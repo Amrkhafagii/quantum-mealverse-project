@@ -1124,14 +1124,7 @@ export type Database = {
         Returns: boolean
       }
       find_nearest_restaurant: {
-        Args:
-          | { order_lat: number; order_lng: number; max_distance_km?: number }
-          | {
-              order_lat: number
-              order_lng: number
-              max_distance_km?: number
-              limit_count?: number
-            }
+        Args: { order_lat: number; order_lng: number; max_distance_km?: number }
         Returns: {
           restaurant_id: string
           user_id: string
