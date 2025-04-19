@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -9,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
+import { checkAssignmentStatus } from '@/integrations/webhook';
+import { useInterval } from '@/hooks/use-interval';
 
 const ThankYou: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +17,12 @@ const ThankYou: React.FC = () => {
   const orderId = searchParams.get('order');
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [assignmentStatus, setAssignmentStatus] = useState<{
+    status: string;
+    assigned_restaurant_id?: string;
+    attempt_count: number;
+    expires_at?: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -45,9 +52,7 @@ const ThankYou: React.FC = () => {
     fetchOrderDetails();
   }, [orderId]);
 
-  // Early return with a JSX element instead of potentially returning void by using navigate()
   if (!orderId) {
-    // Return a JSX element and then navigate in useEffect
     useEffect(() => {
       navigate('/');
     }, [navigate]);
@@ -65,6 +70,78 @@ const ThankYou: React.FC = () => {
       </div>
     );
   }
+
+  useInterval(() => {
+    if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      checkAssignmentStatus(orderId)
+        .then(status => {
+          setAssignmentStatus(status);
+          
+          if (status.status !== 'awaiting_response') {
+            refetch();
+          }
+        })
+        .catch(err => console.error('Error checking assignment status:', err));
+    }
+  }, 10000);
+
+  const renderOrderStatus = () => {
+    if (!order) return null;
+    
+    let statusMessage = '';
+    let statusDetails = '';
+    
+    switch (order.status) {
+      case 'pending':
+        statusMessage = 'Finding a restaurant to fulfill your order...';
+        if (assignmentStatus?.attempt_count) {
+          statusDetails = `Attempt ${assignmentStatus.attempt_count} of 3`;
+        }
+        break;
+      case 'awaiting_restaurant':
+        statusMessage = 'A restaurant is reviewing your order...';
+        if (assignmentStatus?.expires_at) {
+          const expiresAt = new Date(assignmentStatus.expires_at);
+          const timeLeft = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+          statusDetails = `Restaurant has ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')} to respond`;
+        }
+        break;
+      case 'processing':
+        statusMessage = 'Your order is being prepared!';
+        break;
+      case 'on_the_way':
+        statusMessage = 'Your order is on the way to you!';
+        break;
+      case 'delivered':
+        statusMessage = 'Your order has been delivered. Enjoy!';
+        break;
+      case 'cancelled':
+        statusMessage = 'Your order has been cancelled.';
+        break;
+      case 'assignment_failed':
+        statusMessage = 'We couldn\'t find a restaurant for your order right now.';
+        statusDetails = 'Please try again in a few minutes.';
+        break;
+      case 'no_restaurants_available':
+        statusMessage = 'No restaurants available in your area.';
+        statusDetails = 'Please try a different delivery address or try again later.';
+        break;
+      default:
+        statusMessage = `Order Status: ${order.status}`;
+    }
+    
+    return (
+      <div className="space-y-2">
+        <p className="text-lg">{statusMessage}</p>
+        {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
+        {assignmentStatus?.attempt_count > 0 && order.status !== 'processing' && (
+          <p className="text-sm text-gray-400">
+            Assignment attempt: {assignmentStatus.attempt_count} of 3
+          </p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

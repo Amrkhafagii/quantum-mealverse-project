@@ -1,1 +1,4 @@
+
 project_id = "hozgutjvbrljeijybnyg"
+[functions.order-webhook]
+verify_jwt = false

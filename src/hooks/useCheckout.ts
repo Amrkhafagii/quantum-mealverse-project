@@ -98,6 +98,28 @@ export const useCheckout = () => {
       if (data.latitude && data.longitude) {
         console.log("Step 4: Saving user location");
         await saveUserLocation(loggedInUser.id, data.latitude, data.longitude);
+        
+        console.log("Step 5: Sending order to webhook for restaurant assignment");
+        try {
+          const { sendOrderToWebhook } = await import('@/integrations/webhook');
+          const webhookResult = await sendOrderToWebhook(
+            insertedOrder.id,
+            data.latitude,
+            data.longitude
+          );
+          
+          console.log("Webhook result:", webhookResult);
+          
+          if (!webhookResult.success) {
+            console.warn("⚠️ Webhook call failed but continuing order process:", webhookResult.error);
+            // We still continue with the order process even if the webhook fails
+          }
+        } catch (webhookError) {
+          console.error("Error calling webhook:", webhookError);
+          // Continue with order process even if webhook fails
+        }
+      } else {
+        console.log("⚠️ No location data available for restaurant assignment");
       }
       
       console.log("🎉 Order created successfully:", insertedOrder.id);
