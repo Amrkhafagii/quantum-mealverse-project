@@ -13,9 +13,10 @@ import { DeliveryFormValues } from './DeliveryForm';
 
 interface DeliveryDetailsFieldsProps {
   form: UseFormReturn<DeliveryFormValues>;
+  defaultEmail?: string;
 }
 
-export const DeliveryDetailsFields: React.FC<DeliveryDetailsFieldsProps> = ({ form }) => {
+export const DeliveryDetailsFields: React.FC<DeliveryDetailsFieldsProps> = ({ form, defaultEmail }) => {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -47,6 +48,25 @@ export const DeliveryDetailsFields: React.FC<DeliveryDetailsFieldsProps> = ({ fo
           )}
         />
       </div>
+
+      <FormField
+        control={form.control}
+        name="email"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
+            <FormControl>
+              <Input 
+                placeholder="Enter your email" 
+                {...field} 
+                readOnly={!!defaultEmail}
+                className={defaultEmail ? "bg-gray-100 text-gray-700" : ""}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
       <FormField
         control={form.control}

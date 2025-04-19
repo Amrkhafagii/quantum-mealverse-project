@@ -49,6 +49,9 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  console.log("DeliveryForm received defaultValues:", defaultValues);
+  
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,6 +69,16 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     },
     mode: "onChange"
   });
+
+  // Automatically set email as valid if it's provided in defaultValues
+  React.useEffect(() => {
+    if (defaultValues?.email) {
+      console.log("Setting email field as valid:", defaultValues.email);
+      form.setValue('email', defaultValues.email);
+      // Mark email field as valid
+      form.clearErrors('email');
+    }
+  }, [defaultValues?.email, form]);
 
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
     console.log("Location updated:", location);
@@ -159,7 +172,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
             required={form.watch('deliveryMethod') === 'delivery'}
           />
           
-          <DeliveryDetailsFields form={form} />
+          <DeliveryDetailsFields form={form} defaultEmail={defaultValues?.email} />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DeliveryMethodField form={form} />
