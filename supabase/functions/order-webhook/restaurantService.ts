@@ -29,3 +29,66 @@ export async function findNearestRestaurants(
   }
 }
 
+export async function createRestaurantAssignment(
+  supabase: SupabaseClient,
+  orderId: string,
+  restaurantId: string,
+  expiresAt: string
+) {
+  console.log(`Creating restaurant assignment for order ${orderId} to restaurant ${restaurantId}`);
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_assignments')
+      .insert({
+        order_id: orderId,
+        restaurant_id: restaurantId,
+        expires_at: expiresAt,
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating restaurant assignment:', error);
+      return null;
+    }
+
+    console.log('Created restaurant assignment:', data);
+    return data;
+  } catch (e) {
+    console.error('Unexpected error in createRestaurantAssignment:', e);
+    return null;
+  }
+}
+
+export async function logAssignmentAttempt(
+  supabase: SupabaseClient,
+  orderId: string,
+  restaurantId: string,
+  status: string,
+  notes?: string
+) {
+  console.log(`Logging assignment attempt for order ${orderId} to restaurant ${restaurantId}`);
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_assignment_history')
+      .insert({
+        order_id: orderId,
+        restaurant_id: restaurantId,
+        status,
+        notes
+      });
+
+    if (error) {
+      console.error('Error logging assignment attempt:', error);
+      return null;
+    }
+
+    return true;
+  } catch (e) {
+    console.error('Unexpected error in logAssignmentAttempt:', e);
+    return null;
+  }
+}
