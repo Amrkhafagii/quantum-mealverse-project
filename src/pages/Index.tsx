@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '@/components/ParticleBackground';
 import { FeaturedMeals } from '@/components/FeaturedMeals';
 import Navbar from '@/components/Navbar';
-import AdminCreator from '@/components/AdminCreator';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -61,8 +60,8 @@ const Index = () => {
             </button>
 
             {/* Admin section */}
-            <div className="mt-8">
-              {isAdmin ? (
+            {isAdmin && (
+              <div className="mt-8">
                 <div className="p-4 bg-green-900/30 border border-green-500/50 rounded-lg max-w-md mx-auto">
                   <p className="text-green-400 mb-2">✓ You are logged in as an admin user</p>
                   <button 
@@ -72,10 +71,8 @@ const Index = () => {
                     Access Admin Dashboard
                   </button>
                 </div>
-              ) : (
-                <AdminCreator />
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </section>
 
