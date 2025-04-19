@@ -2,13 +2,15 @@
 import React from 'react';
 import ParticleBackground from '@/components/ParticleBackground';
 import { FeaturedMeals } from '@/components/FeaturedMeals';
+import Navbar from '@/components/Navbar';
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
+      <Navbar />
       
-      <main className="relative z-10">
+      <main className="relative z-10 pt-20">
         {/* Hero Section */}
         <section className="h-screen flex items-center justify-center text-center px-4">
           <div className="space-y-6">

@@ -1,6 +1,9 @@
 
 import React from 'react';
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 interface MealCardProps {
   name: string;
@@ -21,6 +24,17 @@ export const MealCard: React.FC<MealCardProps> = ({
   calories,
   macros
 }) => {
+  const { toast } = useToast();
+
+  const handleAddToCart = () => {
+    // TODO: Implement cart functionality
+    toast({
+      title: "Added to cart",
+      description: `${name} has been added to your cart.`,
+      duration: 2000,
+    });
+  };
+
   return (
     <Card className="holographic-card p-6 transition-all duration-300 hover:scale-105">
       <div className="space-y-4">
@@ -44,6 +58,13 @@ export const MealCard: React.FC<MealCardProps> = ({
             <p>{macros.fat}g</p>
           </div>
         </div>
+        <Button 
+          onClick={handleAddToCart}
+          className="w-full cyber-button flex items-center justify-center gap-2"
+        >
+          <ShoppingCart className="w-4 h-4" />
+          Add to Cart
+        </Button>
       </div>
     </Card>
   );
