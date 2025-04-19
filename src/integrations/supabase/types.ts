@@ -57,6 +57,53 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          created_at: string
+          error_details: Json | null
+          error_message: string
+          error_type: string
+          id: string
+          is_critical: boolean
+          is_resolved: boolean
+          related_order_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_details?: Json | null
+          error_message: string
+          error_type: string
+          id?: string
+          is_critical?: boolean
+          is_resolved?: boolean
+          related_order_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_details?: Json | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          is_critical?: boolean
+          is_resolved?: boolean
+          related_order_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_categories: {
         Row: {
           created_at: string | null
@@ -164,6 +211,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_assignments: {
         Row: {
           created_at: string | null
@@ -204,6 +284,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_id_formats: {
+        Row: {
+          created_at: string
+          date_part: string
+          formatted_id: string
+          id: string
+          random_part: string
+          sequence_part: string
+        }
+        Insert: {
+          created_at?: string
+          date_part: string
+          formatted_id: string
+          id?: string
+          random_part: string
+          sequence_part: string
+        }
+        Update: {
+          created_at?: string
+          date_part?: string
+          formatted_id?: string
+          id?: string
+          random_part?: string
+          sequence_part?: string
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -283,6 +390,68 @@ export type Database = {
         }
         Relationships: []
       }
+      order_sequences: {
+        Row: {
+          day: number
+          id: number
+          month: number
+          sequence: number
+          year: number
+        }
+        Insert: {
+          day: number
+          id?: number
+          month: number
+          sequence?: number
+          year: number
+        }
+        Update: {
+          day?: number
+          id?: number
+          month?: number
+          sequence?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      order_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_status: string
+          notes: string | null
+          order_id: string
+          previous_status: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status: string
+          notes?: string | null
+          order_id: string
+          previous_status?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status?: string
+          notes?: string | null
+          order_id?: string
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           city: string
@@ -293,9 +462,16 @@ export type Database = {
           delivery_address: string
           delivery_fee: number
           delivery_method: string
+          formatted_order_id: string | null
           id: string
+          locale: string | null
           notes: string | null
           payment_method: string
+          refund_amount: number | null
+          refund_status: string | null
+          return_images: string[] | null
+          return_reason: string | null
+          return_status: string | null
           status: string
           subtotal: number
           total: number
@@ -311,9 +487,16 @@ export type Database = {
           delivery_address: string
           delivery_fee: number
           delivery_method: string
+          formatted_order_id?: string | null
           id?: string
+          locale?: string | null
           notes?: string | null
           payment_method: string
+          refund_amount?: number | null
+          refund_status?: string | null
+          return_images?: string[] | null
+          return_reason?: string | null
+          return_status?: string | null
           status?: string
           subtotal: number
           total: number
@@ -329,9 +512,16 @@ export type Database = {
           delivery_address?: string
           delivery_fee?: number
           delivery_method?: string
+          formatted_order_id?: string | null
           id?: string
+          locale?: string | null
           notes?: string | null
           payment_method?: string
+          refund_amount?: number | null
+          refund_status?: string | null
+          return_images?: string[] | null
+          return_reason?: string | null
+          return_status?: string | null
           status?: string
           subtotal?: number
           total?: number
@@ -372,6 +562,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      return_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          images: string[] | null
+          order_id: string
+          reason: string
+          refund_amount: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          order_id: string
+          reason: string
+          refund_amount?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          order_id?: string
+          reason?: string
+          refund_amount?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       spatial_ref_sys: {
         Row: {
@@ -812,6 +1049,10 @@ export type Database = {
           distance_km: number
         }[]
       }
+      generate_order_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       geography: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
@@ -1063,6 +1304,16 @@ export type Database = {
       jsonb: {
         Args: { "": unknown }
         Returns: Json
+      }
+      log_error: {
+        Args: {
+          p_error_type: string
+          p_error_message: string
+          p_error_details?: Json
+          p_related_order_id?: string
+          p_is_critical?: boolean
+        }
+        Returns: string
       }
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>

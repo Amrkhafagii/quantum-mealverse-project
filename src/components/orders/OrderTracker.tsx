@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { MapPin, Phone, CreditCard, Clock, Calendar, Package, CheckCircle2 } from 'lucide-react';
+import { OrderStatusBadge } from './OrderStatusBadge';
+import { OrderStatusTimeline } from './OrderStatusTimeline';
+import { ReturnRequestForm } from './ReturnRequestForm';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -36,41 +38,15 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
       </Card>
     );
   }
-  
-  const orderStatuses = [
-    { key: 'pending', label: 'Order Received', icon: Package },
-    { key: 'processing', label: 'Preparing', icon: Package },
-    { key: 'on_the_way', label: 'On The Way', icon: MapPin },
-    { key: 'delivered', label: 'Delivered', icon: CheckCircle2 },
-  ];
-  
-  // Find the current status index
-  const currentStatusIndex = orderStatuses.findIndex(status => status.key === order.status);
-  
-  const getStatusColor = (index: number) => {
-    if (index < currentStatusIndex) return 'text-green-500';
-    if (index === currentStatusIndex) return 'text-quantum-cyan';
-    return 'text-gray-500';
-  };
-  
-  const getLineColor = (index: number) => {
-    if (index < currentStatusIndex) return 'bg-green-500';
-    return 'bg-gray-500 bg-opacity-30';
-  };
-  
+
   return (
     <Card className="h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Order #{order.id.substring(0, 8)}</CardTitle>
-          <Badge className={
-            order.status === 'pending' ? 'bg-yellow-500' : 
-            order.status === 'processing' ? 'bg-blue-500' : 
-            order.status === 'on_the_way' ? 'bg-purple-500' : 
-            order.status === 'delivered' ? 'bg-green-500' : 'bg-red-500'
-          }>
-            {order.status.replace('_', ' ')}
-          </Badge>
+          <CardTitle>
+            Order #{order.formatted_order_id || order.id.substring(0, 8)}
+          </CardTitle>
+          <OrderStatusBadge status={order.status} />
         </div>
         <CardDescription>
           <div className="flex items-center gap-1">
@@ -116,36 +92,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
           
           <div className="pt-4">
             <h3 className="text-lg font-medium mb-4">Order Status</h3>
-            
-            <div className="space-y-0">
-              {orderStatuses.map((status, index) => (
-                <div key={status.key} className="flex items-start">
-                  <div className="flex flex-col items-center">
-                    <div className={`rounded-full h-8 w-8 flex items-center justify-center border-2 ${
-                      index <= currentStatusIndex ? 'border-quantum-cyan' : 'border-gray-500 border-opacity-50'
-                    }`}>
-                      <status.icon className={`h-4 w-4 ${getStatusColor(index)}`} />
-                    </div>
-                    {index < orderStatuses.length - 1 && (
-                      <div className={`w-0.5 h-12 ${getLineColor(index)}`} />
-                    )}
-                  </div>
-                  
-                  <div className="ml-4 pb-8">
-                    <h4 className={`font-medium ${getStatusColor(index)}`}>
-                      {status.label}
-                    </h4>
-                    <p className="text-sm text-gray-400">
-                      {index < currentStatusIndex 
-                        ? 'Completed' 
-                        : index === currentStatusIndex 
-                          ? 'In Progress' 
-                          : 'Pending'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <OrderStatusTimeline orderId={orderId} />
           </div>
           
           <div className="pt-2">
@@ -179,6 +126,33 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
               </div>
             </div>
           </div>
+          
+          {order.status === 'delivered' && !order.return_status && (
+            <div className="pt-4">
+              <ReturnRequestForm orderId={orderId} />
+            </div>
+          )}
+          
+          {order.return_status && (
+            <div className="pt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Return Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p>Status: <OrderStatusBadge status={order.return_status} /></p>
+                    {order.return_reason && (
+                      <p>Reason: {order.return_reason}</p>
+                    )}
+                    {order.refund_status && (
+                      <p>Refund Status: <OrderStatusBadge status={order.refund_status} /></p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
