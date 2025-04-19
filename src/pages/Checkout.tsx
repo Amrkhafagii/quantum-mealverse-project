@@ -39,13 +39,15 @@ const Checkout = () => {
                 <AuthOptions />
               ) : (
                 <>
-                  <CheckoutAuthForm 
-                    onSubmit={handleAuthSubmit}
-                    email={loggedInUser?.email}
-                    showPassword={!loggedInUser && !hasDeliveryInfo}
-                  />
+                  {!loggedInUser && (
+                    <CheckoutAuthForm 
+                      onSubmit={handleAuthSubmit}
+                      email={loggedInUser?.email}
+                      showPassword={!loggedInUser && !hasDeliveryInfo}
+                    />
+                  )}
                   
-                  {loggedInUser && (
+                  {(loggedInUser || hasDeliveryInfo) && (
                     <DeliveryForm
                       onSubmit={handleSubmit}
                       defaultValues={defaultValues}
