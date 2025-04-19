@@ -1,4 +1,8 @@
 
+-- Drop the overloaded version of find_nearest_restaurant with 4 parameters
+DROP FUNCTION IF EXISTS public.find_nearest_restaurant(double precision, double precision, double precision, integer);
+
+-- Keep only the 3-parameter version from the original migration file
 CREATE OR REPLACE FUNCTION find_nearest_restaurant(
     order_lat double precision,
     order_lng double precision,
