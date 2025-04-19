@@ -10,7 +10,7 @@ import { Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
 
-const ThankYou = () => {
+const ThankYou: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order');
@@ -45,8 +45,25 @@ const ThankYou = () => {
     fetchOrderDetails();
   }, [orderId]);
 
+  // Early return with a JSX element instead of potentially returning void by using navigate()
   if (!orderId) {
-    return navigate('/');
+    // Return a JSX element and then navigate in useEffect
+    useEffect(() => {
+      navigate('/');
+    }, [navigate]);
+    
+    return (
+      <div className="min-h-screen bg-quantum-black text-white relative">
+        <ParticleBackground />
+        <Navbar />
+        <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
+          <Card className="holographic-card p-12 max-w-3xl mx-auto">
+            <p className="text-center">Redirecting to home page...</p>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
