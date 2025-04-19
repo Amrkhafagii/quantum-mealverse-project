@@ -10,7 +10,7 @@ import Navbar from '@/components/Navbar';
 import MealForm from '@/components/admin/MealForm';
 import MealList from '@/components/admin/MealList';
 import { useMealManagement } from '@/hooks/useMealManagement';
-import { MealType, INITIAL_MEALS } from '@/types/meal';
+import { MealType, INITIAL_MEAL, INITIAL_MEALS } from '@/types/meal';
 
 const Admin = () => {
   const navigate = useNavigate();

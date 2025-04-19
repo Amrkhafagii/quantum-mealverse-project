@@ -43,6 +43,33 @@ const formSchema = z.object({
 
 type CheckoutFormValues = z.infer<typeof formSchema>
 
+// Define types for profiles
+interface Profile {
+  id: string;
+  full_name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+}
+
+// Define types for orders
+interface Order {
+  id: string;
+  user_id?: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  delivery_address: string;
+  city: string;
+  notes?: string;
+  delivery_method: string;
+  payment_method: string;
+  delivery_fee: number;
+  subtotal: number;
+  total: number;
+  status: string;
+}
+
 const Checkout = () => {
   const { items, totalAmount, clearCart } = useCart();
   const { toast } = useToast();
@@ -72,19 +99,21 @@ const Checkout = () => {
       
       if (data.session) {
         // User is logged in, get their profile data
+        const { data: userData } = await supabase.auth.getUser();
+        setLoggedInUser(userData.user);
+        
+        // Try to get profile data
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', data.session.user.id)
+          .eq('id', userData.user?.id)
           .single();
           
-        setLoggedInUser(data.session.user);
-        
         // Pre-fill form data if profile exists
         if (profileData) {
           form.reset({
             fullName: profileData.full_name || "",
-            email: data.session.user.email || "",
+            email: userData.user?.email || "",
             phone: profileData.phone || "",
             address: profileData.address || "",
             city: profileData.city || "",
@@ -92,8 +121,8 @@ const Checkout = () => {
             deliveryMethod: "delivery",
             paymentMethod: "cash",
           });
-        } else {
-          form.setValue('email', data.session.user.email || "");
+        } else if (userData.user) {
+          form.setValue('email', userData.user.email || "");
         }
       }
     };
@@ -132,13 +161,15 @@ const Checkout = () => {
           
           // Create profile
           if (userId) {
-            await supabase.from('profiles').insert({
-              id: userId,
-              full_name: data.fullName,
-              phone: data.phone,
-              address: data.address,
-              city: data.city,
-            });
+            await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                full_name: data.fullName,
+                phone: data.phone,
+                address: data.address,
+                city: data.city,
+              });
           }
         }
       }
@@ -165,9 +196,12 @@ const Checkout = () => {
         
       if (orderError) throw orderError;
       
+      // Get the order ID
+      const orderId = orderData[0].id;
+      
       // Create order items
       const orderItems = items.map(item => ({
-        order_id: orderData[0].id,
+        order_id: orderId,
         meal_id: item.meal.id,
         quantity: item.quantity,
         price: item.meal.price,
@@ -183,12 +217,12 @@ const Checkout = () => {
       // Success
       toast({
         title: "Order placed successfully",
-        description: `Your order #${orderData[0].id} has been placed successfully`,
+        description: `Your order #${orderId} has been placed successfully`,
       });
       
       // Clear cart and redirect to thank you page
       clearCart();
-      navigate(`/thank-you?order=${orderData[0].id}`);
+      navigate(`/thank-you?order=${orderId}`);
     } catch (error: any) {
       toast({
         title: "Error placing order",

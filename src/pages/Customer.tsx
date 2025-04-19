@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import { CustomerMealCard } from '@/components/CustomerMealCard';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
+import { MealType } from '@/types/meal';
 
 const Customer = () => {
   const { data: meals, isLoading, error } = useQuery({
@@ -48,7 +49,7 @@ const Customer = () => {
           <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {meals?.map((meal) => (
+            {meals?.map((meal: MealType) => (
               <CustomerMealCard
                 key={meal.id}
                 meal={meal}
