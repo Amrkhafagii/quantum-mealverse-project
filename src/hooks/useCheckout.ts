@@ -12,6 +12,7 @@ import {
   createOrderItems,
   saveUserLocation 
 } from '@/services/orders/orderService';
+import { AuthFormData } from '@/types/auth';
 
 export const useCheckout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -115,8 +116,14 @@ export const useCheckout = () => {
     hasDeliveryInfo,
     defaultValues,
     showLoginPrompt,
-    handleAuthSubmit: (data: { email: string; password: string }) => 
-      handleAuthSubmit(data, setLoggedInUser, setShowLoginPrompt, setHasDeliveryInfo, setDefaultValues, toast),
+    handleAuthSubmit: (data: AuthFormData) => 
+      handleAuthSubmit(data, {
+        setLoggedInUser,
+        setShowLoginPrompt,
+        setHasDeliveryInfo,
+        setDefaultValues,
+        toast
+      }),
     handleSubmit
   };
 };
