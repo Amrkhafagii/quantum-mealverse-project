@@ -112,14 +112,18 @@ export const saveUserLocation = async (
   longitude: number
 ) => {
   try {
+    // Fix the ambiguous user_id column issue by explicitly creating a structure
+    // with a properly named field that won't conflict with any table joins
+    const locationData = {
+      user_id: userId,
+      latitude,
+      longitude,
+      source: 'checkout'
+    };
+
     const { error: locationError } = await supabase
       .from('user_locations')
-      .insert({
-        user_id: userId,
-        latitude,
-        longitude,
-        source: 'checkout'
-      });
+      .insert(locationData);
       
     if (locationError) throw locationError;
   } catch (error) {
