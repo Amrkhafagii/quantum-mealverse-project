@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 
 interface Order {
   id?: string;
-  user_id?: string;
+  user_id: string; // Changed from optional to required
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -51,7 +51,7 @@ const Checkout = () => {
           .from('delivery_info')
           .select('*')
           .eq('user_id', userData.user?.id)
-          .single();
+          .maybeSingle();
           
         if (deliveryInfo) {
           setHasDeliveryInfo(true);
@@ -104,11 +104,15 @@ const Checkout = () => {
 
     setIsSubmitting(true);
     try {
+      if (!loggedInUser?.id) {
+        throw new Error("You must be logged in to place an order");
+      }
+
       const deliveryFee = data.deliveryMethod === "delivery" ? 50 : 0;
       const finalTotal = totalAmount + deliveryFee;
       
       const orderData: Order = {
-        user_id: loggedInUser?.id,
+        user_id: loggedInUser.id, // Now this is required and will always be set
         customer_name: data.fullName,
         customer_email: data.email,
         customer_phone: data.phone,

@@ -14,3 +14,19 @@ export interface MealType {
   created_at: string;
   updated_at: string;
 }
+
+export const INITIAL_MEAL: MealType = {
+  id: '',
+  name: '',
+  description: '',
+  price: 0,
+  calories: 0,
+  protein: 0,
+  carbs: 0,
+  fat: 0,
+  image_url: null,
+  is_active: true,
+  restaurant_id: '',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+};
