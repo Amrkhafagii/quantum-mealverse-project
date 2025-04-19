@@ -30,6 +30,9 @@ export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }
         if (value.deliveryMethod === 'pickup') {
           form.clearErrors('latitude');
           form.clearErrors('longitude');
+        } else if (value.deliveryMethod === 'delivery') {
+          // Re-validate location if switching back to delivery
+          form.trigger('latitude');
         }
       }
     });
@@ -51,6 +54,9 @@ export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }
               if (value === 'pickup') {
                 form.clearErrors('latitude');
                 form.clearErrors('longitude');
+              } else if (value === 'delivery') {
+                // Re-validate location if switching to delivery
+                form.trigger('latitude');
               }
             }} 
             defaultValue={field.value}

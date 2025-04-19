@@ -71,6 +71,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
     form.setValue('latitude', location.latitude);
     form.setValue('longitude', location.longitude);
+    form.trigger('latitude'); // Trigger validation after setting location
   };
 
   const handleSubmitWithValidation = async (data: DeliveryFormValues) => {

@@ -67,16 +67,6 @@ export const useCheckout = () => {
       return;
     }
 
-    // Only validate location if delivery method is 'delivery'
-    if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
-      toast({
-        title: "Location Required",
-        description: "Please set your location for delivery",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     
     try {
