@@ -15,33 +15,36 @@ export const useCheckout = () => {
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
   const [hasDeliveryInfo, setHasDeliveryInfo] = useState(false);
   const [defaultValues, setDefaultValues] = useState<Partial<DeliveryFormValues>>({});
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (data.session) {
-        const { data: userData } = await supabase.auth.getUser();
-        setLoggedInUser(userData.user);
+      if (session?.user) {
+        setLoggedInUser(session.user);
         
+        // Fetch delivery info
         const { data: deliveryInfo } = await supabase
           .from('delivery_info')
           .select('*')
-          .eq('user_id', userData.user?.id)
+          .eq('user_id', session.user.id)
           .maybeSingle();
           
         if (deliveryInfo) {
           setHasDeliveryInfo(true);
           setDefaultValues({
             ...deliveryInfo,
-            email: userData.user?.email || "",
+            email: session.user.email || "",
             fullName: deliveryInfo.full_name,
           });
-        } else if (userData.user?.email) {
+        } else if (session.user.email) {
           setDefaultValues({
-            email: userData.user.email
+            email: session.user.email
           });
         }
+      } else {
+        setShowLoginPrompt(true);
       }
     };
     
@@ -187,6 +190,7 @@ export const useCheckout = () => {
     loggedInUser,
     hasDeliveryInfo,
     defaultValues,
+    showLoginPrompt,
     handleAuthSubmit,
     handleSubmit
   };

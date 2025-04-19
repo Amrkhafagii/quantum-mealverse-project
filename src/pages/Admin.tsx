@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import MealForm from '@/components/admin/MealForm';
 import MealList from '@/components/admin/MealList';
 import { useMealManagement } from '@/hooks/useMealManagement';
 import { useAdmin } from '@/hooks/useAdmin';
-import { INITIAL_MEAL } from '@/types/meal';
 
 const Admin = () => {
   const { isAdmin, meals, loading } = useAdmin();
@@ -22,7 +20,9 @@ const Admin = () => {
     handleSaveMeal,
     handleDeleteMeal,
     handleImageUpload,
-  } = useMealManagement(() => {});
+  } = useMealManagement(async () => {
+    await Promise.resolve();
+  });
 
   if (loading) {
     return (

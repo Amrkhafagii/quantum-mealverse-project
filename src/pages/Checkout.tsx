@@ -7,6 +7,7 @@ import { CheckoutAuthForm } from '@/components/CheckoutAuthForm';
 import { OrderSummary } from '@/components/checkout/OrderSummary';
 import { DeliveryForm } from '@/components/checkout/DeliveryForm';
 import { EmptyCartMessage } from '@/components/checkout/EmptyCartMessage';
+import { AuthOptions } from '@/components/checkout/AuthOptions';
 import { useCheckout } from '@/hooks/useCheckout';
 
 const Checkout = () => {
@@ -16,6 +17,7 @@ const Checkout = () => {
     loggedInUser,
     hasDeliveryInfo,
     defaultValues,
+    showLoginPrompt,
     handleAuthSubmit,
     handleSubmit
   } = useCheckout();
@@ -33,17 +35,25 @@ const Checkout = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <CheckoutAuthForm 
-                onSubmit={handleAuthSubmit}
-                email={loggedInUser?.email}
-                showPassword={!loggedInUser && !hasDeliveryInfo}
-              />
-              
-              <DeliveryForm
-                onSubmit={handleSubmit}
-                defaultValues={defaultValues}
-                isSubmitting={isSubmitting}
-              />
+              {showLoginPrompt ? (
+                <AuthOptions />
+              ) : (
+                <>
+                  <CheckoutAuthForm 
+                    onSubmit={handleAuthSubmit}
+                    email={loggedInUser?.email}
+                    showPassword={!loggedInUser && !hasDeliveryInfo}
+                  />
+                  
+                  {loggedInUser && (
+                    <DeliveryForm
+                      onSubmit={handleSubmit}
+                      defaultValues={defaultValues}
+                      isSubmitting={isSubmitting}
+                    />
+                  )}
+                </>
+              )}
             </div>
             
             <div>

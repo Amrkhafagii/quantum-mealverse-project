@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { LocationSection } from './LocationSection';
 
 const formSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
@@ -36,9 +35,6 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   defaultValues,
   isSubmitting = false 
 }) => {
-  const { toast } = useToast();
-  const [isLoadingLocation, setIsLoadingLocation] = React.useState(false);
-
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,62 +50,25 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       longitude: 0,
       ...defaultValues
     },
-    mode: "onChange" // Enable validation as fields change
+    mode: "onChange"
   });
 
-  const getCurrentLocation = () => {
-    setIsLoadingLocation(true);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          form.setValue('latitude', latitude);
-          form.setValue('longitude', longitude);
-          setIsLoadingLocation(false);
-          toast({
-            title: "Location updated",
-            description: "Your current location has been saved.",
-          });
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          toast({
-            title: "Location error",
-            description: "Unable to get your location. Please try again.",
-            variant: "destructive",
-          });
-          setIsLoadingLocation(false);
-        }
-      );
-    } else {
-      toast({
-        title: "Geolocation not supported",
-        description: "Your browser doesn't support geolocation.",
-        variant: "destructive",
-      });
-      setIsLoadingLocation(false);
-    }
+  const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
+    form.setValue('latitude', location.latitude);
+    form.setValue('longitude', location.longitude);
   };
-
-  const handleFormSubmit = form.handleSubmit((data) => {
-    onSubmit(data);
-  });
 
   return (
     <Card className="holographic-card p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-quantum-cyan">Delivery Information</h2>
-        <Button
-          onClick={getCurrentLocation}
-          disabled={isLoadingLocation}
-          className="cyber-button"
-        >
-          {isLoadingLocation ? "Getting Location..." : "Get Current Location"}
-        </Button>
-      </div>
+      <h2 className="text-xl font-bold text-quantum-cyan mb-6">Delivery Information</h2>
       
       <Form {...form}>
-        <form onSubmit={handleFormSubmit} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <LocationSection 
+            onLocationUpdate={handleLocationUpdate}
+            required={form.watch('deliveryMethod') === 'delivery'}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -237,7 +196,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (form.watch('deliveryMethod') === 'delivery' && !form.watch('latitude'))}
           >
             {isSubmitting ? "Processing..." : "Place Order"}
           </Button>
