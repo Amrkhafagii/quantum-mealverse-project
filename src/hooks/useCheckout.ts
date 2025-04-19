@@ -92,6 +92,10 @@ export const useCheckout = () => {
       console.log("Step 2: Creating order");
       const insertedOrder = await createOrder(loggedInUser.id, data, items, totalAmount);
       
+      if (!insertedOrder || !insertedOrder.id) {
+        throw new Error("Failed to create order - no order ID returned");
+      }
+      
       console.log("Step 3: Creating order items");
       await createOrderItems(insertedOrder.id, items);
       
@@ -125,7 +129,7 @@ export const useCheckout = () => {
       console.log("🎉 Order created successfully:", insertedOrder.id);
       toast({
         title: "Order placed successfully",
-        description: `Your order #${insertedOrder.id} has been placed successfully`,
+        description: `Your order has been placed successfully`,
       });
       
       clearCart();
