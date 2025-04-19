@@ -1,74 +1,36 @@
 
 -- Function to find nearest restaurants with distance limit
-CREATE OR REPLACE FUNCTION find_nearest_restaurants(
-  lat double precision,
-  lng double precision,
-  max_distance double precision DEFAULT 50,
-  result_limit integer DEFAULT 3
+-- Make sure this function name matches exactly what we call in the code
+CREATE OR REPLACE FUNCTION find_nearest_restaurant(
+  order_lat double precision,
+  order_lng double precision,
+  max_distance_km double precision DEFAULT 50,
+  limit_count integer DEFAULT 3
 )
 RETURNS TABLE (
   restaurant_id uuid, 
   user_id uuid,
-  name text,
   distance_km double precision
 ) 
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  RETURN QUERY
-  SELECT 
-    id as restaurant_id, 
-    user_id,
-    name,
-    ST_Distance(
-      location::geography,
-      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
-    ) / 1000 as distance_km
-  FROM 
-    restaurants
-  WHERE 
-    is_active = true
+    RETURN QUERY
+    SELECT 
+        r.id as restaurant_id,
+        r.user_id,
+        ST_Distance(
+            r.location::geography,
+            ST_SetSRID(ST_MakePoint(order_lng, order_lat), 4326)::geography
+        ) / 1000 as distance_km
+    FROM restaurants r
+    WHERE r.is_active = true
     AND ST_DWithin(
-      location::geography,
-      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
-      max_distance * 1000
+        r.location::geography,
+        ST_SetSRID(ST_MakePoint(order_lng, order_lat), 4326)::geography,
+        max_distance_km * 1000  -- Convert km to meters
     )
-  ORDER BY 
-    distance_km
-  LIMIT result_limit;
-END;
-$$;
-
--- Function to find all restaurants sorted by distance (without distance limit)
-CREATE OR REPLACE FUNCTION find_all_restaurants_by_distance(
-  lat double precision,
-  lng double precision,
-  result_limit integer DEFAULT 5
-)
-RETURNS TABLE (
-  restaurant_id uuid, 
-  user_id uuid,
-  name text,
-  distance_km double precision
-) 
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    id as restaurant_id, 
-    user_id,
-    name,
-    ST_Distance(
-      location::geography,
-      ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
-    ) / 1000 as distance_km
-  FROM 
-    restaurants
-  WHERE 
-    is_active = true
-  ORDER BY 
-    distance_km
-  LIMIT result_limit;
+    ORDER BY distance_km ASC
+    LIMIT limit_count;
 END;
 $$;

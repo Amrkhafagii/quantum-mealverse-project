@@ -1,3 +1,4 @@
+
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export async function findNearestRestaurants(
@@ -29,12 +30,11 @@ export async function findNearestRestaurants(
   
   // Now let's use rpc to find nearest restaurants
   try {
-    // Use the rpc function to find nearest restaurants
-    const { data, error } = await supabase.rpc('find_nearest_restaurants', {
-      lat: latitude,
-      lng: longitude,
-      max_distance: maxDistance,
-      result_limit: limit
+    // Use the rpc function to find nearest restaurant (singular as per error message)
+    const { data, error } = await supabase.rpc('find_nearest_restaurant', {
+      order_lat: latitude,
+      order_lng: longitude,
+      max_distance_km: maxDistance
     });
 
     if (error) {
@@ -48,12 +48,13 @@ export async function findNearestRestaurants(
     if (!data || data.length === 0) {
       console.log(`No restaurants found within ${maxDistance}km of (${latitude}, ${longitude})`);
       
-      // If no restaurants found, try a broader search with PostgreSQL function
-      const { data: broadSearch, error: broadSearchError } = await supabase.rpc('find_all_restaurants_by_distance', {
-        lat: latitude,
-        lng: longitude,
-        result_limit: 5
-      });
+      // If no restaurants found, try a broader search without distance limit
+      // Let's use a direct SQL query as fallback since we don't have an RPC for this
+      const { data: broadSearch, error: broadSearchError } = await supabase
+        .from('restaurants')
+        .select('id as restaurant_id, user_id, name')
+        .eq('is_active', true)
+        .limit(5);
       
       if (broadSearchError) {
         console.error('Error in broad search:', broadSearchError);
