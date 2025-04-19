@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast as Toast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 export const handleAuthSubmit = async (
   data: { email: string; password: string },
@@ -8,7 +8,7 @@ export const handleAuthSubmit = async (
   setShowLoginPrompt: (show: boolean) => void,
   setHasDeliveryInfo: (has: boolean) => void,
   setDefaultValues: (values: any) => void,
-  toast: Toast
+  toast: typeof toast // Use typeof to correctly reference the toast function type
 ) => {
   try {
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
