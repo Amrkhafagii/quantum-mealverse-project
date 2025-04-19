@@ -24,6 +24,39 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_info: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          full_name: string
+          id: string
+          phone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          full_name: string
+          id?: string
+          phone: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meal_categories: {
         Row: {
           created_at: string | null
@@ -83,6 +116,7 @@ export type Database = {
           description: string | null
           fat: number | null
           id: string
+          image_url: string | null
           is_active: boolean | null
           name: string
           price: number
@@ -97,6 +131,7 @@ export type Database = {
           description?: string | null
           fat?: number | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           name: string
           price: number
@@ -111,6 +146,7 @@ export type Database = {
           description?: string | null
           fat?: number | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           name?: string
           price?: number
@@ -169,6 +205,51 @@ export type Database = {
           },
         ]
       }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          meal_id: string
+          name: string
+          order_id: string
+          price: number
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meal_id: string
+          name: string
+          order_id: string
+          price: number
+          quantity: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meal_id?: string
+          name?: string
+          order_id?: string
+          price?: number
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_locations: {
         Row: {
           distance_km: number | null
@@ -199,6 +280,63 @@ export type Database = {
           restaurant_id?: string | null
           status?: string | null
           timestamp?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          city: string
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          delivery_fee: number
+          delivery_method: string
+          id: string
+          notes: string | null
+          payment_method: string
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          delivery_fee: number
+          delivery_method: string
+          id?: string
+          notes?: string | null
+          payment_method: string
+          status?: string
+          subtotal: number
+          total: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          delivery_address?: string
+          delivery_fee?: number
+          delivery_method?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
