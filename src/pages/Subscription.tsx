@@ -3,7 +3,7 @@ import React from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
-import { SubscriptionPlan } from '@/components/SubscriptionPlan';
+import SubscriptionPlan from '@/components/SubscriptionPlan';
 import { CartProvider } from '@/contexts/CartContext';
 
 const Subscription = () => {
