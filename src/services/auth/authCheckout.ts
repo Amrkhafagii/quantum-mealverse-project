@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Toast } from '@/components/ui/use-toast';
+import { toast as Toast } from '@/components/ui/use-toast';
 
 export const handleAuthSubmit = async (
   data: { email: string; password: string },

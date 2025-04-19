@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/components/checkout/DeliveryForm';
-import { CartItem } from '@/contexts/CartContext';
+import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
 
 export const saveDeliveryInfo = async (

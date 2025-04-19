@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
-
-interface CartItem {
-  meal: MealType;
-  quantity: number;
-}
+import { CartItem } from '@/types/cart';
 
 interface CartContextType {
   items: CartItem[];
@@ -21,7 +17,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   
-  // Load cart from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
@@ -33,7 +28,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
   
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
@@ -43,12 +37,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingItemIndex = prevItems.findIndex(item => item.meal.id === meal.id);
       
       if (existingItemIndex >= 0) {
-        // If item already exists in cart, update quantity
         const newItems = [...prevItems];
         newItems[existingItemIndex].quantity += quantity;
         return newItems;
       } else {
-        // Otherwise add new item
         return [...prevItems, { meal, quantity }];
       }
     });
