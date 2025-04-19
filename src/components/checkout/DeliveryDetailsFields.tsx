@@ -49,24 +49,25 @@ export const DeliveryDetailsFields: React.FC<DeliveryDetailsFieldsProps> = ({ fo
         />
       </div>
 
-      <FormField
-        control={form.control}
-        name="email"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
-            <FormControl>
-              <Input 
-                placeholder="Enter your email" 
-                {...field} 
-                readOnly={!!defaultEmail}
-                className={defaultEmail ? "bg-gray-100 text-gray-700" : ""}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {/* Only show email field when there's no defaultEmail */}
+      {!defaultEmail && (
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter your email" 
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       <FormField
         control={form.control}
