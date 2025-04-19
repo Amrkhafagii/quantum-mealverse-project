@@ -28,14 +28,31 @@ export async function findNearestRestaurants(
     }
   }
   
-  // Now try to find restaurants near the specified location
+  // Now let's directly query for nearby restaurants instead of using the RPC function
   try {
-    // Call the database function with explicit parameter names to avoid issues
-    const { data, error } = await supabase.rpc('find_nearest_restaurant', {
-      order_lat: latitude,
-      order_lng: longitude,
-      max_distance_km: maxDistance
-    });
+    // Direct query using PostGIS functions
+    const { data, error } = await supabase.query(`
+      SELECT 
+        id as restaurant_id, 
+        user_id,
+        name,
+        ST_Distance(
+          location::geography,
+          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+        ) / 1000 as distance_km
+      FROM 
+        restaurants
+      WHERE 
+        is_active = true
+        AND ST_DWithin(
+          location::geography,
+          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+          $3 * 1000
+        )
+      ORDER BY 
+        distance_km
+      LIMIT $4
+    `, [longitude, latitude, maxDistance, limit]);
 
     if (error) {
       console.error('Error finding nearest restaurants:', error);
@@ -48,11 +65,13 @@ export async function findNearestRestaurants(
     if (!data || data.length === 0) {
       console.log(`No restaurants found within ${maxDistance}km of (${latitude}, ${longitude})`);
       
-      // Let's do a direct query with ST_DWithin to verify our distance calculation
-      const { data: directQueryResult, error: directQueryError } = await supabase.query(`
+      // If no restaurants within range, do a broader search without the distance limit
+      // to see what's the closest restaurant
+      const { data: broadSearch, error: broadSearchError } = await supabase.query(`
         SELECT 
-          id, 
-          name, 
+          id as restaurant_id, 
+          user_id,
+          name,
           ST_Distance(
             location::geography,
             ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
@@ -66,10 +85,10 @@ export async function findNearestRestaurants(
         LIMIT 5
       `, [longitude, latitude]);
       
-      if (directQueryError) {
-        console.error('Error in direct spatial query:', directQueryError);
+      if (broadSearchError) {
+        console.error('Error in broad search query:', broadSearchError);
       } else {
-        console.log('Direct spatial query results:', directQueryResult);
+        console.log('Closest restaurants (without distance limit):', broadSearch);
       }
     }
     
