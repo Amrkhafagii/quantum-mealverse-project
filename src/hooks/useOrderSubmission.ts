@@ -9,6 +9,7 @@ import {
   createOrderItems,
   saveUserLocation 
 } from '@/services/orders/orderService';
+import { sendOrderToWebhook } from '@/integrations/webhook';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -60,6 +61,22 @@ export const useOrderSubmission = (
       // Save user location if provided
       if (data.latitude && data.longitude && data.deliveryMethod === "delivery") {
         await saveUserLocation(userId, data.latitude, data.longitude);
+        
+        // Send order to webhook for restaurant assignment
+        console.log('Sending order to webhook for restaurant assignment...');
+        const webhookResult = await sendOrderToWebhook(
+          insertedOrder.id,
+          data.latitude,
+          data.longitude
+        );
+        
+        console.log('Webhook result:', webhookResult);
+        
+        if (!webhookResult.success) {
+          console.error('Webhook call failed:', webhookResult.error);
+          // We'll continue despite webhook failure, but log it
+          // The order is still created even if restaurant assignment fails
+        }
       }
       
       toast({

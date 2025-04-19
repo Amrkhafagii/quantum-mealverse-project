@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
+import { sendOrderToWebhook } from '@/integrations/webhook';
 
 export const saveDeliveryInfo = async (
   userId: string, 
