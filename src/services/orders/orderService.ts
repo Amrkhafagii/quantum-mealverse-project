@@ -15,8 +15,8 @@ export const saveDeliveryInfo = async (
     phone: data.phone,
     address: data.address,
     city: data.city,
-    latitude: data.latitude,
-    longitude: data.longitude
+    // Note: latitude and longitude are stored separately in user_locations,
+    // not in the delivery_info table
   };
 
   try {

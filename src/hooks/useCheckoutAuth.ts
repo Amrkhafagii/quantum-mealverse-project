@@ -15,6 +15,7 @@ interface DeliveryInfoDB {
   phone: string;
   updated_at: string;
   user_id: string;
+  // Note: latitude and longitude are managed in the user_locations table, not in delivery_info
 }
 
 export const useCheckoutAuth = () => {
@@ -74,8 +75,13 @@ export const useCheckoutAuth = () => {
               const longitude = locationData?.longitude || 0;
               
               // Properly cast delivery and payment methods to the expected types
-              const deliveryMethodCast = (previousOrders?.delivery_method || "delivery") as "delivery" | "pickup";
-              const paymentMethodCast = (previousOrders?.payment_method || "cash") as "cash" | "visa";
+              const deliveryMethodCast = previousOrders?.delivery_method === "delivery" || previousOrders?.delivery_method === "pickup" 
+                ? (previousOrders.delivery_method as "delivery" | "pickup") 
+                : "delivery" as const;
+                
+              const paymentMethodCast = previousOrders?.payment_method === "cash" || previousOrders?.payment_method === "visa" 
+                ? (previousOrders.payment_method as "cash" | "visa") 
+                : "cash" as const;
               
               setDefaultValues({
                 email: session.user.email || "",
@@ -96,8 +102,13 @@ export const useCheckoutAuth = () => {
               const longitude = locationData?.longitude || 0;
               
               // Cast string types to the specific union types required
-              const deliveryMethodCast = (previousOrders.delivery_method || "delivery") as "delivery" | "pickup";
-              const paymentMethodCast = (previousOrders.payment_method || "cash") as "cash" | "visa";
+              const deliveryMethodCast = previousOrders.delivery_method === "delivery" || previousOrders.delivery_method === "pickup" 
+                ? (previousOrders.delivery_method as "delivery" | "pickup") 
+                : "delivery" as const;
+                
+              const paymentMethodCast = previousOrders.payment_method === "cash" || previousOrders.payment_method === "visa" 
+                ? (previousOrders.payment_method as "cash" | "visa") 
+                : "cash" as const;
               
               setDefaultValues({
                 fullName: previousOrders.customer_name,
@@ -106,8 +117,8 @@ export const useCheckoutAuth = () => {
                 address: previousOrders.delivery_address,
                 city: previousOrders.city,
                 notes: previousOrders.notes || "",
-                latitude: latitude,
-                longitude: longitude,
+                latitude: previousOrders.latitude || latitude,
+                longitude: previousOrders.longitude || longitude,
                 deliveryMethod: deliveryMethodCast,
                 paymentMethod: paymentMethodCast
               });
@@ -120,8 +131,8 @@ export const useCheckoutAuth = () => {
                 email: session.user.email,
                 latitude: latitude,
                 longitude: longitude,
-                deliveryMethod: "delivery",
-                paymentMethod: "cash"
+                deliveryMethod: "delivery" as const,
+                paymentMethod: "cash" as const
               });
             }
           } catch (error) {
