@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { DeliveryFormValues } from '@/components/checkout/DeliveryForm';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
 

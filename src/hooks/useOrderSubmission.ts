@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
-import { DeliveryFormValues } from '@/components/checkout/DeliveryForm';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { 
   saveDeliveryInfo, 
   createOrder, 

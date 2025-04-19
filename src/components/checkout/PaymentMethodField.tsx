@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { UseFormReturn } from 'react-hook-form';
-import { DeliveryFormValues } from './DeliveryForm';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 
 interface PaymentMethodFieldProps {
   form: UseFormReturn<DeliveryFormValues>;

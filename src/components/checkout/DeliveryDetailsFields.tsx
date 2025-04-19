@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { UseFormReturn } from 'react-hook-form';
-import { DeliveryFormValues } from './DeliveryForm';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 
 interface DeliveryDetailsFieldsProps {
   form: UseFormReturn<DeliveryFormValues>;

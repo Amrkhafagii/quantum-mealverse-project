@@ -85,3 +85,6 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     </Card>
   );
 };
+
+// Export the type to make it explicit
+export type { DeliveryFormValues };

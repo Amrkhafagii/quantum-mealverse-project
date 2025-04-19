@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { DeliveryFormValues } from '@/components/checkout/DeliveryForm';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { handleAuthSubmit } from '@/services/auth/authCheckout';
 import { useToast } from "@/components/ui/use-toast";
 

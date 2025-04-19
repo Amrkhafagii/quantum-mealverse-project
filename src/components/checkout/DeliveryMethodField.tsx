@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { UseFormReturn } from 'react-hook-form';
-import { DeliveryFormValues } from './DeliveryForm';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 
 interface DeliveryMethodFieldProps {
   form: UseFormReturn<DeliveryFormValues>;
@@ -37,7 +37,12 @@ export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }
       }
     });
     
-    return () => subscription.unsubscribe();
+    return () => {
+      // Fix for unsubscribe error - properly type the return value
+      if (subscription && typeof subscription === 'object' && 'unsubscribe' in subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, [form]);
   
   return (
