@@ -1,5 +1,6 @@
 
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
 export async function updateOrderStatus(
   supabase: SupabaseClient,
@@ -111,4 +112,3 @@ export async function handleAssignment(
     attempt_number: (assignmentCount?.count || 0) + 1
   };
 }
-

@@ -1,5 +1,5 @@
 
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export async function findNearestRestaurants(
   supabase: SupabaseClient,
@@ -67,4 +67,3 @@ export async function logAssignmentAttempt(
     console.error(`Error logging assignment history:`, error);
   }
 }
-
