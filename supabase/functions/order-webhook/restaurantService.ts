@@ -13,7 +13,7 @@ export async function findNearestRestaurants(
   // First, let's check if there are any restaurants in the database
   const { data: allRestaurants, error: checkError } = await supabase
     .from('restaurants')
-    .select('id, name, location, is_active')
+    .select('id, name, latitude, longitude, is_active')
     .eq('is_active', true)
     .limit(10);
     
@@ -23,7 +23,7 @@ export async function findNearestRestaurants(
     console.log(`Found ${allRestaurants?.length || 0} active restaurants in total`);
     if (allRestaurants && allRestaurants.length > 0) {
       allRestaurants.forEach(r => {
-        console.log(`Restaurant: ${r.name}, ID: ${r.id}, Active: ${r.is_active}, Location: ${JSON.stringify(r.location)}`);
+        console.log(`Restaurant: ${r.name}, ID: ${r.id}, Active: ${r.is_active}, Location: (${r.latitude}, ${r.longitude})`);
       });
     }
   }

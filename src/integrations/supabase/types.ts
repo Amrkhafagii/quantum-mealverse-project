@@ -615,7 +615,8 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
-          location: unknown
+          latitude: number | null
+          longitude: number | null
           name: string
           updated_at: string | null
           user_id: string
@@ -625,7 +626,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
-          location: unknown
+          latitude?: number | null
+          longitude?: number | null
           name: string
           updated_at?: string | null
           user_id: string
@@ -635,7 +637,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
-          location?: unknown
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           updated_at?: string | null
           user_id?: string
