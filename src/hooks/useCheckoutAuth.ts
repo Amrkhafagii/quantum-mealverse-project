@@ -13,55 +13,95 @@ export const useCheckoutAuth = () => {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
+    console.log("[Place Order Debug] useCheckoutAuth hook initialized");
+    
     const checkLoginStatus = async () => {
-      console.log("Checking login status");
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        console.log("User is logged in:", session.user.email);
-        setLoggedInUser(session.user);
+      console.log("[Place Order Debug] Checking login status");
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        const { data: deliveryInfo } = await supabase
-          .from('delivery_info')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (deliveryInfo) {
-          console.log("User has delivery info:", deliveryInfo);
-          setHasDeliveryInfo(true);
-          setDefaultValues({
-            ...deliveryInfo,
-            email: session.user.email || "",
-            fullName: deliveryInfo.full_name,
-          });
-        } else if (session.user.email) {
-          console.log("User has no delivery info, setting email default only");
-          setDefaultValues({
-            email: session.user.email
-          });
+        if (sessionError) {
+          console.error("[Place Order Debug] Error getting session:", sessionError);
+          setShowLoginPrompt(true);
+          return;
         }
-      } else {
-        console.log("User is not logged in, showing login prompt");
+        
+        if (session?.user) {
+          console.log("[Place Order Debug] User is logged in:", session.user.email);
+          setLoggedInUser(session.user);
+          
+          try {
+            const { data: deliveryInfo, error: deliveryError } = await supabase
+              .from('delivery_info')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+              
+            if (deliveryError) {
+              console.error("[Place Order Debug] Error fetching delivery info:", deliveryError);
+            }
+              
+            if (deliveryInfo) {
+              console.log("[Place Order Debug] User has delivery info:", deliveryInfo);
+              setHasDeliveryInfo(true);
+              setDefaultValues({
+                ...deliveryInfo,
+                email: session.user.email || "",
+                fullName: deliveryInfo.full_name,
+              });
+              console.log("[Place Order Debug] Default values set:", {
+                ...deliveryInfo,
+                email: session.user.email || "",
+                fullName: deliveryInfo.full_name,
+              });
+            } else if (session.user.email) {
+              console.log("[Place Order Debug] User has no delivery info, setting email default only");
+              setDefaultValues({
+                email: session.user.email
+              });
+            }
+          } catch (error) {
+            console.error("[Place Order Debug] Unexpected error in delivery info fetch:", error);
+          }
+        } else {
+          console.log("[Place Order Debug] User is not logged in, showing login prompt");
+          setShowLoginPrompt(true);
+        }
+      } catch (error) {
+        console.error("[Place Order Debug] Unexpected error in checkLoginStatus:", error);
         setShowLoginPrompt(true);
       }
     };
     
     checkLoginStatus();
+    
+    // Return cleanup function
+    return () => {
+      console.log("[Place Order Debug] useCheckoutAuth hook cleanup");
+    };
   }, []);
+
+  console.log("[Place Order Debug] Current auth state:", {
+    loggedInUser: loggedInUser ? `${loggedInUser.email} (${loggedInUser.id})` : null,
+    hasDeliveryInfo,
+    showLoginPrompt,
+    defaultValuesSet: Object.keys(defaultValues).length > 0
+  });
 
   return {
     loggedInUser,
     hasDeliveryInfo,
     defaultValues,
     showLoginPrompt,
-    handleAuthSubmit: (data: any) => 
-      handleAuthSubmit(data, {
+    handleAuthSubmit: (data: any) => {
+      console.log("[Place Order Debug] Auth submit handler called with:", data);
+      return handleAuthSubmit(data, {
         setLoggedInUser,
         setShowLoginPrompt,
         setHasDeliveryInfo,
         setDefaultValues,
         toast
-      })
+      });
+    }
   };
 };

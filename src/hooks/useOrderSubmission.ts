@@ -22,11 +22,18 @@ export const useOrderSubmission = (
   const navigate = useNavigate();
 
   const handleSubmit = async (data: DeliveryFormValues) => {
-    console.log("%c 🚀 ORDER SUBMISSION HANDLER CALLED", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
-    console.log("Handle submit called with data:", data);
+    console.log("%c [Place Order Debug] ORDER SUBMISSION HANDLER CALLED", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
+    console.log("[Place Order Debug] Handle submit called with data:", data);
+    console.log("[Place Order Debug] Current state:", {
+      userId,
+      itemsCount: items.length,
+      totalAmount,
+      hasDeliveryInfo,
+      isSubmitting
+    });
     
     if (items.length === 0) {
-      console.log("❌ Cart is empty, cannot proceed");
+      console.log("[Place Order Debug] ❌ Cart is empty, cannot proceed");
       toast({
         title: "Cart is empty",
         description: "Please add some items to your cart before checkout",
@@ -35,56 +42,59 @@ export const useOrderSubmission = (
       return;
     }
 
-    console.log("✅ Setting isSubmitting to true");
+    console.log("[Place Order Debug] ✅ Setting isSubmitting to true");
     setIsSubmitting(true);
     
     try {
       if (!userId) {
-        console.log("❌ No logged in user ID found");
+        console.log("[Place Order Debug] ❌ No logged in user ID found");
         setIsSubmitting(false);
         throw new Error("You must be logged in to place an order");
       }
 
-      console.log("Step 1: Saving delivery info");
+      console.log("[Place Order Debug] Step 1: Saving delivery info");
       try {
         await saveDeliveryInfo(userId, data, hasDeliveryInfo);
+        console.log("[Place Order Debug] Delivery info saved successfully");
       } catch (saveDeliveryError) {
-        console.error("%c ❌ ERROR SAVING DELIVERY INFO", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
-        console.error("Detailed error:", saveDeliveryError);
+        console.error("[Place Order Debug] ❌ ERROR SAVING DELIVERY INFO", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("[Place Order Debug] Detailed error:", saveDeliveryError);
         throw new Error(`Failed to save delivery info: ${saveDeliveryError.message}`);
       }
       
-      console.log("Step 2: Creating order");
+      console.log("[Place Order Debug] Step 2: Creating order");
       let insertedOrder;
       try {
         insertedOrder = await createOrder(userId, data, items, totalAmount);
-        console.log("Order creation response:", insertedOrder);
+        console.log("[Place Order Debug] Order creation response:", insertedOrder);
       } catch (createOrderError) {
-        console.error("%c ❌ ERROR CREATING ORDER", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
-        console.error("Detailed error:", createOrderError);
+        console.error("[Place Order Debug] ❌ ERROR CREATING ORDER", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("[Place Order Debug] Detailed error:", createOrderError);
         throw new Error(`Failed to create order: ${createOrderError.message}`);
       }
       
       if (!insertedOrder || !insertedOrder.id) {
-        console.error("%c ❌ NO ORDER ID RETURNED", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("[Place Order Debug] ❌ NO ORDER ID RETURNED", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
         throw new Error("Failed to create order - no order ID returned");
       }
       
-      console.log("Step 3: Creating order items");
+      console.log("[Place Order Debug] Step 3: Creating order items");
       try {
         await createOrderItems(insertedOrder.id, items);
+        console.log("[Place Order Debug] Order items created successfully");
       } catch (itemsError) {
-        console.error("%c ❌ ERROR CREATING ORDER ITEMS", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
-        console.error("Detailed error:", itemsError);
+        console.error("[Place Order Debug] ❌ ERROR CREATING ORDER ITEMS", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("[Place Order Debug] Detailed error:", itemsError);
         throw new Error(`Failed to create order items: ${itemsError.message}`);
       }
       
       if (data.latitude && data.longitude) {
-        console.log("Step 4: Saving user location");
+        console.log("[Place Order Debug] Step 4: Saving user location");
         try {
           await saveUserLocation(userId, data.latitude, data.longitude);
+          console.log("[Place Order Debug] User location saved successfully");
           
-          console.log("Step 5: Sending order to webhook for restaurant assignment");
+          console.log("[Place Order Debug] Step 5: Sending order to webhook for restaurant assignment");
           try {
             const { sendOrderToWebhook } = await import('@/integrations/webhook');
             const webhookResult = await sendOrderToWebhook(
@@ -93,24 +103,24 @@ export const useOrderSubmission = (
               data.longitude
             );
             
-            console.log("Webhook result:", webhookResult);
+            console.log("[Place Order Debug] Webhook result:", webhookResult);
             
             if (!webhookResult.success) {
-              console.warn("⚠️ Webhook call failed but continuing order process:", webhookResult.error);
+              console.warn("[Place Order Debug] ⚠️ Webhook call failed but continuing order process:", webhookResult.error);
             }
           } catch (webhookError) {
-            console.error("%c ⚠️ WEBHOOK ERROR", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
-            console.error("Error calling webhook:", webhookError);
+            console.error("[Place Order Debug] ⚠️ WEBHOOK ERROR", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
+            console.error("[Place Order Debug] Error calling webhook:", webhookError);
           }
         } catch (locationError) {
-          console.error("%c ⚠️ LOCATION SAVING ERROR", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
-          console.error("Error saving location:", locationError);
+          console.error("[Place Order Debug] ⚠️ LOCATION SAVING ERROR", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
+          console.error("[Place Order Debug] Error saving location:", locationError);
         }
       } else {
-        console.log("⚠️ No location data available for restaurant assignment");
+        console.log("[Place Order Debug] ⚠️ No location data available for restaurant assignment");
       }
       
-      console.log("🎉 Order created successfully:", insertedOrder.id);
+      console.log("[Place Order Debug] 🎉 Order created successfully:", insertedOrder.id);
       toast({
         title: "Order placed successfully",
         description: `Your order has been placed successfully`,
@@ -119,9 +129,9 @@ export const useOrderSubmission = (
       clearCart();
       navigate(`/thank-you?order=${insertedOrder.id}`);
     } catch (error) {
-      console.error("%c ❌ ORDER SUBMISSION ERROR", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
-      console.error("Error stack:", error.stack);
-      console.error("Full error object:", JSON.stringify(error, null, 2));
+      console.error("[Place Order Debug] ❌ ORDER SUBMISSION ERROR", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+      console.error("[Place Order Debug] Error stack:", error.stack);
+      console.error("[Place Order Debug] Full error object:", JSON.stringify(error, null, 2));
       
       setIsSubmitting(false);
       toast({

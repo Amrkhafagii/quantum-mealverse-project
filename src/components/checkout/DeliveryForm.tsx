@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -68,22 +68,66 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     mode: "onChange"
   });
 
+  // Add form state debugging
+  useEffect(() => {
+    console.log("[Place Order Debug] DeliveryForm mounted");
+    
+    // Return cleanup function to log when form is unmounted
+    return () => {
+      console.log("[Place Order Debug] DeliveryForm unmounted");
+    };
+  }, []);
+
+  // Debug form validation state changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      console.log(`[Place Order Debug] Form field "${name}" changed, type: ${type}`);
+      const formState = form.formState;
+      console.log("[Place Order Debug] Form validation:", {
+        isValid: formState.isValid,
+        isDirty: formState.isDirty,
+        errors: Object.keys(formState.errors).length > 0 ? formState.errors : "No errors",
+      });
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
-    console.log("Location updated:", location);
+    console.log("[Place Order Debug] Location updated:", location);
     form.setValue('latitude', location.latitude);
     form.setValue('longitude', location.longitude);
     form.trigger('latitude');
   };
 
   const toggleEdit = () => {
+    console.log("[Place Order Debug] Toggle edit mode:", !isEditing);
     setIsEditing(!isEditing);
   };
 
   // Fixed submission handler that won't interfere with the form's onSubmit
   const handleFormSubmit = (data: DeliveryFormValues) => {
-    console.log("Form data submitted:", data);
-    onSubmit(data);
+    console.log("[Place Order Debug] Form submission triggered with data:", data);
+    
+    try {
+      console.log("[Place Order Debug] Calling onSubmit prop...");
+      onSubmit(data);
+      console.log("[Place Order Debug] onSubmit prop called successfully");
+    } catch (error) {
+      console.error("[Place Order Debug] Error during form submission:", error);
+      toast({
+        title: "Submission Error",
+        description: "An error occurred while submitting your order. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
+
+  // Log when button is rendered and its disabled state
+  useEffect(() => {
+    console.log("[Place Order Debug] Button disabled state:", isSubmitting);
+    console.log("[Place Order Debug] Form is valid:", form.formState.isValid);
+  }, [isSubmitting, form.formState.isValid]);
 
   return (
     <Card className="holographic-card p-6">
@@ -104,8 +148,17 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       
       <Form {...form}>
         <form 
-          onSubmit={form.handleSubmit(handleFormSubmit)} 
+          onSubmit={(e) => {
+            console.log("[Place Order Debug] Form onSubmit event fired", {
+              defaultPrevented: e.defaultPrevented,
+              eventPhase: e.eventPhase,
+              currentTarget: e.currentTarget,
+              target: e.target
+            });
+            form.handleSubmit(handleFormSubmit)(e);
+          }} 
           className="space-y-6"
+          id="delivery-form"
         >
           <LocationSection 
             onLocationUpdate={handleLocationUpdate}
@@ -149,7 +202,17 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting} 
+            disabled={isSubmitting}
+            onClick={(e) => {
+              console.log("[Place Order Debug] Button clicked", {
+                disabled: isSubmitting,
+                defaultPrevented: e.defaultPrevented,
+                buttonElement: e.currentTarget,
+                formIsValid: form.formState.isValid,
+                formErrors: form.formState.errors
+              });
+            }}
+            id="place-order-button"
           >
             {isSubmitting ? "Processing..." : "Place Order"}
           </Button>
