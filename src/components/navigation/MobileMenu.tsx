@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UserRound, Switch } from 'lucide-react';
+import { UserRound } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";  // Use shadcn/ui Switch instead
 
 interface MobileMenuProps {
   isCustomerView: boolean;
@@ -73,7 +74,10 @@ export const MobileMenu = ({
         {isAdmin && (
           <div className="flex items-center gap-2 text-quantum-cyan pt-2 border-t border-quantum-cyan/20">
             <span className="text-sm">Customer</span>
-            <Switch onCheckedChange={toggleUserView} checked={!isCustomerView} />
+            <Switch 
+              onCheckedChange={(checked) => toggleUserView(checked)} 
+              checked={!isCustomerView} 
+            />
             <span className="text-sm">Admin</span>
           </div>
         )}
