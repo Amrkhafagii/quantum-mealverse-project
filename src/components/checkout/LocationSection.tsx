@@ -3,7 +3,8 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useToast } from "@/components/ui/use-toast";
-import { MapPin } from 'lucide-react';
+import { MapPin, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LocationSectionProps {
   onLocationUpdate: (location: { latitude: number; longitude: number }) => void;
@@ -32,8 +33,8 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
   };
 
   return (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-2">
+    <div className="mb-6 space-y-4">
+      <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold flex items-center">
           <MapPin className="mr-1 h-5 w-5" />
           Location
@@ -43,20 +44,25 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
           onClick={handleGetLocation}
           className="cyber-button"
           type="button"
+          size="lg"
         >
           {location && locationIsValid() ? "Update Location" : "Get Current Location"}
         </Button>
       </div>
-      {location && locationIsValid() && (
+      
+      {location && locationIsValid() ? (
         <p className="text-sm text-green-400">
           Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
         </p>
-      )}
-      {required && !locationIsValid() && (
-        <p className="text-sm text-red-400">
-          Current location is required for delivery
-        </p>
+      ) : (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Please set your current location to continue with delivery
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
 };
+

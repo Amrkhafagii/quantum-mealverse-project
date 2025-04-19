@@ -1,6 +1,5 @@
 
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,6 +11,7 @@ import { DeliveryMethodField } from './DeliveryMethodField';
 import { PaymentMethodField } from './PaymentMethodField';
 import { DeliveryDetailsFields } from './DeliveryDetailsFields';
 import { useToast } from "@/components/ui/use-toast";
+import { Edit2 } from 'lucide-react';
 
 const formSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
@@ -48,9 +48,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   isSubmitting = false 
 }) => {
   const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  console.log("DeliveryForm received defaultValues:", defaultValues);
+  const [isEditing, setIsEditing] = useState(!defaultValues?.fullName);
   
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(formSchema),
@@ -70,16 +68,6 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     mode: "onChange"
   });
 
-  // Automatically set email as valid if it's provided in defaultValues
-  React.useEffect(() => {
-    if (defaultValues?.email) {
-      console.log("Setting email field as valid:", defaultValues.email);
-      form.setValue('email', defaultValues.email);
-      // Mark email field as valid
-      form.clearErrors('email');
-    }
-  }, [defaultValues?.email, form]);
-
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
     console.log("Location updated:", location);
     form.setValue('latitude', location.latitude);
@@ -87,83 +75,32 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     form.trigger('latitude');
   };
 
-  const handleSubmitWithValidation = async (data: DeliveryFormValues) => {
-    console.log("%c === SUBMIT ATTEMPT DETECTED ===", "background: #FF5733; color: white; padding: 4px; font-weight: bold;");
-    console.log("Form submission attempt with data:", data);
-    console.log("Form errors:", form.formState.errors);
-    console.log("Form is valid:", form.formState.isValid);
-    console.log("Form dirty:", form.formState.isDirty);
-    console.log("Form touched fields:", form.formState.touchedFields);
-    console.log("isSubmitting state:", isSubmitting);
-    console.log("Form values dump:", form.getValues());
-    
-    if (data.deliveryMethod === "delivery" && data.latitude === 0 && data.longitude === 0) {
-      console.warn("⚠️ Location required but not provided");
-      toast({
-        title: "Location Required",
-        description: "Please select your delivery location on the map",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      console.log("✅ Proceeding with form submission");
-      await onSubmit(data);
-    } catch (error) {
-      console.error("❌ Error in form submission:", error);
-    }
+  const toggleEdit = () => {
+    setIsEditing(!isEditing);
   };
-
-  React.useEffect(() => {
-    console.log("DeliveryForm mounted with defaultValues:", defaultValues);
-    console.log("Current isSubmitting state:", isSubmitting);
-    
-    return () => {
-      console.log("DeliveryForm unmounted");
-    };
-  }, [defaultValues, isSubmitting]);
-
-  // Manual event listener logger for the submit button
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  
-  React.useEffect(() => {
-    const button = buttonRef.current;
-    
-    if (button) {
-      console.log("Submit button found in DOM, attaching listeners");
-      
-      const clickHandler = (e: Event) => {
-        console.log("%c 🖱️ BUTTON CLICKED", "background: #4CAF50; color: white; padding: 4px; font-weight: bold;");
-        console.log("Button event:", e);
-        console.log("Button disabled:", button.disabled);
-        console.log("Form state at click time:", {
-          isValid: form.formState.isValid,
-          errors: form.formState.errors,
-          isSubmitting: isSubmitting
-        });
-      };
-      
-      button.addEventListener('click', clickHandler);
-      
-      return () => {
-        button.removeEventListener('click', clickHandler);
-      };
-    } else {
-      console.warn("Button ref not found");
-    }
-  }, [form.formState, isSubmitting]);
 
   return (
     <Card className="holographic-card p-6">
-      <h2 className="text-xl font-bold text-quantum-cyan mb-6">Delivery Information</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-quantum-cyan">Delivery Information</h2>
+        {defaultValues?.fullName && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={toggleEdit}
+            className="flex items-center gap-2"
+          >
+            <Edit2 className="h-4 w-4" />
+            {isEditing ? "Cancel Editing" : "Edit Details"}
+          </Button>
+        )}
+      </div>
       
       <Form {...form}>
         <form 
           onSubmit={(e) => {
-            console.log("%c 📝 FORM SUBMIT EVENT", "background: #2196F3; color: white; padding: 4px; font-weight: bold;");
-            console.log("Form event:", e);
-            form.handleSubmit(handleSubmitWithValidation)(e);
+            console.log("Form submit event:", e);
+            form.handleSubmit(onSubmit)(e);
           }} 
           className="space-y-6"
         >
@@ -172,7 +109,34 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
             required={form.watch('deliveryMethod') === 'delivery'}
           />
           
-          <DeliveryDetailsFields form={form} defaultEmail={defaultValues?.email} />
+          {isEditing ? (
+            <DeliveryDetailsFields form={form} defaultEmail={defaultValues?.email} />
+          ) : (
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Full Name</label>
+                  <p className="text-gray-300">{defaultValues?.fullName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Phone</label>
+                  <p className="text-gray-300">{defaultValues?.phone}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Email</label>
+                <p className="text-gray-300">{defaultValues?.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Address</label>
+                <p className="text-gray-300">{defaultValues?.address}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">City</label>
+                <p className="text-gray-300">{defaultValues?.city}</p>
+              </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <DeliveryMethodField form={form} />
@@ -180,15 +144,9 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           </div>
           
           <Button 
-            ref={buttonRef}
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={false} // Never disable the button
-            onClick={(e) => {
-              console.log("%c 🔴 DIRECT BUTTON ONCLICK", "background: #9C27B0; color: white; padding: 4px; font-weight: bold;");
-              console.log("Button click event:", e);
-              console.log("Form validation status:", form.formState);
-            }}
+            disabled={isSubmitting} 
           >
             {isSubmitting ? "Processing..." : "Place Order"}
           </Button>
@@ -197,3 +155,4 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     </Card>
   );
 };
+
