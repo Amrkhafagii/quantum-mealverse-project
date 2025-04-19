@@ -79,6 +79,12 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     setIsEditing(!isEditing);
   };
 
+  // Fixed submission handler that won't interfere with the form's onSubmit
+  const handleFormSubmit = (data: DeliveryFormValues) => {
+    console.log("Form data submitted:", data);
+    onSubmit(data);
+  };
+
   return (
     <Card className="holographic-card p-6">
       <div className="flex justify-between items-center mb-6">
@@ -98,10 +104,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       
       <Form {...form}>
         <form 
-          onSubmit={(e) => {
-            console.log("Form submit event:", e);
-            form.handleSubmit(onSubmit)(e);
-          }} 
+          onSubmit={form.handleSubmit(handleFormSubmit)} 
           className="space-y-6"
         >
           <LocationSection 
@@ -155,4 +158,3 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     </Card>
   );
 };
-
