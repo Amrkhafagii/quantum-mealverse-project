@@ -1,4 +1,5 @@
 
+
 -- Drop the overloaded version of find_nearest_restaurant with 4 parameters
 DROP FUNCTION IF EXISTS public.find_nearest_restaurant(double precision, double precision, double precision, integer);
 
@@ -35,3 +36,4 @@ BEGIN
     LIMIT 1;
 END;
 $$;
+
