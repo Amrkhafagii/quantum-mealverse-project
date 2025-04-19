@@ -87,40 +87,74 @@ export const useCheckout = () => {
       }
 
       console.log("Step 1: Saving delivery info");
-      await saveDeliveryInfo(loggedInUser.id, data, hasDeliveryInfo);
+      try {
+        await saveDeliveryInfo(loggedInUser.id, data, hasDeliveryInfo);
+      } catch (saveDeliveryError) {
+        console.error("%c ❌ ERROR SAVING DELIVERY INFO", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("Detailed error:", saveDeliveryError);
+        console.error("Error details:", JSON.stringify(saveDeliveryError, null, 2));
+        throw new Error(`Failed to save delivery info: ${saveDeliveryError.message}`);
+      }
       
       console.log("Step 2: Creating order");
-      const insertedOrder = await createOrder(loggedInUser.id, data, items, totalAmount);
+      let insertedOrder;
+      try {
+        insertedOrder = await createOrder(loggedInUser.id, data, items, totalAmount);
+        console.log("Order creation response:", insertedOrder);
+      } catch (createOrderError) {
+        console.error("%c ❌ ERROR CREATING ORDER", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("Detailed error:", createOrderError);
+        console.error("Error details:", JSON.stringify(createOrderError, null, 2));
+        throw new Error(`Failed to create order: ${createOrderError.message}`);
+      }
       
       if (!insertedOrder || !insertedOrder.id) {
+        console.error("%c ❌ NO ORDER ID RETURNED", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("Returned order data:", insertedOrder);
         throw new Error("Failed to create order - no order ID returned");
       }
       
       console.log("Step 3: Creating order items");
-      await createOrderItems(insertedOrder.id, items);
+      try {
+        await createOrderItems(insertedOrder.id, items);
+      } catch (itemsError) {
+        console.error("%c ❌ ERROR CREATING ORDER ITEMS", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+        console.error("Detailed error:", itemsError);
+        console.error("Error details:", JSON.stringify(itemsError, null, 2));
+        throw new Error(`Failed to create order items: ${itemsError.message}`);
+      }
       
       if (data.latitude && data.longitude) {
         console.log("Step 4: Saving user location");
-        await saveUserLocation(loggedInUser.id, data.latitude, data.longitude);
-        
-        console.log("Step 5: Sending order to webhook for restaurant assignment");
         try {
-          const { sendOrderToWebhook } = await import('@/integrations/webhook');
-          const webhookResult = await sendOrderToWebhook(
-            insertedOrder.id,
-            data.latitude,
-            data.longitude
-          );
+          await saveUserLocation(loggedInUser.id, data.latitude, data.longitude);
           
-          console.log("Webhook result:", webhookResult);
-          
-          if (!webhookResult.success) {
-            console.warn("⚠️ Webhook call failed but continuing order process:", webhookResult.error);
-            // We still continue with the order process even if the webhook fails
+          console.log("Step 5: Sending order to webhook for restaurant assignment");
+          try {
+            const { sendOrderToWebhook } = await import('@/integrations/webhook');
+            const webhookResult = await sendOrderToWebhook(
+              insertedOrder.id,
+              data.latitude,
+              data.longitude
+            );
+            
+            console.log("Webhook result:", webhookResult);
+            
+            if (!webhookResult.success) {
+              console.warn("⚠️ Webhook call failed but continuing order process:", webhookResult.error);
+              // We still continue with the order process even if the webhook fails
+            }
+          } catch (webhookError) {
+            console.error("%c ⚠️ WEBHOOK ERROR", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
+            console.error("Error calling webhook:", webhookError);
+            console.error("Error details:", JSON.stringify(webhookError, null, 2));
+            // Continue with order process even if webhook fails
           }
-        } catch (webhookError) {
-          console.error("Error calling webhook:", webhookError);
-          // Continue with order process even if webhook fails
+        } catch (locationError) {
+          console.error("%c ⚠️ LOCATION SAVING ERROR", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
+          console.error("Error saving location:", locationError);
+          console.error("Error details:", JSON.stringify(locationError, null, 2));
+          // Continue with the order process even if location saving fails
         }
       } else {
         console.log("⚠️ No location data available for restaurant assignment");
@@ -134,9 +168,33 @@ export const useCheckout = () => {
       
       clearCart();
       navigate(`/thank-you?order=${insertedOrder.id}`);
-    } catch (error: any) {
+    } catch (error) {
       console.error("%c ❌ ORDER SUBMISSION ERROR", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
       console.error("Detailed error:", error);
+      if (error.error?.details) {
+        console.error("Database error details:", error.error.details);
+      }
+      if (error.error?.message) {
+        console.error("Database error message:", error.error.message);
+      }
+      if (error.error?.code) {
+        console.error("Database error code:", error.error.code);
+      }
+      if (error.errors) {
+        console.error("Validation errors:", error.errors);
+      }
+      console.error("Error stack:", error.stack);
+      console.error("Full error object:", JSON.stringify(error, (key, value) => {
+        if (value instanceof Error) {
+          return {
+            message: value.message,
+            stack: value.stack,
+            ...value
+          };
+        }
+        return value;
+      }, 2));
+      
       setIsSubmitting(false); // Make sure to reset submission state on error
       toast({
         title: "Error placing order",
