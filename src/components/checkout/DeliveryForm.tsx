@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,7 +12,6 @@ import { PaymentMethodField } from './PaymentMethodField';
 import { DeliveryDetailsFields } from './DeliveryDetailsFields';
 import { useToast } from "@/components/ui/use-toast";
 
-// Create a more flexible schema with conditional validation
 const formSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -25,14 +24,13 @@ const formSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
 }).refine((data) => {
-  // Only require latitude/longitude if delivery method is "delivery"
   if (data.deliveryMethod === "delivery") {
     return data.latitude !== 0 && data.longitude !== 0;
   }
   return true;
 }, {
   message: "Location is required for delivery",
-  path: ["latitude"], // This shows the error on the latitude field
+  path: ["latitude"],
 });
 
 export type DeliveryFormValues = z.infer<typeof formSchema>;
@@ -49,6 +47,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   isSubmitting = false 
 }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,9 +71,8 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     form.setValue('longitude', location.longitude);
   };
 
-  const handleSubmitWithValidation = (data: DeliveryFormValues) => {
+  const handleSubmitWithValidation = async (data: DeliveryFormValues) => {
     try {
-      // Additional validation for delivery method
       if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
         toast({
           title: "Location Required",
@@ -84,8 +82,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
         return;
       }
       
-      // If validation passes, submit the form
-      onSubmit(data);
+      await onSubmit(data);
     } catch (error: any) {
       toast({
         title: "Error",
