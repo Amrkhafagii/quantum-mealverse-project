@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export async function findNearestRestaurants(
@@ -28,7 +27,7 @@ export async function findNearestRestaurants(
     }
   }
   
-  // Now let's use rpc to find nearest restaurant
+  // Now let's use rpc to find nearest restaurant using only 3 parameters
   try {
     console.log('Calling find_nearest_restaurant RPC function with params:', {
       order_lat: latitude,
@@ -36,7 +35,6 @@ export async function findNearestRestaurants(
       max_distance_km: maxDistance
     });
     
-    // Explicitly call the 3-parameter version without limit_count
     const { data, error } = await supabase.rpc('find_nearest_restaurant', {
       order_lat: latitude,
       order_lng: longitude,
@@ -55,7 +53,6 @@ export async function findNearestRestaurants(
       console.log(`No restaurants found within ${maxDistance}km of (${latitude}, ${longitude})`);
       
       // If no restaurants found, try a broader search without distance limit
-      // Let's use a direct SQL query as fallback since we don't have an RPC for this
       const { data: broadSearch, error: broadSearchError } = await supabase
         .from('restaurants')
         .select('id as restaurant_id, user_id, name')
@@ -69,7 +66,6 @@ export async function findNearestRestaurants(
       }
     }
     
-    // Return data as an empty array if it's null
     return data || [];
   } catch (e) {
     console.error('Unexpected error in findNearestRestaurants:', e);
