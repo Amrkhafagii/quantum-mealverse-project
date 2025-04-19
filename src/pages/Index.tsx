@@ -3,8 +3,37 @@ import React from 'react';
 import ParticleBackground from '@/components/ParticleBackground';
 import { FeaturedMeals } from '@/components/FeaturedMeals';
 import Navbar from '@/components/Navbar';
+import AdminCreator from '@/components/AdminCreator';
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('admin_users')
+            .select()
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (data) {
+            setIsAdmin(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    
+    checkAdminStatus();
+  }, []);
+
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
@@ -24,6 +53,17 @@ const Index = () => {
             <button className="cyber-button text-lg">
               Explore Meals
             </button>
+
+            {/* Admin creator tool - shown to everyone for this demo */}
+            <div className="mt-8">
+              {isAdmin ? (
+                <div className="p-4 bg-green-900/30 border border-green-500/50 rounded-lg max-w-md mx-auto">
+                  <p className="text-green-400">✓ You are logged in as an admin user</p>
+                </div>
+              ) : (
+                <AdminCreator />
+              )}
+            </div>
           </div>
         </section>
 
