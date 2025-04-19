@@ -11,7 +11,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
 
 interface MealType {
-  id: number;
+  id: string; // Changed from number to string to match Supabase's UUID format
   name: string;
   description: string;
   price: number;
@@ -19,6 +19,10 @@ interface MealType {
   protein: number;
   carbs: number;
   fat: number;
+  restaurant_id?: string; // Added as optional since we need it for create
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const Admin = () => {
@@ -28,14 +32,16 @@ const Admin = () => {
   const [meals, setMeals] = useState<MealType[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingMeal, setEditingMeal] = useState<MealType | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MealType>({
+    id: '', // Changed to string
     name: '',
     description: '',
     price: 0,
     calories: 0,
     protein: 0,
     carbs: 0,
-    fat: 0
+    fat: 0,
+    restaurant_id: '' // Added default value
   });
 
   // Check if user is admin
@@ -83,7 +89,7 @@ const Admin = () => {
         .order('id', { ascending: true });
       
       if (error) throw error;
-      if (data) setMeals(data);
+      if (data) setMeals(data as MealType[]);
     } catch (error: any) {
       toast({
         title: "Error fetching meals",
@@ -111,13 +117,15 @@ const Admin = () => {
   const handleEditMeal = (meal: MealType) => {
     setEditingMeal(meal);
     setFormData({
+      id: meal.id,
       name: meal.name,
       description: meal.description,
       price: meal.price,
       calories: meal.calories,
       protein: meal.protein,
       carbs: meal.carbs,
-      fat: meal.fat
+      fat: meal.fat,
+      restaurant_id: meal.restaurant_id
     });
   };
 
@@ -150,9 +158,54 @@ const Admin = () => {
 
   const handleCreateNewMeal = async () => {
     try {
+      // Get current user for restaurant_id (using a default for demo)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a meal",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Get or create a restaurant for the admin user
+      const { data: restaurants } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
+      
+      let restaurant_id;
+      
+      if (restaurants && restaurants.length > 0) {
+        restaurant_id = restaurants[0].id;
+      } else {
+        // Create a default restaurant for the admin
+        const { data: newRestaurant, error: restaurantError } = await supabase
+          .from('restaurants')
+          .insert({
+            name: 'Default Restaurant',
+            user_id: user.id,
+            address: '123 Main Street',
+            location: { type: 'Point', coordinates: [0, 0] }
+          })
+          .select('id')
+          .single();
+        
+        if (restaurantError) throw restaurantError;
+        restaurant_id = newRestaurant.id;
+      }
+
+      const mealToCreate = {
+        ...formData,
+        restaurant_id
+      };
+      
       const { error } = await supabase
         .from('meals')
-        .insert([formData]);
+        .insert([mealToCreate]);
       
       if (error) throw error;
       
@@ -162,13 +215,15 @@ const Admin = () => {
       });
       
       setFormData({
+        id: '',
         name: '',
         description: '',
         price: 0,
         calories: 0,
         protein: 0,
         carbs: 0,
-        fat: 0
+        fat: 0,
+        restaurant_id: restaurant_id
       });
       
       fetchMeals();
@@ -181,7 +236,7 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteMeal = async (id: number) => {
+  const handleDeleteMeal = async (id: string) => { // Changed parameter type to string
     if (!confirm("Are you sure you want to delete this meal?")) return;
     
     try {
