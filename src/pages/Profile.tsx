@@ -36,20 +36,18 @@ const Profile = () => {
         return;
       }
       
-      // Fetch user profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', session.user.id)
-        .single();
+      // Try to get username from delivery_info table
+      const { data: deliveryInfo } = await supabase
+        .from('delivery_info')
+        .select('full_name')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
         
-      if (profile) {
-        setUsername(profile.username || '');
+      if (deliveryInfo && deliveryInfo.full_name) {
+        setUsername(deliveryInfo.full_name);
       } else {
-        // Create profile if it doesn't exist
-        await supabase
-          .from('profiles')
-          .insert({ id: session.user.id });
+        // If no delivery info, we can use the user's email as default username
+        setUsername(session.user.email.split('@')[0]);
       }
     };
     
@@ -62,13 +60,35 @@ const Profile = () => {
     setSaving(true);
     
     try {
-      // Update username
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ username })
-        .eq('id', session.user.id);
-        
-      if (profileError) throw profileError;
+      // Check if user has delivery info
+      const { data: existingInfo } = await supabase
+        .from('delivery_info')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      
+      if (existingInfo) {
+        // Update existing delivery info
+        const { error } = await supabase
+          .from('delivery_info')
+          .update({ full_name: username })
+          .eq('user_id', session.user.id);
+          
+        if (error) throw error;
+      } else {
+        // Create new delivery info with at least the full name
+        const { error } = await supabase
+          .from('delivery_info')
+          .insert({ 
+            user_id: session.user.id, 
+            full_name: username,
+            address: 'Not provided', // These are required fields in the schema
+            phone: 'Not provided',
+            city: 'Not provided'
+          });
+          
+        if (error) throw error;
+      }
       
       toast({
         title: "Profile Updated",
