@@ -75,13 +75,17 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   };
 
   const handleSubmitWithValidation = async (data: DeliveryFormValues) => {
+    console.log("%c === SUBMIT ATTEMPT DETECTED ===", "background: #FF5733; color: white; padding: 4px; font-weight: bold;");
     console.log("Form submission attempt with data:", data);
     console.log("Form errors:", form.formState.errors);
     console.log("Form is valid:", form.formState.isValid);
+    console.log("Form dirty:", form.formState.isDirty);
+    console.log("Form touched fields:", form.formState.touchedFields);
     console.log("isSubmitting state:", isSubmitting);
+    console.log("Form values dump:", form.getValues());
     
     if (data.deliveryMethod === "delivery" && data.latitude === 0 && data.longitude === 0) {
-      console.log("Location required but not provided");
+      console.warn("⚠️ Location required but not provided");
       toast({
         title: "Location Required",
         description: "Please select your delivery location on the map",
@@ -90,16 +94,66 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       return;
     }
     
-    console.log("Proceeding with form submission");
-    await onSubmit(data);
+    try {
+      console.log("✅ Proceeding with form submission");
+      await onSubmit(data);
+    } catch (error) {
+      console.error("❌ Error in form submission:", error);
+    }
   };
+
+  React.useEffect(() => {
+    console.log("DeliveryForm mounted with defaultValues:", defaultValues);
+    console.log("Current isSubmitting state:", isSubmitting);
+    
+    return () => {
+      console.log("DeliveryForm unmounted");
+    };
+  }, [defaultValues, isSubmitting]);
+
+  // Manual event listener logger for the submit button
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  
+  React.useEffect(() => {
+    const button = buttonRef.current;
+    
+    if (button) {
+      console.log("Submit button found in DOM, attaching listeners");
+      
+      const clickHandler = (e: Event) => {
+        console.log("%c 🖱️ BUTTON CLICKED", "background: #4CAF50; color: white; padding: 4px; font-weight: bold;");
+        console.log("Button event:", e);
+        console.log("Button disabled:", button.disabled);
+        console.log("Form state at click time:", {
+          isValid: form.formState.isValid,
+          errors: form.formState.errors,
+          isSubmitting: isSubmitting
+        });
+      };
+      
+      button.addEventListener('click', clickHandler);
+      
+      return () => {
+        button.removeEventListener('click', clickHandler);
+      };
+    } else {
+      console.warn("Button ref not found");
+    }
+  }, [form.formState, isSubmitting]);
 
   return (
     <Card className="holographic-card p-6">
       <h2 className="text-xl font-bold text-quantum-cyan mb-6">Delivery Information</h2>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmitWithValidation)} className="space-y-6">
+        <form 
+          onSubmit={(e) => {
+            console.log("%c 📝 FORM SUBMIT EVENT", "background: #2196F3; color: white; padding: 4px; font-weight: bold;");
+            console.log("Form event:", e);
+            form.handleSubmit(handleSubmitWithValidation)(e);
+          }} 
+          className="space-y-6"
+        >
           <LocationSection 
             onLocationUpdate={handleLocationUpdate}
             required={form.watch('deliveryMethod') === 'delivery'}
@@ -113,9 +167,15 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           </div>
           
           <Button 
+            ref={buttonRef}
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
             disabled={false} // Never disable the button
+            onClick={(e) => {
+              console.log("%c 🔴 DIRECT BUTTON ONCLICK", "background: #9C27B0; color: white; padding: 4px; font-weight: bold;");
+              console.log("Button click event:", e);
+              console.log("Form validation status:", form.formState);
+            }}
           >
             {isSubmitting ? "Processing..." : "Place Order"}
           </Button>

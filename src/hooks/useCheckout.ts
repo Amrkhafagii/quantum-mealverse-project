@@ -63,10 +63,11 @@ export const useCheckout = () => {
   }, []);
 
   const handleSubmit = async (data: DeliveryFormValues) => {
+    console.log("%c 🚀 ORDER SUBMISSION HANDLER CALLED", "background: #FF9800; color: black; padding: 4px; font-weight: bold;");
     console.log("Handle submit called with data:", data);
     
     if (items.length === 0) {
-      console.log("Cart is empty, cannot proceed");
+      console.log("❌ Cart is empty, cannot proceed");
       toast({
         title: "Cart is empty",
         description: "Please add some items to your cart before checkout",
@@ -75,31 +76,31 @@ export const useCheckout = () => {
       return;
     }
 
-    console.log("Setting isSubmitting to true");
+    console.log("✅ Setting isSubmitting to true");
     setIsSubmitting(true);
     
     try {
       if (!loggedInUser?.id) {
-        console.log("No logged in user ID found");
+        console.log("❌ No logged in user ID found");
         setIsSubmitting(false);
         throw new Error("You must be logged in to place an order");
       }
 
-      console.log("Saving delivery info");
+      console.log("Step 1: Saving delivery info");
       await saveDeliveryInfo(loggedInUser.id, data, hasDeliveryInfo);
       
-      console.log("Creating order");
+      console.log("Step 2: Creating order");
       const insertedOrder = await createOrder(loggedInUser.id, data, items, totalAmount);
       
-      console.log("Creating order items");
+      console.log("Step 3: Creating order items");
       await createOrderItems(insertedOrder.id, items);
       
       if (data.latitude && data.longitude) {
-        console.log("Saving user location");
+        console.log("Step 4: Saving user location");
         await saveUserLocation(loggedInUser.id, data.latitude, data.longitude);
       }
       
-      console.log("Order created successfully:", insertedOrder.id);
+      console.log("🎉 Order created successfully:", insertedOrder.id);
       toast({
         title: "Order placed successfully",
         description: `Your order #${insertedOrder.id} has been placed successfully`,
@@ -108,7 +109,8 @@ export const useCheckout = () => {
       clearCart();
       navigate(`/thank-you?order=${insertedOrder.id}`);
     } catch (error: any) {
-      console.error("Order submission error:", error);
+      console.error("%c ❌ ORDER SUBMISSION ERROR", "background: #F44336; color: white; padding: 4px; font-weight: bold;");
+      console.error("Detailed error:", error);
       setIsSubmitting(false); // Make sure to reset submission state on error
       toast({
         title: "Error placing order",
@@ -117,6 +119,11 @@ export const useCheckout = () => {
       });
     }
   };
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log("useCheckout isSubmitting state changed:", isSubmitting);
+  }, [isSubmitting]);
 
   return {
     items,
