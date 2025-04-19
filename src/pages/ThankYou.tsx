@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -20,35 +21,36 @@ const ThankYou: React.FC = () => {
   const [assignmentStatus, setAssignmentStatus] = useState<{
     status: string;
     assigned_restaurant_id?: string;
-    attempt_count: number;
+    assignment_id?: string;
     expires_at?: string;
+    attempt_count: number;
   } | null>(null);
 
+  const fetchOrderDetails = async () => {
+    if (!orderId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+      setOrder(data);
+    } catch (error) {
+      console.error('Error fetching order:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrderDetails = async () => {
-      if (!orderId) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              *
-            )
-          `)
-          .eq('id', orderId)
-          .single();
-
-        if (error) throw error;
-        setOrder(data);
-      } catch (error) {
-        console.error('Error fetching order:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrderDetails();
   }, [orderId]);
 
