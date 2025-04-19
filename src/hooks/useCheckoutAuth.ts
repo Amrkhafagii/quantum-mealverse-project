@@ -98,8 +98,8 @@ export const useCheckoutAuth = () => {
                 fullName: typedDeliveryInfo.full_name,
                 latitude: latitude,
                 longitude: longitude,
-                deliveryMethod: "delivery",
-                paymentMethod: "cash"
+                deliveryMethod: "delivery" as const,
+                paymentMethod: "cash" as const
               });
             } else if (session.user.email) {
               console.log("[Place Order Debug] User has no delivery info, setting email default only");
@@ -120,8 +120,8 @@ export const useCheckoutAuth = () => {
                 email: session.user.email,
                 latitude: latitude,
                 longitude: longitude,
-                deliveryMethod: "delivery",
-                paymentMethod: "cash"
+                deliveryMethod: "delivery" as const,
+                paymentMethod: "cash" as const
               });
             }
           } catch (error) {

@@ -14,7 +14,9 @@ export const saveDeliveryInfo = async (
     full_name: data.fullName,
     phone: data.phone,
     address: data.address,
-    city: data.city
+    city: data.city,
+    latitude: data.latitude,
+    longitude: data.longitude
   };
 
   console.log("Saving delivery info with data:", deliveryInfoData);
@@ -76,13 +78,15 @@ export const createOrder = async (
     delivery_fee: deliveryFee,
     subtotal: totalAmount,
     total: finalTotal,
-    status: "pending"
+    status: "pending",
+    latitude: data.latitude,
+    longitude: data.longitude
   };
   
   console.log("Order data being submitted:", orderData);
   
   try {
-    // Fix: Don't use table alias in the query, and select specific columns we need
+    // Fix: Select specific columns from orders table to avoid ambiguity
     const { data: insertedOrder, error: orderError } = await supabase
       .from('orders')
       .insert(orderData)

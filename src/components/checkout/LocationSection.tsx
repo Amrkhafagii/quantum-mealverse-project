@@ -17,24 +17,32 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
 
   // Initialize with existing location if available
   useEffect(() => {
-    if (location) {
+    if (location && locationIsValid()) {
       // Pass the existing location to the parent component on mount
       console.log("[Place Order Debug] Using existing location on mount:", location);
       onLocationUpdate(location);
     } else if (required) {
       console.log("[Place Order Debug] No location found, will prompt user to set location");
     }
-  }, [location]);
+  }, [location, locationIsValid, onLocationUpdate, required]);
 
   const handleGetLocation = async () => {
     try {
       const newLocation = await getCurrentLocation();
       console.log("[Place Order Debug] Got new location:", newLocation);
-      onLocationUpdate(newLocation);
-      toast({
-        title: "Location updated",
-        description: "Your current location has been saved.",
-      });
+      if (newLocation && newLocation.latitude && newLocation.longitude) {
+        onLocationUpdate(newLocation);
+        toast({
+          title: "Location updated",
+          description: "Your current location has been saved.",
+        });
+      } else {
+        toast({
+          title: "Location error",
+          description: "Could not get valid location coordinates. Please try again.",
+          variant: "destructive"
+        });
+      }
     } catch (error: any) {
       console.error("[Place Order Debug] Error getting location:", error);
       toast({
