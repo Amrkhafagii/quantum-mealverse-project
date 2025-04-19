@@ -8,6 +8,7 @@ export async function findNearestRestaurants(
   maxDistance = 50,
   limit = 3
 ) {
+  // Call the database function with explicit parameter names to avoid issues
   const { data, error } = await supabase.rpc('find_nearest_restaurant', {
     order_lat: latitude,
     order_lng: longitude,
@@ -19,7 +20,11 @@ export async function findNearestRestaurants(
     return null;
   }
 
-  return data;
+  // Log the restaurant data to help with debugging
+  console.log('Found restaurants:', data);
+  
+  // Return data even if it's an empty array (not null)
+  return data || [];
 }
 
 export async function createRestaurantAssignment(

@@ -47,9 +47,14 @@ export async function handleAssignment(
     };
   }
 
+  // Try to find restaurants
+  console.log(`Looking for restaurants near (${latitude}, ${longitude})`);
   const nearestRestaurants = await findNearestRestaurants(supabase, latitude, longitude);
   
+  console.log('Nearest restaurants result:', JSON.stringify(nearestRestaurants));
+  
   if (!nearestRestaurants || nearestRestaurants.length === 0) {
+    console.log('No restaurants available within range');
     await updateOrderStatus(supabase, orderId, 'no_restaurants_available');
     return { 
       success: false, 
