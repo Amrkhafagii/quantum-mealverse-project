@@ -9,6 +9,110 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      meal_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      meal_category_junction: {
+        Row: {
+          category_id: string
+          meal_id: string
+        }
+        Insert: {
+          category_id: string
+          meal_id: string
+        }
+        Update: {
+          category_id?: string
+          meal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_category_junction_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "meal_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_category_junction_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meals: {
+        Row: {
+          calories: number | null
+          carbs: number | null
+          created_at: string | null
+          description: string | null
+          fat: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          protein: number | null
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string | null
+          description?: string | null
+          fat?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+          protein?: number | null
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string | null
+          description?: string | null
+          fat?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          protein?: number | null
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meals_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_assignments: {
         Row: {
           created_at: string | null
@@ -140,6 +244,45 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          id: string
+          meals_per_week: number
+          plan_name: string
+          price: number
+          start_date: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          meals_per_week: number
+          plan_name: string
+          price: number
+          start_date: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          meals_per_week?: number
+          plan_name?: string
+          price?: number
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_locations: {
         Row: {
           id: string
@@ -163,6 +306,45 @@ export type Database = {
           longitude?: number
           source?: string | null
           timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          allergies: string[] | null
+          calorie_target: number | null
+          carbs_target: number | null
+          created_at: string | null
+          dietary_restrictions: string[] | null
+          fat_target: number | null
+          id: string
+          protein_target: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          allergies?: string[] | null
+          calorie_target?: number | null
+          carbs_target?: number | null
+          created_at?: string | null
+          dietary_restrictions?: string[] | null
+          fat_target?: number | null
+          id?: string
+          protein_target?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          allergies?: string[] | null
+          calorie_target?: number | null
+          carbs_target?: number | null
+          created_at?: string | null
+          dietary_restrictions?: string[] | null
+          fat_target?: number | null
+          id?: string
+          protein_target?: number | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
