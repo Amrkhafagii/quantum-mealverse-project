@@ -10,7 +10,7 @@ import Navbar from '@/components/Navbar';
 import MealForm from '@/components/admin/MealForm';
 import MealList from '@/components/admin/MealList';
 import { useMealManagement } from '@/hooks/useMealManagement';
-import { MealType, INITIAL_MEAL, INITIAL_MEALS } from '@/types/meal';
+import { MealType, INITIAL_MEAL } from '@/types/meal';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -121,13 +121,47 @@ const Admin = () => {
         }
 
         if (restaurant_id) {
-          for (const meal of INITIAL_MEALS) {
+          // Define initial meals
+          const initialMeals = [
+            {
+              name: 'Quantum Protein Bowl',
+              description: 'High protein meal with grilled chicken, quinoa, and vegetables',
+              price: 10.99,
+              calories: 450,
+              protein: 35,
+              carbs: 40,
+              fat: 15,
+              is_active: true,
+              restaurant_id
+            },
+            {
+              name: 'Fusion Energy Salad',
+              description: 'Mixed greens with superfoods, avocado, and citrus dressing',
+              price: 8.99,
+              calories: 320,
+              protein: 12,
+              carbs: 25,
+              fat: 22,
+              is_active: true,
+              restaurant_id
+            },
+            {
+              name: 'Particle Pasta',
+              description: 'Whole grain pasta with turkey meatballs and organic marinara',
+              price: 12.99,
+              calories: 520,
+              protein: 28,
+              carbs: 65,
+              fat: 18,
+              is_active: true,
+              restaurant_id
+            }
+          ];
+          
+          for (const meal of initialMeals) {
             await supabase
               .from('meals')
-              .insert({
-                ...meal,
-                restaurant_id
-              });
+              .insert(meal);
           }
           fetchMeals();
         }

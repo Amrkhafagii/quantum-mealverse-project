@@ -43,8 +43,8 @@ const formSchema = z.object({
 
 type CheckoutFormValues = z.infer<typeof formSchema>
 
-// Define types for profiles
-interface Profile {
+// Define types for customer profiles
+interface CustomerProfile {
   id: string;
   full_name?: string;
   phone?: string;
@@ -54,7 +54,7 @@ interface Profile {
 
 // Define types for orders
 interface Order {
-  id: string;
+  id?: string;
   user_id?: string;
   customer_name: string;
   customer_email: string;
@@ -102,27 +102,33 @@ const Checkout = () => {
         const { data: userData } = await supabase.auth.getUser();
         setLoggedInUser(userData.user);
         
-        // Try to get profile data
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userData.user?.id)
-          .single();
-          
-        // Pre-fill form data if profile exists
-        if (profileData) {
-          form.reset({
-            fullName: profileData.full_name || "",
-            email: userData.user?.email || "",
-            phone: profileData.phone || "",
-            address: profileData.address || "",
-            city: profileData.city || "",
-            notes: "",
-            deliveryMethod: "delivery",
-            paymentMethod: "cash",
-          });
-        } else if (userData.user) {
-          form.setValue('email', userData.user.email || "");
+        // Try to get user data
+        try {
+          const { data: userInfo } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userData.user?.id)
+            .single();
+            
+          if (userInfo) {
+            form.reset({
+              fullName: userInfo.full_name || "",
+              email: userData.user?.email || "",
+              phone: userInfo.phone || "",
+              address: userInfo.address || "",
+              city: userInfo.city || "",
+              notes: "",
+              deliveryMethod: "delivery",
+              paymentMethod: "cash",
+            });
+          } else if (userData.user) {
+            form.setValue('email', userData.user.email || "");
+          }
+        } catch (error) {
+          console.log("No user profile found", error);
+          if (userData.user) {
+            form.setValue('email', userData.user.email || "");
+          }
         }
       }
     };
@@ -149,55 +155,71 @@ const Checkout = () => {
       
       // If user is not logged in, create a new user account
       if (!userId) {
-        // Only create account if payment method is visa (for future)
-        if (data.paymentMethod === "visa") {
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: data.email,
-            password: Math.random().toString(36).slice(-10) // Generate random password
-          });
-          
-          if (authError) throw authError;
-          userId = authData.user?.id;
-          
-          // Create profile
-          if (userId) {
-            await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                full_name: data.fullName,
-                phone: data.phone,
-                address: data.address,
-                city: data.city,
-              });
+        try {
+          // Only create account if payment method is visa (for future)
+          if (data.paymentMethod === "visa") {
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+              email: data.email,
+              password: Math.random().toString(36).slice(-10) // Generate random password
+            });
+            
+            if (authError) throw authError;
+            userId = authData.user?.id;
+            
+            // Create user
+            if (userId) {
+              await supabase
+                .from('users')
+                .insert({
+                  id: userId,
+                  full_name: data.fullName,
+                  phone: data.phone,
+                  address: data.address,
+                  city: data.city,
+                });
+            }
           }
+        } catch (error) {
+          console.error("Error creating user:", error);
         }
       }
       
       // Create order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: userId,
-          customer_name: data.fullName,
-          customer_email: data.email,
-          customer_phone: data.phone,
-          delivery_address: data.address,
-          city: data.city,
-          notes: data.notes,
-          delivery_method: data.deliveryMethod,
-          payment_method: data.paymentMethod,
-          delivery_fee: deliveryFee,
-          subtotal: totalAmount,
-          total: finalTotal,
-          status: "pending"
-        })
-        .select();
-        
-      if (orderError) throw orderError;
+      const orderData: Order = {
+        user_id: userId,
+        customer_name: data.fullName,
+        customer_email: data.email,
+        customer_phone: data.phone,
+        delivery_address: data.address,
+        city: data.city,
+        notes: data.notes,
+        delivery_method: data.deliveryMethod,
+        payment_method: data.paymentMethod,
+        delivery_fee: deliveryFee,
+        subtotal: totalAmount,
+        total: finalTotal,
+        status: "pending"
+      };
       
-      // Get the order ID
-      const orderId = orderData[0].id;
+      // Insert the order
+      let orderId: string | undefined;
+      try {
+        const { data: insertedOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert(orderData)
+          .select('id')
+          .single();
+          
+        if (orderError) throw orderError;
+        orderId = insertedOrder.id;
+      } catch (error) {
+        console.error("Error creating order:", error);
+        throw error;
+      }
+      
+      if (!orderId) {
+        throw new Error("Failed to create order");
+      }
       
       // Create order items
       const orderItems = items.map(item => ({
@@ -208,11 +230,16 @@ const Checkout = () => {
         name: item.meal.name
       }));
       
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-        
-      if (itemsError) throw itemsError;
+      try {
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+          
+        if (itemsError) throw itemsError;
+      } catch (error) {
+        console.error("Error creating order items:", error);
+        throw error;
+      }
       
       // Success
       toast({
