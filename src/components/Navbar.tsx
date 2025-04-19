@@ -16,6 +16,7 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import { useToast } from "@/hooks/use-toast";
+import { cn } from '@/lib/utils';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -124,30 +125,20 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center justify-between gap-4">
             {isCustomerView && (
-              <NavigationMenu>
-                <NavigationMenuList>
-                  <NavigationMenuItem>
-                    <Link to="/customer">
-                      <div className={navigationMenuTriggerStyle()}>Meals</div>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link to="/subscription">
-                      <div className={navigationMenuTriggerStyle()}>Subscription</div>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link to="/about">
-                      <div className={navigationMenuTriggerStyle()}>About</div>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link to="/contact">
-                      <div className={navigationMenuTriggerStyle()}>Contact</div>
-                    </Link>
-                  </NavigationMenuItem>
-                </NavigationMenuList>
-              </NavigationMenu>
+              <div className="flex items-center space-x-2">
+                <Link to="/customer" className={cn(navigationMenuTriggerStyle(), "px-4")}>
+                  Meals
+                </Link>
+                <Link to="/subscription" className={cn(navigationMenuTriggerStyle(), "px-4")}>
+                  Subscription
+                </Link>
+                <Link to="/about" className={cn(navigationMenuTriggerStyle(), "px-4")}>
+                  About
+                </Link>
+                <Link to="/contact" className={cn(navigationMenuTriggerStyle(), "px-4")}>
+                  Contact
+                </Link>
+              </div>
             )}
           </div>
           
