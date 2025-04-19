@@ -2,7 +2,6 @@
 import { useCart } from '@/contexts/CartContext';
 import { useCheckoutAuth } from './useCheckoutAuth';
 import { useOrderSubmission } from './useOrderSubmission';
-import { useEffect } from 'react';
 
 export const useCheckout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -21,10 +20,6 @@ export const useCheckout = () => {
     hasDeliveryInfo,
     clearCart
   );
-
-  useEffect(() => {
-    return () => {};
-  }, [isSubmitting, items.length, loggedInUser, hasDeliveryInfo]);
 
   return {
     items,
