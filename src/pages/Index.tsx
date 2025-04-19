@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '@/components/ParticleBackground';
 import { FeaturedMeals } from '@/components/FeaturedMeals';
 import Navbar from '@/components/Navbar';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -39,6 +39,10 @@ const Index = () => {
     navigate('/admin');
   };
 
+  const exploreMeals = () => {
+    navigate('/customer');
+  };
+
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
@@ -49,13 +53,16 @@ const Index = () => {
         <section className="h-screen flex items-center justify-center text-center px-4">
           <div className="space-y-6">
             <h1 className="text-6xl md:text-8xl font-bold text-quantum-cyan neon-text">
-              Quantum Eats
+              ZenithMeals
             </h1>
             <p className="text-xl md:text-2xl text-galaxy-purple max-w-2xl mx-auto">
               Experience the future of food delivery with our AI-powered meal recommendations
               and augmented reality previews
             </p>
-            <button className="cyber-button text-lg">
+            <button 
+              className="cyber-button text-lg"
+              onClick={exploreMeals}
+            >
               Explore Meals
             </button>
 
