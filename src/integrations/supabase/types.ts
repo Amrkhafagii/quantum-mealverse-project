@@ -469,6 +469,7 @@ export type Database = {
           payment_method: string
           refund_amount: number | null
           refund_status: string | null
+          restaurant_id: string | null
           return_images: string[] | null
           return_reason: string | null
           return_status: string | null
@@ -494,6 +495,7 @@ export type Database = {
           payment_method: string
           refund_amount?: number | null
           refund_status?: string | null
+          restaurant_id?: string | null
           return_images?: string[] | null
           return_reason?: string | null
           return_status?: string | null
@@ -519,6 +521,7 @@ export type Database = {
           payment_method?: string
           refund_amount?: number | null
           refund_status?: string | null
+          restaurant_id?: string | null
           return_images?: string[] | null
           return_reason?: string | null
           return_status?: string | null
@@ -529,6 +532,82 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      restaurant_assignment_history: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          restaurant_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          restaurant_id: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          restaurant_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_assignment_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_assignments: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          restaurant_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          restaurant_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          restaurant_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurants: {
         Row: {
@@ -1042,7 +1121,14 @@ export type Database = {
         Returns: boolean
       }
       find_nearest_restaurant: {
-        Args: { order_lat: number; order_lng: number; max_distance_km?: number }
+        Args:
+          | { order_lat: number; order_lng: number; max_distance_km?: number }
+          | {
+              order_lat: number
+              order_lng: number
+              max_distance_km?: number
+              limit_count?: number
+            }
         Returns: {
           restaurant_id: string
           user_id: string

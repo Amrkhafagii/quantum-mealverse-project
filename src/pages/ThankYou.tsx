@@ -78,7 +78,7 @@ const ThankYou: React.FC = () => {
           setAssignmentStatus(status);
           
           if (status.status !== 'awaiting_response') {
-            refetch();
+            fetchOrderDetails();
           }
         })
         .catch(err => console.error('Error checking assignment status:', err));
