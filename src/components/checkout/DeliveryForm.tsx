@@ -37,6 +37,10 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
 
   const toggleEdit = () => setIsEditing(!isEditing);
 
+  // Check if the form is valid based on delivery method
+  const isDeliveryMethodPickup = form.watch('deliveryMethod') === 'pickup';
+  const formIsValid = isDeliveryMethodPickup || form.formState.isValid;
+
   return (
     <Card className="holographic-card p-6">
       <div className="flex justify-between items-center mb-6">
@@ -75,7 +79,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting || !form.formState.isValid}
+            disabled={isSubmitting || (!formIsValid && !isDeliveryMethodPickup)}
             id="place-order-button"
           >
             {isSubmitting ? "Processing..." : "Place Order"}

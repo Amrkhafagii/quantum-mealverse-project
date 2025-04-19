@@ -38,8 +38,7 @@ export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }
     });
     
     return () => {
-      // Fix for unsubscribe error - properly type the return value
-      if (subscription && typeof subscription === 'object' && 'unsubscribe' in subscription) {
+      if (subscription) {
         subscription.unsubscribe();
       }
     };

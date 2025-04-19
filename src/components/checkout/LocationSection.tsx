@@ -38,9 +38,10 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         });
       }
     } catch (error: any) {
+      console.error("Location error:", error);
       toast({
         title: "Location error",
-        description: "We couldn't get your location. Please try again.",
+        description: error.message || "We couldn't get your location. Please try again.",
         variant: "destructive"
       });
     }
@@ -69,12 +70,14 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
           Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
         </p>
       ) : (
-        <Alert variant="destructive" className="border-red-500 bg-red-500/10">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="font-medium">
-            {required ? "Location is required to continue with delivery" : "Please set your current location"}
-          </AlertDescription>
-        </Alert>
+        required ? (
+          <Alert variant="destructive" className="border-red-500 bg-red-500/10">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="font-medium">
+              {required ? "Location is required to continue with delivery" : "Please set your current location"}
+            </AlertDescription>
+          </Alert>
+        ) : null
       )}
     </div>
   );

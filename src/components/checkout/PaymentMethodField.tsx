@@ -29,10 +29,7 @@ export const PaymentMethodField: React.FC<PaymentMethodFieldProps> = ({ form }) 
       render={({ field }) => (
         <FormItem>
           <FormLabel>Payment Method <span className="text-red-500">*</span></FormLabel>
-          <Select 
-            onValueChange={field.onChange} 
-            defaultValue={field.value}
-          >
+          <Select onValueChange={field.onChange} defaultValue={field.value}>
             <FormControl>
               <SelectTrigger>
                 <SelectValue placeholder="Select payment method" />
@@ -40,7 +37,7 @@ export const PaymentMethodField: React.FC<PaymentMethodFieldProps> = ({ form }) 
             </FormControl>
             <SelectContent>
               <SelectItem value="cash">Cash on Delivery</SelectItem>
-              <SelectItem value="visa" disabled>Credit Card (Coming Soon)</SelectItem>
+              <SelectItem value="visa">Credit/Debit Card</SelectItem>
             </SelectContent>
           </Select>
           <FormMessage />

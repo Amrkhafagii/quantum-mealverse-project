@@ -8,14 +8,15 @@ const formSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   phone: z.string().min(11, { message: "Please enter a valid phone number" }),
-  address: z.string().min(10, { message: "Address must be at least 10 characters" }),
+  address: z.string().min(5, { message: "Address must be at least 5 characters" }),
   city: z.string().min(2, { message: "Please enter a valid city" }),
   notes: z.string().optional(),
   deliveryMethod: z.enum(["delivery", "pickup"]),
   paymentMethod: z.enum(["cash", "visa"]),
-  latitude: z.number().refine(val => val !== 0, { message: "Location is required" }),
-  longitude: z.number().refine(val => val !== 0, { message: "Location is required" }),
+  latitude: z.number(),
+  longitude: z.number(),
 }).refine((data) => {
+  // Only require location validation if delivery method is 'delivery'
   if (data.deliveryMethod === "pickup") {
     return true;
   }

@@ -31,6 +31,11 @@ export const useOrderSubmission = (
       return;
     }
 
+    if (isSubmitting) {
+      console.log("Submission already in progress, ignoring duplicate submission");
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -39,17 +44,21 @@ export const useOrderSubmission = (
         throw new Error("You must be logged in to place an order");
       }
 
+      // Save delivery information
       await saveDeliveryInfo(userId, data, hasDeliveryInfo);
       
+      // Create the order
       const insertedOrder = await createOrder(userId, data, items, totalAmount);
       
       if (!insertedOrder || !insertedOrder.id) {
         throw new Error("Failed to create order - no order ID returned");
       }
       
+      // Create order items
       await createOrderItems(insertedOrder.id, items);
       
-      if (data.latitude && data.longitude) {
+      // Save user location if provided
+      if (data.latitude && data.longitude && data.deliveryMethod === "delivery") {
         await saveUserLocation(userId, data.latitude, data.longitude);
       }
       
@@ -60,11 +69,12 @@ export const useOrderSubmission = (
       
       clearCart();
       navigate(`/thank-you?order=${insertedOrder.id}`);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Order submission error:", error);
       setIsSubmitting(false);
       toast({
         title: "Error placing order",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     }
