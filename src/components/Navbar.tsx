@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { LogOut, User, UserRound, ShoppingCart, Menu, X, Home } from 'lucide-react';
+import { LogOut, User, UserRound, ShoppingCart, Menu, X, CreditCard } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from '@/contexts/CartContext';
@@ -23,6 +23,11 @@ const Navbar = () => {
   const [session, setSession] = React.useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { itemCount } = useCart?.() || { itemCount: 0 };
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   React.useEffect(() => {
     // Get initial session
@@ -82,15 +87,7 @@ const Navbar = () => {
                 <NavigationMenuList>
                   <NavigationMenuItem>
                     <Link to="/customer">
-                      <div className={navigationMenuTriggerStyle()}>
-                        <Home className="h-4 w-4 mr-2" />
-                        Home
-                      </div>
-                    </Link>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <Link to="/shop">
-                      <div className={navigationMenuTriggerStyle()}>Shop</div>
+                      <div className={navigationMenuTriggerStyle()}>Meals</div>
                     </Link>
                   </NavigationMenuItem>
                   <NavigationMenuItem>
@@ -115,16 +112,24 @@ const Navbar = () => {
           
           <div className="flex items-center gap-4">
             {isCustomerView && (
-              <Link to="/cart" className="relative">
-                <Button variant="ghost" className="text-quantum-cyan hover:text-white">
-                  <ShoppingCart className="h-5 w-5" />
-                  {itemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-quantum-cyan text-quantum-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                      {itemCount}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+              <>
+                <Link to="/checkout" className="relative">
+                  <Button variant="ghost" className="text-quantum-cyan hover:text-white">
+                    <CreditCard className="h-5 w-5" />
+                    <span className="ml-2 hidden md:inline">Checkout</span>
+                  </Button>
+                </Link>
+                <Link to="/cart" className="relative">
+                  <Button variant="ghost" className="text-quantum-cyan hover:text-white">
+                    <ShoppingCart className="h-5 w-5" />
+                    {itemCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-quantum-cyan text-quantum-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        {itemCount}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              </>
             )}
             
             {session ? (
@@ -178,39 +183,33 @@ const Navbar = () => {
                 <>
                   <Link 
                     to="/customer" 
-                    className="text-quantum-cyan hover:text-white flex items-center gap-2"
-                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-quantum-cyan hover:text-white"
                   >
-                    <Home className="h-4 w-4" />
-                    Home
-                  </Link>
-                  <Link 
-                    to="/shop" 
-                    className="text-quantum-cyan hover:text-white" 
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Shop
+                    Meals
                   </Link>
                   <Link 
                     to="/subscription" 
-                    className="text-quantum-cyan hover:text-white" 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-quantum-cyan hover:text-white"
                   >
                     Subscription
                   </Link>
                   <Link 
                     to="/about" 
-                    className="text-quantum-cyan hover:text-white" 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-quantum-cyan hover:text-white"
                   >
                     About
                   </Link>
                   <Link 
                     to="/contact" 
-                    className="text-quantum-cyan hover:text-white" 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-quantum-cyan hover:text-white"
                   >
                     Contact
+                  </Link>
+                  <Link 
+                    to="/checkout" 
+                    className="text-quantum-cyan hover:text-white"
+                  >
+                    Checkout
                   </Link>
                 </>
               )}

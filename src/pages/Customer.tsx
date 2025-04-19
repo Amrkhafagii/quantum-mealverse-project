@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 import { CustomerMealCard } from '@/components/CustomerMealCard';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
-import { CartProvider } from '@/contexts/CartContext';
 
 const Customer = () => {
   const { data: meals, isLoading, error } = useQuery({
@@ -40,29 +39,27 @@ const Customer = () => {
   );
 
   return (
-    <CartProvider>
-      <div className="min-h-screen bg-quantum-black text-white relative">
-        <ParticleBackground />
-        <Navbar />
-        
-        <main className="relative z-10 pt-20 pb-12">
-          <div className="container mx-auto px-4">
-            <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {meals?.map((meal) => (
-                <CustomerMealCard
-                  key={meal.id}
-                  meal={meal}
-                />
-              ))}
-            </div>
+    <div className="min-h-screen bg-quantum-black text-white relative">
+      <ParticleBackground />
+      <Navbar />
+      
+      <main className="relative z-10 pt-20 pb-12">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {meals?.map((meal) => (
+              <CustomerMealCard
+                key={meal.id}
+                meal={meal}
+              />
+            ))}
           </div>
-        </main>
-        
-        <Footer />
-      </div>
-    </CartProvider>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
   );
 };
 
