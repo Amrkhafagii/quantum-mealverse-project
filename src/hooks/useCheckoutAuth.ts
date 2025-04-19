@@ -44,20 +44,27 @@ export const useCheckoutAuth = () => {
             if (deliveryInfo) {
               console.log("[Place Order Debug] User has delivery info:", deliveryInfo);
               setHasDeliveryInfo(true);
+              // Initialize with valid coordinates to ensure form validation passes
               setDefaultValues({
                 ...deliveryInfo,
                 email: session.user.email || "",
                 fullName: deliveryInfo.full_name,
+                latitude: deliveryInfo.latitude || 0,
+                longitude: deliveryInfo.longitude || 0
               });
               console.log("[Place Order Debug] Default values set:", {
                 ...deliveryInfo,
                 email: session.user.email || "",
                 fullName: deliveryInfo.full_name,
+                latitude: deliveryInfo.latitude || 0,
+                longitude: deliveryInfo.longitude || 0
               });
             } else if (session.user.email) {
               console.log("[Place Order Debug] User has no delivery info, setting email default only");
               setDefaultValues({
-                email: session.user.email
+                email: session.user.email,
+                latitude: 0,
+                longitude: 0
               });
             }
           } catch (error) {

@@ -22,13 +22,14 @@ const formSchema = z.object({
   notes: z.string().optional(),
   deliveryMethod: z.enum(["delivery", "pickup"]),
   paymentMethod: z.enum(["cash", "visa"]),
-  latitude: z.number(),
-  longitude: z.number(),
+  latitude: z.number().refine(val => val !== 0, { message: "Location is required" }),
+  longitude: z.number().refine(val => val !== 0, { message: "Location is required" }),
 }).refine((data) => {
-  if (data.deliveryMethod === "delivery") {
-    return data.latitude !== 0 && data.longitude !== 0;
+  // Simplify the refinement to improve validation success
+  if (data.deliveryMethod === "pickup") {
+    return true; // No location needed for pickup
   }
-  return true;
+  return data.latitude !== 0 && data.longitude !== 0;
 }, {
   message: "Location is required for delivery",
   path: ["latitude"],
@@ -50,27 +51,41 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(!defaultValues?.fullName);
   
+  // Initialize form with default values and ensure location values are set
+  const initialValues = {
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    notes: "",
+    deliveryMethod: "delivery",
+    paymentMethod: "cash",
+    latitude: 0,
+    longitude: 0,
+    ...defaultValues
+  };
+  
+  // Log the default values being used
+  console.log("[Place Order Debug] Initial form values:", initialValues);
+  
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      notes: "",
-      deliveryMethod: "delivery",
-      paymentMethod: "cash",
-      latitude: 0,
-      longitude: 0,
-      ...defaultValues
-    },
+    defaultValues: initialValues,
     mode: "onChange"
   });
 
   // Add form state debugging
   useEffect(() => {
     console.log("[Place Order Debug] DeliveryForm mounted");
+    
+    // Log current form state on mount
+    console.log("[Place Order Debug] Form validation on mount:", {
+      defaultValues: form.formState.defaultValues,
+      isValid: form.formState.isValid,
+      isDirty: form.formState.isDirty,
+      errors: form.formState.errors,
+    });
     
     // Return cleanup function to log when form is unmounted
     return () => {
@@ -87,6 +102,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
         isValid: formState.isValid,
         isDirty: formState.isDirty,
         errors: Object.keys(formState.errors).length > 0 ? formState.errors : "No errors",
+        values: value
       });
     });
     
@@ -95,9 +111,9 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
 
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
     console.log("[Place Order Debug] Location updated:", location);
-    form.setValue('latitude', location.latitude);
-    form.setValue('longitude', location.longitude);
-    form.trigger('latitude');
+    form.setValue('latitude', location.latitude, { shouldValidate: true, shouldDirty: true });
+    form.setValue('longitude', location.longitude, { shouldValidate: true, shouldDirty: true });
+    form.trigger(['latitude', 'longitude']);
   };
 
   const toggleEdit = () => {
@@ -105,7 +121,21 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     setIsEditing(!isEditing);
   };
 
-  // Fixed submission handler that won't interfere with the form's onSubmit
+  // Force validate form when delivery method changes
+  useEffect(() => {
+    const deliveryMethodSubscription = form.watch((value, { name }) => {
+      if (name === 'deliveryMethod') {
+        // If changed to pickup, ensure we validate since location may not be required
+        if (value.deliveryMethod === 'pickup') {
+          form.trigger();
+        }
+      }
+    });
+    
+    return () => deliveryMethodSubscription.unsubscribe();
+  }, [form]);
+
+  // Updated submission handler
   const handleFormSubmit = (data: DeliveryFormValues) => {
     console.log("[Place Order Debug] Form submission triggered with data:", data);
     
@@ -127,7 +157,12 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   useEffect(() => {
     console.log("[Place Order Debug] Button disabled state:", isSubmitting);
     console.log("[Place Order Debug] Form is valid:", form.formState.isValid);
-  }, [isSubmitting, form.formState.isValid]);
+    
+    // Log detailed form errors to help debugging
+    if (!form.formState.isValid) {
+      console.log("[Place Order Debug] Form errors:", form.formState.errors);
+    }
+  }, [isSubmitting, form.formState.isValid, form.formState.errors]);
 
   return (
     <Card className="holographic-card p-6">
@@ -202,10 +237,10 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !form.formState.isValid}
             onClick={(e) => {
               console.log("[Place Order Debug] Button clicked", {
-                disabled: isSubmitting,
+                disabled: isSubmitting || !form.formState.isValid,
                 defaultPrevented: e.defaultPrevented,
                 buttonElement: e.currentTarget,
                 formIsValid: form.formState.isValid,
