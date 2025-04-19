@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
+import { ImageUpload } from '@/components/ImageUpload';
 
 interface MealType {
-  id: string; // Changed from number to string to match Supabase's UUID format
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -19,11 +19,69 @@ interface MealType {
   protein: number;
   carbs: number;
   fat: number;
-  restaurant_id?: string; // Added as optional since we need it for create
+  restaurant_id?: string;
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;
+  image_url?: string;
 }
+
+const INITIAL_MEALS = [
+  {
+    name: "Quantum Quinoa Bowl",
+    description: "A futuristic blend of quinoa, roasted vegetables, and quantum-infused sauce",
+    price: 14.99,
+    calories: 450,
+    protein: 15,
+    carbs: 65,
+    fat: 12,
+  },
+  {
+    name: "Nebula Noodles",
+    description: "Space-inspired udon noodles with star-bright vegetables and cosmic broth",
+    price: 16.99,
+    calories: 520,
+    protein: 18,
+    carbs: 75,
+    fat: 14,
+  },
+  {
+    name: "Cyber Sushi Roll",
+    description: "Digital-age inspired roll with neon-bright ingredients and holographic garnish",
+    price: 18.99,
+    calories: 380,
+    protein: 22,
+    carbs: 45,
+    fat: 16,
+  },
+  {
+    name: "Matrix Miso Soup",
+    description: "A glowing green miso soup with binary-coded tofu and digital seaweed",
+    price: 8.99,
+    calories: 220,
+    protein: 12,
+    carbs: 25,
+    fat: 8,
+  },
+  {
+    name: "Hologram Hamburger",
+    description: "Plant-based burger that seems to shift and change as you eat it",
+    price: 17.99,
+    calories: 580,
+    protein: 25,
+    carbs: 55,
+    fat: 28,
+  },
+  {
+    name: "Virtual Veggie Platter",
+    description: "An array of vegetables prepared with augmented reality seasonings",
+    price: 13.99,
+    calories: 320,
+    protein: 10,
+    carbs: 45,
+    fat: 12,
+  }
+];
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -33,7 +91,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [editingMeal, setEditingMeal] = useState<MealType | null>(null);
   const [formData, setFormData] = useState<MealType>({
-    id: '', // Changed to string
+    id: '',
     name: '',
     description: '',
     price: 0,
@@ -41,10 +99,9 @@ const Admin = () => {
     protein: 0,
     carbs: 0,
     fat: 0,
-    restaurant_id: '' // Added default value
+    restaurant_id: ''
   });
 
-  // Check if user is admin
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
@@ -99,11 +156,63 @@ const Admin = () => {
     }
   };
 
+  useEffect(() => {
+    const initializeMeals = async () => {
+      const { data: existingMeals } = await supabase
+        .from('meals')
+        .select('*');
+
+      if (!existingMeals || existingMeals.length === 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) return;
+
+        const { data: restaurants } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        let restaurant_id;
+        
+        if (restaurants && restaurants.length > 0) {
+          restaurant_id = restaurants[0].id;
+        } else {
+          const { data: newRestaurant } = await supabase
+            .from('restaurants')
+            .insert({
+              name: 'Default Restaurant',
+              user_id: user.id,
+              address: '123 Main Street',
+              location: { type: 'Point', coordinates: [0, 0] }
+            })
+            .select('id')
+            .single();
+          
+          if (newRestaurant) restaurant_id = newRestaurant.id;
+        }
+
+        if (restaurant_id) {
+          for (const meal of INITIAL_MEALS) {
+            await supabase
+              .from('meals')
+              .insert({
+                ...meal,
+                restaurant_id
+              });
+          }
+          fetchMeals();
+        }
+      }
+    };
+
+    initializeMeals();
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     let processedValue: string | number = value;
     
-    // Convert numeric values
     if (['price', 'calories', 'protein', 'carbs', 'fat'].includes(name)) {
       processedValue = parseFloat(value) || 0;
     }
@@ -158,7 +267,6 @@ const Admin = () => {
 
   const handleCreateNewMeal = async () => {
     try {
-      // Get current user for restaurant_id (using a default for demo)
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -170,7 +278,6 @@ const Admin = () => {
         return;
       }
       
-      // Get or create a restaurant for the admin user
       const { data: restaurants } = await supabase
         .from('restaurants')
         .select('id')
@@ -182,8 +289,7 @@ const Admin = () => {
       if (restaurants && restaurants.length > 0) {
         restaurant_id = restaurants[0].id;
       } else {
-        // Create a default restaurant for the admin
-        const { data: newRestaurant, error: restaurantError } = await supabase
+        const { data: newRestaurant } = await supabase
           .from('restaurants')
           .insert({
             name: 'Default Restaurant',
@@ -194,8 +300,7 @@ const Admin = () => {
           .select('id')
           .single();
         
-        if (restaurantError) throw restaurantError;
-        restaurant_id = newRestaurant.id;
+        if (newRestaurant) restaurant_id = newRestaurant.id;
       }
 
       const mealToCreate = {
@@ -236,7 +341,7 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteMeal = async (id: string) => { // Changed parameter type to string
+  const handleDeleteMeal = async (id: string) => {
     if (!confirm("Are you sure you want to delete this meal?")) return;
     
     try {
@@ -262,6 +367,44 @@ const Admin = () => {
     }
   };
 
+  const handleImageUpload = async (file: File, mealId: string) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${mealId}.${fileExt}`;
+      const filePath = `meals/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('meals')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('meals')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('meals')
+        .update({ image_url: publicUrl })
+        .eq('id', mealId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
+
+      fetchMeals();
+    } catch (error: any) {
+      toast({
+        title: "Error uploading image",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-quantum-black text-white flex items-center justify-center">
@@ -276,11 +419,18 @@ const Admin = () => {
       <Navbar />
       
       <main className="relative z-10 pt-24 px-4 container mx-auto">
-        <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Admin Dashboard</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Admin Dashboard</h1>
+          <Button 
+            onClick={() => setEditingMeal(null)}
+            className="cyber-button"
+          >
+            Create New Meal
+          </Button>
+        </div>
         
         {isAdmin ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Meal editor form */}
             <Card className="p-6 holographic-card">
               <h2 className="text-2xl font-bold text-quantum-cyan mb-4">
                 {editingMeal ? `Edit Meal: ${editingMeal.name}` : 'Create New Meal'}
@@ -360,6 +510,16 @@ const Admin = () => {
                   </div>
                 </div>
                 
+                {editingMeal && (
+                  <div className="mt-4">
+                    <label className="block text-sm mb-2">Meal Image</label>
+                    <ImageUpload 
+                      onUpload={(file) => handleImageUpload(file, editingMeal.id)}
+                      currentImageUrl={editingMeal.image_url}
+                    />
+                  </div>
+                )}
+                
                 {editingMeal ? (
                   <div className="flex gap-4">
                     <Button 
@@ -386,7 +546,6 @@ const Admin = () => {
               </div>
             </Card>
             
-            {/* Meal list */}
             <Card className="p-6 holographic-card">
               <h2 className="text-2xl font-bold text-quantum-cyan mb-4">Meals</h2>
               
@@ -396,27 +555,38 @@ const Admin = () => {
                 ) : (
                   meals.map(meal => (
                     <Card key={meal.id} className="p-4 border border-quantum-cyan/30">
-                      <div className="flex justify-between">
-                        <div>
-                          <h3 className="font-bold text-quantum-cyan">{meal.name}</h3>
-                          <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
-                          <p className="text-galaxy-purple">${meal.price.toFixed(2)} | {meal.calories} kcal</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm"
-                            variant="outline" 
-                            onClick={() => handleEditMeal(meal)}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="destructive" 
-                            onClick={() => handleDeleteMeal(meal.id)}
-                          >
-                            Delete
-                          </Button>
+                      <div className="flex gap-4">
+                        {meal.image_url && (
+                          <img 
+                            src={meal.image_url} 
+                            alt={meal.name}
+                            className="w-24 h-24 object-cover rounded"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex justify-between">
+                            <div>
+                              <h3 className="font-bold text-quantum-cyan">{meal.name}</h3>
+                              <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
+                              <p className="text-galaxy-purple">${meal.price.toFixed(2)} | {meal.calories} kcal</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm"
+                                variant="outline" 
+                                onClick={() => handleEditMeal(meal)}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                size="sm"
+                                variant="destructive" 
+                                onClick={() => handleDeleteMeal(meal.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </Card>
