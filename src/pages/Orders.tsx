@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
@@ -15,7 +15,8 @@ import { OrderTracker } from '@/components/orders/OrderTracker';
 
 const Orders = () => {
   const navigate = useNavigate();
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const { id: orderIdParam } = useParams();
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
   
   const { data: session } = useQuery({
     queryKey: ['session'],
