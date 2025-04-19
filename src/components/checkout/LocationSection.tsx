@@ -55,14 +55,13 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
           Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
         </p>
       ) : (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="border-red-500 bg-red-500/10">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Please set your current location to continue with delivery
+          <AlertDescription className="font-medium">
+            {required ? "Location is required to continue with delivery" : "Please set your current location"}
           </AlertDescription>
         </Alert>
       )}
     </div>
   );
 };
-

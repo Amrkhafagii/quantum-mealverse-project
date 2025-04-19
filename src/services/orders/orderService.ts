@@ -54,10 +54,11 @@ export const createOrder = async (
     status: "pending"
   };
   
+  // Explicitly specify table alias in the query to avoid ambiguous column reference
   const { data: insertedOrder, error: orderError } = await supabase
     .from('orders')
     .insert(orderData)
-    .select()
+    .select('orders.*')
     .single();
     
   if (orderError) throw orderError;
