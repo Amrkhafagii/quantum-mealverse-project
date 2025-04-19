@@ -1,28 +1,13 @@
+
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
-import MealForm from '@/components/admin/MealForm';
-import MealList from '@/components/admin/MealList';
-import { useMealManagement } from '@/hooks/useMealManagement';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { useAdmin } from '@/hooks/useAdmin';
 
 const Admin = () => {
   const { isAdmin, meals, loading } = useAdmin();
-
-  const {
-    editingMeal,
-    formData,
-    setEditingMeal,
-    handleInputChange,
-    handleEditMeal,
-    handleSaveMeal,
-    handleDeleteMeal,
-    handleImageUpload,
-  } = useMealManagement(async () => {
-    await Promise.resolve();
-  });
 
   if (loading) {
     return (
@@ -38,32 +23,8 @@ const Admin = () => {
       <Navbar />
       
       <main className="relative z-10 pt-24 px-4 container mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Admin Dashboard</h1>
-          <Button 
-            onClick={() => setEditingMeal(null)}
-            className="cyber-button"
-          >
-            Create New Meal
-          </Button>
-        </div>
-        
         {isAdmin ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <MealForm
-              formData={formData}
-              editingMeal={editingMeal}
-              onInputChange={handleInputChange}
-              onSave={handleSaveMeal}
-              onCancel={() => setEditingMeal(null)}
-              onImageUpload={handleImageUpload}
-            />
-            <MealList
-              meals={meals}
-              onEdit={handleEditMeal}
-              onDelete={handleDeleteMeal}
-            />
-          </div>
+          <AdminDashboard meals={meals} />
         ) : (
           <Card className="p-6 max-w-md mx-auto">
             <p className="text-center text-red-400">Access denied. You need admin privileges.</p>

@@ -35,7 +35,7 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
       email: email || "",
       password: "",
     },
-    mode: "onChange" // Enable validation as fields change
+    mode: "onChange"
   });
 
   return (
@@ -48,9 +48,14 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Email {!email && <span className="text-red-500">*</span>}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter your email" {...field} />
+                  <Input 
+                    placeholder="Enter your email" 
+                    {...field} 
+                    readOnly={!!email}
+                    className={email ? "bg-gray-100" : ""}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
