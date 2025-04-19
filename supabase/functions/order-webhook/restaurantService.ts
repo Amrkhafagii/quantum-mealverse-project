@@ -28,9 +28,14 @@ export async function findNearestRestaurants(
     }
   }
   
-  // Now let's use rpc to find nearest restaurants
+  // Now let's use rpc to find nearest restaurant
   try {
-    // Use the rpc function to find nearest restaurant (singular as per error message)
+    console.log('Calling find_nearest_restaurant RPC function with params:', {
+      order_lat: latitude,
+      order_lng: longitude,
+      max_distance_km: maxDistance
+    });
+    
     const { data, error } = await supabase.rpc('find_nearest_restaurant', {
       order_lat: latitude,
       order_lng: longitude,
