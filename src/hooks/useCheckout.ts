@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -24,7 +23,6 @@ export const useCheckout = () => {
       if (session?.user) {
         setLoggedInUser(session.user);
         
-        // Fetch delivery info
         const { data: deliveryInfo } = await supabase
           .from('delivery_info')
           .select('*')
@@ -54,14 +52,12 @@ export const useCheckout = () => {
   const handleAuthSubmit = async (data: { email: string; password: string }) => {
     try {
       if (!loggedInUser) {
-        // First try to sign in
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: data.email,
           password: data.password
         });
         
         if (signInError) {
-          // If sign in fails, try to sign up
           const { error: signUpError } = await supabase.auth.signUp({
             email: data.email,
             password: data.password
@@ -74,11 +70,9 @@ export const useCheckout = () => {
             description: "Please check your email to verify your account.",
           });
         } else {
-          // Login successful
           setLoggedInUser(signInData.user);
           setShowLoginPrompt(false);
           
-          // Fetch delivery info for the logged in user
           if (signInData.user) {
             const { data: deliveryInfo } = await supabase
               .from('delivery_info')
@@ -121,7 +115,6 @@ export const useCheckout = () => {
       return;
     }
 
-    // Check if location is provided for delivery
     if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
       toast({
         title: "Location Required",
@@ -137,7 +130,6 @@ export const useCheckout = () => {
         throw new Error("You must be logged in to place an order");
       }
 
-      // Save or update delivery info for future use
       if (data.fullName && data.phone && data.address) {
         const deliveryInfoData = {
           user_id: loggedInUser.id,
@@ -162,7 +154,7 @@ export const useCheckout = () => {
       const deliveryFee = data.deliveryMethod === "delivery" ? 50 : 0;
       const finalTotal = totalAmount + deliveryFee;
       
-      const orderData: Order = {
+      const orderData: Omit<Order, 'id'> = {
         user_id: loggedInUser.id,
         customer_name: data.fullName,
         customer_email: data.email,
@@ -175,9 +167,7 @@ export const useCheckout = () => {
         delivery_fee: deliveryFee,
         subtotal: totalAmount,
         total: finalTotal,
-        status: "pending",
-        latitude: data.latitude,
-        longitude: data.longitude
+        status: "pending"
       };
       
       const { data: insertedOrder, error: orderError } = await supabase
@@ -202,7 +192,6 @@ export const useCheckout = () => {
         
       if (itemsError) throw itemsError;
       
-      // Store user location if provided
       if (data.latitude && data.longitude) {
         await supabase
           .from('user_locations')
