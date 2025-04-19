@@ -117,8 +117,8 @@ export const useCheckoutAuth = () => {
                 address: previousOrders.delivery_address,
                 city: previousOrders.city,
                 notes: previousOrders.notes || "",
-                latitude: previousOrders.latitude || latitude,
-                longitude: previousOrders.longitude || longitude,
+                latitude: locationData?.latitude || 0,
+                longitude: locationData?.longitude || 0,
                 deliveryMethod: deliveryMethodCast,
                 paymentMethod: paymentMethodCast
               });

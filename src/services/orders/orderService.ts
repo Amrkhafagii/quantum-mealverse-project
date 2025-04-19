@@ -48,6 +48,7 @@ export const createOrder = async (
   const deliveryFee = data.deliveryMethod === "delivery" ? 50 : 0;
   const finalTotal = totalAmount + deliveryFee;
   
+  // Create order data without latitude and longitude initially
   const orderData: Omit<Order, 'id'> = {
     user_id: userId,
     customer_name: data.fullName,
@@ -61,12 +62,11 @@ export const createOrder = async (
     delivery_fee: deliveryFee,
     subtotal: totalAmount,
     total: finalTotal,
-    status: "pending",
-    latitude: data.latitude,
-    longitude: data.longitude
+    status: "pending"
   };
   
   try {
+    // Insert order without location data first
     const { data: insertedOrder, error: orderError } = await supabase
       .from('orders')
       .insert(orderData)
@@ -74,6 +74,11 @@ export const createOrder = async (
       .single();
       
     if (orderError) throw orderError;
+    
+    // If we have location data and it's a delivery order, save it separately
+    if (data.latitude && data.longitude && data.deliveryMethod === "delivery") {
+      await saveUserLocation(userId, data.latitude, data.longitude);
+    }
     
     return insertedOrder;
   } catch (error) {
