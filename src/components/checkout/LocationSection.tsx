@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useToast } from "@/components/ui/use-toast";
+import { MapPin } from 'lucide-react';
 
 interface LocationSectionProps {
   onLocationUpdate: (location: { latitude: number; longitude: number }) => void;
@@ -33,7 +34,8 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold">
+        <h3 className="text-lg font-semibold flex items-center">
+          <MapPin className="mr-1 h-5 w-5" />
           Location
           {required && !locationIsValid() && <span className="text-red-500 ml-1">*</span>}
         </h3>
@@ -46,7 +48,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         </Button>
       </div>
       {location && locationIsValid() && (
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-green-400">
           Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
         </p>
       )}

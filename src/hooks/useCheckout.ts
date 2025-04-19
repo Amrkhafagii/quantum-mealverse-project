@@ -54,15 +54,53 @@ export const useCheckout = () => {
   const handleAuthSubmit = async (data: { email: string; password: string }) => {
     try {
       if (!loggedInUser) {
-        const { error } = await supabase.auth.signUp({
+        // First try to sign in
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: data.email,
           password: data.password
         });
-        if (error) throw error;
-        toast({
-          title: "Account created",
-          description: "Please check your email to verify your account.",
-        });
+        
+        if (signInError) {
+          // If sign in fails, try to sign up
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: data.email,
+            password: data.password
+          });
+          
+          if (signUpError) throw signUpError;
+          
+          toast({
+            title: "Account created",
+            description: "Please check your email to verify your account.",
+          });
+        } else {
+          // Login successful
+          setLoggedInUser(signInData.user);
+          setShowLoginPrompt(false);
+          
+          // Fetch delivery info for the logged in user
+          if (signInData.user) {
+            const { data: deliveryInfo } = await supabase
+              .from('delivery_info')
+              .select('*')
+              .eq('user_id', signInData.user.id)
+              .maybeSingle();
+              
+            if (deliveryInfo) {
+              setHasDeliveryInfo(true);
+              setDefaultValues({
+                ...deliveryInfo,
+                email: signInData.user.email || "",
+                fullName: deliveryInfo.full_name,
+              });
+            }
+          }
+          
+          toast({
+            title: "Login successful",
+            description: "You've been logged in successfully.",
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -78,6 +116,16 @@ export const useCheckout = () => {
       toast({
         title: "Cart is empty",
         description: "Please add some items to your cart before checkout",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if location is provided for delivery
+    if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
+      toast({
+        title: "Location Required",
+        description: "Please set your location for delivery",
         variant: "destructive"
       });
       return;
@@ -174,6 +222,7 @@ export const useCheckout = () => {
       clearCart();
       navigate(`/thank-you?order=${insertedOrder.id}`);
     } catch (error: any) {
+      console.error("Order submission error:", error);
       toast({
         title: "Error placing order",
         description: error.message,

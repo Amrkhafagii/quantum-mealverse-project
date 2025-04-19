@@ -10,7 +10,9 @@ import { LocationSection } from './LocationSection';
 import { DeliveryMethodField } from './DeliveryMethodField';
 import { PaymentMethodField } from './PaymentMethodField';
 import { DeliveryDetailsFields } from './DeliveryDetailsFields';
+import { useToast } from "@/components/ui/use-toast";
 
+// Create a more flexible schema with conditional validation
 const formSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -22,6 +24,15 @@ const formSchema = z.object({
   paymentMethod: z.enum(["cash", "visa"]),
   latitude: z.number(),
   longitude: z.number(),
+}).refine((data) => {
+  // Only require latitude/longitude if delivery method is "delivery"
+  if (data.deliveryMethod === "delivery") {
+    return data.latitude !== 0 && data.longitude !== 0;
+  }
+  return true;
+}, {
+  message: "Location is required for delivery",
+  path: ["latitude"], // This shows the error on the latitude field
 });
 
 export type DeliveryFormValues = z.infer<typeof formSchema>;
@@ -37,6 +48,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   defaultValues,
   isSubmitting = false 
 }) => {
+  const { toast } = useToast();
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,12 +72,35 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     form.setValue('longitude', location.longitude);
   };
 
+  const handleSubmitWithValidation = (data: DeliveryFormValues) => {
+    try {
+      // Additional validation for delivery method
+      if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
+        toast({
+          title: "Location Required",
+          description: "Please set your location for delivery",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // If validation passes, submit the form
+      onSubmit(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Card className="holographic-card p-6">
       <h2 className="text-xl font-bold text-quantum-cyan mb-6">Delivery Information</h2>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmitWithValidation)} className="space-y-6">
           <LocationSection 
             onLocationUpdate={handleLocationUpdate}
             required={form.watch('deliveryMethod') === 'delivery'}
@@ -81,7 +116,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting || (form.watch('deliveryMethod') === 'delivery' && !form.watch('latitude'))}
+            disabled={isSubmitting}
           >
             {isSubmitting ? "Processing..." : "Place Order"}
           </Button>

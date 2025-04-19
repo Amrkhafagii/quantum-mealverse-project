@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   FormField,
   FormItem,
@@ -22,6 +22,21 @@ interface DeliveryMethodFieldProps {
 }
 
 export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }) => {
+  // Update delivery method effect to ensure proper validation
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'deliveryMethod') {
+        // If method changes to pickup, we don't need location
+        if (value.deliveryMethod === 'pickup') {
+          form.clearErrors('latitude');
+          form.clearErrors('longitude');
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+  
   return (
     <FormField
       control={form.control}
@@ -30,7 +45,14 @@ export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }
         <FormItem>
           <FormLabel>Delivery Method <span className="text-red-500">*</span></FormLabel>
           <Select 
-            onValueChange={field.onChange} 
+            onValueChange={(value) => {
+              field.onChange(value);
+              // Clear location errors if pickup is selected
+              if (value === 'pickup') {
+                form.clearErrors('latitude');
+                form.clearErrors('longitude');
+              }
+            }} 
             defaultValue={field.value}
           >
             <FormControl>
