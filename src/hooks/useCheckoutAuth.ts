@@ -45,6 +45,19 @@ export const useCheckoutAuth = () => {
           setLoggedInUser(session.user);
           
           try {
+            // Also fetch from user_locations to get the most recent location
+            const { data: locationData, error: locationError } = await supabase
+              .from('user_locations')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('timestamp', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+              
+            if (locationError) {
+              console.error("[Place Order Debug] Error fetching location:", locationError);
+            }
+            
             const { data: deliveryInfo, error: deliveryError } = await supabase
               .from('delivery_info')
               .select('*')
@@ -62,13 +75,19 @@ export const useCheckoutAuth = () => {
               // Cast deliveryInfo to our interface
               const typedDeliveryInfo = deliveryInfo as DeliveryInfoDB;
               
+              // Use the most recent location if available, otherwise fallback to delivery info or default
+              const latitude = locationData?.latitude || typedDeliveryInfo.latitude || 0;
+              const longitude = locationData?.longitude || typedDeliveryInfo.longitude || 0;
+              
+              console.log("[Place Order Debug] Using location:", { latitude, longitude });
+              
               // Initialize with valid coordinates to ensure form validation passes
               setDefaultValues({
                 ...typedDeliveryInfo,
                 email: session.user.email || "",
                 fullName: typedDeliveryInfo.full_name,
-                latitude: typedDeliveryInfo.latitude || 0,
-                longitude: typedDeliveryInfo.longitude || 0,
+                latitude: latitude,
+                longitude: longitude,
                 deliveryMethod: "delivery" as const,
                 paymentMethod: "cash" as const
               });
@@ -77,19 +96,32 @@ export const useCheckoutAuth = () => {
                 ...typedDeliveryInfo,
                 email: session.user.email || "",
                 fullName: typedDeliveryInfo.full_name,
-                latitude: typedDeliveryInfo.latitude || 0,
-                longitude: typedDeliveryInfo.longitude || 0,
+                latitude: latitude,
+                longitude: longitude,
                 deliveryMethod: "delivery",
                 paymentMethod: "cash"
               });
             } else if (session.user.email) {
               console.log("[Place Order Debug] User has no delivery info, setting email default only");
+              
+              // Still use location if available
+              const latitude = locationData?.latitude || 0;
+              const longitude = locationData?.longitude || 0;
+              
               setDefaultValues({
                 email: session.user.email,
-                latitude: 0,
-                longitude: 0,
+                latitude: latitude,
+                longitude: longitude,
                 deliveryMethod: "delivery" as const,
                 paymentMethod: "cash" as const
+              });
+              
+              console.log("[Place Order Debug] Default values with email only:", {
+                email: session.user.email,
+                latitude: latitude,
+                longitude: longitude,
+                deliveryMethod: "delivery",
+                paymentMethod: "cash"
               });
             }
           } catch (error) {

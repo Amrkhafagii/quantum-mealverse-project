@@ -51,6 +51,11 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(!defaultValues?.fullName);
   
+  // Type the defaultValues correctly and ensure all enum values are properly cast
+  const typedDefaultValues = defaultValues || {};
+  
+  console.log("[Place Order Debug] Default values received:", typedDefaultValues);
+  
   // Initialize form with default values and ensure location values are set
   const initialValues: Partial<DeliveryFormValues> = {
     fullName: "",
@@ -61,9 +66,9 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     notes: "",
     deliveryMethod: "delivery" as const,
     paymentMethod: "cash" as const,
-    latitude: 0,
-    longitude: 0,
-    ...defaultValues
+    latitude: typedDefaultValues.latitude || 0,
+    longitude: typedDefaultValues.longitude || 0,
+    ...typedDefaultValues
   };
   
   // Log the default values being used
@@ -74,6 +79,37 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     defaultValues: initialValues,
     mode: "onChange"
   });
+
+  // Update form when defaultValues change
+  useEffect(() => {
+    if (defaultValues) {
+      console.log("[Place Order Debug] Updating form with new default values:", defaultValues);
+      
+      // Explicitly set each field to ensure the form updates properly
+      if (defaultValues.fullName) form.setValue('fullName', defaultValues.fullName);
+      if (defaultValues.email) form.setValue('email', defaultValues.email);
+      if (defaultValues.phone) form.setValue('phone', defaultValues.phone);
+      if (defaultValues.address) form.setValue('address', defaultValues.address);
+      if (defaultValues.city) form.setValue('city', defaultValues.city);
+      if (defaultValues.notes) form.setValue('notes', defaultValues.notes);
+      if (defaultValues.deliveryMethod) form.setValue('deliveryMethod', defaultValues.deliveryMethod);
+      if (defaultValues.paymentMethod) form.setValue('paymentMethod', defaultValues.paymentMethod);
+      
+      // Always update coordinates if provided
+      if (defaultValues.latitude && defaultValues.latitude !== 0) {
+        console.log("[Place Order Debug] Setting latitude from defaultValues:", defaultValues.latitude);
+        form.setValue('latitude', defaultValues.latitude, { shouldValidate: true });
+      }
+      
+      if (defaultValues.longitude && defaultValues.longitude !== 0) {
+        console.log("[Place Order Debug] Setting longitude from defaultValues:", defaultValues.longitude);
+        form.setValue('longitude', defaultValues.longitude, { shouldValidate: true });
+      }
+      
+      // Validate the form after updating values
+      form.trigger();
+    }
+  }, [defaultValues, form]);
 
   // Add form state debugging
   useEffect(() => {
@@ -111,9 +147,25 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
 
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
     console.log("[Place Order Debug] Location updated:", location);
-    form.setValue('latitude', location.latitude, { shouldValidate: true, shouldDirty: true });
-    form.setValue('longitude', location.longitude, { shouldValidate: true, shouldDirty: true });
-    form.trigger(['latitude', 'longitude']);
+    
+    if (location && location.latitude && location.longitude) {
+      // Make sure we're setting real coordinates, not zeros
+      if (location.latitude === 0 && location.longitude === 0) {
+        console.warn("[Place Order Debug] Received zero coordinates, not updating form");
+        return;
+      }
+      
+      form.setValue('latitude', location.latitude, { shouldValidate: true, shouldDirty: true });
+      form.setValue('longitude', location.longitude, { shouldValidate: true, shouldDirty: true });
+      form.trigger(['latitude', 'longitude']);
+      
+      console.log("[Place Order Debug] Form coordinates updated:", {
+        latitude: form.getValues('latitude'),
+        longitude: form.getValues('longitude')
+      });
+    } else {
+      console.warn("[Place Order Debug] Received invalid location:", location);
+    }
   };
 
   const toggleEdit = () => {

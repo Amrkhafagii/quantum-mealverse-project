@@ -15,37 +15,32 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
   const { location, getCurrentLocation, locationIsValid } = useLocationTracker();
   const { toast } = useToast();
 
-  // Initialize with default location if none is found
+  // Initialize with existing location if available
   useEffect(() => {
-    if (!location && required) {
-      // Set a default location if none exists and it's required
-      const defaultLocation = { latitude: 34.052235, longitude: -118.243683 }; // Default LA coordinates
-      onLocationUpdate(defaultLocation);
-      console.log("[Place Order Debug] Setting default location:", defaultLocation);
-    } else if (location) {
-      // Ensure we pass the existing location to the parent component on mount
+    if (location) {
+      // Pass the existing location to the parent component on mount
+      console.log("[Place Order Debug] Using existing location on mount:", location);
       onLocationUpdate(location);
-      console.log("[Place Order Debug] Using existing location:", location);
+    } else if (required) {
+      console.log("[Place Order Debug] No location found, will prompt user to set location");
     }
-  }, []);
+  }, [location]);
 
   const handleGetLocation = async () => {
     try {
       const newLocation = await getCurrentLocation();
+      console.log("[Place Order Debug] Got new location:", newLocation);
       onLocationUpdate(newLocation);
       toast({
         title: "Location updated",
         description: "Your current location has been saved.",
       });
     } catch (error: any) {
-      // If location service fails, set a default location
-      const defaultLocation = { latitude: 34.052235, longitude: -118.243683 }; // Default LA coordinates
-      onLocationUpdate(defaultLocation);
-      console.log("[Place Order Debug] Setting default location after error:", defaultLocation);
-      
+      console.error("[Place Order Debug] Error getting location:", error);
       toast({
-        title: "Location approximated",
-        description: "We couldn't get your exact location. An approximate location has been set.",
+        title: "Location error",
+        description: "We couldn't get your location. Please try again.",
+        variant: "destructive"
       });
     }
   };
