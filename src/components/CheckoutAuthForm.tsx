@@ -48,7 +48,7 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email {!email && <span className="text-red-500">*</span>}</FormLabel>
+                {!email && <FormLabel>Email <span className="text-red-500">*</span></FormLabel>}
                 <FormControl>
                   <Input 
                     placeholder="Enter your email" 
