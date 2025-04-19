@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { handleAuthSubmit } from '@/services/auth/authCheckout';
 import { useToast } from "@/components/ui/use-toast";
+import { Order } from '@/types/order';
 
 interface DeliveryInfoDB {
   address: string;
@@ -72,23 +73,31 @@ export const useCheckoutAuth = () => {
               const latitude = locationData?.latitude || 0;
               const longitude = locationData?.longitude || 0;
               
-              const defaultValuesFromDb = {
-                ...deliveryInfo,
+              // Properly cast delivery and payment methods to the expected types
+              const deliveryMethodCast = (previousOrders?.delivery_method || "delivery") as "delivery" | "pickup";
+              const paymentMethodCast = (previousOrders?.payment_method || "cash") as "cash" | "visa";
+              
+              setDefaultValues({
                 email: session.user.email || "",
-                fullName: (deliveryInfo as any).full_name,
+                fullName: (deliveryInfo as DeliveryInfoDB).full_name,
+                phone: (deliveryInfo as DeliveryInfoDB).phone,
+                address: (deliveryInfo as DeliveryInfoDB).address,
+                city: (deliveryInfo as DeliveryInfoDB).city,
                 latitude: latitude,
                 longitude: longitude,
-                deliveryMethod: previousOrders?.delivery_method || "delivery" as const,
-                paymentMethod: previousOrders?.payment_method || "cash" as const
-              };
-              
-              setDefaultValues(defaultValuesFromDb);
+                deliveryMethod: deliveryMethodCast,
+                paymentMethod: paymentMethodCast
+              });
             } else if (previousOrders) {
               // If no delivery info but there are previous orders, use order information
               setHasDeliveryInfo(true);
               
-              const latitude = locationData?.latitude || previousOrders.latitude || 0;
-              const longitude = locationData?.longitude || previousOrders.longitude || 0;
+              const latitude = locationData?.latitude || 0;
+              const longitude = locationData?.longitude || 0;
+              
+              // Cast string types to the specific union types required
+              const deliveryMethodCast = (previousOrders.delivery_method || "delivery") as "delivery" | "pickup";
+              const paymentMethodCast = (previousOrders.payment_method || "cash") as "cash" | "visa";
               
               setDefaultValues({
                 fullName: previousOrders.customer_name,
@@ -99,8 +108,8 @@ export const useCheckoutAuth = () => {
                 notes: previousOrders.notes || "",
                 latitude: latitude,
                 longitude: longitude,
-                deliveryMethod: previousOrders.delivery_method as "delivery" | "pickup",
-                paymentMethod: previousOrders.payment_method as "cash" | "visa"
+                deliveryMethod: deliveryMethodCast,
+                paymentMethod: paymentMethodCast
               });
             } else if (session.user.email) {
               // Fallback to just email if no previous data exists
@@ -111,8 +120,8 @@ export const useCheckoutAuth = () => {
                 email: session.user.email,
                 latitude: latitude,
                 longitude: longitude,
-                deliveryMethod: "delivery" as const,
-                paymentMethod: "cash" as const
+                deliveryMethod: "delivery",
+                paymentMethod: "cash"
               });
             }
           } catch (error) {
