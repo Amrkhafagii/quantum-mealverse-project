@@ -8,6 +8,7 @@ const corsHeaders = {
 
 // Helper to get nearest restaurants
 async function findNearestRestaurants(supabase, latitude, longitude, maxDistance = 50, limit = 3) {
+  // Use RPC call with explicit parameter names to avoid ambiguity
   const { data, error } = await supabase.rpc('find_nearest_restaurant', {
     order_lat: latitude,
     order_lng: longitude,
@@ -264,7 +265,7 @@ async function handleAssignment(supabase, orderId, latitude, longitude) {
     }
   }
 
-  // Find nearest restaurant
+  // Find nearest restaurant with explicitly named parameters to avoid function ambiguity
   const nearestRestaurants = await findNearestRestaurants(supabase, latitude, longitude)
   
   if (!nearestRestaurants || nearestRestaurants.length === 0) {
