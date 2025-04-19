@@ -19,36 +19,22 @@ export const saveDeliveryInfo = async (
     longitude: data.longitude
   };
 
-  console.log("Saving delivery info with data:", deliveryInfoData);
-  console.log("User has delivery info:", hasDeliveryInfo);
-
   try {
     if (hasDeliveryInfo) {
-      const { data: updateResult, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('delivery_info')
         .update(deliveryInfoData)
         .eq('user_id', userId);
         
-      if (updateError) {
-        console.error("Error updating delivery info:", updateError);
-        throw updateError;
-      }
-      
-      console.log("Delivery info updated successfully:", updateResult);
+      if (updateError) throw updateError;
     } else {
-      const { data: insertResult, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('delivery_info')
         .insert(deliveryInfoData);
         
-      if (insertError) {
-        console.error("Error inserting delivery info:", insertError);
-        throw insertError;
-      }
-      
-      console.log("Delivery info inserted successfully:", insertResult);
+      if (insertError) throw insertError;
     }
   } catch (error) {
-    console.error("Delivery info operation failed:", error);
     throw error;
   }
 };
@@ -59,9 +45,6 @@ export const createOrder = async (
   items: CartItem[],
   totalAmount: number
 ) => {
-  console.log("Creating order with user ID:", userId);
-  console.log("Delivery method:", data.deliveryMethod);
-  
   const deliveryFee = data.deliveryMethod === "delivery" ? 50 : 0;
   const finalTotal = totalAmount + deliveryFee;
   
@@ -83,40 +66,22 @@ export const createOrder = async (
     longitude: data.longitude
   };
   
-  console.log("Order data being submitted:", orderData);
-  
   try {
-    // Fix: Select specific columns from orders table to avoid ambiguity
     const { data: insertedOrder, error: orderError } = await supabase
       .from('orders')
       .insert(orderData)
       .select('id, status, total')
       .single();
       
-    if (orderError) {
-      console.error("Error creating order:", orderError);
-      console.error("Error details:", JSON.stringify(orderError, null, 2));
-      throw orderError;
-    }
+    if (orderError) throw orderError;
     
-    console.log("Order created successfully:", insertedOrder);
     return insertedOrder;
   } catch (error) {
-    console.error("Order creation failed:", error);
-    if (error.code) {
-      console.error(`Database error code: ${error.code}`);
-    }
-    if (error.details) {
-      console.error(`Error details: ${error.details}`);
-    }
     throw error;
   }
 };
 
 export const createOrderItems = async (orderId: string, items: CartItem[]) => {
-  console.log("Creating order items for order ID:", orderId);
-  console.log("Items to be added:", items.length);
-  
   const orderItems = items.map(item => ({
     order_id: orderId,
     meal_id: item.meal.id,
@@ -125,23 +90,13 @@ export const createOrderItems = async (orderId: string, items: CartItem[]) => {
     name: item.meal.name
   }));
   
-  console.log("Prepared order items data:", orderItems);
-  
   try {
-    const { data: itemsData, error: itemsError } = await supabase
+    const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems);
       
-    if (itemsError) {
-      console.error("Error creating order items:", itemsError);
-      console.error("Error details:", JSON.stringify(itemsError, null, 2));
-      throw itemsError;
-    }
-    
-    console.log("Order items created successfully:", itemsData);
-    return itemsData;
+    if (itemsError) throw itemsError;
   } catch (error) {
-    console.error("Order items creation failed:", error);
     throw error;
   }
 };
@@ -151,10 +106,8 @@ export const saveUserLocation = async (
   latitude: number,
   longitude: number
 ) => {
-  console.log("Saving user location:", { userId, latitude, longitude });
-  
   try {
-    const { data: locationData, error: locationError } = await supabase
+    const { error: locationError } = await supabase
       .from('user_locations')
       .insert({
         user_id: userId,
@@ -163,16 +116,8 @@ export const saveUserLocation = async (
         source: 'checkout'
       });
       
-    if (locationError) {
-      console.error("Error saving user location:", locationError);
-      console.error("Error details:", JSON.stringify(locationError, null, 2));
-      throw locationError;
-    }
-    
-    console.log("User location saved successfully:", locationData);
-    return locationData;
+    if (locationError) throw locationError;
   } catch (error) {
-    console.error("User location saving failed:", error);
     throw error;
   }
 };
