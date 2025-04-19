@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { CheckoutAuthForm } from '@/components/CheckoutAuthForm';
 import {
   Form,
   FormControl,
@@ -29,7 +29,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 
-// Define form schema using zod
 const formSchema = z.object({
   fullName: z.string().min(3, { message: "Full name must be at least 3 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -39,11 +38,12 @@ const formSchema = z.object({
   notes: z.string().optional(),
   deliveryMethod: z.enum(["delivery", "pickup"]),
   paymentMethod: z.enum(["cash", "visa"]),
-})
+  latitude: z.number(),
+  longitude: z.number(),
+});
 
-type CheckoutFormValues = z.infer<typeof formSchema>
+type CheckoutFormValues = z.infer<typeof formSchema>;
 
-// Interface for orders
 interface Order {
   id?: string;
   user_id?: string;
@@ -67,8 +67,10 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
+  const [hasDeliveryInfo, setHasDeliveryInfo] = useState(false);
+  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
-  // Initialize form
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -80,21 +82,67 @@ const Checkout = () => {
       notes: "",
       deliveryMethod: "delivery",
       paymentMethod: "cash",
+      latitude: 0,
+      longitude: 0,
     },
-  })
+  });
 
-  // Check if user is logged in
-  React.useEffect(() => {
+  const getCurrentLocation = () => {
+    setIsLoadingLocation(true);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ latitude, longitude });
+          form.setValue('latitude', latitude);
+          form.setValue('longitude', longitude);
+          setIsLoadingLocation(false);
+          toast({
+            title: "Location updated",
+            description: "Your current location has been saved.",
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          toast({
+            title: "Location error",
+            description: "Unable to get your location. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoadingLocation(false);
+        }
+      );
+    } else {
+      toast({
+        title: "Geolocation not supported",
+        description: "Your browser doesn't support geolocation.",
+        variant: "destructive",
+      });
+      setIsLoadingLocation(false);
+    }
+  };
+
+  useEffect(() => {
     const checkLoginStatus = async () => {
       const { data } = await supabase.auth.getSession();
       
       if (data.session) {
-        // User is logged in, get their profile data
         const { data: userData } = await supabase.auth.getUser();
         setLoggedInUser(userData.user);
         
-        // Pre-fill form with the user's email
-        if (userData.user?.email) {
+        const { data: deliveryInfo } = await supabase
+          .from('delivery_info')
+          .select('*')
+          .eq('user_id', userData.user?.id)
+          .single();
+          
+        if (deliveryInfo) {
+          setHasDeliveryInfo(true);
+          form.reset({
+            ...deliveryInfo,
+            email: userData.user?.email || "",
+          });
+        } else if (userData.user?.email) {
           form.setValue('email', userData.user.email);
         }
       }
@@ -102,6 +150,28 @@ const Checkout = () => {
     
     checkLoginStatus();
   }, []);
+
+  const handleAuthSubmit = async (data: { email: string; password: string }) => {
+    try {
+      if (!loggedInUser) {
+        const { error } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password
+        });
+        if (error) throw error;
+        toast({
+          title: "Account created",
+          description: "Please check your email to verify your account.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
 
   const deliveryFee = form.watch("deliveryMethod") === "delivery" ? 50 : 0;
   const finalTotal = totalAmount + deliveryFee;
@@ -120,10 +190,6 @@ const Checkout = () => {
     try {
       let userId = loggedInUser?.id;
       
-      // If user is not logged in and payment method is credit card (future feature)
-      // we would create an account, but for now just proceed with the order
-      
-      // Create order
       const orderData: Order = {
         user_id: userId,
         customer_name: data.fullName,
@@ -140,10 +206,8 @@ const Checkout = () => {
         status: "pending"
       };
       
-      // Insert the order - using table directly without type checking
       let orderId: string | undefined;
       try {
-        // @ts-ignore - Bypassing type checking for Supabase tables
         const { data: insertedOrder, error: orderError } = await supabase
           .from('orders')
           .insert(orderData)
@@ -161,7 +225,6 @@ const Checkout = () => {
         throw new Error("Failed to create order");
       }
       
-      // Create order items - using table directly without type checking
       const orderItems = items.map(item => ({
         order_id: orderId,
         meal_id: item.meal.id,
@@ -171,7 +234,6 @@ const Checkout = () => {
       }));
       
       try {
-        // @ts-ignore - Bypassing type checking for Supabase tables
         const { error: itemsError } = await supabase
           .from('order_items')
           .insert(orderItems);
@@ -182,13 +244,11 @@ const Checkout = () => {
         throw error;
       }
       
-      // Success
       toast({
         title: "Order placed successfully",
         description: `Your order #${orderId} has been placed successfully`,
       });
       
-      // Clear cart and redirect to thank you page
       clearCart();
       navigate(`/thank-you?order=${orderId}`);
     } catch (error: any) {
@@ -202,7 +262,6 @@ const Checkout = () => {
     }
   }
 
-  // Redirect to customer page if cart is empty
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-quantum-black text-white relative">
@@ -213,7 +272,7 @@ const Checkout = () => {
           <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Checkout</h1>
           
           <Card className="p-8 text-center holographic-card">
-            <h2 className="text-2xl font-bold text-quantum-cyan mb-4">Your cart is empty</h2>
+            <h2 className="text-2xl font-bold text-quantum-cyan mb-6">Your cart is empty</h2>
             <p className="text-gray-300 mb-6">Please add some meals to your cart before checkout.</p>
             <Button className="cyber-button" onClick={() => navigate('/customer')}>
               Browse Meals
@@ -236,8 +295,23 @@ const Checkout = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
+            <CheckoutAuthForm 
+              onSubmit={handleAuthSubmit}
+              email={loggedInUser?.email}
+              showPassword={!loggedInUser && !hasDeliveryInfo}
+            />
+
             <Card className="holographic-card p-6">
-              <h2 className="text-xl font-bold text-quantum-cyan mb-4">Delivery Information</h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-quantum-cyan">Delivery Information</h2>
+                <Button
+                  onClick={getCurrentLocation}
+                  disabled={isLoadingLocation}
+                  className="cyber-button"
+                >
+                  {isLoadingLocation ? "Getting Location..." : "Get Current Location"}
+                </Button>
+              </div>
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
