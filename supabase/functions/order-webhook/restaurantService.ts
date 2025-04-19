@@ -36,6 +36,7 @@ export async function findNearestRestaurants(
       max_distance_km: maxDistance
     });
     
+    // Explicitly call the 3-parameter version without limit_count
     const { data, error } = await supabase.rpc('find_nearest_restaurant', {
       order_lat: latitude,
       order_lng: longitude,
