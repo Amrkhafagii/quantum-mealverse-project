@@ -25,6 +25,7 @@ const formSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
 }).refine((data) => {
+  // Only validate location if delivery method is 'delivery'
   if (data.deliveryMethod === "delivery") {
     return data.latitude !== 0 && data.longitude !== 0;
   }
@@ -74,22 +75,11 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
 
   const handleSubmitWithValidation = async (data: DeliveryFormValues) => {
     try {
-      if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
-        toast({
-          title: "Location Required",
-          description: "Please set your location for delivery",
-          variant: "destructive"
-        });
-        return;
-      }
-      
+      // Location validation handled by form refinement now
       await onSubmit(data);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
-        variant: "destructive"
-      });
+      // Error handling moved to useCheckout
+      console.error("Form submission error:", error);
     }
   };
 

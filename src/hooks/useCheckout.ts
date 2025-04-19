@@ -67,6 +67,7 @@ export const useCheckout = () => {
       return;
     }
 
+    // Only validate location if delivery method is 'delivery'
     if (data.deliveryMethod === 'delivery' && (data.latitude === 0 || data.longitude === 0)) {
       toast({
         title: "Location Required",
@@ -77,6 +78,7 @@ export const useCheckout = () => {
     }
 
     setIsSubmitting(true);
+    
     try {
       if (!loggedInUser?.id) {
         setIsSubmitting(false);
@@ -100,7 +102,7 @@ export const useCheckout = () => {
       navigate(`/thank-you?order=${insertedOrder.id}`);
     } catch (error: any) {
       console.error("Order submission error:", error);
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Make sure to reset submission state on error
       toast({
         title: "Error placing order",
         description: error.message,
