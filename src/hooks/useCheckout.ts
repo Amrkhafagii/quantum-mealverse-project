@@ -26,9 +26,11 @@ export const useCheckout = () => {
 
   useEffect(() => {
     const checkLoginStatus = async () => {
+      console.log("Checking login status");
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
+        console.log("User is logged in:", session.user.email);
         setLoggedInUser(session.user);
         
         const { data: deliveryInfo } = await supabase
@@ -38,6 +40,7 @@ export const useCheckout = () => {
           .maybeSingle();
           
         if (deliveryInfo) {
+          console.log("User has delivery info:", deliveryInfo);
           setHasDeliveryInfo(true);
           setDefaultValues({
             ...deliveryInfo,
@@ -45,11 +48,13 @@ export const useCheckout = () => {
             fullName: deliveryInfo.full_name,
           });
         } else if (session.user.email) {
+          console.log("User has no delivery info, setting email default only");
           setDefaultValues({
             email: session.user.email
           });
         }
       } else {
+        console.log("User is not logged in, showing login prompt");
         setShowLoginPrompt(true);
       }
     };
@@ -58,7 +63,10 @@ export const useCheckout = () => {
   }, []);
 
   const handleSubmit = async (data: DeliveryFormValues) => {
+    console.log("Handle submit called with data:", data);
+    
     if (items.length === 0) {
+      console.log("Cart is empty, cannot proceed");
       toast({
         title: "Cart is empty",
         description: "Please add some items to your cart before checkout",
@@ -67,22 +75,31 @@ export const useCheckout = () => {
       return;
     }
 
+    console.log("Setting isSubmitting to true");
     setIsSubmitting(true);
     
     try {
       if (!loggedInUser?.id) {
+        console.log("No logged in user ID found");
         setIsSubmitting(false);
         throw new Error("You must be logged in to place an order");
       }
 
+      console.log("Saving delivery info");
       await saveDeliveryInfo(loggedInUser.id, data, hasDeliveryInfo);
+      
+      console.log("Creating order");
       const insertedOrder = await createOrder(loggedInUser.id, data, items, totalAmount);
+      
+      console.log("Creating order items");
       await createOrderItems(insertedOrder.id, items);
       
       if (data.latitude && data.longitude) {
+        console.log("Saving user location");
         await saveUserLocation(loggedInUser.id, data.latitude, data.longitude);
       }
       
+      console.log("Order created successfully:", insertedOrder.id);
       toast({
         title: "Order placed successfully",
         description: `Your order #${insertedOrder.id} has been placed successfully`,

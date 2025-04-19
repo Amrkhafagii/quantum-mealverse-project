@@ -68,13 +68,20 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   });
 
   const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
+    console.log("Location updated:", location);
     form.setValue('latitude', location.latitude);
     form.setValue('longitude', location.longitude);
     form.trigger('latitude');
   };
 
   const handleSubmitWithValidation = async (data: DeliveryFormValues) => {
+    console.log("Form submission attempt with data:", data);
+    console.log("Form errors:", form.formState.errors);
+    console.log("Form is valid:", form.formState.isValid);
+    console.log("isSubmitting state:", isSubmitting);
+    
     if (data.deliveryMethod === "delivery" && data.latitude === 0 && data.longitude === 0) {
+      console.log("Location required but not provided");
       toast({
         title: "Location Required",
         description: "Please select your delivery location on the map",
@@ -82,6 +89,8 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       });
       return;
     }
+    
+    console.log("Proceeding with form submission");
     await onSubmit(data);
   };
 
@@ -106,7 +115,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting}
+            disabled={false} // Never disable the button
           >
             {isSubmitting ? "Processing..." : "Place Order"}
           </Button>
