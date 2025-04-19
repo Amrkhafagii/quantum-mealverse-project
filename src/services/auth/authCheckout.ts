@@ -1,16 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast as toastFunction } from '@/components/ui/use-toast';
+import { AuthFormData, AuthHandlerParams } from '@/types/auth';
 
 export const handleAuthSubmit = async (
-  data: { email: string; password: string },
-  setLoggedInUser: (user: any) => void,
-  setShowLoginPrompt: (show: boolean) => void,
-  setHasDeliveryInfo: (has: boolean) => void,
-  setDefaultValues: (values: any) => void,
-  toast: {
-    (props: { title?: string; description?: string; variant?: "default" | "destructive" }): void;
-  }
+  data: AuthFormData,
+  {
+    setLoggedInUser,
+    setShowLoginPrompt,
+    setHasDeliveryInfo,
+    setDefaultValues,
+    toast
+  }: AuthHandlerParams
 ) => {
   try {
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
