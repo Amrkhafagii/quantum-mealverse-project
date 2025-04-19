@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export async function findNearestRestaurants(
@@ -28,31 +27,15 @@ export async function findNearestRestaurants(
     }
   }
   
-  // Now let's directly query for nearby restaurants instead of using the RPC function
+  // Now let's use rpc to find nearest restaurants
   try {
-    // Direct query using PostGIS functions
-    const { data, error } = await supabase.query(`
-      SELECT 
-        id as restaurant_id, 
-        user_id,
-        name,
-        ST_Distance(
-          location::geography,
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-        ) / 1000 as distance_km
-      FROM 
-        restaurants
-      WHERE 
-        is_active = true
-        AND ST_DWithin(
-          location::geography,
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-          $3 * 1000
-        )
-      ORDER BY 
-        distance_km
-      LIMIT $4
-    `, [longitude, latitude, maxDistance, limit]);
+    // Use the rpc function to find nearest restaurants
+    const { data, error } = await supabase.rpc('find_nearest_restaurants', {
+      lat: latitude,
+      lng: longitude,
+      max_distance: maxDistance,
+      result_limit: limit
+    });
 
     if (error) {
       console.error('Error finding nearest restaurants:', error);
@@ -65,28 +48,15 @@ export async function findNearestRestaurants(
     if (!data || data.length === 0) {
       console.log(`No restaurants found within ${maxDistance}km of (${latitude}, ${longitude})`);
       
-      // If no restaurants within range, do a broader search without the distance limit
-      // to see what's the closest restaurant
-      const { data: broadSearch, error: broadSearchError } = await supabase.query(`
-        SELECT 
-          id as restaurant_id, 
-          user_id,
-          name,
-          ST_Distance(
-            location::geography,
-            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-          ) / 1000 as distance_km
-        FROM 
-          restaurants
-        WHERE 
-          is_active = true
-        ORDER BY 
-          distance_km
-        LIMIT 5
-      `, [longitude, latitude]);
+      // If no restaurants found, try a broader search with PostgreSQL function
+      const { data: broadSearch, error: broadSearchError } = await supabase.rpc('find_all_restaurants_by_distance', {
+        lat: latitude,
+        lng: longitude,
+        result_limit: 5
+      });
       
       if (broadSearchError) {
-        console.error('Error in broad search query:', broadSearchError);
+        console.error('Error in broad search:', broadSearchError);
       } else {
         console.log('Closest restaurants (without distance limit):', broadSearch);
       }
