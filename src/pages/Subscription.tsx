@@ -19,38 +19,44 @@ const Subscription = () => {
           <SubscriptionPlan 
             title="Weekly Essentials"
             price={499.99}
+            period="week"
             currency="EGP"
+            description="Perfect for individuals looking for convenient healthy meals"
             features={[
-              { text: "5 meals per week" },
-              { text: "Free delivery" },
-              { text: "Meal customization" },
-              { text: "Weekly menu rotation" }
+              { text: "5 meals per week", included: true },
+              { text: "Free delivery", included: true },
+              { text: "Meal customization", included: true },
+              { text: "Weekly menu rotation", included: true }
             ]}
           />
           <SubscriptionPlan 
             title="Quantum Family"
             price={899.99}
+            period="week"
             currency="EGP"
+            description="Ideal for families or meal prepping for the whole week"
             features={[
-              { text: "10 meals per week" },
-              { text: "Free delivery" },
-              { text: "Meal customization" },
-              { text: "Weekly menu rotation" },
-              { text: "Family-sized portions" }
+              { text: "10 meals per week", included: true },
+              { text: "Free delivery", included: true },
+              { text: "Meal customization", included: true },
+              { text: "Weekly menu rotation", included: true },
+              { text: "Family-sized portions", included: true }
             ]}
             highlighted={true}
           />
           <SubscriptionPlan 
             title="Quantum Pro"
             price={1299.99}
+            period="week"
             currency="EGP"
+            description="Our premium plan with all features for health enthusiasts"
             features={[
-              { text: "15 meals per week" },
-              { text: "Free priority delivery" },
-              { text: "Premium meal customization" },
-              { text: "Weekly menu rotation" },
-              { text: "Nutritionist consultation" },
-              { text: "Exclusive recipes" }
+              { text: "15 meals per week", included: true },
+              { text: "Free priority delivery", included: true },
+              { text: "Premium meal customization", included: true },
+              { text: "Weekly menu rotation", included: true },
+              { text: "Nutritionist consultation", included: true },
+              { text: "Exclusive recipes", included: true }
             ]}
           />
         </div>

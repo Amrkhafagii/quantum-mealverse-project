@@ -16,12 +16,7 @@ const Cart = () => {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    toast({
-      title: "Checkout",
-      description: "Checkout functionality will be implemented soon!",
-    });
-    // In a real application, navigate to checkout page
-    // navigate('/checkout');
+    navigate('/checkout');
   };
 
   return (
@@ -51,7 +46,7 @@ const Cart = () => {
                     <div key={item.meal.id} className="flex flex-col sm:flex-row gap-4 p-4 border-b border-quantum-cyan/20">
                       <div className="w-full sm:w-24 h-24">
                         <img 
-                          src={item.meal.image_url} 
+                          src={item.meal.image_url || `https://picsum.photos/seed/${item.meal.id}/300/200`} 
                           alt={item.meal.name}
                           className="w-full h-full object-cover rounded"
                         />
@@ -124,13 +119,16 @@ const Cart = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Delivery</span>
-                    <span>25.00 EGP</span>
+                    <span>To be calculated</span>
                   </div>
                   <div className="border-t border-quantum-cyan/20 pt-2 mt-2">
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span className="text-quantum-cyan">{(totalAmount + 25).toFixed(2)} EGP</span>
+                      <span className="text-quantum-cyan">{totalAmount.toFixed(2)} EGP</span>
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      *Delivery fee will be calculated at checkout
+                    </p>
                   </div>
                 </div>
                 <Button 

@@ -24,11 +24,6 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { itemCount } = useCart?.() || { itemCount: 0 };
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
-
   React.useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -70,7 +65,12 @@ const Navbar = () => {
     }
   };
 
-  const isCustomerView = location.pathname === '/customer' || location.pathname === '/';
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const isCustomerView = location.pathname === '/customer' || location.pathname === '/' || 
+    !['/admin'].includes(location.pathname);
 
   return (
     <nav className="fixed w-full z-20 top-0 bg-black/50 backdrop-blur-md border-b border-quantum-cyan/20">
@@ -168,7 +168,7 @@ const Navbar = () => {
               variant="ghost" 
               size="icon"
               className="md:hidden text-quantum-cyan"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={toggleMobileMenu}
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>

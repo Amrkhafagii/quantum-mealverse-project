@@ -2,28 +2,16 @@
 import { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { MealType } from '@/types/meal';
-
-const initialFormState: MealType = {
-  id: '',
-  name: '',
-  description: '',
-  price: 0,
-  calories: 0,
-  protein: 0,
-  carbs: 0,
-  fat: 0,
-  restaurant_id: ''
-};
+import { MealType, INITIAL_MEAL } from '@/types/meal';
 
 export const useMealManagement = (fetchMeals: () => Promise<void>) => {
   const [editingMeal, setEditingMeal] = useState<MealType | null>(null);
-  const [formData, setFormData] = useState<MealType>(initialFormState);
+  const [formData, setFormData] = useState<MealType>(INITIAL_MEAL);
   const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    let processedValue: string | number = value;
+    let processedValue: string | number | boolean = value;
     
     if (['price', 'calories', 'protein', 'carbs', 'fat'].includes(name)) {
       processedValue = parseFloat(value) || 0;
@@ -38,16 +26,7 @@ export const useMealManagement = (fetchMeals: () => Promise<void>) => {
   const handleEditMeal = (meal: MealType) => {
     setEditingMeal(meal);
     setFormData({
-      id: meal.id,
-      name: meal.name,
-      description: meal.description,
-      price: meal.price,
-      calories: meal.calories,
-      protein: meal.protein,
-      carbs: meal.carbs,
-      fat: meal.fat,
-      restaurant_id: meal.restaurant_id,
-      image_url: meal.image_url
+      ...meal // This will copy all properties from the meal object
     });
   };
 
@@ -57,7 +36,18 @@ export const useMealManagement = (fetchMeals: () => Promise<void>) => {
     try {
       const { error } = await supabase
         .from('meals')
-        .update(formData)
+        .update({
+          name: formData.name,
+          description: formData.description,
+          price: formData.price,
+          calories: formData.calories,
+          protein: formData.protein,
+          carbs: formData.carbs,
+          fat: formData.fat,
+          is_active: formData.is_active,
+          updated_at: new Date().toISOString(),
+          image_url: formData.image_url
+        })
         .eq('id', editingMeal.id);
       
       if (error) throw error;
@@ -121,6 +111,11 @@ export const useMealManagement = (fetchMeals: () => Promise<void>) => {
       const { data: { publicUrl } } = supabase.storage
         .from('meals')
         .getPublicUrl(filePath);
+
+      setFormData({
+        ...formData,
+        image_url: publicUrl
+      });
 
       const { error: updateError } = await supabase
         .from('meals')
