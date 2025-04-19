@@ -9,7 +9,8 @@ export const useCheckout = () => {
     loggedInUser, 
     hasDeliveryInfo, 
     defaultValues, 
-    showLoginPrompt, 
+    showLoginPrompt,
+    isLoadingUserData, 
     handleAuthSubmit 
   } = useCheckoutAuth();
   
@@ -28,6 +29,7 @@ export const useCheckout = () => {
     hasDeliveryInfo,
     defaultValues,
     showLoginPrompt,
+    isLoadingUserData,
     handleAuthSubmit,
     handleSubmit
   };

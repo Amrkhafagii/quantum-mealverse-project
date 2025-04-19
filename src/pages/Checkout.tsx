@@ -9,6 +9,7 @@ import { DeliveryForm } from '@/components/checkout/DeliveryForm';
 import { EmptyCartMessage } from '@/components/checkout/EmptyCartMessage';
 import { AuthOptions } from '@/components/checkout/AuthOptions';
 import { useCheckout } from '@/hooks/useCheckout';
+import { Loader2 } from 'lucide-react';
 
 const Checkout = () => {
   const {
@@ -18,6 +19,7 @@ const Checkout = () => {
     hasDeliveryInfo,
     defaultValues,
     showLoginPrompt,
+    isLoadingUserData,
     handleAuthSubmit,
     handleSubmit
   } = useCheckout();
@@ -35,7 +37,12 @@ const Checkout = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              {showLoginPrompt ? (
+              {isLoadingUserData ? (
+                <div className="holographic-card p-6 flex items-center justify-center min-h-[200px]">
+                  <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+                  <span className="ml-2">Loading your information...</span>
+                </div>
+              ) : showLoginPrompt ? (
                 <AuthOptions />
               ) : (
                 <>

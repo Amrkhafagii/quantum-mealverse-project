@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,7 +35,20 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     }
   };
 
-  const toggleEdit = () => setIsEditing(!isEditing);
+  // Fixed toggle function to prevent unnecessary re-renders and state updates
+  const toggleEdit = () => {
+    if (isEditing) {
+      // When canceling edit, reset form values to defaultValues
+      if (defaultValues) {
+        Object.entries(defaultValues).forEach(([key, value]) => {
+          if (value !== undefined) {
+            form.setValue(key as keyof DeliveryFormValues, value as any, { shouldValidate: false });
+          }
+        });
+      }
+    }
+    setIsEditing(prev => !prev);
+  };
 
   // Check if the form is valid based on delivery method
   const isDeliveryMethodPickup = form.watch('deliveryMethod') === 'pickup';
