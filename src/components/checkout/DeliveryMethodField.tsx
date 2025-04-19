@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   FormField,
   FormItem,
@@ -22,26 +22,20 @@ interface DeliveryMethodFieldProps {
 }
 
 export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }) => {
-  // Update delivery method effect to ensure proper validation
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'deliveryMethod') {
-        // If method changes to pickup, we don't need location
-        if (value.deliveryMethod === 'pickup') {
-          form.clearErrors('latitude');
-          form.clearErrors('longitude');
-        } else if (value.deliveryMethod === 'delivery') {
-          // Re-validate location if switching back to delivery
-          form.trigger('latitude');
-        }
-      }
-    });
+  // Memoize the onChange handler to prevent unnecessary rerenders
+  const handleDeliveryMethodChange = useCallback((value: string) => {
+    form.setValue('deliveryMethod', value as "delivery" | "pickup", { shouldValidate: true });
     
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+    // Clear location errors if pickup is selected
+    if (value === 'pickup') {
+      form.clearErrors('latitude');
+      form.clearErrors('longitude');
+    } else if (value === 'delivery') {
+      // Re-validate location if switching to delivery
+      setTimeout(() => {
+        form.trigger('latitude');
+      }, 0);
+    }
   }, [form]);
   
   return (
@@ -52,17 +46,7 @@ export const DeliveryMethodField: React.FC<DeliveryMethodFieldProps> = ({ form }
         <FormItem>
           <FormLabel>Delivery Method <span className="text-red-500">*</span></FormLabel>
           <Select 
-            onValueChange={(value) => {
-              field.onChange(value);
-              // Clear location errors if pickup is selected
-              if (value === 'pickup') {
-                form.clearErrors('latitude');
-                form.clearErrors('longitude');
-              } else if (value === 'delivery') {
-                // Re-validate location if switching to delivery
-                form.trigger('latitude');
-              }
-            }} 
+            onValueChange={handleDeliveryMethodChange} 
             defaultValue={field.value}
           >
             <FormControl>

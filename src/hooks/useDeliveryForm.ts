@@ -52,7 +52,7 @@ export const useDeliveryForm = ({ onSubmit, defaultValues, isSubmitting }: UseDe
       longitude: defaultValues?.longitude || 0,
       ...defaultValues
     },
-    mode: "onChange"
+    mode: "onTouched"  // Changed from onChange to improve performance
   });
 
   const handleSubmit = (data: DeliveryFormValues) => {

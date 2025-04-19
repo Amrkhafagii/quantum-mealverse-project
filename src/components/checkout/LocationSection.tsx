@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useToast } from "@/components/ui/use-toast";
@@ -13,15 +13,21 @@ interface LocationSectionProps {
 
 export const LocationSection = ({ onLocationUpdate, required = true }: LocationSectionProps) => {
   const { location, getCurrentLocation, locationIsValid } = useLocationTracker();
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { toast } = useToast();
 
+  // Use a more efficient useEffect implementation
   useEffect(() => {
-    if (location && locationIsValid()) {
+    if (location && locationIsValid() && !isGettingLocation) {
       onLocationUpdate(location);
     }
-  }, [location, locationIsValid, onLocationUpdate, required]);
+  }, [location, locationIsValid, onLocationUpdate, required, isGettingLocation]);
 
-  const handleGetLocation = async () => {
+  // Memoize handler to prevent unnecessary rerenders
+  const handleGetLocation = useCallback(async () => {
+    if (isGettingLocation) return;
+    
+    setIsGettingLocation(true);
     try {
       const newLocation = await getCurrentLocation();
       if (newLocation && newLocation.latitude && newLocation.longitude) {
@@ -44,8 +50,10 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         description: error.message || "We couldn't get your location. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsGettingLocation(false);
     }
-  };
+  }, [getCurrentLocation, onLocationUpdate, toast, isGettingLocation]);
 
   return (
     <div className="mb-6 space-y-4">
@@ -60,8 +68,11 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
           className="cyber-button"
           type="button"
           size="lg"
+          disabled={isGettingLocation}
         >
-          {location && locationIsValid() ? "Update Location" : "Get Current Location"}
+          {isGettingLocation 
+            ? "Getting Location..." 
+            : (location && locationIsValid() ? "Update Location" : "Get Current Location")}
         </Button>
       </div>
       

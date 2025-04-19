@@ -41,15 +41,13 @@ export const useCheckoutAuth = () => {
           setLoggedInUser(session.user);
           
           try {
-            // First check if user has previous orders
-            const { data: previousOrders, error: ordersError } = await supabase
-              .from('orders')
+            // First check if user has delivery info
+            const { data: deliveryInfo } = await supabase
+              .from('delivery_info')
               .select('*')
               .eq('user_id', session.user.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
               .maybeSingle();
-              
+
             // Get user location data
             const { data: locationData } = await supabase
               .from('user_locations')
@@ -58,12 +56,14 @@ export const useCheckoutAuth = () => {
               .order('timestamp', { ascending: false })
               .limit(1)
               .maybeSingle();
-
-            // Get user's delivery info from delivery_info table  
-            const { data: deliveryInfo } = await supabase
-              .from('delivery_info')
+              
+            // If no delivery info, check previous orders
+            const { data: previousOrders } = await supabase
+              .from('orders')
               .select('*')
               .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
               .maybeSingle();
             
             // Prioritize using delivery information

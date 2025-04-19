@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,7 +25,8 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const [isEditing, setIsEditing] = useState(!defaultValues?.fullName);
   const { form, handleSubmit } = useDeliveryForm({ onSubmit, defaultValues, isSubmitting });
 
-  const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
+  // Memoize the location update handler to prevent unnecessary rerenders
+  const handleLocationUpdate = useCallback((location: { latitude: number; longitude: number }) => {
     if (location?.latitude && location?.longitude) {
       if (location.latitude === 0 && location.longitude === 0) return;
       
@@ -33,22 +34,33 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       form.setValue('longitude', location.longitude, { shouldValidate: true, shouldDirty: true });
       form.trigger(['latitude', 'longitude']);
     }
-  };
+  }, [form]);
 
-  // Fixed toggle function to prevent unnecessary re-renders and state updates
-  const toggleEdit = () => {
-    if (isEditing) {
+  // Improved toggle function to prevent freezing - memoized with useCallback
+  const toggleEdit = useCallback(() => {
+    setIsEditing(prev => {
       // When canceling edit, reset form values to defaultValues
-      if (defaultValues) {
-        Object.entries(defaultValues).forEach(([key, value]) => {
-          if (value !== undefined) {
-            form.setValue(key as keyof DeliveryFormValues, value as any, { shouldValidate: false });
+      if (prev && defaultValues) {
+        // Schedule the form reset on the next tick to avoid React state update issues
+        setTimeout(() => {
+          if (defaultValues) {
+            // Batch all form updates together
+            const updates: Record<string, any> = {};
+            
+            Object.entries(defaultValues).forEach(([key, value]) => {
+              if (value !== undefined) {
+                updates[key as keyof DeliveryFormValues] = value;
+              }
+            });
+            
+            // Update form in a single batch
+            form.reset(updates as DeliveryFormValues);
           }
-        });
+        }, 0);
       }
-    }
-    setIsEditing(prev => !prev);
-  };
+      return !prev;
+    });
+  }, [defaultValues, form]);
 
   // Check if the form is valid based on delivery method
   const isDeliveryMethodPickup = form.watch('deliveryMethod') === 'pickup';
