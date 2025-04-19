@@ -1,41 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
 import MealForm from '@/components/admin/MealForm';
 import MealList from '@/components/admin/MealList';
 import { useMealManagement } from '@/hooks/useMealManagement';
-import { MealType, INITIAL_MEAL } from '@/types/meal';
+import { useAdmin } from '@/hooks/useAdmin';
+import { INITIAL_MEAL } from '@/types/meal';
 
 const Admin = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [meals, setMeals] = useState<MealType[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchMeals = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('meals')
-        .select('*')
-        .order('id', { ascending: true });
-      
-      if (error) throw error;
-      if (data) setMeals(data);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching meals",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+  const { isAdmin, meals, loading } = useAdmin();
 
   const {
     editingMeal,
@@ -46,130 +22,7 @@ const Admin = () => {
     handleSaveMeal,
     handleDeleteMeal,
     handleImageUpload,
-  } = useMealManagement(fetchMeals);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate('/auth');
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select()
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-        if (data) {
-          setIsAdmin(true);
-          fetchMeals();
-        } else {
-          navigate('/');
-          toast({
-            title: "Access Denied",
-            description: "You need admin privileges to access this page",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    checkAdminStatus();
-  }, [navigate, toast]);
-
-  useEffect(() => {
-    const initializeMeals = async () => {
-      const { data: existingMeals } = await supabase
-        .from('meals')
-        .select('*');
-
-      if (!existingMeals || existingMeals.length === 0) {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) return;
-
-        const { data: restaurants } = await supabase
-          .from('restaurants')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        let restaurant_id;
-        
-        if (restaurants && restaurants.length > 0) {
-          restaurant_id = restaurants[0].id;
-        } else {
-          const { data: newRestaurant } = await supabase
-            .from('restaurants')
-            .insert({
-              name: 'Default Restaurant',
-              user_id: user.id,
-              address: '123 Main Street',
-              location: { type: 'Point', coordinates: [0, 0] }
-            })
-            .select('id')
-            .single();
-          
-          if (newRestaurant) restaurant_id = newRestaurant.id;
-        }
-
-        if (restaurant_id) {
-          // Define initial meals
-          const initialMeals = [
-            {
-              name: 'Quantum Protein Bowl',
-              description: 'High protein meal with grilled chicken, quinoa, and vegetables',
-              price: 10.99,
-              calories: 450,
-              protein: 35,
-              carbs: 40,
-              fat: 15,
-              is_active: true,
-              restaurant_id
-            },
-            {
-              name: 'Fusion Energy Salad',
-              description: 'Mixed greens with superfoods, avocado, and citrus dressing',
-              price: 8.99,
-              calories: 320,
-              protein: 12,
-              carbs: 25,
-              fat: 22,
-              is_active: true,
-              restaurant_id
-            },
-            {
-              name: 'Particle Pasta',
-              description: 'Whole grain pasta with turkey meatballs and organic marinara',
-              price: 12.99,
-              calories: 520,
-              protein: 28,
-              carbs: 65,
-              fat: 18,
-              is_active: true,
-              restaurant_id
-            }
-          ];
-          
-          for (const meal of initialMeals) {
-            await supabase
-              .from('meals')
-              .insert(meal);
-          }
-          fetchMeals();
-        }
-      }
-    };
-
-    initializeMeals();
-  }, []);
+  } = useMealManagement(() => {});
 
   if (loading) {
     return (

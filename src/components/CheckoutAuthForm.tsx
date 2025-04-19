@@ -35,6 +35,7 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
       email: email || "",
       password: "",
     },
+    mode: "onChange" // Enable validation as fields change
   });
 
   return (
@@ -47,7 +48,7 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <Input placeholder="Enter your email" {...field} />
                 </FormControl>
@@ -62,7 +63,7 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Password <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="Create a password" {...field} />
                   </FormControl>
@@ -70,6 +71,12 @@ export const CheckoutAuthForm = ({ onSubmit, email, showPassword = true }: Check
                 </FormItem>
               )}
             />
+          )}
+          
+          {showPassword && (
+            <Button type="submit" className="cyber-button w-full">
+              Create Account
+            </Button>
           )}
         </form>
       </Form>

@@ -54,6 +54,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       longitude: 0,
       ...defaultValues
     },
+    mode: "onChange" // Enable validation as fields change
   });
 
   const getCurrentLocation = () => {
@@ -90,6 +91,10 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
     }
   };
 
+  const handleFormSubmit = form.handleSubmit((data) => {
+    onSubmit(data);
+  });
+
   return (
     <Card className="holographic-card p-6">
       <div className="flex justify-between items-center mb-6">
@@ -104,14 +109,14 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
       </div>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel>Full Name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="Enter your full name" {...field} />
                   </FormControl>
@@ -125,7 +130,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="Enter your phone number" {...field} />
                   </FormControl>
@@ -140,7 +145,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Delivery Address</FormLabel>
+                <FormLabel>Delivery Address <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <Input placeholder="Enter your delivery address" {...field} />
                 </FormControl>
@@ -154,7 +159,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
             name="city"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>City</FormLabel>
+                <FormLabel>City <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <Input placeholder="Enter your city" {...field} />
                 </FormControl>
@@ -183,7 +188,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
               name="deliveryMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Method</FormLabel>
+                  <FormLabel>Delivery Method <span className="text-red-500">*</span></FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
@@ -208,7 +213,7 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
               name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
+                  <FormLabel>Payment Method <span className="text-red-500">*</span></FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
