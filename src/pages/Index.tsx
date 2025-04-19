@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '@/components/ParticleBackground';
 import { FeaturedMeals } from '@/components/FeaturedMeals';
 import Navbar from '@/components/Navbar';
@@ -9,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = React.useState(false);
 
   React.useEffect(() => {
@@ -34,6 +36,10 @@ const Index = () => {
     checkAdminStatus();
   }, []);
 
+  const goToAdminDashboard = () => {
+    navigate('/admin');
+  };
+
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
@@ -54,11 +60,17 @@ const Index = () => {
               Explore Meals
             </button>
 
-            {/* Admin creator tool - shown to everyone for this demo */}
+            {/* Admin section */}
             <div className="mt-8">
               {isAdmin ? (
                 <div className="p-4 bg-green-900/30 border border-green-500/50 rounded-lg max-w-md mx-auto">
-                  <p className="text-green-400">✓ You are logged in as an admin user</p>
+                  <p className="text-green-400 mb-2">✓ You are logged in as an admin user</p>
+                  <button 
+                    onClick={goToAdminDashboard}
+                    className="cyber-button bg-green-700 hover:bg-green-800 w-full"
+                  >
+                    Access Admin Dashboard
+                  </button>
                 </div>
               ) : (
                 <AdminCreator />
