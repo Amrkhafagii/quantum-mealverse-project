@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -127,6 +128,7 @@ export const useCheckout = () => {
     setIsSubmitting(true);
     try {
       if (!loggedInUser?.id) {
+        setIsSubmitting(false);
         throw new Error("You must be logged in to place an order");
       }
 
@@ -176,7 +178,10 @@ export const useCheckout = () => {
         .select()
         .single();
         
-      if (orderError) throw orderError;
+      if (orderError) {
+        setIsSubmitting(false);
+        throw orderError;
+      }
       
       const orderItems = items.map(item => ({
         order_id: insertedOrder.id,
@@ -190,7 +195,10 @@ export const useCheckout = () => {
         .from('order_items')
         .insert(orderItems);
         
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        setIsSubmitting(false);
+        throw itemsError;
+      }
       
       if (data.latitude && data.longitude) {
         await supabase
@@ -212,13 +220,12 @@ export const useCheckout = () => {
       navigate(`/thank-you?order=${insertedOrder.id}`);
     } catch (error: any) {
       console.error("Order submission error:", error);
+      setIsSubmitting(false);
       toast({
         title: "Error placing order",
         description: error.message,
         variant: "destructive"
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
