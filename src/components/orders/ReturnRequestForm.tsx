@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
 
 interface ReturnRequestFormProps {
   orderId: string;
@@ -33,8 +34,21 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({ orderId, o
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>();
   const { toast } = useToast();
   
+  // Get the current user session
+  const { data: session } = useQuery({
+    queryKey: ['session'],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    },
+  });
+  
   const onSubmit = async (data: FormData) => {
     try {
+      if (!session?.user?.id) {
+        throw new Error('You must be logged in to submit a return request');
+      }
+      
       // Convert images to base64
       const imageUrls: string[] = [];
       for (let i = 0; i < data.images.length; i++) {
@@ -57,7 +71,8 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({ orderId, o
           order_id: orderId,
           reason: data.reason,
           images: imageUrls,
-          admin_notes: data.details
+          admin_notes: data.details,
+          user_id: session.user.id // Added the user_id from the session
         });
         
       if (error) throw error;
