@@ -52,15 +52,15 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const [isEditing, setIsEditing] = useState(!defaultValues?.fullName);
   
   // Initialize form with default values and ensure location values are set
-  const initialValues = {
+  const initialValues: Partial<DeliveryFormValues> = {
     fullName: "",
     email: "",
     phone: "",
     address: "",
     city: "",
     notes: "",
-    deliveryMethod: "delivery",
-    paymentMethod: "cash",
+    deliveryMethod: "delivery" as const,
+    paymentMethod: "cash" as const,
     latitude: 0,
     longitude: 0,
     ...defaultValues
