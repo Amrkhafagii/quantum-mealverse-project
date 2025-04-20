@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
+import { RefreshCw, Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +32,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   const { toast } = useToast();
   
   useEffect(() => {
-    if (!assignmentStatus?.expires_at || order?.status !== 'awaiting_restaurant') return;
+    if (!assignmentStatus?.expires_at) return;
     
     const expiresAt = new Date(assignmentStatus.expires_at).getTime();
     const totalTime = 5 * 60; // 5 minutes in seconds
@@ -51,7 +52,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     return () => {
       clearInterval(timerInterval);
     };
-  }, [assignmentStatus?.expires_at, order?.status]);
+  }, [assignmentStatus?.expires_at]);
 
   const handleCancelOrder = async () => {
     if (!order?.id || isCancelling) return;
@@ -91,17 +92,19 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     switch (order.status) {
       case 'pending':
         statusMessage = 'Finding a restaurant to fulfill your order...';
-        if (assignmentStatus?.attempt_count) {
+        if (assignmentStatus?.attempt_count > 0) {
           statusDetails = `Attempt ${assignmentStatus.attempt_count} of 3`;
         }
         break;
       case 'awaiting_restaurant':
         if (assignmentStatus?.restaurant_name) {
           statusMessage = `Waiting for confirmation from ${assignmentStatus.restaurant_name}...`;
-          statusDetails = `Attempt ${assignmentStatus.attempt_count} of 3`;
+          statusDetails = `Attempt ${assignmentStatus.attempt_count || 1} of 3`;
           showTimer = true;
         } else {
           statusMessage = 'A restaurant is reviewing your order...';
+          statusDetails = `Attempt ${assignmentStatus?.attempt_count || 1} of 3`;
+          showTimer = true;
         }
         break;
       case 'processing':
@@ -133,8 +136,8 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         <p className="text-lg">{statusMessage}</p>
         {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
         
-        {showTimer && timeLeft > 0 && (
-          <div className="space-y-4">
+        {showTimer && assignmentStatus?.expires_at && (
+          <div className="space-y-4 mt-4">
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <div className="flex items-center gap-1">
@@ -149,7 +152,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
               variant="destructive" 
               onClick={handleCancelOrder}
               disabled={isCancelling}
-              className="w-full"
+              className="w-full mt-2"
             >
               {isCancelling ? 'Cancelling...' : 'Cancel Order'}
             </Button>

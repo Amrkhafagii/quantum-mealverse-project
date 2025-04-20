@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase/client';
 
 // Type definitions for webhook requests
@@ -131,7 +132,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       .from('restaurant_assignments')
       .select(`
         *,
-        restaurant:restaurants(name)
+        restaurant:restaurants(id, name)
       `)
       .eq('order_id', orderId)
       .eq('status', 'pending')
@@ -151,7 +152,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       .select(`
         status, 
         restaurant_id,
-        restaurant:restaurants(name)
+        restaurant:restaurants(id, name)
       `)
       .eq('id', orderId)
       .single();
@@ -160,7 +161,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: assignment.restaurant?.name,
+        restaurant_name: assignment.restaurant?.name || 'Restaurant',
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
         attempt_count: count || 0
@@ -170,7 +171,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     return {
       status: order?.status || 'unknown',
       assigned_restaurant_id: order?.restaurant_id,
-      restaurant_name: order?.restaurant?.name,
+      restaurant_name: order?.restaurant?.name || 'Restaurant',
       attempt_count: count || 0
     };
   } catch (error) {
