@@ -25,22 +25,34 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
     console.log('OrderRestaurantStatus: Rendering with', { 
       orderId,
       status,
-      assignmentStatus,
-      hasExpiryTime: Boolean(assignmentStatus?.expires_at)
+      assignmentStatus
     });
     
-    // Log details about expires_at if present
-    if (assignmentStatus?.expires_at) {
-      try {
-        const expiresDate = new Date(assignmentStatus.expires_at);
-        console.log('Expiry time details:', {
-          expires_at: assignmentStatus.expires_at,
-          parsed: expiresDate.toISOString(),
-          isValid: !isNaN(expiresDate.getTime()),
-          timeRemaining: Math.floor((expiresDate.getTime() - Date.now()) / 1000)
-        });
-      } catch (error) {
-        console.error('Error parsing expiry time:', error);
+    // Debug the assignment status more thoroughly
+    if (assignmentStatus) {
+      console.log('Assignment status details:', assignmentStatus);
+      
+      // Examine expires_at if present
+      if (assignmentStatus.expires_at) {
+        try {
+          const expiresDate = new Date(assignmentStatus.expires_at);
+          const now = new Date();
+          const isValid = !isNaN(expiresDate.getTime());
+          const timeRemaining = isValid ? Math.floor((expiresDate.getTime() - now.getTime()) / 1000) : null;
+          
+          console.log('Expiry time analysis:', {
+            expires_at: assignmentStatus.expires_at,
+            parsed: isValid ? expiresDate.toISOString() : 'INVALID DATE',
+            currentTime: now.toISOString(),
+            isValid,
+            isFuture: isValid && expiresDate > now,
+            timeRemaining: timeRemaining !== null ? `${timeRemaining}s` : 'N/A'
+          });
+        } catch (error) {
+          console.error('Error analyzing expiry time:', error);
+        }
+      } else {
+        console.log('No expires_at found in assignment status');
       }
     }
   }, [status, assignmentStatus, orderId]);
@@ -51,12 +63,17 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
     console.log('Timer expired, refreshing order status...');
   };
 
-  // Check if we have a valid expires_at that's in the future
+  // More robust check for valid expiry time
   const hasValidExpiryTime = Boolean(
     assignmentStatus?.expires_at && 
     !isNaN(new Date(assignmentStatus.expires_at).getTime()) &&
     new Date(assignmentStatus.expires_at) > new Date()
   );
+
+  console.log('Timer visibility check:', { 
+    hasValidExpiryTime, 
+    expiryTime: assignmentStatus?.expires_at
+  });
 
   return (
     <div className="space-y-6 py-4">
@@ -84,7 +101,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             </div>
           ) : (
             <div className="text-sm text-gray-400 mb-6">
-              {assignmentStatus ? 
+              {assignmentStatus?.status === 'awaiting_response' ? 
                 "Restaurant is being contacted..." : 
                 "Preparing to contact nearby restaurants..."}
             </div>
