@@ -39,7 +39,7 @@ export async function createRestaurantAssignment(
   console.log(`Creating restaurant assignment for order ${orderId} to restaurant ${restaurantId}`);
 
   try {
-    // Verify restaurant exists before creating assignment
+    // First verify that the restaurant exists in the restaurants table
     const { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
       .select('id')
