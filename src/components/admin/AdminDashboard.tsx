@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MealList from './MealList';
 import MealForm from './MealForm';
@@ -23,11 +22,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ meals }) => {
     handleSaveMeal, 
     handleDeleteMeal,
     handleImageUpload
-  } = useMealManagement(() => {
+  } = useMealManagement(async () => {
     // This is a placeholder for the fetchMeals function that will be called after updates
     // In a real application, this would refetch the meals from the server
     console.log("Meal updated, would normally refetch meals here");
     // Since we can't directly modify the meals prop, we'd typically use a hook or context here
+    // Return a resolved promise to satisfy the Promise<void> type requirement
+    return Promise.resolve();
   });
 
   const [activeTab, setActiveTab] = useState("meals");
