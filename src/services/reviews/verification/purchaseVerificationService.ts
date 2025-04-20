@@ -1,5 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { PostgrestResponse } from '@supabase/supabase-js';
+
+// Define explicit interface for the query result
+interface OrderItemResult {
+  id: string;
+}
 
 /**
  * Checks if a user has purchased a specific meal by querying the order_items table
@@ -10,20 +16,19 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
   try {
-    // Execute the query and bypass complex type inference with a simpler approach
+    // Assert the type early in the query chain
     const result = await supabase
       .from('order_items')
       .select('id')
       .eq('meal_id', mealId)
       .eq('user_id', userId)
-      .limit(1);
+      .limit(1) as PostgrestResponse<OrderItemResult[]>;
       
     if (result.error) {
       console.error('Error checking verified purchase:', result.error);
       throw result.error;
     }
     
-    // Check if we found any records (without relying on complex types)
     return Array.isArray(result.data) && result.data.length > 0;
   } catch (err) {
     console.error('Unexpected error in checkVerifiedPurchase:', err);
