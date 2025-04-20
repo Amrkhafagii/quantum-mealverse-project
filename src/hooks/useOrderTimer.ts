@@ -6,7 +6,13 @@ export const useOrderTimer = (expiresAt: string | undefined) => {
   const [progress, setProgress] = useState<number>(100);
   
   useEffect(() => {
-    if (!expiresAt) return;
+    console.log('OrderTimer Hook: Starting useEffect');
+    console.log('Expires At:', expiresAt);
+    
+    if (!expiresAt) {
+      console.warn('No expiration time provided');
+      return;
+    }
     
     const expiresAtTime = new Date(expiresAt).getTime();
     const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
@@ -20,8 +26,12 @@ export const useOrderTimer = (expiresAt: string | undefined) => {
       const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
       setProgress(Math.max(0, Math.min(100, progressValue)));
       
-      // Log to help debug
-      console.log(`Timer: ${secondsLeft}s left, ${progressValue.toFixed(1)}% remaining`);
+      // Detailed logging
+      console.log(`Timer Details:
+        - Expires At: ${new Date(expiresAtTime).toISOString()}
+        - Current Time: ${new Date(now).toISOString()}
+        - Seconds Left: ${secondsLeft}s
+        - Progress: ${progressValue.toFixed(1)}%`);
     };
     
     updateTimer();

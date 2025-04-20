@@ -17,6 +17,12 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   assignmentStatus,
   onOrderUpdate 
 }) => {
+  console.log('OrderStatusDisplay Render:', {
+    order: order.id,
+    status: order.status,
+    assignmentStatus: assignmentStatus
+  });
+
   const showTimer = ['pending', 'awaiting_restaurant'].includes(order.status);
   const showCancelButton = ['pending', 'awaiting_restaurant'].includes(order.status);
 
