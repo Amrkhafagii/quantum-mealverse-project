@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
 
 export const useOrderTimer = (
@@ -9,11 +9,9 @@ export const useOrderTimer = (
 ) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
-  const reassignmentAttemptedRef = useRef<boolean>(false);
   
   useEffect(() => {
     console.log('OrderTimer Hook: Starting useEffect with expiresAt:', expiresAt);
-    reassignmentAttemptedRef.current = false;
     
     if (!expiresAt || !orderId) {
       console.warn('Missing required data for timer:', { expiresAt, orderId });
@@ -44,27 +42,18 @@ export const useOrderTimer = (
         }
 
         // When timer hits zero, trigger the webhook for reassignment
-        if (secondsLeft === 0 && !reassignmentAttemptedRef.current) {
+        if (secondsLeft === 0) {
           console.log('Timer expired, attempting reassignment...');
-          reassignmentAttemptedRef.current = true;
-          
           try {
             // Get location from local storage
-            const locationData = localStorage.getItem('lastKnownLocation');
-            if (!locationData) {
-              console.error('No location data available for reassignment');
-              return;
-            }
-            
-            const location = JSON.parse(locationData);
-            const { latitude, longitude } = location;
+            const location = localStorage.getItem('lastKnownLocation');
+            const { latitude, longitude } = location ? JSON.parse(location) : { latitude: null, longitude: null };
             
             if (latitude && longitude) {
-              console.log(`Sending reassignment webhook for order ${orderId} with location: `, { latitude, longitude });
               await sendOrderToWebhook(orderId, latitude, longitude);
               console.log('Reassignment webhook sent successfully');
             } else {
-              console.error('Invalid location data for reassignment:', location);
+              console.error('No location data available for reassignment');
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
