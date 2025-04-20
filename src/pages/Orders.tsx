@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -19,14 +18,12 @@ const Orders = () => {
   const navigate = useNavigate();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   
-  // Update selected order when URL parameter changes
   useEffect(() => {
     if (orderIdParam) {
       setSelectedOrderId(orderIdParam);
     }
   }, [orderIdParam]);
   
-  // Update URL when selected order changes
   useEffect(() => {
     if (selectedOrderId) {
       navigate(`/orders/${selectedOrderId}`, { replace: true });
@@ -50,8 +47,7 @@ const Orders = () => {
         .from('orders')
         .select('*, order_items(*)')
         .eq('user_id', session.user.id)
-        .not('status', 'eq', 'delivered')
-        .not('status', 'eq', 'cancelled')
+        .not('status', 'in', ['delivered', 'cancelled', 'rejected'])
         .order('created_at', { ascending: false });
         
       if (error) throw error;
@@ -69,7 +65,7 @@ const Orders = () => {
         .from('orders')
         .select('*')
         .eq('user_id', session.user.id)
-        .or('status.eq.delivered,status.eq.cancelled')
+        .in('status', ['delivered', 'cancelled', 'rejected'])
         .order('created_at', { ascending: false })
         .limit(5);
         
