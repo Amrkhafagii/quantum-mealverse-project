@@ -122,10 +122,10 @@ export const checkAssignmentStatus = async (orderId: string) => {
     
     console.log(`Assignment attempt count for order ${orderId}: ${count}`);
     
-    // Get current order status
+    // Get current order status - handle the relationship error differently
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('status, restaurant_id, restaurant:restaurants(id, name)')
+      .select('status, restaurant_id')
       .eq('id', orderId)
       .single();
     
@@ -133,20 +133,34 @@ export const checkAssignmentStatus = async (orderId: string) => {
       console.error('Error fetching order details:', orderError);
     }
     
+    // Get restaurant details separately if there's a restaurant_id
+    let restaurantName = 'Restaurant';
+    if (order?.restaurant_id) {
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', order.restaurant_id)
+        .single();
+      
+      if (restaurant) {
+        restaurantName = restaurant.name;
+      }
+    }
+    
     // If there's an active assignment, return its details
     if (assignment) {
-      const restaurantName = getRestaurantName(assignment.restaurant);
+      const assignmentRestaurantName = getRestaurantName(assignment.restaurant);
       
       console.log(`Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
-        restaurant: restaurantName,
+        restaurant: assignmentRestaurantName,
         expires_at: assignment.expires_at
       });
       
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: restaurantName,
+        restaurant_name: assignmentRestaurantName,
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
         attempt_count: count || 1
@@ -155,8 +169,6 @@ export const checkAssignmentStatus = async (orderId: string) => {
     
     // If no active assignment but order exists, return order status
     if (order) {
-      const restaurantName = getRestaurantName(order.restaurant);
-      
       return {
         status: order.status || 'unknown',
         assigned_restaurant_id: order.restaurant_id,

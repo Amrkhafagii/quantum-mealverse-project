@@ -26,14 +26,22 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
 
   const showTimer = ['pending', 'awaiting_restaurant'].includes(order.status);
   const showCancelButton = ['pending', 'awaiting_restaurant'].includes(order.status);
+  
+  // Check if we have a valid expires_at in assignment status
+  const hasValidExpiryTime = Boolean(
+    showTimer && 
+    assignmentStatus && 
+    assignmentStatus.expires_at &&
+    !isNaN(new Date(assignmentStatus.expires_at).getTime())
+  );
 
   return (
     <div className="space-y-2">
       <OrderStatusMessage order={order} assignmentStatus={assignmentStatus} />
       
-      {(showTimer && assignmentStatus && assignmentStatus.expires_at) && (
+      {hasValidExpiryTime && (
         <div className="border border-gray-700 bg-gray-900 rounded-md p-4 mt-4">
-          <OrderTimer expiresAt={assignmentStatus.expires_at} />
+          <OrderTimer expiresAt={assignmentStatus?.expires_at} />
         </div>
       )}
       
