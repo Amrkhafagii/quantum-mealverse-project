@@ -154,7 +154,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       // Safely extract restaurant name with proper null checks
       let restaurantName = 'Restaurant';
       
-      if (assignment.restaurant && 
+      if (assignment.restaurant != null && 
           typeof assignment.restaurant === 'object') {
         // Fixed: Check if restaurant is an array and access first item if needed
         const restaurantObj = Array.isArray(assignment.restaurant) 
@@ -179,7 +179,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     // Safely extract restaurant name from order with proper null checks
     let restaurantName = 'Restaurant';
     
-    if (orderData?.restaurant && 
+    if (orderData?.restaurant != null && 
         typeof orderData.restaurant === 'object') {
       // Fixed: Check if restaurant is an array and access first item if needed
       const restaurantObj = Array.isArray(orderData.restaurant) 

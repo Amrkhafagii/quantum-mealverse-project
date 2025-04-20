@@ -121,7 +121,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
     if (assignment) {
       let restaurantName = 'Restaurant';
       
-      if (assignment.restaurant && 
+      if (assignment.restaurant != null && 
           typeof assignment.restaurant === 'object') {
         // Fixed: Check if restaurant is an array and access first item if needed
         const restaurantObj = Array.isArray(assignment.restaurant) 
@@ -145,7 +145,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
     
     let restaurantName = 'Restaurant';
     
-    if (order?.restaurant && 
+    if (order?.restaurant != null && 
         typeof order.restaurant === 'object') {
       // Fixed: Check if restaurant is an array and access first item if needed
       const restaurantObj = Array.isArray(order.restaurant) 
