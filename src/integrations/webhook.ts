@@ -130,10 +130,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     // Get the current assignment
     const { data: assignment, error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select(`
-        *,
-        restaurant:restaurants(id, name)
-      `)
+      .select('*, restaurant:restaurants(id, name)')
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -149,29 +146,38 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     // Get the order status
     const { data: order } = await supabase
       .from('orders')
-      .select(`
-        status, 
-        restaurant_id,
-        restaurant:restaurants(id, name)
-      `)
+      .select('status, restaurant_id, restaurant:restaurants(id, name)')
       .eq('id', orderId)
       .single();
     
     if (assignment) {
+      // Handle the restaurant data properly to avoid type errors
+      const restaurantName = assignment.restaurant && 
+        typeof assignment.restaurant === 'object' && 
+        'name' in assignment.restaurant ? 
+        assignment.restaurant.name : 'Restaurant';
+        
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: assignment.restaurant?.name || 'Restaurant',
+        restaurant_name: restaurantName,
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
         attempt_count: count || 0
       };
     }
     
+    // Handle the restaurant data properly to avoid type errors
+    const restaurantName = order && 
+      order.restaurant && 
+      typeof order.restaurant === 'object' && 
+      'name' in order.restaurant ? 
+      order.restaurant.name : 'Restaurant';
+    
     return {
       status: order?.status || 'unknown',
       assigned_restaurant_id: order?.restaurant_id,
-      restaurant_name: order?.restaurant?.name || 'Restaurant',
+      restaurant_name: restaurantName,
       attempt_count: count || 0
     };
   } catch (error) {
