@@ -1,6 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+interface ReviewFlagCheck {
+  id: string;
+}
+
 // Flag a review for moderation
 export const flagReview = async (reviewId: string): Promise<boolean> => {
   const { error } = await supabase
@@ -12,35 +16,18 @@ export const flagReview = async (reviewId: string): Promise<boolean> => {
   return true;
 };
 
-// Verify user's purchase status
-export const hasUserPurchased = async (userId: string, mealId: string, restaurantId: string): Promise<boolean> => {
-  const { data, error } = await supabase
-    .from('order_items')
-    .select('id')
-    .match({
-      user_id: userId,
-      meal_id: mealId,
-      restaurant_id: restaurantId
-    })
-    .single();
-    
-  if (error && error.code !== 'PGRST116') throw error;
-  return !!data;
-};
-
 // Check if user has already reviewed
 export const hasUserReviewed = async (userId: string, mealId: string, restaurantId: string): Promise<boolean> => {
   const { data, error } = await supabase
     .from('reviews')
-    .select('id')
+    .select<'reviews', ReviewFlagCheck>('id')
     .match({
       user_id: userId,
       meal_id: mealId,
       restaurant_id: restaurantId
     })
-    .single();
+    .limit(1);
     
-  if (error && error.code !== 'PGRST116') throw error;
-  return !!data;
+  if (error) throw error;
+  return data !== null && data.length > 0;
 };
-

@@ -2,18 +2,24 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Review } from '@/types/review';
 
-// Submit a new review
+interface ReviewCheck {
+  id: string;
+}
+
 export const submitReview = async (review: Omit<Review, 'id' | 'created_at' | 'updated_at'>) => {
-  // Check for duplicate reviews from the same user for the same meal/restaurant
-  const { data: existingReviews } = await supabase
+  // Check for duplicate reviews
+  const { data: existingReviews, error: checkError } = await supabase
     .from('reviews')
-    .select('id')
+    .select<'reviews', ReviewCheck>('id')
     .match({
       user_id: review.user_id,
       meal_id: review.meal_id,
       restaurant_id: review.restaurant_id
-    });
+    })
+    .limit(1);
     
+  if (checkError) throw checkError;
+  
   if (existingReviews && existingReviews.length > 0) {
     throw new Error('You have already reviewed this meal from this restaurant');
   }
@@ -48,4 +54,3 @@ const updateRatingCaches = async (mealId: string, restaurantId: string) => {
     console.error('Error updating rating cache:', error);
   }
 };
-
