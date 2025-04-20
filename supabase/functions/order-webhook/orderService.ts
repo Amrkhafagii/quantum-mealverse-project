@@ -1,3 +1,4 @@
+
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -37,6 +38,8 @@ export async function handleAssignment(
     return { success: false, error: 'Failed to check assignment count' };
   }
 
+  console.log(`handleAssignment called for order ${orderId} with current assignment attempt count: ${assignmentCount?.count}`);
+
   if (assignmentCount?.count >= 3) {
     await updateOrderStatus(supabase, orderId, 'assignment_failed');
     
@@ -73,12 +76,14 @@ export async function handleAssignment(
     .eq('order_id', orderId);
   
   const triedRestaurantIds = previousAttempts?.map(a => a.restaurant_id) || [];
+  console.log(`Previously tried restaurants for order ${orderId}:`, triedRestaurantIds);
   
   const availableRestaurant = nearestRestaurants.find(r => 
     !triedRestaurantIds.includes(r.restaurant_id)
   );
 
   if (!availableRestaurant) {
+    console.log('No more available restaurants to try for reassignment');
     await updateOrderStatus(supabase, orderId, 'no_available_restaurants');
     return { 
       success: false, 
@@ -86,6 +91,8 @@ export async function handleAssignment(
       retryAllowed: true
     };
   }
+
+  console.log(`Assigning to restaurant ID: ${availableRestaurant.restaurant_id} (${availableRestaurant.name}) on attempt #${(assignmentCount?.count || 0) + 1}`);
 
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
@@ -123,3 +130,4 @@ export async function handleAssignment(
     attempt_number: (assignmentCount?.count || 0) + 1
   };
 }
+
