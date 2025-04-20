@@ -119,7 +119,10 @@ const Orders = () => {
                 selectedOrderId={selectedOrderId}
                 onOrderSelect={handleOrderSelect}
               />
-              <PastOrdersList orders={pastOrders || []} />
+              <PastOrdersList 
+                orders={pastOrders || []} 
+                onOrderSelect={handleOrderSelect} 
+              />
             </div>
             
             <div className="lg:col-span-2">
