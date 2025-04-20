@@ -9,7 +9,7 @@ import {
   createOrderItems,
   saveUserLocation 
 } from '@/services/orders/orderService';
-import { sendOrderToWebhook } from '@/integrations/webhook';
+import { sendOrderToWebhook } from '@/services/orders/webhookService';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -64,11 +64,7 @@ export const useOrderSubmission = (
         
         // Send order to webhook for restaurant assignment
         console.log('Sending order to webhook for restaurant assignment...');
-        const webhookResult = await sendOrderToWebhook(
-          insertedOrder.id,
-          data.latitude,
-          data.longitude
-        );
+        const webhookResult = await sendOrderToWebhook(insertedOrder.id);
         
         console.log('Webhook result:', webhookResult);
         

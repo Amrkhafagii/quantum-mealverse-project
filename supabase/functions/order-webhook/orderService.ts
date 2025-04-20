@@ -1,3 +1,4 @@
+
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -23,7 +24,9 @@ export async function updateOrderStatus(
 
 export async function handleAssignment(
   supabase: SupabaseClient,
-  orderId: string
+  orderId: string,
+  latitude?: number,
+  longitude?: number
 ) {
   const { data: assignmentCount, error: countError } = await supabase
     .from('restaurant_assignment_history')
@@ -66,7 +69,21 @@ export async function handleAssignment(
     };
   }
 
-  const nearestRestaurants = await findNearestRestaurants(supabase, order.restaurant?.latitude, order.restaurant?.longitude);
+  // Get location from parameters or from the order's restaurant
+  const searchLatitude = latitude || order.restaurant?.latitude;
+  const searchLongitude = longitude || order.restaurant?.longitude;
+  
+  // If we can't determine a location, return an error
+  if (!searchLatitude || !searchLongitude) {
+    console.log('No location data available for restaurant search');
+    await updateOrderStatus(supabase, orderId, 'no_location_data');
+    return { 
+      success: false, 
+      error: 'no_location_data_available'
+    };
+  }
+
+  const nearestRestaurants = await findNearestRestaurants(supabase, searchLatitude, searchLongitude);
   
   if (!nearestRestaurants || nearestRestaurants.length === 0) {
     console.log('No restaurants available within range');
