@@ -4,8 +4,6 @@ import { Building } from 'lucide-react';
 import { Order } from '@/types/order';
 import { AssignmentStatus } from '@/types/webhook';
 import { Progress } from "@/components/ui/progress";
-import { useCountdownTimer } from '@/hooks/useCountdownTimer';
-import { CircularTimer } from './CircularTimer';
 
 interface OrderStatusMessageProps {
   order: Order;
@@ -21,8 +19,6 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   order, 
   assignmentStatus 
 }) => {
-  const { timeLeft, totalTime } = useCountdownTimer(assignmentStatus?.expires_at);
-  
   const getStatusMessage = (): StatusMessage => {
     if (!order) return { message: '' };
     
@@ -82,14 +78,7 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
                 <span>{statusMessage.details}</span>
               </div>
               {showAttemptProgress && (
-                <div className="space-y-4">
-                  {assignmentStatus?.expires_at && (
-                    <div className="flex justify-center">
-                      <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
-                    </div>
-                  )}
-                  <Progress value={progressValue} className="h-2" />
-                </div>
+                <Progress value={progressValue} className="h-2" />
               )}
             </div>
           )}
