@@ -119,27 +119,42 @@ const ThankYou: React.FC = () => {
                 </div>
                 
                 <h1 className="text-4xl font-bold text-quantum-cyan mb-4 neon-text">Order Confirmed!</h1>
-                <p className="text-xl mb-6">Order #{order?.formatted_order_id || orderId.substring(0, 8)}</p>
+                <p className="text-xl mb-2">Order #{order?.formatted_order_id || orderId.substring(0, 8)}</p>
+                {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
+                  <p className="text-sm text-gray-400">
+                    We're looking for the perfect restaurant to prepare your order.
+                    You can track the progress below.
+                  </p>
+                )}
               </div>
 
               {order && (
                 <>
-                  <OrderStatusDisplay 
-                    order={order} 
-                    assignmentStatus={assignmentStatus} 
-                    onOrderUpdate={fetchOrderDetails}
-                  />
+                  <div className="border-t border-b border-gray-800 py-6">
+                    <OrderStatusDisplay 
+                      order={order} 
+                      assignmentStatus={assignmentStatus} 
+                      onOrderUpdate={fetchOrderDetails}
+                    />
+                  </div>
                   <OrderDetailsDisplay order={order} />
                 </>
               )}
 
               <div className="space-y-4 pt-6">
-                <Button className="cyber-button w-full" onClick={() => navigate('/customer')}>
-                  Continue Shopping
+                <Button 
+                  onClick={() => navigate('/orders')} 
+                  className="w-full"
+                >
+                  Track Your Order
                 </Button>
                 
-                <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
-                  Return to Home
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => navigate('/customer')}
+                >
+                  Continue Shopping
                 </Button>
               </div>
             </div>

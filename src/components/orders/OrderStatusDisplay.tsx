@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
@@ -88,6 +87,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     let statusMessage = '';
     let statusDetails = '';
     let showTimer = false;
+    let showCancelButton = false;
     
     switch (order.status) {
       case 'pending':
@@ -95,16 +95,19 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         if (assignmentStatus?.attempt_count > 0) {
           statusDetails = `Attempt ${assignmentStatus.attempt_count} of 3`;
         }
+        showCancelButton = true;
         break;
       case 'awaiting_restaurant':
         if (assignmentStatus?.restaurant_name) {
           statusMessage = `Waiting for confirmation from ${assignmentStatus.restaurant_name}...`;
           statusDetails = `Attempt ${assignmentStatus.attempt_count || 1} of 3`;
           showTimer = true;
+          showCancelButton = true;
         } else {
           statusMessage = 'A restaurant is reviewing your order...';
           statusDetails = `Attempt ${assignmentStatus?.attempt_count || 1} of 3`;
           showTimer = true;
+          showCancelButton = true;
         }
         break;
       case 'processing':
@@ -136,28 +139,33 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         <p className="text-lg">{statusMessage}</p>
         {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
         
-        {showTimer && assignmentStatus?.expires_at && (
+        {(showTimer && assignmentStatus?.expires_at) || showCancelButton ? (
           <div className="space-y-4 mt-4">
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Restaurant response time:</span>
+            {showTimer && assignmentStatus?.expires_at && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>Restaurant response time:</span>
+                  </div>
+                  <span>{formatTime(timeLeft)}</span>
                 </div>
-                <span>{formatTime(timeLeft)}</span>
+                <Progress value={progress} className="h-2" />
               </div>
-              <Progress value={progress} className="h-2 bg-gray-700" />
-            </div>
-            <Button 
-              variant="destructive" 
-              onClick={handleCancelOrder}
-              disabled={isCancelling}
-              className="w-full mt-2"
-            >
-              {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-            </Button>
+            )}
+            
+            {showCancelButton && (
+              <Button 
+                variant="destructive" 
+                onClick={handleCancelOrder}
+                disabled={isCancelling}
+                className="w-full mt-2"
+              >
+                {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+              </Button>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
     );
   };
