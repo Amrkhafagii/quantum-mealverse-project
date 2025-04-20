@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
@@ -20,9 +21,6 @@ export const sendOrderToWebhook = async (
   longitude: number
 ): Promise<WebhookResponse> => {
   try {
-    // Store the location in localStorage for potential reassignment
-    localStorage.setItem('lastKnownLocation', JSON.stringify({ latitude, longitude }));
-    
     const data: OrderAssignmentRequest = {
       order_id: orderId,
       latitude,
@@ -30,7 +28,6 @@ export const sendOrderToWebhook = async (
       action: 'assign'
     };
 
-    console.log('Sending order assignment request:', data);
     const response = await supabase.functions.invoke('order-webhook', {
       body: data
     });
@@ -125,34 +122,15 @@ export const checkAssignmentStatus = async (orderId: string) => {
     
     console.log(`Assignment attempt count for order ${orderId}: ${count}`);
     
-    // Get current order status and restaurant_attempts
+    // Get current order status - handle the relationship error differently
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('status, restaurant_id, restaurant_attempts')
+      .select('status, restaurant_id')
       .eq('id', orderId)
       .single();
     
     if (orderError) {
       console.error('Error fetching order details:', orderError);
-    }
-    
-    // Parse the restaurant attempts data if it exists
-    let nextRestaurants = [];
-    if (order?.restaurant_attempts) {
-      try {
-        const attemptData = order.restaurant_attempts as {
-          restaurants: Array<{ restaurant_id: string; name: string }>;
-          current_attempt: number;
-        };
-        const currentAttempt = attemptData.current_attempt || 0;
-        const restaurants = attemptData.restaurants || [];
-        nextRestaurants = restaurants.slice(currentAttempt).map(r => ({
-          id: r.restaurant_id,
-          name: r.name
-        }));
-      } catch (e) {
-        console.error('Error parsing restaurant_attempts data:', e);
-      }
     }
     
     // Get restaurant details separately if there's a restaurant_id
@@ -169,48 +147,45 @@ export const checkAssignmentStatus = async (orderId: string) => {
       }
     }
     
-    // If there's an active assignment, return its details, always including expires_at
+    // If there's an active assignment, return its details
     if (assignment) {
       const assignmentRestaurantName = getRestaurantName(assignment.restaurant);
+      
       console.log(`Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
         restaurant: assignmentRestaurantName,
         expires_at: assignment.expires_at
       });
+      
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
         restaurant_name: assignmentRestaurantName,
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
-        attempt_count: count || 1,
-        next_restaurants: nextRestaurants
+        attempt_count: count || 1
       };
     }
     
-    // If no active assignment but order exists, return order status (expires_at: undefined)
+    // If no active assignment but order exists, return order status
     if (order) {
       return {
         status: order.status || 'unknown',
         assigned_restaurant_id: order.restaurant_id,
         restaurant_name: restaurantName,
-        attempt_count: count || 0,
-        next_restaurants: nextRestaurants,
-        expires_at: undefined
+        attempt_count: count || 0
       };
     }
     
     return {
       status: 'error',
-      attempt_count: 0,
-      expires_at: undefined
+      attempt_count: 0
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);
     return {
       status: 'error',
-      attempt_count: 0,
-      expires_at: undefined
+      attempt_count: 0
     };
   }
 };

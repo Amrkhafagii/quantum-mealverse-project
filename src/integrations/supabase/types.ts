@@ -291,45 +291,6 @@ export type Database = {
           },
         ]
       }
-      nearby_restaurant_locations: {
-        Row: {
-          id: string
-          nearby_restaurants_id: string
-          restaurant_id: string
-          restaurant_latitude: number
-          restaurant_longitude: number
-        }
-        Insert: {
-          id?: string
-          nearby_restaurants_id: string
-          restaurant_id: string
-          restaurant_latitude: number
-          restaurant_longitude: number
-        }
-        Update: {
-          id?: string
-          nearby_restaurants_id?: string
-          restaurant_id?: string
-          restaurant_latitude?: number
-          restaurant_longitude?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_nearby_restaurants_id"
-            columns: ["nearby_restaurants_id"]
-            isOneToOne: false
-            referencedRelation: "user_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "nearby_restaurant_locations_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notifications: {
         Row: {
           created_at: string
@@ -609,7 +570,6 @@ export type Database = {
           payment_method: string
           refund_amount: number | null
           refund_status: string | null
-          restaurant_attempts: Json | null
           restaurant_id: string | null
           return_images: string[] | null
           return_reason: string | null
@@ -636,7 +596,6 @@ export type Database = {
           payment_method: string
           refund_amount?: number | null
           refund_status?: string | null
-          restaurant_attempts?: Json | null
           restaurant_id?: string | null
           return_images?: string[] | null
           return_reason?: string | null
@@ -663,7 +622,6 @@ export type Database = {
           payment_method?: string
           refund_amount?: number | null
           refund_status?: string | null
-          restaurant_attempts?: Json | null
           restaurant_id?: string | null
           return_images?: string[] | null
           return_reason?: string | null

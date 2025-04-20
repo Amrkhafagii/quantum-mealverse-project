@@ -37,14 +37,11 @@ export const useOrderData = (orderId: string) => {
             restaurantData = restaurant;
           }
         }
-
-        // Parse restaurant_attempts if it exists
+        
+        // Combine the order with restaurant data
         const formattedData: Order = {
           ...orderData,
-          restaurant: restaurantData || { id: '', name: '' },
-          restaurant_attempts: orderData.restaurant_attempts ? 
-            orderData.restaurant_attempts as Order['restaurant_attempts'] : 
-            undefined
+          restaurant: restaurantData || { id: '', name: '' }
         };
         
         return formattedData;
