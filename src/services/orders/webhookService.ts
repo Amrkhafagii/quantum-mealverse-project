@@ -103,19 +103,45 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     console.log(`Checking assignment status for order: ${orderId}`);
     
     // First check for active assignments in restaurant_assignments table
-    const { data: assignment, error: assignmentError } = await supabase
+    const { data: assignments, error: assignmentError } = await supabase
       .from('restaurant_assignments')
       .select('*, restaurant:restaurants(id, name)')
       .eq('order_id', orderId)
       .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: false });
     
     if (assignmentError) {
+      console.error('Error fetching assignments:', assignmentError);
       console.log('No active assignments found, checking order status');
-    } else {
+    } else if (assignments && assignments.length > 0) {
+      const assignment = assignments[0];
       console.log('Active assignment found:', assignment);
+      
+      // Validate that expires_at is a valid date in the future
+      const expiresAt = assignment.expires_at;
+      const expiresAtDate = new Date(expiresAt);
+      const isValidDate = !isNaN(expiresAtDate.getTime());
+      const isFutureDate = isValidDate && expiresAtDate > new Date();
+      
+      console.log(`Assignment details for ${orderId}:`, {
+        status: 'awaiting_response',
+        restaurant: getRestaurantName(assignment.restaurant),
+        expires_at: expiresAt,
+        expiresAtValid: isValidDate,
+        isFutureDate,
+        timeRemaining: isValidDate ? Math.floor((expiresAtDate.getTime() - Date.now()) / 1000) : 'invalid date'
+      });
+      
+      return {
+        status: 'awaiting_response',
+        assigned_restaurant_id: assignment.restaurant_id,
+        restaurant_name: getRestaurantName(assignment.restaurant),
+        assignment_id: assignment.id,
+        expires_at: expiresAt,
+        attempt_count: 1
+      };
+    } else {
+      console.log('No active assignments found for order:', orderId);
     }
     
     // Get attempt count from assignment history
@@ -126,7 +152,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     
     console.log(`Assignment attempt count for order ${orderId}: ${count}`);
     
-    // Get current order status - handle the relationship error differently
+    // Get current order status
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('status, restaurant_id')
@@ -149,29 +175,6 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       if (restaurant) {
         restaurantName = restaurant.name;
       }
-    }
-    
-    // If there's an active assignment, return its details
-    if (assignment) {
-      const assignmentRestaurantName = getRestaurantName(assignment.restaurant);
-      
-      // Log the expires_at time and validate it
-      console.log(`Assignment details for ${orderId}:`, {
-        status: 'awaiting_response',
-        restaurant: assignmentRestaurantName,
-        expires_at: assignment.expires_at,
-        expiresAtValid: !isNaN(new Date(assignment.expires_at).getTime()),
-        timeRemaining: Math.floor((new Date(assignment.expires_at).getTime() - Date.now()) / 1000)
-      });
-      
-      return {
-        status: 'awaiting_response',
-        assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: assignmentRestaurantName,
-        assignment_id: assignment.id,
-        expires_at: assignment.expires_at,
-        attempt_count: count || 1
-      };
     }
     
     // If no active assignment but order exists, return order status

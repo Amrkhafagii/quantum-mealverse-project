@@ -28,6 +28,21 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
       assignmentStatus,
       hasExpiryTime: Boolean(assignmentStatus?.expires_at)
     });
+    
+    // Log details about expires_at if present
+    if (assignmentStatus?.expires_at) {
+      try {
+        const expiresDate = new Date(assignmentStatus.expires_at);
+        console.log('Expiry time details:', {
+          expires_at: assignmentStatus.expires_at,
+          parsed: expiresDate.toISOString(),
+          isValid: !isNaN(expiresDate.getTime()),
+          timeRemaining: Math.floor((expiresDate.getTime() - Date.now()) / 1000)
+        });
+      } catch (error) {
+        console.error('Error parsing expiry time:', error);
+      }
+    }
   }, [status, assignmentStatus, orderId]);
 
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
