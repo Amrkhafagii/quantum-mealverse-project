@@ -1,132 +1,88 @@
-
 import React from 'react';
-import { Review } from '@/types/review';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { StarRating } from './StarRating';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, X, Trash } from 'lucide-react';
+import { Review } from '@/types/review';
+import { StarRating } from './StarRating';
+import { format } from 'date-fns';
 
 interface AdminReviewCardProps {
-  review: Review & {
-    meals?: { name: string };
-    restaurants?: { name: string };
-  };
+  review: Review;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
-  onDelete: (id: string) => void;
+  isProcessing?: boolean;
 }
 
-export const AdminReviewCard: React.FC<AdminReviewCardProps> = ({ 
-  review, 
-  onApprove, 
-  onReject, 
-  onDelete 
+export const AdminReviewCard: React.FC<AdminReviewCardProps> = ({
+  review,
+  onApprove,
+  onReject,
+  isProcessing = false
 }) => {
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'outline'; // Changed from 'success' to use a valid variant
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+        return 'destructive';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'secondary';
     }
   };
-
+  
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between">
-          <div>
-            <CardTitle>Review for {review.meals?.name || 'Unknown Meal'}</CardTitle>
-            <p className="text-sm text-gray-500">
-              At {review.restaurants?.name || 'Unknown Restaurant'}
-            </p>
-          </div>
-          <div className="space-x-2">
-            {review.is_flagged && (
-              <Badge variant="outline" className="bg-red-100 text-red-800">
-                Flagged
-              </Badge>
-            )}
-            <Badge variant={
-              review.status === 'approved' ? 'default' : 
-              review.status === 'pending' ? 'secondary' : 
-              'destructive'
-            }>
-              {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
-            </Badge>
-          </div>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Review by User ID: {review.user_id}</h3>
+          <Badge variant={getStatusBadgeVariant(review.status)}>
+            {review.status}
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="mb-2">
-          <StarRating rating={review.rating} size="sm" showNumber />
+      
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <StarRating rating={review.rating} size="sm" />
+          <span className="text-sm text-gray-500">
+            {format(new Date(review.created_at), 'PPP')}
+          </span>
         </div>
         
-        {review.comment && (
-          <p className="text-gray-600 mb-4">{review.comment}</p>
-        )}
+        <p className="text-sm">{review.comment}</p>
         
         {review.images && review.images.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex gap-2 mt-2">
             {review.images.map((image, index) => (
               <img 
                 key={index} 
                 src={image} 
-                alt={`Review ${index + 1}`} 
+                alt={`Review Image ${index + 1}`} 
                 className="w-20 h-20 object-cover rounded" 
               />
             ))}
           </div>
         )}
-        
-        <div className="text-xs text-gray-500">
-          {review.is_verified_purchase && (
-            <span className="mr-3">✓ Verified Purchase</span>
-          )}
-          <span>
-            Submitted on {new Date(review.created_at || '').toLocaleDateString()}
-          </span>
-        </div>
       </CardContent>
       
-      <CardFooter className="border-t pt-4 flex justify-between">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="text-red-500 border-red-500"
-          onClick={() => onDelete(review.id || '')}
-        >
-          <Trash className="w-4 h-4 mr-1" /> Delete
-        </Button>
-        
-        <div className="space-x-2">
-          {review.status !== 'rejected' && (
+      <CardFooter className="flex justify-end gap-2">
+        {review.status === 'pending' && (
+          <>
             <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-red-500 border-red-500"
-              onClick={() => onReject(review.id || '')}
+              variant="secondary" 
+              onClick={() => onReject(review.id)}
+              disabled={isProcessing}
             >
-              <X className="w-4 h-4 mr-1" /> Reject
+              Reject
             </Button>
-          )}
-          
-          {review.status !== 'approved' && (
             <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-green-500 border-green-500"
-              onClick={() => onApprove(review.id || '')}
+              onClick={() => onApprove(review.id)}
+              disabled={isProcessing}
             >
-              <Check className="w-4 h-4 mr-1" /> Approve
+              Approve
             </Button>
-          )}
-        </div>
+          </>
+        )}
       </CardFooter>
     </Card>
   );

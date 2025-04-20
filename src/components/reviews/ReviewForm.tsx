@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -43,9 +44,11 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   });
   
   const onSubmit = async (values: ReviewFormValues) => {
+    // Ensure rating is always provided and valid
     const rating = values.rating || 1;
+    
     const reviewData: ReviewSubmissionData = {
-      rating: rating,
+      rating: rating, // Ensure rating is always provided
       comment: values.comment,
       mealId,
       restaurantId,

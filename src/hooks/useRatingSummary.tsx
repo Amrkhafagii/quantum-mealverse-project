@@ -19,13 +19,19 @@ export const useRatingSummary = (mealId: string, restaurantId: string, showGloba
         .single();
       
       if (localData) {
-        // Safe type casting for rating_distribution
-        const distribution = localData.rating_distribution as Record<number, number> || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+        // Proper type casting for rating_distribution
+        const distribution = localData.rating_distribution as Record<string, number> || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+        
+        // Convert string keys to numbers for RatingStats interface
+        const typedDistribution: Record<number, number> = {};
+        Object.entries(distribution).forEach(([key, value]) => {
+          typedDistribution[Number(key)] = value;
+        });
         
         setLocalStats({
           avg_rating: localData.avg_rating,
           review_count: localData.review_count,
-          rating_distribution: distribution
+          rating_distribution: typedDistribution
         });
       }
 
@@ -37,13 +43,19 @@ export const useRatingSummary = (mealId: string, restaurantId: string, showGloba
           .single();
           
         if (globalData) {
-          // Safe type casting for rating_distribution
-          const globalDistribution = globalData.rating_distribution as Record<number, number> || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+          // Proper type casting for rating_distribution
+          const globalDistribution = globalData.rating_distribution as Record<string, number> || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+          
+          // Convert string keys to numbers for RatingStats interface
+          const typedGlobalDistribution: Record<number, number> = {};
+          Object.entries(globalDistribution).forEach(([key, value]) => {
+            typedGlobalDistribution[Number(key)] = value;
+          });
           
           setGlobalStats({
             avg_rating: globalData.avg_rating,
             review_count: globalData.review_count,
-            rating_distribution: globalDistribution
+            rating_distribution: typedGlobalDistribution
           });
         }
       }

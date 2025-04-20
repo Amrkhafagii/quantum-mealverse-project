@@ -26,26 +26,30 @@ export const useReviewSubmission = () => {
     setIsSubmitting(true);
     
     try {
-      // Use simpler query to avoid type issues
-      const { data: existingReviews } = await supabase
+      // Simplify query to avoid type issues
+      const { data: existingReviews, error: checkError } = await supabase
         .from('reviews')
         .select('id')
         .eq('user_id', user.id)
         .eq('meal_id', data.mealId)
         .eq('restaurant_id', data.restaurantId);
         
+      if (checkError) throw checkError;
+        
       if (existingReviews && existingReviews.length > 0) {
         toast.error('You have already reviewed this meal from this restaurant');
         return false;
       }
       
-      // Use simpler query to avoid type issues
-      const { data: orders } = await supabase
+      // Simplify query to avoid type issues
+      const { data: orders, error: orderError } = await supabase
         .from('order_items')
         .select('order_id')
         .eq('meal_id', data.mealId)
         .eq('user_id', user.id);
         
+      if (orderError) throw orderError;
+      
       const isVerifiedPurchase = orders && orders.length > 0;
       
       const review = {

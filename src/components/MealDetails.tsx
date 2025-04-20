@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { MealType } from '@/types/meal';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
-import { useCart } from '@/hooks/useCart';
+import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

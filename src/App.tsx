@@ -27,7 +27,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/customer" element={<Customer />} />
-              {/* Fix MealDetails route to pass required props */}
+              {/* Fix MealDetails route to pass required props with complete MealType */}
               <Route path="/meals/:id" element={
                 <MealDetails 
                   meal={{
@@ -39,7 +39,11 @@ function App() {
                     calories: 0,
                     protein: 0,
                     fat: 0,
-                    carbs: 0
+                    carbs: 0,
+                    is_active: true,
+                    restaurant_id: '',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                   }} 
                   onAddToCart={() => {}} 
                 />
