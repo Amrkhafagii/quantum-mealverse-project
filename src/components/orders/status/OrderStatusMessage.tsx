@@ -3,6 +3,7 @@ import React from 'react';
 import { Building } from 'lucide-react';
 import { Order } from '@/types/order';
 import { AssignmentStatus } from '@/types/webhook';
+import { Progress } from "@/components/ui/progress";
 
 interface OrderStatusMessageProps {
   order: Order;
@@ -59,16 +60,31 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   };
 
   const statusMessage = getStatusMessage();
+  const showAttemptProgress = ['pending', 'awaiting_restaurant'].includes(order.status);
+  const attemptCount = assignmentStatus?.attempt_count || 1;
+  const progressValue = ((3 - attemptCount + 1) / 3) * 100;
 
   return (
-    <div className="flex items-start gap-2">
-      {order.status === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
-        <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
-      )}
-      <div>
-        <p className="text-lg">{statusMessage.message}</p>
-        {statusMessage.details && <p className="text-sm text-gray-400">{statusMessage.details}</p>}
+    <div className="space-y-4">
+      <div className="flex items-start gap-2">
+        {order.status === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
+          <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
+        )}
+        <div>
+          <p className="text-lg">{statusMessage.message}</p>
+          {statusMessage.details && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-400">{statusMessage.details}</p>
+              {showAttemptProgress && (
+                <div>
+                  <Progress value={progressValue} className="h-2" />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+
