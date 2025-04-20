@@ -127,11 +127,12 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
+        console.log('Restaurant rejected order, attempting next restaurant in sequence');
         const result = await handleAssignment(supabase, order_id, latitude, longitude);
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Order rejected, reassignment processed',
+            message: 'Order rejected, trying next restaurant',
             result
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -140,6 +141,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'assign') {
+      console.log(`Processing assignment request for order ${order_id}`);
       const result = await handleAssignment(supabase, order_id, latitude, longitude);
       return new Response(
         JSON.stringify({ success: true, result }),

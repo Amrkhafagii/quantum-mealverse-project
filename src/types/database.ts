@@ -50,7 +50,7 @@ export type Database = {
   meal_ratings: {
     Row: {
       meal_id: string
-      restaurant_id: string // uuid, references restaurants.id
+      restaurant_id: string
       avg_rating: number
       review_count: number
       rating_distribution: Json | null
@@ -58,7 +58,7 @@ export type Database = {
     }
     Insert: {
       meal_id: string
-      restaurant_id: string // uuid
+      restaurant_id: string
       avg_rating: number
       review_count: number
       rating_distribution?: Json | null
@@ -116,7 +116,7 @@ export type Database = {
       id: string
       user_id: string
       meal_id: string
-      restaurant_id: string    // uuid, references restaurants.id
+      restaurant_id: string
       rating: number
       comment: string | null
       images: string[] | null
@@ -129,7 +129,7 @@ export type Database = {
     Insert: {
       user_id: string
       meal_id: string
-      restaurant_id: string    // uuid, references restaurants.id
+      restaurant_id: string
       rating: number
       comment?: string | null
       images?: string[] | null
@@ -140,7 +140,7 @@ export type Database = {
     Update: {
       user_id?: string
       meal_id?: string
-      restaurant_id?: string    // uuid, references restaurants.id
+      restaurant_id?: string
       rating?: number
       comment?: string | null
       images?: string[] | null
@@ -152,7 +152,7 @@ export type Database = {
       id: string
       user_id: string
       meal_id: string
-      restaurant_id: string    // uuid, references restaurants.id
+      restaurant_id: string
       rating: number
       comment: string | null
       images: string[] | null
@@ -161,42 +161,6 @@ export type Database = {
       updated_at: string
       is_flagged: boolean
       status: string
-    }
-  }
-  restaurant_assignments: {
-    Row: {
-      id: string
-      restaurant_id: string // uuid, references restaurants.id
-      order_id: string      // uuid, references orders.id
-      status: string
-      expires_at: string
-      created_at: string
-      updated_at: string
-      notes: string | null
-    }
-    Insert: {
-      restaurant_id: string // uuid, references restaurants.id
-      order_id: string      // uuid, references orders.id
-      status?: string
-      expires_at: string
-      notes?: string | null
-    }
-    Update: {
-      restaurant_id?: string
-      order_id?: string
-      status?: string
-      expires_at?: string
-      notes?: string | null
-    }
-    Select: {
-      id: string
-      restaurant_id: string // uuid
-      order_id: string
-      status: string
-      expires_at: string
-      created_at: string
-      updated_at: string
-      notes: string | null
     }
   }
   public: {
@@ -242,7 +206,7 @@ export type Database = {
       meal_ratings: {
         Row: {
           meal_id: string
-          restaurant_id: string // uuid, references restaurants.id
+          restaurant_id: string
           avg_rating: number
           review_count: number
           rating_distribution: Json | null
@@ -250,7 +214,7 @@ export type Database = {
         }
         Insert: {
           meal_id: string
-          restaurant_id: string // uuid
+          restaurant_id: string
           avg_rating: number
           review_count: number
           rating_distribution?: Json | null
@@ -308,7 +272,7 @@ export type Database = {
           id: string
           user_id: string
           meal_id: string
-          restaurant_id: string    // uuid, references restaurants.id
+          restaurant_id: string
           rating: number
           comment: string | null
           images: string[] | null
@@ -321,7 +285,7 @@ export type Database = {
         Insert: {
           user_id: string
           meal_id: string
-          restaurant_id: string    // uuid, references restaurants.id
+          restaurant_id: string
           rating: number
           comment?: string | null
           images?: string[] | null
@@ -332,7 +296,7 @@ export type Database = {
         Update: {
           user_id?: string
           meal_id?: string
-          restaurant_id?: string    // uuid, references restaurants.id
+          restaurant_id?: string
           rating?: number
           comment?: string | null
           images?: string[] | null
@@ -344,7 +308,7 @@ export type Database = {
           id: string
           user_id: string
           meal_id: string
-          restaurant_id: string    // uuid, references restaurants.id
+          restaurant_id: string
           rating: number
           comment: string | null
           images: string[] | null
@@ -353,92 +317,6 @@ export type Database = {
           updated_at: string
           is_flagged: boolean
           status: string
-        }
-      }
-      restaurant_assignments: {
-        Row: {
-          id: string
-          restaurant_id: string // uuid, references restaurants.id
-          order_id: string      // uuid, references orders.id
-          status: string
-          expires_at: string
-          created_at: string
-          updated_at: string
-          notes: string | null
-        }
-        Insert: {
-          restaurant_id: string // uuid, references restaurants.id
-          order_id: string      // uuid, references orders.id
-          status?: string
-          expires_at: string
-          notes?: string | null
-        }
-        Update: {
-          restaurant_id?: string
-          order_id?: string
-          status?: string
-          expires_at?: string
-          notes?: string | null
-        }
-        Select: {
-          id: string
-          restaurant_id: string // uuid
-          order_id: string
-          status: string
-          expires_at: string
-          created_at: string
-          updated_at: string
-          notes: string | null
-        }
-      }
-      restaurants: {
-        Row: {
-          id: string
-          name: string
-          address: string
-          user_id: string
-          is_active: boolean | null
-          created_at: string | null
-          updated_at: string | null
-          latitude: number | null
-          longitude: number | null
-          email: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          address: string
-          user_id: string
-          is_active?: boolean | null
-          created_at?: string | null
-          updated_at?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          email?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          address?: string
-          user_id?: string
-          is_active?: boolean | null
-          created_at?: string | null
-          updated_at?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          email?: string | null
-        }
-        Select: {
-          id: string
-          name: string
-          address: string
-          user_id: string
-          is_active: boolean | null
-          created_at: string | null
-          updated_at: string | null
-          latitude: number | null
-          longitude: number | null
-          email: string | null
         }
       }
     }

@@ -1,4 +1,3 @@
-
 export interface Order {
   id?: string;
   user_id: string;
@@ -36,4 +35,12 @@ export interface Order {
   return_images?: string[];
   refund_status?: string;
   refund_amount?: number;
+  restaurant_attempts?: {
+    restaurants: Array<{
+      restaurant_id: string;
+      name: string;
+      distance_km?: number;
+    }>;
+    current_attempt: number;
+  };
 }

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
 
 export const useOrderTimer = (
@@ -9,9 +9,11 @@ export const useOrderTimer = (
 ) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
+  const reassignmentAttemptedRef = useRef<boolean>(false);
   
   useEffect(() => {
     console.log('OrderTimer Hook: Starting useEffect with expiresAt:', expiresAt);
+    reassignmentAttemptedRef.current = false;
     
     if (!expiresAt || !orderId) {
       console.warn('Missing required data for timer:', { expiresAt, orderId });
@@ -42,26 +44,44 @@ export const useOrderTimer = (
         }
 
         // When timer hits zero, trigger the webhook for reassignment
-        if (secondsLeft === 0) {
+        if (secondsLeft <= 0 && !reassignmentAttemptedRef.current) {
           console.log('Timer expired, attempting reassignment...');
+          reassignmentAttemptedRef.current = true;
+          
           try {
             // Get location from local storage
-            const location = localStorage.getItem('lastKnownLocation');
-            const { latitude, longitude } = location ? JSON.parse(location) : { latitude: null, longitude: null };
+            const locationData = localStorage.getItem('lastKnownLocation');
+            if (!locationData) {
+              console.error('No location data available for reassignment');
+              return;
+            }
+            
+            const location = JSON.parse(locationData);
+            const { latitude, longitude } = location;
             
             if (latitude && longitude) {
-              await sendOrderToWebhook(orderId, latitude, longitude);
-              console.log('Reassignment webhook sent successfully');
+              console.log(`Sending reassignment webhook for order ${orderId} with location: `, { latitude, longitude });
+              const response = await sendOrderToWebhook(orderId, latitude, longitude);
+              console.log('Reassignment webhook response:', response);
+              
+              if (!response.success) {
+                console.error('Reassignment failed:', response.error);
+              }
             } else {
-              console.error('No location data available for reassignment');
+              console.error('Invalid location data for reassignment:', location);
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
           }
-          onExpire?.();
+          
+          if (onExpire) {
+            console.log('Calling onExpire callback');
+            onExpire();
+          }
         }
       };
       
+      // Execute once immediately to set initial values
       updateTimer();
       const timerInterval = setInterval(updateTimer, 1000);
       

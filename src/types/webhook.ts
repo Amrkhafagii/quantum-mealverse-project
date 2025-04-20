@@ -22,6 +22,7 @@ export interface AssignmentStatus {
   assignment_id?: string;
   expires_at?: string;
   attempt_count: number;
+  next_restaurants?: Array<{id: string, name: string}>;
 }
 
 export interface WebhookResponse {

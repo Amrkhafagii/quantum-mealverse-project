@@ -291,6 +291,33 @@ export type Database = {
           },
         ]
       }
+      nearby_restaurants: {
+        Row: {
+          created_at: string
+          id: string
+          nearby: Json | null
+          user_id: string
+          user_latitude: number
+          user_longitude: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nearby?: Json | null
+          user_id: string
+          user_latitude: number
+          user_longitude: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nearby?: Json | null
+          user_id?: string
+          user_latitude?: number
+          user_longitude?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -745,13 +772,6 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "restaurant_assignments_restaurant_id_restaurants_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
