@@ -9,10 +9,12 @@ import MealDetails from '@/components/MealDetails';
 import ParticleBackground from '@/components/ParticleBackground';
 import { MealType } from '@/types/meal';
 import { useCart } from '@/contexts/CartContext';
+import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
 const MealDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
+  const { userCurrency, displayPrice } = useCurrencyConverter();
   
   const { data: meal, isLoading, error } = useQuery({
     queryKey: ['meal', id],
@@ -24,6 +26,12 @@ const MealDetailsPage = () => {
         .single();
       
       if (error) throw error;
+      
+      // Generate placeholder image if image_url is null or empty
+      if (!data.image_url) {
+        data.image_url = `https://picsum.photos/seed/${data.id}/300/200`;
+      }
+      
       return data as MealType;
     },
     enabled: !!id
@@ -36,7 +44,7 @@ const MealDetailsPage = () => {
         .from('restaurants')
         .select('*')
         .eq('id', meal?.restaurant_id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -57,6 +65,7 @@ const MealDetailsPage = () => {
       <div className="container mx-auto px-4 py-24 flex items-center justify-center">
         <div className="text-2xl text-quantum-cyan">Loading meal details...</div>
       </div>
+      <Footer />
     </div>
   );
 
@@ -66,6 +75,7 @@ const MealDetailsPage = () => {
       <div className="container mx-auto px-4 py-24 flex items-center justify-center">
         <div className="text-2xl text-red-500">Error loading meal details</div>
       </div>
+      <Footer />
     </div>
   );
 
@@ -75,59 +85,18 @@ const MealDetailsPage = () => {
       <Navbar />
       
       <main className="relative z-10 pt-24 pb-16 container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+          <div>
             <MealDetails 
               meal={meal} 
               onAddToCart={handleAddToCart}
               restaurantId={restaurant?.id || ''}
             />
           </div>
-          
-          <div className="bg-quantum-black text-white relative p-6 rounded-2xl border border-quantum-cyan/30 backdrop-blur-sm">
-            <h2 className="text-2xl font-bold mb-6 neon-text">Currency Exchange</h2>
-            <div className="space-y-4">
-              <CurrencyDisplay price={meal.price} />
-            </div>
-          </div>
         </div>
       </main>
       
       <Footer />
-    </div>
-  );
-};
-
-// Currency display component
-const CurrencyDisplay = ({ price }: { price: number }) => {
-  // For now, we'll hard-code a few exchange rates
-  // In a real app, you would fetch these from an API
-  const exchangeRates = {
-    USD: 1,
-    EUR: 0.92,
-    GBP: 0.78,
-    JPY: 109.25,
-    CAD: 1.35
-  };
-  
-  return (
-    <div className="space-y-3">
-      <p className="text-gray-400">Price in different currencies:</p>
-      <ul className="space-y-2">
-        {Object.entries(exchangeRates).map(([currency, rate]) => (
-          <li key={currency} className="flex justify-between">
-            <span>{currency}:</span>
-            <span className="font-semibold text-quantum-cyan">
-              {currency === 'USD' ? '$' : currency === 'EUR' ? '€' : 
-               currency === 'GBP' ? '£' : currency === 'JPY' ? '¥' : 'CA$'}
-              {(price * rate).toFixed(2)}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="text-xs text-gray-500 mt-4">
-        * Exchange rates are approximate and for informational purposes only
-      </p>
     </div>
   );
 };

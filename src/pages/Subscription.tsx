@@ -4,8 +4,13 @@ import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import SubscriptionPlan from '@/components/SubscriptionPlan';
+import { toast } from 'sonner';
 
 const Subscription = () => {
+  const handleSubscribe = (plan: string) => {
+    toast.success(`You've selected the ${plan} plan. Redirecting to checkout...`);
+  };
+
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
@@ -29,7 +34,7 @@ const Subscription = () => {
                 { text: "Email Support", included: true },
                 { text: "Personalized Meal Plans", included: false }
               ]}
-              onSubscribe={() => alert('Basic plan selected')}
+              onSubscribe={() => handleSubscribe('Basic Zenith')}
             />
             
             <SubscriptionPlan
@@ -45,7 +50,7 @@ const Subscription = () => {
                 { text: "Personalized Meal Plans", included: true }
               ]}
               highlighted={true}
-              onSubscribe={() => alert('Pro plan selected')}
+              onSubscribe={() => handleSubscribe('Pro Zenith')}
             />
             
             <SubscriptionPlan
@@ -61,7 +66,7 @@ const Subscription = () => {
                 { text: "Personalized Meal Plans", included: true },
                 { text: "Nutritionist Consultation", included: true }
               ]}
-              onSubscribe={() => alert('Ultimate plan selected')}
+              onSubscribe={() => handleSubscribe('Ultimate Zenith')}
             />
           </div>
         </div>

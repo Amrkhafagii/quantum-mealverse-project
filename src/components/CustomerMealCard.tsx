@@ -7,7 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -96,12 +97,14 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
 
   return (
     <motion.div 
-      className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      onClick={navigateToMealDetails}
     >
-      <div className="relative overflow-hidden rounded-t-lg">
+      <div 
+        className="relative overflow-hidden rounded-t-lg cursor-pointer"
+        onClick={navigateToMealDetails}
+      >
         <img
           src={meal.image_url}
           alt={meal.name}
@@ -110,7 +113,22 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
       </div>
       
       <div className="p-5 font-light">
-        <h3 className="text-xl font-semibold text-white mb-2 neon-text">{meal.name}</h3>
+        <div className="flex justify-between items-start">
+          <h3 
+            className="text-xl font-semibold text-white mb-2 neon-text cursor-pointer" 
+            onClick={navigateToMealDetails}
+          >
+            {meal.name}
+          </h3>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-quantum-cyan hover:text-white"
+            onClick={navigateToMealDetails}
+          >
+            <Info className="h-5 w-5" />
+          </Button>
+        </div>
         
         <div className="flex items-center mb-2">
           {!loading && avgRating !== null && (
@@ -126,7 +144,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
           )}
         </div>
         
-        <p className="text-gray-300 mb-4">{meal.description}</p>
+        <p className="text-gray-300 mb-4 cursor-pointer" onClick={navigateToMealDetails}>{meal.description}</p>
         
         <div className="mt-4 flex flex-col space-y-3">
           <div className="flex justify-between items-center">

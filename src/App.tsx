@@ -15,6 +15,10 @@ import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import ReviewsManagement from './pages/Admin/ReviewsManagement';
 import MealDetailsPage from './pages/MealDetailsPage';
+import Subscription from './pages/Subscription';
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Notifications from './pages/Notifications';
 
 function App() {
   const queryClient = new QueryClient();
@@ -31,6 +35,10 @@ function App() {
               <Route path="/cart" element={<Cart />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/subscription" element={<Subscription />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/notifications" element={<Notifications />} />
               
               <Route 
                 path="/profile" 
@@ -57,9 +65,9 @@ function App() {
                 } 
               />
               
-              {/* Add the new admin reviews route */}
+              {/* Admin routes */}
               <Route path="/admin/reviews" element={<ReviewsManagement />} />
-              
+              <Route path="/orders" element={<Notifications />} />
             </Routes>
           </Router>
           <Toaster position="top-right" />

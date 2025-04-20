@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MealReviews } from './MealReviews';
+import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
 interface MealDetailsProps {
   meal: MealType;
@@ -28,6 +29,7 @@ const MealDetails: React.FC<MealDetailsProps> = ({
 }) => {
   const { addItem } = useCart();
   const [mealQuantity, setMealQuantity] = useState(quantity);
+  const { displayPrice } = useCurrencyConverter();
   
   const handleAddToCart = () => {
     if (meal) {
@@ -48,9 +50,13 @@ const MealDetails: React.FC<MealDetailsProps> = ({
       
       <div className="relative overflow-hidden rounded-xl">
         <img
-          src={meal.image_url}
+          src={meal.image_url || `https://picsum.photos/seed/${meal.id}/600/400`}
           alt={meal.name}
           className="w-full h-64 object-cover rounded-md"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = `https://picsum.photos/seed/${meal.id}/600/400`;
+          }}
         />
       </div>
       
@@ -67,7 +73,7 @@ const MealDetails: React.FC<MealDetailsProps> = ({
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <h3 className="text-xl font-semibold neon-text">Price</h3>
-          <p className="text-2xl">${meal.price.toFixed(2)}</p>
+          <p className="text-2xl">{displayPrice(meal.price)}</p>
         </div>
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -111,7 +117,6 @@ const MealDetails: React.FC<MealDetailsProps> = ({
         </div>
       </div>
       
-      {/* Add the reviews component */}
       <div className="mt-12">
         <MealReviews 
           mealId={meal.id || ''} 
