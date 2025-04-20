@@ -13,6 +13,7 @@ interface OrderRestaurantStatusProps {
   assignmentStatus: any;
   isCancelling: boolean;
   onCancel: () => void;
+  orderId?: string; // Adding orderId prop
 }
 
 export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
@@ -20,7 +21,8 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   restaurantName,
   assignmentStatus,
   isCancelling,
-  onCancel
+  onCancel,
+  orderId // Receive the orderId prop
 }) => {
   const { timeLeft, totalTime } = useCountdownTimer(assignmentStatus?.expires_at);
   const getProgressValue = () => {
@@ -30,6 +32,11 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   };
   
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
+
+  const handleTimerExpire = () => {
+    console.log('Timer expired, refreshing order status...');
+    // We don't have onOrderUpdate here, but we could potentially refresh data another way
+  };
 
   return (
     <div className="space-y-6 py-4">
@@ -53,7 +60,11 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
           
           {assignmentStatus?.expires_at && (
             <div className="w-full mb-6">
-              <OrderTimer expiresAt={assignmentStatus.expires_at} />
+              <OrderTimer 
+                expiresAt={assignmentStatus.expires_at} 
+                orderId={orderId}
+                onTimerExpire={handleTimerExpire}
+              />
             </div>
           )}
 

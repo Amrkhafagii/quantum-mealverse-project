@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -122,6 +121,7 @@ const ThankYou = () => {
                   assignmentStatus={assignmentStatus}
                   isCancelling={isCancelling}
                   onCancel={handleCancelOrder}
+                  orderId={orderId}
                 />
               )}
 
