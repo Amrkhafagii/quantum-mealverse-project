@@ -21,6 +21,8 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
+import ThankYou from './pages/ThankYou';
+import Orders from './pages/Orders';
 
 function App() {
   const queryClient = new QueryClient();
@@ -42,6 +44,7 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/thank-you" element={<ThankYou />} />
               
               <Route 
                 path="/profile" 
@@ -67,6 +70,14 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/orders" 
+                element={
+                  <ProtectedRoute>
+                    <Orders />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Admin routes */}
               <Route 
@@ -82,14 +93,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ReviewsManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/orders" 
-                element={
-                  <ProtectedRoute>
-                    <Notifications />
                   </ProtectedRoute>
                 } 
               />
