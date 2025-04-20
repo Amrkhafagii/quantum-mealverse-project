@@ -15,6 +15,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Order webhook received request');
+    
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://hozgutjvbrljeijybnyg.supabase.co';
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhvemd1dGp2YnJsamVpanlibnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5ODc0MjksImV4cCI6MjA2MDU2MzQyOX0.Wy8X0JuOVDQZTVZWtwF42fdcsuPjsGVJJ4slPqMCWT4';
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -31,18 +33,22 @@ Deno.serve(async (req) => {
     const requestData = await req.json();
     console.log('Received webhook request:', requestData);
 
-    if (!requestData.order_id || !requestData.latitude || !requestData.longitude) {
+    if (!requestData.order_id) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Missing required fields: order_id, latitude, longitude' 
+          error: 'Missing required field: order_id' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    const { order_id, latitude, longitude } = requestData;
+    const { order_id } = requestData;
+    const latitude = requestData.latitude !== undefined ? requestData.latitude : null;
+    const longitude = requestData.longitude !== undefined ? requestData.longitude : null;
     const action = requestData.action || 'assign';
+
+    console.log(`Processing ${action} action for order ${order_id}`);
 
     if (action === 'accept' || action === 'reject') {
       if (!requestData.restaurant_id || !requestData.assignment_id) {
@@ -57,6 +63,7 @@ Deno.serve(async (req) => {
 
       const { restaurant_id, assignment_id } = requestData;
       
+      // Verify the assignment exists and is valid
       const { data: assignment, error: assignmentError } = await supabase
         .from('restaurant_assignments')
         .select('*')
@@ -67,6 +74,7 @@ Deno.serve(async (req) => {
         .single();
       
       if (assignmentError || !assignment) {
+        console.error('Invalid or expired assignment:', assignmentError);
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -76,7 +84,9 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Check if assignment has expired
       if (new Date(assignment.expires_at) < new Date()) {
+        console.log('Assignment has expired');
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -86,6 +96,7 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Update the assignment status
       const { error: updateError } = await supabase
         .from('restaurant_assignments')
         .update({ status: action === 'accept' ? 'accepted' : 'rejected' })
@@ -99,9 +110,18 @@ Deno.serve(async (req) => {
         );
       }
 
-      await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
+      // Log the assignment attempt
+      await logAssignmentAttempt(
+        supabase, 
+        order_id, 
+        restaurant_id, 
+        action,
+        `Restaurant ${action === 'accept' ? 'accepted' : 'rejected'} the order`
+      );
 
       if (action === 'accept') {
+        // If accepted, update order status and assign to restaurant
+        console.log(`Restaurant ${restaurant_id} accepted order ${order_id}`);
         const { error: orderUpdateError } = await supabase
           .from('orders')
           .update({ 
@@ -127,7 +147,11 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
+        // If rejected, try to reassign to another restaurant
+        console.log(`Restaurant ${restaurant_id} rejected order ${order_id}, trying reassignment`);
         const result = await handleAssignment(supabase, order_id, latitude, longitude);
+        
+        console.log('Reassignment result:', result);
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -140,7 +164,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'assign') {
+      console.log(`Assigning order ${order_id} to a restaurant`);
       const result = await handleAssignment(supabase, order_id, latitude, longitude);
+      
+      console.log('Assignment result:', result);
       return new Response(
         JSON.stringify({ success: true, result }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

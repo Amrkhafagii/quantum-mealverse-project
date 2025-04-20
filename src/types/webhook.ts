@@ -1,8 +1,8 @@
 
 export interface OrderAssignmentRequest {
   order_id: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   action: 'assign';
 }
 
@@ -10,8 +10,8 @@ export interface RestaurantResponseRequest {
   order_id: string;
   restaurant_id: string;
   assignment_id: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   action: 'accept' | 'reject';
 }
 

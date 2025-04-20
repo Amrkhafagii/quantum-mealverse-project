@@ -17,16 +17,22 @@ const getRestaurantName = (restaurant: any): string => {
 
 export const sendOrderToWebhook = async (
   orderId: string,
-  latitude: number,
-  longitude: number
+  latitude: number | null = null,
+  longitude: number | null = null
 ): Promise<WebhookResponse> => {
   try {
+    console.log(`Sending order ${orderId} to webhook with location:`, { latitude, longitude });
+    
     const data: OrderAssignmentRequest = {
       order_id: orderId,
-      latitude,
-      longitude,
       action: 'assign'
     };
+    
+    // Only add coordinates if they exist
+    if (latitude !== null && longitude !== null) {
+      data.latitude = latitude;
+      data.longitude = longitude;
+    }
 
     const response = await supabase.functions.invoke('order-webhook', {
       body: data
@@ -40,6 +46,7 @@ export const sendOrderToWebhook = async (
       };
     }
 
+    console.log('Webhook response:', response.data);
     return {
       success: true,
       result: response.data
@@ -58,18 +65,24 @@ export const simulateRestaurantResponse = async (
   restaurantId: string,
   assignmentId: string,
   action: 'accept' | 'reject',
-  latitude: number,
-  longitude: number
+  latitude: number | null = null,
+  longitude: number | null = null
 ): Promise<WebhookResponse> => {
   try {
+    console.log(`Simulating restaurant ${action} for order ${orderId}:`, { restaurantId, assignmentId });
+    
     const data: RestaurantResponseRequest = {
       order_id: orderId,
       restaurant_id: restaurantId,
       assignment_id: assignmentId,
-      latitude,
-      longitude,
       action
     };
+    
+    // Only add coordinates if they exist
+    if (latitude !== null && longitude !== null) {
+      data.latitude = latitude;
+      data.longitude = longitude;
+    }
 
     const response = await supabase.functions.invoke('order-webhook', {
       body: data
@@ -82,6 +95,7 @@ export const simulateRestaurantResponse = async (
       };
     }
 
+    console.log(`Restaurant ${action} simulation response:`, response.data);
     return {
       success: true,
       result: response.data

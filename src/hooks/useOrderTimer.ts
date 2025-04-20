@@ -9,6 +9,7 @@ export const useOrderTimer = (
 ) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
+  const [hasExpired, setHasExpired] = useState<boolean>(false);
   
   useEffect(() => {
     console.log('OrderTimer Hook: Starting useEffect with expiresAt:', expiresAt);
@@ -24,6 +25,9 @@ export const useOrderTimer = (
         console.error('Invalid expiration time format:', expiresAt);
         return;
       }
+      
+      // Reset expired state when we get a new timer
+      setHasExpired(false);
       
       const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
       
@@ -42,22 +46,29 @@ export const useOrderTimer = (
         }
 
         // When timer hits zero, trigger the webhook for reassignment
-        if (secondsLeft === 0) {
+        if (secondsLeft === 0 && !hasExpired) {
           console.log('Timer expired, attempting reassignment...');
+          setHasExpired(true);
+          
           try {
             // Get location from local storage
             const location = localStorage.getItem('lastKnownLocation');
             const { latitude, longitude } = location ? JSON.parse(location) : { latitude: null, longitude: null };
             
-            if (latitude && longitude) {
-              await sendOrderToWebhook(orderId, latitude, longitude);
+            console.log('Attempting reassignment with location:', { latitude, longitude });
+            
+            const result = await sendOrderToWebhook(orderId, latitude, longitude);
+            console.log('Reassignment webhook response:', result);
+            
+            if (result.success) {
               console.log('Reassignment webhook sent successfully');
             } else {
-              console.error('No location data available for reassignment');
+              console.error('Error in reassignment:', result.error);
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
           }
+          
           onExpire?.();
         }
       };
@@ -71,7 +82,7 @@ export const useOrderTimer = (
     } catch (error) {
       console.error('Error in timer calculation:', error);
     }
-  }, [expiresAt, orderId, onExpire]);
+  }, [expiresAt, orderId, onExpire, hasExpired]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -82,6 +93,7 @@ export const useOrderTimer = (
   return {
     timeLeft,
     progress,
-    formattedTime: formatTime(timeLeft)
+    formattedTime: formatTime(timeLeft),
+    hasExpired
   };
 };
