@@ -7,30 +7,21 @@ interface CircularTimerProps {
 }
 
 export const CircularTimer: React.FC<CircularTimerProps> = ({ timeLeft, totalTime }) => {
-  const radius = 30;
+  const radius = 35;
   const circumference = 2 * Math.PI * radius;
   const progress = (timeLeft / totalTime) * 100;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      <svg className="transform -rotate-90 w-20 h-20">
-        {/* Background circle */}
-        <circle
-          cx="40"
-          cy="40"
-          r={radius}
-          className="stroke-gray-200"
-          strokeWidth="6"
-          fill="none"
-        />
+      <svg className="transform -rotate-90 w-28 h-28">
         {/* Progress circle */}
         <circle
-          cx="40"
-          cy="40"
+          cx="56"
+          cy="56"
           r={radius}
           className="stroke-green-500"
-          strokeWidth="6"
+          strokeWidth="4"
           fill="none"
           strokeLinecap="round"
           style={{
@@ -40,8 +31,8 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ timeLeft, totalTim
           }}
         />
       </svg>
-      <div className="absolute font-mono text-lg font-semibold">
-        {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+      <div className="absolute font-mono text-2xl font-bold tracking-wider">
+        {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
       </div>
     </div>
   );
