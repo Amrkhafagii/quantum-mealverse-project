@@ -40,7 +40,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     enabled: !!orderId,
     staleTime: 0, // Always fetch fresh data
     refetchInterval: (data) => 
-      data && ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false,
+      data && data.status && ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false,
   });
 
   const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
