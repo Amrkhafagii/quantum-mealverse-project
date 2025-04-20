@@ -1,7 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { cancelOrder } from '@/services/orders/orderService';
 
 interface AssignmentStatus {
   status: string;
@@ -14,43 +16,63 @@ interface AssignmentStatus {
 interface OrderStatusDisplayProps {
   order: any;
   assignmentStatus: AssignmentStatus | null;
+  onOrderUpdate?: () => void;
 }
 
-export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ order, assignmentStatus }) => {
+export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ 
+  order, 
+  assignmentStatus,
+  onOrderUpdate 
+}) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const { toast } = useToast();
   
-  // Calculate and update countdown timer
   useEffect(() => {
     if (!assignmentStatus?.expires_at || order?.status !== 'awaiting_restaurant') return;
     
     const expiresAt = new Date(assignmentStatus.expires_at).getTime();
     const totalTime = 5 * 60; // 5 minutes in seconds
     
-    // Define updateTimer inside the useEffect to avoid variable scope issues
     const updateTimer = () => {
       const now = Date.now();
       const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
       setTimeLeft(secondsLeft);
       
-      // Calculate progress percentage (from 100% to 0%)
       const progressValue = (secondsLeft / totalTime) * 100;
       setProgress(progressValue);
     };
     
-    // Run immediately
     updateTimer();
-    
-    // Then set up the interval
     const timerInterval = setInterval(updateTimer, 1000);
     
-    // Clean up function
     return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
+      if (timerInterval) clearInterval(timerInterval);
     };
   }, [assignmentStatus?.expires_at, order?.status]);
+
+  const handleCancelOrder = async () => {
+    if (!order?.id || isCancelling) return;
+    
+    setIsCancelling(true);
+    try {
+      await cancelOrder(order.id);
+      toast({
+        title: "Order cancelled",
+        description: "Your order has been cancelled successfully."
+      });
+      if (onOrderUpdate) onOrderUpdate();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel the order. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
   
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -104,16 +126,28 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ order, a
         <p className="text-lg">{statusMessage}</p>
         {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
         
-        {order.status === 'awaiting_restaurant' && timeLeft > 0 && (
-          <div className="space-y-1 mt-2">
-            <div className="flex justify-between text-xs">
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span>Restaurant response time:</span>
+        {order.status === 'awaiting_restaurant' && (
+          <div className="space-y-4">
+            {timeLeft > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>Restaurant response time:</span>
+                  </div>
+                  <span>{formatTime(timeLeft)}</span>
+                </div>
+                <Progress value={progress} className="h-2 bg-gray-700" />
               </div>
-              <span>{formatTime(timeLeft)}</span>
-            </div>
-            <Progress value={progress} className="h-2 bg-gray-700" />
+            )}
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelOrder}
+              disabled={isCancelling}
+              className="w-full"
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Order'}
+            </Button>
           </div>
         )}
         

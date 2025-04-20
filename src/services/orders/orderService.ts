@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
@@ -127,6 +126,19 @@ export const saveUserLocation = async (
       .insert(locationData);
       
     if (locationError) throw locationError;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const cancelOrder = async (orderId: string) => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'cancelled' })
+      .eq('id', orderId);
+      
+    if (error) throw error;
   } catch (error) {
     throw error;
   }

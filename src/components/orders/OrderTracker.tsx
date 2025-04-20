@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +34,6 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     enabled: !!orderId,
   });
 
-  // Check assignment status periodically if order is pending or awaiting restaurant
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
@@ -49,7 +47,6 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     }
   }, order && ['pending', 'awaiting_restaurant'].includes(order.status) ? 10000 : null);
 
-  // Check assignment status on initial load
   React.useEffect(() => {
     if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
@@ -88,7 +85,11 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
       <CardContent>
         <div className="space-y-6">
           <div className="pt-0 pb-4">
-            <OrderStatusDisplay order={order} assignmentStatus={assignmentStatus} />
+            <OrderStatusDisplay 
+              order={order} 
+              assignmentStatus={assignmentStatus}
+              onOrderUpdate={refetch}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
