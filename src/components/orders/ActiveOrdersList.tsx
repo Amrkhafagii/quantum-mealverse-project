@@ -68,7 +68,9 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
     );
   }
   
+  // Fixed: Make the click handler properly handle events
   const handleSelectOrder = (orderId: string, e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     onOrderSelect(orderId);
   };

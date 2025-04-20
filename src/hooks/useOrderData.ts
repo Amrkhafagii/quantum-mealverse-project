@@ -8,29 +8,43 @@ export const useOrderData = (orderId: string) => {
     queryKey: ['order-details', orderId],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
+        // Instead of trying to join with restaurants directly, we'll fetch the order first
+        const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .select(`
             *, 
-            order_items(*),
-            restaurant:restaurants(id, name)
+            order_items(*)
           `)
           .eq('id', orderId)
           .maybeSingle();
           
-        if (error) throw error;
+        if (orderError) throw orderError;
         
-        if (!data) {
+        if (!orderData) {
           throw new Error('Order not found');
         }
         
-        // Ensure the restaurant property has the correct shape
-        const formattedData = {
-          ...data,
-          restaurant: data.restaurant || { id: '', name: '' }
+        // Then, if there's a restaurant_id, fetch restaurant data separately
+        let restaurantData = null;
+        if (orderData.restaurant_id) {
+          const { data: restaurant, error: restaurantError } = await supabase
+            .from('restaurants')
+            .select('id, name')
+            .eq('id', orderData.restaurant_id)
+            .maybeSingle();
+            
+          if (!restaurantError && restaurant) {
+            restaurantData = restaurant;
+          }
+        }
+        
+        // Combine the order with restaurant data
+        const formattedData: Order = {
+          ...orderData,
+          restaurant: restaurantData || { id: '', name: '' }
         };
         
-        return formattedData as Order;
+        return formattedData;
       } catch (error) {
         console.error('Error fetching order data:', error);
         throw error;

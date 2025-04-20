@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -12,7 +13,8 @@ import { checkAssignmentStatus } from '@/integrations/webhook';
 import { useInterval } from '@/hooks/use-interval';
 import { OrderStatusDisplay } from '@/components/orders/OrderStatusDisplay';
 import { OrderDetailsDisplay } from '@/components/orders/OrderDetailsDisplay';
-import { useOrderTimer } from '@/hooks/useOrderTimer';
+import { CircularTimer } from '@/components/orders/status/CircularTimer';
+import { useCountdownTimer } from '@/hooks/useCountdownTimer';
 import { Progress } from "@/components/ui/progress";
 
 const ThankYou: React.FC = () => {
@@ -31,7 +33,7 @@ const ThankYou: React.FC = () => {
     attempt_count: number;
   } | null>(null);
 
-  const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
+  const { timeLeft, totalTime, formattedTime } = useCountdownTimer(assignmentStatus?.expires_at);
 
   const fetchOrderDetails = async () => {
     if (!orderId) return;
@@ -129,15 +131,20 @@ const ThankYou: React.FC = () => {
                     )}
                     
                     {assignmentStatus?.expires_at && (
-                      <div className="space-y-1 max-w-md mx-auto">
-                        <div className="flex justify-between text-xs">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span>Restaurant response time:</span>
-                          </div>
-                          <span>{formattedTime}</span>
+                      <div className="max-w-md mx-auto">
+                        <div className="flex justify-center mb-4">
+                          <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
                         </div>
-                        <Progress value={progress} className="h-2" />
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>Restaurant response time:</span>
+                            </div>
+                            <span>{formattedTime}</span>
+                          </div>
+                          <Progress value={(timeLeft / totalTime) * 100} className="h-2" />
+                        </div>
                       </div>
                     )}
                   </div>
