@@ -1,32 +1,37 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Clock, Building, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
 import { checkAssignmentStatus } from '@/integrations/webhook';
 import { useInterval } from '@/hooks/use-interval';
 import { OrderStatusDisplay } from '@/components/orders/OrderStatusDisplay';
 import { OrderDetailsDisplay } from '@/components/orders/OrderDetailsDisplay';
+import { useOrderTimer } from '@/hooks/useOrderTimer';
+import { Progress } from "@/components/ui/progress";
 
 const ThankYou: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order');
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [assignmentStatus, setAssignmentStatus] = useState<{
+  const [order, setOrder] = React.useState<Order | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  const [assignmentStatus, setAssignmentStatus] = React.useState<{
     status: string;
     assigned_restaurant_id?: string;
+    restaurant_name?: string;
     assignment_id?: string;
     expires_at?: string;
     attempt_count: number;
   } | null>(null);
+
+  const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
 
   const fetchOrderDetails = async () => {
     if (!orderId) return;
@@ -52,33 +57,21 @@ const ThankYou: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchOrderDetails();
-  }, [orderId]);
-
-  // Check assignment status initially
-  useEffect(() => {
-    if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
-      checkAssignmentStatus(orderId)
-        .then(status => setAssignmentStatus(status))
-        .catch(err => console.error('Error checking initial assignment status:', err));
-    }
-  }, [orderId, order]);
-
-  // Poll for updates more frequently (every 5 seconds) to catch restaurant changes faster
+  // Check assignment status more frequently (every 5 seconds)
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId!)
         .then(status => {
           setAssignmentStatus(status);
-          
-          // Always refetch to ensure we have the latest order data
-          // This ensures we catch transitions between restaurants
-          fetchOrderDetails();
+          fetchOrderDetails(); // Always refetch order details
         })
         .catch(err => console.error('Error checking assignment status:', err));
     }
   }, 5000);
+
+  useEffect(() => {
+    fetchOrderDetails();
+  }, [orderId]);
 
   if (!orderId) {
     useEffect(() => {
@@ -120,11 +113,34 @@ const ThankYou: React.FC = () => {
                 
                 <h1 className="text-4xl font-bold text-quantum-cyan mb-4 neon-text">Order Confirmed!</h1>
                 <p className="text-xl mb-2">Order #{order?.formatted_order_id || orderId.substring(0, 8)}</p>
+                
                 {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
-                  <p className="text-sm text-gray-400">
-                    We're looking for the perfect restaurant to prepare your order.
-                    You can track the progress below.
-                  </p>
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-400">
+                      We're looking for the perfect restaurant to prepare your order.
+                      You can track the progress below.
+                    </p>
+                    
+                    {assignmentStatus?.restaurant_name && (
+                      <div className="flex items-center justify-center gap-2 text-quantum-cyan">
+                        <Building className="h-4 w-4" />
+                        <span>{assignmentStatus.restaurant_name}</span>
+                      </div>
+                    )}
+                    
+                    {assignmentStatus?.expires_at && (
+                      <div className="space-y-1 max-w-md mx-auto">
+                        <div className="flex justify-between text-xs">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>Restaurant response time:</span>
+                          </div>
+                          <span>{formattedTime}</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -143,7 +159,7 @@ const ThankYou: React.FC = () => {
 
               <div className="space-y-4 pt-6">
                 <Button 
-                  onClick={() => navigate('/orders')} 
+                  onClick={() => navigate(`/orders/${orderId}`)}
                   className="w-full"
                 >
                   Track Your Order

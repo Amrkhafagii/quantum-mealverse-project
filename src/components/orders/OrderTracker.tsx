@@ -1,17 +1,17 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Calendar, Clock, MapPin, Phone, CreditCard, Package } from 'lucide-react';
 import { format } from 'date-fns';
-import { MapPin, Phone, CreditCard, Clock, Calendar, Package } from 'lucide-react';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { OrderStatusTimeline } from './OrderStatusTimeline';
 import { ReturnRequestForm } from './ReturnRequestForm';
 import { OrderStatusDisplay } from './OrderStatusDisplay';
 import { checkAssignmentStatus } from '@/integrations/webhook';
 import { useInterval } from '@/hooks/use-interval';
+import { useOrderTimer } from '@/hooks/useOrderTimer';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -37,37 +37,34 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
       return data;
     },
     enabled: !!orderId,
+    staleTime: 0, // Always fetch fresh data
+    refetchInterval: (data) => 
+      data && ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false,
   });
 
-  // More frequent polling when awaiting restaurant response
-  const pollingInterval = order && ['pending', 'awaiting_restaurant'].includes(order.status) ? 5000 : null;
+  const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
+
+  // Initial check and setup polling
+  React.useEffect(() => {
+    if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      checkAssignmentStatus(orderId)
+        .then(status => {
+          setAssignmentStatus(status);
+        })
+        .catch(err => console.error('Error checking initial assignment status:', err));
+    }
+  }, [orderId, order?.status]);
 
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
-          
-          // Always refetch to ensure we have the latest data
-          // This ensures we catch status transitions between restaurants
-          refetch();
+          refetch(); // Keep order data fresh
         })
         .catch(err => console.error('Error checking assignment status:', err));
     }
-  }, pollingInterval);
-
-  React.useEffect(() => {
-    if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
-      checkAssignmentStatus(orderId)
-        .then(status => {
-          setAssignmentStatus(status);
-          if (status.status !== assignmentStatus?.status) {
-            refetch();
-          }
-        })
-        .catch(err => console.error('Error checking initial assignment status:', err));
-    }
-  }, [orderId, order, assignmentStatus?.status]);
+  }, 5000);
   
   if (isLoading || !order) {
     return (
