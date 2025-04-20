@@ -1,27 +1,25 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  OrderAssignmentRequest, 
+  RestaurantResponseRequest, 
+  WebhookResponse 
+} from '@/types/webhook';
 
-export interface OrderAssignmentRequest {
-  order_id: string;
-  latitude: number;
-  longitude: number;
-  action: 'assign';
-}
-
-export interface RestaurantResponseRequest {
-  order_id: string;
-  restaurant_id: string;
-  assignment_id: string;
-  latitude: number;
-  longitude: number;
-  action: 'accept' | 'reject';
-}
+// Helper function to safely get restaurant name
+const getRestaurantName = (restaurant: any): string => {
+  if (!restaurant) return 'Restaurant';
+  
+  // Handle array case
+  const restaurantData = Array.isArray(restaurant) ? restaurant[0] : restaurant;
+  return restaurantData?.name || 'Restaurant';
+};
 
 export const sendOrderToWebhook = async (
   orderId: string,
   latitude: number,
   longitude: number
-): Promise<{ success: boolean; result?: any; error?: string }> => {
+): Promise<WebhookResponse> => {
   try {
     const data: OrderAssignmentRequest = {
       order_id: orderId,
@@ -62,7 +60,7 @@ export const simulateRestaurantResponse = async (
   action: 'accept' | 'reject',
   latitude: number,
   longitude: number
-): Promise<{ success: boolean; result?: any; error?: string }> => {
+): Promise<WebhookResponse> => {
   try {
     const data: RestaurantResponseRequest = {
       order_id: orderId,
@@ -119,19 +117,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
       .single();
     
     if (assignment) {
-      let restaurantName = 'Restaurant';
-      
-      if (assignment.restaurant != null && 
-          typeof assignment.restaurant === 'object') {
-        // Fixed: Check if restaurant is an array and access first item if needed
-        const restaurantObj = Array.isArray(assignment.restaurant) 
-          ? assignment.restaurant[0] 
-          : assignment.restaurant as { id: string; name: string };
-          
-        if (restaurantObj && restaurantObj.name) {
-          restaurantName = restaurantObj.name;
-        }
-      }
+      const restaurantName = getRestaurantName(assignment.restaurant);
         
       return {
         status: 'awaiting_response',
@@ -143,19 +129,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
       };
     }
     
-    let restaurantName = 'Restaurant';
-    
-    if (order?.restaurant != null && 
-        typeof order.restaurant === 'object') {
-      // Fixed: Check if restaurant is an array and access first item if needed
-      const restaurantObj = Array.isArray(order.restaurant) 
-        ? order.restaurant[0] 
-        : order.restaurant as { id: string; name: string };
-        
-      if (restaurantObj && restaurantObj.name) {
-        restaurantName = restaurantObj.name;
-      }
-    }
+    const restaurantName = getRestaurantName(order?.restaurant);
     
     return {
       status: order?.status || 'unknown',

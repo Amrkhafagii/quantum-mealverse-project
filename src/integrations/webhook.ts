@@ -1,35 +1,22 @@
 
 import { supabase } from './supabase/client';
+import { WebhookResponse, OrderAssignmentRequest, RestaurantResponseRequest } from '@/types/webhook';
 
-// Type definitions for webhook requests
-export interface OrderAssignmentRequest {
-  order_id: string;
-  latitude: number;
-  longitude: number;
-  action: 'assign';
-}
-
-export interface RestaurantResponseRequest {
-  order_id: string;
-  restaurant_id: string;
-  assignment_id: string;
-  latitude: number;
-  longitude: number;
-  action: 'accept' | 'reject';
-}
-
-export type WebhookRequest = OrderAssignmentRequest | RestaurantResponseRequest;
+// Helper function to safely get restaurant name
+const getRestaurantName = (restaurant: any): string => {
+  if (!restaurant) return 'Restaurant';
+  
+  // Handle array case
+  const restaurantData = Array.isArray(restaurant) ? restaurant[0] : restaurant;
+  return restaurantData?.name || 'Restaurant';
+};
 
 // Helper function to call the webhook with order data
 export async function sendOrderToWebhook(
   orderId: string,
   latitude: number,
   longitude: number
-): Promise<{
-  success: boolean;
-  result?: any;
-  error?: string;
-}> {
+): Promise<WebhookResponse> {
   try {
     const data: OrderAssignmentRequest = {
       order_id: orderId,
@@ -58,7 +45,7 @@ export async function sendOrderToWebhook(
       success: true,
       result: response.data
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending order to webhook:', error);
     return {
       success: false,
@@ -75,11 +62,7 @@ export async function simulateRestaurantResponse(
   action: 'accept' | 'reject',
   latitude: number,
   longitude: number
-): Promise<{
-  success: boolean;
-  result?: any;
-  error?: string;
-}> {
+): Promise<WebhookResponse> {
   try {
     const data: RestaurantResponseRequest = {
       order_id: orderId,
@@ -108,7 +91,7 @@ export async function simulateRestaurantResponse(
       success: true,
       result: response.data
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error simulating restaurant ${action}:`, error);
     return {
       success: false,
@@ -118,17 +101,9 @@ export async function simulateRestaurantResponse(
 }
 
 // Function to check assignment status
-export async function checkAssignmentStatus(orderId: string): Promise<{
-  status: string;
-  assigned_restaurant_id?: string;
-  restaurant_name?: string;
-  assignment_id?: string;
-  expires_at?: string;
-  attempt_count: number;
-}> {
+export async function checkAssignmentStatus(orderId: string) {
   try {
-    // Get the current assignment
-    const { data: assignment, error: assignmentError } = await supabase
+    const { data: assignment } = await supabase
       .from('restaurant_assignments')
       .select('*, restaurant:restaurants(id, name)')
       .eq('order_id', orderId)
@@ -137,35 +112,20 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       .limit(1)
       .single();
     
-    // Get the count of assignment attempts
     const { count } = await supabase
       .from('restaurant_assignment_history')
       .select('*', { count: 'exact', head: true })
       .eq('order_id', orderId);
     
-    // Get the order status
-    const { data: orderData } = await supabase
+    const { data: order } = await supabase
       .from('orders')
       .select('status, restaurant_id, restaurant:restaurants(id, name)')
       .eq('id', orderId)
       .single();
     
     if (assignment) {
-      // Safely extract restaurant name with proper null checks
-      let restaurantName = 'Restaurant';
+      const restaurantName = getRestaurantName(assignment.restaurant);
       
-      if (assignment.restaurant != null && 
-          typeof assignment.restaurant === 'object') {
-        // Fixed: Check if restaurant is an array and access first item if needed
-        const restaurantObj = Array.isArray(assignment.restaurant) 
-          ? assignment.restaurant[0] 
-          : assignment.restaurant as { id: string; name: string };
-          
-        if (restaurantObj && restaurantObj.name) {
-          restaurantName = restaurantObj.name;
-        }
-      }
-        
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
@@ -176,24 +136,11 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       };
     }
     
-    // Safely extract restaurant name from order with proper null checks
-    let restaurantName = 'Restaurant';
-    
-    if (orderData?.restaurant != null && 
-        typeof orderData.restaurant === 'object') {
-      // Fixed: Check if restaurant is an array and access first item if needed
-      const restaurantObj = Array.isArray(orderData.restaurant) 
-        ? orderData.restaurant[0] 
-        : orderData.restaurant as { id: string; name: string };
-        
-      if (restaurantObj && restaurantObj.name) {
-        restaurantName = restaurantObj.name;
-      }
-    }
+    const restaurantName = getRestaurantName(order?.restaurant);
     
     return {
-      status: orderData?.status || 'unknown',
-      assigned_restaurant_id: orderData?.restaurant_id,
+      status: order?.status || 'unknown',
+      assigned_restaurant_id: order?.restaurant_id,
       restaurant_name: restaurantName,
       attempt_count: count || 0
     };
