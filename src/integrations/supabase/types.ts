@@ -1235,6 +1235,10 @@ export type Database = {
         Args: { "": unknown } | { "": unknown }
         Returns: string
       }
+      check_verified_purchase: {
+        Args: { user_id: string; meal_id: string }
+        Returns: boolean
+      }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
         Returns: string

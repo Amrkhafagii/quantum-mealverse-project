@@ -1,8 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/types/database';
-
-type OrderItem = Database['order_items']['Row'];
 
 interface QueryResult {
   exists: boolean;
@@ -12,20 +9,18 @@ interface QueryResult {
  * Helper function to encapsulate the Supabase query logic with proper typing
  */
 const runPurchaseQuery = async (userId: string, mealId: string): Promise<QueryResult> => {
-  // Use simpler typing approach to avoid excessive type instantiation
   const { data, error } = await supabase
-    .from('order_items')
-    .select('id')
-    .eq('meal_id', mealId)
-    .eq('user_id', userId)
-    .limit(1);
+    .rpc('check_verified_purchase', {
+      user_id: userId,
+      meal_id: mealId
+    });
 
   if (error) {
     console.error('Error checking verified purchase:', error);
     throw error;
   }
 
-  return { exists: Array.isArray(data) && data.length > 0 };
+  return { exists: !!data };
 };
 
 /**
