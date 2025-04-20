@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import Home from './pages/Home';
 import Customer from './pages/Customer';
-import MealDetails from './components/MealDetails';
 import Cart from './pages/Cart';
 import { CartProvider } from './contexts/CartContext';
 import Checkout from './pages/Checkout';
@@ -15,6 +14,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import ReviewsManagement from './pages/Admin/ReviewsManagement';
+import MealDetailsPage from './pages/MealDetailsPage';
 
 function App() {
   const queryClient = new QueryClient();
@@ -27,27 +27,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/customer" element={<Customer />} />
-              {/* Fix MealDetails route to pass required props with complete MealType */}
-              <Route path="/meals/:id" element={
-                <MealDetails 
-                  meal={{
-                    id: '',
-                    name: '',
-                    description: '',
-                    price: 0,
-                    image_url: '',
-                    calories: 0,
-                    protein: 0,
-                    fat: 0,
-                    carbs: 0,
-                    is_active: true,
-                    restaurant_id: '',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  }} 
-                  onAddToCart={() => {}} 
-                />
-              } />
+              <Route path="/meals/:id" element={<MealDetailsPage />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

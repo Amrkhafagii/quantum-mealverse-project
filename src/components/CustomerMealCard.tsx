@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Minus } from 'lucide-react';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -17,6 +18,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   const navigate = useNavigate();
 
@@ -71,13 +73,25 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     
     addItem({
       ...meal,
-      quantity: 1
+      quantity: quantity
     });
     toast.success(`${meal.name} added to cart!`);
   };
 
   const navigateToMealDetails = () => {
     navigate(`/meals/${meal.id}`);
+  };
+
+  const increaseQuantity = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQuantity(prev => prev + 1);
+  };
+
+  const decreaseQuantity = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
   };
 
   return (
@@ -114,11 +128,31 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
         
         <p className="text-gray-300 mb-4">{meal.description}</p>
         
-        <div className="mt-4 flex justify-between items-center">
-          <span className="text-quantum-cyan font-medium">${meal.price.toFixed(2)}</span>
+        <div className="mt-4 flex flex-col space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-quantum-cyan font-medium">${meal.price.toFixed(2)}</span>
+            
+            <div className="flex items-center space-x-1">
+              <button 
+                className="bg-quantum-darkBlue text-quantum-cyan p-1 rounded-full hover:bg-quantum-cyan hover:text-quantum-black transition-colors"
+                onClick={decreaseQuantity}
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              
+              <span className="w-8 text-center">{quantity}</span>
+              
+              <button 
+                className="bg-quantum-darkBlue text-quantum-cyan p-1 rounded-full hover:bg-quantum-cyan hover:text-quantum-black transition-colors"
+                onClick={increaseQuantity}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
           
           <button 
-            className="bg-quantum-cyan text-quantum-black py-2 px-4 rounded-full hover:bg-cyan-600 transition-colors duration-300"
+            className="bg-quantum-cyan text-quantum-black py-2 px-4 rounded-full hover:bg-cyan-600 transition-colors duration-300 w-full"
             onClick={handleAddToCart}
           >
             Add to Cart
