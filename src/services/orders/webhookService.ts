@@ -21,6 +21,9 @@ export const sendOrderToWebhook = async (
   longitude: number
 ): Promise<WebhookResponse> => {
   try {
+    // Store the location in localStorage for potential reassignment
+    localStorage.setItem('lastKnownLocation', JSON.stringify({ latitude, longitude }));
+    
     const data: OrderAssignmentRequest = {
       order_id: orderId,
       latitude,
@@ -28,6 +31,7 @@ export const sendOrderToWebhook = async (
       action: 'assign'
     };
 
+    console.log('Sending order assignment request:', data);
     const response = await supabase.functions.invoke('order-webhook', {
       body: data
     });
@@ -125,12 +129,30 @@ export const checkAssignmentStatus = async (orderId: string) => {
     // Get current order status - handle the relationship error differently
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('status, restaurant_id')
+      .select('status, restaurant_id, restaurant_attempts')
       .eq('id', orderId)
       .single();
     
     if (orderError) {
       console.error('Error fetching order details:', orderError);
+    }
+    
+    // Parse the restaurant attempts data if it exists
+    let nextRestaurants = [];
+    if (order?.restaurant_attempts) {
+      try {
+        const attemptData = JSON.parse(order.restaurant_attempts);
+        const currentAttempt = attemptData.current_attempt || 0;
+        const restaurants = attemptData.restaurants || [];
+        
+        // Next restaurants are those after the current attempt
+        nextRestaurants = restaurants.slice(currentAttempt).map(r => ({
+          id: r.restaurant_id,
+          name: r.name
+        }));
+      } catch (e) {
+        console.error('Error parsing restaurant_attempts data:', e);
+      }
     }
     
     // Get restaurant details separately if there's a restaurant_id
@@ -163,7 +185,8 @@ export const checkAssignmentStatus = async (orderId: string) => {
         restaurant_name: assignmentRestaurantName,
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
-        attempt_count: count || 1
+        attempt_count: count || 1,
+        next_restaurants: nextRestaurants
       };
     }
     
@@ -173,7 +196,8 @@ export const checkAssignmentStatus = async (orderId: string) => {
         status: order.status || 'unknown',
         assigned_restaurant_id: order.restaurant_id,
         restaurant_name: restaurantName,
-        attempt_count: count || 0
+        attempt_count: count || 0,
+        next_restaurants: nextRestaurants
       };
     }
     
