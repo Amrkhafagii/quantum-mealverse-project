@@ -3,7 +3,6 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
 
 interface MealCardProps {
   name: string;
@@ -24,15 +23,10 @@ export const MealCard: React.FC<MealCardProps> = ({
   calories,
   macros
 }) => {
-  const { toast } = useToast();
+  // Removed toast usage, as tooltip on add to cart is to be disabled
 
   const handleAddToCart = () => {
-    // TODO: Implement cart functionality
-    toast({
-      title: "Added to cart",
-      description: `${name} has been added to your cart.`,
-      duration: 2000,
-    });
+    // Removed tooltip toast call to prevent tooltip on adding meal to cart
   };
 
   return (

@@ -570,6 +570,7 @@ export type Database = {
           payment_method: string
           refund_amount: number | null
           refund_status: string | null
+          restaurant_attempts: Json | null
           restaurant_id: string | null
           return_images: string[] | null
           return_reason: string | null
@@ -596,6 +597,7 @@ export type Database = {
           payment_method: string
           refund_amount?: number | null
           refund_status?: string | null
+          restaurant_attempts?: Json | null
           restaurant_id?: string | null
           return_images?: string[] | null
           return_reason?: string | null
@@ -622,6 +624,7 @@ export type Database = {
           payment_method?: string
           refund_amount?: number | null
           refund_status?: string | null
+          restaurant_attempts?: Json | null
           restaurant_id?: string | null
           return_images?: string[] | null
           return_reason?: string | null
@@ -742,6 +745,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_assignments_restaurant_id_restaurants_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
