@@ -44,7 +44,7 @@ export const useOrderTimer = (
         }
 
         // When timer hits zero, trigger the webhook for reassignment
-        if (secondsLeft <= 0 && !reassignmentAttemptedRef.current) {
+        if (secondsLeft === 0 && !reassignmentAttemptedRef.current) {
           console.log('Timer expired, attempting reassignment...');
           reassignmentAttemptedRef.current = true;
           
@@ -61,27 +61,18 @@ export const useOrderTimer = (
             
             if (latitude && longitude) {
               console.log(`Sending reassignment webhook for order ${orderId} with location: `, { latitude, longitude });
-              const response = await sendOrderToWebhook(orderId, latitude, longitude);
-              console.log('Reassignment webhook response:', response);
-              
-              if (!response.success) {
-                console.error('Reassignment failed:', response.error);
-              }
+              await sendOrderToWebhook(orderId, latitude, longitude);
+              console.log('Reassignment webhook sent successfully');
             } else {
               console.error('Invalid location data for reassignment:', location);
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
           }
-          
-          if (onExpire) {
-            console.log('Calling onExpire callback');
-            onExpire();
-          }
+          onExpire?.();
         }
       };
       
-      // Execute once immediately to set initial values
       updateTimer();
       const timerInterval = setInterval(updateTimer, 1000);
       
