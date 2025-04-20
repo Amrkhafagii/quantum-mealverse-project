@@ -14,17 +14,17 @@ const Subscription = () => {
       <main className="relative z-10 pt-24 pb-12">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-quantum-cyan mb-4 neon-text">Subscription Plans</h1>
-          <p className="text-xl mb-12 text-gray-300">Choose the perfect nutrition plan for your goals</p>
+          <p className="text-xl mb-12 text-gray-300">Choose the perfect meal plan for your lifestyle</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <SubscriptionPlan
-              title="Basic Quantum"
+              title="Basic Zenith"
               price={99}
               period="month"
-              description="Perfect for individuals starting their fitness journey"
+              description="Perfect for individuals starting their wellness journey"
               features={[
                 { text: "5 Meals Per Week", included: true },
-                { text: "Basic Nutrition Tracking", included: true },
+                { text: "Basic Meal Tracking", included: true },
                 { text: "Standard Menu Selection", included: true },
                 { text: "Email Support", included: true },
                 { text: "Personalized Meal Plans", included: false }
@@ -33,29 +33,29 @@ const Subscription = () => {
             />
             
             <SubscriptionPlan
-              title="Power Quantum"
+              title="Pro Zenith"
               price={179}
               period="month"
-              description="Our most popular plan for serious fitness enthusiasts"
+              description="Our most popular plan for health enthusiasts"
               features={[
                 { text: "10 Meals Per Week", included: true },
-                { text: "Advanced Nutrition Tracking", included: true },
+                { text: "Advanced Meal Tracking", included: true },
                 { text: "Extended Menu Selection", included: true },
                 { text: "Priority Email Support", included: true },
                 { text: "Personalized Meal Plans", included: true }
               ]}
               highlighted={true}
-              onSubscribe={() => alert('Power plan selected')}
+              onSubscribe={() => alert('Pro plan selected')}
             />
             
             <SubscriptionPlan
-              title="Ultimate Quantum"
+              title="Ultimate Zenith"
               price={279}
               period="month"
               description="The ultimate nutrition solution for maximum results"
               features={[
                 { text: "15 Meals Per Week", included: true },
-                { text: "Premium Nutrition Tracking", included: true },
+                { text: "Premium Meal Tracking", included: true },
                 { text: "Full Menu Access", included: true },
                 { text: "24/7 Phone and Email Support", included: true },
                 { text: "Personalized Meal Plans", included: true },

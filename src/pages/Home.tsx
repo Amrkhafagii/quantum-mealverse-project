@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -18,15 +17,14 @@ const Home = () => {
       <Navbar />
       
       <main className="relative z-10 pt-20">
-        {/* Hero Section */}
         <section className="h-screen flex items-center justify-center text-center px-4">
           <div className="space-y-6">
             <h1 className="text-6xl md:text-8xl font-bold text-quantum-cyan neon-text">
-              ZenithMeals
+              Zenith Meals
             </h1>
             <p className="text-xl md:text-2xl text-galaxy-purple max-w-2xl mx-auto">
-              Experience the future of food delivery with our AI-powered meal recommendations
-              and augmented reality previews
+              Experience the future of food delivery with our smart meal recommendations
+              and real-time meal previews
             </p>
             <button 
               className="cyber-button text-lg"

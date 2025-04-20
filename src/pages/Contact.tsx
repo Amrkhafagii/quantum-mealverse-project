@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -16,10 +15,9 @@ const Contact = () => {
     e.preventDefault();
     toast({
       title: "Message sent",
-      description: "Thank you for contacting us. We'll respond shortly!",
+      description: "Thank you for contacting Zenith Meals. We'll respond shortly!",
       duration: 3000,
     });
-    // Reset form (would clear fields in a real implementation)
   };
   
   return (
@@ -35,7 +33,7 @@ const Contact = () => {
             <div>
               <h2 className="text-2xl font-bold text-galaxy-purple mb-4">Get In Touch</h2>
               <p className="mb-6">
-                Have questions about our meals, technology, or delivery? We're here to help!
+                Have questions about our meals, delivery, or services? We're here to help!
                 Fill out the form and our team will respond as soon as possible.
               </p>
               
@@ -48,7 +46,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-quantum-cyan">Email</h3>
-                    <p className="text-gray-300">support@quantumeats.com</p>
+                    <p className="text-gray-300">support@zenithmeals.com</p>
                   </div>
                 </div>
                 
