@@ -10,10 +10,11 @@ export async function findNearestRestaurants(
   console.log(`Searching for restaurants near (${latitude}, ${longitude}) within ${maxDistance}km`);
   
   try {
+    // Ensure we're explicitly passing double precision parameters
     const { data, error } = await supabase.rpc('find_nearest_restaurant', {
-      order_lat: latitude,
-      order_lng: longitude,
-      max_distance_km: maxDistance
+      order_lat: parseFloat(latitude.toString()),
+      order_lng: parseFloat(longitude.toString()),
+      max_distance_km: parseFloat(maxDistance.toString())
     });
 
     if (error) {

@@ -56,6 +56,30 @@ const ThankYou: React.FC = () => {
     fetchOrderDetails();
   }, [orderId]);
 
+  // Check assignment status initially
+  useEffect(() => {
+    if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      checkAssignmentStatus(orderId)
+        .then(status => setAssignmentStatus(status))
+        .catch(err => console.error('Error checking initial assignment status:', err));
+    }
+  }, [orderId, order]);
+
+  // Poll for updates
+  useInterval(() => {
+    if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      checkAssignmentStatus(orderId!)
+        .then(status => {
+          setAssignmentStatus(status);
+          
+          if (status.status !== 'awaiting_response') {
+            fetchOrderDetails();
+          }
+        })
+        .catch(err => console.error('Error checking assignment status:', err));
+    }
+  }, 10000);
+
   if (!orderId) {
     useEffect(() => {
       navigate('/');
@@ -74,20 +98,6 @@ const ThankYou: React.FC = () => {
       </div>
     );
   }
-
-  useInterval(() => {
-    if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
-      checkAssignmentStatus(orderId)
-        .then(status => {
-          setAssignmentStatus(status);
-          
-          if (status.status !== 'awaiting_response') {
-            fetchOrderDetails();
-          }
-        })
-        .catch(err => console.error('Error checking assignment status:', err));
-    }
-  }, 10000);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -109,12 +119,16 @@ const ThankYou: React.FC = () => {
                 </div>
                 
                 <h1 className="text-4xl font-bold text-quantum-cyan mb-4 neon-text">Order Confirmed!</h1>
-                <p className="text-xl mb-6">Order #{orderId}</p>
+                <p className="text-xl mb-6">Order #{order?.formatted_order_id || orderId.substring(0, 8)}</p>
               </div>
 
               {order && (
                 <>
-                  <OrderStatusDisplay order={order} assignmentStatus={assignmentStatus} />
+                  <OrderStatusDisplay 
+                    order={order} 
+                    assignmentStatus={assignmentStatus} 
+                    onOrderUpdate={fetchOrderDetails}
+                  />
                   <OrderDetailsDisplay order={order} />
                 </>
               )}

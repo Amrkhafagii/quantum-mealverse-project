@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
@@ -48,7 +49,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     const timerInterval = setInterval(updateTimer, 1000);
     
     return () => {
-      if (timerInterval) clearInterval(timerInterval);
+      clearInterval(timerInterval);
     };
   }, [assignmentStatus?.expires_at, order?.status]);
 
