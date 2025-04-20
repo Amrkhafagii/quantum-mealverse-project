@@ -291,6 +291,45 @@ export type Database = {
           },
         ]
       }
+      nearby_restaurant_locations: {
+        Row: {
+          id: string
+          nearby_restaurants_id: string
+          restaurant_id: string
+          restaurant_latitude: number
+          restaurant_longitude: number
+        }
+        Insert: {
+          id?: string
+          nearby_restaurants_id: string
+          restaurant_id: string
+          restaurant_latitude: number
+          restaurant_longitude: number
+        }
+        Update: {
+          id?: string
+          nearby_restaurants_id?: string
+          restaurant_id?: string
+          restaurant_latitude?: number
+          restaurant_longitude?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nearby_restaurant_locations_nearby_restaurants_id_fkey"
+            columns: ["nearby_restaurants_id"]
+            isOneToOne: false
+            referencedRelation: "nearby_restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nearby_restaurant_locations_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nearby_restaurants: {
         Row: {
           created_at: string
