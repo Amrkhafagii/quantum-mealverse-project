@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Building, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
@@ -21,11 +21,27 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   onCancel,
   orderId
 }) => {
+  useEffect(() => {
+    console.log('OrderRestaurantStatus: Rendering with', { 
+      orderId,
+      status,
+      assignmentStatus,
+      hasExpiryTime: Boolean(assignmentStatus?.expires_at)
+    });
+  }, [status, assignmentStatus, orderId]);
+
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
 
   const handleTimerExpire = () => {
     console.log('Timer expired, refreshing order status...');
   };
+
+  // Check if we have a valid expires_at that's in the future
+  const hasValidExpiryTime = Boolean(
+    assignmentStatus?.expires_at && 
+    !isNaN(new Date(assignmentStatus.expires_at).getTime()) &&
+    new Date(assignmentStatus.expires_at) > new Date()
+  );
 
   return (
     <div className="space-y-6 py-4">
@@ -43,13 +59,19 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             <span>Waiting for confirmation from Restaurant...</span>
           </div>
           
-          {assignmentStatus?.expires_at && (
+          {hasValidExpiryTime ? (
             <div className="w-full mb-6">
               <OrderTimer 
                 expiresAt={assignmentStatus.expires_at} 
                 orderId={orderId}
                 onTimerExpire={handleTimerExpire}
               />
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 mb-6">
+              {assignmentStatus ? 
+                "Restaurant is being contacted..." : 
+                "Preparing to contact nearby restaurants..."}
             </div>
           )}
         </div>

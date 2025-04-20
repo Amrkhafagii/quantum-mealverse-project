@@ -16,7 +16,11 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   onTimerExpire
 }) => {
   useEffect(() => {
-    console.log('OrderTimer Component Mounted with:', { expiresAt, orderId });
+    console.log('OrderTimer Component Mounted with:', { 
+      expiresAt, 
+      orderId,
+      currentTime: new Date().toISOString() 
+    });
     
     if (!expiresAt) {
       console.warn('No expiration time provided to OrderTimer');
@@ -26,10 +30,12 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     // Validate the expiresAt value
     try {
       const date = new Date(expiresAt);
+      const timeUntilExpiry = Math.floor((date.getTime() - Date.now()) / 1000);
+      
       if (isNaN(date.getTime())) {
         console.error('Invalid date format for expiresAt:', expiresAt);
       } else {
-        console.log('Valid expiration time:', date.toISOString());
+        console.log(`Valid expiration time: ${date.toISOString()}, ${timeUntilExpiry}s remaining`);
       }
     } catch (error) {
       console.error('Error parsing expiresAt:', error);
@@ -47,8 +53,19 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     );
   }
 
+  // Add debug info in dev environment
+  const isDebug = process.env.NODE_ENV === 'development';
+
   return (
     <div className="space-y-3">
+      {isDebug && (
+        <div className="text-xs text-gray-500 mb-2">
+          <p>Debug: Expires at {expiresAt}</p>
+          <p>Debug: Order ID {orderId}</p>
+          <p>Debug: Time left {timeLeft}s</p>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <Clock className="h-4 w-4 text-quantum-cyan" />

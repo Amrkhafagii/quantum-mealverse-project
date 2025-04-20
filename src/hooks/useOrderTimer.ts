@@ -9,9 +9,10 @@ export const useOrderTimer = (
 ) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
   
   useEffect(() => {
-    console.log('OrderTimer Hook: Starting useEffect with expiresAt:', expiresAt);
+    console.log('OrderTimer Hook: Starting with expiresAt:', expiresAt, 'orderId:', orderId);
     
     if (!expiresAt || !orderId) {
       console.warn('Missing required data for timer:', { expiresAt, orderId });
@@ -19,11 +20,16 @@ export const useOrderTimer = (
     }
     
     try {
-      const expiresAtTime = new Date(expiresAt).getTime();
+      // Parse the expiration date and validate it
+      const expiresAtDate = new Date(expiresAt);
+      const expiresAtTime = expiresAtDate.getTime();
+      
       if (isNaN(expiresAtTime)) {
         console.error('Invalid expiration time format:', expiresAt);
         return;
       }
+      
+      console.log(`Timer initialized: Will expire at ${expiresAtDate.toISOString()}`);
       
       const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
       
@@ -38,31 +44,41 @@ export const useOrderTimer = (
         
         // Log timer info periodically
         if (secondsLeft % 10 === 0 || secondsLeft <= 10) {
-          console.log(`Timer update: Expires at ${new Date(expiresAtTime).toISOString()}, ${secondsLeft}s left, ${progressValue.toFixed(1)}% progress`);
+          console.log(`Timer update: ${secondsLeft}s left, ${progressValue.toFixed(1)}% progress`);
         }
 
         // When timer hits zero, trigger the webhook for reassignment
-        if (secondsLeft === 0) {
+        if (secondsLeft === 0 && !isExpired) {
+          setIsExpired(true);
           console.log('Timer expired, attempting reassignment...');
           try {
             // Get location from local storage
-            const location = localStorage.getItem('lastKnownLocation');
-            const { latitude, longitude } = location ? JSON.parse(location) : { latitude: null, longitude: null };
+            const locationData = localStorage.getItem('lastKnownLocation');
+            
+            if (!locationData) {
+              console.error('No location data available for reassignment');
+              return;
+            }
+            
+            const { latitude, longitude } = JSON.parse(locationData);
             
             if (latitude && longitude) {
               await sendOrderToWebhook(orderId, latitude, longitude);
               console.log('Reassignment webhook sent successfully');
             } else {
-              console.error('No location data available for reassignment');
+              console.error('Invalid location data for reassignment:', { latitude, longitude });
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
+          } finally {
+            onExpire?.();
           }
-          onExpire?.();
         }
       };
       
+      // Initial update
       updateTimer();
+      
       const timerInterval = setInterval(updateTimer, 1000);
       
       return () => {
@@ -71,7 +87,7 @@ export const useOrderTimer = (
     } catch (error) {
       console.error('Error in timer calculation:', error);
     }
-  }, [expiresAt, orderId, onExpire]);
+  }, [expiresAt, orderId, onExpire, isExpired]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -82,6 +98,7 @@ export const useOrderTimer = (
   return {
     timeLeft,
     progress,
-    formattedTime: formatTime(timeLeft)
+    formattedTime: formatTime(timeLeft),
+    isExpired
   };
 };

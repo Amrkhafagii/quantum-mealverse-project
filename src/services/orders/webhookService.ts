@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
   RestaurantResponseRequest, 
-  WebhookResponse 
+  WebhookResponse,
+  AssignmentStatus 
 } from '@/types/webhook';
 
 // Helper function to safely get restaurant name
@@ -21,6 +22,8 @@ export const sendOrderToWebhook = async (
   longitude: number
 ): Promise<WebhookResponse> => {
   try {
+    console.log(`Sending order ${orderId} to webhook with location:`, { latitude, longitude });
+    
     const data: OrderAssignmentRequest = {
       order_id: orderId,
       latitude,
@@ -40,6 +43,7 @@ export const sendOrderToWebhook = async (
       };
     }
 
+    console.log('Webhook response:', response.data);
     return {
       success: true,
       result: response.data
@@ -94,7 +98,7 @@ export const simulateRestaurantResponse = async (
   }
 };
 
-export const checkAssignmentStatus = async (orderId: string) => {
+export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus> => {
   try {
     console.log(`Checking assignment status for order: ${orderId}`);
     
@@ -151,10 +155,13 @@ export const checkAssignmentStatus = async (orderId: string) => {
     if (assignment) {
       const assignmentRestaurantName = getRestaurantName(assignment.restaurant);
       
+      // Log the expires_at time and validate it
       console.log(`Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
         restaurant: assignmentRestaurantName,
-        expires_at: assignment.expires_at
+        expires_at: assignment.expires_at,
+        expiresAtValid: !isNaN(new Date(assignment.expires_at).getTime()),
+        timeRemaining: Math.floor((new Date(assignment.expires_at).getTime() - Date.now()) / 1000)
       });
       
       return {
