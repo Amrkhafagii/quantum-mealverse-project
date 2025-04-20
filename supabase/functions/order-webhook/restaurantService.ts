@@ -39,6 +39,18 @@ export async function createRestaurantAssignment(
   console.log(`Creating restaurant assignment for order ${orderId} to restaurant ${restaurantId}`);
 
   try {
+    // Verify restaurant exists before creating assignment
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .eq('id', restaurantId)
+      .single();
+      
+    if (restaurantError || !restaurant) {
+      console.error('Error verifying restaurant existence:', restaurantError);
+      throw new Error(`Restaurant with ID ${restaurantId} not found`);
+    }
+
     const { data, error } = await supabase
       .from('restaurant_assignments')
       .insert({

@@ -163,6 +163,42 @@ export type Database = {
       status: string
     }
   }
+  restaurant_assignments: {
+    Row: {
+      id: string
+      restaurant_id: string
+      order_id: string
+      status: string
+      expires_at: string
+      created_at: string
+      updated_at: string
+      notes: string | null
+    }
+    Insert: {
+      restaurant_id: string
+      order_id: string
+      status?: string
+      expires_at: string
+      notes?: string | null
+    }
+    Update: {
+      restaurant_id?: string
+      order_id?: string
+      status?: string
+      expires_at?: string
+      notes?: string | null
+    }
+    Select: {
+      id: string
+      restaurant_id: string
+      order_id: string
+      status: string
+      expires_at: string
+      created_at: string
+      updated_at: string
+      notes: string | null
+    }
+  }
   public: {
     Tables: {
       order_items: {
@@ -317,6 +353,92 @@ export type Database = {
           updated_at: string
           is_flagged: boolean
           status: string
+        }
+      }
+      restaurant_assignments: {
+        Row: {
+          id: string
+          restaurant_id: string
+          order_id: string
+          status: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+          notes: string | null
+        }
+        Insert: {
+          restaurant_id: string
+          order_id: string
+          status?: string
+          expires_at: string
+          notes?: string | null
+        }
+        Update: {
+          restaurant_id?: string
+          order_id?: string
+          status?: string
+          expires_at?: string
+          notes?: string | null
+        }
+        Select: {
+          id: string
+          restaurant_id: string
+          order_id: string
+          status: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+          notes: string | null
+        }
+      }
+      restaurants: {
+        Row: {
+          id: string
+          name: string
+          address: string
+          user_id: string
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+          latitude: number | null
+          longitude: number | null
+          email: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          address: string
+          user_id: string
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          email?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          address?: string
+          user_id?: string
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          email?: string | null
+        }
+        Select: {
+          id: string
+          name: string
+          address: string
+          user_id: string
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+          latitude: number | null
+          longitude: number | null
+          email: string | null
         }
       }
     }
