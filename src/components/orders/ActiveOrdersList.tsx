@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,12 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  console.log('Active orders received in component:', orders);
-  
-  // Fetch assignment status for all awaiting_restaurant orders
-  const awaitingRestaurantOrders = orders.filter(order => 
-    ['pending', 'awaiting_restaurant', 'processing'].includes(order.status)
-  ).map(order => order.id);
+  // Use memoization to prevent unnecessary recalculations
+  const awaitingRestaurantOrders = useMemo(() => {
+    return orders.filter(order => 
+      ['pending', 'awaiting_restaurant', 'processing'].includes(order.status)
+    ).map(order => order.id);
+  }, [orders]);
   
   // Use React Query to fetch all assignment statuses in parallel
   const assignmentStatusQueries = useQuery({
@@ -48,14 +48,21 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
         })
       );
       
-      console.log('Assignment statuses fetched:', results);
       return results;
     },
     enabled: awaitingRestaurantOrders.length > 0,
-    refetchInterval: 5000 // Refresh every 5 seconds to match other components
+    refetchInterval: 5000, // Refresh every 5 seconds to match other components
+    staleTime: 3000,       // Prevent unnecessary refetches
   });
   
   const assignmentStatuses = assignmentStatusQueries.data || {};
+  
+  // Memoize the handler to prevent recreations
+  const handleSelectOrder = useCallback((orderId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onOrderSelect(orderId);
+  }, [onOrderSelect]);
   
   if (!orders.length) {
     return (
@@ -70,13 +77,6 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
       </Card>
     );
   }
-  
-  // Fixed: Make the click handler properly handle events
-  const handleSelectOrder = (orderId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onOrderSelect(orderId);
-  };
   
   return (
     <>

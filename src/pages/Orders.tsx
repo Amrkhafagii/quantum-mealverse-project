@@ -39,23 +39,32 @@ const Orders = () => {
     queryFn: async () => {
       if (!session?.user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('user_id', session.user.id)
-        .not('status', 'in', ['delivered', 'cancelled', 'rejected'])
-        .order('created_at', { ascending: false });
+      try {
+        // Fix the "not.in" syntax issue by using "not" with individual "eq" filters
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('user_id', session.user.id)
+          .not('status', 'eq', 'delivered')
+          .not('status', 'eq', 'cancelled')
+          .not('status', 'eq', 'rejected')
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error('Error fetching active orders:', error);
+          throw error;
+        }
         
-      if (error) {
-        console.error('Error fetching active orders:', error);
-        throw error;
+        console.log('Active orders fetched:', data);
+        return data || [];
+      } catch (error) {
+        console.error('Error in active orders query:', error);
+        return [];
       }
-      
-      console.log('Active orders fetched:', data);
-      return data || [];
     },
     enabled: !!session?.user?.id,
     refetchInterval: 10000, // Refresh every 10 seconds to catch status updates
+    staleTime: 5000, // Prevent unnecessary refetches
   });
   
   const { data: pastOrders } = useQuery({
@@ -75,11 +84,8 @@ const Orders = () => {
       return data || [];
     },
     enabled: !!session?.user?.id,
+    staleTime: 30000, // Past orders don't change as frequently
   });
-
-  const handleOrderSelect = (orderId: string) => {
-    setSelectedOrderId(orderId);
-  };
 
   if (!session) {
     return (
