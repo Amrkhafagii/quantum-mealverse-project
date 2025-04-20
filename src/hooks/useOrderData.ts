@@ -18,13 +18,19 @@ export const useOrderData = (orderId: string) => {
         .single();
         
       if (error) throw error;
-      return data as Order;
+      
+      // Ensure the restaurant property has the correct shape
+      const formattedData = {
+        ...data,
+        restaurant: data.restaurant || { id: '', name: '' }
+      };
+      
+      return formattedData as Order;
     },
     enabled: !!orderId,
     staleTime: 0,
-    refetchInterval: (data) => {
+    refetchInterval: (data: Order | undefined) => {
       if (!data) return false;
-      // Access the status property from the data object returned by the queryFn
       return ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false;
     },
   });
