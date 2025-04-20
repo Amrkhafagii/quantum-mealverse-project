@@ -13,6 +13,8 @@ export interface MealType {
   restaurant_id: string;
   created_at: string;
   updated_at: string;
+  ingredients?: string[];
+  steps?: string[];
 }
 
 export const INITIAL_MEAL: MealType = {
@@ -28,5 +30,7 @@ export const INITIAL_MEAL: MealType = {
   is_active: true,
   restaurant_id: '',
   created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
+  updated_at: new Date().toISOString(),
+  ingredients: [],
+  steps: []
 };

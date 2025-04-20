@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
 import { MealType } from '@/types/meal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, UtensilsCrossed, ScrollText } from 'lucide-react';
 import { MealReviews } from './MealReviews';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface MealDetailsProps {
   meal: MealType;
@@ -59,6 +60,7 @@ const MealDetails: React.FC<MealDetailsProps> = ({
             <p className="text-gray-400 text-lg">{meal.description}</p>
           </div>
 
+          {/* Nutrition Information */}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
@@ -80,6 +82,7 @@ const MealDetails: React.FC<MealDetailsProps> = ({
             </div>
           </div>
 
+          {/* Add to Cart Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-3xl font-bold text-quantum-cyan">
@@ -126,6 +129,57 @@ const MealDetails: React.FC<MealDetailsProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Ingredients and Steps Sections */}
+      <div className="mt-12 space-y-6">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="ingredients" className="border-quantum-cyan/20">
+            <AccordionTrigger className="text-xl font-bold text-quantum-cyan hover:text-quantum-cyan/80">
+              <UtensilsCrossed className="mr-2 h-5 w-5" />
+              Ingredients
+            </AccordionTrigger>
+            <AccordionContent>
+              <Card className="bg-quantum-darkBlue border-quantum-cyan/20">
+                <CardContent className="pt-6">
+                  {meal.ingredients && meal.ingredients.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-2">
+                      {meal.ingredients.map((ingredient, index) => (
+                        <li key={index} className="text-gray-300">{ingredient}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-400 italic">No ingredients listed for this meal.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="steps" className="border-quantum-cyan/20">
+            <AccordionTrigger className="text-xl font-bold text-quantum-cyan hover:text-quantum-cyan/80">
+              <ScrollText className="mr-2 h-5 w-5" />
+              Cooking Steps
+            </AccordionTrigger>
+            <AccordionContent>
+              <Card className="bg-quantum-darkBlue border-quantum-cyan/20">
+                <CardContent className="pt-6">
+                  {meal.steps && meal.steps.length > 0 ? (
+                    <ol className="list-decimal pl-5 space-y-4">
+                      {meal.steps.map((step, index) => (
+                        <li key={index} className="text-gray-300">
+                          <p>{step}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-gray-400 italic">No cooking steps available for this meal.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
 
       {/* Reviews Section */}
