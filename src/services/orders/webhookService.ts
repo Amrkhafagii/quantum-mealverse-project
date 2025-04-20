@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
@@ -15,11 +16,15 @@ const getRestaurantName = (restaurant: any): string => {
 };
 
 export const sendOrderToWebhook = async (
-  orderId: string
+  orderId: string,
+  latitude: number,
+  longitude: number
 ): Promise<WebhookResponse> => {
   try {
     const data: OrderAssignmentRequest = {
       order_id: orderId,
+      latitude,
+      longitude,
       action: 'assign'
     };
 

@@ -1,5 +1,8 @@
+
 export interface OrderAssignmentRequest {
   order_id: string;
+  latitude: number;
+  longitude: number;
   action: 'assign';
 }
 

@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
-import { useToast } from '@/hooks/use-toast';
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -10,7 +9,6 @@ export const useOrderTimer = (
 ) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
-  const { toast } = useToast();
   
   useEffect(() => {
     console.log('OrderTimer Hook: Starting useEffect with expiresAt:', expiresAt);
@@ -47,29 +45,15 @@ export const useOrderTimer = (
         if (secondsLeft === 0) {
           console.log('Timer expired, attempting reassignment...');
           try {
-            const result = await sendOrderToWebhook(orderId);
+            // Get location from local storage
+            const location = localStorage.getItem('lastKnownLocation');
+            const { latitude, longitude } = location ? JSON.parse(location) : { latitude: null, longitude: null };
             
-            if (result.success) {
-              console.log('Reassignment webhook sent successfully:', result);
-              if (result.result?.error === 'no_restaurants_available') {
-                toast({
-                  title: "No Restaurants Available",
-                  description: "Unfortunately, no restaurants are available to fulfill your order at this time. Your order will be cancelled.",
-                  variant: "destructive"
-                });
-              } else {
-                toast({
-                  title: "Checking other restaurants",
-                  description: "Looking for another restaurant to fulfill your order...",
-                });
-              }
+            if (latitude && longitude) {
+              await sendOrderToWebhook(orderId, latitude, longitude);
+              console.log('Reassignment webhook sent successfully');
             } else {
-              console.error('Error in reassignment:', result.error);
-              toast({
-                title: "Order Issue",
-                description: "There was a problem with your order. It will be cancelled.",
-                variant: "destructive"
-              });
+              console.error('No location data available for reassignment');
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
@@ -87,7 +71,7 @@ export const useOrderTimer = (
     } catch (error) {
       console.error('Error in timer calculation:', error);
     }
-  }, [expiresAt, orderId, onExpire, toast]);
+  }, [expiresAt, orderId, onExpire]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
