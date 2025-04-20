@@ -19,6 +19,9 @@ export const useOrderTimer = (expiresAt: string | undefined) => {
       // Calculate progress as percentage of time remaining from 5 minutes
       const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
       setProgress(Math.max(0, Math.min(100, progressValue)));
+      
+      // Log to help debug
+      console.log(`Timer: ${secondsLeft}s left, ${progressValue.toFixed(1)}% remaining`);
     };
     
     updateTimer();

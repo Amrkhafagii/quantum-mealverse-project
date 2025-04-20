@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { CircularTimer } from '@/components/orders/status/CircularTimer';
 import { Button } from "@/components/ui/button";
 import { useCountdownTimer } from '@/hooks/useCountdownTimer';
+import { OrderTimer } from '@/components/orders/status/OrderTimer';
 
 interface OrderRestaurantStatusProps {
   status: string;
@@ -51,8 +52,8 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
           </div>
           
           {assignmentStatus?.expires_at && (
-            <div className="mb-4">
-              <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
+            <div className="w-full mb-6">
+              <OrderTimer expiresAt={assignmentStatus.expires_at} />
             </div>
           )}
 

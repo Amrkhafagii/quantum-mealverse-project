@@ -24,20 +24,20 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     <div className="space-y-2">
       <OrderStatusMessage order={order} assignmentStatus={assignmentStatus} />
       
-      {(showTimer && assignmentStatus?.expires_at) || showCancelButton ? (
-        <div className="space-y-4 mt-4">
-          {showTimer && assignmentStatus?.expires_at && (
-            <OrderTimer expiresAt={assignmentStatus.expires_at} />
-          )}
-          
-          {showCancelButton && onOrderUpdate && (
-            <CancelOrderButton 
-              orderId={order.id!} 
-              onOrderUpdate={onOrderUpdate} 
-            />
-          )}
+      {(showTimer && assignmentStatus?.expires_at) && (
+        <div className="border border-gray-700 bg-gray-900 rounded-md p-4 mt-4">
+          <OrderTimer expiresAt={assignmentStatus.expires_at} />
         </div>
-      ) : null}
+      )}
+      
+      {showCancelButton && onOrderUpdate && (
+        <div className="mt-4">
+          <CancelOrderButton 
+            orderId={order.id!} 
+            onOrderUpdate={onOrderUpdate} 
+          />
+        </div>
+      )}
     </div>
   );
 };
