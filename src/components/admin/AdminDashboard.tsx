@@ -1,84 +1,90 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MealForm from './MealForm';
 import MealList from './MealList';
-import CurrencySettings from './CurrencySettings';
-import { useMealManagement } from '@/hooks/useMealManagement';
+import MealForm from './MealForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 import { MealType } from '@/types/meal';
+import { useMealManagement } from '@/hooks/useMealManagement';
+import CurrencySettings from './CurrencySettings';
 
 interface AdminDashboardProps {
   meals: MealType[];
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ meals }) => {
-  const {
-    editingMeal,
-    formData,
-    setEditingMeal,
-    handleInputChange,
-    handleEditMeal,
-    handleSaveMeal,
+  const { 
+    editingMeal, 
+    formData, 
+    setEditingMeal, 
+    handleInputChange, 
+    handleFormDataChange,
+    handleEditMeal, 
+    handleSaveMeal, 
     handleDeleteMeal,
-    handleImageUpload,
-  } = useMealManagement(async () => {
-    await Promise.resolve();
+    handleImageUpload
+  } = useMealManagement(() => {
+    // This is a placeholder for the fetchMeals function that will be called after updates
+    // In a real application, this would refetch the meals from the server
+    console.log("Meal updated, would normally refetch meals here");
+    // Since we can't directly modify the meals prop, we'd typically use a hook or context here
   });
 
+  const [activeTab, setActiveTab] = useState("meals");
+
+  const handleCancelEdit = () => {
+    setEditingMeal(null);
+  };
+
   return (
-    <>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Admin Dashboard</h1>
-        <Button 
-          onClick={() => setEditingMeal(null)}
-          className="cyber-button"
-        >
-          Create New Meal
-        </Button>
-      </div>
+    <div className="space-y-8">
+      <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Admin Dashboard</h1>
       
-      <Tabs defaultValue="meals" className="mb-8">
-        <TabsList className="mb-6">
-          <TabsTrigger value="meals">Meals Management</TabsTrigger>
-          <TabsTrigger value="currency">Currency Settings</TabsTrigger>
+      <Tabs defaultValue="meals" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-3 max-w-md">
+          <TabsTrigger value="meals">Meals</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="reviews">Reviews</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="meals">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <MealForm
-              formData={formData}
-              editingMeal={editingMeal}
-              onInputChange={handleInputChange}
-              onSave={handleSaveMeal}
-              onCancel={() => setEditingMeal(null)}
-              onImageUpload={handleImageUpload}
-            />
-            <MealList
-              meals={meals}
-              onEdit={handleEditMeal}
-              onDelete={handleDeleteMeal}
-            />
+        <TabsContent value="meals" className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <MealForm 
+                formData={formData}
+                editingMeal={editingMeal}
+                onInputChange={handleInputChange}
+                onFormDataChange={handleFormDataChange}
+                onSave={handleSaveMeal}
+                onCancel={handleCancelEdit}
+                onImageUpload={handleImageUpload}
+              />
+            </div>
+            
+            <div>
+              <MealList 
+                meals={meals} 
+                onEdit={handleEditMeal} 
+                onDelete={handleDeleteMeal}
+              />
+            </div>
           </div>
         </TabsContent>
         
-        <TabsContent value="currency">
-          <CurrencySettings />
+        <TabsContent value="settings">
+          <Card className="p-6 holographic-card">
+            <h2 className="text-2xl font-bold text-quantum-cyan mb-4">Settings</h2>
+            <CurrencySettings />
+          </Card>
         </TabsContent>
         
         <TabsContent value="reviews">
-          <div className="bg-quantum-black border border-quantum-cyan/30 p-6 rounded-xl">
-            <h2 className="text-2xl font-bold text-quantum-cyan mb-4">Review Management</h2>
-            <p className="text-gray-400">
-              Visit the dedicated reviews page to manage customer reviews.
-            </p>
-            <Button className="mt-4" onClick={() => window.location.href = '/admin/reviews'}>
-              Go to Reviews
-            </Button>
-          </div>
+          <Card className="p-6 holographic-card">
+            <h2 className="text-2xl font-bold text-quantum-cyan mb-4">Reviews Management</h2>
+            <p>Go to the <a href="/admin/reviews" className="text-quantum-cyan underline">Reviews Management</a> page to moderate and respond to customer reviews.</p>
+          </Card>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -8,36 +9,30 @@ import { useToast } from "@/hooks/use-toast";
 import { MobileMenu } from './navigation/MobileMenu';
 import { DesktopNavigation } from './navigation/DesktopNavigation';
 import { UserActions } from './navigation/UserActions';
+import { useAuth } from '@/hooks/useAuth';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [session, setSession] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const { itemCount } = useCart?.() || { itemCount: 0 };
   const { toast } = useToast();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      checkAdminStatus(session?.user?.id);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      checkAdminStatus(session?.user?.id);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    // Check admin status when user changes
+    if (user?.id) {
+      checkAdminStatus(user.id);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   // Subscribe to order notifications if user is logged in
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!user?.id) return;
 
     const channel = supabase
       .channel('order-updates')
@@ -45,7 +40,7 @@ const Navbar = () => {
         event: 'UPDATE',
         schema: 'public',
         table: 'orders',
-        filter: `user_id=eq.${session.user.id}`,
+        filter: `user_id=eq.${user.id}`,
       }, (payload) => {
         // Show toast notification when order status changes
         const newStatus = payload.new.status;
@@ -65,7 +60,7 @@ const Navbar = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.user?.id, toast]);
+  }, [user?.id, toast]);
 
   const checkAdminStatus = async (userId) => {
     if (!userId) return;
@@ -80,7 +75,7 @@ const Navbar = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     navigate('/auth');
   };
 
@@ -117,7 +112,7 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             <UserActions 
               isCustomerView={isCustomerView}
-              session={session}
+              session={user ? { user } : null}
               isAdmin={isAdmin}
               itemCount={itemCount}
               notificationCount={notificationCount}
@@ -141,7 +136,7 @@ const Navbar = () => {
           <MobileMenu 
             isCustomerView={isCustomerView}
             isAdmin={isAdmin}
-            session={session}
+            session={user ? { user } : null}
             toggleUserView={toggleUserView}
           />
         )}

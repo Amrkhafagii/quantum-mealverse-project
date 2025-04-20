@@ -23,6 +23,13 @@ export const useMealManagement = (fetchMeals: () => Promise<void>) => {
     });
   };
 
+  const handleFormDataChange = (updatedData: Partial<MealType>) => {
+    setFormData({
+      ...formData,
+      ...updatedData
+    });
+  };
+
   const handleEditMeal = (meal: MealType) => {
     setEditingMeal(meal);
     setFormData({
@@ -46,7 +53,9 @@ export const useMealManagement = (fetchMeals: () => Promise<void>) => {
           fat: formData.fat,
           is_active: formData.is_active,
           updated_at: new Date().toISOString(),
-          image_url: formData.image_url
+          image_url: formData.image_url,
+          ingredients: formData.ingredients,
+          steps: formData.steps
         })
         .eq('id', editingMeal.id);
       
@@ -145,6 +154,7 @@ export const useMealManagement = (fetchMeals: () => Promise<void>) => {
     setEditingMeal,
     setFormData,
     handleInputChange,
+    handleFormDataChange,
     handleEditMeal,
     handleSaveMeal,
     handleDeleteMeal,

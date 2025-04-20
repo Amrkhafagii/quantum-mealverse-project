@@ -13,8 +13,22 @@ export const useAuth = () => {
       setLoading(false);
     });
 
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
-  return { user, loading };
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
+  return { user, loading, logout };
 };
