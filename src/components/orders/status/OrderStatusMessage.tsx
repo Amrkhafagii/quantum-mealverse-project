@@ -1,9 +1,9 @@
-
 import React from 'react';
-import { Building } from 'lucide-react';
+import { Building, Clock } from 'lucide-react';
 import { Order } from '@/types/order';
 import { AssignmentStatus } from '@/types/webhook';
 import { Progress } from "@/components/ui/progress";
+import { useCountdownTimer } from '@/hooks/useCountdownTimer';
 
 interface OrderStatusMessageProps {
   order: Order;
@@ -19,6 +19,8 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   order, 
   assignmentStatus 
 }) => {
+  const { formattedTime } = useCountdownTimer(assignmentStatus?.expires_at);
+  
   const getStatusMessage = (): StatusMessage => {
     if (!order) return { message: '' };
     
@@ -70,11 +72,19 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
         {order.status === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
           <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
         )}
-        <div>
+        <div className="w-full">
           <p className="text-lg">{statusMessage.message}</p>
           {statusMessage.details && (
             <div className="space-y-2">
-              <p className="text-sm text-gray-400">{statusMessage.details}</p>
+              <div className="flex justify-between items-center text-sm text-gray-400">
+                <span>{statusMessage.details}</span>
+                {showAttemptProgress && assignmentStatus?.expires_at && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{formattedTime}</span>
+                  </div>
+                )}
+              </div>
               {showAttemptProgress && (
                 <div>
                   <Progress value={progressValue} className="h-2" />
@@ -87,4 +97,3 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
     </div>
   );
 };
-
