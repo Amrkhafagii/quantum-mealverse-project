@@ -65,9 +65,36 @@ Deno.serve(async (req) => {
         .eq('order_id', statusChange.record_id)
         .maybeSingle();
       
+      // If no order location is found, try to get it from user_locations
+      let latitude = orderLocation?.latitude;
+      let longitude = orderLocation?.longitude;
+      
+      if (!latitude || !longitude) {
+        // Get the user id from the order
+        const { data: order } = await supabase
+          .from('orders')
+          .select('user_id')
+          .eq('id', statusChange.record_id)
+          .maybeSingle();
+          
+        if (order?.user_id) {
+          // Try to get the most recent location for this user
+          const { data: userLocation } = await supabase
+            .from('user_locations')
+            .select('latitude, longitude')
+            .eq('user_id', order.user_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+            
+          latitude = userLocation?.latitude;
+          longitude = userLocation?.longitude;
+        }
+      }
+      
       // Default coordinates if none are found
-      const latitude = orderLocation?.latitude || 0;
-      const longitude = orderLocation?.longitude || 0;
+      latitude = latitude || 0;
+      longitude = longitude || 0;
       
       // Adapting to the target webhook's expected format for orders
       targetPayload = {
@@ -77,6 +104,8 @@ Deno.serve(async (req) => {
         longitude,
         action: 'status_update'
       };
+      
+      console.log(`Formatted payload for order-webhook: ${JSON.stringify(targetPayload)}`);
     } else {
       // For other types of status changes, add default fields needed by order-webhook
       targetPayload = {

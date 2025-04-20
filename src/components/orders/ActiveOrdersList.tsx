@@ -22,9 +22,11 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
 }) => {
   const navigate = useNavigate();
   
+  console.log('Active orders received in component:', orders);
+  
   // Fetch assignment status for all awaiting_restaurant orders
   const awaitingRestaurantOrders = orders.filter(order => 
-    ['pending', 'awaiting_restaurant'].includes(order.status)
+    ['pending', 'awaiting_restaurant', 'processing'].includes(order.status)
   ).map(order => order.id);
   
   // Use React Query to fetch all assignment statuses in parallel
@@ -46,6 +48,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
         })
       );
       
+      console.log('Assignment statuses fetched:', results);
       return results;
     },
     enabled: awaitingRestaurantOrders.length > 0,
@@ -102,7 +105,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
                   <span>{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
                 </div>
                 
-                {['pending', 'awaiting_restaurant'].includes(order.status) && orderAssignmentStatus?.restaurant_name && (
+                {['pending', 'awaiting_restaurant', 'processing'].includes(order.status) && orderAssignmentStatus?.restaurant_name && (
                   <div className="flex items-center gap-1 mt-1 text-quantum-cyan">
                     <Building className="h-3 w-3" />
                     <span>{orderAssignmentStatus.restaurant_name}</span>

@@ -46,10 +46,16 @@ const Orders = () => {
         .not('status', 'in', ['delivered', 'cancelled', 'rejected'])
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching active orders:', error);
+        throw error;
+      }
+      
+      console.log('Active orders fetched:', data);
       return data || [];
     },
     enabled: !!session?.user?.id,
+    refetchInterval: 10000, // Refresh every 10 seconds to catch status updates
   });
   
   const { data: pastOrders } = useQuery({
@@ -117,11 +123,11 @@ const Orders = () => {
               <ActiveOrdersList 
                 orders={orders || []} 
                 selectedOrderId={selectedOrderId}
-                onOrderSelect={handleOrderSelect}
+                onOrderSelect={setSelectedOrderId}
               />
               <PastOrdersList 
                 orders={pastOrders || []} 
-                onOrderSelect={handleOrderSelect} 
+                onOrderSelect={setSelectedOrderId} 
               />
             </div>
             
