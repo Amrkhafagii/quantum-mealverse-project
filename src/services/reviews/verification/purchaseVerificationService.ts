@@ -9,11 +9,6 @@ interface OrderItem {
   order_id: string;
 }
 
-interface OrderItemResponse {
-  data: OrderItem[] | null;
-  error: any;
-}
-
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
   // Query order_items table to see if the user has purchased this meal
   const result = await supabase
