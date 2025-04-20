@@ -12,9 +12,10 @@ interface QueryResult {
  * Helper function to encapsulate the Supabase query logic with proper typing
  */
 const runPurchaseQuery = async (userId: string, mealId: string): Promise<QueryResult> => {
+  // Use simpler typing approach to avoid excessive type instantiation
   const { data, error } = await supabase
     .from('order_items')
-    .select<'id', Pick<OrderItem, 'id'>>('id')
+    .select('id')
     .eq('meal_id', mealId)
     .eq('user_id', userId)
     .limit(1);

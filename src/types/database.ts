@@ -1,4 +1,3 @@
-
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface MealRating {
@@ -16,6 +15,24 @@ export interface GlobalMealRating {
   review_count: number;
   rating_distribution: Record<number, number>;
   last_updated: string;
+}
+
+// Add the Database type with tables interface
+export interface Database {
+  order_items: {
+    Row: {
+      id: string;
+      order_id: string;
+      meal_id: string;
+      quantity: number;
+      price: number;
+      name: string;
+      created_at: string;
+      user_id?: string;
+    };
+    Insert: Omit<Database['order_items']['Row'], 'id' | 'created_at'>;
+    Update: Partial<Database['order_items']['Row']>;
+  };
 }
 
 export interface Tables {
