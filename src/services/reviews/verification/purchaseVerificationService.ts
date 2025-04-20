@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
   try {
-    // Simple query to check if any matching records exist
     const { data, error } = await supabase
       .from('order_items')
       .select('id')
@@ -23,8 +22,8 @@ export const checkVerifiedPurchase = async (userId: string, mealId: string): Pro
       throw error;
     }
     
-    // If we found at least one record, the user has purchased this meal
-    return Array.isArray(data) && data.length > 0;
+    // Return true if we found at least one record
+    return data !== null && data.length > 0;
   } catch (err) {
     console.error('Unexpected error in checkVerifiedPurchase:', err);
     throw err;
