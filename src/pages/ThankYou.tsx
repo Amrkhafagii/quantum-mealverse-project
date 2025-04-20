@@ -6,15 +6,13 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Clock, Building, Loader2 } from 'lucide-react';
+import { Building, Check, Clock, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
 import { checkAssignmentStatus } from '@/integrations/webhook';
 import { useInterval } from '@/hooks/use-interval';
-import { OrderStatusDisplay } from '@/components/orders/OrderStatusDisplay';
-import { OrderDetailsDisplay } from '@/components/orders/OrderDetailsDisplay';
-import { CircularTimer } from '@/components/orders/status/CircularTimer';
 import { useCountdownTimer } from '@/hooks/useCountdownTimer';
+import { CircularTimer } from '@/components/orders/status/CircularTimer';
 import { Progress } from "@/components/ui/progress";
 
 const ThankYou: React.FC = () => {
@@ -33,7 +31,7 @@ const ThankYou: React.FC = () => {
     attempt_count: number;
   } | null>(null);
 
-  const { timeLeft, totalTime, formattedTime } = useCountdownTimer(assignmentStatus?.expires_at);
+  const { timeLeft, totalTime } = useCountdownTimer(assignmentStatus?.expires_at);
 
   const fetchOrderDetails = async () => {
     if (!orderId) return;
@@ -59,13 +57,12 @@ const ThankYou: React.FC = () => {
     }
   };
 
-  // Check assignment status more frequently (every 5 seconds)
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId!)
         .then(status => {
           setAssignmentStatus(status);
-          fetchOrderDetails(); // Always refetch order details
+          fetchOrderDetails();
         })
         .catch(err => console.error('Error checking assignment status:', err));
     }
@@ -79,90 +76,108 @@ const ThankYou: React.FC = () => {
     useEffect(() => {
       navigate('/');
     }, [navigate]);
-    
-    return (
-      <div className="min-h-screen bg-quantum-black text-white relative">
-        <ParticleBackground />
-        <Navbar />
-        <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
-          <Card className="holographic-card p-12 max-w-3xl mx-auto">
-            <p className="text-center">Redirecting to home page...</p>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative">
+    <div className="min-h-screen bg-gradient-to-br from-quantum-black via-quantum-darkBlue to-quantum-black text-white relative">
       <ParticleBackground />
       <Navbar />
       
       <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
-        <Card className="holographic-card p-12 max-w-3xl mx-auto">
+        <Card className="holographic-card p-12 max-w-3xl mx-auto space-y-8">
           {loading ? (
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto" />
               <p className="mt-2">Loading order details...</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="space-y-8">
+              <div className="text-center space-y-6">
+                <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
                   <Check className="w-12 h-12 text-green-500" />
                 </div>
                 
-                <h1 className="text-4xl font-bold text-quantum-cyan mb-4 neon-text">Order Confirmed!</h1>
-                <p className="text-xl mb-2">Order #{order?.formatted_order_id || orderId.substring(0, 8)}</p>
+                <h1 className="text-4xl font-bold text-quantum-cyan mb-2 neon-text">Order Confirmed!</h1>
+                <p className="text-2xl mb-2">Order #{order?.formatted_order_id || orderId.substring(0, 8)}</p>
                 
-                {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-400">
-                      We're looking for the perfect restaurant to prepare your order.
-                      You can track the progress below.
-                    </p>
-                    
-                    {assignmentStatus?.restaurant_name && (
-                      <div className="flex items-center justify-center gap-2 text-quantum-cyan">
-                        <Building className="h-4 w-4" />
-                        <span>{assignmentStatus.restaurant_name}</span>
-                      </div>
-                    )}
-                    
-                    {assignmentStatus?.expires_at && (
-                      <div className="max-w-md mx-auto">
-                        <div className="flex justify-center mb-4">
-                          <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>Restaurant response time:</span>
-                            </div>
-                            <span>{formattedTime}</span>
-                          </div>
-                          <Progress value={(timeLeft / totalTime) * 100} className="h-2" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <p className="text-gray-400">
+                  We're looking for the perfect restaurant to prepare your order.
+                  You can track the progress below.
+                </p>
               </div>
 
-              {order && (
-                <>
-                  <div className="border-t border-b border-gray-800 py-6">
-                    <OrderStatusDisplay 
-                      order={order} 
-                      assignmentStatus={assignmentStatus} 
-                      onOrderUpdate={fetchOrderDetails}
-                    />
+              {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
+                <div className="space-y-6 py-4">
+                  {assignmentStatus?.restaurant_name && (
+                    <div className="flex items-center justify-center gap-2 text-quantum-cyan">
+                      <Building className="h-5 w-5" />
+                      <span className="text-lg">{assignmentStatus.restaurant_name}</span>
+                    </div>
+                  )}
+
+                  <div className="max-w-md mx-auto space-y-6">
+                    {assignmentStatus?.expires_at && (
+                      <div className="flex justify-center">
+                        <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="flex justify-between items-center text-sm text-gray-400 mb-2">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>Waiting for confirmation from Restaurant...</span>
+                        </div>
+                        <span>Attempt {assignmentStatus?.attempt_count || 1} of 3</span>
+                      </div>
+                      <Progress value={33.33} className="h-2" />
+                    </div>
+
+                    <Button 
+                      variant="destructive" 
+                      className="w-full" 
+                      onClick={() => {/* implement cancel logic */}}
+                    >
+                      Cancel Order
+                    </Button>
                   </div>
-                  <OrderDetailsDisplay order={order} />
-                </>
+                </div>
               )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-800">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">Delivery Details</h3>
+                  <div className="space-y-2 text-gray-300">
+                    <p>{order?.delivery_address}</p>
+                    <p>{order?.city}</p>
+                    <p>{order?.customer_phone}</p>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <h3 className="text-xl font-semibold mb-2">Delivery Method</h3>
+                    <p className="text-gray-300">{order?.delivery_method}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">Order Summary</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-gray-300">
+                      <span>Subtotal:</span>
+                      <span>{order?.subtotal.toFixed(2)} EGP</span>
+                    </div>
+                    <div className="flex justify-between text-gray-300">
+                      <span>Delivery:</span>
+                      <span>{order?.delivery_fee.toFixed(2)} EGP</span>
+                    </div>
+                    <div className="flex justify-between text-xl font-semibold text-quantum-cyan pt-2">
+                      <span>Total:</span>
+                      <span>{order?.total.toFixed(2)} EGP</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-4 pt-6">
                 <Button 
