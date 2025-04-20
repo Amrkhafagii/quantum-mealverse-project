@@ -35,13 +35,22 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     !isNaN(new Date(assignmentStatus.expires_at).getTime())
   );
 
+  const handleTimerExpire = () => {
+    console.log('Timer expired, refreshing order status...');
+    onOrderUpdate?.();
+  };
+
   return (
     <div className="space-y-2">
       <OrderStatusMessage order={order} assignmentStatus={assignmentStatus} />
       
       {hasValidExpiryTime && (
         <div className="border border-gray-700 bg-gray-900 rounded-md p-4 mt-4">
-          <OrderTimer expiresAt={assignmentStatus?.expires_at} />
+          <OrderTimer 
+            expiresAt={assignmentStatus?.expires_at} 
+            orderId={order.id}
+            onTimerExpire={handleTimerExpire}
+          />
         </div>
       )}
       

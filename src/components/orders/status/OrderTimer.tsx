@@ -6,11 +6,17 @@ import { useOrderTimer } from '@/hooks/useOrderTimer';
 
 interface OrderTimerProps {
   expiresAt: string | undefined;
+  orderId: string | undefined;
+  onTimerExpire?: () => void;
 }
 
-export const OrderTimer: React.FC<OrderTimerProps> = ({ expiresAt }) => {
+export const OrderTimer: React.FC<OrderTimerProps> = ({ 
+  expiresAt,
+  orderId,
+  onTimerExpire
+}) => {
   useEffect(() => {
-    console.log('OrderTimer Component Mounted with expiresAt:', expiresAt);
+    console.log('OrderTimer Component Mounted with:', { expiresAt, orderId });
     
     if (!expiresAt) {
       console.warn('No expiration time provided to OrderTimer');
@@ -28,9 +34,9 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({ expiresAt }) => {
     } catch (error) {
       console.error('Error parsing expiresAt:', error);
     }
-  }, [expiresAt]);
+  }, [expiresAt, orderId]);
 
-  const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt);
+  const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt, orderId, onTimerExpire);
 
   if (!expiresAt) {
     return (
