@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
@@ -126,7 +125,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
     
     console.log(`Assignment attempt count for order ${orderId}: ${count}`);
     
-    // Get current order status - handle the relationship error differently
+    // Get current order status and restaurant_attempts
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('status, restaurant_id, restaurant_attempts')
@@ -141,7 +140,10 @@ export const checkAssignmentStatus = async (orderId: string) => {
     let nextRestaurants = [];
     if (order?.restaurant_attempts) {
       try {
-        const attemptData = JSON.parse(order.restaurant_attempts);
+        const attemptData = order.restaurant_attempts as {
+          restaurants: Array<{ restaurant_id: string; name: string }>;
+          current_attempt: number;
+        };
         const currentAttempt = attemptData.current_attempt || 0;
         const restaurants = attemptData.restaurants || [];
         
