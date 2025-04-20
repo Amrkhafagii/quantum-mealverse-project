@@ -10,7 +10,7 @@ export const submitReview = async (review: Omit<Review, 'id' | 'created_at' | 'u
   // Check for duplicate reviews
   const { data: existingReviews, error: checkError } = await supabase
     .from('reviews')
-    .select<'reviews', ReviewCheck>('id')
+    .select('id')
     .match({
       user_id: review.user_id,
       meal_id: review.meal_id,

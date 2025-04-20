@@ -9,7 +9,9 @@ interface ReviewFlagCheck {
 export const flagReview = async (reviewId: string): Promise<boolean> => {
   const { error } = await supabase
     .from('reviews')
-    .update({ is_flagged: true })
+    .update({ 
+      is_flagged: true 
+    })
     .eq('id', reviewId);
     
   if (error) throw error;
@@ -20,7 +22,7 @@ export const flagReview = async (reviewId: string): Promise<boolean> => {
 export const hasUserReviewed = async (userId: string, mealId: string, restaurantId: string): Promise<boolean> => {
   const { data, error } = await supabase
     .from('reviews')
-    .select<'reviews', ReviewFlagCheck>('id')
+    .select('id')
     .match({
       user_id: userId,
       meal_id: mealId,
