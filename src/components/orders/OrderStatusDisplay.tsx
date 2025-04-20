@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
@@ -9,6 +8,7 @@ import { cancelOrder } from '@/services/orders/orderService';
 interface AssignmentStatus {
   status: string;
   assigned_restaurant_id?: string;
+  restaurant_name?: string;
   assignment_id?: string;
   expires_at?: string;
   attempt_count: number;
@@ -86,6 +86,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     
     let statusMessage = '';
     let statusDetails = '';
+    let showTimer = false;
     
     switch (order.status) {
       case 'pending':
@@ -95,11 +96,20 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         }
         break;
       case 'awaiting_restaurant':
-        statusMessage = 'A restaurant is reviewing your order...';
-        statusDetails = timeLeft > 0 ? `Restaurant has ${formatTime(timeLeft)} to respond` : 'Waiting for response';
+        if (assignmentStatus?.restaurant_name) {
+          statusMessage = `Waiting for confirmation from ${assignmentStatus.restaurant_name}...`;
+          statusDetails = `Attempt ${assignmentStatus.attempt_count} of 3`;
+          showTimer = true;
+        } else {
+          statusMessage = 'A restaurant is reviewing your order...';
+        }
         break;
       case 'processing':
         statusMessage = 'Your order is being prepared!';
+        break;
+      case 'assignment_failed':
+        statusMessage = 'No nearby restaurants available at the moment.';
+        statusDetails = 'Please try again later.';
         break;
       case 'on_the_way':
         statusMessage = 'Your order is on the way to you!';
@@ -109,10 +119,6 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         break;
       case 'cancelled':
         statusMessage = 'Your order has been cancelled.';
-        break;
-      case 'assignment_failed':
-        statusMessage = "We couldn't find a restaurant for your order right now.";
-        statusDetails = 'Your order has been automatically cancelled.';
         break;
       case 'no_restaurants_available':
         statusMessage = 'No restaurants available in your area.';
@@ -127,20 +133,18 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         <p className="text-lg">{statusMessage}</p>
         {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
         
-        {order.status === 'awaiting_restaurant' && (
+        {showTimer && timeLeft > 0 && (
           <div className="space-y-4">
-            {timeLeft > 0 && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>Restaurant response time:</span>
-                  </div>
-                  <span>{formatTime(timeLeft)}</span>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>Restaurant response time:</span>
                 </div>
-                <Progress value={progress} className="h-2 bg-gray-700" />
+                <span>{formatTime(timeLeft)}</span>
               </div>
-            )}
+              <Progress value={progress} className="h-2 bg-gray-700" />
+            </div>
             <Button 
               variant="destructive" 
               onClick={handleCancelOrder}
@@ -150,13 +154,6 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
               {isCancelling ? 'Cancelling...' : 'Cancel Order'}
             </Button>
           </div>
-        )}
-        
-        {/* Display assignment attempt count regardless of status */}
-        {(order.status === 'pending' || order.status === 'awaiting_restaurant') && assignmentStatus?.attempt_count > 0 && (
-          <p className="text-sm text-gray-400 mt-2">
-            Assignment attempt: {assignmentStatus.attempt_count} of 3
-          </p>
         )}
       </div>
     );

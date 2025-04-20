@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase/client';
 
 // Type definitions for webhook requests
@@ -121,6 +120,7 @@ export async function simulateRestaurantResponse(
 export async function checkAssignmentStatus(orderId: string): Promise<{
   status: string;
   assigned_restaurant_id?: string;
+  restaurant_name?: string;
   assignment_id?: string;
   expires_at?: string;
   attempt_count: number;
@@ -129,7 +129,10 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     // Get the current assignment
     const { data: assignment, error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select('*')
+      .select(`
+        *,
+        restaurant:restaurants(name)
+      `)
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -145,7 +148,11 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     // Get the order status
     const { data: order } = await supabase
       .from('orders')
-      .select('status, restaurant_id')
+      .select(`
+        status, 
+        restaurant_id,
+        restaurant:restaurants(name)
+      `)
       .eq('id', orderId)
       .single();
     
@@ -153,6 +160,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
+        restaurant_name: assignment.restaurant?.name,
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
         attempt_count: count || 0
@@ -162,6 +170,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     return {
       status: order?.status || 'unknown',
       assigned_restaurant_id: order?.restaurant_id,
+      restaurant_name: order?.restaurant?.name,
       attempt_count: count || 0
     };
   } catch (error) {

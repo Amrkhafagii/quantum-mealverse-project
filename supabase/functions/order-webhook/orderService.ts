@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -39,10 +38,8 @@ export async function handleAssignment(
   }
 
   if (assignmentCount?.count >= 3) {
-    // When 3 attempts are reached, cancel the order automatically
     await updateOrderStatus(supabase, orderId, 'assignment_failed');
     
-    // Log the final assignment attempt failure
     await logAssignmentAttempt(
       supabase,
       orderId,
@@ -58,11 +55,8 @@ export async function handleAssignment(
     };
   }
 
-  // Try to find restaurants
   console.log(`Looking for restaurants near (${latitude}, ${longitude})`);
   const nearestRestaurants = await findNearestRestaurants(supabase, latitude, longitude);
-  
-  console.log('Nearest restaurants result:', JSON.stringify(nearestRestaurants));
   
   if (!nearestRestaurants || nearestRestaurants.length === 0) {
     console.log('No restaurants available within range');
@@ -123,6 +117,7 @@ export async function handleAssignment(
     success: true, 
     message: 'Order assigned to restaurant',
     restaurant_id: availableRestaurant.restaurant_id,
+    restaurant_name: availableRestaurant.name,
     assignment_id: assignment.id,
     expires_at: expiresAt,
     attempt_number: (assignmentCount?.count || 0) + 1
