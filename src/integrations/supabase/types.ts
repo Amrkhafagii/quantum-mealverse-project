@@ -104,6 +104,41 @@ export type Database = {
           },
         ]
       }
+      global_meal_ratings: {
+        Row: {
+          avg_rating: number
+          id: string
+          last_updated: string
+          meal_id: string
+          rating_distribution: Json
+          review_count: number
+        }
+        Insert: {
+          avg_rating?: number
+          id?: string
+          last_updated?: string
+          meal_id: string
+          rating_distribution?: Json
+          review_count?: number
+        }
+        Update: {
+          avg_rating?: number
+          id?: string
+          last_updated?: string
+          meal_id?: string
+          rating_distribution?: Json
+          review_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_meal_ratings_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: true
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_categories: {
         Row: {
           created_at: string | null
@@ -151,6 +186,51 @@ export type Database = {
             columns: ["meal_id"]
             isOneToOne: false
             referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_ratings: {
+        Row: {
+          avg_rating: number
+          id: string
+          last_updated: string
+          meal_id: string
+          rating_distribution: Json
+          restaurant_id: string
+          review_count: number
+        }
+        Insert: {
+          avg_rating?: number
+          id?: string
+          last_updated?: string
+          meal_id: string
+          rating_distribution?: Json
+          restaurant_id: string
+          review_count?: number
+        }
+        Update: {
+          avg_rating?: number
+          id?: string
+          last_updated?: string
+          meal_id?: string
+          rating_distribution?: Json
+          restaurant_id?: string
+          review_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_ratings_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_ratings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -691,6 +771,66 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          images: string[] | null
+          is_flagged: boolean
+          is_verified_purchase: boolean
+          meal_id: string
+          rating: number
+          restaurant_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          is_flagged?: boolean
+          is_verified_purchase?: boolean
+          meal_id: string
+          rating: number
+          restaurant_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          is_flagged?: boolean
+          is_verified_purchase?: boolean
+          meal_id?: string
+          rating?: number
+          restaurant_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -2672,6 +2812,14 @@ export type Database = {
       unlockrows: {
         Args: { "": string }
         Returns: number
+      }
+      update_global_meal_rating_cache: {
+        Args: { p_meal_id: string }
+        Returns: undefined
+      }
+      update_meal_rating_cache: {
+        Args: { p_meal_id: string; p_restaurant_id: string }
+        Returns: undefined
       }
       updategeometrysrid: {
         Args: {

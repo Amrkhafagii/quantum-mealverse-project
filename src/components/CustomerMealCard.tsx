@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
+import { Tables } from '@/types/database';
 
 export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [avgRating, setAvgRating] = useState<number | null>(null);
@@ -13,25 +13,23 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   useEffect(() => {
     const fetchRating = async () => {
       try {
-        // First try to get from cached ratings
-        const { data, error } = await supabase
-          .from('global_meal_ratings')
-          .select('avg_rating, review_count')
+        const { data: globalRating, error } = await supabase
+          .from<'global_meal_ratings', Tables['global_meal_ratings']['Row']>('global_meal_ratings')
+          .select('avg_rating,review_count')
           .eq('meal_id', meal.id)
           .single();
           
-        if (error && error.code !== 'PGRST116') { // Not found error is okay
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching rating:', error);
           return;
         }
         
-        if (data) {
-          setAvgRating(data.avg_rating);
-          setReviewCount(data.review_count);
+        if (globalRating) {
+          setAvgRating(globalRating.avg_rating);
+          setReviewCount(globalRating.review_count);
         } else {
-          // Calculate on the fly if no cached data
           const { data: reviews, error: reviewsError } = await supabase
-            .from('reviews')
+            .from<'reviews', Tables['reviews']['Row']>('reviews')
             .select('rating')
             .eq('meal_id', meal.id)
             .eq('status', 'approved');
@@ -74,7 +72,6 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
       <div className="p-5 font-light">
         <h3 className="text-xl font-semibold text-white mb-2 neon-text">{meal.name}</h3>
         
-        {/* Add rating display */}
         <div className="flex items-center mb-2">
           {!loading && avgRating !== null && (
             <>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { StarRating } from './StarRating';
 import { Progress } from '@/components/ui/progress';
@@ -34,35 +33,33 @@ export const RatingsSummary: React.FC<RatingsSummaryProps> = ({
       try {
         // Get restaurant-specific rating stats
         const { data: localData, error: localError } = await supabase
-          .from('meal_ratings')
+          .from<'meal_ratings', Tables['meal_ratings']['Row']>('meal_ratings')
           .select('*')
           .eq('meal_id', mealId)
           .eq('restaurant_id', restaurantId)
           .single();
           
-        if (localError && localError.code !== 'PGRST116') { // Not found error
+        if (localError && localError.code !== 'PGRST116') {
           throw localError;
         }
         
-        // If no cached ratings exist yet, calculate from reviews
         if (!localData) {
           const { data: reviewsData, error: reviewsError } = await supabase
-            .from('reviews')
+            .from<'reviews', Tables['reviews']['Row']>('reviews')
             .select('rating')
             .eq('meal_id', mealId)
             .eq('restaurant_id', restaurantId)
             .eq('status', 'approved');
             
-          if (reviewsError) throw reviewsError;
+          if (reviewsError) {
+            throw reviewsError;
+          }
           
           if (reviewsData && reviewsData.length > 0) {
+            const sum = reviewsData.reduce((acc, review) => acc + review.rating, 0);
             const distribution: Record<number, number> = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-            let sum = 0;
-            
             reviewsData.forEach(review => {
-              const rating = review.rating;
-              sum += rating;
-              distribution[rating] = (distribution[rating] || 0) + 1;
+              distribution[review.rating] = (distribution[review.rating] || 0) + 1;
             });
             
             setLocalStats({
@@ -78,7 +75,6 @@ export const RatingsSummary: React.FC<RatingsSummaryProps> = ({
             });
           }
         } else {
-          // Parse the distribution from the cache
           setLocalStats({
             avg_rating: localData.avg_rating,
             review_count: localData.review_count,
@@ -86,7 +82,6 @@ export const RatingsSummary: React.FC<RatingsSummaryProps> = ({
           });
         }
         
-        // Get global meal rating stats if enabled
         if (showGlobalRating) {
           const { data: globalData, error: globalError } = await supabase
             .from('global_meal_ratings')
@@ -94,7 +89,7 @@ export const RatingsSummary: React.FC<RatingsSummaryProps> = ({
             .eq('meal_id', mealId)
             .single();
             
-          if (globalError && globalError.code !== 'PGRST116') { // Not found error
+          if (globalError && globalError.code !== 'PGRST116') {
             throw globalError;
           }
           
