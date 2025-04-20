@@ -103,9 +103,10 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     console.log(`Checking assignment status for order: ${orderId}`);
     
     // First check for active assignments in restaurant_assignments table
+    // Fix the relationship query by specifying the exact relationship to use
     const { data: assignments, error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select('*, restaurant:restaurants(id, name)')
+      .select('*, restaurant:restaurants!restaurant_assignments_restaurant_id_restaurants_fkey(id, name)')
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
