@@ -1,20 +1,26 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
-import { MapPin, Phone, CreditCard, Clock, Calendar, Package, CheckCircle2 } from 'lucide-react';
+import { MapPin, Phone, CreditCard, Clock, Calendar, Package } from 'lucide-react';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { OrderStatusTimeline } from './OrderStatusTimeline';
 import { ReturnRequestForm } from './ReturnRequestForm';
+import { OrderStatusDisplay } from './OrderStatusDisplay';
+import { checkAssignmentStatus } from '@/integrations/webhook';
+import { useInterval } from '@/hooks/use-interval';
 
 interface OrderTrackerProps {
   orderId: string;
 }
 
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
-  const { data: order, isLoading } = useQuery({
+  const [assignmentStatus, setAssignmentStatus] = React.useState<any>(null);
+
+  const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['order-details', orderId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -28,6 +34,29 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     },
     enabled: !!orderId,
   });
+
+  // Check assignment status periodically if order is pending or awaiting restaurant
+  useInterval(() => {
+    if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      checkAssignmentStatus(orderId)
+        .then(status => {
+          setAssignmentStatus(status);
+          if (status.status !== 'awaiting_response') {
+            refetch();
+          }
+        })
+        .catch(err => console.error('Error checking assignment status:', err));
+    }
+  }, order && ['pending', 'awaiting_restaurant'].includes(order.status) ? 10000 : null);
+
+  // Check assignment status on initial load
+  React.useEffect(() => {
+    if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      checkAssignmentStatus(orderId)
+        .then(status => setAssignmentStatus(status))
+        .catch(err => console.error('Error checking initial assignment status:', err));
+    }
+  }, [orderId, order]);
   
   if (isLoading || !order) {
     return (
@@ -58,6 +87,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
       
       <CardContent>
         <div className="space-y-6">
+          <div className="pt-0 pb-4">
+            <OrderStatusDisplay order={order} assignmentStatus={assignmentStatus} />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-gray-400">Delivery Address</h3>

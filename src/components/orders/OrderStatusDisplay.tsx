@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface AssignmentStatus {
@@ -102,12 +102,13 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ order, a
         {order.status === 'awaiting_restaurant' && timeLeft > 0 && (
           <div className="space-y-1 mt-2">
             <div className="flex justify-between text-xs">
-              <span>Restaurant response time:</span>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>Restaurant response time:</span>
+              </div>
               <span>{formatTime(timeLeft)}</span>
             </div>
-            <Progress value={progress} className="h-2 bg-gray-700">
-              <div className="h-full bg-quantum-cyan" style={{ width: `${progress}%` }} />
-            </Progress>
+            <Progress value={progress} className="h-2 bg-gray-700" />
           </div>
         )}
         

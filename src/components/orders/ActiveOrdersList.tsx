@@ -27,7 +27,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
           <CardTitle>No Active Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4">You don't have any active orders at the moment.</p>
+          <div className="mb-4">You don't have any active orders at the moment.</div>
           <Button onClick={() => navigate('/customer')}>Order Meals</Button>
         </CardContent>
       </Card>

@@ -613,6 +613,7 @@ export type Database = {
         Row: {
           address: string
           created_at: string | null
+          email: string | null
           id: string
           is_active: boolean | null
           latitude: number | null
@@ -624,6 +625,7 @@ export type Database = {
         Insert: {
           address: string
           created_at?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean | null
           latitude?: number | null
@@ -635,6 +637,7 @@ export type Database = {
         Update: {
           address?: string
           created_at?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean | null
           latitude?: number | null
@@ -1124,7 +1127,9 @@ export type Database = {
         Returns: boolean
       }
       find_nearest_restaurant: {
-        Args: { order_lat: number; order_lng: number; max_distance_km?: number }
+        Args:
+          | { order_lat: number; order_lng: number; max_distance_km?: number }
+          | { order_lat: number; order_lng: number; max_distance_km?: number }
         Returns: {
           restaurant_id: string
           user_id: string
