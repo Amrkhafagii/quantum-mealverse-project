@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { StarRating } from './StarRating';
 import { ImageUploadSection } from './ImageUploadSection';
 import { useImageUpload } from '@/hooks/useImageUpload';
-import { useReviewSubmission } from '@/hooks/useReviewSubmission';
+import { useReviewSubmission, ReviewSubmissionData } from '@/hooks/useReviewSubmission';
 
 const reviewSchema = z.object({
   rating: z.number().min(1).max(5),
@@ -44,12 +43,16 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   });
   
   const onSubmit = async (values: ReviewFormValues) => {
-    const success = await submitReview({
-      ...values,
+    const rating = values.rating || 1;
+    const reviewData: ReviewSubmissionData = {
+      rating: rating,
+      comment: values.comment,
       mealId,
       restaurantId,
       images: uploadedImages
-    });
+    };
+    
+    const success = await submitReview(reviewData);
     
     if (success) {
       form.reset();

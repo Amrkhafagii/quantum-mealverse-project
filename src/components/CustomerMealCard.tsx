@@ -3,7 +3,11 @@ import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/types/database';
+
+interface GlobalMealRating {
+  avg_rating: number;
+  review_count: number;
+}
 
 export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [avgRating, setAvgRating] = useState<number | null>(null);
@@ -14,10 +18,10 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     const fetchRating = async () => {
       try {
         const { data: globalRating, error } = await supabase
-          .from<'global_meal_ratings', Tables['global_meal_ratings']['Row']>('global_meal_ratings')
+          .from('global_meal_ratings')
           .select('avg_rating,review_count')
           .eq('meal_id', meal.id)
-          .single();
+          .maybeSingle();
           
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching rating:', error);
@@ -25,11 +29,11 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
         }
         
         if (globalRating) {
-          setAvgRating(globalRating.avg_rating);
-          setReviewCount(globalRating.review_count);
+          setAvgRating((globalRating as GlobalMealRating).avg_rating);
+          setReviewCount((globalRating as GlobalMealRating).review_count);
         } else {
           const { data: reviews, error: reviewsError } = await supabase
-            .from<'reviews', Tables['reviews']['Row']>('reviews')
+            .from('reviews')
             .select('rating')
             .eq('meal_id', meal.id)
             .eq('status', 'approved');
@@ -40,7 +44,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
           }
           
           if (reviews && reviews.length > 0) {
-            const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+            const sum = reviews.reduce((acc, review: any) => acc + review.rating, 0);
             setAvgRating(sum / reviews.length);
             setReviewCount(reviews.length);
           }

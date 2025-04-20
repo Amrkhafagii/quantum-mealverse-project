@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Review } from '@/types/review';
 
-interface ReviewSubmissionData {
+export interface ReviewSubmissionData {
   rating: number;
   comment?: string;
   images?: string[];
@@ -26,6 +26,7 @@ export const useReviewSubmission = () => {
     setIsSubmitting(true);
     
     try {
+      // Use simpler query to avoid type issues
       const { data: existingReviews } = await supabase
         .from('reviews')
         .select('id')
@@ -38,6 +39,7 @@ export const useReviewSubmission = () => {
         return false;
       }
       
+      // Use simpler query to avoid type issues
       const { data: orders } = await supabase
         .from('order_items')
         .select('order_id')
@@ -46,7 +48,7 @@ export const useReviewSubmission = () => {
         
       const isVerifiedPurchase = orders && orders.length > 0;
       
-      const review: Review = {
+      const review = {
         user_id: user.id,
         meal_id: data.mealId,
         restaurant_id: data.restaurantId,
@@ -54,7 +56,7 @@ export const useReviewSubmission = () => {
         comment: data.comment,
         images: data.images,
         is_verified_purchase: isVerifiedPurchase,
-        status: 'pending'
+        status: 'pending' as const
       };
       
       const { error } = await supabase

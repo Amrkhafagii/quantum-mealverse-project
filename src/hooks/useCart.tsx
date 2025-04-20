@@ -1,11 +1,2 @@
-
-import { useContext } from 'react';
-import { CartContext } from '@/contexts/CartContext';
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return context;
-};
+// This file is now redundant as the useCart hook is defined in CartContext.tsx
+// This file is kept empty to avoid build errors until all imports are updated

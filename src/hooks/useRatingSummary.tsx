@@ -19,10 +19,13 @@ export const useRatingSummary = (mealId: string, restaurantId: string, showGloba
         .single();
       
       if (localData) {
+        // Safe type casting for rating_distribution
+        const distribution = localData.rating_distribution as Record<number, number> || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+        
         setLocalStats({
           avg_rating: localData.avg_rating,
           review_count: localData.review_count,
-          rating_distribution: localData.rating_distribution || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+          rating_distribution: distribution
         });
       }
 
@@ -34,10 +37,13 @@ export const useRatingSummary = (mealId: string, restaurantId: string, showGloba
           .single();
           
         if (globalData) {
+          // Safe type casting for rating_distribution
+          const globalDistribution = globalData.rating_distribution as Record<number, number> || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+          
           setGlobalStats({
             avg_rating: globalData.avg_rating,
             review_count: globalData.review_count,
-            rating_distribution: globalData.rating_distribution || {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+            rating_distribution: globalDistribution
           });
         }
       }

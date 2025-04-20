@@ -16,11 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type ReviewFilter = 'all' | 'flagged' | 'pending';
+
 export const ReviewsManagement = () => {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'flagged' | 'pending'>('all');
+  const [filter, setFilter] = useState<ReviewFilter>('all');
   const { handleApproveReview, handleRejectReview, handleDeleteReview } = useReviewManagement();
   
   useEffect(() => {
@@ -72,7 +74,13 @@ export const ReviewsManagement = () => {
       
       if (error) throw error;
       
-      setReviews(data);
+      // Properly cast the status before setting
+      const typedReviews = data?.map(review => ({
+        ...review,
+        status: review.status as 'pending' | 'approved' | 'rejected' // Ensure status is typed correctly
+      })) as Review[];
+      
+      setReviews(typedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);
       toast.error('Failed to load reviews');
@@ -86,7 +94,7 @@ export const ReviewsManagement = () => {
     if (success) {
       setReviews(reviews.map(review => 
         review.id === id 
-          ? { ...review, status: 'approved', is_flagged: false } 
+          ? { ...review, status: 'approved' as const, is_flagged: false } 
           : review
       ));
     }
@@ -97,7 +105,7 @@ export const ReviewsManagement = () => {
     if (success) {
       setReviews(reviews.map(review => 
         review.id === id 
-          ? { ...review, status: 'rejected' } 
+          ? { ...review, status: 'rejected' as const } 
           : review
       ));
     }
@@ -125,7 +133,7 @@ export const ReviewsManagement = () => {
           <Filter className="w-4 h-4" />
           <Select 
             value={filter} 
-            onValueChange={(value: 'all' | 'flagged' | 'pending') => setFilter(value)}
+            onValueChange={(value: ReviewFilter) => setFilter(value)}
           >
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Filter" />

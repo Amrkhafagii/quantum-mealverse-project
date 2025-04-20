@@ -1,138 +1,133 @@
 
 import React from 'react';
 import { Review } from '@/types/review';
-import { formatDistanceToNow } from 'date-fns';
-import { Check, X, Flag } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { StarRating } from './StarRating';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Check, X, Trash } from 'lucide-react';
 
 interface AdminReviewCardProps {
-  review: Review & { meals?: { name: string }, restaurants?: { name: string } };
+  review: Review & {
+    meals?: { name: string };
+    restaurants?: { name: string };
+  };
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-export const AdminReviewCard = ({ 
+export const AdminReviewCard: React.FC<AdminReviewCardProps> = ({ 
   review, 
   onApprove, 
   onReject, 
   onDelete 
-}: AdminReviewCardProps) => {
-  const getStatusBadge = (status: string, isFlagged: boolean) => {
-    if (isFlagged) {
-      return (
-        <Badge variant="destructive" className="flex items-center gap-1">
-          <Flag className="w-3 h-3" />
-          Flagged
-        </Badge>
-      );
-    }
-    
+}) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
-        return (
-          <Badge variant="success" className="flex items-center gap-1">
-            <Check className="w-3 h-3" />
-            Approved
-          </Badge>
-        );
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
       case 'rejected':
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <X className="w-3 h-3" />
-            Rejected
-          </Badge>
-        );
+        return 'bg-red-100 text-red-800';
       default:
-        return (
-          <Badge variant="outline" className="flex items-center gap-1">
-            Pending
-          </Badge>
-        );
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="flex justify-between">
-              <div>
-                <h3 className="font-medium">
-                  {review.meals?.name || 'Unknown Meal'}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  at {review.restaurants?.name || 'Unknown Restaurant'}
-                </p>
-              </div>
-              {getStatusBadge(review.status, review.is_flagged || false)}
-            </div>
-            
-            <div className="mt-2">
-              <StarRating rating={review.rating} size="sm" />
-              <p className="mt-2 text-sm text-gray-600">{review.comment}</p>
-            </div>
-            
-            {review.images && review.images.length > 0 && (
-              <div className="mt-4 flex gap-2 overflow-x-auto">
-                {review.images.map((img, index) => (
-                  <img 
-                    key={index} 
-                    src={img} 
-                    alt={`Review image ${index + 1}`}
-                    className="w-16 h-16 object-cover rounded-md"
-                  />
-                ))}
-              </div>
-            )}
-            
-            <div className="mt-4 text-xs text-gray-500">
-              Posted {review.created_at && formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}
-              {review.is_verified_purchase && (
-                <span className="ml-2 text-green-600">
-                  Verified Purchase
-                </span>
-              )}
-            </div>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between">
+          <div>
+            <CardTitle>Review for {review.meals?.name || 'Unknown Meal'}</CardTitle>
+            <p className="text-sm text-gray-500">
+              At {review.restaurants?.name || 'Unknown Restaurant'}
+            </p>
           </div>
-          
-          <div className="flex flex-row md:flex-col gap-2 justify-end">
-            {review.status !== 'approved' && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => onApprove(review.id || '')}
-              >
-                <Check className="w-4 h-4 mr-1" />
-                Approve
-              </Button>
+          <div className="space-x-2">
+            {review.is_flagged && (
+              <Badge variant="outline" className="bg-red-100 text-red-800">
+                Flagged
+              </Badge>
             )}
-            
-            {review.status !== 'rejected' && (
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => onReject(review.id || '')}
-              >
-                <X className="w-4 h-4 mr-1" />
-                Reject
-              </Button>
-            )}
-            
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onDelete(review.id || '')}
-            >
-              Delete
-            </Button>
+            <Badge variant={
+              review.status === 'approved' ? 'default' : 
+              review.status === 'pending' ? 'secondary' : 
+              'destructive'
+            }>
+              {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
+            </Badge>
           </div>
         </div>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-2">
+          <StarRating rating={review.rating} size="sm" showNumber />
+        </div>
+        
+        {review.comment && (
+          <p className="text-gray-600 mb-4">{review.comment}</p>
+        )}
+        
+        {review.images && review.images.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {review.images.map((image, index) => (
+              <img 
+                key={index} 
+                src={image} 
+                alt={`Review ${index + 1}`} 
+                className="w-20 h-20 object-cover rounded" 
+              />
+            ))}
+          </div>
+        )}
+        
+        <div className="text-xs text-gray-500">
+          {review.is_verified_purchase && (
+            <span className="mr-3">✓ Verified Purchase</span>
+          )}
+          <span>
+            Submitted on {new Date(review.created_at || '').toLocaleDateString()}
+          </span>
+        </div>
       </CardContent>
+      
+      <CardFooter className="border-t pt-4 flex justify-between">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="text-red-500 border-red-500"
+          onClick={() => onDelete(review.id || '')}
+        >
+          <Trash className="w-4 h-4 mr-1" /> Delete
+        </Button>
+        
+        <div className="space-x-2">
+          {review.status !== 'rejected' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-red-500 border-red-500"
+              onClick={() => onReject(review.id || '')}
+            >
+              <X className="w-4 h-4 mr-1" /> Reject
+            </Button>
+          )}
+          
+          {review.status !== 'approved' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-green-500 border-green-500"
+              onClick={() => onApprove(review.id || '')}
+            >
+              <Check className="w-4 h-4 mr-1" /> Approve
+            </Button>
+          )}
+        </div>
+      </CardFooter>
     </Card>
   );
 };

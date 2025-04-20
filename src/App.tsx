@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,7 +7,7 @@ import Home from './pages/Home';
 import Customer from './pages/Customer';
 import MealDetails from './components/MealDetails';
 import Cart from './pages/Cart';
-import { CartProvider } from './context/CartContext';
+import { CartProvider } from './contexts/CartContext';
 import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
 import Login from './pages/Login';
@@ -26,7 +27,23 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/customer" element={<Customer />} />
-              <Route path="/meals/:id" element={<MealDetails />} />
+              {/* Fix MealDetails route to pass required props */}
+              <Route path="/meals/:id" element={
+                <MealDetails 
+                  meal={{
+                    id: '',
+                    name: '',
+                    description: '',
+                    price: 0,
+                    image_url: '',
+                    calories: 0,
+                    protein: 0,
+                    fat: 0,
+                    carbs: 0
+                  }} 
+                  onAddToCart={() => {}} 
+                />
+              } />
               <Route path="/cart" element={<Cart />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
