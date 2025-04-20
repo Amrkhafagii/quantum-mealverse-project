@@ -76,7 +76,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/auth');
+    navigate('/');
   };
 
   const toggleUserView = (checked: boolean) => {

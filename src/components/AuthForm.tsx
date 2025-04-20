@@ -33,12 +33,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           title: "Success!",
           description: "Please check your email to verify your account.",
         });
+        // After successful signup, redirect to login
+        setMode('login');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        // After successful login, redirect to home
         navigate('/');
       }
     } catch (error: any) {

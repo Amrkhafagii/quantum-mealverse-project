@@ -11,6 +11,7 @@ import Checkout from './pages/Checkout';
 import OrderConfirmation from './pages/OrderConfirmation';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import ReviewsManagement from './pages/Admin/ReviewsManagement';
@@ -19,6 +20,7 @@ import Subscription from './pages/Subscription';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Notifications from './pages/Notifications';
+import Admin from './pages/Admin';
 
 function App() {
   const queryClient = new QueryClient();
@@ -30,11 +32,12 @@ function App() {
           <Router>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/customer" element={<Customer />} />
               <Route path="/meals/:id" element={<MealDetailsPage />} />
               <Route path="/cart" element={<Cart />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
               <Route path="/subscription" element={<Subscription />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
@@ -66,8 +69,30 @@ function App() {
               />
               
               {/* Admin routes */}
-              <Route path="/admin/reviews" element={<ReviewsManagement />} />
-              <Route path="/orders" element={<Notifications />} />
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/reviews" 
+                element={
+                  <ProtectedRoute>
+                    <ReviewsManagement />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/orders" 
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } 
+              />
             </Routes>
           </Router>
           <Toaster position="top-right" />
