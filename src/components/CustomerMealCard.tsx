@@ -1,14 +1,13 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
-import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Minus, Info } from 'lucide-react';
+import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
 interface GlobalMealRating {
@@ -71,121 +70,105 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   }, [meal.id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    // Stop event propagation to prevent navigation when clicking the Add to Cart button
     e.stopPropagation();
-    
     addItem({
       ...meal,
       quantity: quantity
     });
     toast.success(`${meal.name} added to cart!`);
+    setQuantity(1);
   };
 
   const navigateToMealDetails = () => {
     navigate(`/meals/${meal.id}`);
   };
 
-  const increaseQuantity = (e: React.MouseEvent) => {
+  const handleQuantityChange = (action: 'increase' | 'decrease') => (e: React.MouseEvent) => {
     e.stopPropagation();
-    setQuantity(prev => prev + 1);
-  };
-
-  const decreaseQuantity = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (quantity > 1) {
+    if (action === 'increase') {
+      setQuantity(prev => prev + 1);
+    } else if (action === 'decrease' && quantity > 1) {
       setQuantity(prev => prev - 1);
     }
   };
 
   return (
-    <motion.div 
-      className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      <div 
-        className="relative overflow-hidden rounded-t-lg cursor-pointer"
+    <Card className="relative overflow-hidden bg-quantum-black border-quantum-cyan/20 group hover:border-quantum-cyan/40 transition-all duration-300">
+      <motion.div 
+        className="w-full h-48 relative overflow-hidden cursor-pointer"
         onClick={navigateToMealDetails}
       >
         <img
           src={meal.image_url}
           alt={meal.name}
-          className="w-full h-48 object-cover transform hover:scale-110 transition-transform duration-300"
+          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = `https://picsum.photos/seed/${meal.id}/300/200`;
           }}
         />
-      </div>
-      
-      <div className="p-5 font-light">
-        <div className="flex justify-between items-start">
-          <h3 
-            className="text-xl font-semibold text-white mb-2 neon-text cursor-pointer" 
-            onClick={navigateToMealDetails}
-          >
+        <div className="absolute inset-0 bg-gradient-to-t from-quantum-black/80 to-transparent" />
+      </motion.div>
+
+      <CardContent className="p-4 space-y-3">
+        <div 
+          className="cursor-pointer space-y-2"
+          onClick={navigateToMealDetails}
+        >
+          <h3 className="text-xl font-semibold text-white hover:text-quantum-cyan transition-colors">
             {meal.name}
           </h3>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-quantum-cyan hover:text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigateToMealDetails();
-            }}
-          >
-            <Info className="h-5 w-5" />
-          </Button>
+          
+          <div className="flex items-center gap-2">
+            {!loading && avgRating !== null && (
+              <>
+                <StarRating rating={avgRating} size="sm" showNumber />
+                <span className="text-xs text-gray-400">({reviewCount})</span>
+              </>
+            )}
+          </div>
+
+          <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
         </div>
-        
-        <div className="flex items-center mb-2">
-          {!loading && avgRating !== null && (
-            <>
-              <StarRating rating={avgRating} size="sm" showNumber />
-              <span className="ml-2 text-xs text-gray-400">
-                ({reviewCount})
-              </span>
-            </>
-          )}
-          {!loading && avgRating === null && (
-            <span className="text-xs text-gray-400">No reviews yet</span>
-          )}
-        </div>
-        
-        <p className="text-gray-300 mb-4 cursor-pointer" onClick={navigateToMealDetails}>{meal.description}</p>
-        
-        <div className="mt-4 flex flex-col space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-quantum-cyan font-medium">{displayPrice(meal.price)}</span>
-            
-            <div className="flex items-center space-x-1" onClick={e => e.stopPropagation()}>
-              <button 
-                className="bg-quantum-darkBlue text-quantum-cyan p-1 rounded-full hover:bg-quantum-cyan hover:text-quantum-black transition-colors"
-                onClick={decreaseQuantity}
+
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-lg font-semibold text-quantum-cyan">
+            {displayPrice(meal.price)}
+          </span>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-quantum-darkBlue rounded-lg p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
+                onClick={handleQuantityChange('decrease')}
               >
                 <Minus className="h-4 w-4" />
-              </button>
+              </Button>
               
-              <span className="w-8 text-center">{quantity}</span>
+              <span className="w-8 text-center text-white">{quantity}</span>
               
-              <button 
-                className="bg-quantum-darkBlue text-quantum-cyan p-1 rounded-full hover:bg-quantum-cyan hover:text-quantum-black transition-colors"
-                onClick={increaseQuantity}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
+                onClick={handleQuantityChange('increase')}
               >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
+
+            <Button
+              onClick={handleAddToCart}
+              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+            >
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              Add
+            </Button>
           </div>
-          
-          <button 
-            className="bg-quantum-cyan text-quantum-black py-2 px-4 rounded-full hover:bg-cyan-600 transition-colors duration-300 w-full"
-            onClick={handleAddToCart}
-          >
-            Add to Cart
-          </button>
         </div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 };
