@@ -144,7 +144,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       .eq('order_id', orderId);
     
     // Get the order status
-    const { data: order } = await supabase
+    const { data: orderData } = await supabase
       .from('orders')
       .select('status, restaurant_id, restaurant:restaurants(id, name)')
       .eq('id', orderId)
@@ -156,8 +156,11 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       
       if (assignment.restaurant && 
           typeof assignment.restaurant === 'object') {
-        // Use type assertion to tell TypeScript the structure
-        const restaurantObj = assignment.restaurant as { id: string; name: string };
+        // Fixed: Check if restaurant is an array and access first item if needed
+        const restaurantObj = Array.isArray(assignment.restaurant) 
+          ? assignment.restaurant[0] 
+          : assignment.restaurant as { id: string; name: string };
+          
         if (restaurantObj && 'name' in restaurantObj) {
           restaurantName = restaurantObj.name;
         }
@@ -176,18 +179,21 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
     // Safely extract restaurant name from order with proper null checks
     let restaurantName = 'Restaurant';
     
-    if (order && order.restaurant && 
-        typeof order.restaurant === 'object') {
-      // Use type assertion to tell TypeScript the structure
-      const restaurantObj = order.restaurant as { id: string; name: string };
+    if (orderData?.restaurant && 
+        typeof orderData.restaurant === 'object') {
+      // Fixed: Check if restaurant is an array and access first item if needed
+      const restaurantObj = Array.isArray(orderData.restaurant) 
+        ? orderData.restaurant[0] 
+        : orderData.restaurant as { id: string; name: string };
+        
       if (restaurantObj && 'name' in restaurantObj) {
         restaurantName = restaurantObj.name;
       }
     }
     
     return {
-      status: order?.status || 'unknown',
-      assigned_restaurant_id: order?.restaurant_id,
+      status: orderData?.status || 'unknown',
+      assigned_restaurant_id: orderData?.restaurant_id,
       restaurant_name: restaurantName,
       attempt_count: count || 0
     };

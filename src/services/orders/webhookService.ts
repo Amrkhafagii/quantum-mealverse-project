@@ -123,7 +123,11 @@ export const checkAssignmentStatus = async (orderId: string) => {
       
       if (assignment.restaurant && 
           typeof assignment.restaurant === 'object') {
-        const restaurantObj = assignment.restaurant as { id: string; name: string };
+        // Fixed: Check if restaurant is an array and access first item if needed
+        const restaurantObj = Array.isArray(assignment.restaurant) 
+          ? assignment.restaurant[0] 
+          : assignment.restaurant as { id: string; name: string };
+          
         if (restaurantObj && 'name' in restaurantObj) {
           restaurantName = restaurantObj.name;
         }
@@ -143,7 +147,11 @@ export const checkAssignmentStatus = async (orderId: string) => {
     
     if (order?.restaurant && 
         typeof order.restaurant === 'object') {
-      const restaurantObj = order.restaurant as { id: string; name: string };
+      // Fixed: Check if restaurant is an array and access first item if needed
+      const restaurantObj = Array.isArray(order.restaurant) 
+        ? order.restaurant[0] 
+        : order.restaurant as { id: string; name: string };
+        
       if (restaurantObj && 'name' in restaurantObj) {
         restaurantName = restaurantObj.name;
       }
