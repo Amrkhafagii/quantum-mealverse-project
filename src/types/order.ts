@@ -16,4 +16,5 @@ export interface Order {
   status: string;
   latitude?: number;
   longitude?: number;
+  formatted_order_id?: string;
 }
