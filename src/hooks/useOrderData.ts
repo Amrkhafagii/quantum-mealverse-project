@@ -29,7 +29,9 @@ export const useOrderData = (orderId: string) => {
     },
     enabled: !!orderId,
     staleTime: 0,
-    refetchInterval: (data: Order | undefined) => {
+    refetchInterval: (query) => {
+      // Get the data from the query object
+      const data = query.state.data as Order | undefined;
       if (!data) return false;
       return ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false;
     },
