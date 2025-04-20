@@ -13,7 +13,28 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({ expiresAt }) => {
   
   useEffect(() => {
     console.log('OrderTimer Component Mounted with expiresAt:', expiresAt);
+    
+    // Validate the expiresAt value
+    try {
+      const date = new Date(expiresAt);
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date format for expiresAt:', expiresAt);
+      } else {
+        console.log('Valid expiration time:', date.toISOString());
+      }
+    } catch (error) {
+      console.error('Error parsing expiresAt:', error);
+    }
   }, [expiresAt]);
+
+  if (!expiresAt) {
+    return (
+      <div className="text-center py-2 text-gray-400">
+        <Clock className="h-4 w-4 inline mr-2" />
+        <span>Waiting for response...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

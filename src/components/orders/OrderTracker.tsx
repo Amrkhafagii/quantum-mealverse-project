@@ -9,7 +9,6 @@ import { ReturnRequestForm } from './ReturnRequestForm';
 import { OrderStatusDisplay } from './OrderStatusDisplay';
 import { OrderDetailsGrid } from './OrderDetailsGrid';
 import { OrderItemsList } from './OrderItemsList';
-import { useOrderTimer } from '@/hooks/useOrderTimer';
 import { useOrderData } from '@/hooks/useOrderData';
 import { checkAssignmentStatus } from '@/services/orders/webhookService';
 import { useInterval } from '@/hooks/use-interval';
@@ -21,13 +20,16 @@ interface OrderTrackerProps {
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const [assignmentStatus, setAssignmentStatus] = React.useState<any>(null);
   const { data: order, isLoading, error, refetch } = useOrderData(orderId);
-  const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
 
   // Fetch assignment status when order data changes or initially loads
   React.useEffect(() => {
     if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      console.log('Fetching initial assignment status for order:', orderId);
       checkAssignmentStatus(orderId)
-        .then(status => setAssignmentStatus(status))
+        .then(status => {
+          console.log('Initial assignment status received:', status);
+          setAssignmentStatus(status);
+        })
         .catch(err => console.error('Error checking initial assignment status:', err));
     }
   }, [orderId, order?.status]);
@@ -35,8 +37,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   // Periodically check status for pending orders
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      console.log('Periodic assignment status check for order:', orderId);
       checkAssignmentStatus(orderId)
         .then(status => {
+          console.log('Updated assignment status:', status);
           setAssignmentStatus(status);
           refetch(); // Refresh order data to ensure status is in sync
         })

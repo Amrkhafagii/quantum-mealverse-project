@@ -96,7 +96,10 @@ export const simulateRestaurantResponse = async (
 
 export const checkAssignmentStatus = async (orderId: string) => {
   try {
-    const { data: assignment } = await supabase
+    console.log(`Checking assignment status for order: ${orderId}`);
+    
+    // First check for active assignments in restaurant_assignments table
+    const { data: assignment, error: assignmentError } = await supabase
       .from('restaurant_assignments')
       .select('*, restaurant:restaurants(id, name)')
       .eq('order_id', orderId)
@@ -105,37 +108,66 @@ export const checkAssignmentStatus = async (orderId: string) => {
       .limit(1)
       .single();
     
+    if (assignmentError) {
+      console.log('No active assignments found, checking order status');
+    } else {
+      console.log('Active assignment found:', assignment);
+    }
+    
+    // Get attempt count from assignment history
     const { count } = await supabase
       .from('restaurant_assignment_history')
       .select('*', { count: 'exact', head: true })
       .eq('order_id', orderId);
     
-    const { data: order } = await supabase
+    console.log(`Assignment attempt count for order ${orderId}: ${count}`);
+    
+    // Get current order status
+    const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('status, restaurant_id, restaurant:restaurants(id, name)')
       .eq('id', orderId)
       .single();
     
+    if (orderError) {
+      console.error('Error fetching order details:', orderError);
+    }
+    
+    // If there's an active assignment, return its details
     if (assignment) {
       const restaurantName = getRestaurantName(assignment.restaurant);
-        
+      
+      console.log(`Assignment details for ${orderId}:`, {
+        status: 'awaiting_response',
+        restaurant: restaurantName,
+        expires_at: assignment.expires_at
+      });
+      
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
         restaurant_name: restaurantName,
         assignment_id: assignment.id,
         expires_at: assignment.expires_at,
+        attempt_count: count || 1
+      };
+    }
+    
+    // If no active assignment but order exists, return order status
+    if (order) {
+      const restaurantName = getRestaurantName(order.restaurant);
+      
+      return {
+        status: order.status || 'unknown',
+        assigned_restaurant_id: order.restaurant_id,
+        restaurant_name: restaurantName,
         attempt_count: count || 0
       };
     }
     
-    const restaurantName = getRestaurantName(order?.restaurant);
-    
     return {
-      status: order?.status || 'unknown',
-      assigned_restaurant_id: order?.restaurant_id,
-      restaurant_name: restaurantName,
-      attempt_count: count || 0
+      status: 'error',
+      attempt_count: 0
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);
