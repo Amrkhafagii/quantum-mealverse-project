@@ -1,6 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Order } from '@/types/order';
 
 export const useOrderData = (orderId: string) => {
   return useQuery({
@@ -17,11 +18,13 @@ export const useOrderData = (orderId: string) => {
         .single();
         
       if (error) throw error;
-      return data;
+      return data as Order;
     },
     enabled: !!orderId,
     staleTime: 0,
-    refetchInterval: (data) => 
-      data && ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false,
+    refetchInterval: (data) => {
+      if (!data) return false;
+      return ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false;
+    },
   });
 };
