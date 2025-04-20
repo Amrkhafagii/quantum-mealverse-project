@@ -24,6 +24,7 @@ export const useOrderData = (orderId: string) => {
     staleTime: 0,
     refetchInterval: (data) => {
       if (!data) return false;
+      // Access the status property from the data object returned by the queryFn
       return ['pending', 'awaiting_restaurant'].includes(data.status) ? 5000 : false;
     },
   });

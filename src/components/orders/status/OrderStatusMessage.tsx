@@ -9,12 +9,17 @@ interface OrderStatusMessageProps {
   assignmentStatus: AssignmentStatus | null;
 }
 
+interface StatusMessage {
+  message: string;
+  details?: string;
+}
+
 export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({ 
   order, 
   assignmentStatus 
 }) => {
-  const getStatusMessage = () => {
-    if (!order) return '';
+  const getStatusMessage = (): StatusMessage => {
+    if (!order) return { message: '' };
     
     switch (order.status) {
       case 'pending':
@@ -53,7 +58,7 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
     }
   };
 
-  const { message, details } = getStatusMessage();
+  const statusMessage = getStatusMessage();
 
   return (
     <div className="flex items-start gap-2">
@@ -61,8 +66,8 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
         <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
       )}
       <div>
-        <p className="text-lg">{message}</p>
-        {details && <p className="text-sm text-gray-400">{details}</p>}
+        <p className="text-lg">{statusMessage.message}</p>
+        {statusMessage.details && <p className="text-sm text-gray-400">{statusMessage.details}</p>}
       </div>
     </div>
   );
