@@ -291,33 +291,6 @@ export type Database = {
           },
         ]
       }
-      nearby_restaurants: {
-        Row: {
-          created_at: string
-          id: string
-          nearby: Json | null
-          user_id: string
-          user_latitude: number
-          user_longitude: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          nearby?: Json | null
-          user_id: string
-          user_latitude: number
-          user_longitude: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          nearby?: Json | null
-          user_id?: string
-          user_latitude?: number
-          user_longitude?: number
-        }
-        Relationships: []
-      }
       notifications: {
         Row: {
           created_at: string
