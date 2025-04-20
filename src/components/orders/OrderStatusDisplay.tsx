@@ -112,7 +112,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
         break;
       case 'assignment_failed':
         statusMessage = "We couldn't find a restaurant for your order right now.";
-        statusDetails = 'Please try again in a few minutes.';
+        statusDetails = 'Your order has been automatically cancelled.';
         break;
       case 'no_restaurants_available':
         statusMessage = 'No restaurants available in your area.';
@@ -152,8 +152,9 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           </div>
         )}
         
-        {assignmentStatus?.attempt_count > 0 && order.status !== 'processing' && (
-          <p className="text-sm text-gray-400">
+        {/* Display assignment attempt count regardless of status */}
+        {(order.status === 'pending' || order.status === 'awaiting_restaurant') && assignmentStatus?.attempt_count > 0 && (
+          <p className="text-sm text-gray-400 mt-2">
             Assignment attempt: {assignmentStatus.attempt_count} of 3
           </p>
         )}

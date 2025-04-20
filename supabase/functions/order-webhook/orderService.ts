@@ -39,11 +39,22 @@ export async function handleAssignment(
   }
 
   if (assignmentCount?.count >= 3) {
+    // When 3 attempts are reached, cancel the order automatically
     await updateOrderStatus(supabase, orderId, 'assignment_failed');
+    
+    // Log the final assignment attempt failure
+    await logAssignmentAttempt(
+      supabase,
+      orderId,
+      null,
+      'cancelled',
+      'Order automatically cancelled after 3 failed assignment attempts'
+    );
+    
     return { 
       success: false, 
-      error: 'Maximum assignment attempts reached',
-      retryAllowed: true
+      error: 'Maximum assignment attempts reached, order cancelled',
+      retryAllowed: false
     };
   }
 

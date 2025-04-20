@@ -65,20 +65,20 @@ const ThankYou: React.FC = () => {
     }
   }, [orderId, order]);
 
-  // Poll for updates
+  // Poll for updates more frequently (every 5 seconds) to catch restaurant changes faster
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId!)
         .then(status => {
           setAssignmentStatus(status);
           
-          if (status.status !== 'awaiting_response') {
-            fetchOrderDetails();
-          }
+          // Always refetch to ensure we have the latest order data
+          // This ensures we catch transitions between restaurants
+          fetchOrderDetails();
         })
         .catch(err => console.error('Error checking assignment status:', err));
     }
-  }, 10000);
+  }, 5000);
 
   if (!orderId) {
     useEffect(() => {

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,26 +35,35 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     enabled: !!orderId,
   });
 
+  // More frequent polling when awaiting restaurant response
+  const pollingInterval = order && ['pending', 'awaiting_restaurant'].includes(order.status) ? 5000 : null;
+
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
-          if (status.status !== 'awaiting_response') {
-            refetch();
-          }
+          
+          // Always refetch to ensure we have the latest data
+          // This ensures we catch status transitions between restaurants
+          refetch();
         })
         .catch(err => console.error('Error checking assignment status:', err));
     }
-  }, order && ['pending', 'awaiting_restaurant'].includes(order.status) ? 10000 : null);
+  }, pollingInterval);
 
   React.useEffect(() => {
     if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
-        .then(status => setAssignmentStatus(status))
+        .then(status => {
+          setAssignmentStatus(status);
+          if (status.status !== assignmentStatus?.status) {
+            refetch();
+          }
+        })
         .catch(err => console.error('Error checking initial assignment status:', err));
     }
-  }, [orderId, order]);
+  }, [orderId, order, assignmentStatus?.status]);
   
   if (isLoading || !order) {
     return (
