@@ -10,9 +10,11 @@ export interface Review {
   is_verified_purchase: boolean;
   created_at?: string;
   updated_at?: string;
-  is_flagged?: boolean;
-  status: 'pending' | 'approved' | 'rejected';
+  is_flagged: boolean;
+  status: ReviewStatus;
 }
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export interface RatingStats {
   avg_rating: number;

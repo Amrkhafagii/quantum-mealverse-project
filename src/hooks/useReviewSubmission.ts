@@ -1,10 +1,11 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { submitReview as submitReviewService } from '@/services/reviews/submission/reviewSubmissionService';
 import { hasUserReviewed } from '@/services/reviews/moderation/reviewModerationService';
+import { checkVerifiedPurchase } from '@/services/reviews/verification/purchaseVerificationService';
+import { Review } from '@/types/review';
 
 export interface ReviewSubmissionData {
   rating: number;
@@ -27,7 +28,6 @@ export const useReviewSubmission = () => {
     setIsSubmitting(true);
     
     try {
-      // Check for existing reviews using our service function
       const hasReviewed = await hasUserReviewed(user.id, data.mealId, data.restaurantId);
         
       if (hasReviewed) {
@@ -35,19 +35,9 @@ export const useReviewSubmission = () => {
         return false;
       }
       
-      // Check if user has purchased the meal - simplified query
-      const { count, error: orderError } = await supabase
-        .from('order_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('meal_id', data.mealId)
-        .eq('user_id', user.id);
-        
-      if (orderError) throw orderError;
+      const isVerifiedPurchase = await checkVerifiedPurchase(user.id, data.mealId);
       
-      const isVerifiedPurchase = Boolean(count && count > 0);
-      
-      // Create review object
-      const review = {
+      const review: Omit<Review, 'id' | 'created_at' | 'updated_at'> = {
         user_id: user.id,
         meal_id: data.mealId,
         restaurant_id: data.restaurantId,
@@ -55,12 +45,11 @@ export const useReviewSubmission = () => {
         comment: data.comment,
         images: data.images,
         is_verified_purchase: isVerifiedPurchase,
-        status: 'pending' as const
+        status: 'pending',
+        is_flagged: false
       };
       
-      // Use the service to submit the review
       await submitReviewService(review);
-      
       toast.success('Review submitted successfully!');
       return true;
     } catch (error) {
