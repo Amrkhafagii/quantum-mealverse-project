@@ -14,11 +14,18 @@ export interface Review {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+export interface RatingStats {
+  avg_rating: number;
+  review_count: number;
+  rating_distribution: Record<number, number>;
+}
+
 export interface MealRating {
   meal_id: string;
   restaurant_id: string;
   avg_rating: number;
   review_count: number;
+  rating_distribution: Record<number, number>;
   last_updated: string;
 }
 
@@ -26,5 +33,6 @@ export interface GlobalMealRating {
   meal_id: string;
   avg_rating: number;
   review_count: number;
+  rating_distribution: Record<number, number>;
   last_updated: string;
 }
