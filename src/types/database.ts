@@ -1,3 +1,4 @@
+
 // Generated types from Supabase database schema
 export type Json =
   | string
@@ -162,19 +163,178 @@ export type Database = {
       status: string
     }
   }
+  public: {
+    Tables: {
+      order_items: {
+        Row: {
+          id: string
+          order_id: string
+          meal_id: string
+          quantity: number
+          price: number
+          name: string
+          created_at: string
+          user_id: string | null
+        }
+        Insert: {
+          order_id: string
+          meal_id: string
+          quantity: number
+          price: number
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          order_id?: string
+          meal_id?: string
+          quantity?: number
+          price?: number
+          name?: string
+          user_id?: string | null
+        }
+        Select: {
+          id: string
+          order_id: string
+          meal_id: string
+          quantity: number
+          price: number
+          name: string
+          created_at: string
+          user_id: string | null
+        }
+      }
+      meal_ratings: {
+        Row: {
+          meal_id: string
+          restaurant_id: string
+          avg_rating: number
+          review_count: number
+          rating_distribution: Json | null
+          last_updated: string
+        }
+        Insert: {
+          meal_id: string
+          restaurant_id: string
+          avg_rating: number
+          review_count: number
+          rating_distribution?: Json | null
+          last_updated: string
+        }
+        Update: {
+          meal_id?: string
+          restaurant_id?: string
+          avg_rating?: number
+          review_count?: number
+          rating_distribution?: Json | null
+          last_updated?: string
+        }
+        Select: {
+          meal_id: string
+          restaurant_id: string
+          avg_rating: number
+          review_count: number
+          rating_distribution: Json | null
+          last_updated: string
+        }
+      }
+      global_meal_ratings: {
+        Row: {
+          meal_id: string
+          avg_rating: number
+          review_count: number
+          rating_distribution: Json | null
+          last_updated: string
+        }
+        Insert: {
+          meal_id: string
+          avg_rating: number
+          review_count: number
+          rating_distribution?: Json | null
+          last_updated: string
+        }
+        Update: {
+          meal_id?: string
+          avg_rating?: number
+          review_count?: number
+          rating_distribution?: Json | null
+          last_updated?: string
+        }
+        Select: {
+          meal_id: string
+          avg_rating: number
+          review_count: number
+          rating_distribution: Json | null
+          last_updated: string
+        }
+      }
+      reviews: {
+        Row: {
+          id: string
+          user_id: string
+          meal_id: string
+          restaurant_id: string
+          rating: number
+          comment: string | null
+          images: string[] | null
+          is_verified_purchase: boolean
+          created_at: string
+          updated_at: string
+          is_flagged: boolean
+          status: string
+        }
+        Insert: {
+          user_id: string
+          meal_id: string
+          restaurant_id: string
+          rating: number
+          comment?: string | null
+          images?: string[] | null
+          is_verified_purchase: boolean
+          is_flagged: boolean
+          status: string
+        }
+        Update: {
+          user_id?: string
+          meal_id?: string
+          restaurant_id?: string
+          rating?: number
+          comment?: string | null
+          images?: string[] | null
+          is_verified_purchase?: boolean
+          is_flagged?: boolean
+          status?: string
+        }
+        Select: {
+          id: string
+          user_id: string
+          meal_id: string
+          restaurant_id: string
+          rating: number
+          comment: string | null
+          images: string[] | null
+          is_verified_purchase: boolean
+          created_at: string
+          updated_at: string
+          is_flagged: boolean
+          status: string
+        }
+      }
+    }
+    Functions: {
+      check_verified_purchase: {
+        Args: {
+          user_id: string
+          meal_id: string
+        }
+        Returns: boolean
+      }
+    }
+  }
 }
 
-export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (Database & { public: { tables: never } })
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["tables"]
-    : PublicTableNameOrOptions extends keyof (Database & { public: { tables: never } })
-      ? keyof (Database & { public: { tables: never } })[PublicTableNameOrOptions]["tables"]
-      : never
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["tables"][TableName]
-  : PublicTableNameOrOptions extends keyof (Database & { public: { tables: never } })
-    ? (Database & { public: { tables: never } })[PublicTableNameOrOptions]["tables"][TableName]
-    : never
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]
+export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert']
+export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
+export type TablesRow<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+
+export type DbFunctions<T extends keyof Database['public']['Functions']> = Database['public']['Functions'][T]
