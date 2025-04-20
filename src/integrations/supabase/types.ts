@@ -324,54 +324,6 @@ export type Database = {
         }
         Relationships: []
       }
-      order_assignments: {
-        Row: {
-          created_at: string | null
-          distance_km: number | null
-          id: string
-          order_id: string
-          restaurant_id: string
-          restaurant_name: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          distance_km?: number | null
-          id?: string
-          order_id: string
-          restaurant_id: string
-          restaurant_name: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          distance_km?: number | null
-          id?: string
-          order_id?: string
-          restaurant_id?: string
-          restaurant_name?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_assignments_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_assignments_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       order_history: {
         Row: {
           created_at: string

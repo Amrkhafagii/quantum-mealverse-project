@@ -1,4 +1,6 @@
 
+# Project ID from your Supabase project settings
 project_id = "hozgutjvbrljeijybnyg"
-[functions.order-webhook]
+
+[functions.status-to-customer]
 verify_jwt = false
