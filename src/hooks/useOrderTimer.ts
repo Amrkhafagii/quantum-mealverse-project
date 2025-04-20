@@ -9,15 +9,16 @@ export const useOrderTimer = (expiresAt: string | undefined) => {
     if (!expiresAt) return;
     
     const expiresAtTime = new Date(expiresAt).getTime();
-    const totalTime = 5 * 60; // 5 minutes in seconds
+    const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
     
     const updateTimer = () => {
       const now = Date.now();
       const secondsLeft = Math.max(0, Math.floor((expiresAtTime - now) / 1000));
       setTimeLeft(secondsLeft);
       
-      const progressValue = (secondsLeft / totalTime) * 100;
-      setProgress(progressValue);
+      // Calculate progress as percentage of time remaining from 5 minutes
+      const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
+      setProgress(Math.max(0, Math.min(100, progressValue)));
     };
     
     updateTimer();
