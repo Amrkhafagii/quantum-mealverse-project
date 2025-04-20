@@ -22,7 +22,7 @@ export async function addNearbyRestaurants(
     .select()
     .single();
 
-  return { data, error };
+  return { data: data as NearbyRestaurantsRow | null, error };
 }
 
 /**
