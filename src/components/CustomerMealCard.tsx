@@ -1,120 +1,106 @@
-
-import React, { useState } from 'react';
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus, Minus, Info } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { useCart } from '@/contexts/CartContext';
+import React from 'react';
 import { MealType } from '@/types/meal';
-import { MealDetails } from '@/components/MealDetails';
+import { motion } from 'framer-motion';
+import { StarRating } from './reviews/StarRating';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 
-interface CustomerMealCardProps {
-  meal: MealType;
-}
+export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({ meal }) => {
-  const { toast } = useToast();
-  const { addToCart } = useCart();
-  const [quantity, setQuantity] = useState(1);
-  const [showDetails, setShowDetails] = useState(false);
-
-  const handleAddToCart = () => {
-    addToCart(meal, quantity);
-    toast({
-      title: "Added to cart",
-      description: `${quantity} × ${meal.name} has been added to your cart.`,
-      duration: 2000,
-    });
-  };
-
-  const incrementQuantity = () => {
-    setQuantity(prev => Math.min(prev + 1, 10));
-  };
-
-  const decrementQuantity = () => {
-    setQuantity(prev => Math.max(prev - 1, 1));
-  };
-
-  const openMealDetails = () => {
-    setShowDetails(true);
-  };
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        // First try to get from cached ratings
+        const { data, error } = await supabase
+          .from('global_meal_ratings')
+          .select('avg_rating, review_count')
+          .eq('meal_id', meal.id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') { // Not found error is okay
+          console.error('Error fetching rating:', error);
+          return;
+        }
+        
+        if (data) {
+          setAvgRating(data.avg_rating);
+          setReviewCount(data.review_count);
+        } else {
+          // Calculate on the fly if no cached data
+          const { data: reviews, error: reviewsError } = await supabase
+            .from('reviews')
+            .select('rating')
+            .eq('meal_id', meal.id)
+            .eq('status', 'approved');
+            
+          if (reviewsError) {
+            console.error('Error fetching reviews:', reviewsError);
+            return;
+          }
+          
+          if (reviews && reviews.length > 0) {
+            const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+            setAvgRating(sum / reviews.length);
+            setReviewCount(reviews.length);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (meal.id) {
+      fetchRating();
+    }
+  }, [meal.id]);
 
   return (
-    <>
-      <Card className="holographic-card p-6 transition-all duration-300 hover:scale-105">
-        <div className="space-y-4">
-          {meal.image_url && (
-            <div 
-              className="aspect-video overflow-hidden rounded-lg cursor-pointer"
-              onClick={openMealDetails}
-            >
-              <img 
-                src={meal.image_url} 
-                alt={meal.name} 
-                className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500"
-              />
-            </div>
-          )}
-          <div className="flex justify-between items-start">
-            <h3 
-              className="text-2xl font-bold text-quantum-cyan neon-text cursor-pointer"
-              onClick={openMealDetails}
-            >
-              {meal.name}
-            </h3>
-            <Button 
-              variant="ghost"
-              size="icon"
-              className="text-quantum-cyan"
-              onClick={openMealDetails}
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-          </div>
-          <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-bold text-quantum-cyan">{(meal.price * 50).toFixed(2)} EGP</span>
-            <span className="text-sm text-galaxy-purple">{meal.calories} kcal</span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 bg-quantum-black/50 p-2 rounded-lg">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 text-quantum-cyan" 
-                onClick={decrementQuantity}
-                disabled={quantity <= 1}
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="w-6 text-center">{quantity}</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 text-quantum-cyan" 
-                onClick={incrementQuantity}
-                disabled={quantity >= 10}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button 
-              onClick={handleAddToCart}
-              className="cyber-button flex items-center justify-center gap-2"
-            >
-              <ShoppingCart className="w-4 w-4" />
-              Add to Cart
-            </Button>
-          </div>
-        </div>
-      </Card>
+    <motion.div 
+      className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <div className="relative overflow-hidden rounded-t-lg">
+        <img
+          src={meal.image_url}
+          alt={meal.name}
+          className="w-full h-48 object-cover transform hover:scale-110 transition-transform duration-300"
+        />
+      </div>
       
-      <MealDetails 
-        meal={meal}
-        isOpen={showDetails}
-        onClose={() => setShowDetails(false)}
-      />
-    </>
+      <div className="p-5 font-light">
+        <h3 className="text-xl font-semibold text-white mb-2 neon-text">{meal.name}</h3>
+        
+        {/* Add rating display */}
+        <div className="flex items-center mb-2">
+          {!loading && avgRating !== null && (
+            <>
+              <StarRating rating={avgRating} size="sm" showNumber />
+              <span className="ml-2 text-xs text-gray-400">
+                ({reviewCount})
+              </span>
+            </>
+          )}
+          {!loading && avgRating === null && (
+            <span className="text-xs text-gray-400">No reviews yet</span>
+          )}
+        </div>
+        
+        <p className="text-gray-300 mb-4">{meal.description}</p>
+        
+        <div className="mt-4 flex justify-between items-center">
+          <span className="text-quantum-cyan font-medium">${meal.price.toFixed(2)}</span>
+          
+          <button 
+            className="bg-quantum-cyan text-quantum-black py-2 px-4 rounded-full hover:bg-cyan-600 transition-colors duration-300"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 };

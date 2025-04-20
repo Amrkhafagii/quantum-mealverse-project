@@ -1,56 +1,71 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
+import Home from './pages/Home';
+import Customer from './pages/Customer';
+import MealDetails from './components/MealDetails';
+import Cart from './pages/Cart';
+import { CartProvider } from './context/CartContext';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Profile from './pages/Profile';
+import ProtectedRoute from './components/ProtectedRoute';
+import ReviewsManagement from './pages/Admin/ReviewsManagement';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
-import Customer from "./pages/Customer";
-import Cart from "./pages/Cart";
-import Shop from "./pages/Shop";
-import Subscription from "./pages/Subscription";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Checkout from "./pages/Checkout";
-import ThankYou from "./pages/ThankYou";
-import Profile from "./pages/Profile";
-import Orders from "./pages/Orders";
-import { CartProvider } from "@/contexts/CartContext";
+function App() {
+  const queryClient = new QueryClient();
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <CartProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/customer" element={<Customer />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/subscription" element={<Subscription />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/thank-you" element={<ThankYou />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/orders/:id" element={<Orders />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <div className="App">
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/customer" element={<Customer />} />
+              <Route path="/meals/:id" element={<MealDetails />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/checkout" 
+                element={
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/order-confirmation/:orderId" 
+                element={
+                  <ProtectedRoute>
+                    <OrderConfirmation />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Add the new admin reviews route */}
+              <Route path="/admin/reviews" element={<ReviewsManagement />} />
+              
+            </Routes>
+          </Router>
+          <Toaster position="top-right" />
+        </CartProvider>
+      </QueryClientProvider>
+    </div>
+  );
+}
 
 export default App;
