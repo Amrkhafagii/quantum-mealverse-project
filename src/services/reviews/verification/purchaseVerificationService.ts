@@ -15,16 +15,14 @@ interface OrderItemResponse {
 }
 
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
-  // Use type assertion to help TypeScript understand the response type
+  // Query order_items table to see if the user has purchased this meal
   const result = await supabase
     .from('order_items')
-    .select('id, meal_id, user_id')
+    .select('id, meal_id, user_id, order_id')
     .eq('meal_id', mealId)
     .eq('user_id', userId)
-    .limit(1) as Promise<OrderItemResponse>;
+    .limit(1);
     
-  const response = await result;
-  if (response.error) throw response.error;
-  return response.data !== null && response.data.length > 0;
+  if (result.error) throw result.error;
+  return result.data !== null && result.data.length > 0;
 };
-
