@@ -1,23 +1,32 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Define explicit interfaces for the query results
-interface OrderItem {
-  id: string;
-  meal_id: string;
-  user_id: string;
-  order_id: string;
-}
-
+/**
+ * Checks if a user has purchased a specific meal by querying the order_items table
+ * 
+ * @param userId The ID of the user
+ * @param mealId The ID of the meal
+ * @returns A boolean indicating whether the user has purchased the meal
+ */
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
-  // Query order_items table to see if the user has purchased this meal
-  const result = await supabase
-    .from('order_items')
-    .select('id, meal_id, user_id, order_id')
-    .eq('meal_id', mealId)
-    .eq('user_id', userId)
-    .limit(1);
+  try {
+    // Simple query to check if any matching records exist
+    const { data, error } = await supabase
+      .from('order_items')
+      .select('id')
+      .eq('meal_id', mealId)
+      .eq('user_id', userId)
+      .limit(1);
+      
+    if (error) {
+      console.error('Error checking verified purchase:', error);
+      throw error;
+    }
     
-  if (result.error) throw result.error;
-  return result.data !== null && result.data.length > 0;
+    // If we found at least one record, the user has purchased this meal
+    return Array.isArray(data) && data.length > 0;
+  } catch (err) {
+    console.error('Unexpected error in checkVerifiedPurchase:', err);
+    throw err;
+  }
 };
