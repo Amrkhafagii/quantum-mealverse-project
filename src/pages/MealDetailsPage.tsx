@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -63,7 +62,7 @@ const MealDetailsPage = () => {
     <div className="min-h-screen bg-quantum-black text-white">
       <Navbar />
       <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-        <div className="text-2xl text-quantum-cyan">Loading meal details...</div>
+        <div className="text-2xl text-quantum-cyan animate-pulse">Loading meal details...</div>
       </div>
       <Footer />
     </div>
@@ -84,15 +83,13 @@ const MealDetailsPage = () => {
       <ParticleBackground />
       <Navbar />
       
-      <main className="relative z-10 pt-24 pb-16 container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
-          <div>
-            <MealDetails 
-              meal={meal} 
-              onAddToCart={handleAddToCart}
-              restaurantId={restaurant?.id || ''}
-            />
-          </div>
+      <main className="relative z-10 container mx-auto px-4 py-24">
+        <div className="max-w-7xl mx-auto">
+          <MealDetails 
+            meal={meal} 
+            onAddToCart={handleAddToCart}
+            restaurantId={restaurant?.id || ''}
+          />
         </div>
       </main>
       
