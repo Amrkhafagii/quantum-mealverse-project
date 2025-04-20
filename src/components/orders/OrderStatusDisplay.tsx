@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 
 interface AssignmentStatus {
@@ -27,6 +27,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ order, a
     const expiresAt = new Date(assignmentStatus.expires_at).getTime();
     const totalTime = 5 * 60; // 5 minutes in seconds
     
+    // Define updateTimer inside the useEffect to avoid variable scope issues
     const updateTimer = () => {
       const now = Date.now();
       const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -35,16 +36,20 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ order, a
       // Calculate progress percentage (from 100% to 0%)
       const progressValue = (secondsLeft / totalTime) * 100;
       setProgress(progressValue);
-      
-      if (secondsLeft <= 0) {
+    };
+    
+    // Run immediately
+    updateTimer();
+    
+    // Then set up the interval
+    const timerInterval = setInterval(updateTimer, 1000);
+    
+    // Clean up function
+    return () => {
+      if (timerInterval) {
         clearInterval(timerInterval);
       }
     };
-    
-    updateTimer(); // Run immediately
-    const timerInterval = setInterval(updateTimer, 1000);
-    
-    return () => clearInterval(timerInterval);
   }, [assignmentStatus?.expires_at, order?.status]);
   
   const formatTime = (seconds: number): string => {
