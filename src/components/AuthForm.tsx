@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
-type AuthMode = 'login' | 'signup';
+interface AuthFormProps {
+  isRegister?: boolean;
+}
 
-export const AuthForm = () => {
-  const [mode, setMode] = useState<AuthMode>('login');
+export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
+  const [mode, setMode] = useState<'login' | 'signup'>(isRegister ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
