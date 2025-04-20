@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
 
+const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
+
 export const useCountdownTimer = (expiresAt: string | undefined) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
@@ -31,6 +33,7 @@ export const useCountdownTimer = (expiresAt: string | undefined) => {
 
   return {
     timeLeft,
+    totalTime: FIVE_MINUTES,
     formattedTime: formatTime(timeLeft)
   };
 };
