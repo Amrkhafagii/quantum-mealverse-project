@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { Building } from 'lucide-react';
 import { Order } from '@/types/order';
 import { AssignmentStatus } from '@/types/webhook';
-import { Progress } from "@/components/ui/progress";
 
 interface OrderStatusMessageProps {
   order: Order;
@@ -60,9 +58,6 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   };
 
   const statusMessage = getStatusMessage();
-  const showAttemptProgress = ['pending', 'awaiting_restaurant'].includes(order.status);
-  const attemptCount = assignmentStatus?.attempt_count || 1;
-  const progressValue = ((3 - attemptCount + 1) / 3) * 100;
 
   return (
     <div className="space-y-4">
@@ -77,9 +72,6 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
               <div className="flex justify-between items-center text-sm text-gray-400">
                 <span>{statusMessage.details}</span>
               </div>
-              {showAttemptProgress && (
-                <Progress value={progressValue} className="h-2" />
-              )}
             </div>
           )}
         </div>
