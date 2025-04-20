@@ -26,7 +26,7 @@ export const useReviewSubmission = () => {
     setIsSubmitting(true);
     
     try {
-      // Simplify query to avoid type issues
+      // Check for existing reviews - simplified query to avoid type issues
       const { data: existingReviews, error: checkError } = await supabase
         .from('reviews')
         .select('id')
@@ -41,7 +41,7 @@ export const useReviewSubmission = () => {
         return false;
       }
       
-      // Simplify query to avoid type issues
+      // Check if user has purchased the meal - simplified query
       const { data: orders, error: orderError } = await supabase
         .from('order_items')
         .select('order_id')
@@ -52,6 +52,7 @@ export const useReviewSubmission = () => {
       
       const isVerifiedPurchase = orders && orders.length > 0;
       
+      // Create review object
       const review = {
         user_id: user.id,
         meal_id: data.mealId,
@@ -63,6 +64,7 @@ export const useReviewSubmission = () => {
         status: 'pending' as const
       };
       
+      // Insert the review
       const { error } = await supabase
         .from('reviews')
         .insert(review);

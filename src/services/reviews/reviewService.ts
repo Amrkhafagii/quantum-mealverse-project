@@ -51,6 +51,7 @@ export const getMealReviews = async (mealId: string, restaurantId: string, page 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   
+  // Simplified query to avoid type issues
   const { data, error, count } = await supabase
     .from('reviews')
     .select('*', { count: 'exact' })
@@ -72,7 +73,7 @@ export const getMealReviews = async (mealId: string, restaurantId: string, page 
 
 // Get a meal's rating statistics for a specific restaurant
 export const getMealRatingStats = async (mealId: string, restaurantId: string) => {
-  // First try to get from cached ratings
+  // First try to get from cached ratings - simplified query
   const { data, error } = await supabase
     .from('meal_ratings')
     .select('*')
@@ -92,7 +93,7 @@ export const getMealRatingStats = async (mealId: string, restaurantId: string) =
     };
   }
   
-  // If no cached ratings exist yet, calculate from reviews
+  // If no cached ratings exist yet, calculate from reviews - simplified query
   const { data: reviewsData, error: reviewsError } = await supabase
     .from('reviews')
     .select('rating')
@@ -129,9 +130,10 @@ export const getMealRatingStats = async (mealId: string, restaurantId: string) =
 
 // Get a meal's global rating (across all restaurants)
 export const getGlobalMealRating = async (mealId: string) => {
+  // Simplified query to avoid type issues
   const { data, error } = await supabase
     .from('global_meal_ratings')
-    .select('*')
+    .select('avg_rating, review_count, rating_distribution')
     .eq('meal_id', mealId)
     .single();
     
@@ -147,7 +149,7 @@ export const getGlobalMealRating = async (mealId: string) => {
     };
   }
   
-  // Calculate on the fly if no cached data
+  // Calculate on the fly if no cached data - simplified query
   const { data: reviewsData, error: reviewsError } = await supabase
     .from('reviews')
     .select('rating')

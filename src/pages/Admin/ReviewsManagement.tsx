@@ -156,7 +156,7 @@ export const ReviewsManagement = () => {
           reviews.map((review) => (
             <AdminReviewCard
               key={review.id}
-              review={review as any}
+              review={review}
               onApprove={onApprove}
               onReject={onReject}
               onDelete={onDelete}

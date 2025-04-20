@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,7 @@ interface AdminReviewCardProps {
   review: Review;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onDelete?: (id: string) => void; // Added this missing prop
   isProcessing?: boolean;
 }
 
@@ -17,12 +19,13 @@ export const AdminReviewCard: React.FC<AdminReviewCardProps> = ({
   review,
   onApprove,
   onReject,
+  onDelete,
   isProcessing = false
 }) => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'outline'; // Changed from 'success' to use a valid variant
+        return 'outline'; // Using valid variant
       case 'rejected':
         return 'destructive';
       default:
@@ -82,6 +85,17 @@ export const AdminReviewCard: React.FC<AdminReviewCardProps> = ({
               Approve
             </Button>
           </>
+        )}
+        
+        {/* Add delete button if onDelete prop is provided */}
+        {onDelete && (
+          <Button 
+            variant="destructive" 
+            onClick={() => onDelete(review.id)}
+            disabled={isProcessing}
+          >
+            Delete
+          </Button>
         )}
       </CardFooter>
     </Card>
