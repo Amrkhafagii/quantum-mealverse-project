@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { supabase } from '@/integrations/supabase/client';
+import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -13,6 +16,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { addItem } = useCart();
 
   useEffect(() => {
     const fetchRating = async () => {
@@ -59,6 +63,14 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     }
   }, [meal.id]);
 
+  const handleAddToCart = () => {
+    addItem({
+      ...meal,
+      quantity: 1
+    });
+    toast.success(`${meal.name} added to cart!`);
+  };
+
   return (
     <motion.div 
       className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
@@ -97,6 +109,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
           
           <button 
             className="bg-quantum-cyan text-quantum-black py-2 px-4 rounded-full hover:bg-cyan-600 transition-colors duration-300"
+            onClick={handleAddToCart}
           >
             Add to Cart
           </button>
