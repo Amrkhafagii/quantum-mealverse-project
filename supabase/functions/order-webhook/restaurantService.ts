@@ -85,21 +85,6 @@ export async function logAssignmentAttempt(
   console.log(`Logging assignment attempt for order ${orderId} to restaurant ${restaurantId}`);
 
   try {
-    // Verify that the restaurant ID exists in the restaurants table first
-    if (restaurantId) {
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from('restaurants')
-        .select('id')
-        .eq('id', restaurantId)
-        .single();
-        
-      if (restaurantError) {
-        console.error('Error verifying restaurant existence:', restaurantError);
-        console.log('Proceeding with null restaurant_id for logging purposes');
-        restaurantId = null;
-      }
-    }
-
     const { data, error } = await supabase
       .from('restaurant_assignment_history')
       .insert({
