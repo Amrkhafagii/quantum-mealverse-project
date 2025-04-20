@@ -79,6 +79,13 @@ const ThankYou: React.FC = () => {
     return null;
   }
 
+  // Calculate the progress based on the attempt count
+  const getProgressValue = () => {
+    if (!assignmentStatus) return 33.33;
+    const { attempt_count } = assignmentStatus;
+    return ((3 - attempt_count + 1) / 3) * 100;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-quantum-black via-quantum-darkBlue to-quantum-black text-white relative">
       <ParticleBackground />
@@ -117,21 +124,26 @@ const ThankYou: React.FC = () => {
                   )}
 
                   <div className="max-w-md mx-auto space-y-6">
-                    {assignmentStatus?.expires_at && (
-                      <div className="flex justify-center">
-                        <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-2 mb-2 text-gray-300">
+                        <Clock className="h-5 w-5" />
+                        <span>Waiting for confirmation from Restaurant...</span>
                       </div>
-                    )}
-
-                    <div>
-                      <div className="flex justify-between items-center text-sm text-gray-400 mb-2">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>Waiting for confirmation from Restaurant...</span>
-                        </div>
+                      <div className="flex justify-between w-full text-sm mb-2">
+                        <span></span>
                         <span>Attempt {assignmentStatus?.attempt_count || 1} of 3</span>
                       </div>
-                      <Progress value={33.33} className="h-2" />
+                      
+                      {assignmentStatus?.expires_at && (
+                        <div className="mb-4">
+                          <CircularTimer timeLeft={timeLeft} totalTime={totalTime} />
+                        </div>
+                      )}
+
+                      <Progress 
+                        value={getProgressValue()} 
+                        className="h-2 w-full bg-gradient-to-r from-quantum-cyan to-quantum-purple" 
+                      />
                     </div>
 
                     <Button 

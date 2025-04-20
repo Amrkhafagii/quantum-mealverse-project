@@ -9,8 +9,13 @@ interface CircularTimerProps {
 export const CircularTimer: React.FC<CircularTimerProps> = ({ timeLeft, totalTime }) => {
   const radius = 35;
   const circumference = 2 * Math.PI * radius;
-  const progress = (timeLeft / totalTime) * 100;
+  const progress = Math.min(100, Math.max(0, (timeLeft / totalTime) * 100));
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  
+  // Format the time as MM:SS
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
   return (
     <div className="relative inline-flex items-center justify-center">
@@ -31,8 +36,8 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({ timeLeft, totalTim
           }}
         />
       </svg>
-      <div className="absolute font-mono text-2xl font-bold tracking-wider">
-        {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+      <div className="absolute font-mono text-2xl font-bold tracking-wider text-white">
+        {formattedTime}
       </div>
     </div>
   );
