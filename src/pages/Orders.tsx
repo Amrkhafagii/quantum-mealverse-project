@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
@@ -16,7 +16,22 @@ import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
 
 const Orders = () => {
   const { id: orderIdParam } = useParams();
+  const navigate = useNavigate();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
+  
+  // Update URL when selected order changes
+  useEffect(() => {
+    if (selectedOrderId) {
+      navigate(`/orders/${selectedOrderId}`, { replace: true });
+    }
+  }, [selectedOrderId, navigate]);
+  
+  // Set selected order from URL parameter
+  useEffect(() => {
+    if (orderIdParam) {
+      setSelectedOrderId(orderIdParam);
+    }
+  }, [orderIdParam]);
   
   const { data: session } = useQuery({
     queryKey: ['session'],

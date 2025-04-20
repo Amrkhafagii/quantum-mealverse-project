@@ -25,7 +25,11 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, order_items(*)')
+        .select(`
+          *, 
+          order_items(*),
+          restaurant:restaurants(id, name)
+        `)
         .eq('id', orderId)
         .single();
         
@@ -142,7 +146,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
           <div className="pt-2">
             <h3 className="text-lg font-medium mb-4">Order Items</h3>
             <div className="space-y-2">
-              {order.order_items.map((item: any) => (
+              {order.order_items && order.order_items.map((item: any) => (
                 <div key={item.id} className="flex justify-between items-center border-b border-gray-800 pb-2">
                   <div>
                     <span className="font-medium">{item.name}</span>

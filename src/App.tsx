@@ -78,6 +78,14 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/orders/:id" 
+                element={
+                  <ProtectedRoute>
+                    <Orders />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Admin routes */}
               <Route 

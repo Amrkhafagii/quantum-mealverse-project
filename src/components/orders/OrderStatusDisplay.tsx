@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Clock } from 'lucide-react';
+import { RefreshCw, Clock, Building } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -136,8 +137,15 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     
     return (
       <div className="space-y-2">
-        <p className="text-lg">{statusMessage}</p>
-        {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
+        <div className="flex items-start gap-2">
+          {order.status === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
+            <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
+          )}
+          <div>
+            <p className="text-lg">{statusMessage}</p>
+            {statusDetails && <p className="text-sm text-gray-400">{statusDetails}</p>}
+          </div>
+        </div>
         
         {(showTimer && assignmentStatus?.expires_at) || showCancelButton ? (
           <div className="space-y-4 mt-4">
