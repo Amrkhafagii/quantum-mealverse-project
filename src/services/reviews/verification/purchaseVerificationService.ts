@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Simple interface to type the query result
 interface OrderItemResult {
   id: string;
 }
@@ -14,23 +15,21 @@ interface OrderItemResult {
  */
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
   try {
-    // Break up the query chain to avoid deep type instantiation
-    const query = supabase.from('order_items');
-    const selection = query.select('id');
-    
-    // Apply filters separately
-    const result = await selection
+    // Use a simpler approach with explicit type assertion to avoid deep type instantiation
+    const { data, error } = await supabase
+      .from('order_items')
+      .select('id')
       .eq('meal_id', mealId)
       .eq('user_id', userId)
-      .limit(1);
+      .limit(1) as { data: OrderItemResult[] | null, error: any };
       
-    if (result.error) {
-      console.error('Error checking verified purchase:', result.error);
-      throw result.error;
+    if (error) {
+      console.error('Error checking verified purchase:', error);
+      throw error;
     }
     
     // Check if we found any records
-    return (result.data?.length ?? 0) > 0;
+    return Array.isArray(data) && data.length > 0;
   } catch (err) {
     console.error('Unexpected error in checkVerifiedPurchase:', err);
     throw err;
