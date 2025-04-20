@@ -6,6 +6,7 @@ import { StarRating } from './reviews/StarRating';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -17,6 +18,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchRating = async () => {
@@ -63,7 +65,10 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     }
   }, [meal.id]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    // Stop event propagation to prevent navigation when clicking the Add to Cart button
+    e.stopPropagation();
+    
     addItem({
       ...meal,
       quantity: 1
@@ -71,11 +76,16 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     toast.success(`${meal.name} added to cart!`);
   };
 
+  const navigateToMealDetails = () => {
+    navigate(`/meals/${meal.id}`);
+  };
+
   return (
     <motion.div 
-      className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
+      className="bg-quantum-black rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
+      onClick={navigateToMealDetails}
     >
       <div className="relative overflow-hidden rounded-t-lg">
         <img
