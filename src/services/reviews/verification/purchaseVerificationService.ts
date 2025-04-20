@@ -1,11 +1,29 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { PostgrestResponse } from '@supabase/supabase-js';
 
-// Define explicit interface for the query result
-interface OrderItemResult {
-  id: string;
+// Simple interface for the query result
+interface QueryResult {
+  exists: boolean;
 }
+
+/**
+ * Helper function to encapsulate the Supabase query logic
+ */
+const runPurchaseQuery = async (userId: string, mealId: string): Promise<QueryResult> => {
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('id')
+    .eq('meal_id', mealId)
+    .eq('user_id', userId)
+    .limit(1);
+
+  if (error) {
+    console.error('Error checking verified purchase:', error);
+    throw error;
+  }
+
+  return { exists: Array.isArray(data) && data.length > 0 };
+};
 
 /**
  * Checks if a user has purchased a specific meal by querying the order_items table
@@ -16,20 +34,8 @@ interface OrderItemResult {
  */
 export const checkVerifiedPurchase = async (userId: string, mealId: string): Promise<boolean> => {
   try {
-    // Assert the type early in the query chain
-    const result = await supabase
-      .from('order_items')
-      .select('id')
-      .eq('meal_id', mealId)
-      .eq('user_id', userId)
-      .limit(1) as PostgrestResponse<OrderItemResult[]>;
-      
-    if (result.error) {
-      console.error('Error checking verified purchase:', result.error);
-      throw result.error;
-    }
-    
-    return Array.isArray(result.data) && result.data.length > 0;
+    const result = await runPurchaseQuery(userId, mealId);
+    return result.exists;
   } catch (err) {
     console.error('Unexpected error in checkVerifiedPurchase:', err);
     throw err;
