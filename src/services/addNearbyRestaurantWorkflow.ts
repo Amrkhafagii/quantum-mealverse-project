@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { addNearbyRestaurants } from "@/services/nearbyRestaurantsService";
 
 // Helper to add location to user_location table (optional, more tracking)
 async function addUserLocation(userId: string, latitude: number, longitude: number) {
@@ -13,7 +12,7 @@ async function addUserLocation(userId: string, latitude: number, longitude: numb
 }
 
 // Helper to fetch restaurants nearby using Supabase SQL function, picking up to 3 closest
-async function findNearbyRestaurants(latitude: number, longitude: number, maxDistanceKm = 10) {
+export async function findNearbyRestaurants(latitude: number, longitude: number, maxDistanceKm = 10) {
   // Raw SQL RPC
   const { data, error } = await supabase.rpc('find_nearest_restaurant', {
     order_lat: latitude,
@@ -26,47 +25,44 @@ async function findNearbyRestaurants(latitude: number, longitude: number, maxDis
     return [];
   }
 
-  // Expecting each row: { restaurant_id, restaurant_name, restaurant_address, restaurant_email, distance_km }
-  return (data || []).slice(0, 3).map((row: any) => ({
-    restaurant_id: row.restaurant_id,
-    restaurant_latitude: null,  // We'll fetch separately, but not needed for join
-    restaurant_longitude: null,
-  }));
+  // Expecting each row: { restaurant_id, user_id, distance_km }
+  // Fetch restaurant details for the ids
+  const restaurantIds = (data || []).map((row: any) => row.restaurant_id);
+  if (!restaurantIds.length) return [];
+
+  const { data: restaurants, error: restError } = await supabase
+    .from('restaurants')
+    .select('id, name, latitude, longitude, address, email')
+    .in('id', restaurantIds);
+
+  if (restError) {
+    console.warn('Error while fetching restaurant details:', restError);
+    return [];
+  }
+
+  // Return joined restaurant/location
+  // Add the distance as well
+  return restaurantIds.map((id: string) => {
+    const row = (data || []).find((r: any) => r.restaurant_id === id);
+    const info = (restaurants || []).find((r: any) => r.id === id);
+    return {
+      ...info,
+      distance_km: row?.distance_km ?? null
+    };
+  });
 }
 
-// Workflow to run after user login
+// Workflow to run after user login: Just insert user location and optionally return nearby restaurants
 export async function addNearbyRestaurantForUser(latitude: number, longitude: number) {
   const sessionInfo = await supabase.auth.getSession();
   const userId = sessionInfo.data.session?.user?.id;
   if (!userId) throw new Error("User not authenticated");
 
-  // Optional: insert user location for tracking
+  // Insert user location for tracking
   await addUserLocation(userId, latitude, longitude);
 
-  // Get close restaurants for this location
-  const locations = await findNearbyRestaurants(latitude, longitude);
-
-  // For each location, fill in the restaurant lat/lng
-  // If you want actual lat/lng per restaurant, fetch those now
-  for (let loc of locations) {
-    if (!loc.restaurant_latitude || !loc.restaurant_longitude) {
-      const { data: rest } = await supabase
-        .from('restaurants')
-        .select('latitude,longitude')
-        .eq('id', loc.restaurant_id)
-        .maybeSingle();
-      if (rest) {
-        loc.restaurant_latitude = rest.latitude;
-        loc.restaurant_longitude = rest.longitude;
-      }
-    }
-  }
-
-  // Add parent and child records
-  await addNearbyRestaurants(
-    userId,
-    latitude,
-    longitude,
-    locations
-  );
+  // Optionally, fetch nearby restaurants (return to caller if needed)
+  // (You may use findNearbyRestaurants here if you want to show nearby restaurants to user)
+  // const nearby = await findNearbyRestaurants(latitude, longitude);
+  // return nearby;
 }
