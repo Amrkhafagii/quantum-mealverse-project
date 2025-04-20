@@ -86,9 +86,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
   };
 
-  // Calculate total amount
+  // Calculate total amount (in USD)
   const totalAmount = items.reduce((sum, item) => {
-    return sum + (item.meal.price * item.quantity * 50);
+    return sum + (item.meal.price * item.quantity);
   }, 0);
 
   // Calculate item count

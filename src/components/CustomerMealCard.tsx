@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Minus, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -22,6 +23,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   const navigate = useNavigate();
+  const { displayPrice } = useCurrencyConverter();
 
   useEffect(() => {
     const fetchRating = async () => {
@@ -109,6 +111,10 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
           src={meal.image_url}
           alt={meal.name}
           className="w-full h-48 object-cover transform hover:scale-110 transition-transform duration-300"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = `https://picsum.photos/seed/${meal.id}/300/200`;
+          }}
         />
       </div>
       
@@ -124,7 +130,10 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
             variant="ghost" 
             size="icon" 
             className="text-quantum-cyan hover:text-white"
-            onClick={navigateToMealDetails}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigateToMealDetails();
+            }}
           >
             <Info className="h-5 w-5" />
           </Button>
@@ -148,9 +157,9 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
         
         <div className="mt-4 flex flex-col space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-quantum-cyan font-medium">${meal.price.toFixed(2)}</span>
+            <span className="text-quantum-cyan font-medium">{displayPrice(meal.price)}</span>
             
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1" onClick={e => e.stopPropagation()}>
               <button 
                 className="bg-quantum-darkBlue text-quantum-cyan p-1 rounded-full hover:bg-quantum-cyan hover:text-quantum-black transition-colors"
                 onClick={decreaseQuantity}

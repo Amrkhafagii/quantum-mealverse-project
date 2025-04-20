@@ -15,7 +15,22 @@ const DEFAULT_EXCHANGE_RATES: ExchangeRates = {
   EUR: { rate: 0.92, symbol: '€' },
   GBP: { rate: 0.78, symbol: '£' },
   JPY: { rate: 109.25, symbol: '¥' },
-  CAD: { rate: 1.35, symbol: 'CA$' }
+  CAD: { rate: 1.35, symbol: 'CA$' },
+  EGP: { rate: 50, symbol: 'EGP' } // Adding Egyptian Pound
+};
+
+// Map of country codes to currencies
+const COUNTRY_TO_CURRENCY: { [key: string]: string } = {
+  'US': 'USD',
+  'GB': 'GBP',
+  'CA': 'CAD',
+  'JP': 'JPY',
+  'DE': 'EUR',
+  'FR': 'EUR',
+  'IT': 'EUR',
+  'ES': 'EUR',
+  'EG': 'EGP', // Egypt
+  // Add more mappings as needed
 };
 
 export const useCurrencyConverter = () => {
@@ -27,29 +42,30 @@ export const useCurrencyConverter = () => {
   useEffect(() => {
     const detectUserCurrency = async () => {
       try {
-        // In a real app, you would use an API to get the user's location
-        // For this example, we'll try to use the browser's language to guess
-        const browserLang = navigator.language;
+        // Try to detect user's country by timezone
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        let detectedCurrency = 'USD'; // Default
+
+        // Check if timezone contains a country code that we can map
+        if (timezone.includes('Cairo') || timezone.includes('Egypt')) {
+          detectedCurrency = 'EGP';
+        } else {
+          // Use navigator language as fallback
+          const browserLang = navigator.language;
+          
+          // Try to extract country code from language
+          const countryCode = browserLang.split('-')[1];
+          if (countryCode && COUNTRY_TO_CURRENCY[countryCode]) {
+            detectedCurrency = COUNTRY_TO_CURRENCY[countryCode];
+          } else if (browserLang.startsWith('ar')) {
+            // Arabic language might indicate Middle Eastern countries
+            detectedCurrency = 'EGP';
+          }
+        }
         
-        // Very simple mapping based on language
-        const currencyMap: { [key: string]: string } = {
-          'en-US': 'USD',
-          'en-GB': 'GBP',
-          'en-CA': 'CAD',
-          'ja': 'JPY',
-          'ja-JP': 'JPY',
-          'de': 'EUR',
-          'fr': 'EUR',
-          'it': 'EUR',
-          'es': 'EUR'
-        };
-        
-        // Default to USD if we can't determine
-        const detectedCurrency = currencyMap[browserLang] || 'USD';
+        // Set the detected currency
         setUserCurrency(detectedCurrency);
-        
-        // Fetch stored exchange rates (in real app, from supabase)
-        // Here we just use the defaults
+        console.log('Detected currency:', detectedCurrency);
         
       } catch (error) {
         console.error('Error detecting currency:', error);
@@ -78,6 +94,8 @@ export const useCurrencyConverter = () => {
     // Handle special formatting for some currencies
     if (currency === 'JPY') {
       return `${symbol}${Math.round(price)}`;
+    } else if (currency === 'EGP') {
+      return `${Math.round(price)} ${symbol}`;
     }
     
     return `${symbol}${price.toFixed(2)}`;

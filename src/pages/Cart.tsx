@@ -9,11 +9,13 @@ import { Card } from "@/components/ui/card";
 import { useCart } from '@/contexts/CartContext';
 import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, totalAmount, clearCart } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { displayPrice } = useCurrencyConverter();
 
   const handleCheckout = () => {
     navigate('/checkout');
@@ -55,7 +57,7 @@ const Cart = () => {
                         <h3 className="text-lg font-bold text-quantum-cyan">{item.meal.name}</h3>
                         <p className="text-sm text-gray-300 line-clamp-1">{item.meal.description}</p>
                         <div className="flex justify-between items-center mt-2">
-                          <span className="text-galaxy-purple">{(item.meal.price * 50).toFixed(2)} EGP</span>
+                          <span className="text-galaxy-purple">{displayPrice(item.meal.price)}</span>
                           <div className="flex items-center gap-2">
                             <Button 
                               variant="outline" 
@@ -115,7 +117,7 @@ const Cart = () => {
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>{totalAmount.toFixed(2)} EGP</span>
+                    <span>{displayPrice(totalAmount / 50)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Delivery</span>
@@ -124,7 +126,7 @@ const Cart = () => {
                   <div className="border-t border-quantum-cyan/20 pt-2 mt-2">
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span className="text-quantum-cyan">{totalAmount.toFixed(2)} EGP</span>
+                      <span className="text-quantum-cyan">{displayPrice(totalAmount / 50)}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
                       *Delivery fee will be calculated at checkout

@@ -14,7 +14,7 @@ import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 const MealDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
-  const { userCurrency, displayPrice } = useCurrencyConverter();
+  const { displayPrice } = useCurrencyConverter();
   
   const { data: meal, isLoading, error } = useQuery({
     queryKey: ['meal', id],
@@ -29,7 +29,7 @@ const MealDetailsPage = () => {
       
       // Generate placeholder image if image_url is null or empty
       if (!data.image_url) {
-        data.image_url = `https://picsum.photos/seed/${data.id}/300/200`;
+        data.image_url = `https://picsum.photos/seed/${data.id}/600/400`;
       }
       
       return data as MealType;
