@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from 'lucide-react';
+import { Calendar, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { OrderStatusTimeline } from './OrderStatusTimeline';
@@ -20,7 +20,7 @@ interface OrderTrackerProps {
 
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const [assignmentStatus, setAssignmentStatus] = React.useState<any>(null);
-  const { data: order, isLoading, refetch } = useOrderData(orderId);
+  const { data: order, isLoading, error, refetch } = useOrderData(orderId);
   const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
 
   React.useEffect(() => {
@@ -42,11 +42,35 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     }
   }, 5000);
   
-  if (isLoading || !order) {
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center py-8">Loading order details...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center py-8 space-y-4">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto" />
+            <p>There was an error loading your order details.</p>
+            <p className="text-sm text-gray-500">Please try again later or contact support.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!order) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center py-8">Order not found</div>
         </CardContent>
       </Card>
     );

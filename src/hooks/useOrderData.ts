@@ -7,25 +7,34 @@ export const useOrderData = (orderId: string) => {
   return useQuery({
     queryKey: ['order-details', orderId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *, 
-          order_items(*),
-          restaurant:restaurants(id, name)
-        `)
-        .eq('id', orderId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *, 
+            order_items(*),
+            restaurant:restaurants(id, name)
+          `)
+          .eq('id', orderId)
+          .maybeSingle();
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Ensure the restaurant property has the correct shape
-      const formattedData = {
-        ...data,
-        restaurant: data.restaurant || { id: '', name: '' }
-      };
-      
-      return formattedData as Order;
+        if (!data) {
+          throw new Error('Order not found');
+        }
+        
+        // Ensure the restaurant property has the correct shape
+        const formattedData = {
+          ...data,
+          restaurant: data.restaurant || { id: '', name: '' }
+        };
+        
+        return formattedData as Order;
+      } catch (error) {
+        console.error('Error fetching order data:', error);
+        throw error;
+      }
     },
     enabled: !!orderId,
     staleTime: 0,

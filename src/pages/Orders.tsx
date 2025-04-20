@@ -17,7 +17,14 @@ import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
 const Orders = () => {
   const { id: orderIdParam } = useParams();
   const navigate = useNavigate();
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  
+  // Update selected order when URL parameter changes
+  useEffect(() => {
+    if (orderIdParam) {
+      setSelectedOrderId(orderIdParam);
+    }
+  }, [orderIdParam]);
   
   // Update URL when selected order changes
   useEffect(() => {
@@ -25,13 +32,6 @@ const Orders = () => {
       navigate(`/orders/${selectedOrderId}`, { replace: true });
     }
   }, [selectedOrderId, navigate]);
-  
-  // Set selected order from URL parameter
-  useEffect(() => {
-    if (orderIdParam) {
-      setSelectedOrderId(orderIdParam);
-    }
-  }, [orderIdParam]);
   
   const { data: session } = useQuery({
     queryKey: ['session'],
@@ -79,6 +79,10 @@ const Orders = () => {
     enabled: !!session?.user?.id,
   });
 
+  const handleOrderSelect = (orderId: string) => {
+    setSelectedOrderId(orderId);
+  };
+
   if (!session) {
     return (
       <div className="min-h-screen bg-quantum-black text-white relative">
@@ -121,7 +125,7 @@ const Orders = () => {
               <ActiveOrdersList 
                 orders={orders || []} 
                 selectedOrderId={selectedOrderId}
-                onOrderSelect={setSelectedOrderId}
+                onOrderSelect={handleOrderSelect}
               />
               <PastOrdersList orders={pastOrders || []} />
             </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Package, CreditCard, Building } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { checkAssignmentStatus } from '@/integrations/webhook';
+import { checkAssignmentStatus } from '@/services/orders/webhookService';
 import { useQuery } from '@tanstack/react-query';
 
 interface ActiveOrdersListProps {
@@ -68,6 +68,11 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
     );
   }
   
+  const handleSelectOrder = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOrderSelect(orderId);
+  };
+  
   return (
     <>
       <h2 className="text-2xl font-bold text-quantum-cyan">Active Orders</h2>
@@ -107,7 +112,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-quantum-cyan" />
-                  <span>{order.order_items.length} items</span>
+                  <span>{order.order_items?.length || 0} items</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-quantum-cyan" />
@@ -117,10 +122,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOrderSelect(order.id);
-                    }}
+                    onClick={(e) => handleSelectOrder(order.id, e)}
                   >
                     View Details
                   </Button>
