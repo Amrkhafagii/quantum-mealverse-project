@@ -23,9 +23,7 @@ export async function updateOrderStatus(
 
 export async function handleAssignment(
   supabase: SupabaseClient,
-  orderId: string,
-  latitude: number,
-  longitude: number
+  orderId: string
 ) {
   const { data: assignmentCount, error: countError } = await supabase
     .from('restaurant_assignment_history')
@@ -50,20 +48,32 @@ export async function handleAssignment(
     
     return { 
       success: false, 
-      error: 'Maximum assignment attempts reached, order cancelled',
+      error: 'no_restaurants_available',
       retryAllowed: false
     };
   }
 
-  console.log(`Looking for restaurants near (${latitude}, ${longitude})`);
-  const nearestRestaurants = await findNearestRestaurants(supabase, latitude, longitude);
+  const { data: order } = await supabase
+    .from('orders')
+    .select('*, restaurant:restaurants(*)')
+    .eq('id', orderId)
+    .single();
+
+  if (!order) {
+    return { 
+      success: false, 
+      error: 'Order not found'
+    };
+  }
+
+  const nearestRestaurants = await findNearestRestaurants(supabase, order.restaurant?.latitude, order.restaurant?.longitude);
   
   if (!nearestRestaurants || nearestRestaurants.length === 0) {
     console.log('No restaurants available within range');
     await updateOrderStatus(supabase, orderId, 'no_restaurants_available');
     return { 
       success: false, 
-      error: 'No restaurants available within range'
+      error: 'no_restaurants_available'
     };
   }
 
@@ -82,7 +92,7 @@ export async function handleAssignment(
     await updateOrderStatus(supabase, orderId, 'no_available_restaurants');
     return { 
       success: false, 
-      error: 'No more available restaurants to try',
+      error: 'no_restaurants_available',
       retryAllowed: true
     };
   }

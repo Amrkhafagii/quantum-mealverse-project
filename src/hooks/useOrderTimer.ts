@@ -47,45 +47,27 @@ export const useOrderTimer = (
         if (secondsLeft === 0) {
           console.log('Timer expired, attempting reassignment...');
           try {
-            // Use default coordinates for London if no location is available
-            // This ensures the reassignment always has coordinates to work with
-            const defaultLat = 51.5074;
-            const defaultLng = -0.1278;
-            
-            // Try to get location from local storage
-            let latitude = defaultLat;
-            let longitude = defaultLng;
-            
-            const locationString = localStorage.getItem('lastKnownLocation');
-            if (locationString) {
-              try {
-                const locationData = JSON.parse(locationString);
-                if (locationData.latitude && locationData.longitude) {
-                  latitude = locationData.latitude;
-                  longitude = locationData.longitude;
-                  console.log('Using stored location:', { latitude, longitude });
-                }
-              } catch (err) {
-                console.warn('Error parsing stored location, using defaults:', err);
-              }
-            } else {
-              console.log('No stored location found, using default coordinates');
-            }
-            
-            // Send the reassignment webhook with the coordinates we have
-            const result = await sendOrderToWebhook(orderId, latitude, longitude);
+            const result = await sendOrderToWebhook(orderId);
             
             if (result.success) {
               console.log('Reassignment webhook sent successfully:', result);
-              toast({
-                title: "Checking other restaurants",
-                description: "Looking for another restaurant to fulfill your order...",
-              });
+              if (result.result?.error === 'no_restaurants_available') {
+                toast({
+                  title: "No Restaurants Available",
+                  description: "Unfortunately, no restaurants are available to fulfill your order at this time. Your order will be cancelled.",
+                  variant: "destructive"
+                });
+              } else {
+                toast({
+                  title: "Checking other restaurants",
+                  description: "Looking for another restaurant to fulfill your order...",
+                });
+              }
             } else {
               console.error('Error in reassignment:', result.error);
               toast({
-                title: "Reassignment issue",
-                description: "There was a problem finding another restaurant. We're still trying.",
+                title: "Order Issue",
+                description: "There was a problem with your order. It will be cancelled.",
                 variant: "destructive"
               });
             }
