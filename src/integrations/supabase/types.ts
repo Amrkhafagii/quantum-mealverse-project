@@ -315,6 +315,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_nearby_restaurants_id"
+            columns: ["nearby_restaurants_id"]
+            isOneToOne: false
+            referencedRelation: "user_locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "nearby_restaurant_locations_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false

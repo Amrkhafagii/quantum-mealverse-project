@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase/client';
 import { WebhookResponse, OrderAssignmentRequest, RestaurantResponseRequest } from '@/types/webhook';
 
@@ -142,13 +141,15 @@ export async function checkAssignmentStatus(orderId: string) {
       status: order?.status || 'unknown',
       assigned_restaurant_id: order?.restaurant_id,
       restaurant_name: restaurantName,
-      attempt_count: count || 0
+      attempt_count: count || 0,
+      expires_at: undefined
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);
     return {
       status: 'error',
-      attempt_count: 0
+      attempt_count: 0,
+      expires_at: undefined
     };
   }
 }

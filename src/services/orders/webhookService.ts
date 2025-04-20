@@ -146,8 +146,6 @@ export const checkAssignmentStatus = async (orderId: string) => {
         };
         const currentAttempt = attemptData.current_attempt || 0;
         const restaurants = attemptData.restaurants || [];
-        
-        // Next restaurants are those after the current attempt
         nextRestaurants = restaurants.slice(currentAttempt).map(r => ({
           id: r.restaurant_id,
           name: r.name
@@ -171,16 +169,14 @@ export const checkAssignmentStatus = async (orderId: string) => {
       }
     }
     
-    // If there's an active assignment, return its details
+    // If there's an active assignment, return its details, always including expires_at
     if (assignment) {
       const assignmentRestaurantName = getRestaurantName(assignment.restaurant);
-      
       console.log(`Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
         restaurant: assignmentRestaurantName,
         expires_at: assignment.expires_at
       });
-      
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
@@ -192,26 +188,29 @@ export const checkAssignmentStatus = async (orderId: string) => {
       };
     }
     
-    // If no active assignment but order exists, return order status
+    // If no active assignment but order exists, return order status (expires_at: undefined)
     if (order) {
       return {
         status: order.status || 'unknown',
         assigned_restaurant_id: order.restaurant_id,
         restaurant_name: restaurantName,
         attempt_count: count || 0,
-        next_restaurants: nextRestaurants
+        next_restaurants: nextRestaurants,
+        expires_at: undefined
       };
     }
     
     return {
       status: 'error',
-      attempt_count: 0
+      attempt_count: 0,
+      expires_at: undefined
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);
     return {
       status: 'error',
-      attempt_count: 0
+      attempt_count: 0,
+      expires_at: undefined
     };
   }
 };
