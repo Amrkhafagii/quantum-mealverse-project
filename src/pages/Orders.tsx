@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -16,19 +17,14 @@ import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
 const Orders = () => {
   const { id: orderIdParam } = useParams();
   const navigate = useNavigate();
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
   
+  // Only update URL when selectedOrderId changes and it's different from the URL parameter
   useEffect(() => {
-    if (orderIdParam) {
-      setSelectedOrderId(orderIdParam);
-    }
-  }, [orderIdParam]);
-  
-  useEffect(() => {
-    if (selectedOrderId) {
+    if (selectedOrderId && selectedOrderId !== orderIdParam) {
       navigate(`/orders/${selectedOrderId}`, { replace: true });
     }
-  }, [selectedOrderId, navigate]);
+  }, [selectedOrderId, orderIdParam, navigate]);
   
   const { data: session } = useQuery({
     queryKey: ['session'],
