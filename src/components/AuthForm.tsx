@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { addNearbyRestaurantForUser } from '@/services/addNearbyRestaurantWorkflow';
 
 interface AuthFormProps {
   isRegister?: boolean;
@@ -33,7 +33,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           title: "Success!",
           description: "Please check your email to verify your account.",
         });
-        // After successful signup, redirect to login
         setMode('login');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -41,8 +40,22 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           password,
         });
         if (error) throw error;
-        // After successful login, redirect to home
-        navigate('/');
+
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+              await addNearbyRestaurantForUser(pos.coords.latitude, pos.coords.longitude);
+            } catch (geoErr) {
+              console.error("Error adding nearby restaurant for user after login:", geoErr);
+            }
+            navigate('/');
+          }, (geoErr) => {
+            console.warn("User denied geolocation or error occurred:", geoErr);
+            navigate('/');
+          }, { timeout: 10000, enableHighAccuracy: true });
+        } else {
+          navigate('/');
+        }
       }
     } catch (error: any) {
       toast({
