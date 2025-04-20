@@ -151,11 +151,17 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       .single();
     
     if (assignment) {
-      // Handle the restaurant data properly to avoid type errors
-      const restaurantName = assignment.restaurant && 
-        typeof assignment.restaurant === 'object' && 
-        'name' in assignment.restaurant ? 
-        assignment.restaurant.name : 'Restaurant';
+      // Safely extract restaurant name with proper null checks
+      let restaurantName = 'Restaurant';
+      
+      if (assignment.restaurant && 
+          typeof assignment.restaurant === 'object') {
+        // Use type assertion to tell TypeScript the structure
+        const restaurantObj = assignment.restaurant as { id: string; name: string };
+        if (restaurantObj && 'name' in restaurantObj) {
+          restaurantName = restaurantObj.name;
+        }
+      }
         
       return {
         status: 'awaiting_response',
@@ -167,12 +173,17 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
       };
     }
     
-    // Handle the restaurant data properly to avoid type errors
-    const restaurantName = order && 
-      order.restaurant && 
-      typeof order.restaurant === 'object' && 
-      'name' in order.restaurant ? 
-      order.restaurant.name : 'Restaurant';
+    // Safely extract restaurant name from order with proper null checks
+    let restaurantName = 'Restaurant';
+    
+    if (order && order.restaurant && 
+        typeof order.restaurant === 'object') {
+      // Use type assertion to tell TypeScript the structure
+      const restaurantObj = order.restaurant as { id: string; name: string };
+      if (restaurantObj && 'name' in restaurantObj) {
+        restaurantName = restaurantObj.name;
+      }
+    }
     
     return {
       status: order?.status || 'unknown',
