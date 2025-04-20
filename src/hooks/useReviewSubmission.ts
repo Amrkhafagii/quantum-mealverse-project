@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Review } from '@/types/review';
+import { submitReview as submitReviewService } from '@/services/reviews/submission/reviewSubmissionService';
+import { hasUserReviewed } from '@/services/reviews/moderation/reviewModerationService';
 
 export interface ReviewSubmissionData {
   rating: number;
@@ -26,31 +27,24 @@ export const useReviewSubmission = () => {
     setIsSubmitting(true);
     
     try {
-      // Check for existing reviews - simplified query to avoid type issues
-      const { data: existingReviews, error: checkError } = await supabase
-        .from('reviews')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('meal_id', data.mealId)
-        .eq('restaurant_id', data.restaurantId);
+      // Check for existing reviews using our service function
+      const hasReviewed = await hasUserReviewed(user.id, data.mealId, data.restaurantId);
         
-      if (checkError) throw checkError;
-        
-      if (existingReviews && existingReviews.length > 0) {
+      if (hasReviewed) {
         toast.error('You have already reviewed this meal from this restaurant');
         return false;
       }
       
       // Check if user has purchased the meal - simplified query
-      const { data: orders, error: orderError } = await supabase
+      const { count, error: orderError } = await supabase
         .from('order_items')
-        .select('order_id')
+        .select('*', { count: 'exact', head: true })
         .eq('meal_id', data.mealId)
         .eq('user_id', user.id);
         
       if (orderError) throw orderError;
       
-      const isVerifiedPurchase = orders && orders.length > 0;
+      const isVerifiedPurchase = Boolean(count && count > 0);
       
       // Create review object
       const review = {
@@ -64,12 +58,8 @@ export const useReviewSubmission = () => {
         status: 'pending' as const
       };
       
-      // Insert the review
-      const { error } = await supabase
-        .from('reviews')
-        .insert(review);
-        
-      if (error) throw error;
+      // Use the service to submit the review
+      await submitReviewService(review);
       
       toast.success('Review submitted successfully!');
       return true;
