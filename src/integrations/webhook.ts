@@ -161,7 +161,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
           ? assignment.restaurant[0] 
           : assignment.restaurant as { id: string; name: string };
           
-        if (restaurantObj && 'name' in restaurantObj) {
+        if (restaurantObj && restaurantObj.name) {
           restaurantName = restaurantObj.name;
         }
       }
@@ -186,7 +186,7 @@ export async function checkAssignmentStatus(orderId: string): Promise<{
         ? orderData.restaurant[0] 
         : orderData.restaurant as { id: string; name: string };
         
-      if (restaurantObj && 'name' in restaurantObj) {
+      if (restaurantObj && restaurantObj.name) {
         restaurantName = restaurantObj.name;
       }
     }

@@ -128,7 +128,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
           ? assignment.restaurant[0] 
           : assignment.restaurant as { id: string; name: string };
           
-        if (restaurantObj && 'name' in restaurantObj) {
+        if (restaurantObj && restaurantObj.name) {
           restaurantName = restaurantObj.name;
         }
       }
@@ -152,7 +152,7 @@ export const checkAssignmentStatus = async (orderId: string) => {
         ? order.restaurant[0] 
         : order.restaurant as { id: string; name: string };
         
-      if (restaurantObj && 'name' in restaurantObj) {
+      if (restaurantObj && restaurantObj.name) {
         restaurantName = restaurantObj.name;
       }
     }
