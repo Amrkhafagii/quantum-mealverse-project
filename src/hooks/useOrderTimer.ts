@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
+import { useToast } from '@/hooks/use-toast';
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -9,6 +10,7 @@ export const useOrderTimer = (
 ) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState<number>(100);
+  const { toast } = useToast();
   
   useEffect(() => {
     console.log('OrderTimer Hook: Starting useEffect with expiresAt:', expiresAt);
@@ -45,15 +47,47 @@ export const useOrderTimer = (
         if (secondsLeft === 0) {
           console.log('Timer expired, attempting reassignment...');
           try {
-            // Get location from local storage
-            const location = localStorage.getItem('lastKnownLocation');
-            const { latitude, longitude } = location ? JSON.parse(location) : { latitude: null, longitude: null };
+            // Use default coordinates for London if no location is available
+            // This ensures the reassignment always has coordinates to work with
+            const defaultLat = 51.5074;
+            const defaultLng = -0.1278;
             
-            if (latitude && longitude) {
-              await sendOrderToWebhook(orderId, latitude, longitude);
-              console.log('Reassignment webhook sent successfully');
+            // Try to get location from local storage
+            let latitude = defaultLat;
+            let longitude = defaultLng;
+            
+            const locationString = localStorage.getItem('lastKnownLocation');
+            if (locationString) {
+              try {
+                const locationData = JSON.parse(locationString);
+                if (locationData.latitude && locationData.longitude) {
+                  latitude = locationData.latitude;
+                  longitude = locationData.longitude;
+                  console.log('Using stored location:', { latitude, longitude });
+                }
+              } catch (err) {
+                console.warn('Error parsing stored location, using defaults:', err);
+              }
             } else {
-              console.error('No location data available for reassignment');
+              console.log('No stored location found, using default coordinates');
+            }
+            
+            // Send the reassignment webhook with the coordinates we have
+            const result = await sendOrderToWebhook(orderId, latitude, longitude);
+            
+            if (result.success) {
+              console.log('Reassignment webhook sent successfully:', result);
+              toast({
+                title: "Checking other restaurants",
+                description: "Looking for another restaurant to fulfill your order...",
+              });
+            } else {
+              console.error('Error in reassignment:', result.error);
+              toast({
+                title: "Reassignment issue",
+                description: "There was a problem finding another restaurant. We're still trying.",
+                variant: "destructive"
+              });
             }
           } catch (error) {
             console.error('Error triggering reassignment:', error);
@@ -71,7 +105,7 @@ export const useOrderTimer = (
     } catch (error) {
       console.error('Error in timer calculation:', error);
     }
-  }, [expiresAt, orderId, onExpire]);
+  }, [expiresAt, orderId, onExpire, toast]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);

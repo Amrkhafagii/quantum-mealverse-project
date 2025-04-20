@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -24,6 +25,21 @@ const ThankYou = () => {
   const [loading, setLoading] = React.useState(true);
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [assignmentStatus, setAssignmentStatus] = React.useState<any>(null);
+
+  // Set default location coordinates if none exist
+  useEffect(() => {
+    const locationData = localStorage.getItem('lastKnownLocation');
+    if (!locationData) {
+      // Default coordinates for London
+      const defaultLocation = {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('lastKnownLocation', JSON.stringify(defaultLocation));
+      console.log('Set default location for reassignment', defaultLocation);
+    }
+  }, []);
 
   const fetchOrderDetails = async () => {
     if (!orderId) return;
