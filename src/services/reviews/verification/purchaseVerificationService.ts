@@ -1,18 +1,20 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/types/database';
 
-// Simple interface for the query result
+type OrderItem = Database['order_items']['Row'];
+
 interface QueryResult {
   exists: boolean;
 }
 
 /**
- * Helper function to encapsulate the Supabase query logic
+ * Helper function to encapsulate the Supabase query logic with proper typing
  */
 const runPurchaseQuery = async (userId: string, mealId: string): Promise<QueryResult> => {
   const { data, error } = await supabase
     .from('order_items')
-    .select('id')
+    .select<'id', Pick<OrderItem, 'id'>>('id')
     .eq('meal_id', mealId)
     .eq('user_id', userId)
     .limit(1);
