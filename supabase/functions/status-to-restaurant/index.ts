@@ -55,26 +55,13 @@ Deno.serve(async (req) => {
 
     console.log(`Forwarding status change: ${JSON.stringify(statusChange)}`);
 
-    // Process status change based on table type
-    let targetPayload;
-    if (statusChange.table === 'orders' && statusChange.status_column === 'status') {
-      // Adapting to the target webhook's expected format for orders
-      targetPayload = {
-        orderId: statusChange.record_id,
-        status: statusChange.new_status
-      };
-    } else {
-      // For other types of status changes, forward the original payload
-      targetPayload = statusChange;
-    }
-
     // Forward the status change to the target webhook
     const response = await fetch(TARGET_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(targetPayload)
+      body: JSON.stringify(statusChange)
     });
 
     if (!response.ok) {
