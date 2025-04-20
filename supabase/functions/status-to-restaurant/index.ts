@@ -55,13 +55,45 @@ Deno.serve(async (req) => {
 
     console.log(`Forwarding status change: ${JSON.stringify(statusChange)}`);
 
+    // Process status change based on table type to match the expected format
+    let targetPayload;
+    if (statusChange.table === 'orders' && statusChange.status_column === 'status') {
+      // Get location data for the order to provide required latitude and longitude
+      const { data: orderLocation } = await supabase
+        .from('order_locations')
+        .select('latitude, longitude')
+        .eq('order_id', statusChange.record_id)
+        .maybeSingle();
+      
+      // Default coordinates if none are found
+      const latitude = orderLocation?.latitude || 0;
+      const longitude = orderLocation?.longitude || 0;
+      
+      // Adapting to the target webhook's expected format for orders
+      targetPayload = {
+        order_id: statusChange.record_id,
+        status: statusChange.new_status,
+        latitude,
+        longitude,
+        action: 'status_update'
+      };
+    } else {
+      // For other types of status changes, add default fields needed by order-webhook
+      targetPayload = {
+        ...statusChange,
+        order_id: statusChange.record_id,
+        latitude: 0,
+        longitude: 0
+      };
+    }
+
     // Forward the status change to the target webhook
     const response = await fetch(TARGET_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(statusChange)
+      body: JSON.stringify(targetPayload)
     });
 
     if (!response.ok) {
