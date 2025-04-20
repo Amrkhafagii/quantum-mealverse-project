@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
@@ -9,6 +9,7 @@ import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GlobalMealRating {
   avg_rating: number;
