@@ -4,3 +4,6 @@ project_id = "hozgutjvbrljeijybnyg"
 
 [functions.status-to-customer]
 verify_jwt = false
+
+[functions.status-to-restaurant]
+verify_jwt = false
