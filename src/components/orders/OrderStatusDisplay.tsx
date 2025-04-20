@@ -20,7 +20,8 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   console.log('OrderStatusDisplay Render:', {
     order: order.id,
     status: order.status,
-    assignmentStatus: assignmentStatus
+    assignmentStatus: assignmentStatus,
+    expiresAt: assignmentStatus?.expires_at
   });
 
   const showTimer = ['pending', 'awaiting_restaurant'].includes(order.status);
@@ -30,7 +31,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     <div className="space-y-2">
       <OrderStatusMessage order={order} assignmentStatus={assignmentStatus} />
       
-      {(showTimer && assignmentStatus?.expires_at) && (
+      {(showTimer && assignmentStatus && assignmentStatus.expires_at) && (
         <div className="border border-gray-700 bg-gray-900 rounded-md p-4 mt-4">
           <OrderTimer expiresAt={assignmentStatus.expires_at} />
         </div>

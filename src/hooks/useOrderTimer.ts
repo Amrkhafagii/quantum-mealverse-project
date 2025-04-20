@@ -14,32 +14,41 @@ export const useOrderTimer = (expiresAt: string | undefined) => {
       return;
     }
     
-    const expiresAtTime = new Date(expiresAt).getTime();
-    const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
-    
-    const updateTimer = () => {
-      const now = Date.now();
-      const secondsLeft = Math.max(0, Math.floor((expiresAtTime - now) / 1000));
-      setTimeLeft(secondsLeft);
+    try {
+      const expiresAtTime = new Date(expiresAt).getTime();
+      if (isNaN(expiresAtTime)) {
+        console.error('Invalid expiration time format:', expiresAt);
+        return;
+      }
       
-      // Calculate progress as percentage of time remaining from 5 minutes
-      const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
-      setProgress(Math.max(0, Math.min(100, progressValue)));
+      const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
       
-      // Detailed logging
-      console.log(`Timer Details:
-        - Expires At: ${new Date(expiresAtTime).toISOString()}
-        - Current Time: ${new Date(now).toISOString()}
-        - Seconds Left: ${secondsLeft}s
-        - Progress: ${progressValue.toFixed(1)}%`);
-    };
-    
-    updateTimer();
-    const timerInterval = setInterval(updateTimer, 1000);
-    
-    return () => {
-      clearInterval(timerInterval);
-    };
+      const updateTimer = () => {
+        const now = Date.now();
+        const secondsLeft = Math.max(0, Math.floor((expiresAtTime - now) / 1000));
+        setTimeLeft(secondsLeft);
+        
+        // Calculate progress as percentage of time remaining from 5 minutes
+        const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
+        setProgress(Math.max(0, Math.min(100, progressValue)));
+        
+        // Detailed logging
+        console.log(`Timer Details:
+          - Expires At: ${new Date(expiresAtTime).toISOString()}
+          - Current Time: ${new Date(now).toISOString()}
+          - Seconds Left: ${secondsLeft}s
+          - Progress: ${progressValue.toFixed(1)}%`);
+      };
+      
+      updateTimer();
+      const timerInterval = setInterval(updateTimer, 1000);
+      
+      return () => {
+        clearInterval(timerInterval);
+      };
+    } catch (error) {
+      console.error('Error in timer calculation:', error);
+    }
   }, [expiresAt]);
 
   const formatTime = (seconds: number): string => {

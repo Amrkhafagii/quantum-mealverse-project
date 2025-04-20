@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
@@ -10,6 +10,10 @@ interface OrderTimerProps {
 
 export const OrderTimer: React.FC<OrderTimerProps> = ({ expiresAt }) => {
   const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt);
+  
+  useEffect(() => {
+    console.log('OrderTimer Component Mounted with expiresAt:', expiresAt);
+  }, [expiresAt]);
 
   return (
     <div className="space-y-3">
