@@ -14,13 +14,17 @@ import { useInterval } from '@/hooks/use-interval';
 import { useCountdownTimer } from '@/hooks/useCountdownTimer';
 import { CircularTimer } from '@/components/orders/status/CircularTimer';
 import { Progress } from "@/components/ui/progress";
+import { useToast } from '@/hooks/use-toast';
+import { cancelOrder } from '@/services/orders/orderService';
 
 const ThankYou: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order');
   const [order, setOrder] = React.useState<Order | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [isCancelling, setIsCancelling] = React.useState(false);
 
   const [assignmentStatus, setAssignmentStatus] = React.useState<{
     status: string;
@@ -54,6 +58,29 @@ const ThankYou: React.FC = () => {
       console.error('Error fetching order:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!orderId || isCancelling) return;
+    
+    setIsCancelling(true);
+    try {
+      await cancelOrder(orderId);
+      toast({
+        title: "Order cancelled",
+        description: "Your order has been cancelled successfully."
+      });
+      fetchOrderDetails(); // Refresh order data after cancellation
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel the order. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -149,9 +176,10 @@ const ThankYou: React.FC = () => {
                     <Button 
                       variant="destructive" 
                       className="w-full" 
-                      onClick={() => {/* implement cancel logic */}}
+                      onClick={handleCancelOrder}
+                      disabled={isCancelling}
                     >
-                      Cancel Order
+                      {isCancelling ? 'Cancelling...' : 'Cancel Order'}
                     </Button>
                   </div>
                 </div>

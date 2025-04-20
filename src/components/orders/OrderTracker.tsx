@@ -23,6 +23,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const { data: order, isLoading, error, refetch } = useOrderData(orderId);
   const { timeLeft, progress, formattedTime } = useOrderTimer(assignmentStatus?.expires_at);
 
+  // Fetch assignment status when order data changes or initially loads
   React.useEffect(() => {
     if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
@@ -31,12 +32,13 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     }
   }, [orderId, order?.status]);
 
+  // Periodically check status for pending orders
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
-          refetch();
+          refetch(); // Refresh order data to ensure status is in sync
         })
         .catch(err => console.error('Error checking assignment status:', err));
     }

@@ -357,7 +357,76 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "order_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "order_assignments_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_history: {
+        Row: {
+          created_at: string
+          details: Json | null
+          expired_at: string | null
+          id: string
+          order_id: string
+          restaurant_id: string
+          restaurant_name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          expired_at?: string | null
+          id?: string
+          order_id: string
+          restaurant_id: string
+          restaurant_name: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          expired_at?: string | null
+          id?: string
+          order_id?: string
+          restaurant_id?: string
+          restaurant_name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_order_history_order"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_order_history_restaurant"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_history_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"

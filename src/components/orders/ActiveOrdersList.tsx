@@ -24,7 +24,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
   
   // Fetch assignment status for all awaiting_restaurant orders
   const awaitingRestaurantOrders = orders.filter(order => 
-    order.status === 'awaiting_restaurant'
+    ['pending', 'awaiting_restaurant'].includes(order.status)
   ).map(order => order.id);
   
   // Use React Query to fetch all assignment statuses in parallel
@@ -49,7 +49,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
       return results;
     },
     enabled: awaitingRestaurantOrders.length > 0,
-    refetchInterval: 10000 // Refetch every 10 seconds
+    refetchInterval: 5000 // Refresh every 5 seconds to match other components
   });
   
   const assignmentStatuses = assignmentStatusQueries.data || {};
@@ -102,7 +102,7 @@ export const ActiveOrdersList: React.FC<ActiveOrdersListProps> = ({
                   <span>{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
                 </div>
                 
-                {order.status === 'awaiting_restaurant' && orderAssignmentStatus?.restaurant_name && (
+                {['pending', 'awaiting_restaurant'].includes(order.status) && orderAssignmentStatus?.restaurant_name && (
                   <div className="flex items-center gap-1 mt-1 text-quantum-cyan">
                     <Building className="h-3 w-3" />
                     <span>{orderAssignmentStatus.restaurant_name}</span>
