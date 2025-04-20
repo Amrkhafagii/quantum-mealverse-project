@@ -1,4 +1,3 @@
-
 // Generated types from Supabase database schema
 export type Json =
   | string
@@ -50,7 +49,7 @@ export type Database = {
   meal_ratings: {
     Row: {
       meal_id: string
-      restaurant_id: string
+      restaurant_id: string // uuid, references restaurants.id
       avg_rating: number
       review_count: number
       rating_distribution: Json | null
@@ -58,7 +57,7 @@ export type Database = {
     }
     Insert: {
       meal_id: string
-      restaurant_id: string
+      restaurant_id: string // uuid
       avg_rating: number
       review_count: number
       rating_distribution?: Json | null
@@ -116,7 +115,7 @@ export type Database = {
       id: string
       user_id: string
       meal_id: string
-      restaurant_id: string
+      restaurant_id: string    // uuid, references restaurants.id
       rating: number
       comment: string | null
       images: string[] | null
@@ -129,7 +128,7 @@ export type Database = {
     Insert: {
       user_id: string
       meal_id: string
-      restaurant_id: string
+      restaurant_id: string    // uuid, references restaurants.id
       rating: number
       comment?: string | null
       images?: string[] | null
@@ -140,7 +139,7 @@ export type Database = {
     Update: {
       user_id?: string
       meal_id?: string
-      restaurant_id?: string
+      restaurant_id?: string    // uuid, references restaurants.id
       rating?: number
       comment?: string | null
       images?: string[] | null
@@ -152,7 +151,7 @@ export type Database = {
       id: string
       user_id: string
       meal_id: string
-      restaurant_id: string
+      restaurant_id: string    // uuid, references restaurants.id
       rating: number
       comment: string | null
       images: string[] | null
@@ -166,8 +165,8 @@ export type Database = {
   restaurant_assignments: {
     Row: {
       id: string
-      restaurant_id: string
-      order_id: string
+      restaurant_id: string // uuid, references restaurants.id
+      order_id: string      // uuid, references orders.id
       status: string
       expires_at: string
       created_at: string
@@ -175,8 +174,8 @@ export type Database = {
       notes: string | null
     }
     Insert: {
-      restaurant_id: string
-      order_id: string
+      restaurant_id: string // uuid, references restaurants.id
+      order_id: string      // uuid, references orders.id
       status?: string
       expires_at: string
       notes?: string | null
@@ -190,7 +189,7 @@ export type Database = {
     }
     Select: {
       id: string
-      restaurant_id: string
+      restaurant_id: string // uuid
       order_id: string
       status: string
       expires_at: string
@@ -242,7 +241,7 @@ export type Database = {
       meal_ratings: {
         Row: {
           meal_id: string
-          restaurant_id: string
+          restaurant_id: string // uuid, references restaurants.id
           avg_rating: number
           review_count: number
           rating_distribution: Json | null
@@ -250,7 +249,7 @@ export type Database = {
         }
         Insert: {
           meal_id: string
-          restaurant_id: string
+          restaurant_id: string // uuid
           avg_rating: number
           review_count: number
           rating_distribution?: Json | null
@@ -308,7 +307,7 @@ export type Database = {
           id: string
           user_id: string
           meal_id: string
-          restaurant_id: string
+          restaurant_id: string    // uuid, references restaurants.id
           rating: number
           comment: string | null
           images: string[] | null
@@ -321,7 +320,7 @@ export type Database = {
         Insert: {
           user_id: string
           meal_id: string
-          restaurant_id: string
+          restaurant_id: string    // uuid, references restaurants.id
           rating: number
           comment?: string | null
           images?: string[] | null
@@ -332,7 +331,7 @@ export type Database = {
         Update: {
           user_id?: string
           meal_id?: string
-          restaurant_id?: string
+          restaurant_id?: string    // uuid, references restaurants.id
           rating?: number
           comment?: string | null
           images?: string[] | null
@@ -344,7 +343,7 @@ export type Database = {
           id: string
           user_id: string
           meal_id: string
-          restaurant_id: string
+          restaurant_id: string    // uuid, references restaurants.id
           rating: number
           comment: string | null
           images: string[] | null
@@ -358,8 +357,8 @@ export type Database = {
       restaurant_assignments: {
         Row: {
           id: string
-          restaurant_id: string
-          order_id: string
+          restaurant_id: string // uuid, references restaurants.id
+          order_id: string      // uuid, references orders.id
           status: string
           expires_at: string
           created_at: string
@@ -367,8 +366,8 @@ export type Database = {
           notes: string | null
         }
         Insert: {
-          restaurant_id: string
-          order_id: string
+          restaurant_id: string // uuid, references restaurants.id
+          order_id: string      // uuid, references orders.id
           status?: string
           expires_at: string
           notes?: string | null
@@ -382,7 +381,7 @@ export type Database = {
         }
         Select: {
           id: string
-          restaurant_id: string
+          restaurant_id: string // uuid
           order_id: string
           status: string
           expires_at: string
