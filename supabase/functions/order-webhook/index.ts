@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -30,20 +31,18 @@ Deno.serve(async (req) => {
     const requestData = await req.json();
     console.log('Received webhook request:', requestData);
 
-    if (!requestData.order_id) {
+    if (!requestData.order_id || !requestData.latitude || !requestData.longitude) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Missing required field: order_id' 
+          error: 'Missing required fields: order_id, latitude, longitude' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    const { order_id } = requestData;
+    const { order_id, latitude, longitude } = requestData;
     const action = requestData.action || 'assign';
-    const latitude = requestData.latitude;
-    const longitude = requestData.longitude;
 
     if (action === 'accept' || action === 'reject') {
       if (!requestData.restaurant_id || !requestData.assignment_id) {
