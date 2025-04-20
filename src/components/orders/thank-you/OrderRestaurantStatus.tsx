@@ -1,10 +1,7 @@
 
 import React from 'react';
 import { Building, Clock } from 'lucide-react';
-import { Progress } from "@/components/ui/progress";
-import { CircularTimer } from '@/components/orders/status/CircularTimer';
 import { Button } from "@/components/ui/button";
-import { useCountdownTimer } from '@/hooks/useCountdownTimer';
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
 
 interface OrderRestaurantStatusProps {
@@ -13,7 +10,7 @@ interface OrderRestaurantStatusProps {
   assignmentStatus: any;
   isCancelling: boolean;
   onCancel: () => void;
-  orderId?: string; // Adding orderId prop
+  orderId?: string;
 }
 
 export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
@@ -22,20 +19,12 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   assignmentStatus,
   isCancelling,
   onCancel,
-  orderId // Receive the orderId prop
+  orderId
 }) => {
-  const { timeLeft, totalTime } = useCountdownTimer(assignmentStatus?.expires_at);
-  const getProgressValue = () => {
-    if (!assignmentStatus) return 33.33;
-    const { attempt_count } = assignmentStatus;
-    return ((3 - attempt_count + 1) / 3) * 100;
-  };
-  
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
 
   const handleTimerExpire = () => {
     console.log('Timer expired, refreshing order status...');
-    // We don't have onOrderUpdate here, but we could potentially refresh data another way
   };
 
   return (
@@ -53,10 +42,6 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             <Clock className="h-5 w-5" />
             <span>Waiting for confirmation from Restaurant...</span>
           </div>
-          <div className="flex justify-between w-full text-sm mb-2">
-            <span></span>
-            <span>Attempt {assignmentStatus?.attempt_count || 1} of 3</span>
-          </div>
           
           {assignmentStatus?.expires_at && (
             <div className="w-full mb-6">
@@ -67,11 +52,6 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
               />
             </div>
           )}
-
-          <Progress 
-            value={getProgressValue()} 
-            className="h-2 w-full bg-gradient-to-r from-quantum-cyan to-quantum-purple" 
-          />
         </div>
 
         <Button 
