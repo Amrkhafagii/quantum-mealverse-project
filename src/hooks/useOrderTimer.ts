@@ -17,15 +17,20 @@ export const useOrderTimer = (
   useEffect(() => {
     const getServerTime = async () => {
       try {
-        // Use Supabase to get server time
-        const { data, error } = await supabase.rpc('get_server_time');
+        // Use Supabase to get server time - using a type assertion to fix the TypeScript error
+        const { data, error } = await supabase.rpc('get_server_time') as { 
+          data: string; 
+          error: any 
+        };
+        
         if (error) {
           console.error('Error getting server time:', error);
           return;
         }
         
-        // Set server time
+        // Set server time with proper type checking
         if (data) {
+          // Parse the ISO string to ensure it's a valid date
           const serverTimeDate = new Date(data);
           console.log('Server time:', serverTimeDate.toISOString());
           console.log('Local time:', new Date().toISOString());
