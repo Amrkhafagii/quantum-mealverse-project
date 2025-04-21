@@ -3,13 +3,17 @@ import { useEffect } from 'react';
 import { forceExpireAssignments, checkExpiredAssignments } from '@/services/orders/webhookService';
 import { logApiCall } from '@/services/loggerService';
 
+/**
+ * This hook handles expired assignment checks.
+ * It performs an initial check and handles timer expiration.
+ */
 export const useExpiredAssignments = (
   orderId: string | undefined,
   expiresAt: string | undefined,
   isExpired: boolean,
   onTimerExpire?: () => void
 ) => {
-  // Initial check for expired assignments
+  // Initial check for expired assignments - only runs once when component mounts
   useEffect(() => {
     if (!orderId || !expiresAt) return;
 
@@ -19,18 +23,22 @@ export const useExpiredAssignments = (
         const expiryTime = new Date(expiresAt);
         const now = new Date();
         
+        // This is now mainly for UI consistency - the server will handle actual expiration
         if (expiryTime < now) {
-          console.log('Assignment appears to be expired by timestamp, forcing expiration');
-          const result = await forceExpireAssignments(orderId);
-          console.log('Force expiration result:', result);
+          console.log('Assignment appears to be expired by timestamp, checking server status');
           
-          await logApiCall('initial-expired-force', { 
+          // Call the server to check expired assignments
+          await checkExpiredAssignments();
+          
+          // Log the check
+          await logApiCall('initial-expired-check', { 
             orderId, 
             expiresAt,
             currentTime: now.toISOString()
-          }, result);
+          }, { success: true });
           
-          if (result.success && onTimerExpire) {
+          // If the assignment should be expired, refresh UI
+          if (onTimerExpire) {
             onTimerExpire();
           }
         }
@@ -48,26 +56,17 @@ export const useExpiredAssignments = (
 
     const handleExpiration = async () => {
       try {
-        const result = await forceExpireAssignments(orderId);
-        await logApiCall('timer-expired-direct-update', { orderId }, result);
+        // This function now mainly ensures UI consistency with server state
+        // The server should already be updating expired assignments independently
+        console.log('Timer expired in UI - verifying with server');
         
-        if (!result.success) {
-          const webhookResult = await checkExpiredAssignments();
-          await logApiCall('timer-expired-webhook', { orderId }, webhookResult);
-        }
+        const webhookResult = await checkExpiredAssignments();
+        await logApiCall('timer-expired-check', { orderId }, webhookResult);
       } catch (error) {
         console.error('Error handling timer expiration:', error);
-        
-        setTimeout(async () => {
-          try {
-            const finalResult = await forceExpireAssignments(orderId);
-            await logApiCall('timer-expired-final-attempt', { orderId }, finalResult);
-          } catch (finalError) {
-            console.error('Final attempt also failed:', finalError);
-          }
-        }, 2000);
       }
       
+      // Update UI regardless
       onTimerExpire();
     };
 
