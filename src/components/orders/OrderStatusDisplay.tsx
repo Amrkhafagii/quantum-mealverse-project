@@ -1,103 +1,113 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Order } from '@/types/order';
-import { OrderTimer } from './status/OrderTimer';
-import { OrderStatusMessage } from './status/OrderStatusMessage';
-import { CancelOrderButton } from './status/CancelOrderButton';
-import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from '@/components/ui/button';
-import { Info, AlertTriangle } from 'lucide-react';
-import { simulateRestaurantResponse } from '@/services/orders/webhookService';
-import { toast } from '@/hooks/use-toast';
+import { OrderRestaurantStatus } from './thank-you/OrderRestaurantStatus';
+import { cancelOrder } from '@/services/orders/orderService';
+import { toast } from 'sonner';
+import { useRouter } from 'react-router-dom';
+import { checkAssignmentStatus } from '@/services/orders/webhookService';
 
 interface OrderStatusDisplayProps {
   order: Order;
   assignmentStatus: any;
-  onOrderUpdate: () => void;
+  onOrderUpdate?: () => void;
 }
 
 export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ 
   order, 
-  assignmentStatus,
-  onOrderUpdate
+  assignmentStatus, 
+  onOrderUpdate 
 }) => {
-  if (!order) return null;
+  const [isCancelling, setIsCancelling] = useState(false);
+  const router = useRouter();
 
-  // Only check for pending/awaiting_restaurant status
-  const isPendingOrAwaitingRestaurant = order.status === 'pending' || order.status === 'awaiting_restaurant';
-  const isNoRestaurantAccepted = order.status === 'no_restaurant_accepted';
+  const handleCancelOrder = async () => {
+    if (isCancelling) return;
+    
+    try {
+      setIsCancelling(true);
+      
+      // First check if all assignments are expired
+      const updatedStatus = await checkAssignmentStatus(order.id);
+      
+      // If there are no pending assignments, no need to cancel
+      if (updatedStatus && updatedStatus.pending_count === 0) {
+        toast.error('Cannot cancel order - all restaurant assignments have expired or been rejected');
+        return;
+      }
+      
+      await cancelOrder(order.id);
+      toast.success('Order cancelled successfully');
+      onOrderUpdate?.();
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('Failed to cancel order');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
-  if (isPendingOrAwaitingRestaurant || isNoRestaurantAccepted) {
+  // Only show restaurant selection status for pending or awaiting_restaurant orders
+  if (['pending', 'awaiting_restaurant'].includes(order.status)) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          {assignmentStatus?.status === 'awaiting_response' && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium">Waiting for restaurant confirmation</h3>
-                  <p className="text-sm text-gray-500">Restaurant: {assignmentStatus.restaurant_name}</p>
-                </div>
-                {assignmentStatus.expires_at && (
-                  <div className="ml-4 w-64 max-w-xs">
-                    <OrderTimer 
-                      expiresAt={assignmentStatus.expires_at}
-                      orderId={order.id!}
-                      onTimerExpire={onOrderUpdate}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {isNoRestaurantAccepted && (
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              <AlertTitle className="text-amber-800">No restaurant available</AlertTitle>
-              <AlertDescription className="text-amber-700">
-                We're sorry, all restaurants are currently busy or unavailable. 
-                Please try again later or choose a different delivery location.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {(!assignmentStatus || assignmentStatus.status === 'error' || 
-           (assignmentStatus.status !== 'awaiting_response' && 
-            !isNoRestaurantAccepted)) && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>Processing your order</AlertTitle>
-              <AlertDescription>
-                We're finding a restaurant to prepare your order...
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="mt-4">
-            <CancelOrderButton 
-              orderId={order.id!} 
-              onCancelSuccess={onOrderUpdate}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <OrderRestaurantStatus 
+        status={order.status}
+        restaurantName={order.restaurant?.name}
+        assignmentStatus={assignmentStatus}
+        isCancelling={isCancelling}
+        onCancel={handleCancelOrder}
+        orderId={order.id}
+      />
     );
   }
 
-  return (
-    <div>
-      {['processing', 'preparing', 'ready_for_pickup', 'out_for_delivery'].includes(order.status) && (
-        <div className="mb-4">
-          <OrderTimer orderId={order.id!} />
-        </div>
-      )}
+  // Handle different order statuses
+  let statusMessage = '';
+  let statusDetails = '';
 
-      <OrderStatusMessage 
-        order={order}
-        assignmentStatus={assignmentStatus}
-      />
+  switch (order.status) {
+    case 'processing':
+      statusMessage = 'Your order is being prepared';
+      statusDetails = order.restaurant?.name ? `by ${order.restaurant.name}` : '';
+      break;
+    case 'on_the_way':
+      statusMessage = 'Your order is on the way';
+      statusDetails = 'It should arrive soon!';
+      break;
+    case 'delivered':
+      statusMessage = 'Your order has been delivered';
+      statusDetails = 'Enjoy your meal!';
+      break;
+    case 'cancelled':
+      statusMessage = 'Your order was cancelled';
+      statusDetails = 'No restaurant was able to accept your order';
+      break;
+    case 'no_restaurant_accepted':
+      statusMessage = 'No restaurant available';
+      statusDetails = 'All restaurants were busy or too far away';
+      break;
+    case 'rejected':
+      statusMessage = 'Your order was rejected';
+      statusDetails = 'We apologize for the inconvenience';
+      break;
+    default:
+      statusMessage = `Order status: ${order.status}`;
+      break;
+  }
+
+  return (
+    <div className="text-center space-y-3 p-4">
+      <h3 className="text-xl font-semibold">{statusMessage}</h3>
+      {statusDetails && <p className="text-muted-foreground">{statusDetails}</p>}
+      
+      {(order.status === 'cancelled' || order.status === 'no_restaurant_accepted' || order.status === 'rejected') && (
+        <button 
+          onClick={() => router.navigate('/shop')}
+          className="mt-4 px-6 py-2 bg-quantum-cyan text-black rounded-lg hover:bg-quantum-cyan/80 transition-all"
+        >
+          Order Again
+        </button>
+      )}
     </div>
   );
 };

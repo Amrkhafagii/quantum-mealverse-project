@@ -37,7 +37,25 @@ export const useOrderTimer = (
       if (secondsLeft === 0 && !isExpired) {
         setIsExpired(true);
         try {
-          await cancelOrder(orderId);
+          // First check if any assignments are still pending for this order
+          const { data: pendingAssignments } = await supabase
+            .from('restaurant_assignments')
+            .select('id')
+            .eq('order_id', orderId)
+            .eq('status', 'pending');
+          
+          // Only cancel if there are still pending assignments
+          if (pendingAssignments && pendingAssignments.length > 0) {
+            // First mark all pending assignments as expired
+            await supabase
+              .from('restaurant_assignments')
+              .update({ status: 'expired' })
+              .eq('order_id', orderId)
+              .eq('status', 'pending');
+              
+            // Then cancel the order
+            await cancelOrder(orderId);
+          }
         } finally {
           onExpire?.();
         }
