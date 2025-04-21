@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
 import { toast } from 'sonner';
 import { checkExpiredAssignments } from '@/services/orders/webhookService';
+import { logApiCall } from '@/services/loggerService';
 
 interface OrderTimerProps {
   expiresAt?: string;
@@ -26,7 +27,20 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   useEffect(() => {
     const interval = setInterval(async () => {
       if (orderId) {
-        await checkExpiredAssignments();
+        console.log('Periodic expired assignment check for order:', orderId);
+        try {
+          const result = await checkExpiredAssignments();
+          console.log('Periodic check result:', result);
+          
+          // Log the check in our system
+          await logApiCall('periodic-expired-check', { orderId }, result);
+          
+          if (!result.success) {
+            console.warn('Periodic expired check failed:', result.error);
+          }
+        } catch (error) {
+          console.error('Error in periodic expired assignment check:', error);
+        }
       }
     }, 30000); // Every 30 seconds
     
@@ -37,9 +51,27 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   useEffect(() => {
     if (isExpired && onTimerExpire) {
       toast.info("Restaurant response time expired. Updating order status...");
-      onTimerExpire();
+      
+      // Force an immediate check for expired assignments
+      const forceCheck = async () => {
+        console.log('Timer expired - forcing check for expired assignments');
+        try {
+          const result = await checkExpiredAssignments();
+          console.log('Force check result on timer expiry:', result);
+          
+          // Log the forced check
+          await logApiCall('timer-expired-check', { orderId }, result);
+        } catch (error) {
+          console.error('Error in force check on timer expiry:', error);
+        }
+        
+        // Call the callback regardless of the check result
+        onTimerExpire();
+      };
+      
+      forceCheck();
     }
-  }, [isExpired, onTimerExpire]);
+  }, [isExpired, onTimerExpire, orderId]);
 
   if (isExpired) {
     return (

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkExpiredAssignments } from '@/services/orders/webhookService';
+import { logApiCall } from '@/services/loggerService';
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -20,6 +21,7 @@ export const useOrderTimer = (
     const expiresAtTime = expiresAtDate.getTime();
 
     if (isNaN(expiresAtTime)) {
+      console.warn('Invalid expiry time format:', expiresAt);
       return;
     }
 
@@ -35,12 +37,24 @@ export const useOrderTimer = (
 
       // If the timer has just expired (secondsLeft is 0 and we haven't set isExpired yet)
       if (secondsLeft === 0 && !isExpired) {
-        console.log(`Timer expired for order ${orderId}`);
+        console.log(`Timer expired for order ${orderId} at ${new Date().toISOString()}`);
         setIsExpired(true);
+        
+        // Log the timer expiration
+        await logApiCall('timer-expired', {
+          orderId, 
+          expiresAt, 
+          currentTime: new Date().toISOString()
+        }, null);
         
         // When a timer expires in the UI, trigger the backend check
         try {
-          await checkExpiredAssignments();
+          console.log('Triggering expired assignments check on timer expiry');
+          const result = await checkExpiredAssignments();
+          console.log('Expired assignments check result:', result);
+          
+          // Log the result
+          await logApiCall('expired-assignments-check', { orderId }, result);
         } catch (error) {
           console.error('Error checking expired assignments:', error);
         }

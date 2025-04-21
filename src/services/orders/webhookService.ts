@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { AssignmentStatus, OrderAssignmentRequest, RestaurantResponseRequest, WebhookResponse } from '@/types/webhook';
+import { logApiCall } from '@/services/loggerService';
 
 // Function URL
 const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozgutjvbrljeijybnyg.supabase.co/functions/v1';
@@ -23,21 +24,32 @@ export const sendOrderToWebhook = async (
       expired_reassignment: expiredReassignment
     };
 
+    // Get current session for authentication
+    const { data: authData } = await supabase.auth.getSession();
+    const token = authData.session?.access_token;
+
+    // Log the request before sending
+    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, null);
+
     const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(requestBody),
     });
 
+    const responseData = await response.json();
+    
+    // Log the response
+    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, responseData);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Webhook request failed:', errorData);
-      return { success: false, error: errorData.error || 'Webhook request failed' };
+      console.error('Webhook request failed:', responseData);
+      return { success: false, error: responseData.error || 'Webhook request failed' };
     }
 
-    const responseData: WebhookResponse = await response.json();
     return responseData;
   } catch (error) {
     console.error('Error sending order to webhook:', error);
@@ -107,25 +119,55 @@ export const recordOrderHistory = async (
  */
 export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
   try {
+    console.log('Calling checkExpiredAssignments webhook');
     const requestBody = {
       action: 'check_expired'
     };
 
+    // Get current session for authentication
+    const { data: authData } = await supabase.auth.getSession();
+    const token = authData.session?.access_token;
+
+    // If no auth token is available, use the client directly which has the anon key
+    if (!token) {
+      console.log('No auth token available, using supabase client directly');
+      const { data, error } = await supabase.functions.invoke('order-webhook', {
+        body: requestBody
+      });
+
+      if (error) {
+        console.error('Check expired supabase client request failed:', error);
+        return { success: false, error: error.message || 'Check expired request failed' };
+      }
+
+      return data;
+    }
+
+    // Log the request before sending
+    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, null);
+
+    // Fetch with authorization header
     const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(requestBody),
     });
 
+    const responseData = await response.json();
+    
+    // Log the response
+    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, responseData);
+
+    console.log('Check expired response:', responseData);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Check expired request failed:', errorData);
-      return { success: false, error: errorData.error || 'Check expired request failed' };
+      console.error('Check expired request failed:', responseData);
+      return { success: false, error: responseData.error || 'Check expired request failed' };
     }
 
-    const responseData: WebhookResponse = await response.json();
     return responseData;
   } catch (error) {
     console.error('Error checking expired assignments:', error);
