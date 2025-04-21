@@ -4,7 +4,7 @@ import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
 import { toast } from 'sonner';
-import { checkExpiredAssignments } from '@/services/orders/webhookService';
+import { checkExpiredAssignments, forceExpireAssignments } from '@/services/orders/webhookService';
 import { logApiCall } from '@/services/loggerService';
 
 interface OrderTimerProps {
@@ -56,13 +56,34 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       const forceCheck = async () => {
         console.log('Timer expired - forcing check for expired assignments');
         try {
+          // First try the standard check which calls the webhook
           const result = await checkExpiredAssignments();
           console.log('Force check result on timer expiry:', result);
           
           // Log the forced check
           await logApiCall('timer-expired-check', { orderId }, result);
+          
+          // If the webhook check doesn't work or reports no expired assignments
+          // but we know the timer expired, use our direct database approach as backup
+          if (!result.success || result.message === 'No expired assignments found') {
+            console.log('Webhook check failed or found no expired assignments, using direct approach');
+            const backupResult = await forceExpireAssignments(orderId);
+            console.log('Backup expiration result:', backupResult);
+            
+            // Log the backup approach
+            await logApiCall('direct-expiration', { orderId }, backupResult);
+          }
         } catch (error) {
           console.error('Error in force check on timer expiry:', error);
+          
+          // If both approaches fail, try one final direct approach
+          try {
+            console.log('Attempting final direct expiration');
+            const lastResortResult = await forceExpireAssignments(orderId);
+            console.log('Final expiration result:', lastResortResult);
+          } catch (innerError) {
+            console.error('Final expiration attempt also failed:', innerError);
+          }
         }
         
         // Call the callback regardless of the check result

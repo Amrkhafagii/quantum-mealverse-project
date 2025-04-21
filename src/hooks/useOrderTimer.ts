@@ -25,6 +25,15 @@ export const useOrderTimer = (
       return;
     }
 
+    // If the timestamp is already in the past, consider it expired immediately
+    if (expiresAtTime < Date.now()) {
+      console.log(`Timer already expired for order ${orderId}, expires_at: ${expiresAt}`);
+      setTimeLeft(0);
+      setProgress(0);
+      setIsExpired(true);
+      return;
+    }
+
     const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
 
     const updateTimer = async () => {
@@ -55,6 +64,10 @@ export const useOrderTimer = (
           
           // Log the result
           await logApiCall('expired-assignments-check', { orderId }, result);
+          
+          if (!result.success) {
+            console.warn('Expired check failed:', result.error);
+          }
         } catch (error) {
           console.error('Error checking expired assignments:', error);
         }
