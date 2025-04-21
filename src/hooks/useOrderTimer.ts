@@ -1,8 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkExpiredAssignments, forceExpireAssignments } from '@/services/orders/webhookService';
 import { logApiCall } from '@/services/loggerService';
+import { createUnitTest } from '@/services/testLogger/unitTestLogger';
+
+const orderTimerTest = createUnitTest('useOrderTimer');
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -17,11 +19,21 @@ export const useOrderTimer = (
   useEffect(() => {
     const getServerTime = async () => {
       try {
-        // Use the correct hyphenated name format for the edge function
-        const response = await supabase.functions.invoke('get-server-time', {
-          method: 'POST',
-        });
-        
+        await orderTimerTest(
+          'getServerTime function call',
+          async () => {
+            const response = await supabase.functions.invoke('get-server-time', {
+              method: 'POST',
+            });
+            
+            if (response.error) {
+              throw response.error;
+            }
+            
+            return response.data;
+          }
+        );
+
         if (response.error) {
           console.error('Error getting server time:', response.error);
           return;
@@ -195,9 +207,18 @@ export const useOrderTimer = (
   }, [expiresAt, orderId, isExpired, serverTime]);
 
   const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const testFormatTime = async () => {
+      const result = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+      await orderTimerTest(
+        'formatTime function',
+        async () => result,
+        result
+      );
+      return result;
+    };
+
+    testFormatTime();
+    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   };
 
   return {
