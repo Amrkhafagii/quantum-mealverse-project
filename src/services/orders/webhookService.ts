@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AssignmentStatus, OrderAssignmentRequest, RestaurantResponseRequest, WebhookResponse } from '@/types/webhook';
 
@@ -89,7 +90,13 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     // Now fetch the current status after potentially updating things
     const { data: assignments, error } = await supabase
       .from('restaurant_assignments')
-      .select('id, status, restaurant_id, expires_at, restaurants(name)')
+      .select(`
+        id, 
+        status, 
+        restaurant_id, 
+        expires_at, 
+        restaurants(id, name)
+      `)
       .eq('order_id', orderId);
     
     if (error || !assignments) {
@@ -101,10 +108,12 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
     const acceptedCount = assignments.filter(a => a.status === 'accepted').length;
     const rejectedCount = assignments.filter(a => a.status === 'rejected').length;
-    const expiredCount = assignments.filter(a => a.status === 'expired').length;
     
     // Find if there's an accepted assignment
     const acceptedAssignment = assignments.find(a => a.status === 'accepted');
+    
+    // Get restaurant name safely
+    const restaurantName = acceptedAssignment?.restaurants?.name || undefined;
     
     // Get the most recent active assignment for timer
     const pendingAssignments = assignments.filter(a => a.status === 'pending');
@@ -119,14 +128,13 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
               pendingCount > 0 ? 'awaiting_response' : 
               'no_response',
       assigned_restaurant_id: acceptedAssignment?.restaurant_id,
-      restaurant_name: acceptedAssignment?.restaurants?.name,
+      restaurant_name: restaurantName,
       assignment_id: acceptedAssignment?.id,
       expires_at: mostRecentAssignment?.expires_at,
       attempt_count: assignments.length,
       pending_count: pendingCount,
       accepted_count: acceptedCount,
-      rejected_count: rejectedCount,
-      expired_count: expiredCount
+      rejected_count: rejectedCount
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);

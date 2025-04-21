@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
 import { cancelOrder } from '@/services/orders/orderService';
 

@@ -4,7 +4,7 @@ import { Order } from '@/types/order';
 import { OrderRestaurantStatus } from './thank-you/OrderRestaurantStatus';
 import { cancelOrder } from '@/services/orders/orderService';
 import { toast } from 'sonner';
-import { useRouter } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { checkAssignmentStatus } from '@/services/orders/webhookService';
 
 interface OrderStatusDisplayProps {
@@ -19,7 +19,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   onOrderUpdate 
 }) => {
   const [isCancelling, setIsCancelling] = useState(false);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleCancelOrder = async () => {
     if (isCancelling) return;
@@ -102,7 +102,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
       
       {(order.status === 'cancelled' || order.status === 'no_restaurant_accepted' || order.status === 'rejected') && (
         <button 
-          onClick={() => router.navigate('/shop')}
+          onClick={() => navigate('/shop')}
           className="mt-4 px-6 py-2 bg-quantum-cyan text-black rounded-lg hover:bg-quantum-cyan/80 transition-all"
         >
           Order Again
