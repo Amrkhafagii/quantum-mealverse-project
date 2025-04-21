@@ -43,11 +43,16 @@ export const useOrderTimer = (
         
         try {
           // Check if any assignments are still pending for this order
-          const { data: pendingAssignments } = await supabase
+          const { data: pendingAssignments, error } = await supabase
             .from('restaurant_assignments')
             .select('id, restaurant_id')
             .eq('order_id', orderId)
             .eq('status', 'pending');
+          
+          if (error) {
+            console.error('Error checking pending assignments:', error);
+            throw error;
+          }
           
           // Only update if there are still pending assignments
           if (pendingAssignments && pendingAssignments.length > 0) {
@@ -55,7 +60,8 @@ export const useOrderTimer = (
             
             // For each pending assignment, create a history entry with timed_out status
             for (const assignment of pendingAssignments) {
-              await supabase
+              // First add the assignment history record
+              const { error: historyError } = await supabase
                 .from('restaurant_assignment_history')
                 .insert({
                   order_id: orderId,
@@ -63,6 +69,10 @@ export const useOrderTimer = (
                   status: 'timed_out',
                   notes: 'Timer expired automatically'
                 });
+                
+              if (historyError) {
+                console.error('Error inserting assignment history:', historyError);
+              }
                 
               // Also record in order_history
               await recordOrderHistory(
@@ -75,26 +85,38 @@ export const useOrderTimer = (
             }
             
             // Then mark all pending assignments as expired in the assignments table
-            await supabase
+            const { error: updateError } = await supabase
               .from('restaurant_assignments')
               .update({ status: 'expired' })
               .eq('order_id', orderId)
               .eq('status', 'pending');
               
+            if (updateError) {
+              console.error('Error updating assignments to expired:', updateError);
+            }
+              
             // Then cancel the order if all assignments have expired
             // First check if there are any non-expired assignments left
-            const { data: activeAssignments } = await supabase
+            const { data: activeAssignments, error: activeError } = await supabase
               .from('restaurant_assignments')
               .select('id')
               .eq('order_id', orderId)
               .eq('status', 'pending');
               
+            if (activeError) {
+              console.error('Error checking active assignments:', activeError);
+            }
+              
             // If no active assignments remain and no assignment was accepted, cancel the order
-            const { data: acceptedAssignments } = await supabase
+            const { data: acceptedAssignments, error: acceptedError } = await supabase
               .from('restaurant_assignments')
               .select('id')
               .eq('order_id', orderId)
               .eq('status', 'accepted');
+              
+            if (acceptedError) {
+              console.error('Error checking accepted assignments:', acceptedError);
+            }
               
             if ((!activeAssignments || activeAssignments.length === 0) && 
                 (!acceptedAssignments || acceptedAssignments.length === 0)) {

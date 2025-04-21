@@ -51,13 +51,13 @@ export const sendOrderToWebhook = async (
 export const recordOrderHistory = async (
   orderId: string,
   status: string,
-  restaurantId?: string,
+  restaurantId?: string | null,
   details?: any,
   expiredAt?: string
 ): Promise<void> => {
   try {
     // Get restaurant name if restaurantId is provided
-    let restaurantName;
+    let restaurantName = null;
     if (restaurantId) {
       const { data: restaurant } = await supabase
         .from('restaurants')
@@ -68,8 +68,18 @@ export const recordOrderHistory = async (
       restaurantName = restaurant?.name;
     }
 
+    // Debugging: Log the data we're about to insert
+    console.log('Recording order history:', {
+      order_id: orderId,
+      status,
+      restaurant_id: restaurantId,
+      restaurant_name: restaurantName,
+      details,
+      expired_at: expiredAt
+    });
+    
     // Insert record into order_history table
-    await supabase
+    const { data, error } = await supabase
       .from('order_history')
       .insert({
         order_id: orderId,
@@ -80,7 +90,12 @@ export const recordOrderHistory = async (
         expired_at: expiredAt
       });
       
-    console.log(`Order history recorded for ${orderId}, status: ${status}`);
+    if (error) {
+      console.error('Error recording order history:', error);
+      return;
+    }
+      
+    console.log(`Order history recorded for ${orderId}, status: ${status}`, data);
   } catch (error) {
     console.error('Error recording order history:', error);
   }
@@ -271,3 +286,4 @@ export const sendRestaurantResponse = async (
     return { success: false, error: 'Failed to send restaurant response to webhook' };
   }
 };
+

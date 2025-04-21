@@ -1,8 +1,10 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
 import { sendOrderToWebhook } from '@/integrations/webhook';
+import { recordOrderHistory } from '@/services/orders/webhookService';
 
 export const saveDeliveryInfo = async (
   userId: string, 
@@ -80,6 +82,16 @@ export const createOrder = async (
       await saveUserLocation(userId, data.latitude, data.longitude);
     }
     
+    // Record the initial order creation in history
+    if (insertedOrder && insertedOrder.id) {
+      await recordOrderHistory(
+        insertedOrder.id,
+        'created',
+        null,
+        { total: finalTotal, delivery_method: data.deliveryMethod }
+      );
+    }
+    
     return insertedOrder;
   } catch (error) {
     throw error;
@@ -101,6 +113,14 @@ export const createOrderItems = async (orderId: string, items: CartItem[]) => {
       .insert(orderItems);
       
     if (itemsError) throw itemsError;
+    
+    // Record the items in order history
+    await recordOrderHistory(
+      orderId,
+      'items_added',
+      null,
+      { items_count: items.length }
+    );
   } catch (error) {
     throw error;
   }
@@ -161,18 +181,15 @@ export const cancelOrder = async (orderId: string) => {
         restaurantName = restaurant?.name;
       }
 
-      await supabase
-        .from('order_history')
-        .insert({
-          order_id: orderId,
-          status: 'cancelled',
-          restaurant_id: order.restaurant_id,
-          restaurant_name: restaurantName,
-          details: { 
-            reason: 'Customer cancelled order',
-            cancelled_via: 'customer interface' 
-          }
-        });
+      await recordOrderHistory(
+        orderId,
+        'cancelled',
+        order.restaurant_id,
+        { 
+          reason: 'Customer cancelled order',
+          cancelled_via: 'customer interface' 
+        }
+      );
     }
 
     return true;
