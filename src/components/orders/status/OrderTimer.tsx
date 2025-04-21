@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
 import { toast } from 'sonner';
+import { checkExpiredAssignments } from '@/services/orders/webhookService';
 
 interface OrderTimerProps {
   expiresAt?: string;
@@ -16,18 +17,29 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   orderId,
   onTimerExpire,
 }) => {
-  const handleTimerExpire = () => {
-    toast.info("Restaurant response time expired. Updating order status...");
-    if (onTimerExpire) {
-      onTimerExpire();
-    }
-  };
-
   const { timeLeft, progress, formattedTime, isExpired } = useOrderTimer(
     expiresAt, 
-    orderId, 
-    handleTimerExpire
+    orderId
   );
+  
+  // Periodically check for expired assignments at the server level
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (orderId) {
+        await checkExpiredAssignments();
+      }
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [orderId]);
+  
+  // When our timer expires, notify the user and trigger refresh
+  useEffect(() => {
+    if (isExpired && onTimerExpire) {
+      toast.info("Restaurant response time expired. Updating order status...");
+      onTimerExpire();
+    }
+  }, [isExpired, onTimerExpire]);
 
   if (isExpired) {
     return (

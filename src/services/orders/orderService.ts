@@ -1,9 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
-import { sendOrderToWebhook } from '@/integrations/webhook';
 import { recordOrderHistory } from '@/services/orders/webhookService';
 
 export const saveDeliveryInfo = async (
@@ -181,15 +179,17 @@ export const cancelOrder = async (orderId: string) => {
         restaurantName = restaurant?.name;
       }
 
-      await recordOrderHistory(
-        orderId,
-        'cancelled',
-        order.restaurant_id,
-        { 
+      // Add a record directly to order_history
+      await supabase.from('order_history').insert({
+        order_id: orderId,
+        status: 'cancelled',
+        restaurant_id: order.restaurant_id,
+        restaurant_name: restaurantName,
+        details: { 
           reason: 'Customer cancelled order',
           cancelled_via: 'customer interface' 
         }
-      );
+      });
     }
 
     return true;

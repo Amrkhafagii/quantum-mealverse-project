@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Building, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
 import { toast } from 'sonner';
+import { checkExpiredAssignments } from '@/services/orders/webhookService';
 
 interface OrderRestaurantStatusProps {
   status: string;
@@ -22,6 +23,17 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   onCancel,
   orderId
 }) => {
+  useEffect(() => {
+    // Check for expired assignments when component mounts
+    if (orderId && ['pending', 'awaiting_restaurant'].includes(status)) {
+      const checkExpired = async () => {
+        await checkExpiredAssignments();
+      };
+      
+      checkExpired();
+    }
+  }, [orderId, status]);
+  
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
 
   const handleTimerExpire = () => {

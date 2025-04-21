@@ -102,78 +102,45 @@ export const recordOrderHistory = async (
 };
 
 /**
+ * Makes a direct call to check and handle expired assignments
+ * This is a server-side operation that doesn't need frontend involvement
+ */
+export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
+  try {
+    const requestBody = {
+      action: 'check_expired'
+    };
+
+    const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Check expired request failed:', errorData);
+      return { success: false, error: errorData.error || 'Check expired request failed' };
+    }
+
+    const responseData: WebhookResponse = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error checking expired assignments:', error);
+    return { success: false, error: 'Failed to check expired assignments' };
+  }
+};
+
+/**
  * Checks the current status of an order's restaurant assignments
  * and automatically handles expired assignments
  */
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus | null> => {
   try {
     // Check for any expired assignments that need to be handled
-    const now = new Date().toISOString();
-    
-    // Find assignments that have expired but still have pending status
-    const { data: expiredAssignments } = await supabase
-      .from('restaurant_assignments')
-      .select('id, restaurant_id')
-      .eq('order_id', orderId)
-      .eq('status', 'pending')
-      .lt('expires_at', now);
-    
-    // If we found expired assignments, mark them as expired
-    if (expiredAssignments && expiredAssignments.length > 0) {
-      console.log(`Marking ${expiredAssignments.length} expired assignments for order ${orderId}`);
-      
-      // Update all expired assignments
-      await supabase
-        .from('restaurant_assignments')
-        .update({ status: 'expired' })
-        .eq('order_id', orderId)
-        .eq('status', 'pending')
-        .lt('expires_at', now);
-      
-      // Add entries to the assignment history for the status changes with timed_out status
-      for (const assignment of expiredAssignments) {
-        await supabase
-          .from('restaurant_assignment_history')
-          .insert({
-            order_id: orderId,
-            restaurant_id: assignment.restaurant_id,
-            status: 'timed_out',
-            notes: 'Timer expired'
-          });
-          
-        // Also record in order_history
-        await recordOrderHistory(
-          orderId,
-          'assignment_expired',
-          assignment.restaurant_id,
-          { assignment_id: assignment.id },
-          now
-        );
-      }
-      
-      // Check if all assignments are now expired/rejected
-      const { data: activeAssignments } = await supabase
-        .from('restaurant_assignments')
-        .select('id')
-        .eq('order_id', orderId)
-        .in('status', ['pending', 'accepted']);
-      
-      // If no active assignments remain, cancel the order
-      if (!activeAssignments || activeAssignments.length === 0) {
-        await supabase
-          .from('orders')
-          .update({ status: 'cancelled' })
-          .eq('id', orderId);
-          
-        // Record cancellation in order_history
-        await recordOrderHistory(
-          orderId,
-          'cancelled',
-          null,
-          { reason: 'All restaurants timed out or rejected the order' }
-        );
-      }
-    }
+    await checkExpiredAssignments();
     
     // Now fetch the current status after potentially updating things
     const { data: assignments, error } = await supabase
@@ -286,4 +253,3 @@ export const sendRestaurantResponse = async (
     return { success: false, error: 'Failed to send restaurant response to webhook' };
   }
 };
-

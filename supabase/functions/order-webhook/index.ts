@@ -1,7 +1,8 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
-import { handleAssignment, duplicateOrderWithNewRestaurant, assignOrderToAllNearbyRestaurants } from './orderService.ts';
+import { handleAssignment, duplicateOrderWithNewRestaurant, assignOrderToAllNearbyRestaurants, checkAndHandleExpiredAssignments } from './orderService.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,6 +30,16 @@ Deno.serve(async (req) => {
 
     const requestData = await req.json();
     console.log('[WEBHOOK] Received webhook request:', requestData);
+
+    // Check for explicit action to handle expired assignments
+    if (requestData.action === 'check_expired') {
+      console.log('[WEBHOOK] Checking for expired assignments');
+      const result = await checkAndHandleExpiredAssignments(supabase);
+      return new Response(
+        JSON.stringify({ success: true, result }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!requestData.order_id || !requestData.latitude || !requestData.longitude) {
       return new Response(
@@ -180,6 +191,15 @@ Deno.serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
           );
         }
+        
+        // Add order history record
+        await supabase.from('order_history').insert({
+          order_id: order_id,
+          status: 'restaurant_accepted',
+          restaurant_id: restaurant_id,
+          details: { assignment_id: assignment_id }
+        });
+        
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -203,6 +223,15 @@ Deno.serve(async (req) => {
           );
         }
         await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
+        
+        // Add order history record for the rejection
+        await supabase.from('order_history').insert({
+          order_id: order_id,
+          status: 'restaurant_rejected',
+          restaurant_id: restaurant_id,
+          details: { assignment_id: assignment_id }
+        });
+        
         // If no pending assignments remain, update to no_restaurant_accepted
         const { data: pendingAssignments } = await supabase
           .from('restaurant_assignments')
@@ -211,6 +240,14 @@ Deno.serve(async (req) => {
           .eq('status', 'pending');
         if (!pendingAssignments || pendingAssignments.length === 0) {
           await updateOrderStatus(supabase, order_id, 'no_restaurant_accepted');
+          
+          // Add order history record for no restaurants accepting
+          await supabase.from('order_history').insert({
+            order_id: order_id,
+            status: 'no_restaurant_accepted',
+            details: { reason: 'All restaurants have rejected the order' }
+          });
+          
           return new Response(
             JSON.stringify({ 
               success: true, 

@@ -1,3 +1,4 @@
+
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -40,6 +41,14 @@ export async function assignOrderToAllNearbyRestaurants(
         reason: 'No restaurants available within range'
       }
     });
+    
+    // Record in order_history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: 'no_restaurant_available',
+      details: { reason: 'No restaurants available within range' }
+    });
+    
     return { 
       success: false, 
       error: 'No restaurants available within range',
@@ -69,6 +78,15 @@ export async function assignOrderToAllNearbyRestaurants(
         'assigned',
         `Assignment expires at ${expiresAt}`
       );
+      
+      // Record each assignment in order_history
+      await supabase.from('order_history').insert({
+        order_id: orderId,
+        status: 'restaurant_assigned',
+        restaurant_id: restaurant.restaurant_id,
+        restaurant_name: restaurant.restaurant_name,
+        details: { assignment_id: assignment.id, expires_at: expiresAt },
+      });
     }
   }
 
@@ -81,6 +99,14 @@ export async function assignOrderToAllNearbyRestaurants(
         reason: 'Failed to create assignments'
       }
     });
+    
+    // Record failure in order_history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: 'assignment_error',
+      details: { reason: 'Failed to create restaurant assignments' }
+    });
+    
     return { 
       success: false, 
       error: 'Failed to create restaurant assignments',
@@ -99,6 +125,18 @@ export async function assignOrderToAllNearbyRestaurants(
   });
 
   await updateOrderStatus(supabase, orderId, 'awaiting_restaurant');
+  
+  // Record in order_history that assignments were created
+  await supabase.from('order_history').insert({
+    order_id: orderId,
+    status: 'assignments_created',
+    details: { 
+      assignment_count: assignments.length,
+      restaurant_names: restaurantNames,
+      expires_at: expiresAt
+    }
+  });
+  
   return { 
     success: true, 
     message: `Order assigned to ${assignments.length} restaurants`,
@@ -142,6 +180,14 @@ export async function handleAssignment(
       
     await logAssignmentAttempt(supabase, orderId, restaurantId, 'expired');
     
+    // Record in order_history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: 'assignment_expired',
+      restaurant_id: restaurantId,
+      details: { assignment_id: assignmentId }
+    });
+    
     return { 
       success: false, 
       error: 'Assignment has expired' 
@@ -171,6 +217,14 @@ export async function handleAssignment(
     }
     
     await logAssignmentAttempt(supabase, orderId, restaurantId, 'accepted');
+    
+    // Record in order_history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: 'restaurant_accepted',
+      restaurant_id: restaurantId,
+      details: { assignment_id: assignmentId }
+    });
     
     const { error: orderUpdateError } = await supabase
       .from('orders')
@@ -204,14 +258,30 @@ export async function handleAssignment(
     
     await logAssignmentAttempt(supabase, orderId, restaurantId, 'rejected');
     
+    // Record in order_history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: 'restaurant_rejected',
+      restaurant_id: restaurantId,
+      details: { assignment_id: assignmentId }
+    });
+    
     const { data: pendingAssignments } = await supabase
       .from('restaurant_assignments')
       .select('id')
-      .eq('order_id', orderId)
+      .eq('order_id', order_id)
       .eq('status', 'pending');
     
     if (!pendingAssignments || pendingAssignments.length === 0) {
       await updateOrderStatus(supabase, orderId, 'no_restaurant_accepted');
+      
+      // Record in order_history
+      await supabase.from('order_history').insert({
+        order_id: orderId,
+        status: 'no_restaurant_accepted',
+        details: { reason: 'All restaurants have rejected the order' }
+      });
+      
       return { 
         success: true, 
         message: 'Order rejected by restaurant, no more pending assignments',
@@ -228,4 +298,145 @@ export async function handleAssignment(
       pending_assignments: pendingAssignments.length
     };
   }
+}
+
+// New function to check and handle expired assignments
+export async function checkAndHandleExpiredAssignments(supabase: SupabaseClient) {
+  console.log('[CHECK_EXPIRED] Checking for expired assignments');
+  const now = new Date().toISOString();
+  
+  // Find assignments that have expired but still have pending status
+  const { data: expiredAssignments, error: expiredError } = await supabase
+    .from('restaurant_assignments')
+    .select('id, restaurant_id, order_id, expires_at')
+    .eq('status', 'pending')
+    .lt('expires_at', now);
+  
+  if (expiredError) {
+    console.error('[CHECK_EXPIRED] Error fetching expired assignments:', expiredError);
+    return { success: false, error: 'Failed to fetch expired assignments' };
+  }
+  
+  console.log(`[CHECK_EXPIRED] Found ${expiredAssignments?.length || 0} expired assignments`);
+  
+  if (!expiredAssignments || expiredAssignments.length === 0) {
+    return { success: true, message: 'No expired assignments found' };
+  }
+  
+  const results = [];
+  
+  for (const assignment of expiredAssignments) {
+    console.log(`[CHECK_EXPIRED] Processing expired assignment ${assignment.id} for order ${assignment.order_id}`);
+    
+    try {
+      // Mark the assignment as expired
+      const { error: updateError } = await supabase
+        .from('restaurant_assignments')
+        .update({ status: 'expired' })
+        .eq('id', assignment.id);
+      
+      if (updateError) {
+        console.error(`[CHECK_EXPIRED] Error updating assignment ${assignment.id}:`, updateError);
+        results.push({ 
+          assignment_id: assignment.id, 
+          success: false, 
+          error: 'Failed to update assignment status' 
+        });
+        continue;
+      }
+      
+      // Add to assignment history
+      await supabase
+        .from('restaurant_assignment_history')
+        .insert({
+          order_id: assignment.order_id,
+          restaurant_id: assignment.restaurant_id,
+          status: 'timed_out',
+          notes: 'Timer expired automatically'
+        });
+      
+      // Add to order history
+      await supabase
+        .from('order_history')
+        .insert({
+          order_id: assignment.order_id,
+          status: 'assignment_expired',
+          restaurant_id: assignment.restaurant_id,
+          details: { assignment_id: assignment.id },
+          expired_at: now
+        });
+      
+      results.push({ 
+        assignment_id: assignment.id, 
+        success: true, 
+        message: 'Assignment marked as expired' 
+      });
+    } catch (error) {
+      console.error(`[CHECK_EXPIRED] Exception processing assignment ${assignment.id}:`, error);
+      results.push({ 
+        assignment_id: assignment.id, 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+  
+  // Now check each affected order to see if all assignments are expired/rejected
+  const affectedOrders = [...new Set(expiredAssignments.map(a => a.order_id))];
+  
+  for (const orderId of affectedOrders) {
+    try {
+      // Check if there are any pending assignments left
+      const { data: pendingAssignments, error: pendingError } = await supabase
+        .from('restaurant_assignments')
+        .select('id')
+        .eq('order_id', orderId)
+        .eq('status', 'pending');
+        
+      if (pendingError) {
+        console.error(`[CHECK_EXPIRED] Error checking pending assignments for order ${orderId}:`, pendingError);
+        continue;
+      }
+      
+      // Check if there's an accepted assignment
+      const { data: acceptedAssignments, error: acceptedError } = await supabase
+        .from('restaurant_assignments')
+        .select('id')
+        .eq('order_id', orderId)
+        .eq('status', 'accepted');
+        
+      if (acceptedError) {
+        console.error(`[CHECK_EXPIRED] Error checking accepted assignments for order ${orderId}:`, acceptedError);
+        continue;
+      }
+      
+      // If no pending assignments remain and no accepted assignments, cancel the order
+      if ((!pendingAssignments || pendingAssignments.length === 0) &&
+          (!acceptedAssignments || acceptedAssignments.length === 0)) {
+        
+        console.log(`[CHECK_EXPIRED] All assignments for order ${orderId} have expired or been rejected, cancelling order`);
+        
+        // Update order status
+        await updateOrderStatus(supabase, orderId, 'cancelled');
+        
+        // Add to order history
+        await supabase
+          .from('order_history')
+          .insert({
+            order_id: orderId,
+            status: 'cancelled',
+            details: { reason: 'All restaurant assignments expired' }
+          });
+      }
+    } catch (error) {
+      console.error(`[CHECK_EXPIRED] Exception processing order ${orderId}:`, error);
+    }
+  }
+  
+  return { 
+    success: true, 
+    processed: results.length,
+    results,
+    affected_orders: affectedOrders.length
+  };
 }
