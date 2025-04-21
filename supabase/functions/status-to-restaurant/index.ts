@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         // Get the user id from the order
         const { data: order } = await supabase
           .from('orders')
-          .select('user_id')
+          .select('user_id, restaurant_id')
           .eq('id', statusChange.record_id)
           .maybeSingle();
           
@@ -90,6 +90,31 @@ Deno.serve(async (req) => {
           latitude = userLocation?.latitude;
           longitude = userLocation?.longitude;
         }
+
+        // Add entry to order_history table
+        let restaurantName;
+        if (order?.restaurant_id) {
+          const { data: restaurant } = await supabase
+            .from('restaurants')
+            .select('name')
+            .eq('id', order.restaurant_id)
+            .single();
+          
+          restaurantName = restaurant?.name;
+        }
+
+        await supabase
+          .from('order_history')
+          .insert({
+            order_id: statusChange.record_id,
+            status: statusChange.new_status,
+            restaurant_id: order?.restaurant_id,
+            restaurant_name: restaurantName,
+            details: {
+              previous_status: statusChange.old_status,
+              updated_via: 'status-to-restaurant webhook'
+            }
+          });
       }
       
       // Default coordinates if none are found

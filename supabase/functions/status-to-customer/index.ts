@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { orderId, status } = await req.json();
+    const { orderId, status, restaurantId } = await req.json();
 
     if (!orderId || !status) {
       return new Response(
@@ -35,9 +35,19 @@ Deno.serve(async (req) => {
 
     console.log(`Updating order ${orderId} status to ${status}`);
 
+    // Get the current order status before updating
+    const { data: currentOrder } = await supabase
+      .from('orders')
+      .select('status')
+      .eq('id', orderId)
+      .single();
+
+    const oldStatus = currentOrder?.status || null;
+
+    // Update order status
     const { error: updateError } = await supabase
       .from('orders')
-      .update({ status })
+      .update({ status, restaurant_id: restaurantId || null })
       .eq('id', orderId);
 
     if (updateError) {
@@ -50,12 +60,42 @@ Deno.serve(async (req) => {
       .insert({
         order_id: orderId,
         new_status: status,
-        old_status: null // We don't track old status in this simple implementation
+        previous_status: oldStatus // Now tracking the old status
       });
 
     if (historyError) {
       console.error('Error recording status history:', historyError);
       // Don't throw here - the main update succeeded
+    }
+
+    // Get restaurant name if restaurantId is provided
+    let restaurantName;
+    if (restaurantId) {
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', restaurantId)
+        .single();
+      
+      restaurantName = restaurant?.name;
+    }
+
+    // Add entry to order_history table
+    const { error: orderHistoryError } = await supabase
+      .from('order_history')
+      .insert({
+        order_id: orderId,
+        status,
+        restaurant_id: restaurantId,
+        restaurant_name: restaurantName,
+        details: {
+          previous_status: oldStatus,
+          updated_via: 'status-to-customer webhook'
+        }
+      });
+
+    if (orderHistoryError) {
+      console.error('Error recording order history:', orderHistoryError);
     }
 
     return new Response(

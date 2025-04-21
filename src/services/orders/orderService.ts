@@ -133,13 +133,51 @@ export const saveUserLocation = async (
 
 export const cancelOrder = async (orderId: string) => {
   try {
+    // Update order status to cancelled
     const { error } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
       .eq('id', orderId);
-      
+
     if (error) throw error;
+
+    // Get order details for adding to order history
+    const { data: order } = await supabase
+      .from('orders')
+      .select('restaurant_id')
+      .eq('id', orderId)
+      .single();
+
+    // Record in order_history
+    if (order) {
+      let restaurantName;
+      if (order.restaurant_id) {
+        const { data: restaurant } = await supabase
+          .from('restaurants')
+          .select('name')
+          .eq('id', order.restaurant_id)
+          .single();
+        
+        restaurantName = restaurant?.name;
+      }
+
+      await supabase
+        .from('order_history')
+        .insert({
+          order_id: orderId,
+          status: 'cancelled',
+          restaurant_id: order.restaurant_id,
+          restaurant_name: restaurantName,
+          details: { 
+            reason: 'Customer cancelled order',
+            cancelled_via: 'customer interface' 
+          }
+        });
+    }
+
+    return true;
   } catch (error) {
+    console.error('Error cancelling order:', error);
     throw error;
   }
 };

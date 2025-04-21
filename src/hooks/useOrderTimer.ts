@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
 import { cancelOrder } from '@/services/orders/orderService';
+import { recordOrderHistory } from '@/services/orders/webhookService';
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -59,6 +60,15 @@ export const useOrderTimer = (
                   status: 'timed_out',
                   notes: 'Timer expired automatically'
                 });
+                
+              // Also record in order_history
+              await recordOrderHistory(
+                orderId,
+                'assignment_expired',
+                assignment.restaurant_id,
+                { assignment_id: assignment.id },
+                new Date().toISOString()
+              );
             }
             
             // Then mark all pending assignments as expired in the assignments table
@@ -70,6 +80,14 @@ export const useOrderTimer = (
               
             // Then cancel the order
             await cancelOrder(orderId);
+            
+            // Also record order cancellation in order_history
+            await recordOrderHistory(
+              orderId,
+              'cancelled',
+              null,
+              { reason: 'All restaurant assignments expired' }
+            );
             
             // Force a refresh of assignment data
             if (onExpire) {

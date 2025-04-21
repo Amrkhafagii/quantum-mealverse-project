@@ -46,6 +46,47 @@ export const sendOrderToWebhook = async (
 };
 
 /**
+ * Records an entry in the order history table
+ */
+export const recordOrderHistory = async (
+  orderId: string,
+  status: string,
+  restaurantId?: string,
+  details?: any,
+  expiredAt?: string
+): Promise<void> => {
+  try {
+    // Get restaurant name if restaurantId is provided
+    let restaurantName;
+    if (restaurantId) {
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', restaurantId)
+        .single();
+      
+      restaurantName = restaurant?.name;
+    }
+
+    // Insert record into order_history table
+    await supabase
+      .from('order_history')
+      .insert({
+        order_id: orderId,
+        status,
+        restaurant_id: restaurantId,
+        restaurant_name: restaurantName,
+        details,
+        expired_at: expiredAt
+      });
+      
+    console.log(`Order history recorded for ${orderId}, status: ${status}`);
+  } catch (error) {
+    console.error('Error recording order history:', error);
+  }
+};
+
+/**
  * Checks the current status of an order's restaurant assignments
  */
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus | null> => {
@@ -83,6 +124,15 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
             status: 'timed_out',
             notes: 'Timer expired'
           });
+          
+        // Also record in order_history
+        await recordOrderHistory(
+          orderId,
+          'assignment_expired',
+          assignment.restaurant_id,
+          { assignment_id: assignment.id },
+          now
+        );
       }
       
       // Check if all assignments are now expired/rejected
@@ -98,6 +148,14 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
           .from('orders')
           .update({ status: 'cancelled' })
           .eq('id', orderId);
+          
+        // Record cancellation in order_history
+        await recordOrderHistory(
+          orderId,
+          'cancelled',
+          null,
+          { reason: 'All restaurants timed out or rejected the order' }
+        );
       }
     }
     
@@ -197,6 +255,15 @@ export const sendRestaurantResponse = async (
     }
 
     const responseData: WebhookResponse = await response.json();
+    
+    // Record the restaurant response in order_history
+    await recordOrderHistory(
+      orderId,
+      `restaurant_${action}ed`,
+      restaurantId,
+      { assignment_id: assignmentId }
+    );
+    
     return responseData;
   } catch (error) {
     console.error('Error sending restaurant response to webhook:', error);
