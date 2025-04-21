@@ -5,23 +5,26 @@ import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
 
 interface OrderTimerProps {
-  expiresAt: string | undefined;
-  orderId: string | undefined;
+  expiresAt?: string;
+  orderId: string;
   onTimerExpire?: () => void;
   attemptCount?: number;
+  status?: string; // Add this field to match how it's being used
 }
 
 export const OrderTimer: React.FC<OrderTimerProps> = ({ 
   expiresAt,
   orderId,
   onTimerExpire,
-  attemptCount = 1
+  attemptCount = 1,
+  status
 }) => {
   useEffect(() => {
     console.log('[TIMER] OrderTimer Component Mounted with:', { 
       expiresAt, 
       orderId,
       attemptCount,
+      status,
       currentTime: new Date().toISOString() 
     });
     
@@ -44,7 +47,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     } catch (error) {
       console.error('[TIMER] Error parsing expiresAt:', error);
     }
-  }, [expiresAt, orderId, attemptCount]);
+  }, [expiresAt, orderId, attemptCount, status]);
 
   const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt, orderId, onTimerExpire);
 
@@ -68,6 +71,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
           <p>Debug: Order ID {orderId}</p>
           <p>Debug: Time left {timeLeft}s</p>
           <p>Debug: Assignment attempt #{attemptCount}</p>
+          {status && <p>Debug: Order status: {status}</p>}
         </div>
       )}
       

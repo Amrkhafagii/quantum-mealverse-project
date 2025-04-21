@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Building } from 'lucide-react';
 import { Order } from '@/types/order';
@@ -6,6 +7,9 @@ import { AssignmentStatus } from '@/types/webhook';
 interface OrderStatusMessageProps {
   order: Order;
   assignmentStatus: AssignmentStatus | null;
+  status?: string; // Add this field to match usage in OrderStatusDisplay
+  restaurant?: { id: string; name: string; }; // Add this field
+  deliveryMethod?: string; // Add this field
 }
 
 interface StatusMessage {
@@ -15,12 +19,20 @@ interface StatusMessage {
 
 export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({ 
   order, 
-  assignmentStatus 
+  assignmentStatus,
+  status,
+  restaurant,
+  deliveryMethod
 }) => {
+  // Use order properties or fallback to direct props for backward compatibility
+  const orderStatus = status || order?.status;
+  const orderRestaurant = restaurant || order?.restaurant;
+  const orderDeliveryMethod = deliveryMethod || order?.delivery_method;
+
   const getStatusMessage = (): StatusMessage => {
-    if (!order) return { message: '' };
+    if (!orderStatus) return { message: '' };
     
-    switch (order.status) {
+    switch (orderStatus) {
       case 'pending':
         return {
           message: 'Finding a restaurant to fulfill your order...',
@@ -47,13 +59,18 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
         return { message: 'Your order has been delivered. Enjoy!' };
       case 'cancelled':
         return { message: 'Your order has been cancelled.' };
+      case 'no_restaurant_accepted':
+        return {
+          message: 'No restaurants available in your area.',
+          details: 'Please try a different delivery address or try again later.'
+        };
       case 'no_restaurants_available':
         return {
           message: 'No restaurants available in your area.',
           details: 'Please try a different delivery address or try again later.'
         };
       default:
-        return { message: `Order Status: ${order.status}` };
+        return { message: `Order Status: ${orderStatus}` };
     }
   };
 
@@ -62,7 +79,7 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-2">
-        {order.status === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
+        {orderStatus === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
           <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
         )}
         <div className="w-full">

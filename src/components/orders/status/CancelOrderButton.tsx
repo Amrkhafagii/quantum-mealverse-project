@@ -6,12 +6,14 @@ import { cancelOrder } from '@/services/orders/orderService';
 
 interface CancelOrderButtonProps {
   orderId: string;
-  onOrderUpdate: () => void;
+  orderStatus?: string; // Make it optional to match the existing usage
+  onCancelSuccess: () => void;
 }
 
 export const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ 
   orderId, 
-  onOrderUpdate 
+  orderStatus,
+  onCancelSuccess 
 }) => {
   const [isCancelling, setIsCancelling] = useState(false);
   const { toast } = useToast();
@@ -26,7 +28,7 @@ export const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({
         title: "Order cancelled",
         description: "Your order has been cancelled successfully."
       });
-      onOrderUpdate();
+      onCancelSuccess();
     } catch (error) {
       toast({
         title: "Error",

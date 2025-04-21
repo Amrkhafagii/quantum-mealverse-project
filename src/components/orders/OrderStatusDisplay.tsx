@@ -27,8 +27,12 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   
   // For debugging simulators
   const showDebugButtons = process.env.NODE_ENV === 'development';
+
+  // Fixed the comparison conditions to correctly check for status values
+  const isPendingOrAwaitingRestaurant = order.status === 'pending' || order.status === 'awaiting_restaurant';
+  const isNoRestaurantAccepted = order.status === 'no_restaurant_accepted';
   
-  if (order.status === 'pending' || order.status === 'awaiting_restaurant') {
+  if (isPendingOrAwaitingRestaurant || isNoRestaurantAccepted) {
     return (
       <Card>
         <CardContent className="p-4">
@@ -128,7 +132,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
             </div>
           )}
           
-          {order.status === 'no_restaurant_accepted' && (
+          {isNoRestaurantAccepted && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
               <AlertTitle className="text-amber-800">No restaurant available</AlertTitle>
@@ -141,7 +145,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           
           {(!assignmentStatus || assignmentStatus.status === 'error' || 
            (assignmentStatus.status !== 'awaiting_response' && 
-            order.status !== 'no_restaurant_accepted')) && (
+            !isNoRestaurantAccepted)) && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertTitle>Processing your order</AlertTitle>
@@ -167,14 +171,16 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     <div>
       {['processing', 'preparing', 'ready_for_pickup', 'out_for_delivery'].includes(order.status) && (
         <div className="mb-4">
-          <OrderTimer orderId={order.id!} status={order.status} />
+          <OrderTimer 
+            orderId={order.id!} 
+            status={order.status}
+          />
         </div>
       )}
       
       <OrderStatusMessage 
-        status={order.status} 
-        restaurant={order.restaurant} 
-        deliveryMethod={order.delivery_method}
+        order={order}
+        assignmentStatus={assignmentStatus}
       />
     </div>
   );

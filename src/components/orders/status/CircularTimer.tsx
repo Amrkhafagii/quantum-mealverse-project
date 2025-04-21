@@ -1,21 +1,25 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useOrderTimer } from '@/hooks/useOrderTimer';
 
 interface CircularTimerProps {
-  timeLeft: number;
-  totalTime: number;
+  expiresAt: string;
+  onExpired: () => void;
 }
 
-export const CircularTimer: React.FC<CircularTimerProps> = ({ timeLeft, totalTime }) => {
+export const CircularTimer: React.FC<CircularTimerProps> = ({ 
+  expiresAt, 
+  onExpired 
+}) => {
+  const { timeLeft, progress, formattedTime } = useOrderTimer(
+    expiresAt,
+    undefined, // No orderId needed for this timer
+    onExpired
+  );
+
   const radius = 35;
   const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(100, Math.max(0, (timeLeft / totalTime) * 100));
   const strokeDashoffset = circumference - (progress / 100) * circumference;
-  
-  // Format the time as MM:SS
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-  const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
   return (
     <div className="relative inline-flex items-center justify-center">
