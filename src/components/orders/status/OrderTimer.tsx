@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
@@ -15,17 +15,6 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   orderId,
   onTimerExpire,
 }) => {
-  useEffect(() => {
-    if (!expiresAt) {
-      return;
-    }
-    // Validate the expiresAt value
-    try {
-      const date = new Date(expiresAt);
-      const timeUntilExpiry = Math.floor((date.getTime() - Date.now()) / 1000);
-    } catch (error) {}
-  }, [expiresAt, orderId]);
-
   const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt, orderId, onTimerExpire);
 
   if (!expiresAt) {

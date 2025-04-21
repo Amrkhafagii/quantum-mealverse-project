@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Building, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
@@ -21,57 +21,16 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   onCancel,
   orderId
 }) => {
-  useEffect(() => {
-    console.log('OrderRestaurantStatus: Rendering with', { 
-      orderId,
-      status,
-      assignmentStatus
-    });
-    if (assignmentStatus) {
-      console.log('Assignment status details:', assignmentStatus);
-      if (assignmentStatus.expires_at) {
-        try {
-          const expiresDate = new Date(assignmentStatus.expires_at);
-          const now = new Date();
-          const isValid = !isNaN(expiresDate.getTime());
-          const timeRemaining = isValid ? Math.floor((expiresDate.getTime() - now.getTime()) / 1000) : null;
-          console.log('Expiry time analysis:', {
-            expires_at: assignmentStatus.expires_at,
-            parsed: isValid ? expiresDate.toISOString() : 'INVALID DATE',
-            currentTime: now.toISOString(),
-            isValid,
-            isFuture: isValid && expiresDate > now,
-            timeRemaining: timeRemaining !== null ? `${timeRemaining}s` : 'N/A'
-          });
-        } catch (error) {
-          console.error('Error analyzing expiry time:', error);
-        }
-      } else {
-        console.log('No expires_at found in assignment status');
-      }
-    }
-  }, [status, assignmentStatus, orderId]);
-
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
 
-  const handleTimerExpire = () => {
-    console.log('Timer expired, refreshing order status...');
-  };
+  const handleTimerExpire = () => {};
 
-  // More robust check for valid expiry time
   const hasValidExpiryTime = Boolean(
     assignmentStatus?.expires_at && 
     !isNaN(new Date(assignmentStatus.expires_at).getTime()) &&
     new Date(assignmentStatus.expires_at) > new Date()
   );
 
-  console.log('Timer visibility check:', { 
-    hasValidExpiryTime, 
-    expiryTime: assignmentStatus?.expires_at
-  });
-
-  // Only show the restaurant name if there's an actual assigned restaurant
-  // that has accepted the order (not just a pending assignment)
   const showRestaurantName = restaurantName && 
                             status !== 'pending' && 
                             status !== 'awaiting_restaurant' && 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, AlertCircle } from 'lucide-react';
@@ -24,27 +23,23 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   // Fetch assignment status when order data changes or initially loads
   React.useEffect(() => {
     if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
-      console.log('Fetching initial assignment status for order:', orderId);
       checkAssignmentStatus(orderId)
         .then(status => {
-          console.log('Initial assignment status received:', status);
           setAssignmentStatus(status);
         })
-        .catch(err => console.error('Error checking initial assignment status:', err));
+        .catch(() => {});
     }
   }, [orderId, order?.status]);
 
   // Periodically check status for pending orders
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
-      console.log('Periodic assignment status check for order:', orderId);
       checkAssignmentStatus(orderId)
         .then(status => {
-          console.log('Updated assignment status:', status);
           setAssignmentStatus(status);
           refetch(); // Refresh order data to ensure status is in sync
         })
-        .catch(err => console.error('Error checking assignment status:', err));
+        .catch(() => {});
     }
   }, 5000);
   

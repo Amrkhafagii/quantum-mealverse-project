@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { sendOrderToWebhook } from '@/services/orders/webhookService';
+import { cancelOrder } from '@/services/orders/orderService';
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -16,51 +17,41 @@ export const useOrderTimer = (
       return;
     }
 
-    try {
-      const expiresAtDate = new Date(expiresAt);
-      const expiresAtTime = expiresAtDate.getTime();
+    const expiresAtDate = new Date(expiresAt);
+    const expiresAtTime = expiresAtDate.getTime();
 
-      if (isNaN(expiresAtTime)) {
-        return;
-      }
+    if (isNaN(expiresAtTime)) {
+      return;
+    }
 
-      const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
+    const FIVE_MINUTES = 5 * 60; // 5 minutes in seconds
 
-      const updateTimer = async () => {
-        const now = Date.now();
-        const secondsLeft = Math.max(0, Math.floor((expiresAtTime - now) / 1000));
-        setTimeLeft(secondsLeft);
+    const updateTimer = async () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((expiresAtTime - now) / 1000));
+      setTimeLeft(secondsLeft);
 
-        const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
-        setProgress(Math.max(0, Math.min(100, progressValue)));
+      const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
+      setProgress(Math.max(0, Math.min(100, progressValue)));
 
-        if (secondsLeft === 0 && !isExpired) {
-          setIsExpired(true);
-          try {
-            const locationData = localStorage.getItem('lastKnownLocation');
-            if (!locationData) {
-              return;
-            }
-
-            const { latitude, longitude } = JSON.parse(locationData);
-
-            if (latitude && longitude) {
-              await sendOrderToWebhook(orderId, latitude, longitude);
-            }
-          } finally {
-            onExpire?.();
-          }
+      if (secondsLeft === 0 && !isExpired) {
+        setIsExpired(true);
+        try {
+          await cancelOrder(orderId);
+        } finally {
+          onExpire?.();
         }
-      };
+      }
+    };
 
-      updateTimer();
+    updateTimer();
 
-      const timerInterval = setInterval(updateTimer, 1000);
+    const timerInterval = setInterval(updateTimer, 1000);
 
-      return () => {
-        clearInterval(timerInterval);
-      };
-    } catch (error) {}
+    return () => {
+      clearInterval(timerInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expiresAt, orderId, onExpire, isExpired]);
 
   const formatTime = (seconds: number): string => {
