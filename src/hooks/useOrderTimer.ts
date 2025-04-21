@@ -49,19 +49,19 @@ export const useOrderTimer = (
           if (pendingAssignments && pendingAssignments.length > 0) {
             console.log(`Timer expired for ${pendingAssignments.length} restaurant assignments`);
             
-            // For each pending assignment, create a history entry
+            // For each pending assignment, create a history entry with timed_out status
             for (const assignment of pendingAssignments) {
               await supabase
                 .from('restaurant_assignment_history')
                 .insert({
                   order_id: orderId,
                   restaurant_id: assignment.restaurant_id,
-                  status: 'expired',
+                  status: 'timed_out',
                   notes: 'Timer expired automatically'
                 });
             }
             
-            // Then mark all pending assignments as expired
+            // Then mark all pending assignments as expired in the assignments table
             await supabase
               .from('restaurant_assignments')
               .update({ status: 'expired' })

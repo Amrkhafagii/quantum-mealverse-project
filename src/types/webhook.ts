@@ -26,6 +26,7 @@ export interface AssignmentStatus {
   pending_count?: number;
   accepted_count?: number;
   rejected_count?: number;
+  expired_count?: number;
 }
 
 export interface WebhookResponse {

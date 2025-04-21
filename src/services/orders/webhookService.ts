@@ -56,7 +56,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     // Find assignments that have expired but still have pending status
     const { data: expiredAssignments } = await supabase
       .from('restaurant_assignments')
-      .select('id')
+      .select('id, restaurant_id')
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .lt('expires_at', now);
@@ -73,14 +73,14 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         .eq('status', 'pending')
         .lt('expires_at', now);
       
-      // Add entries to the assignment history for the status changes
+      // Add entries to the assignment history for the status changes with timed_out status
       for (const assignment of expiredAssignments) {
         await supabase
           .from('restaurant_assignment_history')
           .insert({
             order_id: orderId,
-            restaurant_id: null, // We'll get this in the next step
-            status: 'expired',
+            restaurant_id: assignment.restaurant_id,
+            status: 'timed_out',
             notes: 'Timer expired'
           });
       }
@@ -152,7 +152,8 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       attempt_count: assignments.length,
       pending_count: pendingCount,
       accepted_count: acceptedCount,
-      rejected_count: rejectedCount
+      rejected_count: rejectedCount,
+      expired_count: expiredCount
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);
