@@ -1,3 +1,4 @@
+
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -19,6 +20,107 @@ export async function updateOrderStatus(
   }
 
   return data;
+}
+
+export async function assignOrderToAllNearbyRestaurants(
+  supabase: SupabaseClient,
+  orderId: string,
+  latitude: number,
+  longitude: number
+) {
+  console.log(`[ASSIGN_ALL] Looking for restaurants near (${latitude}, ${longitude})`);
+  const nearestRestaurants = await findNearestRestaurants(supabase, latitude, longitude);
+  
+  if (!nearestRestaurants || nearestRestaurants.length === 0) {
+    console.log('[ASSIGN_ALL] No restaurants available within range');
+    await updateOrderStatus(supabase, orderId, 'no_restaurants_available');
+    
+    // Log to webhook_logs
+    await supabase.from('webhook_logs').insert({
+      payload: {
+        order_id: orderId,
+        status: 'failed',
+        reason: 'No restaurants available within range'
+      }
+    });
+    
+    return { 
+      success: false, 
+      error: 'No restaurants available within range',
+      status: 'no_restaurants_available'
+    };
+  }
+
+  console.log(`[ASSIGN_ALL] Found ${nearestRestaurants.length} restaurants for order ${orderId}`);
+
+  // Set expiration time for 5 minutes from now
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  
+  const assignments = [];
+  const restaurantNames = [];
+
+  // Create assignments for all restaurants
+  for (const restaurant of nearestRestaurants) {
+    const assignment = await createRestaurantAssignment(
+      supabase, 
+      orderId, 
+      restaurant.restaurant_id,
+      expiresAt
+    );
+
+    if (assignment) {
+      assignments.push(assignment);
+      restaurantNames.push(restaurant.restaurant_name || 'Restaurant');
+      
+      await logAssignmentAttempt(
+        supabase, 
+        orderId, 
+        restaurant.restaurant_id, 
+        'assigned',
+        `Assignment expires at ${expiresAt}`
+      );
+    }
+  }
+
+  if (assignments.length === 0) {
+    console.log('[ASSIGN_ALL] Failed to create any restaurant assignments');
+    
+    // Log to webhook_logs
+    await supabase.from('webhook_logs').insert({
+      payload: {
+        order_id: orderId,
+        status: 'error',
+        reason: 'Failed to create assignments'
+      }
+    });
+    
+    return { 
+      success: false, 
+      error: 'Failed to create restaurant assignments'
+    };
+  }
+
+  // Log to webhook_logs
+  await supabase.from('webhook_logs').insert({
+    payload: {
+      order_id: orderId,
+      status: 'assigned_to_multiple',
+      assignment_count: assignments.length,
+      restaurants: restaurantNames,
+      expires_at: expiresAt
+    }
+  });
+
+  await updateOrderStatus(supabase, orderId, 'awaiting_restaurant');
+
+  // Return success with information about these assignments
+  return { 
+    success: true, 
+    message: `Order assigned to ${assignments.length} restaurants`,
+    assignment_count: assignments.length,
+    restaurant_names: restaurantNames,
+    expires_at: expiresAt
+  };
 }
 
 export async function handleAssignment(

@@ -23,6 +23,9 @@ export interface AssignmentStatus {
   assignment_id?: string;
   expires_at?: string;
   attempt_count: number;
+  pending_count?: number;
+  accepted_count?: number;
+  rejected_count?: number;
 }
 
 export interface WebhookResponse {

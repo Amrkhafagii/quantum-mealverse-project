@@ -1,7 +1,8 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
-import { handleAssignment, duplicateOrderWithNewRestaurant } from './orderService.ts';
+import { handleAssignment, duplicateOrderWithNewRestaurant, assignOrderToAllNearbyRestaurants } from './orderService.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,34 +109,47 @@ Deno.serve(async (req) => {
       const currentAttemptNumber = count || 1;
       console.log(`[WEBHOOK] Processing ${action} for order ${order_id} on attempt #${currentAttemptNumber}`);
 
-      const { error: updateError } = await supabase
-        .from('restaurant_assignments')
-        .update({ status: action === 'accept' ? 'accepted' : 'rejected' })
-        .eq('id', assignment_id);
-      
-      if (updateError) {
-        console.error('[WEBHOOK] Error updating assignment:', updateError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Failed to update assignment' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-
-      await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
-      
-      await supabase.from('webhook_logs').insert({
-        payload: {
-          order_id,
-          restaurant_id,
-          action,
-          status: action,
-          attempt_number: currentAttemptNumber,
-          timestamp: new Date().toISOString()
-        },
-        restaurant_assigned: restaurant_id
-      });
-
       if (action === 'accept') {
+        // Mark this assignment as accepted
+        const { error: updateError } = await supabase
+          .from('restaurant_assignments')
+          .update({ status: 'accepted' })
+          .eq('id', assignment_id);
+        
+        if (updateError) {
+          console.error('[WEBHOOK] Error updating assignment:', updateError);
+          return new Response(
+            JSON.stringify({ success: false, error: 'Failed to update assignment' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+
+        // Mark all other pending assignments for this order as cancelled
+        const { error: cancelError } = await supabase
+          .from('restaurant_assignments')
+          .update({ status: 'cancelled' })
+          .eq('order_id', order_id)
+          .eq('status', 'pending')
+          .neq('id', assignment_id);
+
+        if (cancelError) {
+          console.error('[WEBHOOK] Error cancelling other assignments:', cancelError);
+        }
+
+        await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
+        
+        await supabase.from('webhook_logs').insert({
+          payload: {
+            order_id,
+            restaurant_id,
+            action,
+            status: action,
+            attempt_number: currentAttemptNumber,
+            timestamp: new Date().toISOString()
+          },
+          restaurant_assigned: restaurant_id
+        });
+
         console.log(`[WEBHOOK] Restaurant ${restaurant_id} accepted order ${order_id} on attempt #${currentAttemptNumber}`);
         
         const { error: orderUpdateError } = await supabase
@@ -164,16 +178,67 @@ Deno.serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-      } else {
-        console.log(`[WEBHOOK] Restaurant ${restaurant_id} rejected order ${order_id}, creating new order for a different restaurant...`);
-        const result = await duplicateOrderWithNewRestaurant(supabase, order_id, latitude, longitude);
+      } else { // action === 'reject'
+        // Mark this assignment as rejected
+        const { error: updateError } = await supabase
+          .from('restaurant_assignments')
+          .update({ status: 'rejected' })
+          .eq('id', assignment_id);
+        
+        if (updateError) {
+          console.error('[WEBHOOK] Error updating assignment:', updateError);
+          return new Response(
+            JSON.stringify({ success: false, error: 'Failed to update assignment' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+
+        await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
+        
+        await supabase.from('webhook_logs').insert({
+          payload: {
+            order_id,
+            restaurant_id,
+            action,
+            status: action,
+            attempt_number: currentAttemptNumber,
+            timestamp: new Date().toISOString()
+          },
+          restaurant_assigned: restaurant_id
+        });
+
+        // Check if all restaurants have rejected or expired
+        const { data: pendingAssignments } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', order_id)
+          .eq('status', 'pending');
+        
+        if (!pendingAssignments || pendingAssignments.length === 0) {
+          // All restaurants have responded, and none accepted
+          await updateOrderStatus(supabase, order_id, 'no_restaurant_accepted');
+          
+          console.log(`[WEBHOOK] No restaurants accepted order ${order_id}, marking as no_restaurant_accepted`);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Order rejected by restaurant, no more pending assignments',
+              result: {
+                status: 'no_restaurant_accepted',
+                message: 'All restaurants have rejected the order'
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // There are still pending assignments, wait for other restaurants to respond
         return new Response(
           JSON.stringify({ 
-            success: result.success, 
-            message: result.success 
-              ? 'Order was rejected, a new order was created for an untried restaurant'
-              : (result.error || 'Failed to create new order'),
-            result
+            success: true, 
+            message: 'Order rejected by restaurant, but still awaiting responses from other restaurants',
+            pending_assignments: pendingAssignments.length
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -184,21 +249,45 @@ Deno.serve(async (req) => {
       console.log(`[WEBHOOK] Processing ${isExpiredReassignment ? 'reassignment due to expiration' : 'new assignment'} for order ${order_id}`);
       
       if (isExpiredReassignment) {
-        console.log(`[WEBHOOK] Order expired, creating new order for a different restaurant...`);
-        const result = await duplicateOrderWithNewRestaurant(supabase, order_id, latitude, longitude);
+        // Check if all restaurants have rejected or expired
+        const { data: pendingAssignments } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', order_id)
+          .eq('status', 'pending');
+        
+        if (!pendingAssignments || pendingAssignments.length === 0) {
+          // All restaurants have responded or expired, and none accepted
+          await updateOrderStatus(supabase, order_id, 'no_restaurant_accepted');
+          
+          console.log(`[WEBHOOK] All assignments for order ${order_id} have expired, marking as no_restaurant_accepted`);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'All assignments have expired, no restaurant accepted the order',
+              result: {
+                status: 'no_restaurant_accepted',
+                message: 'No restaurant accepted the order in time'
+              }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // There are still pending assignments, do nothing
         return new Response(
-          JSON.stringify({
-            success: result.success,
-            message: result.success
-              ? 'Order expired, a new order was created for an untried restaurant'
-              : (result.error || 'Failed to create new order'),
-            result
+          JSON.stringify({ 
+            success: true, 
+            message: 'Some assignments expired, but still awaiting responses from other restaurants',
+            pending_assignments: pendingAssignments.length
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      const result = await handleAssignment(supabase, order_id, latitude, longitude);
+      // For new orders, assign to all nearby restaurants
+      const result = await assignOrderToAllNearbyRestaurants(supabase, order_id, latitude, longitude);
       if (!result.success) {
         return new Response(
           JSON.stringify({ 

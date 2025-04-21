@@ -55,15 +55,13 @@ export const sendOrderToWebhook = async (
 
     console.log('Webhook response:', response.data);
     
-    // Log the assignment attempt in the client side
-    if (response.data?.result?.attempt_number) {
-      console.log(`[REASSIGNMENT CLIENT] Order ${orderId} - ${response.data.result.attempt_number > 1 ? 'Reassigned' : 'Assigned'} to restaurant on attempt #${response.data.result.attempt_number}`);
-      
-      // If this was a reassignment, show more details
-      if (response.data.result.attempt_number > 1) {
-        console.log(`[REASSIGNMENT CLIENT] Order ${orderId} - Restaurant ${response.data.result.restaurant_name} (${response.data.result.restaurant_id})`);
-        console.log(`[REASSIGNMENT CLIENT] Order ${orderId} - Expires at ${response.data.result.expires_at}`);
+    // If multiple restaurants were assigned, log it
+    if (response.data?.result?.assignment_count > 1) {
+      console.log(`[ASSIGNMENT CLIENT] Order ${orderId} - Assigned to ${response.data.result.assignment_count} restaurants`);
+      if (response.data.result.restaurant_names && response.data.result.restaurant_names.length) {
+        console.log(`[ASSIGNMENT CLIENT] Order ${orderId} - Restaurants: ${response.data.result.restaurant_names.join(', ')}`);
       }
+      console.log(`[ASSIGNMENT CLIENT] Order ${orderId} - Expires at ${response.data.result.expires_at}`);
     }
     
     return {
@@ -110,10 +108,6 @@ export const simulateRestaurantResponse = async (
       };
     }
 
-    if (action === 'reject' && response.data?.result?.attempt_number) {
-      console.log(`[REASSIGNMENT CLIENT] Order ${orderId} - Rejected, attempting reassignment (attempt #${response.data.result.attempt_number})`);
-    }
-    
     return {
       success: true,
       result: response.data
@@ -128,10 +122,9 @@ export const simulateRestaurantResponse = async (
 
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus> => {
   try {
-    console.log(`[REASSIGNMENT CLIENT] Checking assignment status for order: ${orderId}`);
+    console.log(`[ASSIGNMENT CLIENT] Checking assignment status for order: ${orderId}`);
     
     // First check for active assignments in restaurant_assignments table
-    // Use a simpler query structure to avoid relationship issues
     const { data: assignments, error: assignmentError } = await supabase
       .from('restaurant_assignments')
       .select('id, status, order_id, restaurant_id, expires_at, created_at')
@@ -143,8 +136,26 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       console.error('Error fetching assignments:', assignmentError);
       console.log('No active assignments found, checking order status');
     } else if (assignments && assignments.length > 0) {
+      console.log(`[ASSIGNMENT CLIENT] Found ${assignments.length} pending assignments for order ${orderId}`);
+      
+      // Get the total number of restaurants this order was sent to
+      const { count } = await supabase
+        .from('restaurant_assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('order_id', orderId);
+      
+      // Get restaurants that have responded (either accepted or rejected)
+      const { data: responded } = await supabase
+        .from('restaurant_assignments')
+        .select('status')
+        .eq('order_id', orderId)
+        .or('status.eq.accepted,status.eq.rejected');
+      
+      const accepted = responded?.filter(a => a.status === 'accepted').length || 0;
+      const rejected = responded?.filter(a => a.status === 'rejected').length || 0;
+      
+      // Get one assignment to get the expires_at time
       const assignment = assignments[0];
-      console.log('[REASSIGNMENT CLIENT] Active assignment found:', assignment);
       
       // Get restaurant details separately
       const { data: restaurant } = await supabase
@@ -153,27 +164,19 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         .eq('id', assignment.restaurant_id)
         .single();
       
-      // Get the assignment attempt count to know if this is a reassignment
-      const { count } = await supabase
-        .from('restaurant_assignment_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('order_id', orderId);
-      
-      // Validate that expires_at is a valid date in the future
       const expiresAt = assignment.expires_at;
       const expiresAtDate = new Date(expiresAt);
       const isValidDate = !isNaN(expiresAtDate.getTime());
       const isFutureDate = isValidDate && expiresAtDate > new Date();
       const restaurantName = restaurant?.name || 'Restaurant';
       
-      console.log(`[REASSIGNMENT CLIENT] Assignment details for ${orderId}:`, {
+      console.log(`[ASSIGNMENT CLIENT] Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
-        restaurant: restaurantName,
-        restaurant_id: assignment.restaurant_id,
-        attempt_count: count,
+        pending_count: assignments.length,
+        total_count: count,
+        accepted,
+        rejected,
         expires_at: expiresAt,
-        expiresAtValid: isValidDate,
-        isFutureDate,
         timeRemaining: isValidDate ? Math.floor((expiresAtDate.getTime() - Date.now()) / 1000) : 'invalid date'
       });
       
@@ -183,21 +186,16 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         restaurant_name: restaurantName,
         assignment_id: assignment.id,
         expires_at: expiresAt,
-        attempt_count: count || 0
+        attempt_count: count || 0,
+        pending_count: assignments.length,
+        accepted_count: accepted,
+        rejected_count: rejected
       };
     } else {
-      console.log('[REASSIGNMENT CLIENT] No active assignments found for order:', orderId);
+      console.log('[ASSIGNMENT CLIENT] No active assignments found for order:', orderId);
     }
     
-    // Get attempt count from assignment history
-    const { count } = await supabase
-      .from('restaurant_assignment_history')
-      .select('*', { count: 'exact', head: true })
-      .eq('order_id', orderId);
-    
-    console.log(`[REASSIGNMENT CLIENT] Total assignment attempts for order ${orderId}: ${count}`);
-    
-    // Get current order status
+    // Get current order status if no pending assignments
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('status, restaurant_id')
@@ -221,6 +219,12 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         restaurantName = restaurant.name;
       }
     }
+    
+    // Get total assignment count
+    const { count } = await supabase
+      .from('restaurant_assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('order_id', orderId);
     
     // If no active assignment but order exists, return order status
     if (order) {
