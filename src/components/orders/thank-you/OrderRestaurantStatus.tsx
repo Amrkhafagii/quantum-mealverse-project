@@ -73,9 +73,9 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   // Only show the restaurant name if there's an actual assigned restaurant
   // that has accepted the order (not just a pending assignment)
   const showRestaurantName = restaurantName && 
-                            (status !== 'pending' && 
-                             status !== 'awaiting_restaurant' && 
-                             assignmentStatus?.status !== 'awaiting_response');
+                            status !== 'pending' && 
+                            status !== 'awaiting_restaurant' && 
+                            assignmentStatus?.status !== 'awaiting_response';
 
   return (
     <div className="space-y-6 py-4">

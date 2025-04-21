@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -75,11 +76,23 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'accept' || action === 'reject') {
-      if (!requestData.restaurant_id || !requestData.assignment_id) {
+      // Stricter validation for restaurant_id and assignment_id
+      if (!requestData.assignment_id) {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: 'Missing restaurant_id or assignment_id for accept/reject action' 
+            error: 'Missing assignment_id for accept/reject action' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      if (!requestData.restaurant_id) {
+        console.error(`[WEBHOOK] Invalid ${action} request: Missing restaurant_id`, requestData);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Missing restaurant_id for ${action} action` 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
@@ -89,6 +102,7 @@ Deno.serve(async (req) => {
       
       console.log(`[WEBHOOK] Processing ${action} action for order ${order_id} from restaurant ${restaurant_id}`);
       
+      // Verify the assignment exists and is still pending
       const { data: assignment, error: assignmentError } = await supabase
         .from('restaurant_assignments')
         .select('*')

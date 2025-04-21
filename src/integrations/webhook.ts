@@ -64,6 +64,23 @@ export async function simulateRestaurantResponse(
   longitude: number
 ): Promise<WebhookResponse> {
   try {
+    // Validate inputs to prevent null restaurantId being sent
+    if (!restaurantId) {
+      console.error('Cannot simulate restaurant response with null restaurantId');
+      return {
+        success: false,
+        error: 'Missing restaurant ID'
+      };
+    }
+
+    if (!assignmentId) {
+      console.error('Cannot simulate restaurant response with null assignmentId');
+      return {
+        success: false,
+        error: 'Missing assignment ID'
+      };
+    }
+
     const data: RestaurantResponseRequest = {
       order_id: orderId,
       restaurant_id: restaurantId,

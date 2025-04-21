@@ -7,9 +7,9 @@ import { AssignmentStatus } from '@/types/webhook';
 interface OrderStatusMessageProps {
   order: Order;
   assignmentStatus: AssignmentStatus | null;
-  status?: string; // Add this field to match usage in OrderStatusDisplay
-  restaurant?: { id: string; name: string; }; // Add this field
-  deliveryMethod?: string; // Add this field
+  status?: string;
+  restaurant?: { id: string; name: string; };
+  deliveryMethod?: string;
 }
 
 interface StatusMessage {
@@ -29,6 +29,14 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   const orderRestaurant = restaurant || order?.restaurant;
   const orderDeliveryMethod = deliveryMethod || order?.delivery_method;
 
+  // Only show restaurant name if a restaurant has actually accepted the order
+  const shouldShowRestaurantName = 
+    assignmentStatus?.restaurant_name && 
+    assignmentStatus?.assigned_restaurant_id && 
+    orderStatus !== 'pending' && 
+    orderStatus !== 'awaiting_restaurant' && 
+    assignmentStatus?.status !== 'awaiting_response';
+
   const getStatusMessage = (): StatusMessage => {
     if (!orderStatus) return { message: '' };
     
@@ -41,13 +49,17 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
         };
       case 'awaiting_restaurant':
         return {
-          message: assignmentStatus?.restaurant_name ? 
+          message: shouldShowRestaurantName ? 
             `Waiting for confirmation from ${assignmentStatus.restaurant_name}...` :
-            'A restaurant is reviewing your order...',
+            'Waiting for a restaurant to accept your order...',
           details: `Attempt ${assignmentStatus?.attempt_count || 1} of 3`
         };
       case 'processing':
-        return { message: 'Your order is being prepared!' };
+        return { 
+          message: shouldShowRestaurantName ? 
+            `Your order is being prepared by ${assignmentStatus.restaurant_name}!` : 
+            'Your order is being prepared!' 
+        };
       case 'assignment_failed':
         return {
           message: 'No nearby restaurants available at the moment.',
@@ -79,7 +91,7 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-2">
-        {orderStatus === 'awaiting_restaurant' && assignmentStatus?.restaurant_name && (
+        {shouldShowRestaurantName && (
           <Building className="h-5 w-5 text-quantum-cyan mt-1 flex-shrink-0" />
         )}
         <div className="w-full">
