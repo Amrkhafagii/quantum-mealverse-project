@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { WebhookResponse } from '@/types/webhook';
 import { logApiCall } from '@/services/loggerService';

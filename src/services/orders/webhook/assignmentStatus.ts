@@ -9,8 +9,10 @@ import { checkExpiredAssignments } from './expirationCheck';
  */
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus | null> => {
   try {
+    // First check and handle any expired assignments
     await checkExpiredAssignments();
     
+    // Then fetch the current assignments
     const { data: assignments, error } = await supabase
       .from('restaurant_assignments')
       .select(`

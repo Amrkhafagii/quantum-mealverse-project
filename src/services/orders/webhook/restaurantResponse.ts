@@ -44,11 +44,15 @@ export const sendRestaurantResponse = async (
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Webhook request failed:', errorData);
-      return { success: false, error: errorData.error || 'Webhook request failed' };
+      return {
+        success: false,
+        error: errorData.error || `Webhook request failed`
+      };
     }
 
     const responseData: WebhookResponse = await response.json();
     
+    // Manually create order history entry
     await recordOrderHistory(
       orderId,
       `restaurant_${action}ed`,
@@ -59,6 +63,9 @@ export const sendRestaurantResponse = async (
     return responseData;
   } catch (error) {
     console.error('Error sending restaurant response to webhook:', error);
-    return { success: false, error: 'Failed to send restaurant response to webhook' };
+    return {
+      success: false,
+      error: 'Failed to send restaurant response to webhook'
+    };
   }
 };
