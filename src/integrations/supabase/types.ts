@@ -1510,6 +1510,10 @@ export type Database = {
         Args: { "": unknown } | { "": unknown }
         Returns: string
       }
+      check_expired_assignments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       check_verified_purchase: {
         Args: { user_id: string; meal_id: string }
         Returns: boolean

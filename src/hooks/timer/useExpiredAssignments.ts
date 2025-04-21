@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { forceExpireAssignments, checkExpiredAssignments } from '@/services/orders/webhookService';
+import { checkExpiredAssignments } from '@/services/orders/webhookService';
 import { logApiCall } from '@/services/loggerService';
 
 /**
@@ -23,7 +23,7 @@ export const useExpiredAssignments = (
         const expiryTime = new Date(expiresAt);
         const now = new Date();
         
-        // This is now mainly for UI consistency - the server will handle actual expiration
+        // Verify server state if assignment appears to be expired
         if (expiryTime < now) {
           console.log('Assignment appears to be expired by timestamp, checking server status');
           
@@ -50,26 +50,23 @@ export const useExpiredAssignments = (
     initialCheck();
   }, [orderId, expiresAt, onTimerExpire]);
 
-  // Handle timer expiration
+  // Handle timer expiration in UI
   useEffect(() => {
     if (!orderId || !isExpired || !onTimerExpire) return;
 
-    const handleExpiration = async () => {
+    const verifyExpiration = async () => {
       try {
-        // This function now mainly ensures UI consistency with server state
-        // The server should already be updating expired assignments independently
-        console.log('Timer expired in UI - verifying with server');
-        
-        const webhookResult = await checkExpiredAssignments();
-        await logApiCall('timer-expired-check', { orderId }, webhookResult);
+        // Verify with server that assignment is truly expired
+        await checkExpiredAssignments();
+        await logApiCall('verify-expired-state', { orderId }, { success: true });
       } catch (error) {
-        console.error('Error handling timer expiration:', error);
+        console.error('Error verifying expired state:', error);
       }
       
-      // Update UI regardless
+      // Update UI to reflect expired state
       onTimerExpire();
     };
 
-    handleExpiration();
+    verifyExpiration();
   }, [orderId, isExpired, onTimerExpire]);
 };
