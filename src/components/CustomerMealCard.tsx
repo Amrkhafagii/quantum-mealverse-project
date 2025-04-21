@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { useCart } from '@/contexts/CartContext';
-import { toast } from 'sonner';
+// Removed import of toast from sonner to avoid toast messages on add to cart
 import { useNavigate } from 'react-router-dom';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
       ...meal,
       quantity: quantity
     });
-    toast.success(`${meal.name} added to cart!`);
+    // Removed toast success call to prevent toast on adding meal to cart
     setQuantity(1);
   };
 
@@ -173,3 +174,4 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     </Card>
   );
 };
+
