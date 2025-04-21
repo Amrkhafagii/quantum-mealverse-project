@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkExpiredAssignments, forceExpireAssignments } from '@/services/orders/webhookService';
@@ -17,21 +16,20 @@ export const useOrderTimer = (
   useEffect(() => {
     const getServerTime = async () => {
       try {
-        // Use Supabase to get server time - using a type assertion to fix the TypeScript error
-        const { data, error } = await supabase.rpc('get_server_time') as { 
-          data: string; 
-          error: any 
-        };
+        // Use a more generic type definition for the RPC call to bypass TypeScript error
+        const response = await supabase.functions.invoke('get-server-time', {
+          method: 'POST',
+        });
         
-        if (error) {
-          console.error('Error getting server time:', error);
+        if (response.error) {
+          console.error('Error getting server time:', response.error);
           return;
         }
         
         // Set server time with proper type checking
-        if (data) {
+        if (response.data) {
           // Parse the ISO string to ensure it's a valid date
-          const serverTimeDate = new Date(data);
+          const serverTimeDate = new Date(response.data.timestamp);
           console.log('Server time:', serverTimeDate.toISOString());
           console.log('Local time:', new Date().toISOString());
           setServerTime(serverTimeDate);
