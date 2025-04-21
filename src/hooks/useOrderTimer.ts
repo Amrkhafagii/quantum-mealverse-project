@@ -165,14 +165,13 @@ export const useOrderTimer = (
         const preCheckExpired = async () => {
           try {
             // Verify if there are still pending assignments that need to be expired
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('restaurant_assignments')
-              .select('count')
+              .select('id')
               .eq('order_id', orderId)
-              .eq('status', 'pending')
-              .count();
+              .eq('status', 'pending');
               
-            const pendingCount = data?.[0]?.count || 0;
+            const pendingCount = data?.length || 0;
             console.log(`Pre-check: ${pendingCount} pending assignments for order ${orderId}`);
             
             if (pendingCount > 0) {
