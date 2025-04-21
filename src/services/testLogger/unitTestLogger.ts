@@ -15,8 +15,9 @@ interface UnitTestResult {
 
 export const logUnitTestResult = async (result: UnitTestResult) => {
   try {
+    // Use type assertion to tell TypeScript that our table exists
     const { error } = await supabase
-      .from('unit_test_customer')
+      .from('unit_test_customer' as any)
       .insert([{
         test_name: result.test_name,
         function_name: result.function_name,

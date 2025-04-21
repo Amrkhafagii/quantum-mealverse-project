@@ -1134,6 +1134,45 @@ export type Database = {
         }
         Relationships: []
       }
+      unit_test_customer: {
+        Row: {
+          actual_output: Json | null
+          error_message: string | null
+          execution_time: number
+          expected_output: Json | null
+          function_name: string
+          id: string
+          input: Json | null
+          passed: boolean
+          test_name: string
+          timestamp: string
+        }
+        Insert: {
+          actual_output?: Json | null
+          error_message?: string | null
+          execution_time: number
+          expected_output?: Json | null
+          function_name: string
+          id?: string
+          input?: Json | null
+          passed: boolean
+          test_name: string
+          timestamp?: string
+        }
+        Update: {
+          actual_output?: Json | null
+          error_message?: string | null
+          execution_time?: number
+          expected_output?: Json | null
+          function_name?: string
+          id?: string
+          input?: Json | null
+          passed?: boolean
+          test_name?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
       user_locations: {
         Row: {
           id: string
