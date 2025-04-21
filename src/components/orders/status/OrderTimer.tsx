@@ -42,7 +42,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
             console.log('Force expiration result:', forceResult);
             
             // Log the force check
-            await logApiCall('initial-force-expiration', { 
+            await logApiCall('component-initial-force', { 
               orderId, 
               expiresAt,
               currentTime: now.toISOString()

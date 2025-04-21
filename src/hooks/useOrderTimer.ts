@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkExpiredAssignments, forceExpireAssignments } from '@/services/orders/webhookService';
@@ -14,6 +15,7 @@ export const useOrderTimer = (
   const [progress, setProgress] = useState<number>(100);
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [serverTime, setServerTime] = useState<Date | null>(null);
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
 
   // First effect: Get server time once to calculate offset
   useEffect(() => {
@@ -51,6 +53,11 @@ export const useOrderTimer = (
             console.log('Server time:', serverTimeDate.toISOString());
             console.log('Local time:', new Date().toISOString());
             setServerTime(serverTimeDate);
+            
+            // Calculate and store the offset separately
+            const offset = serverTimeDate.getTime() - new Date().getTime();
+            console.log('Server time offset (ms):', offset);
+            setServerTimeOffset(offset);
           } catch (parseError) {
             console.error('Error parsing server time:', parseError);
           }
@@ -83,29 +90,18 @@ export const useOrderTimer = (
     console.log('expiresAt (parsed):', expiresAtDate.toISOString());
     console.log('Current local time:', new Date().toISOString());
     
-    // Calculate time correctly using server time if available
+    // Calculate time correctly using server time offset
     const calculateRemainingTime = () => {
       const now = new Date();
       let secondsLeft: number;
       
-      // If we have server time, use it to calculate a more accurate time difference
-      if (serverTime) {
-        // Calculate the offset between local time and server time
-        const serverTimeOffset = serverTime.getTime() - new Date().getTime();
-        console.log('Server time offset (ms):', serverTimeOffset);
-        
-        // Adjust our current time by the server offset to get "server now"
-        const adjustedNow = new Date(now.getTime() + serverTimeOffset);
-        console.log('Adjusted current time (with server offset):', adjustedNow.toISOString());
-        
-        // Calculate time difference in seconds
-        secondsLeft = Math.max(0, Math.floor((expiresAtDate.getTime() - adjustedNow.getTime()) / 1000));
-        console.log('Time remaining with server-adjusted time (seconds):', secondsLeft);
-      } else {
-        // No server time available, use local time (less accurate)
-        secondsLeft = Math.max(0, Math.floor((expiresAtDate.getTime() - now.getTime()) / 1000));
-        console.log('Time remaining with local time (seconds):', secondsLeft);
-      }
+      // Always use the server time offset to get more accurate time
+      const adjustedNow = new Date(now.getTime() + serverTimeOffset);
+      console.log('Adjusted current time (with server offset):', adjustedNow.toISOString());
+      
+      // Calculate time difference in seconds
+      secondsLeft = Math.max(0, Math.floor((expiresAtDate.getTime() - adjustedNow.getTime()) / 1000));
+      console.log('Time remaining with server-adjusted time (seconds):', secondsLeft);
       
       return secondsLeft;
     };
@@ -115,7 +111,7 @@ export const useOrderTimer = (
     
     // If the timer is already expired based on initial calculation
     if (initialSecondsLeft <= 0) {
-      console.log(`Timer already expired for order ${orderId}`);
+      console.log(`⏰ Timer already expired for order ${orderId}`);
       setTimeLeft(0);
       setProgress(0);
       setIsExpired(true);
@@ -129,6 +125,13 @@ export const useOrderTimer = (
           
           // Log the result
           await logApiCall('initial-expired-force', { orderId }, result);
+          
+          // If direct force method fails, try the webhook
+          if (!result.success) {
+            console.log('Direct method failed, trying webhook...');
+            const webhookResult = await checkExpiredAssignments();
+            console.log('Webhook expired assignments check result:', webhookResult);
+          }
         } catch (error) {
           console.error('Error forcing expiration on initial check:', error);
         }
@@ -153,6 +156,36 @@ export const useOrderTimer = (
       if (secondsLeft <= 300 && secondsLeft % 30 === 0) {
         console.log(`Timer check for order ${orderId}: ${secondsLeft} seconds left`);
       }
+      
+      // When timer is about to expire (30 seconds or less), start checking more frequently
+      if (secondsLeft <= 30 && secondsLeft > 0 && !isExpired) {
+        console.log(`⏰ Timer about to expire for order ${orderId} in ${secondsLeft} seconds...`);
+        
+        // Pre-check if assignments are still pending and need to be expired
+        const preCheckExpired = async () => {
+          try {
+            // Verify if there are still pending assignments that need to be expired
+            const { data } = await supabase
+              .from('restaurant_assignments')
+              .select('count')
+              .eq('order_id', orderId)
+              .eq('status', 'pending')
+              .count();
+              
+            const pendingCount = data?.[0]?.count || 0;
+            console.log(`Pre-check: ${pendingCount} pending assignments for order ${orderId}`);
+            
+            if (pendingCount > 0) {
+              console.log('Preemptively checking for expirations...');
+              await checkExpiredAssignments();
+            }
+          } catch (error) {
+            console.error('Error in pre-check for expired assignments:', error);
+          }
+        };
+        
+        preCheckExpired();
+      }
 
       // When timer expires (becomes 0)
       if (secondsLeft === 0 && !isExpired) {
@@ -165,40 +198,74 @@ export const useOrderTimer = (
           orderId, 
           expiresAt, 
           currentTime: new Date().toISOString(),
-          serverTime: serverTime?.toISOString() || 'not available'
+          serverTime: serverTime?.toISOString() || 'not available',
+          serverTimeOffset
         }, null);
         
+        // Multiple expiration methods for redundancy
+        
+        // Method 1: Direct database update via forceExpireAssignments
         try {
-          console.log('🔄 Directly forcing assignment expiration for order:', orderId);
+          console.log('🔄 Method 1: Directly forcing assignment expiration for order:', orderId);
           const result = await forceExpireAssignments(orderId);
-          console.log('Direct force expiration result:', result);
+          console.log('Method 1 result:', result);
+          await logApiCall('expire-method1', { orderId }, result);
           
-          // Log the result
-          await logApiCall('direct-expired-assignments', { orderId }, result);
-          
-          // If direct method fails, try the webhook method as backup
+          // Method 2: Webhook check if method 1 fails or as additional verification
           if (!result.success) {
-            console.log('🔄 Direct method failed, trying webhook...');
+            console.log('🔄 Method 1 failed, trying Method 2: webhook...');
             const webhookResult = await checkExpiredAssignments();
-            console.log('Webhook expired assignments check result:', webhookResult);
-            
-            // Log the result
-            await logApiCall('expired-assignments-webhook', { orderId }, webhookResult);
+            console.log('Method 2 result:', webhookResult);
+            await logApiCall('expire-method2', { orderId }, webhookResult);
           }
         } catch (error) {
-          console.error('❌ Error handling expired assignment:', error);
+          console.error('❌ Error in Method 1:', error);
           
-          // Last resort: Try one more time with a delay
+          // Method 2: Webhook check (as backup)
+          try {
+            console.log('🔄 Method 2: Checking expired assignments via webhook');
+            const webhookResult = await checkExpiredAssignments();
+            console.log('Method 2 result:', webhookResult);
+            await logApiCall('expire-method2-backup', { orderId }, webhookResult);
+          } catch (webhookError) {
+            console.error('❌ Error in Method 2:', webhookError);
+          }
+          
+          // Method 3: Last resort - direct database update with delay
           setTimeout(async () => {
             try {
-              console.log('🔄 Final attempt to force expiration for order:', orderId);
+              console.log('🔄 Method 3: Final attempt to force expiration for order:', orderId);
               const finalResult = await forceExpireAssignments(orderId);
-              console.log('Final force expiration result:', finalResult);
+              console.log('Method 3 result:', finalResult);
+              await logApiCall('expire-method3', { orderId }, finalResult);
             } catch (finalError) {
               console.error('❌ Final attempt also failed:', finalError);
             }
           }, 2000);
         }
+        
+        // Method 4: Double check with another delay to ensure assignments were updated
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Method 4: Verification check for pending assignments');
+            const { data } = await supabase
+              .from('restaurant_assignments')
+              .select('id, status, expires_at')
+              .eq('order_id', orderId)
+              .eq('status', 'pending');
+              
+            if (data && data.length > 0) {
+              console.log(`Found ${data.length} pending assignments that should be expired. Forcing update.`);
+              const forceResult = await forceExpireAssignments(orderId);
+              console.log('Method 4 result:', forceResult);
+              await logApiCall('expire-method4', { orderId }, forceResult);
+            } else {
+              console.log('No pending assignments found in verification check.');
+            }
+          } catch (error) {
+            console.error('❌ Error in verification check:', error);
+          }
+        }, 5000);
       }
     };
 
@@ -208,7 +275,7 @@ export const useOrderTimer = (
     return () => {
       clearInterval(timerInterval);
     };
-  }, [expiresAt, orderId, isExpired, serverTime]);
+  }, [expiresAt, orderId, isExpired, serverTime, serverTimeOffset]);
 
   const formatTime = (seconds: number): string => {
     const timeStr = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;

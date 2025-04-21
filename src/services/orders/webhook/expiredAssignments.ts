@@ -87,6 +87,35 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
     
     if (!pendingAssignments || pendingAssignments.length === 0) {
       console.log(`No pending assignments found for order ${orderId}`);
+      
+      // Check if there are any accepted assignments
+      const { data: acceptedAssignments } = await supabase
+        .from('restaurant_assignments')
+        .select('id')
+        .eq('order_id', orderId)
+        .eq('status', 'accepted');
+      
+      if (!acceptedAssignments || acceptedAssignments.length === 0) {
+        // No accepted assignments either, update order status
+        console.log(`No accepted assignments for order ${orderId}, updating status`);
+        
+        const { error: orderUpdateError } = await supabase
+          .from('orders')
+          .update({ status: 'no_restaurant_accepted' })
+          .eq('id', orderId);
+          
+        if (orderUpdateError) {
+          console.error('Error updating order status:', orderUpdateError);
+        } else {
+          await recordOrderHistory(
+            orderId,
+            'no_restaurant_accepted',
+            null,
+            { reason: 'No restaurants accepted the order' }
+          );
+        }
+      }
+      
       return { success: true, message: 'No pending assignments found' };
     }
     
@@ -105,15 +134,20 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
       console.log(`Has expired: ${expiresAt < now ? 'YES' : 'NO'}`);
     });
     
-    // Force update the status to expired for ALL pending assignments
-    // This is a more aggressive approach to ensure they get expired
+    // Direct database update - Update status to expired for ALL pending assignments
+    // regardless of actual expiration time to ensure they get processed
     const updates = pendingAssignments.map(async (assignment) => {
-      console.log(`Attempting to update assignment ${assignment.id} to expired status`);
+      console.log(`Updating assignment ${assignment.id} to expired status`);
       
+      // First try an update with a direct query
       const { error: updateError } = await supabase
         .from('restaurant_assignments')
-        .update({ status: 'expired' })
-        .eq('id', assignment.id);
+        .update({ 
+          status: 'expired',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assignment.id)
+        .eq('status', 'pending'); // Only update if still pending
       
       if (updateError) {
         console.error(`Error updating assignment ${assignment.id}:`, updateError);
@@ -121,6 +155,21 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
       }
       
       console.log(`Successfully marked assignment ${assignment.id} as expired`);
+      
+      // Record in restaurant_assignment_history
+      try {
+        await supabase
+          .from('restaurant_assignment_history')
+          .insert({
+            order_id: orderId,
+            restaurant_id: assignment.restaurant_id,
+            status: 'expired',
+            notes: 'Force expired by timer'
+          });
+        console.log(`Added history entry for assignment ${assignment.id}`);
+      } catch (historyError) {
+        console.error(`Error recording assignment history for ${assignment.id}:`, historyError);
+      }
       
       // Record in order history
       try {
@@ -131,9 +180,9 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
           { assignment_id: assignment.id, forced: true },
           new Date().toISOString()
         );
-        console.log(`Added history entry for assignment ${assignment.id}`);
+        console.log(`Added order history entry for assignment ${assignment.id}`);
       } catch (historyError) {
-        console.error(`Error recording history for assignment ${assignment.id}:`, historyError);
+        console.error(`Error recording order history for assignment ${assignment.id}:`, historyError);
       }
       
       return true;
@@ -193,6 +242,14 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
           console.log(`Added history entry for order status change`);
         }
       }
+    }
+    
+    // Try to directly call the webhook as well, as a backup
+    try {
+      console.log('Calling webhook as additional verification');
+      await checkExpiredAssignments();
+    } catch (webhookError) {
+      console.error('Error calling webhook:', webhookError);
     }
     
     return { 
