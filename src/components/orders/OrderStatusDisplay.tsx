@@ -1,13 +1,13 @@
+
 import React from 'react';
 import { Order } from '@/types/order';
-import { CircularTimer } from './status/CircularTimer';
 import { OrderTimer } from './status/OrderTimer';
 import { OrderStatusMessage } from './status/OrderStatusMessage';
 import { CancelOrderButton } from './status/CancelOrderButton';
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
-import { CircleCheck, CircleX, Clock, Info, AlertTriangle } from 'lucide-react';
+import { Info, AlertTriangle } from 'lucide-react';
 import { simulateRestaurantResponse } from '@/services/orders/webhookService';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,9 +23,6 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   onOrderUpdate
 }) => {
   if (!order) return null;
-  
-  // For debugging simulators
-  const showDebugButtons = process.env.NODE_ENV === 'development';
 
   // Only check for pending/awaiting_restaurant status
   const isPendingOrAwaitingRestaurant = order.status === 'pending' || order.status === 'awaiting_restaurant';
@@ -43,87 +40,18 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
                   <p className="text-sm text-gray-500">Restaurant: {assignmentStatus.restaurant_name}</p>
                 </div>
                 {assignmentStatus.expires_at && (
-                  <CircularTimer 
-                    expires_at={assignmentStatus.expires_at} 
-                    onExpired={onOrderUpdate}
-                  />
+                  <div className="ml-4 w-64 max-w-xs">
+                    <OrderTimer 
+                      expiresAt={assignmentStatus.expires_at}
+                      orderId={order.id!}
+                      onTimerExpire={onOrderUpdate}
+                    />
+                  </div>
                 )}
               </div>
-              
-              {showDebugButtons && assignmentStatus.assignment_id && (
-                <div className="pt-2 mt-4 border-t border-gray-200">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Debug Controls (Development Only)</p>
-                  <div className="flex space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="text-xs h-8"
-                      onClick={async () => {
-                        const response = await simulateRestaurantResponse(
-                          order.id!,
-                          assignmentStatus.assigned_restaurant_id!,
-                          assignmentStatus.assignment_id,
-                          'accept',
-                          order.latitude || 0,
-                          order.longitude || 0
-                        );
-                        
-                        if (response.success) {
-                          toast({
-                            title: 'Restaurant accepted',
-                            description: 'The restaurant has accepted your order'
-                          });
-                          onOrderUpdate();
-                        } else {
-                          toast({
-                            title: 'Error',
-                            description: response.error || 'Failed to accept',
-                            variant: 'destructive'
-                          });
-                        }
-                      }}
-                    >
-                      <CircleCheck className="h-3 w-3 mr-1" />
-                      Simulate Accept
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="text-xs h-8"
-                      onClick={async () => {
-                        const response = await simulateRestaurantResponse(
-                          order.id!,
-                          assignmentStatus.assigned_restaurant_id!,
-                          assignmentStatus.assignment_id,
-                          'reject',
-                          order.latitude || 0,
-                          order.longitude || 0
-                        );
-                        
-                        if (response.success) {
-                          toast({
-                            title: 'Restaurant rejected',
-                            description: 'The restaurant has rejected your order, trying other restaurants'
-                          });
-                          onOrderUpdate();
-                        } else {
-                          toast({
-                            title: 'Error',
-                            description: response.error || 'Failed to reject',
-                            variant: 'destructive'
-                          });
-                        }
-                      }}
-                    >
-                      <CircleX className="h-3 w-3 mr-1" />
-                      Simulate Reject
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
-          
+
           {isNoRestaurantAccepted && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -134,7 +62,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
               </AlertDescription>
             </Alert>
           )}
-          
+
           {(!assignmentStatus || assignmentStatus.status === 'error' || 
            (assignmentStatus.status !== 'awaiting_response' && 
             !isNoRestaurantAccepted)) && (
@@ -146,7 +74,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
               </AlertDescription>
             </Alert>
           )}
-          
+
           <div className="mt-4">
             <CancelOrderButton 
               orderId={order.id!} 
@@ -157,7 +85,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
       </Card>
     );
   }
-  
+
   return (
     <div>
       {['processing', 'preparing', 'ready_for_pickup', 'out_for_delivery'].includes(order.status) && (
@@ -165,7 +93,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           <OrderTimer orderId={order.id!} />
         </div>
       )}
-      
+
       <OrderStatusMessage 
         order={order}
         assignmentStatus={assignmentStatus}
