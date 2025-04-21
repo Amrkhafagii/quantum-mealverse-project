@@ -1,18 +1,18 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
 
 interface CircularTimerProps {
-  expiresAt: string;
+  expires_at: string;
   onExpired: () => void;
 }
 
 export const CircularTimer: React.FC<CircularTimerProps> = ({ 
-  expiresAt, 
+  expires_at, 
   onExpired 
 }) => {
-  const { timeLeft, progress, formattedTime } = useOrderTimer(
-    expiresAt,
+  const { progress, formattedTime } = useOrderTimer(
+    expires_at,
     undefined, // No orderId needed for this timer
     onExpired
   );
@@ -24,7 +24,6 @@ export const CircularTimer: React.FC<CircularTimerProps> = ({
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg className="transform -rotate-90 w-28 h-28">
-        {/* Progress circle */}
         <circle
           cx="56"
           cy="56"

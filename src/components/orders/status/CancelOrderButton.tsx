@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -6,13 +5,11 @@ import { cancelOrder } from '@/services/orders/orderService';
 
 interface CancelOrderButtonProps {
   orderId: string;
-  orderStatus?: string; // Make it optional to match the existing usage
   onCancelSuccess: () => void;
 }
 
 export const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ 
   orderId, 
-  orderStatus,
   onCancelSuccess 
 }) => {
   const [isCancelling, setIsCancelling] = useState(false);

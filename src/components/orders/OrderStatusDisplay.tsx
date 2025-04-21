@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Order } from '@/types/order';
 import { CircularTimer } from './status/CircularTimer';
@@ -28,10 +27,10 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   // For debugging simulators
   const showDebugButtons = process.env.NODE_ENV === 'development';
 
-  // Fixed the comparison conditions to correctly check for status values
+  // Only check for pending/awaiting_restaurant status
   const isPendingOrAwaitingRestaurant = order.status === 'pending' || order.status === 'awaiting_restaurant';
   const isNoRestaurantAccepted = order.status === 'no_restaurant_accepted';
-  
+
   if (isPendingOrAwaitingRestaurant || isNoRestaurantAccepted) {
     return (
       <Card>
@@ -41,18 +40,11 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-medium">Waiting for restaurant confirmation</h3>
-                  {assignmentStatus.pending_count > 1 ? (
-                    <p className="text-sm text-gray-500">
-                      Sent to {assignmentStatus.attempt_count} nearby restaurants.<br/>
-                      {assignmentStatus.accepted_count || 0} accepted, {assignmentStatus.rejected_count || 0} rejected, {assignmentStatus.pending_count} pending
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-500">Restaurant: {assignmentStatus.restaurant_name}</p>
-                  )}
+                  <p className="text-sm text-gray-500">Restaurant: {assignmentStatus.restaurant_name}</p>
                 </div>
                 {assignmentStatus.expires_at && (
                   <CircularTimer 
-                    expiresAt={assignmentStatus.expires_at} 
+                    expires_at={assignmentStatus.expires_at} 
                     onExpired={onOrderUpdate}
                   />
                 )}
@@ -158,7 +150,6 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           <div className="mt-4">
             <CancelOrderButton 
               orderId={order.id!} 
-              orderStatus={order.status}
               onCancelSuccess={onOrderUpdate}
             />
           </div>
@@ -171,10 +162,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     <div>
       {['processing', 'preparing', 'ready_for_pickup', 'out_for_delivery'].includes(order.status) && (
         <div className="mb-4">
-          <OrderTimer 
-            orderId={order.id!} 
-            status={order.status}
-          />
+          <OrderTimer orderId={order.id!} />
         </div>
       )}
       
