@@ -39,7 +39,8 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     showTimer,
     hasValidExpiryTime, 
     expiryTime: assignmentStatus?.expires_at,
-    assignmentStatusPresent: Boolean(assignmentStatus)
+    assignmentStatusPresent: Boolean(assignmentStatus),
+    assignedRestaurantId: assignmentStatus?.assigned_restaurant_id
   });
 
   const handleTimerExpire = () => {
@@ -56,7 +57,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           <OrderTimer 
             expiresAt={assignmentStatus?.expires_at} 
             orderId={order.id}
-            attemptCount={assignmentStatus.attempt_count}
+            attemptCount={assignmentStatus?.attempt_count || 1}
             onTimerExpire={handleTimerExpire}
           />
         </div>

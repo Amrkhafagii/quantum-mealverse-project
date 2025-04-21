@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
@@ -121,21 +120,10 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     console.log(`[REASSIGNMENT CLIENT] Checking assignment status for order: ${orderId}`);
     
     // First check for active assignments in restaurant_assignments table
-    // Fix the relationship query by specifying the correct foreign key
+    // Use a simpler query structure to avoid relationship issues
     const { data: assignments, error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select(`
-        id, 
-        status, 
-        order_id, 
-        restaurant_id, 
-        expires_at, 
-        created_at,
-        restaurants:restaurant_id (
-          id, 
-          name
-        )
-      `)
+      .select('id, status, order_id, restaurant_id, expires_at, created_at')
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
@@ -146,6 +134,13 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     } else if (assignments && assignments.length > 0) {
       const assignment = assignments[0];
       console.log('[REASSIGNMENT CLIENT] Active assignment found:', assignment);
+      
+      // Get restaurant details separately
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .eq('id', assignment.restaurant_id)
+        .single();
       
       // Get the assignment attempt count to know if this is a reassignment
       const { count } = await supabase
@@ -158,10 +153,12 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       const expiresAtDate = new Date(expiresAt);
       const isValidDate = !isNaN(expiresAtDate.getTime());
       const isFutureDate = isValidDate && expiresAtDate > new Date();
+      const restaurantName = restaurant?.name || 'Restaurant';
       
       console.log(`[REASSIGNMENT CLIENT] Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
-        restaurant: assignment.restaurants ? assignment.restaurants.name : 'Restaurant',
+        restaurant: restaurantName,
+        restaurant_id: assignment.restaurant_id,
         attempt_count: count,
         expires_at: expiresAt,
         expiresAtValid: isValidDate,
@@ -172,7 +169,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: assignment.restaurants ? assignment.restaurants.name : 'Restaurant',
+        restaurant_name: restaurantName,
         assignment_id: assignment.id,
         expires_at: expiresAt,
         attempt_count: count || 0
