@@ -41,13 +41,27 @@ export const useOrderTimer = (
           // First check if any assignments are still pending for this order
           const { data: pendingAssignments } = await supabase
             .from('restaurant_assignments')
-            .select('id')
+            .select('id, restaurant_id')
             .eq('order_id', orderId)
             .eq('status', 'pending');
           
-          // Only cancel if there are still pending assignments
+          // Only update if there are still pending assignments
           if (pendingAssignments && pendingAssignments.length > 0) {
-            // First mark all pending assignments as expired
+            console.log(`Timer expired for ${pendingAssignments.length} restaurant assignments`);
+            
+            // For each pending assignment, create a history entry
+            for (const assignment of pendingAssignments) {
+              await supabase
+                .from('restaurant_assignment_history')
+                .insert({
+                  order_id: orderId,
+                  restaurant_id: assignment.restaurant_id,
+                  status: 'expired',
+                  notes: 'Timer expired automatically'
+                });
+            }
+            
+            // Then mark all pending assignments as expired
             await supabase
               .from('restaurant_assignments')
               .update({ status: 'expired' })
@@ -57,6 +71,8 @@ export const useOrderTimer = (
             // Then cancel the order
             await cancelOrder(orderId);
           }
+        } catch (error) {
+          console.error('Error handling timer expiration:', error);
         } finally {
           onExpire?.();
         }

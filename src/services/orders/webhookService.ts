@@ -63,6 +63,8 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     
     // If we found expired assignments, mark them as expired
     if (expiredAssignments && expiredAssignments.length > 0) {
+      console.log(`Marking ${expiredAssignments.length} expired assignments for order ${orderId}`);
+      
       // Update all expired assignments
       await supabase
         .from('restaurant_assignments')
@@ -70,6 +72,18 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         .eq('order_id', orderId)
         .eq('status', 'pending')
         .lt('expires_at', now);
+      
+      // Add entries to the assignment history for the status changes
+      for (const assignment of expiredAssignments) {
+        await supabase
+          .from('restaurant_assignment_history')
+          .insert({
+            order_id: orderId,
+            restaurant_id: null, // We'll get this in the next step
+            status: 'expired',
+            notes: 'Timer expired'
+          });
+      }
       
       // Check if all assignments are now expired/rejected
       const { data: activeAssignments } = await supabase
@@ -108,12 +122,16 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
     const acceptedCount = assignments.filter(a => a.status === 'accepted').length;
     const rejectedCount = assignments.filter(a => a.status === 'rejected').length;
+    const expiredCount = assignments.filter(a => a.status === 'expired').length;
     
     // Find if there's an accepted assignment
     const acceptedAssignment = assignments.find(a => a.status === 'accepted');
     
-    // Get restaurant name safely
-    const restaurantName = acceptedAssignment?.restaurants?.name || undefined;
+    // Get restaurant name safely - handle the nested structure properly
+    const restaurantName = acceptedAssignment && 
+                           acceptedAssignment.restaurants && 
+                           typeof acceptedAssignment.restaurants === 'object' ? 
+                           (acceptedAssignment.restaurants as any).name : undefined;
     
     // Get the most recent active assignment for timer
     const pendingAssignments = assignments.filter(a => a.status === 'pending');
