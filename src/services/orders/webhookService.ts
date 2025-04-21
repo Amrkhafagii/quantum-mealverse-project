@@ -298,13 +298,16 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
     
     if (!remainingPending || remainingPending.length === 0) {
       // If no assignments are accepted, update order status
-      const { data: acceptedCount } = await supabase
+      const { data: acceptedAssignments } = await supabase
         .from('restaurant_assignments')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('order_id', orderId)
         .eq('status', 'accepted');
         
-      if (acceptedCount === 0) {
+      // Fix: Check if acceptedAssignments exists and has length 0, not comparing with number
+      const noAcceptedAssignments = !acceptedAssignments || acceptedAssignments.length === 0;
+        
+      if (noAcceptedAssignments) {
         const { error: orderUpdateError } = await supabase
           .from('orders')
           .update({ status: 'no_restaurant_accepted' })
