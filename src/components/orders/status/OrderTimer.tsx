@@ -23,21 +23,36 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     orderId
   );
   
-  // Instead of periodically checking, let's force a check at component mount and
-  // then rely on the timer expiration to handle the rest
+  // Check for already expired assignments on mount
   useEffect(() => {
-    if (orderId) {
+    if (orderId && expiresAt) {
       const initialCheck = async () => {
         console.log('Initial expired assignment check for order:', orderId);
         try {
           // Check if the assignment should already be expired (by timestamp)
-          if (expiresAt && new Date(expiresAt) < new Date()) {
+          const expiryTime = new Date(expiresAt);
+          const now = new Date();
+          console.log('Expiry time:', expiryTime.toISOString());
+          console.log('Current time:', now.toISOString());
+          console.log('Time difference (seconds):', Math.floor((expiryTime.getTime() - now.getTime()) / 1000));
+          
+          if (expiryTime < now) {
             console.log('Assignment appears to be expired by timestamp, forcing expiration');
             const forceResult = await forceExpireAssignments(orderId);
             console.log('Force expiration result:', forceResult);
             
             // Log the force check
-            await logApiCall('initial-force-expiration', { orderId }, forceResult);
+            await logApiCall('initial-force-expiration', { 
+              orderId, 
+              expiresAt,
+              currentTime: now.toISOString()
+            }, forceResult);
+            
+            // Update UI if assignment was expired
+            if (forceResult.success && onTimerExpire) {
+              toast.info("Restaurant response time expired. Updating order status...");
+              onTimerExpire();
+            }
           } else {
             console.log('Assignment not yet expired by timestamp. expiresAt:', expiresAt);
           }
@@ -48,7 +63,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       
       initialCheck();
     }
-  }, [orderId, expiresAt]);
+  }, [orderId, expiresAt, onTimerExpire]);
   
   // When our timer expires, notify the user and trigger refresh
   useEffect(() => {
