@@ -70,11 +70,16 @@ export const useOrderTimer = (
               
             // Then cancel the order
             await cancelOrder(orderId);
+            
+            // Force a refresh of assignment data
+            if (onExpire) {
+              setTimeout(() => {
+                onExpire();
+              }, 500); // Add a small delay to ensure DB operations complete
+            }
           }
         } catch (error) {
           console.error('Error handling timer expiration:', error);
-        } finally {
-          onExpire?.();
         }
       }
     };

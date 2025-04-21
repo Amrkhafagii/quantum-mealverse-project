@@ -3,6 +3,7 @@ import React from 'react';
 import { Building, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
+import { toast } from 'sonner';
 
 interface OrderRestaurantStatusProps {
   status: string;
@@ -23,7 +24,13 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
 }) => {
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
 
-  const handleTimerExpire = () => {};
+  const handleTimerExpire = () => {
+    toast.info("Restaurant response time expired");
+    // Force a refresh of the assignment data
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  };
 
   const hasValidExpiryTime = Boolean(
     assignmentStatus?.expires_at && 

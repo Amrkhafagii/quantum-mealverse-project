@@ -109,7 +109,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         status, 
         restaurant_id, 
         expires_at, 
-        restaurants(id, name)
+        restaurants!restaurant_assignments_restaurant_id_restaurants_fkey(id, name)
       `)
       .eq('order_id', orderId);
     

@@ -15,7 +15,16 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   orderId,
   onTimerExpire,
 }) => {
-  const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt, orderId, onTimerExpire);
+  const { timeLeft, progress, formattedTime, isExpired } = useOrderTimer(expiresAt, orderId, onTimerExpire);
+
+  if (isExpired) {
+    return (
+      <div className="text-center py-2 text-amber-500">
+        <Clock className="h-4 w-4 inline mr-2" />
+        <span>Timer expired. Updating status...</span>
+      </div>
+    );
+  }
 
   if (!expiresAt) {
     return (
