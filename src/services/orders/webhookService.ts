@@ -65,7 +65,10 @@ export const recordOrderHistory = async (
   status: string,
   restaurantId?: string | null,
   details?: any,
-  expiredAt?: string
+  expiredAt?: string,
+  changedBy?: string,
+  changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system',
+  visibility: boolean = true
 ): Promise<void> => {
   try {
     // Get restaurant name if restaurantId is provided
@@ -80,14 +83,27 @@ export const recordOrderHistory = async (
       restaurantName = restaurant?.name;
     }
 
+    // Get previous status for this order
+    const { data: lastStatus } = await supabase
+      .from('order_history')
+      .select('status')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
     // Debugging: Log the data we're about to insert
     console.log('Recording order history:', {
       order_id: orderId,
       status,
+      previous_status: lastStatus?.status,
       restaurant_id: restaurantId,
       restaurant_name: restaurantName,
       details,
-      expired_at: expiredAt
+      expired_at: expiredAt,
+      changed_by: changedBy,
+      changed_by_type: changedByType,
+      visibility
     });
     
     // Insert record into order_history table
@@ -96,10 +112,14 @@ export const recordOrderHistory = async (
       .insert({
         order_id: orderId,
         status,
+        previous_status: lastStatus?.status,
         restaurant_id: restaurantId,
         restaurant_name: restaurantName,
         details,
-        expired_at: expiredAt
+        expired_at: expiredAt,
+        changed_by: changedBy,
+        changed_by_type: changedByType,
+        visibility
       });
       
     if (error) {

@@ -404,34 +404,46 @@ export type Database = {
       }
       order_history: {
         Row: {
+          changed_by: string | null
+          changed_by_type: string
           created_at: string
           details: Json | null
           expired_at: string | null
           id: string
           order_id: string
+          previous_status: string | null
           restaurant_id: string
           restaurant_name: string
           status: string
+          visibility: boolean
         }
         Insert: {
+          changed_by?: string | null
+          changed_by_type?: string
           created_at?: string
           details?: Json | null
           expired_at?: string | null
           id?: string
           order_id: string
+          previous_status?: string | null
           restaurant_id: string
           restaurant_name: string
           status: string
+          visibility?: boolean
         }
         Update: {
+          changed_by?: string | null
+          changed_by_type?: string
           created_at?: string
           details?: Json | null
           expired_at?: string | null
           id?: string
           order_id?: string
+          previous_status?: string | null
           restaurant_id?: string
           restaurant_name?: string
           status?: string
+          visibility?: boolean
         }
         Relationships: [
           {
