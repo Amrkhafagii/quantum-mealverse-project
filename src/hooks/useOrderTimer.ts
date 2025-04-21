@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkExpiredAssignments, forceExpireAssignments } from '@/services/orders/webhookService';
@@ -16,7 +17,7 @@ export const useOrderTimer = (
   useEffect(() => {
     const getServerTime = async () => {
       try {
-        // Use a more generic type definition for the RPC call to bypass TypeScript error
+        // Use the correct hyphenated name format for the edge function
         const response = await supabase.functions.invoke('get-server-time', {
           method: 'POST',
         });
@@ -27,12 +28,18 @@ export const useOrderTimer = (
         }
         
         // Set server time with proper type checking
-        if (response.data) {
-          // Parse the ISO string to ensure it's a valid date
-          const serverTimeDate = new Date(response.data.timestamp);
-          console.log('Server time:', serverTimeDate.toISOString());
-          console.log('Local time:', new Date().toISOString());
-          setServerTime(serverTimeDate);
+        if (response.data && response.data.timestamp) {
+          try {
+            // Parse the ISO string to ensure it's a valid date
+            const serverTimeDate = new Date(response.data.timestamp);
+            console.log('Server time:', serverTimeDate.toISOString());
+            console.log('Local time:', new Date().toISOString());
+            setServerTime(serverTimeDate);
+          } catch (parseError) {
+            console.error('Error parsing server time:', parseError);
+          }
+        } else {
+          console.warn('No timestamp in server response:', response.data);
         }
       } catch (error) {
         console.error('Failed to get server time:', error);
