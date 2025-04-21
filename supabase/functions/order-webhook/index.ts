@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
-import { handleAssignment } from './orderService.ts';
+import { handleAssignment, duplicateOrderWithNewRestaurant } from './orderService.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -165,13 +165,14 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
-        console.log(`[WEBHOOK] Restaurant ${restaurant_id} rejected order ${order_id}, attempting reassignment to a new restaurant...`);
-        
-        const result = await handleAssignment(supabase, order_id, latitude, longitude);
+        console.log(`[WEBHOOK] Restaurant ${restaurant_id} rejected order ${order_id}, creating new order for a different restaurant...`);
+        const result = await duplicateOrderWithNewRestaurant(supabase, order_id, latitude, longitude);
         return new Response(
           JSON.stringify({ 
-            success: true, 
-            message: 'Order rejected, reassignment processed',
+            success: result.success, 
+            message: result.success 
+              ? 'Order was rejected, a new order was created for an untried restaurant'
+              : (result.error || 'Failed to create new order'),
             result
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -183,31 +184,18 @@ Deno.serve(async (req) => {
       console.log(`[WEBHOOK] Processing ${isExpiredReassignment ? 'reassignment due to expiration' : 'new assignment'} for order ${order_id}`);
       
       if (isExpiredReassignment) {
-        const { data: expiredAssignments } = await supabase
-          .from('restaurant_assignments')
-          .select('id, restaurant_id')
-          .eq('order_id', order_id)
-          .eq('status', 'pending')
-          .lt('expires_at', new Date().toISOString());
-          
-        if (expiredAssignments && expiredAssignments.length > 0) {
-          console.log(`[WEBHOOK] Found ${expiredAssignments.length} expired assignments to update`);
-          
-          for (const assignment of expiredAssignments) {
-            await supabase
-              .from('restaurant_assignments')
-              .update({ status: 'expired' })
-              .eq('id', assignment.id);
-              
-            await logAssignmentAttempt(
-              supabase, 
-              order_id, 
-              assignment.restaurant_id, 
-              'expired',
-              'Restaurant did not respond within the time limit'
-            );
-          }
-        }
+        console.log(`[WEBHOOK] Order expired, creating new order for a different restaurant...`);
+        const result = await duplicateOrderWithNewRestaurant(supabase, order_id, latitude, longitude);
+        return new Response(
+          JSON.stringify({
+            success: result.success,
+            message: result.success
+              ? 'Order expired, a new order was created for an untried restaurant'
+              : (result.error || 'Failed to create new order'),
+            result
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
       const result = await handleAssignment(supabase, order_id, latitude, longitude);

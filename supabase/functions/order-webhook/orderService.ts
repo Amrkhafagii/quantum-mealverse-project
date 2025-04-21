@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -255,5 +254,122 @@ export async function handleAssignment(
     assignment_id: assignment.id,
     expires_at: expiresAt,
     attempt_number: currentAttemptNumber
+  };
+}
+
+export async function duplicateOrderWithNewRestaurant(
+  supabase: any,
+  originalOrderId: string,
+  latitude: number,
+  longitude: number
+) {
+  // Fetch the original order data
+  const { data: originalOrder, error: fetchOrderError } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', originalOrderId)
+    .single();
+
+  if (fetchOrderError || !originalOrder) {
+    console.error('[DUPLICATE ORDER] Failed to fetch original order:', fetchOrderError);
+    return { success: false, error: 'Failed to fetch original order' };
+  }
+
+  // Find nearest restaurants
+  const nearestRestaurants = await findNearestRestaurants(supabase, latitude, longitude);
+  if (!nearestRestaurants || nearestRestaurants.length === 0) {
+    return { success: false, error: 'No available restaurants' };
+  }
+
+  // Find previously tried restaurant IDs
+  const { data: previousAttempts } = await supabase
+    .from('restaurant_assignment_history')
+    .select('restaurant_id')
+    .eq('order_id', originalOrderId);
+
+  const triedRestaurantIds = previousAttempts?.map(a => a.restaurant_id) || [];
+
+  // Find a restaurant not tried before
+  const availableRestaurant = nearestRestaurants.find(r =>
+    !triedRestaurantIds.includes(r.restaurant_id)
+  );
+
+  if (!availableRestaurant) {
+    return { success: false, error: 'No untried restaurants available' };
+  }
+
+  // Prepare new order data (duplicate order except for possibly unique fields)
+  const newOrderData = { ...originalOrder };
+  delete newOrderData.id;
+  delete newOrderData.created_at;
+  delete newOrderData.updated_at;
+  newOrderData.status = 'pending';
+  newOrderData.restaurant_id = availableRestaurant.restaurant_id || null;
+
+  // Insert new order
+  const { data: newOrder, error: insertError } = await supabase
+    .from('orders')
+    .insert(newOrderData)
+    .select('*')
+    .single();
+
+  if (insertError || !newOrder) {
+    console.error('[DUPLICATE ORDER] Failed to create new order:', insertError);
+    return { success: false, error: 'Failed to create new order' };
+  }
+
+  // Duplicate order_items
+  const { data: orderItems } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', originalOrderId);
+
+  if (orderItems && orderItems.length > 0) {
+    const newItems = orderItems.map(item => ({
+      ...item,
+      order_id: newOrder.id,
+      id: undefined // Let DB create a new ID
+    }));
+    await supabase
+      .from('order_items')
+      .insert(newItems.map(i => {
+        const { id, ...rest } = i;
+        return rest;
+      }));
+  }
+
+  // Assign to the new restaurant
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const assignment = await createRestaurantAssignment(
+    supabase, 
+    newOrder.id, 
+    availableRestaurant.restaurant_id,
+    expiresAt
+  );
+
+  if (!assignment) {
+    return { success: false, error: 'Failed to create restaurant assignment for new order' };
+  }
+
+  // Log the duplication
+  await logAssignmentAttempt(
+    supabase,
+    newOrder.id,
+    availableRestaurant.restaurant_id,
+    'duplicated_assignment',
+    `Order duplicated from ${originalOrderId} after expiration/rejection`
+  );
+
+  // Optionally update the original order's status to reflect that it was branched
+  await updateOrderStatus(supabase, originalOrderId, 'branched_to_new_order');
+
+  return { 
+    success: true,
+    message: 'New order created for another restaurant',
+    new_order_id: newOrder.id,
+    new_assignment_id: assignment.id,
+    restaurant_id: availableRestaurant.restaurant_id,
+    restaurant_name: availableRestaurant.name,
+    expires_at: expiresAt
   };
 }
