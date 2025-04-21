@@ -36,10 +36,13 @@ export const useOrderTimer = (
       const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
       setProgress(Math.max(0, Math.min(100, progressValue)));
 
+      // If the timer has just expired (secondsLeft is 0 and we haven't set isExpired yet)
       if (secondsLeft === 0 && !isExpired) {
+        console.log(`Timer expired for order ${orderId}`);
         setIsExpired(true);
+        
         try {
-          // First check if any assignments are still pending for this order
+          // Check if any assignments are still pending for this order
           const { data: pendingAssignments } = await supabase
             .from('restaurant_assignments')
             .select('id, restaurant_id')
@@ -78,16 +81,33 @@ export const useOrderTimer = (
               .eq('order_id', orderId)
               .eq('status', 'pending');
               
-            // Then cancel the order
-            await cancelOrder(orderId);
-            
-            // Also record order cancellation in order_history
-            await recordOrderHistory(
-              orderId,
-              'cancelled',
-              null,
-              { reason: 'All restaurant assignments expired' }
-            );
+            // Then cancel the order if all assignments have expired
+            // First check if there are any non-expired assignments left
+            const { data: activeAssignments } = await supabase
+              .from('restaurant_assignments')
+              .select('id')
+              .eq('order_id', orderId)
+              .eq('status', 'pending');
+              
+            // If no active assignments remain and no assignment was accepted, cancel the order
+            const { data: acceptedAssignments } = await supabase
+              .from('restaurant_assignments')
+              .select('id')
+              .eq('order_id', orderId)
+              .eq('status', 'accepted');
+              
+            if ((!activeAssignments || activeAssignments.length === 0) && 
+                (!acceptedAssignments || acceptedAssignments.length === 0)) {
+              await cancelOrder(orderId);
+              
+              // Also record order cancellation in order_history
+              await recordOrderHistory(
+                orderId,
+                'cancelled',
+                null,
+                { reason: 'All restaurant assignments expired' }
+              );
+            }
             
             // Force a refresh of assignment data
             if (onExpire) {
@@ -102,6 +122,7 @@ export const useOrderTimer = (
       }
     };
 
+    // Immediately check and update on mount/dependency change
     updateTimer();
 
     const timerInterval = setInterval(updateTimer, 1000);

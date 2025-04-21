@@ -88,6 +88,7 @@ export const recordOrderHistory = async (
 
 /**
  * Checks the current status of an order's restaurant assignments
+ * and automatically handles expired assignments
  */
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus | null> => {
   try {
@@ -140,7 +141,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         .from('restaurant_assignments')
         .select('id')
         .eq('order_id', orderId)
-        .eq('status', 'pending');
+        .in('status', ['pending', 'accepted']);
       
       // If no active assignments remain, cancel the order
       if (!activeAssignments || activeAssignments.length === 0) {

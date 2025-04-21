@@ -3,6 +3,7 @@ import React from 'react';
 import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
+import { toast } from 'sonner';
 
 interface OrderTimerProps {
   expiresAt?: string;
@@ -15,7 +16,18 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   orderId,
   onTimerExpire,
 }) => {
-  const { timeLeft, progress, formattedTime, isExpired } = useOrderTimer(expiresAt, orderId, onTimerExpire);
+  const handleTimerExpire = () => {
+    toast.info("Restaurant response time expired. Updating order status...");
+    if (onTimerExpire) {
+      onTimerExpire();
+    }
+  };
+
+  const { timeLeft, progress, formattedTime, isExpired } = useOrderTimer(
+    expiresAt, 
+    orderId, 
+    handleTimerExpire
+  );
 
   if (isExpired) {
     return (
