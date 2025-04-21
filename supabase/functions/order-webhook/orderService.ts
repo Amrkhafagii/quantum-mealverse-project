@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -302,141 +301,137 @@ export async function handleAssignment(
 
 // New function to check and handle expired assignments
 export async function checkAndHandleExpiredAssignments(supabase: SupabaseClient) {
-  console.log('[CHECK_EXPIRED] Checking for expired assignments');
+  console.log('[CHECK_EXPIRED] Starting expired assignments check');
   const now = new Date().toISOString();
   
-  // Find assignments that have expired but still have pending status
-  const { data: expiredAssignments, error: expiredError } = await supabase
-    .from('restaurant_assignments')
-    .select('id, restaurant_id, order_id, expires_at')
-    .eq('status', 'pending')
-    .lt('expires_at', now);
-  
-  if (expiredError) {
-    console.error('[CHECK_EXPIRED] Error fetching expired assignments:', expiredError);
-    return { success: false, error: 'Failed to fetch expired assignments' };
-  }
-  
-  console.log(`[CHECK_EXPIRED] Found ${expiredAssignments?.length || 0} expired assignments`);
-  
-  if (!expiredAssignments || expiredAssignments.length === 0) {
-    return { success: true, message: 'No expired assignments found' };
-  }
-  
-  const results = [];
-  
-  for (const assignment of expiredAssignments) {
-    console.log(`[CHECK_EXPIRED] Processing expired assignment ${assignment.id} for order ${assignment.order_id}`);
+  try {
+    // Find assignments that have expired but still have pending status
+    const { data: expiredAssignments, error: expiredError } = await supabase
+      .from('restaurant_assignments')
+      .select('id, restaurant_id, order_id, expires_at')
+      .eq('status', 'pending')
+      .lt('expires_at', now);
     
-    try {
-      // Mark the assignment as expired
-      const { error: updateError } = await supabase
-        .from('restaurant_assignments')
-        .update({ status: 'expired' })
-        .eq('id', assignment.id);
-      
-      if (updateError) {
-        console.error(`[CHECK_EXPIRED] Error updating assignment ${assignment.id}:`, updateError);
-        results.push({ 
-          assignment_id: assignment.id, 
-          success: false, 
-          error: 'Failed to update assignment status' 
-        });
-        continue;
-      }
-      
-      // Add to assignment history
-      await supabase
-        .from('restaurant_assignment_history')
-        .insert({
-          order_id: assignment.order_id,
-          restaurant_id: assignment.restaurant_id,
-          status: 'timed_out',
-          notes: 'Timer expired automatically'
-        });
-      
-      // Add to order history
-      await supabase
-        .from('order_history')
-        .insert({
-          order_id: assignment.order_id,
-          status: 'assignment_expired',
-          restaurant_id: assignment.restaurant_id,
-          details: { assignment_id: assignment.id },
-          expired_at: now
-        });
-      
-      results.push({ 
-        assignment_id: assignment.id, 
-        success: true, 
-        message: 'Assignment marked as expired' 
-      });
-    } catch (error) {
-      console.error(`[CHECK_EXPIRED] Exception processing assignment ${assignment.id}:`, error);
-      results.push({ 
-        assignment_id: assignment.id, 
-        success: false, 
-        error: error.message 
-      });
+    if (expiredError) {
+      console.error('[CHECK_EXPIRED] Error fetching expired assignments:', expiredError);
+      return { success: false, error: 'Failed to fetch expired assignments' };
     }
-  }
-  
-  // Now check each affected order to see if all assignments are expired/rejected
-  const affectedOrders = [...new Set(expiredAssignments.map(a => a.order_id))];
-  
-  for (const orderId of affectedOrders) {
-    try {
-      // Check if there are any pending assignments left
-      const { data: pendingAssignments, error: pendingError } = await supabase
-        .from('restaurant_assignments')
-        .select('id')
-        .eq('order_id', orderId)
-        .eq('status', 'pending');
-        
-      if (pendingError) {
-        console.error(`[CHECK_EXPIRED] Error checking pending assignments for order ${orderId}:`, pendingError);
-        continue;
-      }
+    
+    console.log(`[CHECK_EXPIRED] Found ${expiredAssignments?.length || 0} expired assignments`);
+    
+    if (!expiredAssignments || expiredAssignments.length === 0) {
+      return { success: true, message: 'No expired assignments found' };
+    }
+    
+    const results = [];
+    const affectedOrders = new Set();
+    
+    for (const assignment of expiredAssignments) {
+      console.log(`[CHECK_EXPIRED] Processing expired assignment ${assignment.id} for order ${assignment.order_id}`);
       
-      // Check if there's an accepted assignment
-      const { data: acceptedAssignments, error: acceptedError } = await supabase
-        .from('restaurant_assignments')
-        .select('id')
-        .eq('order_id', orderId)
-        .eq('status', 'accepted');
+      try {
+        // Mark the assignment as expired
+        const { error: updateError } = await supabase
+          .from('restaurant_assignments')
+          .update({ status: 'expired' })
+          .eq('id', assignment.id);
         
-      if (acceptedError) {
-        console.error(`[CHECK_EXPIRED] Error checking accepted assignments for order ${orderId}:`, acceptedError);
-        continue;
-      }
-      
-      // If no pending assignments remain and no accepted assignments, cancel the order
-      if ((!pendingAssignments || pendingAssignments.length === 0) &&
-          (!acceptedAssignments || acceptedAssignments.length === 0)) {
+        if (updateError) {
+          console.error(`[CHECK_EXPIRED] Error updating assignment ${assignment.id}:`, updateError);
+          results.push({ 
+            assignment_id: assignment.id, 
+            success: false, 
+            error: 'Failed to update assignment status' 
+          });
+          continue;
+        }
         
-        console.log(`[CHECK_EXPIRED] All assignments for order ${orderId} have expired or been rejected, cancelling order`);
-        
-        // Update order status
-        await updateOrderStatus(supabase, orderId, 'cancelled');
-        
-        // Add to order history
+        // Add to history
         await supabase
           .from('order_history')
           .insert({
-            order_id: orderId,
-            status: 'cancelled',
-            details: { reason: 'All restaurant assignments expired' }
+            order_id: assignment.order_id,
+            status: 'assignment_expired',
+            restaurant_id: assignment.restaurant_id,
+            details: { assignment_id: assignment.id },
+            expired_at: now
           });
+        
+        affectedOrders.add(assignment.order_id);
+        
+        results.push({ 
+          assignment_id: assignment.id, 
+          success: true, 
+          message: 'Assignment marked as expired' 
+        });
+      } catch (error) {
+        console.error(`[CHECK_EXPIRED] Exception processing assignment ${assignment.id}:`, error);
+        results.push({ 
+          assignment_id: assignment.id, 
+          success: false, 
+          error: error.message 
+        });
       }
-    } catch (error) {
-      console.error(`[CHECK_EXPIRED] Exception processing order ${orderId}:`, error);
     }
+    
+    // Process affected orders
+    for (const orderId of affectedOrders) {
+      try {
+        // Check if there are any pending assignments left
+        const { data: pendingAssignments, error: pendingError } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', orderId)
+          .eq('status', 'pending');
+          
+        if (pendingError) {
+          console.error(`[CHECK_EXPIRED] Error checking pending assignments for order ${orderId}:`, pendingError);
+          continue;
+        }
+        
+        // Check if there's an accepted assignment
+        const { data: acceptedAssignments, error: acceptedError } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', orderId)
+          .eq('status', 'accepted');
+          
+        if (acceptedError) {
+          console.error(`[CHECK_EXPIRED] Error checking accepted assignments for order ${orderId}:`, acceptedError);
+          continue;
+        }
+        
+        // If no pending or accepted assignments remain, update order status
+        if ((!pendingAssignments || pendingAssignments.length === 0) &&
+            (!acceptedAssignments || acceptedAssignments.length === 0)) {
+          
+          console.log(`[CHECK_EXPIRED] All assignments expired for order ${orderId}, updating status`);
+          
+          // Update order status
+          await updateOrderStatus(supabase, orderId, 'no_restaurant_accepted');
+          
+          // Add to order history
+          await supabase
+            .from('order_history')
+            .insert({
+              order_id: orderId,
+              status: 'no_restaurant_accepted',
+              details: { reason: 'All restaurant assignments expired' }
+            });
+        }
+      } catch (error) {
+        console.error(`[CHECK_EXPIRED] Error processing order ${orderId}:`, error);
+      }
+    }
+    
+    return { 
+      success: true, 
+      processed: results.length,
+      results,
+      affected_orders: affectedOrders.size
+    };
+  } catch (error) {
+    console.error('[CHECK_EXPIRED] Error in checkAndHandleExpiredAssignments:', error);
+    return { success: false, error: 'Failed to process expired assignments' };
   }
-  
-  return { 
-    success: true, 
-    processed: results.length,
-    results,
-    affected_orders: affectedOrders.length
-  };
 }

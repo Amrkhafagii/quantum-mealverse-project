@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AssignmentStatus, OrderAssignmentRequest, RestaurantResponseRequest, WebhookResponse } from '@/types/webhook';
 import { logApiCall } from '@/services/loggerService';
@@ -128,50 +127,35 @@ export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
     const { data: authData } = await supabase.auth.getSession();
     const token = authData.session?.access_token;
 
-    // If no auth token is available, use the client directly which has the anon key
-    if (!token) {
-      console.log('No auth token available, using supabase client directly');
-      const { data, error } = await supabase.functions.invoke('order-webhook', {
-        body: requestBody
-      });
-
-      if (error) {
-        console.error('Check expired supabase client request failed:', error);
-        return { success: false, error: error.message || 'Check expired request failed' };
-      }
-
-      return data;
-    }
-
     // Log the request before sending
     await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, null);
 
-    // Fetch with authorization header
-    const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(requestBody),
+    const response = await supabase.functions.invoke('order-webhook', {
+      body: requestBody,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
     });
 
-    const responseData = await response.json();
-    
-    // Log the response
-    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, responseData);
-
-    console.log('Check expired response:', responseData);
-
-    if (!response.ok) {
-      console.error('Check expired request failed:', responseData);
-      return { success: false, error: responseData.error || 'Check expired request failed' };
+    if (response.error) {
+      console.error('Check expired request failed:', response.error);
+      return { 
+        success: false, 
+        error: response.error.message || 'Check expired request failed' 
+      };
     }
 
-    return responseData;
+    const data = response.data;
+    console.log('Check expired response:', data);
+
+    // Log the response
+    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, data);
+
+    return data;
   } catch (error) {
     console.error('Error checking expired assignments:', error);
-    return { success: false, error: 'Failed to check expired assignments' };
+    return { 
+      success: false, 
+      error: 'Failed to check expired assignments' 
+    };
   }
 };
 
