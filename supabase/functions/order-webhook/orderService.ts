@@ -115,7 +115,6 @@ export async function handleAssignment(
   assignmentId: string,
   action: 'accept' | 'reject'
 ) {
-  // Verify the assignment exists and is still pending
   const { data: assignment, error: assignmentError } = await supabase
     .from('restaurant_assignments')
     .select('*')
@@ -136,7 +135,6 @@ export async function handleAssignment(
   if (new Date(assignment.expires_at) < new Date()) {
     console.log('[HANDLE_ASSIGNMENT] Assignment has expired');
     
-    // Update assignment status to expired
     await supabase
       .from('restaurant_assignments')
       .update({ status: 'expired' })
@@ -151,7 +149,6 @@ export async function handleAssignment(
   }
 
   if (action === 'accept') {
-    // Mark this assignment as accepted
     const { error: updateError } = await supabase
       .from('restaurant_assignments')
       .update({ status: 'accepted' })
@@ -162,7 +159,6 @@ export async function handleAssignment(
       return { success: false, error: 'Failed to update assignment' };
     }
     
-    // Mark all other pending assignments as cancelled
     const { error: cancelError } = await supabase
       .from('restaurant_assignments')
       .update({ status: 'cancelled' })
@@ -196,7 +192,6 @@ export async function handleAssignment(
       restaurant_id: restaurantId
     };
   } else { // action === 'reject'
-    // Mark this assignment as rejected
     const { error: updateError } = await supabase
       .from('restaurant_assignments')
       .update({ status: 'rejected' })
@@ -209,7 +204,6 @@ export async function handleAssignment(
     
     await logAssignmentAttempt(supabase, orderId, restaurantId, 'rejected');
     
-    // If no pending assignments remain, update to no_restaurant_accepted
     const { data: pendingAssignments } = await supabase
       .from('restaurant_assignments')
       .select('id')
@@ -228,94 +222,10 @@ export async function handleAssignment(
       };
     }
     
-    // There are still pending assignments, do nothing
     return { 
       success: true, 
       message: 'Order rejected by restaurant, but still awaiting responses from other restaurants',
       pending_assignments: pendingAssignments.length
     };
-  }
-}
-
-export async function duplicateOrderWithNewRestaurant(
-  supabase: SupabaseClient,
-  orderId: string,
-  restaurantId: string
-) {
-  // Implementation for duplicating an order with a new restaurant
-  console.log(`Duplicating order ${orderId} for restaurant ${restaurantId}`);
-
-  try {
-    // Fetch the original order
-    const { data: originalOrder, error: fetchError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', orderId)
-      .single();
-
-    if (fetchError || !originalOrder) {
-      console.error('Error fetching original order:', fetchError);
-      return { success: false, error: 'Failed to fetch original order' };
-    }
-
-    // Fetch the order items from the original order
-    const { data: orderItems, error: fetchItemsError } = await supabase
-      .from('order_items')
-      .select('*')
-      .eq('order_id', orderId);
-
-    if (fetchItemsError) {
-      console.error('Error fetching order items:', fetchItemsError);
-      return { success: false, error: 'Failed to fetch order items' };
-    }
-
-    // Prepare the new order data
-    const newOrderData = {
-      ...originalOrder,
-      restaurant_id: restaurantId,
-      status: 'pending', // Set the new order status to pending
-      id: undefined, // Let Supabase generate a new UUID
-      created_at: undefined, // Let Supabase handle the timestamp
-      updated_at: undefined, // Let Supabase handle the timestamp
-    };
-
-    // Insert the new order
-    const { data: newOrder, error: insertError } = await supabase
-      .from('orders')
-      .insert([newOrderData])
-      .select('id')
-      .single();
-
-    if (insertError || !newOrder) {
-      console.error('Error inserting new order:', insertError);
-      return { success: false, error: 'Failed to insert new order' };
-    }
-
-    // Prepare the new order items
-    const newOrderItems = orderItems.map(item => ({
-      ...item,
-      order_id: newOrder.id,
-      id: undefined, // Let Supabase generate a new UUID
-      created_at: undefined, // Let Supabase handle the timestamp
-    }));
-
-    // Insert the new order items
-    const { error: insertItemsError } = await supabase
-      .from('order_items')
-      .insert(newOrderItems);
-
-    if (insertItemsError) {
-      console.error('Error inserting new order items:', insertItemsError);
-      return { success: false, error: 'Failed to insert new order items' };
-    }
-
-    return {
-      success: true,
-      message: `Order ${orderId} duplicated for restaurant ${restaurantId} with new order ID ${newOrder.id}`,
-      new_order_id: newOrder.id,
-    };
-  } catch (error) {
-    console.error('Unexpected error in duplicateOrderWithNewRestaurant:', error);
-    return { success: false, error: 'Unexpected error occurred' };
   }
 }
