@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
@@ -70,7 +69,30 @@ export const simulateRestaurantResponse = async (
 
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus> => {
   try {
-    // Get pending assignments for order
+    // Get the order status first to determine if a restaurant has accepted
+    const { data: order } = await supabase
+      .from('orders')
+      .select('status, restaurant_id')
+      .eq('id', orderId)
+      .single();
+    
+    // If the order has been accepted by a restaurant (status is 'processing' or later)
+    if (order && order.restaurant_id && order.status !== 'pending' && order.status !== 'awaiting_restaurant') {
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', order.restaurant_id)
+        .single();
+      
+      return {
+        status: order.status,
+        assigned_restaurant_id: order.restaurant_id,
+        restaurant_name: restaurant?.name || 'Restaurant',
+        attempt_count: 0
+      };
+    }
+    
+    // Otherwise, check for pending assignments
     const { data: assignments } = await supabase
       .from('restaurant_assignments')
       .select('id, status, order_id, restaurant_id, expires_at, created_at')
@@ -79,47 +101,24 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       .order('created_at', { ascending: false });
 
     if (assignments && assignments.length > 0) {
-      // Only one status: awaiting_response
-      const assignment = assignments[0];
-      const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('id, name')
-        .eq('id', assignment.restaurant_id)
-        .single();
-
+      // Don't include restaurant name for pending assignments
       return {
         status: 'awaiting_response',
-        assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: restaurant?.name || 'Restaurant',
-        assignment_id: assignment.id,
-        expires_at: assignment.expires_at,
+        assigned_restaurant_id: null,
+        restaurant_name: null,
+        assignment_id: assignments[0].id,
+        expires_at: assignments[0].expires_at,
         attempt_count: 1,
         pending_count: assignments.length,
       };
     }
 
-    // No pending assignment found: fetch order status
-    const { data: order } = await supabase
-      .from('orders')
-      .select('status, restaurant_id')
-      .eq('id', orderId)
-      .single();
-
-    let restaurantName = 'Restaurant';
-    if (order?.restaurant_id) {
-      const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('name')
-        .eq('id', order.restaurant_id)
-        .single();
-      if (restaurant) restaurantName = restaurant.name;
-    }
-
+    // No pending assignment found and no accepted restaurant
     return {
       status: order?.status || 'unknown',
-      assigned_restaurant_id: order?.restaurant_id,
-      restaurant_name: restaurantName,
-      attempt_count: 1
+      assigned_restaurant_id: null,
+      restaurant_name: null,
+      attempt_count: 0
     };
   } catch (error) {
     console.error('Error checking assignment status:', error);
@@ -129,4 +128,3 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     };
   }
 };
-

@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Building, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -69,9 +70,16 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
     expiryTime: assignmentStatus?.expires_at
   });
 
+  // Only show the restaurant name if there's an actual assigned restaurant
+  // that has accepted the order (not just a pending assignment)
+  const showRestaurantName = restaurantName && 
+                            (status !== 'pending' && 
+                             status !== 'awaiting_restaurant' && 
+                             assignmentStatus?.status !== 'awaiting_response');
+
   return (
     <div className="space-y-6 py-4">
-      {restaurantName && (
+      {showRestaurantName && (
         <div className="flex items-center justify-center gap-2 text-quantum-cyan">
           <Building className="h-5 w-5" />
           <span className="text-lg">{restaurantName}</span>
@@ -82,7 +90,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
         <div className="flex flex-col items-center">
           <div className="flex items-center gap-2 mb-2 text-gray-300">
             <Clock className="h-5 w-5" />
-            <span>Waiting for confirmation from Restaurant...</span>
+            <span>Waiting for a restaurant to accept your order...</span>
           </div>
           
           {hasValidExpiryTime ? (
@@ -96,7 +104,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
           ) : (
             <div className="text-sm text-gray-400 mb-6">
               {assignmentStatus?.status === 'awaiting_response' ? 
-                "Restaurant is being contacted..." : 
+                "Reaching out to nearby restaurants..." : 
                 "Preparing to contact nearby restaurants..."}
             </div>
           )}
