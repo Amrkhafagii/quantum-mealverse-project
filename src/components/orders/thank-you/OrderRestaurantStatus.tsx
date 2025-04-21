@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Building, Clock } from 'lucide-react';
+import { Building, Clock, RefreshCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
 
@@ -31,6 +31,10 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
     // Debug the assignment status more thoroughly
     if (assignmentStatus) {
       console.log('Assignment status details:', assignmentStatus);
+      
+      if (assignmentStatus.attempt_count > 1) {
+        console.log(`[REASSIGNMENT UI] This is attempt #${assignmentStatus.attempt_count} for order ${orderId}`);
+      }
       
       // Examine expires_at if present
       if (assignmentStatus.expires_at) {
@@ -74,6 +78,11 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
     hasValidExpiryTime, 
     expiryTime: assignmentStatus?.expires_at
   });
+  
+  // Check if this is a reassignment (attempt > 1)
+  const isReassignment = assignmentStatus?.attempt_count > 1;
+  const attemptCount = assignmentStatus?.attempt_count || 1;
+  const attemptsRemaining = 3 - attemptCount;
 
   return (
     <div className="space-y-6 py-4">
@@ -81,6 +90,22 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
         <div className="flex items-center justify-center gap-2 text-quantum-cyan">
           <Building className="h-5 w-5" />
           <span className="text-lg">{restaurantName}</span>
+          {isReassignment && (
+            <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded-full">
+              Attempt {attemptCount}/3
+            </span>
+          )}
+        </div>
+      )}
+
+      {isReassignment && (
+        <div className="bg-blue-900/20 border border-blue-800 rounded-md p-3 text-sm text-center">
+          <RefreshCcw className="h-4 w-4 inline mr-1 text-blue-400" />
+          <span className="text-blue-300">
+            {attemptsRemaining > 0 
+              ? `Previous restaurant(s) didn't respond in time. Trying another restaurant (${attemptsRemaining} attempt${attemptsRemaining !== 1 ? 's' : ''} remaining).`
+              : 'Final attempt to assign your order to a restaurant.'}
+          </span>
         </div>
       )}
 
@@ -96,6 +121,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
               <OrderTimer 
                 expiresAt={assignmentStatus.expires_at} 
                 orderId={orderId}
+                attemptCount={assignmentStatus.attempt_count}
                 onTimerExpire={handleTimerExpire}
               />
             </div>

@@ -8,22 +8,25 @@ interface OrderTimerProps {
   expiresAt: string | undefined;
   orderId: string | undefined;
   onTimerExpire?: () => void;
+  attemptCount?: number;
 }
 
 export const OrderTimer: React.FC<OrderTimerProps> = ({ 
   expiresAt,
   orderId,
-  onTimerExpire
+  onTimerExpire,
+  attemptCount = 1
 }) => {
   useEffect(() => {
-    console.log('OrderTimer Component Mounted with:', { 
+    console.log('[TIMER] OrderTimer Component Mounted with:', { 
       expiresAt, 
       orderId,
+      attemptCount,
       currentTime: new Date().toISOString() 
     });
     
     if (!expiresAt) {
-      console.warn('No expiration time provided to OrderTimer');
+      console.warn('[TIMER] No expiration time provided to OrderTimer');
       return;
     }
     
@@ -33,14 +36,15 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       const timeUntilExpiry = Math.floor((date.getTime() - Date.now()) / 1000);
       
       if (isNaN(date.getTime())) {
-        console.error('Invalid date format for expiresAt:', expiresAt);
+        console.error('[TIMER] Invalid date format for expiresAt:', expiresAt);
       } else {
-        console.log(`Valid expiration time: ${date.toISOString()}, ${timeUntilExpiry}s remaining`);
+        console.log(`[TIMER] Valid expiration time: ${date.toISOString()}, ${timeUntilExpiry}s remaining`);
+        console.log(`[TIMER] This is assignment attempt #${attemptCount} for order ${orderId}`);
       }
     } catch (error) {
-      console.error('Error parsing expiresAt:', error);
+      console.error('[TIMER] Error parsing expiresAt:', error);
     }
-  }, [expiresAt, orderId]);
+  }, [expiresAt, orderId, attemptCount]);
 
   const { timeLeft, progress, formattedTime } = useOrderTimer(expiresAt, orderId, onTimerExpire);
 
@@ -63,13 +67,14 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
           <p>Debug: Expires at {expiresAt}</p>
           <p>Debug: Order ID {orderId}</p>
           <p>Debug: Time left {timeLeft}s</p>
+          <p>Debug: Assignment attempt #{attemptCount}</p>
         </div>
       )}
       
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <Clock className="h-4 w-4 text-quantum-cyan" />
-          <span>Restaurant response timer:</span>
+          <span>Restaurant response timer{attemptCount > 1 ? ` (attempt #${attemptCount})` : ''}:</span>
         </div>
         <div className="text-lg font-mono bg-quantum-darkBlue px-3 py-1 rounded-md text-quantum-cyan">
           <Hourglass className="h-4 w-4 inline mr-2 animate-pulse" />
@@ -82,6 +87,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       />
       <p className="text-xs text-gray-500 text-right">
         Time remaining for restaurant to respond
+        {attemptCount > 1 ? ` (attempt ${attemptCount} of 3)` : ''}
       </p>
     </div>
   );

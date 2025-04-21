@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     );
 
     const requestData = await req.json();
-    console.log('Received webhook request:', requestData);
+    console.log('[WEBHOOK] Received webhook request:', requestData);
 
     if (!requestData.order_id || !requestData.latitude || !requestData.longitude) {
       return new Response(
@@ -44,6 +44,16 @@ Deno.serve(async (req) => {
     const { order_id, latitude, longitude } = requestData;
     const action = requestData.action || 'assign';
 
+    // Log this webhook call with timestamp
+    await supabase.from('webhook_logs').insert({
+      payload: {
+        action,
+        order_id,
+        timestamp: new Date().toISOString(),
+        request_data: requestData
+      }
+    });
+
     if (action === 'accept' || action === 'reject') {
       if (!requestData.restaurant_id || !requestData.assignment_id) {
         return new Response(
@@ -57,6 +67,8 @@ Deno.serve(async (req) => {
 
       const { restaurant_id, assignment_id } = requestData;
       
+      console.log(`[WEBHOOK] Processing ${action} action for order ${order_id} from restaurant ${restaurant_id}`);
+      
       const { data: assignment, error: assignmentError } = await supabase
         .from('restaurant_assignments')
         .select('*')
@@ -67,6 +79,7 @@ Deno.serve(async (req) => {
         .single();
       
       if (assignmentError || !assignment) {
+        console.log('[WEBHOOK] Invalid or expired assignment');
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -77,6 +90,7 @@ Deno.serve(async (req) => {
       }
 
       if (new Date(assignment.expires_at) < new Date()) {
+        console.log('[WEBHOOK] Assignment has expired');
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -86,13 +100,22 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Get the current attempt number based on assignment history
+      const { count } = await supabase
+        .from('restaurant_assignment_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('order_id', order_id);
+      
+      const currentAttemptNumber = count || 1;
+      console.log(`[WEBHOOK] Processing ${action} for order ${order_id} on attempt #${currentAttemptNumber}`);
+
       const { error: updateError } = await supabase
         .from('restaurant_assignments')
         .update({ status: action === 'accept' ? 'accepted' : 'rejected' })
         .eq('id', assignment_id);
       
       if (updateError) {
-        console.error('Error updating assignment:', updateError);
+        console.error('[WEBHOOK] Error updating assignment:', updateError);
         return new Response(
           JSON.stringify({ success: false, error: 'Failed to update assignment' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -100,8 +123,23 @@ Deno.serve(async (req) => {
       }
 
       await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
+      
+      // Log the outcome to webhook_logs
+      await supabase.from('webhook_logs').insert({
+        payload: {
+          order_id,
+          restaurant_id,
+          action,
+          status: action,
+          attempt_number: currentAttemptNumber,
+          timestamp: new Date().toISOString()
+        },
+        restaurant_assigned: restaurant_id
+      });
 
       if (action === 'accept') {
+        console.log(`[WEBHOOK] Restaurant ${restaurant_id} accepted order ${order_id} on attempt #${currentAttemptNumber}`);
+        
         const { error: orderUpdateError } = await supabase
           .from('orders')
           .update({ 
@@ -111,7 +149,7 @@ Deno.serve(async (req) => {
           .eq('id', order_id);
         
         if (orderUpdateError) {
-          console.error('Error updating order after acceptance:', orderUpdateError);
+          console.error('[WEBHOOK] Error updating order after acceptance:', orderUpdateError);
           return new Response(
             JSON.stringify({ success: false, error: 'Failed to update order' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -122,11 +160,16 @@ Deno.serve(async (req) => {
           JSON.stringify({ 
             success: true, 
             message: 'Order accepted successfully',
-            order_id
+            order_id,
+            attempt_number: currentAttemptNumber,
+            restaurant_id
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
+        console.log(`[WEBHOOK] Restaurant ${restaurant_id} rejected order ${order_id}, attempting reassignment...`);
+        
+        // Restaurant rejected the order, try to reassign
         const result = await handleAssignment(supabase, order_id, latitude, longitude);
         return new Response(
           JSON.stringify({ 
@@ -140,6 +183,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'assign') {
+      console.log(`[WEBHOOK] Processing new assignment for order ${order_id}`);
+      
       const result = await handleAssignment(supabase, order_id, latitude, longitude);
       return new Response(
         JSON.stringify({ success: true, result }),
@@ -153,7 +198,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    console.error('[WEBHOOK] Error processing webhook:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
