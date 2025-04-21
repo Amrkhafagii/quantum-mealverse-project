@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -44,16 +43,6 @@ Deno.serve(async (req) => {
     const { order_id, latitude, longitude } = requestData;
     const action = requestData.action || 'assign';
     const isExpiredReassignment = requestData.expired_reassignment === true;
-
-    await supabase.from('webhook_logs').insert({
-      payload: {
-        action,
-        order_id,
-        timestamp: new Date().toISOString(),
-        request_data: requestData,
-        is_expiration: isExpiredReassignment
-      }
-    });
 
     if (action === 'assign') {
       // Always assign to all nearby at once on any assign call
