@@ -23,29 +23,32 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     orderId
   );
   
-  // Periodically check for expired assignments at the server level
+  // Instead of periodically checking, let's force a check at component mount and
+  // then rely on the timer expiration to handle the rest
   useEffect(() => {
-    const interval = setInterval(async () => {
-      if (orderId) {
-        console.log('Periodic expired assignment check for order:', orderId);
+    if (orderId) {
+      const initialCheck = async () => {
+        console.log('Initial expired assignment check for order:', orderId);
         try {
-          const result = await checkExpiredAssignments();
-          console.log('Periodic check result:', result);
-          
-          // Log the check in our system
-          await logApiCall('periodic-expired-check', { orderId }, result);
-          
-          if (!result.success) {
-            console.warn('Periodic expired check failed:', result.error);
+          // Check if the assignment should already be expired (by timestamp)
+          if (expiresAt && new Date(expiresAt) < new Date()) {
+            console.log('Assignment appears to be expired by timestamp, forcing expiration');
+            const forceResult = await forceExpireAssignments(orderId);
+            console.log('Force expiration result:', forceResult);
+            
+            // Log the force check
+            await logApiCall('initial-force-expiration', { orderId }, forceResult);
+          } else {
+            console.log('Assignment not yet expired by timestamp. expiresAt:', expiresAt);
           }
         } catch (error) {
-          console.error('Error in periodic expired assignment check:', error);
+          console.error('Error in initial expired assignment check:', error);
         }
-      }
-    }, 30000); // Every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [orderId]);
+      };
+      
+      initialCheck();
+    }
+  }, [orderId, expiresAt]);
   
   // When our timer expires, notify the user and trigger refresh
   useEffect(() => {
@@ -56,36 +59,39 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       const forceCheck = async () => {
         console.log('Timer expired - forcing check for expired assignments');
         try {
-          // First try the standard check which calls the webhook
-          const result = await checkExpiredAssignments();
-          console.log('Force check result on timer expiry:', result);
+          // First try direct database modification
+          console.log('Attempting direct database update for expired assignments');
+          const result = await forceExpireAssignments(orderId);
+          console.log('Force expiration result on timer expiry:', result);
           
           // Log the forced check
-          await logApiCall('timer-expired-check', { orderId }, result);
+          await logApiCall('timer-expired-direct-update', { orderId }, result);
           
-          // Check if the webhook reported no expired assignments
-          // If it did, or if it failed, we'll attempt a direct update
-          if (!result.success || (result.message && result.message.includes('No expired assignments found'))) {
-            console.log('Webhook check failed or found no expired assignments, using direct approach');
+          // If direct update didn't work, try the webhook
+          if (!result.success) {
+            console.log('Direct update failed, trying webhook');
+            const webhookResult = await checkExpiredAssignments();
+            console.log('Webhook check result:', webhookResult);
             
-            // Try the direct database approach as a fallback
-            const backupResult = await forceExpireAssignments(orderId);
-            console.log('Backup expiration result:', backupResult);
-            
-            // Log the backup approach
-            await logApiCall('direct-expiration', { orderId }, backupResult);
+            // Log the webhook approach
+            await logApiCall('timer-expired-webhook', { orderId }, webhookResult);
           }
         } catch (error) {
           console.error('Error in force check on timer expiry:', error);
           
-          // If both approaches fail, try one final direct approach
-          try {
-            console.log('Attempting final direct expiration');
-            const lastResortResult = await forceExpireAssignments(orderId);
-            console.log('Final expiration result:', lastResortResult);
-          } catch (innerError) {
-            console.error('Final expiration attempt also failed:', innerError);
-          }
+          // One last attempt with a short delay
+          setTimeout(async () => {
+            try {
+              console.log('Final attempt to expire assignments');
+              const lastResortResult = await forceExpireAssignments(orderId);
+              console.log('Final attempt result:', lastResortResult);
+              
+              // Log the final attempt
+              await logApiCall('timer-expired-final-attempt', { orderId }, lastResortResult);
+            } catch (finalError) {
+              console.error('Final attempt also failed:', finalError);
+            }
+          }, 1000);
         }
         
         // Call the callback regardless of the check result
@@ -113,6 +119,18 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       </div>
     );
   }
+
+  // Add clear debugging information to help diagnose time-related issues
+  const expiryDate = new Date(expiresAt);
+  const currentDate = new Date();
+  const diffMs = expiryDate.getTime() - currentDate.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  
+  console.log(`OrderTimer render for order ${orderId}:`);
+  console.log(`- expiresAt: ${expiresAt}`);
+  console.log(`- Current time: ${currentDate.toISOString()}`);
+  console.log(`- Time difference: ${diffSecs} seconds`);
+  console.log(`- timeLeft from hook: ${timeLeft} seconds`);
 
   return (
     <div className="space-y-3">

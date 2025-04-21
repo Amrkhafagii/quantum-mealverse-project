@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { checkExpiredAssignments } from '@/services/orders/webhookService';
+import { checkExpiredAssignments, forceExpireAssignments } from '@/services/orders/webhookService';
 import { logApiCall } from '@/services/loggerService';
 
 export const useOrderTimer = (
@@ -25,9 +25,17 @@ export const useOrderTimer = (
       return;
     }
 
-    // If the timestamp is already in the past, consider it expired immediately
+    // Debug logs to help diagnose timezone issues
+    console.log('Timer initialization for order:', orderId);
+    console.log('expiresAt (raw):', expiresAt);
+    console.log('expiresAt (parsed):', expiresAtDate.toISOString());
+    console.log('Current time:', new Date().toISOString());
+    console.log('Time difference (ms):', expiresAtTime - Date.now());
+    console.log('Time difference (seconds):', Math.floor((expiresAtTime - Date.now()) / 1000));
+
+    // If the timestamp is already in the past, expire immediately
     if (expiresAtTime < Date.now()) {
-      console.log(`Timer already expired for order ${orderId}, expires_at: ${expiresAt}`);
+      console.log(`Timer already expired for order ${orderId}`);
       console.log(`Current time: ${new Date().toISOString()}, Expiry time: ${expiresAt}`);
       console.log(`Time difference: ${Math.floor((expiresAtTime - Date.now()) / 1000)} seconds`);
       setTimeLeft(0);
@@ -46,9 +54,15 @@ export const useOrderTimer = (
       const progressValue = (secondsLeft / FIVE_MINUTES) * 100;
       setProgress(Math.max(0, Math.min(100, progressValue)));
 
+      // Log periodic checks to help diagnose expiration issues
+      if (secondsLeft <= 300 && secondsLeft % 30 === 0) {
+        console.log(`Timer check for order ${orderId}: ${secondsLeft} seconds left`);
+        console.log(`Current time: ${new Date().toISOString()}, Expiry time: ${expiresAt}`);
+      }
+
       // If the timer has just expired (secondsLeft is 0 and we haven't set isExpired yet)
       if (secondsLeft === 0 && !isExpired) {
-        console.log(`Timer expired for order ${orderId} at ${new Date().toISOString()}`);
+        console.log(`⏰ TIMER EXPIRED for order ${orderId} at ${new Date().toISOString()}`);
         console.log(`Expiry time was: ${expiresAt}`);
         setIsExpired(true);
         
@@ -59,20 +73,37 @@ export const useOrderTimer = (
           currentTime: new Date().toISOString()
         }, null);
         
-        // When a timer expires in the UI, trigger the backend check
+        // First attempt: Try to force expiration directly in the database
         try {
-          console.log('Triggering expired assignments check on timer expiry');
-          const result = await checkExpiredAssignments();
-          console.log('Expired assignments check result:', result);
+          console.log('🔄 Directly forcing assignment expiration for order:', orderId);
+          const result = await forceExpireAssignments(orderId);
+          console.log('Direct force expiration result:', result);
           
           // Log the result
-          await logApiCall('expired-assignments-check', { orderId }, result);
+          await logApiCall('direct-expired-assignments', { orderId }, result);
           
+          // If direct method fails, try the webhook method as backup
           if (!result.success) {
-            console.warn('Expired check failed:', result.error);
+            console.log('🔄 Direct method failed, trying webhook...');
+            const webhookResult = await checkExpiredAssignments();
+            console.log('Webhook expired assignments check result:', webhookResult);
+            
+            // Log the result
+            await logApiCall('expired-assignments-webhook', { orderId }, webhookResult);
           }
         } catch (error) {
-          console.error('Error checking expired assignments:', error);
+          console.error('❌ Error handling expired assignment:', error);
+          
+          // Last resort: Try one more time with a delay
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Final attempt to force expiration for order:', orderId);
+              const finalResult = await forceExpireAssignments(orderId);
+              console.log('Final force expiration result:', finalResult);
+            } catch (finalError) {
+              console.error('❌ Final attempt also failed:', finalError);
+            }
+          }, 2000);
         }
       }
     };
@@ -85,7 +116,6 @@ export const useOrderTimer = (
     return () => {
       clearInterval(timerInterval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expiresAt, orderId, isExpired]);
 
   const formatTime = (seconds: number): string => {

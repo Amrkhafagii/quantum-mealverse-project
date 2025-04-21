@@ -30,6 +30,8 @@ export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
       timezone_offset: new Date().getTimezoneOffset()
     };
 
+    console.log('Sending webhook request with timestamp:', requestWithTimestamp);
+
     const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
       method: 'POST',
       headers: {
@@ -69,7 +71,7 @@ export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
  */
 export const forceExpireAssignments = async (orderId: string): Promise<WebhookResponse> => {
   try {
-    console.log(`Forcing expiration of assignments for order ${orderId}`);
+    console.log(`🔥 Forcing expiration of assignments for order ${orderId}`);
     
     // First, get all pending assignments for this order
     const { data: pendingAssignments, error: fetchError } = await supabase
@@ -84,6 +86,7 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
     }
     
     if (!pendingAssignments || pendingAssignments.length === 0) {
+      console.log(`No pending assignments found for order ${orderId}`);
       return { success: true, message: 'No pending assignments found' };
     }
     
@@ -91,18 +94,19 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
     
     // Debug: Log each assignment with expiration time
     const now = new Date();
+    console.log(`Current time for comparison: ${now.toISOString()}`);
     pendingAssignments.forEach(assignment => {
       const expiresAt = new Date(assignment.expires_at);
       const diffMs = expiresAt.getTime() - now.getTime();
       const diffMins = Math.round(diffMs / 60000);
       
       console.log(`Assignment ${assignment.id}: expires at ${assignment.expires_at}`);
-      console.log(`Current time: ${now.toISOString()}`);
       console.log(`Time difference: ${diffMins} minutes (${diffMs}ms)`);
       console.log(`Has expired: ${expiresAt < now ? 'YES' : 'NO'}`);
     });
     
-    // Force update the status to expired
+    // Force update the status to expired for ALL pending assignments
+    // This is a more aggressive approach to ensure they get expired
     const updates = pendingAssignments.map(async (assignment) => {
       console.log(`Attempting to update assignment ${assignment.id} to expired status`);
       
