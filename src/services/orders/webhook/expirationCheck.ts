@@ -1,7 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { WebhookResponse } from '@/types/webhook';
 import { logApiCall } from '@/services/loggerService';
+import { recordOrderHistory } from './orderHistory';
 
 const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozgutjvbrljeijybnyg.supabase.co/functions/v1';
 
