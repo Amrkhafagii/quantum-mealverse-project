@@ -19,7 +19,7 @@ export const useOrderTimer = (
   useEffect(() => {
     const getServerTime = async () => {
       try {
-        await orderTimerTest(
+        const testResponse = await orderTimerTest(
           'getServerTime function call',
           async () => {
             const response = await supabase.functions.invoke('get-server-time', {
@@ -34,6 +34,10 @@ export const useOrderTimer = (
           }
         );
 
+        const response = await supabase.functions.invoke('get-server-time', {
+          method: 'POST',
+        });
+        
         if (response.error) {
           console.error('Error getting server time:', response.error);
           return;
@@ -207,18 +211,18 @@ export const useOrderTimer = (
   }, [expiresAt, orderId, isExpired, serverTime]);
 
   const formatTime = (seconds: number): string => {
+    const timeStr = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+    
     const testFormatTime = async () => {
-      const result = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
       await orderTimerTest(
         'formatTime function',
-        async () => result,
-        result
+        async () => timeStr,
+        timeStr
       );
-      return result;
     };
 
     testFormatTime();
-    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+    return timeStr;
   };
 
   return {

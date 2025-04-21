@@ -17,10 +17,17 @@ export const logUnitTestResult = async (result: UnitTestResult) => {
   try {
     const { error } = await supabase
       .from('unit_test_customer')
-      .insert({
-        ...result,
+      .insert([{
+        test_name: result.test_name,
+        function_name: result.function_name,
+        input: result.input,
+        expected_output: result.expected_output,
+        actual_output: result.actual_output,
+        passed: result.passed,
+        error_message: result.error_message,
+        execution_time: result.execution_time,
         timestamp: new Date().toISOString()
-      });
+      }]);
 
     if (error) {
       console.error('Failed to log unit test result:', error);
