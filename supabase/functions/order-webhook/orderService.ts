@@ -299,7 +299,6 @@ export async function handleAssignment(
   }
 }
 
-// New function to check and handle expired assignments
 export async function checkAndHandleExpiredAssignments(supabase: SupabaseClient) {
   console.log('[CHECK_EXPIRED] Starting expired assignments check');
   const now = new Date().toISOString();
@@ -346,7 +345,17 @@ export async function checkAndHandleExpiredAssignments(supabase: SupabaseClient)
           continue;
         }
         
-        // Add to history
+        // Add to restaurant_assignment_history table - this was missing
+        await supabase
+          .from('restaurant_assignment_history')
+          .insert({
+            order_id: assignment.order_id,
+            restaurant_id: assignment.restaurant_id,
+            status: 'expired',
+            notes: `Automatically expired at ${now}`
+          });
+        
+        // Add to order_history
         await supabase
           .from('order_history')
           .insert({

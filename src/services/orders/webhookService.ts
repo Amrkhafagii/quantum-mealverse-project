@@ -274,7 +274,21 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
         return false;
       }
       
-      // Record in history
+      // Add to restaurant_assignment_history - this was missing
+      const { error: historyError } = await supabase
+        .from('restaurant_assignment_history')
+        .insert({
+          order_id: orderId,
+          restaurant_id: assignment.restaurant_id,
+          status: 'expired',
+          notes: 'Manually expired by frontend timer'
+        });
+      
+      if (historyError) {
+        console.error(`Error adding to history for assignment ${assignment.id}:`, historyError);
+      }
+      
+      // Record in order history
       await recordOrderHistory(
         orderId,
         'assignment_expired',
