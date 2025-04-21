@@ -1,14 +1,42 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import SubscriptionPlan from '@/components/SubscriptionPlan';
 import { toast } from 'sonner';
+import { useCustomerLogger } from '@/hooks/useCustomerLogger';
+import { testLogger } from '@/services/loggerService';
+import { useAuth } from '@/hooks/useAuth';
 
 const Subscription = () => {
+  const { logEvent } = useCustomerLogger();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Test log on component mount
+    const runTest = async () => {
+      const result = await testLogger(user?.id);
+      console.log('Logger test result:', result);
+    };
+    
+    runTest();
+  }, [user]);
+
   const handleSubscribe = (plan: string) => {
+    // Log subscription selection
+    logEvent('subscription_selected', { plan, price: getPlanPrice(plan) });
+    
     toast.success(`You've selected the ${plan} plan. Redirecting to checkout...`);
+  };
+  
+  const getPlanPrice = (plan: string): number => {
+    switch (plan) {
+      case 'Basic Zenith': return 99;
+      case 'Pro Zenith': return 179;
+      case 'Ultimate Zenith': return 279;
+      default: return 0;
+    }
   };
 
   return (

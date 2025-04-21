@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 import HolographicCard from './HolographicCard';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PlanFeature {
   text: string;
@@ -32,6 +32,34 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   ctaText = 'Subscribe Now',
   onSubscribe,
 }) => {
+  const handleClick = async () => {
+    // Direct logging test
+    console.log('Testing direct log from SubscriptionPlan component');
+    try {
+      const { error } = await supabase.from('customer_logs').insert({
+        type: 'click',
+        element_id: 'subscription_button',
+        element_type: 'button',
+        element_class: 'subscription-cta',
+        page_url: window.location.href,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (error) {
+        console.error('Direct logging test failed:', error);
+      } else {
+        console.log('Direct logging test succeeded');
+      }
+    } catch (err) {
+      console.error('Direct logging test error:', err);
+    }
+    
+    // Call the provided onSubscribe handler
+    if (onSubscribe) {
+      onSubscribe();
+    }
+  };
+
   return (
     <HolographicCard
       className={cn(
@@ -94,9 +122,9 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         </div>
 
         <button
-          onClick={onSubscribe}
+          onClick={handleClick}
           className={cn(
-            "w-full py-3 px-6 rounded-md transition-all duration-300 text-center",
+            "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta",
             highlighted
               ? "bg-quantum-purple text-white hover:bg-quantum-darkPurple"
               : "cyber-button"

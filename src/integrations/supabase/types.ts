@@ -841,6 +841,78 @@ export type Database = {
           },
         ]
       }
+      restaurant_logs: {
+        Row: {
+          affected_rows: number | null
+          after_state: Json | null
+          before_state: Json | null
+          element_class: string | null
+          element_id: string | null
+          element_type: string | null
+          endpoint: string | null
+          error_message: string | null
+          error_stack: string | null
+          id: string
+          page_url: string | null
+          query_text: string | null
+          request_body: Json | null
+          request_headers: Json | null
+          response_body: Json | null
+          response_headers: Json | null
+          session_id: string | null
+          status_code: number | null
+          timestamp: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          affected_rows?: number | null
+          after_state?: Json | null
+          before_state?: Json | null
+          element_class?: string | null
+          element_id?: string | null
+          element_type?: string | null
+          endpoint?: string | null
+          error_message?: string | null
+          error_stack?: string | null
+          id?: string
+          page_url?: string | null
+          query_text?: string | null
+          request_body?: Json | null
+          request_headers?: Json | null
+          response_body?: Json | null
+          response_headers?: Json | null
+          session_id?: string | null
+          status_code?: number | null
+          timestamp?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          affected_rows?: number | null
+          after_state?: Json | null
+          before_state?: Json | null
+          element_class?: string | null
+          element_id?: string | null
+          element_type?: string | null
+          endpoint?: string | null
+          error_message?: string | null
+          error_stack?: string | null
+          id?: string
+          page_url?: string | null
+          query_text?: string | null
+          request_body?: Json | null
+          request_headers?: Json | null
+          response_body?: Json | null
+          response_headers?: Json | null
+          session_id?: string | null
+          status_code?: number | null
+          timestamp?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       restaurants: {
         Row: {
           address: string
