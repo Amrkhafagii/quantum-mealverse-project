@@ -28,6 +28,8 @@ export const useOrderTimer = (
     // If the timestamp is already in the past, consider it expired immediately
     if (expiresAtTime < Date.now()) {
       console.log(`Timer already expired for order ${orderId}, expires_at: ${expiresAt}`);
+      console.log(`Current time: ${new Date().toISOString()}, Expiry time: ${expiresAt}`);
+      console.log(`Time difference: ${Math.floor((expiresAtTime - Date.now()) / 1000)} seconds`);
       setTimeLeft(0);
       setProgress(0);
       setIsExpired(true);
@@ -47,6 +49,7 @@ export const useOrderTimer = (
       // If the timer has just expired (secondsLeft is 0 and we haven't set isExpired yet)
       if (secondsLeft === 0 && !isExpired) {
         console.log(`Timer expired for order ${orderId} at ${new Date().toISOString()}`);
+        console.log(`Expiry time was: ${expiresAt}`);
         setIsExpired(true);
         
         // Log the timer expiration

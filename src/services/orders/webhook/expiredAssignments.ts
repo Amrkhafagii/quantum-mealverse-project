@@ -88,12 +88,24 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
     }
     
     console.log(`Found ${pendingAssignments.length} pending assignments for order ${orderId}`);
-    // Log each pending assignment with its expiration time for debugging
+    
+    // Debug: Log each assignment with expiration time
+    const now = new Date();
     pendingAssignments.forEach(assignment => {
+      const expiresAt = new Date(assignment.expires_at);
+      const diffMs = expiresAt.getTime() - now.getTime();
+      const diffMins = Math.round(diffMs / 60000);
+      
       console.log(`Assignment ${assignment.id}: expires at ${assignment.expires_at}`);
+      console.log(`Current time: ${now.toISOString()}`);
+      console.log(`Time difference: ${diffMins} minutes (${diffMs}ms)`);
+      console.log(`Has expired: ${expiresAt < now ? 'YES' : 'NO'}`);
     });
     
+    // Force update the status to expired
     const updates = pendingAssignments.map(async (assignment) => {
+      console.log(`Attempting to update assignment ${assignment.id} to expired status`);
+      
       const { error: updateError } = await supabase
         .from('restaurant_assignments')
         .update({ status: 'expired' })
@@ -106,13 +118,19 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
       
       console.log(`Successfully marked assignment ${assignment.id} as expired`);
       
-      await recordOrderHistory(
-        orderId,
-        'assignment_expired',
-        assignment.restaurant_id,
-        { assignment_id: assignment.id, forced: true },
-        new Date().toISOString()
-      );
+      // Record in order history
+      try {
+        await recordOrderHistory(
+          orderId,
+          'assignment_expired',
+          assignment.restaurant_id,
+          { assignment_id: assignment.id, forced: true },
+          new Date().toISOString()
+        );
+        console.log(`Added history entry for assignment ${assignment.id}`);
+      } catch (historyError) {
+        console.error(`Error recording history for assignment ${assignment.id}:`, historyError);
+      }
       
       return true;
     });
@@ -121,22 +139,37 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
     const successCount = results.filter(r => r).length;
     
     // Check if all pending assignments are now expired
-    const { data: remainingPending } = await supabase
+    const { data: remainingPending, error: checkError } = await supabase
       .from('restaurant_assignments')
       .select('id')
       .eq('order_id', orderId)
       .eq('status', 'pending');
     
+    if (checkError) {
+      console.error('Error checking remaining pending assignments:', checkError);
+    }
+    
+    console.log(`After updates: ${remainingPending?.length || 0} pending assignments remain`);
+    
     if (!remainingPending || remainingPending.length === 0) {
-      const { data: acceptedAssignments } = await supabase
+      console.log('No more pending assignments, checking for accepted assignments');
+      
+      const { data: acceptedAssignments, error: acceptedError } = await supabase
         .from('restaurant_assignments')
         .select('id')
         .eq('order_id', orderId)
         .eq('status', 'accepted');
         
+      if (acceptedError) {
+        console.error('Error checking accepted assignments:', acceptedError);
+      }
+      
       const noAcceptedAssignments = !acceptedAssignments || acceptedAssignments.length === 0;
+      console.log(`Accepted assignments: ${acceptedAssignments?.length || 0}`);
         
       if (noAcceptedAssignments) {
+        console.log(`Updating order ${orderId} status to no_restaurant_accepted`);
+        
         const { error: orderUpdateError } = await supabase
           .from('orders')
           .update({ status: 'no_restaurant_accepted' })
@@ -146,12 +179,14 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
           console.error('Error updating order status:', orderUpdateError);
         } else {
           console.log(`Successfully updated order ${orderId} status to no_restaurant_accepted`);
+          
           await recordOrderHistory(
             orderId,
             'no_restaurant_accepted',
             null,
             { reason: 'All restaurant assignments expired or were manually expired' }
           );
+          console.log(`Added history entry for order status change`);
         }
       }
     }

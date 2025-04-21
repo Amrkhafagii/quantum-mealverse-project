@@ -63,9 +63,12 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
           // Log the forced check
           await logApiCall('timer-expired-check', { orderId }, result);
           
-          // Fixed: Check the success property and look for any message about no expired assignments
+          // Check if the webhook reported no expired assignments
+          // If it did, or if it failed, we'll attempt a direct update
           if (!result.success || (result.message && result.message.includes('No expired assignments found'))) {
             console.log('Webhook check failed or found no expired assignments, using direct approach');
+            
+            // Try the direct database approach as a fallback
             const backupResult = await forceExpireAssignments(orderId);
             console.log('Backup expiration result:', backupResult);
             
