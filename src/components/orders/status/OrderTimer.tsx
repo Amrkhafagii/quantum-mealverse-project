@@ -52,7 +52,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     return (
       <div className="text-center py-2 text-gray-400">
         <Clock className="h-4 w-4 inline mr-2" />
-        <span>Waiting for response...</span>
+        <span>Waiting for restaurant assignment...</span>
       </div>
     );
   }

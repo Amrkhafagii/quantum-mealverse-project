@@ -121,10 +121,21 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     console.log(`[REASSIGNMENT CLIENT] Checking assignment status for order: ${orderId}`);
     
     // First check for active assignments in restaurant_assignments table
-    // Using the explicit foreign key relationship to fix the relationship query
+    // Fix the relationship query by specifying the correct foreign key
     const { data: assignments, error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select('*, restaurant:restaurants(id, name)')
+      .select(`
+        id, 
+        status, 
+        order_id, 
+        restaurant_id, 
+        expires_at, 
+        created_at,
+        restaurants:restaurant_id (
+          id, 
+          name
+        )
+      `)
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
@@ -150,7 +161,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       
       console.log(`[REASSIGNMENT CLIENT] Assignment details for ${orderId}:`, {
         status: 'awaiting_response',
-        restaurant: getRestaurantName(assignment.restaurant),
+        restaurant: assignment.restaurants ? assignment.restaurants.name : 'Restaurant',
         attempt_count: count,
         expires_at: expiresAt,
         expiresAtValid: isValidDate,
@@ -161,7 +172,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: getRestaurantName(assignment.restaurant),
+        restaurant_name: assignment.restaurants ? assignment.restaurants.name : 'Restaurant',
         assignment_id: assignment.id,
         expires_at: expiresAt,
         attempt_count: count || 0
