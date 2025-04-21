@@ -1,3 +1,4 @@
+
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -70,6 +71,45 @@ export async function handleAssignment(
       retryAllowed: false,
       status: 'assignment_failed'
     };
+  }
+
+  // First, check if there are any pending assignments for this order that haven't expired yet
+  const { data: pendingAssignments } = await supabase
+    .from('restaurant_assignments')
+    .select('id, restaurant_id, expires_at')
+    .eq('order_id', orderId)
+    .eq('status', 'pending');
+  
+  // If there's a non-expired pending assignment, don't create a new one
+  const now = new Date();
+  const validAssignment = pendingAssignments?.find(a => new Date(a.expires_at) > now);
+  
+  if (validAssignment) {
+    console.log(`[REASSIGNMENT DEBUG] Order ${orderId} already has a valid pending assignment. Skipping reassignment.`);
+    return {
+      success: false,
+      error: 'Order already has an active assignment',
+      retryAllowed: false
+    };
+  }
+
+  // If there are expired assignments, update their status
+  const expiredAssignments = pendingAssignments?.filter(a => new Date(a.expires_at) <= now) || [];
+  
+  for (const assignment of expiredAssignments) {
+    console.log(`[REASSIGNMENT DEBUG] Marking expired assignment ${assignment.id} as 'expired'`);
+    await supabase
+      .from('restaurant_assignments')
+      .update({ status: 'expired' })
+      .eq('id', assignment.id);
+      
+    await logAssignmentAttempt(
+      supabase,
+      orderId,
+      assignment.restaurant_id,
+      'expired',
+      'Restaurant did not respond within the time limit'
+    );
   }
 
   console.log(`[REASSIGNMENT DEBUG] Looking for restaurants near (${latitude}, ${longitude})`);

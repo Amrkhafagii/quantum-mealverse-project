@@ -63,7 +63,9 @@ export const useOrderTimer = (
             const { latitude, longitude } = JSON.parse(locationData);
             
             if (latitude && longitude) {
-              await sendOrderToWebhook(orderId, latitude, longitude);
+              console.log(`Sending reassignment webhook for order ${orderId} due to timer expiration`);
+              // Pass true for isExpiredReassignment to indicate this is a reassignment due to expiration
+              await sendOrderToWebhook(orderId, latitude, longitude, true);
               console.log('Reassignment webhook sent successfully');
             } else {
               console.error('Invalid location data for reassignment:', { latitude, longitude });

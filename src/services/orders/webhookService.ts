@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   OrderAssignmentRequest, 
@@ -18,17 +19,27 @@ const getRestaurantName = (restaurant: any): string => {
 export const sendOrderToWebhook = async (
   orderId: string,
   latitude: number,
-  longitude: number
+  longitude: number,
+  isExpiredReassignment = false
 ): Promise<WebhookResponse> => {
   try {
-    console.log(`Sending order ${orderId} to webhook with location:`, { latitude, longitude });
+    console.log(`Sending order ${orderId} to webhook with location:`, { 
+      latitude, 
+      longitude, 
+      isExpiredReassignment 
+    });
     
-    const data: OrderAssignmentRequest = {
+    const data: OrderAssignmentRequest & { expired_reassignment?: boolean } = {
       order_id: orderId,
       latitude,
       longitude,
       action: 'assign'
     };
+    
+    // Add flag to indicate this is a reassignment due to expiration
+    if (isExpiredReassignment) {
+      data.expired_reassignment = true;
+    }
 
     const response = await supabase.functions.invoke('order-webhook', {
       body: data

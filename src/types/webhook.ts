@@ -4,6 +4,7 @@ export interface OrderAssignmentRequest {
   latitude: number;
   longitude: number;
   action: 'assign';
+  expired_reassignment?: boolean;
 }
 
 export interface RestaurantResponseRequest {

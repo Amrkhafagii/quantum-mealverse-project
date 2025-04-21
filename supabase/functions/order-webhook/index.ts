@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -42,6 +43,7 @@ Deno.serve(async (req) => {
 
     const { order_id, latitude, longitude } = requestData;
     const action = requestData.action || 'assign';
+    const isExpiredReassignment = requestData.expired_reassignment === true;
 
     // Log this webhook call with timestamp
     await supabase.from('webhook_logs').insert({
@@ -49,7 +51,8 @@ Deno.serve(async (req) => {
         action,
         order_id,
         timestamp: new Date().toISOString(),
-        request_data: requestData
+        request_data: requestData,
+        is_expiration: isExpiredReassignment
       }
     });
 
@@ -182,7 +185,36 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'assign') {
-      console.log(`[WEBHOOK] Processing new assignment for order ${order_id}`);
+      console.log(`[WEBHOOK] Processing ${isExpiredReassignment ? 'reassignment due to expiration' : 'new assignment'} for order ${order_id}`);
+      
+      // If this is a reassignment due to expiration, first update any expired assignments
+      if (isExpiredReassignment) {
+        const { data: expiredAssignments } = await supabase
+          .from('restaurant_assignments')
+          .select('id, restaurant_id')
+          .eq('order_id', order_id)
+          .eq('status', 'pending')
+          .lt('expires_at', new Date().toISOString());
+          
+        if (expiredAssignments && expiredAssignments.length > 0) {
+          console.log(`[WEBHOOK] Found ${expiredAssignments.length} expired assignments to update`);
+          
+          for (const assignment of expiredAssignments) {
+            await supabase
+              .from('restaurant_assignments')
+              .update({ status: 'expired' })
+              .eq('id', assignment.id);
+              
+            await logAssignmentAttempt(
+              supabase, 
+              order_id, 
+              assignment.restaurant_id, 
+              'expired',
+              'Restaurant did not respond within the time limit'
+            );
+          }
+        }
+      }
       
       const result = await handleAssignment(supabase, order_id, latitude, longitude);
       if (!result.success) {
