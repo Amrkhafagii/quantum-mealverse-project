@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -186,6 +185,17 @@ Deno.serve(async (req) => {
       console.log(`[WEBHOOK] Processing new assignment for order ${order_id}`);
       
       const result = await handleAssignment(supabase, order_id, latitude, longitude);
+      if (!result.success) {
+        // If assignment failed, make sure error and status messages reflect this
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: result.error,
+            status: result.status || 'failed'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ success: true, result }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

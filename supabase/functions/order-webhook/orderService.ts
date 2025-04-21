@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { findNearestRestaurants, createRestaurantAssignment, logAssignmentAttempt } from './restaurantService.ts';
 
@@ -44,31 +43,32 @@ export async function handleAssignment(
 
   // Check if we've reached the maximum number of attempts (3)
   if (currentAttemptNumber > 3) {
-    console.log(`[REASSIGNMENT DEBUG] Order ${orderId} - Maximum attempts (3) reached, marking as failed`);
+    console.log(`[REASSIGNMENT DEBUG] Order ${orderId} - Maximum attempts (3) reached, marking as assignment_failed`);
     await updateOrderStatus(supabase, orderId, 'assignment_failed');
     
     await logAssignmentAttempt(
       supabase,
       orderId,
       null,
-      'cancelled',
-      'Order automatically cancelled after 3 failed assignment attempts'
+      'failed',
+      'Order automatically failed assignment after 3 attempts with no response from restaurants'
     );
     
-    // Log details to webhook_logs table for tracking
+    // Log to webhook_logs table for tracking
     await supabase.from('webhook_logs').insert({
       payload: {
         order_id: orderId,
         attempt_number: currentAttemptNumber,
-        status: 'failed',
-        reason: 'Maximum assignment attempts reached'
+        status: 'assignment_failed',
+        reason: 'Maximum assignment attempts reached with no responses'
       }
     });
     
     return { 
       success: false, 
-      error: 'Maximum assignment attempts reached, order cancelled',
-      retryAllowed: false
+      error: 'Maximum assignment attempts reached, no response from restaurants, order marked as assignment_failed',
+      retryAllowed: false,
+      status: 'assignment_failed'
     };
   }
 
@@ -123,12 +123,20 @@ export async function handleAssignment(
     console.log('[REASSIGNMENT DEBUG] No more available restaurants to try for reassignment');
     await updateOrderStatus(supabase, orderId, 'no_available_restaurants');
     
+    await logAssignmentAttempt(
+      supabase,
+      orderId,
+      null,
+      'failed',
+      'All nearby restaurants have been exhausted with no acceptance'
+    );
+    
     // Log to webhook_logs
     await supabase.from('webhook_logs').insert({
       payload: {
         order_id: orderId,
         attempt_number: currentAttemptNumber,
-        status: 'failed',
+        status: 'no_available_restaurants',
         reason: 'No more available restaurants to try'
       }
     });
@@ -136,7 +144,8 @@ export async function handleAssignment(
     return { 
       success: false, 
       error: 'No more available restaurants to try',
-      retryAllowed: true
+      retryAllowed: false,
+      status: 'no_available_restaurants'
     };
   }
 
