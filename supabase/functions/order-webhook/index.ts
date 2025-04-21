@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -45,7 +44,6 @@ Deno.serve(async (req) => {
     const action = requestData.action || 'assign';
     const isExpiredReassignment = requestData.expired_reassignment === true;
 
-    // Log this webhook call with timestamp
     await supabase.from('webhook_logs').insert({
       payload: {
         action,
@@ -102,7 +100,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get the current attempt number based on assignment history
       const { count } = await supabase
         .from('restaurant_assignment_history')
         .select('*', { count: 'exact', head: true })
@@ -126,7 +123,6 @@ Deno.serve(async (req) => {
 
       await logAssignmentAttempt(supabase, order_id, restaurant_id, action);
       
-      // Log the outcome to webhook_logs
       await supabase.from('webhook_logs').insert({
         payload: {
           order_id,
@@ -169,9 +165,8 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
-        console.log(`[WEBHOOK] Restaurant ${restaurant_id} rejected order ${order_id}, attempting reassignment...`);
+        console.log(`[WEBHOOK] Restaurant ${restaurant_id} rejected order ${order_id}, attempting reassignment to a new restaurant...`);
         
-        // Restaurant rejected the order, try to reassign
         const result = await handleAssignment(supabase, order_id, latitude, longitude);
         return new Response(
           JSON.stringify({ 
@@ -187,7 +182,6 @@ Deno.serve(async (req) => {
     if (action === 'assign') {
       console.log(`[WEBHOOK] Processing ${isExpiredReassignment ? 'reassignment due to expiration' : 'new assignment'} for order ${order_id}`);
       
-      // If this is a reassignment due to expiration, first update any expired assignments
       if (isExpiredReassignment) {
         const { data: expiredAssignments } = await supabase
           .from('restaurant_assignments')
@@ -218,7 +212,6 @@ Deno.serve(async (req) => {
       
       const result = await handleAssignment(supabase, order_id, latitude, longitude);
       if (!result.success) {
-        // If assignment failed, make sure error and status messages reflect this
         return new Response(
           JSON.stringify({ 
             success: false,
