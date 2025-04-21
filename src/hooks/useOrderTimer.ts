@@ -1,14 +1,11 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { checkExpiredAssignments } from '@/services/orders/webhookService';
-import { useServerTime } from './timer/useServerTime';
-import { useExpiredAssignments } from './timer/useExpiredAssignments';
 import { 
   calculateRemainingTime, 
   formatTime, 
   calculateProgress 
 } from '@/utils/timer/timerCalculations';
+import { useServerTime } from './timer/useServerTime';
 
 export const useOrderTimer = (
   expiresAt: string | undefined,
@@ -18,9 +15,6 @@ export const useOrderTimer = (
   const [progress, setProgress] = useState<number>(100);
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const { serverTimeOffset } = useServerTime();
-
-  // Use the extracted expired assignments hook
-  useExpiredAssignments(orderId, expiresAt, isExpired);
 
   // Timer logic
   useEffect(() => {
@@ -51,31 +45,10 @@ export const useOrderTimer = (
     setTimeLeft(initialSecondsLeft);
     setProgress(calculateProgress(initialSecondsLeft));
 
-    const updateTimer = async () => {
+    const updateTimer = () => {
       const secondsLeft = calculateRemainingTime(expiresAtDate, serverTimeOffset);
       setTimeLeft(secondsLeft);
       setProgress(calculateProgress(secondsLeft));
-
-      if (secondsLeft <= 30 && secondsLeft > 0 && !isExpired) {
-        console.log(`⏰ Timer about to expire for order ${orderId} in ${secondsLeft} seconds...`);
-        
-        try {
-          const { data } = await supabase
-            .from('restaurant_assignments')
-            .select('id')
-            .eq('order_id', orderId)
-            .eq('status', 'pending');
-            
-          const pendingCount = data?.length || 0;
-          
-          if (pendingCount > 0) {
-            console.log('Preemptively checking for expirations...');
-            await checkExpiredAssignments();
-          }
-        } catch (error) {
-          console.error('Error in pre-check for expired assignments:', error);
-        }
-      }
 
       if (secondsLeft === 0 && !isExpired) {
         console.log(`⏰ TIMER EXPIRED for order ${orderId} at ${new Date().toISOString()}`);

@@ -4,8 +4,6 @@ import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
 import { toast } from 'sonner';
-import { checkExpiredAssignments } from '@/services/orders/webhookService';
-import { logApiCall } from '@/services/loggerService';
 
 interface OrderTimerProps {
   expiresAt?: string;
@@ -22,37 +20,6 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     expiresAt, 
     orderId
   );
-  
-  // Check for server-side assignment expiration periodically
-  useEffect(() => {
-    if (orderId && expiresAt) {
-      // Initial check when component mounts
-      const initialCheck = async () => {
-        try {
-          await checkExpiredAssignments();
-        } catch (error) {
-          console.error('Error in initial assignment check:', error);
-        }
-      };
-      
-      initialCheck();
-      
-      // Set up a periodic check
-      const checkInterval = setInterval(async () => {
-        try {
-          // Only do periodic checks if we're still waiting for a response
-          if (!isExpired && timeLeft < 60) {
-            console.log('Performing periodic check for expired assignments');
-            await checkExpiredAssignments();
-          }
-        } catch (error) {
-          console.error('Error in periodic assignment check:', error);
-        }
-      }, 30000); // Check every 30 seconds
-      
-      return () => clearInterval(checkInterval);
-    }
-  }, [orderId, expiresAt, isExpired, timeLeft]);
   
   // When our timer expires, notify the user and trigger refresh
   useEffect(() => {
