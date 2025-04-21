@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,9 +22,11 @@ import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
 import ThankYou from './pages/ThankYou';
 import Orders from './pages/Orders';
+import { useCustomerLogger } from '@/hooks/useCustomerLogger';
 
 function App() {
   const queryClient = new QueryClient();
+  useCustomerLogger(); // Initialize customer logger
 
   return (
     <div className="App">
