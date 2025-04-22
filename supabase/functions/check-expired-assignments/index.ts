@@ -27,6 +27,16 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Parse request body for additional options
+    let forceCheck = false;
+    try {
+      const body = await req.json();
+      forceCheck = body?.force_check === true;
+      console.log(`Request received with force_check: ${forceCheck}`);
+    } catch (e) {
+      console.log("No request body or invalid JSON");
+    }
+
     const now = new Date().toISOString();
     console.log(`Current server time: ${now}`);
 
@@ -111,7 +121,8 @@ Deno.serve(async (req) => {
         processed: results.length,
         results,
         affected_orders: Array.from(affectedOrders),
-        order_results: orderResults
+        order_results: orderResults,
+        server_time: now
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

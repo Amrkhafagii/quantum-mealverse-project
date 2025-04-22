@@ -26,7 +26,8 @@ export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
         'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
-        client_timestamp: new Date().toISOString()
+        client_timestamp: new Date().toISOString(),
+        force_check: true // Signal to force a check regardless of timing
       }),
     });
 
@@ -63,8 +64,7 @@ export const forceExpireAssignments = async (orderId: string): Promise<WebhookRe
   try {
     console.log(`🔄 Refreshing order ${orderId} after assignment expiration`);
     
-    // Just call the server function to check for expired assignments
-    // The server will handle the actual database updates
+    // Call the server function to check for expired assignments
     const result = await checkExpiredAssignments();
     
     // Refresh the UI by informing the caller of the result

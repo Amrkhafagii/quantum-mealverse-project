@@ -21,17 +21,6 @@ export async function updateOrderStatus(supabase: any, orderId: string) {
   console.log(`Updating order ${orderId} to status 'no_restaurant_accepted'`);
   
   try {
-    // Update order status
-    const { error: orderUpdateError } = await supabase
-      .from('orders')
-      .update({ status: 'no_restaurant_accepted' })
-      .eq('id', orderId);
-
-    if (orderUpdateError) {
-      console.error('Error updating order status:', orderUpdateError);
-      throw orderUpdateError;
-    }
-
     // Get current order status for history record
     const { data: currentOrder, error: fetchError } = await supabase
       .from('orders')
@@ -42,6 +31,17 @@ export async function updateOrderStatus(supabase: any, orderId: string) {
     if (fetchError) {
       console.error('Error fetching current order:', fetchError);
       throw fetchError;
+    }
+
+    // Update order status
+    const { error: orderUpdateError } = await supabase
+      .from('orders')
+      .update({ status: 'no_restaurant_accepted' })
+      .eq('id', orderId);
+
+    if (orderUpdateError) {
+      console.error('Error updating order status:', orderUpdateError);
+      throw orderUpdateError;
     }
 
     // Log status change in order history

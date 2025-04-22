@@ -1,6 +1,7 @@
 
 import { useEffect } from 'react';
 import { logApiCall } from '@/services/loggerService';
+import { checkExpiredAssignments } from '@/services/orders/webhook/expiredAssignments';
 
 /**
  * This hook handles expired assignment checks.
@@ -26,13 +27,16 @@ export const useExpiredAssignments = (
           timestamp: new Date().toISOString(),
           message: 'Client UI timer expired - triggering refresh only'
         }, { success: true });
+        
+        // Force server-side check for expired assignments
+        await checkExpiredAssignments();
+        
+        // Update UI to reflect expired state, but don't change DB state
+        console.log('UI timer expired, refreshing to get the latest server state');
+        onTimerExpire();
       } catch (error) {
-        console.error('Error logging timer expiration:', error);
+        console.error('Error handling timer expiration:', error);
       }
-      
-      // Update UI to reflect expired state, but don't change DB state
-      console.log('UI timer expired, refreshing to get the latest server state');
-      onTimerExpire();
     };
 
     logExpiration();

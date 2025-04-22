@@ -5,7 +5,7 @@ import { OrderRestaurantStatus } from './thank-you/OrderRestaurantStatus';
 import { cancelOrder } from '@/services/orders/orderService';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { checkAssignmentStatus } from '@/services/orders/webhookService';
+import { checkAssignmentStatus, checkExpiredAssignments } from '@/services/orders/webhook';
 
 interface OrderStatusDisplayProps {
   order: Order;
@@ -28,6 +28,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
       setIsCancelling(true);
       
       // First check if all assignments are expired
+      await checkExpiredAssignments();
       const updatedStatus = await checkAssignmentStatus(order.id);
       
       // If there are no pending assignments, no need to cancel

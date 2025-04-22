@@ -4,6 +4,7 @@ import { Building, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { OrderTimer } from '@/components/orders/status/OrderTimer';
 import { toast } from 'sonner';
+import { checkExpiredAssignments } from '@/services/orders/webhook/expiredAssignments';
 
 interface OrderRestaurantStatusProps {
   status: string;
@@ -24,9 +25,17 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
 }) => {
   if (!['pending', 'awaiting_restaurant'].includes(status)) return null;
 
-  const handleTimerExpire = () => {
+  const handleTimerExpire = async () => {
     toast.info("Restaurant response time expired");
-    // Force a refresh of the assignment data
+    
+    // Force a server-side check for expired assignments
+    try {
+      await checkExpiredAssignments();
+    } catch (error) {
+      console.error("Error checking expired assignments:", error);
+    }
+    
+    // Force refresh of the assignment data
     setTimeout(() => {
       window.location.reload();
     }, 1000);
