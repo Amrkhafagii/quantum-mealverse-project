@@ -605,44 +605,6 @@ export type Database = {
         }
         Relationships: []
       }
-      order_status_history: {
-        Row: {
-          changed_at: string
-          changed_by: string | null
-          id: string
-          new_status: string
-          notes: string | null
-          order_id: string
-          previous_status: string | null
-        }
-        Insert: {
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_status: string
-          notes?: string | null
-          order_id: string
-          previous_status?: string | null
-        }
-        Update: {
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_status?: string
-          notes?: string | null
-          order_id?: string
-          previous_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_status_history_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       orders: {
         Row: {
           city: string
@@ -1094,6 +1056,32 @@ export type Database = {
           srtext?: string | null
         }
         Relationships: []
+      }
+      status: {
+        Row: {
+          order_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          order_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          order_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {

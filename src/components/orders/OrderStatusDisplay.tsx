@@ -67,9 +67,17 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   let statusDetails = '';
 
   switch (order.status) {
-    case 'processing':
+    case 'accepted':
+      statusMessage = 'Your order has been accepted';
+      statusDetails = order.restaurant?.name ? `by ${order.restaurant.name}` : '';
+      break;
+    case 'preparing':
       statusMessage = 'Your order is being prepared';
       statusDetails = order.restaurant?.name ? `by ${order.restaurant.name}` : '';
+      break;
+    case 'ready_for_pickup':
+      statusMessage = 'Your order is ready for pickup';
+      statusDetails = order.restaurant?.name ? `at ${order.restaurant.name}` : '';
       break;
     case 'on_the_way':
       statusMessage = 'Your order is on the way';

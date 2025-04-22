@@ -35,6 +35,15 @@ Deno.serve(async (req) => {
 
     console.log(`Updating order ${orderId} status to ${status}`);
 
+    // Validate status transition
+    const allowedStatuses = ['accepted', 'preparing', 'ready_for_pickup', 'on_the_way', 'delivered'];
+    if (!allowedStatuses.includes(status)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid status. Allowed statuses: ' + allowedStatuses.join(', ') }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
     // Get the current order status before updating
     const { data: currentOrder } = await supabase
       .from('orders')

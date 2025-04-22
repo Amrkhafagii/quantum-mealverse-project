@@ -228,7 +228,7 @@ export async function handleAssignment(
     const { error: orderUpdateError } = await supabase
       .from('orders')
       .update({ 
-        status: 'processing', 
+        status: 'accepted', 
         restaurant_id: restaurantId 
       })
       .eq('id', orderId);

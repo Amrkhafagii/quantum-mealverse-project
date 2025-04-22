@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { updateOrderStatus } from './orderService.ts';
 import { findNearestRestaurants, logAssignmentAttempt } from './restaurantService.ts';
@@ -180,7 +179,7 @@ Deno.serve(async (req) => {
         const { error: orderUpdateError } = await supabase
           .from('orders')
           .update({ 
-            status: 'processing', 
+            status: 'accepted', 
             restaurant_id: restaurant_id 
           })
           .eq('id', order_id);
