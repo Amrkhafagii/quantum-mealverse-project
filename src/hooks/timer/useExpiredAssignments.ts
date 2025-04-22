@@ -17,7 +17,7 @@ export const useExpiredAssignments = (
   useEffect(() => {
     if (!orderId || !isExpired || !onTimerExpire) return;
 
-    // Log expired timer state for debugging only
+    // Log expired timer state for debugging only 
     const logExpiration = async () => {
       try {
         await logApiCall('timer-expired-client', { 

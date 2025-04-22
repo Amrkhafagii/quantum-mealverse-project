@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 interface OrderRestaurantStatusProps {
   status: string;
-  restaurantName?: string;
+  restaurantName?: string; 
   assignmentStatus: any;
   isCancelling: boolean;
   onCancel: () => void;
