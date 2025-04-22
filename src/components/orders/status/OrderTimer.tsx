@@ -1,8 +1,9 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Clock, Hourglass } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useOrderTimer } from '@/hooks/useOrderTimer';
+import { useExpiredAssignments } from '@/hooks/timer/useExpiredAssignments';
 import { toast } from 'sonner';
 
 interface OrderTimerProps {
@@ -21,13 +22,13 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     orderId
   );
   
-  // When our timer expires, notify the user and trigger refresh
-  useEffect(() => {
-    if (isExpired && onTimerExpire) {
+  // Use the dedicated hook for handling expiration
+  useExpiredAssignments(orderId, expiresAt, isExpired, () => {
+    if (onTimerExpire) {
       toast.info("Restaurant response time expired. Updating order status...");
       onTimerExpire();
     }
-  }, [isExpired, onTimerExpire]);
+  });
 
   if (isExpired) {
     return (

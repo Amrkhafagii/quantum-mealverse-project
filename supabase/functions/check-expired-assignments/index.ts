@@ -17,6 +17,10 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing environment variables for Supabase connection');
+    }
+
     const supabase = createClient(
       SUPABASE_URL,
       SUPABASE_SERVICE_ROLE_KEY,
@@ -36,9 +40,19 @@ Deno.serve(async (req) => {
       console.log(`Processing expired assignment ${assignment.id} for order ${assignment.order_id}`);
       
       try {
+        // Mark the assignment as expired
         await markAssignmentExpired(supabase, assignment, now);
+        
+        // Log the status change in assignment history
         await logAssignmentHistory(supabase, assignment, now);
-        await logOrderExpiration(supabase, assignment.order_id, assignment.restaurant_id, assignment.id, now);
+        
+        // Log the expiration event in order history
+        try {
+          await logOrderExpiration(supabase, assignment.order_id, assignment.restaurant_id, assignment.id, now);
+        } catch (error) {
+          console.error(`Error logging order expiration for ${assignment.order_id}:`, error);
+          // Continue processing even if this fails
+        }
         
         affectedOrders.add(assignment.order_id);
         results.push({ 
@@ -53,21 +67,41 @@ Deno.serve(async (req) => {
           success: false, 
           error: error.message 
         });
-        continue;
+        // Still add the order to affected orders to check if we need to update status
+        affectedOrders.add(assignment.order_id);
       }
     }
     
     // Process affected orders
+    const orderResults = [];
     for (const orderId of affectedOrders) {
       try {
         const { noPending, noAccepted } = await checkRemainingAssignments(supabase, orderId);
         
+        console.log(`Order ${orderId} check: noPending=${noPending}, noAccepted=${noAccepted}`);
+        
         if (noPending && noAccepted) {
           console.log(`All assignments expired for order ${orderId}, updating status`);
           await updateOrderStatus(supabase, orderId);
+          orderResults.push({
+            order_id: orderId,
+            status: 'updated_to_no_restaurant_accepted',
+            success: true
+          });
+        } else {
+          orderResults.push({
+            order_id: orderId,
+            status: 'no_update_needed',
+            details: { has_pending: !noPending, has_accepted: !noAccepted }
+          });
         }
       } catch (error) {
         console.error(`Error processing order ${orderId}:`, error);
+        orderResults.push({
+          order_id: orderId,
+          success: false,
+          error: error.message
+        });
       }
     }
     
@@ -76,7 +110,8 @@ Deno.serve(async (req) => {
         success: true,
         processed: results.length,
         results,
-        affected_orders: Array.from(affectedOrders)
+        affected_orders: Array.from(affectedOrders),
+        order_results: orderResults
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

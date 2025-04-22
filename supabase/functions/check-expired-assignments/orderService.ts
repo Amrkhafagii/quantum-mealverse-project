@@ -1,52 +1,68 @@
 
 export async function logOrderExpiration(supabase: any, orderId: string, restaurantId: string, assignmentId: string, now: string) {
+  // Use the valid status 'expired_assignment' instead of 'assignment_expired'
   const { error: orderHistoryError } = await supabase
     .from('order_history')
     .insert({
       order_id: orderId,
-      status: 'assignment_expired',
+      status: 'expired_assignment',
       restaurant_id: restaurantId,
       details: { assignment_id: assignmentId },
       expired_at: now
     });
 
-  if (orderHistoryError) throw orderHistoryError;
+  if (orderHistoryError) {
+    console.error('Error logging order expiration to history:', orderHistoryError);
+    throw orderHistoryError;
+  }
 }
 
 export async function updateOrderStatus(supabase: any, orderId: string) {
-  // Update order status
-  const { error: orderUpdateError } = await supabase
-    .from('orders')
-    .update({ status: 'no_restaurant_accepted' })
-    .eq('id', orderId);
+  console.log(`Updating order ${orderId} to status 'no_restaurant_accepted'`);
+  
+  try {
+    // Update order status
+    const { error: orderUpdateError } = await supabase
+      .from('orders')
+      .update({ status: 'no_restaurant_accepted' })
+      .eq('id', orderId);
 
-  if (orderUpdateError) throw orderUpdateError;
+    if (orderUpdateError) {
+      console.error('Error updating order status:', orderUpdateError);
+      throw orderUpdateError;
+    }
 
-  // Log status change in order history
-  const { error: historyError } = await supabase
-    .from('order_history')
-    .insert({
-      order_id: orderId,
-      status: 'no_restaurant_accepted',
-      details: { reason: 'All restaurant assignments expired' }
-    });
+    // Get current order status for history record
+    const { data: currentOrder, error: fetchError } = await supabase
+      .from('orders')
+      .select('status')
+      .eq('id', orderId)
+      .single();
 
-  if (historyError) throw historyError;
+    if (fetchError) {
+      console.error('Error fetching current order:', fetchError);
+      throw fetchError;
+    }
 
-  // Add to order status history
-  const { data: currentOrder } = await supabase
-    .from('orders')
-    .select('status')
-    .eq('id', orderId)
-    .single();
+    // Log status change in order history
+    const { error: historyError } = await supabase
+      .from('order_history')
+      .insert({
+        order_id: orderId,
+        status: 'no_restaurant_accepted',
+        previous_status: currentOrder?.status,
+        details: { reason: 'All restaurant assignments expired' }
+      });
 
-  const { error: statusHistoryError } = await supabase
-    .from('order_status_history')
-    .insert({
-      order_id: orderId,
-      previous_status: currentOrder?.status,
-      new_status: 'no_restaurant_accepted'
-    });
+    if (historyError) {
+      console.error('Error inserting into order history:', historyError);
+      throw historyError;
+    }
 
-  if (statusHistoryError) throw statusHistoryError;
+    console.log(`Successfully updated order ${orderId} status and history records`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to update order ${orderId} status:`, error);
+    throw error;
+  }
 }

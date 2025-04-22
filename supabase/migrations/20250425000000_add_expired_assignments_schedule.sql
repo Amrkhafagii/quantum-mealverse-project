@@ -34,7 +34,7 @@ BEGIN
       'Automatically expired by scheduled function at ' || now_timestamp
     );
     
-    -- Log in order_history
+    -- Log in order_history (using a valid status)
     INSERT INTO order_history (
       order_id, 
       status, 
@@ -43,7 +43,7 @@ BEGIN
       expired_at
     ) VALUES (
       assignment.order_id, 
-      'assignment_expired', 
+      'expired_assignment', -- Using a valid status in the check constraint
       assignment.restaurant_id, 
       jsonb_build_object('assignment_id', assignment.id), 
       now_timestamp
@@ -86,6 +86,8 @@ BEGIN
         'no_restaurant_accepted', 
         jsonb_build_object('reason', 'All restaurant assignments expired')
       );
+      
+      RAISE NOTICE 'Updated order % to no_restaurant_accepted', assignment.order_id;
     END IF;
   END LOOP;
 END;
