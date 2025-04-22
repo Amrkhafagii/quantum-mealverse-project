@@ -9,9 +9,21 @@ interface OrderStatusTimelineProps {
   orderId: string;
 }
 
+// Define a type for order status history items
+interface OrderStatusHistoryItem {
+  id?: string;
+  order_id: string;
+  previous_status: string | null;
+  new_status: string;
+  changed_at: string;
+  changed_by?: string | null;
+}
+
 const statusSteps = [
   { key: 'pending', label: 'Order Received', Icon: Package },
-  { key: 'processing', label: 'Processing', Icon: RefreshCcw },
+  { key: 'accepted', label: 'Accepted', Icon: RefreshCcw },
+  { key: 'preparing', label: 'Preparing', Icon: RefreshCcw },
+  { key: 'ready_for_pickup', label: 'Ready for Pickup', Icon: RefreshCcw },
   { key: 'on_the_way', label: 'On The Way', Icon: Truck },
   { key: 'delivered', label: 'Delivered', Icon: CheckCircle2 },
 ];
@@ -19,10 +31,12 @@ const statusSteps = [
 const getStepIndex = (status: string) => {
   const statusMap: { [key: string]: number } = {
     'pending': 0,
-    'accepted': 1, // This will color up to Processing
-    'processing': 1,
-    'on_the_way': 2,
-    'delivered': 3
+    'awaiting_restaurant': 0, // Same as pending in the timeline
+    'accepted': 1,
+    'preparing': 2,
+    'ready_for_pickup': 3,
+    'on_the_way': 4,
+    'delivered': 5
   };
   return statusMap[status] ?? -1;
 };
@@ -31,17 +45,28 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ orderI
   const { data: statusHistory } = useQuery({
     queryKey: ['order-status-history', orderId],
     queryFn: async () => {
+      // Use the order_history table that contains status changes
       const { data, error } = await supabase
-        .from('order_status_history')
+        .from('order_history')
         .select('*')
         .eq('order_id', orderId)
-        .order('changed_at');
+        .order('created_at');
         
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match the expected OrderStatusHistoryItem structure
+      return (data || []).map((item): OrderStatusHistoryItem => ({
+        id: item.id,
+        order_id: item.order_id,
+        previous_status: item.previous_status,
+        new_status: item.status,
+        changed_at: item.created_at,
+        changed_by: item.changed_by
+      }));
     }
   });
 
+  // Get the current status from the last history item
   const currentStatus = statusHistory?.length 
     ? statusHistory[statusHistory.length - 1].new_status 
     : 'pending';
@@ -55,6 +80,9 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ orderI
         const isActive = index === currentStep;
 
         const { Icon } = step;
+        
+        // Find the history item for this step
+        const historyItem = statusHistory?.find(h => h.new_status === step.key);
 
         return (
           <div key={step.key} className="flex items-start">
@@ -77,10 +105,10 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ orderI
               <h4 className={`font-medium ${isComplete ? 'text-quantum-cyan' : 'text-gray-500'}`}>
                 {step.label}
               </h4>
-              {statusHistory?.find(h => h.new_status === step.key) && (
+              {historyItem && (
                 <p className="text-sm text-gray-400">
                   {format(
-                    new Date(statusHistory.find(h => h.new_status === step.key)!.changed_at),
+                    new Date(historyItem.changed_at),
                     'MMM dd, yyyy HH:mm'
                   )}
                 </p>
