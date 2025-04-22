@@ -1,12 +1,11 @@
 
 import { useEffect } from 'react';
 import { logApiCall } from '@/services/loggerService';
-import { checkExpiredAssignments } from '@/services/orders/webhook/expiredAssignments';
 
 /**
- * This hook handles expired assignment checks.
- * It relies on the server-side cron job for expiration handling
- * and just updates the UI when expiration occurs.
+ * This hook handles UI updates when assignments expire.
+ * It DOES NOT trigger any database updates - all expiration logic
+ * is handled by the server-side cron job.
  */
 export const useExpiredAssignments = (
   orderId: string | undefined,
@@ -14,31 +13,29 @@ export const useExpiredAssignments = (
   isExpired: boolean,
   onTimerExpire?: () => void
 ) => {
-  // When timer expires in UI, we trigger a refresh but let server handle the DB work
+  // When timer expires in UI, just trigger a UI refresh
   useEffect(() => {
     if (!orderId || !isExpired || !onTimerExpire) return;
 
-    // Log expired timer state for debugging only 
-    const logExpiration = async () => {
+    // Just log the expiration and refresh the UI
+    const refreshUiOnly = async () => {
       try {
+        // Only log the expiration for debugging purposes
         await logApiCall('timer-expired-client', { 
           orderId, 
           expiresAt,
           timestamp: new Date().toISOString(),
-          message: 'Client UI timer expired - triggering refresh only'
+          message: 'Client UI timer expired - UI refresh only, no DB changes'
         }, { success: true });
         
-        // Force server-side check for expired assignments
-        await checkExpiredAssignments();
-        
-        // Update UI to reflect expired state, but don't change DB state
         console.log('UI timer expired, refreshing to get the latest server state');
+        // Just refresh the UI without making any changes to the database
         onTimerExpire();
       } catch (error) {
-        console.error('Error handling timer expiration:', error);
+        console.error('Error handling UI refresh on timer expiration:', error);
       }
     };
 
-    logExpiration();
+    refreshUiOnly();
   }, [orderId, isExpired, onTimerExpire, expiresAt]);
 };

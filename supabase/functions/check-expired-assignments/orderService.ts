@@ -7,6 +7,7 @@ export async function logOrderExpiration(supabase: any, orderId: string, restaur
       order_id: orderId,
       status: 'expired_assignment',
       restaurant_id: restaurantId,
+      restaurant_name: null, // Add null restaurant_name to avoid constraints
       details: { assignment_id: assignmentId },
       expired_at: now
     });
@@ -51,6 +52,8 @@ export async function updateOrderStatus(supabase: any, orderId: string) {
         order_id: orderId,
         status: 'no_restaurant_accepted',
         previous_status: currentOrder?.status,
+        restaurant_id: null, // Use null to avoid constraints
+        restaurant_name: null, // Use null to avoid constraints
         details: { reason: 'All restaurant assignments expired' }
       });
 
