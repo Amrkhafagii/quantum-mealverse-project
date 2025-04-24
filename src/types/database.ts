@@ -1,3 +1,4 @@
+
 // Generated types from Supabase database schema
 export type Json =
   | string
@@ -164,7 +165,7 @@ export type Database = {
           status: string
         }
       }
-      restaurant_assignment_history: {
+      restaurant_assignments: {
         Row: {
           id: string
           restaurant_id: string

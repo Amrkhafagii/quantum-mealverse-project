@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 interface Assignment {
@@ -13,7 +14,7 @@ export async function getExpiredAssignments(supabase: any): Promise<Assignment[]
   expiryTime.setMinutes(expiryTime.getMinutes() - timeoutMinutes);
   
   const { data: expiredAssignments, error } = await supabase
-    .from('restaurant_assignment_history')
+    .from('restaurant_assignments')
     .select('id, restaurant_id, order_id, created_at')
     .eq('status', 'pending')
     .lt('created_at', expiryTime.toISOString());
@@ -23,9 +24,9 @@ export async function getExpiredAssignments(supabase: any): Promise<Assignment[]
 }
 
 export async function markAssignmentExpired(supabase: any, assignment: Assignment, now: string) {
-  // Insert new record with expired status instead of updating
+  // Insert new record with expired status
   const { error: insertError } = await supabase
-    .from('restaurant_assignment_history')
+    .from('restaurant_assignments')
     .insert({
       order_id: assignment.order_id,
       restaurant_id: assignment.restaurant_id, 
@@ -35,11 +36,19 @@ export async function markAssignmentExpired(supabase: any, assignment: Assignmen
     });
 
   if (insertError) throw insertError;
+  
+  // Also update the original assignment to expired
+  const { error: updateError } = await supabase
+    .from('restaurant_assignments')
+    .update({ status: 'expired' })
+    .eq('id', assignment.id);
+    
+  if (updateError) throw updateError;
 }
 
 export async function logAssignmentHistory(supabase: any, assignment: Assignment, now: string) {
-  // This is now redundant since we're using restaurant_assignment_history directly
-  // but keeping the function for API compatibility
+  // This function is now redundant since we're using restaurant_assignments directly
+  // Kept for API compatibility
   return;
 }
 
@@ -48,7 +57,7 @@ export async function checkRemainingAssignments(supabase: any, orderId: string):
   noAccepted: boolean; 
 }> {
   const { data: recentAssignments } = await supabase
-    .from('restaurant_assignment_history')
+    .from('restaurant_assignments')
     .select('id, status')
     .eq('order_id', orderId)
     .order('created_at', { ascending: false });

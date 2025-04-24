@@ -13,7 +13,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     
     // Get all assignments for this order
     const { data: assignments, error } = await supabase
-      .from('restaurant_assignment_history')
+      .from('restaurant_assignments')
       .select(`
         id, 
         status,

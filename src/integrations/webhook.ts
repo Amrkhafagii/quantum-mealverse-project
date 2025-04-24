@@ -120,9 +120,9 @@ export async function simulateRestaurantResponse(
 // Function to check assignment status
 export async function checkAssignmentStatus(orderId: string) {
   try {
-    // We're using restaurant_assignment_history table now since both tables were merged
+    // Now we're using the restaurant_assignments table directly
     const { data: assignment } = await supabase
-      .from('restaurant_assignment_history')
+      .from('restaurant_assignments')
       .select('id, restaurant_id, order_id, status, created_at, restaurants:restaurant_id(id, name)')
       .eq('order_id', orderId)
       .eq('status', 'pending')
@@ -131,7 +131,7 @@ export async function checkAssignmentStatus(orderId: string) {
       .single();
     
     const { count } = await supabase
-      .from('restaurant_assignment_history')
+      .from('restaurant_assignments')
       .select('*', { count: 'exact', head: true })
       .eq('order_id', orderId);
     
@@ -149,7 +149,7 @@ export async function checkAssignmentStatus(orderId: string) {
         assigned_restaurant_id: assignment.restaurant_id,
         restaurant_name: restaurantName,
         assignment_id: assignment.id,
-        expires_at: assignment.created_at, // Use created_at instead of expires_at
+        expires_at: assignment.created_at, // Using created_at instead of expires_at
         attempt_count: count || 0
       };
     }
