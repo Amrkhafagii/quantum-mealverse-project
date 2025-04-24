@@ -1,4 +1,3 @@
-
 // Generated types from Supabase database schema
 export type Json =
   | string
@@ -163,6 +162,44 @@ export type Database = {
       status: string
     }
   }
+  restaurant_assignment_history: {
+    Row: {
+      id: string
+      restaurant_id: string
+      order_id: string
+      status: string
+      notes: string | null
+      created_at: string
+      restaurants?: {
+        id: string
+        name: string
+      }
+    }
+    Insert: {
+      restaurant_id: string
+      order_id: string
+      status: string
+      notes?: string | null
+    }
+    Update: {
+      restaurant_id?: string
+      order_id?: string
+      status?: string
+      notes?: string | null
+    }
+    Select: {
+      id: string
+      restaurant_id: string
+      order_id: string
+      status: string
+      notes: string | null
+      created_at: string
+      restaurants?: {
+        id: string
+        name: string
+      }
+    }
+  }
   public: {
     Tables: {
       order_items: {
@@ -317,6 +354,36 @@ export type Database = {
           updated_at: string
           is_flagged: boolean
           status: string
+        }
+      }
+      restaurant_assignment_history: {
+        Row: {
+          id: string
+          restaurant_id: string
+          order_id: string
+          status: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          restaurant_id: string
+          order_id: string
+          status: string
+          notes?: string | null
+        }
+        Update: {
+          restaurant_id?: string
+          order_id?: string
+          status?: string
+          notes?: string | null
+        }
+        Select: {
+          id: string
+          restaurant_id: string
+          order_id: string
+          status: string
+          notes: string | null
+          created_at: string
         }
       }
     }

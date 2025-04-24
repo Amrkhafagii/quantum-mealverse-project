@@ -121,8 +121,8 @@ export async function simulateRestaurantResponse(
 export async function checkAssignmentStatus(orderId: string) {
   try {
     const { data: assignment } = await supabase
-      .from('restaurant_assignments')
-      .select('*, restaurant:restaurants(id, name)')
+      .from('restaurant_assignment_history')
+      .select('*, restaurants:restaurant_id(id, name)')
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -136,19 +136,19 @@ export async function checkAssignmentStatus(orderId: string) {
     
     const { data: order } = await supabase
       .from('orders')
-      .select('status, restaurant_id, restaurant:restaurants(id, name)')
+      .select('status, restaurant_id, restaurant:restaurant_id(id, name)')
       .eq('id', orderId)
       .single();
     
     if (assignment) {
-      const restaurantName = getRestaurantName(assignment.restaurant);
+      const restaurantName = getRestaurantName(assignment.restaurants);
       
       return {
         status: 'awaiting_response',
         assigned_restaurant_id: assignment.restaurant_id,
         restaurant_name: restaurantName,
         assignment_id: assignment.id,
-        expires_at: assignment.expires_at,
+        expires_at: assignment.created_at, // Use created_at instead of expires_at
         attempt_count: count || 0
       };
     }
