@@ -697,62 +697,6 @@ export type Database = {
           },
         ]
       }
-      restaurant_assignment_history: {
-        Row: {
-          created_at: string
-          id: string
-          notes: string | null
-          order_id: string
-          restaurant_id: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          notes?: string | null
-          order_id: string
-          restaurant_id: string
-          status: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          notes?: string | null
-          order_id?: string
-          restaurant_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_restaurant_assignment_history_order"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_restaurant_assignment_history_restaurant"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "restaurant_assignment_history_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "restaurant_assignment_history_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       restaurant_assignments: {
         Row: {
           created_at: string
@@ -1062,16 +1006,19 @@ export type Database = {
           order_id: string
           status: string
           updated_at: string
+          updated_by: string
         }
         Insert: {
           order_id: string
           status: string
           updated_at?: string
+          updated_by?: string
         }
         Update: {
           order_id?: string
           status?: string
           updated_at?: string
+          updated_by?: string
         }
         Relationships: [
           {

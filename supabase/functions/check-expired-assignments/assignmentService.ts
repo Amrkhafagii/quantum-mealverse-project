@@ -1,68 +1,63 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 interface Assignment {
   id: string;
   restaurant_id: string;
   order_id: string;
-  expires_at: string;
+  created_at: string;
 }
 
 export async function getExpiredAssignments(supabase: any): Promise<Assignment[]> {
-  const now = new Date().toISOString();
+  const timeoutMinutes = 5; // Assignments expire after 5 minutes
+  const expiryTime = new Date();
+  expiryTime.setMinutes(expiryTime.getMinutes() - timeoutMinutes);
+  
   const { data: expiredAssignments, error } = await supabase
-    .from('restaurant_assignments')
-    .select('id, restaurant_id, order_id, expires_at')
+    .from('restaurant_assignment_history')
+    .select('id, restaurant_id, order_id, created_at')
     .eq('status', 'pending')
-    .lt('expires_at', now);
+    .lt('created_at', expiryTime.toISOString());
 
   if (error) throw error;
   return expiredAssignments || [];
 }
 
 export async function markAssignmentExpired(supabase: any, assignment: Assignment, now: string) {
-  const { error: updateError } = await supabase
-    .from('restaurant_assignments')
-    .update({ 
-      status: 'expired',
-      updated_at: now
-    })
-    .eq('id', assignment.id);
-
-  if (updateError) throw updateError;
-}
-
-export async function logAssignmentHistory(supabase: any, assignment: Assignment, now: string) {
-  const { error: historyError } = await supabase
+  // Insert new record with expired status instead of updating
+  const { error: insertError } = await supabase
     .from('restaurant_assignment_history')
     .insert({
       order_id: assignment.order_id,
-      restaurant_id: assignment.restaurant_id,
+      restaurant_id: assignment.restaurant_id, 
       status: 'expired',
+      created_at: now,
       notes: `Automatically expired at ${now}`
     });
 
-  if (historyError) throw historyError;
+  if (insertError) throw insertError;
+}
+
+export async function logAssignmentHistory(supabase: any, assignment: Assignment, now: string) {
+  // This is now redundant since we're using restaurant_assignment_history directly
+  // but keeping the function for API compatibility
+  return;
 }
 
 export async function checkRemainingAssignments(supabase: any, orderId: string): Promise<{ 
   noPending: boolean; 
   noAccepted: boolean; 
 }> {
-  const { data: pendingAssignments } = await supabase
-    .from('restaurant_assignments')
-    .select('id')
+  const { data: recentAssignments } = await supabase
+    .from('restaurant_assignment_history')
+    .select('id, status')
     .eq('order_id', orderId)
-    .eq('status', 'pending');
+    .order('created_at', { ascending: false });
 
-  const { data: acceptedAssignments } = await supabase
-    .from('restaurant_assignments')
-    .select('id')
-    .eq('order_id', orderId)
-    .eq('status', 'accepted');
+  const pendingAssignments = recentAssignments?.filter(a => a.status === 'pending') || [];
+  const acceptedAssignments = recentAssignments?.filter(a => a.status === 'accepted') || [];
 
   return {
-    noPending: !pendingAssignments || pendingAssignments.length === 0,
-    noAccepted: !acceptedAssignments || acceptedAssignments.length === 0
+    noPending: pendingAssignments.length === 0,
+    noAccepted: acceptedAssignments.length === 0
   };
 }

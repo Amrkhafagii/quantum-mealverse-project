@@ -4,52 +4,45 @@ import { AssignmentStatus } from '@/types/webhook';
 import { checkExpiredAssignments } from './expiredAssignments';
 
 /**
- * Checks the current status of an order's restaurant assignments
+ * Checks the current status of an order's restaurant assignments 
  */
 export const checkAssignmentStatus = async (orderId: string): Promise<AssignmentStatus | null> => {
   try {
     // Check for any expired assignments that need to be handled
     await checkExpiredAssignments();
     
-    // Now fetch the current status after potentially updating things
+    // Get all assignments for this order
     const { data: assignments, error } = await supabase
-      .from('restaurant_assignments')
+      .from('restaurant_assignment_history')
       .select(`
         id, 
-        status, 
-        restaurant_id, 
-        expires_at, 
-        restaurants!restaurant_assignments_restaurant_id_restaurants_fkey(id, name)
+        status,
+        restaurant_id,
+        created_at,
+        restaurants!inner(id, name)
       `)
-      .eq('order_id', orderId);
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false });
     
     if (error || !assignments) {
       console.error('Error fetching assignments:', error);
       return null;
     }
     
-    // Count status types
+    // Count the different assignment statuses
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
     const acceptedCount = assignments.filter(a => a.status === 'accepted').length;
     const rejectedCount = assignments.filter(a => a.status === 'rejected').length;
     const expiredCount = assignments.filter(a => a.status === 'expired').length;
     
-    // Find if there's an accepted assignment
+    // Get the most recent accepted assignment if any
     const acceptedAssignment = assignments.find(a => a.status === 'accepted');
     
-    // Get restaurant name safely
-    const restaurantName = acceptedAssignment && 
-                           acceptedAssignment.restaurants && 
-                           typeof acceptedAssignment.restaurants === 'object' ? 
-                           (acceptedAssignment.restaurants as any).name : undefined;
+    // Get restaurant name from the joined data
+    const restaurantName = acceptedAssignment?.restaurants?.name;
     
-    // Get the most recent active assignment for timer
-    const pendingAssignments = assignments.filter(a => a.status === 'pending');
-    const mostRecentAssignment = pendingAssignments.length > 0 
-      ? pendingAssignments.sort((a, b) => 
-          new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime()
-        )[0]
-      : null;
+    // Get the most recent pending assignment for expiry time
+    const mostRecentPendingAssignment = assignments.find(a => a.status === 'pending');
     
     return {
       status: acceptedAssignment ? 'accepted' : 
@@ -58,7 +51,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       assigned_restaurant_id: acceptedAssignment?.restaurant_id,
       restaurant_name: restaurantName,
       assignment_id: acceptedAssignment?.id,
-      expires_at: mostRecentAssignment?.expires_at,
+      expires_at: mostRecentPendingAssignment?.created_at, // We'll use created_at instead of expires_at
       attempt_count: assignments.length,
       pending_count: pendingCount,
       accepted_count: acceptedCount,
