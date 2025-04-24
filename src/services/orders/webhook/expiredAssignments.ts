@@ -1,75 +1,75 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { WebhookResponse } from '@/types/webhook';
-import { logApiCall } from '@/services/loggerService';
-
-const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozgutjvbrljeijybnyg.supabase.co/functions/v1';
 
 /**
- * Makes a passive call to get the latest state from the server
- * Does NOT force any changes to the database
+ * Checks and handles expired restaurant assignments
  */
-export const checkExpiredAssignments = async (): Promise<WebhookResponse> => {
+export const checkExpiredAssignments = async (): Promise<void> => {
   try {
-    console.log('Fetching latest state from server');
+    const now = new Date();
     
-    // Get current session for authentication
-    const { data: authData } = await supabase.auth.getSession();
-    const token = authData.session?.access_token;
-
-    // Call our serverless function to get the current state without forcing changes
-    const response = await fetch(`${WEBHOOK_URL}/check-expired-assignments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        client_timestamp: new Date().toISOString(),
-        force_check: false // Don't force any changes, just get current state
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server state check failed:', response.status, errorText);
-      return { 
-        success: false, 
-        error: `Server state check failed: ${response.status} ${errorText}`
-      };
+    // Find all assignments that have expired but still have pending status
+    const { data: expiredAssignments, error } = await supabase
+      .from('restaurant_assignments')
+      .select('id, restaurant_id, order_id, created_at')
+      .eq('status', 'pending')
+      .lt('created_at', new Date(now.getTime() - 5 * 60 * 1000).toISOString()); // 5 minutes expiry
+    
+    if (error) {
+      console.error('Error fetching expired assignments:', error);
+      return;
     }
-
-    const data = await response.json();
-    console.log('Server state check response:', data);
-
-    // Log the response
-    await logApiCall(`${WEBHOOK_URL}/check-expired-assignments`, {}, data);
-
-    return data;
-  } catch (error) {
-    console.error('Error checking server state:', error);
-    return { 
-      success: false, 
-      error: 'Failed to check server state' 
-    };
-  }
-};
-
-/**
- * Client-side function to refresh the UI only
- * Does NOT modify the database at all
- */
-export const forceExpireAssignments = async (orderId: string): Promise<WebhookResponse> => {
-  try {
-    console.log(`🔄 Refreshing UI for order ${orderId}`);
     
-    // Just return success immediately - no server changes
-    return { 
-      success: true, 
-      message: `UI refreshed for order ${orderId}`,
-    };
+    if (!expiredAssignments || expiredAssignments.length === 0) {
+      return;
+    }
+    
+    // Process expired assignments
+    for (const assignment of expiredAssignments) {
+      // Update assignment status
+      await supabase
+        .from('restaurant_assignments')
+        .update({ status: 'expired' })
+        .eq('id', assignment.id);
+      
+      // Check if this order has any remaining pending assignments
+      const { data: pendingCount } = await supabase
+        .from('restaurant_assignments')
+        .select('id', { count: 'exact', head: true })
+        .eq('order_id', assignment.order_id)
+        .eq('status', 'pending');
+      
+      // Check if any restaurant has accepted it
+      const { data: acceptedCount } = await supabase
+        .from('restaurant_assignments')
+        .select('id', { count: 'exact', head: true })
+        .eq('order_id', assignment.order_id)
+        .eq('status', 'accepted');
+      
+      // If no more pending assignments and no acceptance, mark the order as no restaurant accepted
+      if ((!pendingCount || pendingCount.count === 0) && (!acceptedCount || acceptedCount.count === 0)) {
+        // Update the order status
+        await supabase
+          .from('orders')
+          .update({ status: 'no_restaurant_accepted' })
+          .eq('id', assignment.order_id);
+        
+        // Record in order history
+        await supabase.from('order_history').insert({
+          order_id: assignment.order_id,
+          status: 'no_restaurant_accepted',
+          details: { reason: 'All restaurants rejected or assignments expired' }
+        });
+        
+        // Update status table
+        await supabase.from('status').insert({
+          order_id: assignment.order_id,
+          status: 'no_restaurant_accepted',
+          updated_by: 'system'
+        });
+      }
+    }
   } catch (error) {
-    console.error('Error refreshing UI:', error);
-    return { success: false, error: 'Failed to refresh UI' };
+    console.error('Error handling expired assignments:', error);
   }
 };

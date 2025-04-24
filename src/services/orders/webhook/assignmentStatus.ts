@@ -44,10 +44,22 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     // Get the most recent pending assignment for expiry time
     const mostRecentPendingAssignment = assignments.find(a => a.status === 'pending');
     
+    // Determine the current status
+    const currentStatus = acceptedAssignment ? 'accepted' : 
+                           pendingCount > 0 ? 'awaiting_response' : 
+                           'no_response';
+    
+    // Update status table with latest assignment status
+    if (assignments.length > 0) {
+      await supabase.from('status').insert({
+        order_id: orderId,
+        status: currentStatus,
+        updated_by: 'system'
+      });
+    }
+    
     return {
-      status: acceptedAssignment ? 'accepted' : 
-              pendingCount > 0 ? 'awaiting_response' : 
-              'no_response',
+      status: currentStatus,
       assigned_restaurant_id: acceptedAssignment?.restaurant_id,
       restaurant_name: restaurantName,
       assignment_id: acceptedAssignment?.id,

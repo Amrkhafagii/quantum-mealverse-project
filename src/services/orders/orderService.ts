@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
@@ -88,6 +89,13 @@ export const createOrder = async (
         null,
         { total: finalTotal, delivery_method: data.deliveryMethod }
       );
+      
+      // Add record to status table
+      await supabase.from('status').insert({
+        order_id: insertedOrder.id,
+        status: 'pending',
+        updated_by: 'system'
+      });
     }
     
     return insertedOrder;
@@ -189,6 +197,13 @@ export const cancelOrder = async (orderId: string) => {
           reason: 'Customer cancelled order',
           cancelled_via: 'customer interface' 
         }
+      });
+      
+      // Update status table
+      await supabase.from('status').insert({
+        order_id: orderId,
+        status: 'cancelled',
+        updated_by: 'customer'
       });
     }
 

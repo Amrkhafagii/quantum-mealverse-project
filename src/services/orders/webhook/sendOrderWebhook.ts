@@ -50,6 +50,13 @@ export const sendOrderToWebhook = async (
       return { success: false, error: responseData.error || 'Webhook request failed' };
     }
 
+    // Update the status table regardless of response to track the webhook call
+    await supabase.from('status').insert({
+      order_id: orderId,
+      status: 'awaiting_restaurant',
+      updated_by: 'system'
+    });
+
     return responseData;
   } catch (error) {
     console.error('Error sending order to webhook:', error);
