@@ -8,198 +8,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  order_items: {
-    Row: {
-      id: string
-      order_id: string
-      meal_id: string
-      quantity: number
-      price: number
-      name: string
-      created_at: string
-      user_id: string | null
-    }
-    Insert: {
-      order_id: string
-      meal_id: string
-      quantity: number
-      price: number
-      name: string
-      user_id?: string | null
-    }
-    Update: {
-      order_id?: string
-      meal_id?: string
-      quantity?: number
-      price?: number
-      name?: string
-      user_id?: string | null
-    }
-    Select: {
-      id: string
-      order_id: string
-      meal_id: string
-      quantity: number
-      price: number
-      name: string
-      created_at: string
-      user_id: string | null
-    }
-  }
-  meal_ratings: {
-    Row: {
-      meal_id: string
-      restaurant_id: string
-      avg_rating: number
-      review_count: number
-      rating_distribution: Json | null
-      last_updated: string
-    }
-    Insert: {
-      meal_id: string
-      restaurant_id: string
-      avg_rating: number
-      review_count: number
-      rating_distribution?: Json | null
-      last_updated: string
-    }
-    Update: {
-      meal_id?: string
-      restaurant_id?: string
-      avg_rating?: number
-      review_count?: number
-      rating_distribution?: Json | null
-      last_updated?: string
-    }
-    Select: {
-      meal_id: string
-      restaurant_id: string
-      avg_rating: number
-      review_count: number
-      rating_distribution: Json | null
-      last_updated: string
-    }
-  }
-  global_meal_ratings: {
-    Row: {
-      meal_id: string
-      avg_rating: number
-      review_count: number
-      rating_distribution: Json | null
-      last_updated: string
-    }
-    Insert: {
-      meal_id: string
-      avg_rating: number
-      review_count: number
-      rating_distribution?: Json | null
-      last_updated: string
-    }
-    Update: {
-      meal_id?: string
-      avg_rating?: number
-      review_count?: number
-      rating_distribution?: Json | null
-      last_updated?: string
-    }
-    Select: {
-      meal_id: string
-      avg_rating: number
-      review_count: number
-      rating_distribution: Json | null
-      last_updated: string
-    }
-  }
-  reviews: {
-    Row: {
-      id: string
-      user_id: string
-      meal_id: string
-      restaurant_id: string
-      rating: number
-      comment: string | null
-      images: string[] | null
-      is_verified_purchase: boolean
-      created_at: string
-      updated_at: string
-      is_flagged: boolean
-      status: string
-    }
-    Insert: {
-      user_id: string
-      meal_id: string
-      restaurant_id: string
-      rating: number
-      comment?: string | null
-      images?: string[] | null
-      is_verified_purchase: boolean
-      is_flagged: boolean
-      status: string
-    }
-    Update: {
-      user_id?: string
-      meal_id?: string
-      restaurant_id?: string
-      rating?: number
-      comment?: string | null
-      images?: string[] | null
-      is_verified_purchase?: boolean
-      is_flagged?: boolean
-      status?: string
-    }
-    Select: {
-      id: string
-      user_id: string
-      meal_id: string
-      restaurant_id: string
-      rating: number
-      comment: string | null
-      images: string[] | null
-      is_verified_purchase: boolean
-      created_at: string
-      updated_at: string
-      is_flagged: boolean
-      status: string
-    }
-  }
-  restaurant_assignment_history: {
-    Row: {
-      id: string
-      restaurant_id: string
-      order_id: string
-      status: string
-      notes: string | null
-      created_at: string
-      restaurants?: {
-        id: string
-        name: string
-      }
-    }
-    Insert: {
-      restaurant_id: string
-      order_id: string
-      status: string
-      notes?: string | null
-    }
-    Update: {
-      restaurant_id?: string
-      order_id?: string
-      status?: string
-      notes?: string | null
-    }
-    Select: {
-      id: string
-      restaurant_id: string
-      order_id: string
-      status: string
-      notes: string | null
-      created_at: string
-      restaurants?: {
-        id: string
-        name: string
-      }
-    }
-  }
   public: {
     Tables: {
       order_items: {
@@ -364,6 +172,10 @@ export type Database = {
           status: string
           notes: string | null
           created_at: string
+          restaurants?: {
+            id: string
+            name: string
+          }
         }
         Insert: {
           restaurant_id: string
@@ -384,6 +196,10 @@ export type Database = {
           status: string
           notes: string | null
           created_at: string
+          restaurants?: {
+            id: string
+            name: string
+          }
         }
       }
     }
