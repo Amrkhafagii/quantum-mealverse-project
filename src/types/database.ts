@@ -173,10 +173,6 @@ export type Database = {
           status: string
           notes: string | null
           created_at: string
-          restaurants?: {
-            id: string
-            name: string
-          }
         }
         Insert: {
           restaurant_id: string

@@ -19,7 +19,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         status,
         restaurant_id,
         created_at,
-        restaurants(id, name)
+        restaurants!restaurant_id(id, name)
       `)
       .eq('order_id', orderId)
       .order('created_at', { ascending: false });
