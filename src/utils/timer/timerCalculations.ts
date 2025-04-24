@@ -5,12 +5,7 @@ export const calculateRemainingTime = (
 ): number => {
   const now = new Date();
   const adjustedNow = new Date(now.getTime() + serverTimeOffset);
-  console.log('Adjusted current time (with server offset):', adjustedNow.toISOString());
-  
-  const secondsLeft = Math.max(0, Math.floor((expiresAtDate.getTime() - adjustedNow.getTime()) / 1000));
-  console.log('Time remaining with server-adjusted time (seconds):', secondsLeft);
-  
-  return secondsLeft;
+  return Math.max(0, Math.floor((expiresAtDate.getTime() - adjustedNow.getTime()) / 1000));
 };
 
 export const formatTime = (seconds: number): string => {

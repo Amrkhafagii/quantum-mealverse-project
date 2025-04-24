@@ -15,12 +15,7 @@ export const checkExpiredAssignments = async (): Promise<void> => {
       .eq('status', 'pending')
       .lt('created_at', new Date(now.getTime() - 5 * 60 * 1000).toISOString()); // 5 minutes expiry
     
-    if (error) {
-      console.error('Error fetching expired assignments:', error);
-      return;
-    }
-    
-    if (!expiredAssignments || expiredAssignments.length === 0) {
+    if (error || !expiredAssignments || expiredAssignments.length === 0) {
       return;
     }
     
@@ -73,6 +68,6 @@ export const checkExpiredAssignments = async (): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('Error handling expired assignments:', error);
+    // Silent fail - errors are handled by the caller
   }
 };

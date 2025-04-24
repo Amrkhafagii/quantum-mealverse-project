@@ -46,7 +46,6 @@ export const sendOrderToWebhook = async (
     await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, responseData);
 
     if (!response.ok) {
-      console.error('Webhook request failed:', responseData);
       return { success: false, error: responseData.error || 'Webhook request failed' };
     }
 
@@ -59,7 +58,6 @@ export const sendOrderToWebhook = async (
 
     return responseData;
   } catch (error) {
-    console.error('Error sending order to webhook:', error);
     return { success: false, error: 'Failed to send order to webhook' };
   }
 };

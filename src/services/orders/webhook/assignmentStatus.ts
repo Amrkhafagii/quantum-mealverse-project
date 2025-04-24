@@ -19,13 +19,12 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         status,
         restaurant_id,
         created_at,
-        restaurants!restaurant_id(id, name)
+        restaurants!restaurant_assignments_restaurant_id_restaurants_fkey(id, name)
       `)
       .eq('order_id', orderId)
       .order('created_at', { ascending: false });
     
     if (error || !assignments) {
-      console.error('Error fetching assignments:', error);
       return null;
     }
     
@@ -63,7 +62,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       assigned_restaurant_id: acceptedAssignment?.restaurant_id,
       restaurant_name: restaurantName,
       assignment_id: acceptedAssignment?.id,
-      expires_at: mostRecentPendingAssignment?.created_at, // We'll use created_at instead of expires_at
+      expires_at: mostRecentPendingAssignment?.created_at,
       attempt_count: assignments.length,
       pending_count: pendingCount,
       accepted_count: acceptedCount,
@@ -71,7 +70,6 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       expired_count: expiredCount
     };
   } catch (error) {
-    console.error('Error checking assignment status:', error);
     return null;
   }
 };
