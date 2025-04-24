@@ -33,21 +33,22 @@ export const checkExpiredAssignments = async (): Promise<void> => {
         .eq('id', assignment.id);
       
       // Check if this order has any remaining pending assignments
-      const { data: pendingCount } = await supabase
+      const { data: pendingAssignments } = await supabase
         .from('restaurant_assignments')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('order_id', assignment.order_id)
         .eq('status', 'pending');
       
       // Check if any restaurant has accepted it
-      const { data: acceptedCount } = await supabase
+      const { data: acceptedAssignments } = await supabase
         .from('restaurant_assignments')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('order_id', assignment.order_id)
         .eq('status', 'accepted');
       
       // If no more pending assignments and no acceptance, mark the order as no restaurant accepted
-      if ((!pendingCount || pendingCount.count === 0) && (!acceptedCount || acceptedCount.count === 0)) {
+      if ((!pendingAssignments || pendingAssignments.length === 0) && 
+          (!acceptedAssignments || acceptedAssignments.length === 0)) {
         // Update the order status
         await supabase
           .from('orders')
@@ -58,7 +59,9 @@ export const checkExpiredAssignments = async (): Promise<void> => {
         await supabase.from('order_history').insert({
           order_id: assignment.order_id,
           status: 'no_restaurant_accepted',
-          details: { reason: 'All restaurants rejected or assignments expired' }
+          details: { reason: 'All restaurants rejected or assignments expired' },
+          restaurant_id: null,  // Use null for system-generated entries
+          restaurant_name: 'System' // Using 'System' as a placeholder
         });
         
         // Update status table
