@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase/client';
 import { WebhookResponse, OrderAssignmentRequest, RestaurantResponseRequest } from '@/types/webhook';
 
@@ -123,7 +122,7 @@ export async function checkAssignmentStatus(orderId: string) {
     // Now we're using the restaurant_assignments table directly
     const { data: assignment } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, order_id, status, created_at, restaurants:restaurant_id(id, name)')
+      .select('id, restaurant_id, order_id, status, created_at, restaurants(id, name)')
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -142,7 +141,7 @@ export async function checkAssignmentStatus(orderId: string) {
       .single();
     
     if (assignment) {
-      const restaurantName = getRestaurantName(assignment.restaurants);
+      const restaurantName = assignment.restaurants?.name;
       
       return {
         status: 'awaiting_response',
