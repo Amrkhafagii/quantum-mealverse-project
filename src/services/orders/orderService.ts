@@ -102,7 +102,7 @@ export const saveDeliveryInfo = async (
     if (hasExistingInfo) {
       // Update existing delivery info
       const { error } = await supabase
-        .from('user_delivery_info')
+        .from('delivery_info')
         .update({
           full_name: deliveryInfo.fullName,
           email: deliveryInfo.email,
@@ -117,7 +117,7 @@ export const saveDeliveryInfo = async (
     } else {
       // Insert new delivery info
       const { error } = await supabase
-        .from('user_delivery_info')
+        .from('delivery_info')
         .insert({
           user_id: userId,
           full_name: deliveryInfo.fullName,
