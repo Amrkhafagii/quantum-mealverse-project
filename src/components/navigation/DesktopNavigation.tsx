@@ -3,13 +3,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
+import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 
 interface DesktopNavigationProps {
   isCustomerView: boolean;
 }
 
 export const DesktopNavigation = ({ isCustomerView }: DesktopNavigationProps) => {
-  if (!isCustomerView) return null;
+  const { isRestaurantOwner } = useRestaurantAuth();
+  
+  // Hide customer navigation for restaurant owners
+  if (!isCustomerView || isRestaurantOwner) return null;
   
   return (
     <div className="hidden md:flex items-center space-x-2">
