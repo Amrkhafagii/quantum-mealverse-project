@@ -23,25 +23,20 @@ export const checkExpiredAssignments = async (): Promise<void> => {
     
     // Process expired assignments
     for (const assignment of expiredAssignments) {
-      // Use a transaction to ensure data consistency
-      const { data: transaction, error: txError } = await supabase.rpc(
-        'handle_expired_assignment',
-        { 
-          p_assignment_id: assignment.id,
-          p_order_id: assignment.order_id,
-          p_restaurant_id: assignment.restaurant_id,
-          p_current_time: now
-        }
-      );
-      
-      if (txError) {
-        console.error('Error handling expired assignment:', txError);
-        
-        // Fallback if RPC fails: Update assignment status directly
-        await supabase
+      try {
+        // Update assignment status directly
+        const { error: updateError } = await supabase
           .from('restaurant_assignments')
-          .update({ status: 'expired' })
+          .update({ 
+            status: 'expired',
+            updated_at: now
+          })
           .eq('id', assignment.id);
+          
+        if (updateError) {
+          console.error('Error updating expired assignment:', updateError);
+          continue;
+        }
         
         // Record in order history
         await recordOrderHistory(
@@ -51,6 +46,8 @@ export const checkExpiredAssignments = async (): Promise<void> => {
           { assignment_id: assignment.id, expires_at: assignment.expires_at },
           now
         );
+      } catch (err) {
+        console.error(`Error processing assignment ${assignment.id}:`, err);
       }
       
       // Check if this order has any remaining pending assignments
@@ -86,7 +83,10 @@ export const checkExpiredAssignments = async (): Promise<void> => {
           // Update the order status
           await supabase
             .from('orders')
-            .update({ status: OrderStatus.NO_RESTAURANT_ACCEPTED })
+            .update({ 
+              status: OrderStatus.NO_RESTAURANT_ACCEPTED,
+              updated_at: now
+            })
             .eq('id', assignment.order_id);
           
           // Record in order history

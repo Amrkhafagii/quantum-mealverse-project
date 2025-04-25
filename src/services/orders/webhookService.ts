@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from './webhook/orderHistoryService';
+import { isValidStatusTransition } from '@/utils/orderStatus';
 
 /**
  * Updates an order's status with proper validation and history tracking
@@ -40,22 +41,22 @@ export const updateOrderStatus = async (
       return false;
     }
 
-    // Update the order status using a transaction for data integrity
-    const { error: updateError } = await supabase.rpc('update_order_status_with_history', { 
-      p_order_id: orderId,
-      p_new_status: newStatus,
-      p_restaurant_id: restaurantId,
-      p_details: details ? JSON.stringify(details) : null,
-      p_changed_by: changedBy,
-      p_changed_by_type: changedByType
-    });
+    // Update the order status directly since RPC may not be available
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ 
+        status: newStatus,
+        restaurant_id: restaurantId || order.restaurant_id, 
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
     
     if (updateError) {
       console.error('Failed to update order status:', updateError);
       return false;
     }
     
-    // Record in order history (as a backup/alternative to the RPC method)
+    // Record in order history
     await recordOrderHistory(
       orderId, 
       newStatus, 
