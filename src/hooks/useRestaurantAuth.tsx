@@ -46,6 +46,10 @@ export const useRestaurantAuth = () => {
   }, [user, authLoading]);
 
   const isRestaurantOwner = !!restaurant;
+  
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
 
   return {
     user,
@@ -53,6 +57,7 @@ export const useRestaurantAuth = () => {
     restaurant,
     loading: authLoading || loading,
     error,
-    isRestaurantOwner
+    isRestaurantOwner,
+    logout
   };
 };

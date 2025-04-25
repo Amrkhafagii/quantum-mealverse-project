@@ -1,3 +1,4 @@
+import { Json } from './database';
 
 export interface MenuItem {
   id: string;

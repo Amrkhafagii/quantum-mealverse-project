@@ -1,5 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
+
+type OrderHistoryInsert = Database['public']['Tables']['order_history']['Insert'];
+type OrderHistoryRow = Database['public']['Tables']['order_history']['Row'];
 
 /**
  * Records an entry in the order history table with standardized UTC timestamps
@@ -8,7 +12,7 @@ export const recordOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId?: string | null,
-  details?: Record<string, unknown>, // Changed to unknown to avoid deep instantiation
+  details?: Record<string, unknown>,
   expiredAt?: string,
   changedBy?: string,
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system',
@@ -40,21 +44,23 @@ export const recordOrderHistory = async (
     const now = new Date().toISOString();
     const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
     
+    const historyEntry: OrderHistoryInsert = {
+      order_id: orderId,
+      status,
+      previous_status: lastStatus?.status,
+      restaurant_id: restaurantId || null,
+      restaurant_name: restaurantName || 'Pending Assignment',
+      details: details as any, // Type cast since we can't guarantee the shape
+      expired_at: expiredAtUTC,
+      changed_by: changedBy,
+      changed_by_type: changedByType,
+      visibility
+    };
+    
     // Insert record into order_history table
     const { error } = await supabase
       .from('order_history')
-      .insert({
-        order_id: orderId,
-        status,
-        previous_status: lastStatus?.status,
-        restaurant_id: restaurantId,
-        restaurant_name: restaurantName || 'Pending Assignment',
-        details,
-        expired_at: expiredAtUTC,
-        changed_by: changedBy,
-        changed_by_type: changedByType,
-        visibility
-      });
+      .insert(historyEntry);
       
     if (error) {
       console.error('Error recording order history:', error);
