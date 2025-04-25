@@ -148,7 +148,8 @@ export const saveUserLocation = async (
         user_id: userId,
         latitude,
         longitude,
-        last_updated: new Date().toISOString()
+        // Fix: Change 'last_updated' to 'timestamp' to match the database schema
+        timestamp: new Date().toISOString()
       });
       
     if (error) throw error;
