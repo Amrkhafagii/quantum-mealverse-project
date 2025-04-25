@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { OrderAssignmentRequest, WebhookResponse } from '@/types/webhook';
+import { OrderAssignmentRequest, WebhookResponse, OrderStatus } from '@/types/webhook';
 import { logApiCall } from '@/services/loggerService';
 
 // Function URL
@@ -60,7 +59,7 @@ export const sendOrderToWebhook = async (
     if (!existingStatus) {
       await supabase.from('status').insert({
         order_id: orderId,
-        status: 'awaiting_restaurant',
+        status: OrderStatus.AWAITING_RESTAURANT,
         updated_by: 'system'
       });
     }

@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
+import { OrderStatus } from '@/types/webhook';
 import { 
   saveDeliveryInfo, 
   createOrder, 
@@ -48,8 +48,8 @@ export const useOrderSubmission = (
       // Save delivery information
       await saveDeliveryInfo(userId, data, hasDeliveryInfo);
       
-      // Create the order
-      const insertedOrder = await createOrder(userId, data, items, totalAmount);
+      // Create the order with initial PENDING status
+      const insertedOrder = await createOrder(userId, data, items, totalAmount, OrderStatus.PENDING);
       
       if (!insertedOrder || !insertedOrder.id) {
         throw new Error("Failed to create order - no order ID returned");
@@ -62,7 +62,6 @@ export const useOrderSubmission = (
       if (data.latitude && data.longitude && data.deliveryMethod === "delivery") {
         await saveUserLocation(userId, data.latitude, data.longitude);
         
-        // Send order to webhook for restaurant assignment
         console.log('Sending order to webhook for restaurant assignment...');
         const webhookResult = await sendOrderToWebhook(
           insertedOrder.id,
@@ -70,12 +69,8 @@ export const useOrderSubmission = (
           data.longitude
         );
         
-        console.log('Webhook result:', webhookResult);
-        
         if (!webhookResult.success) {
           console.error('Webhook call failed:', webhookResult.error);
-          // We'll continue despite webhook failure, but log it
-          // The order is still created even if restaurant assignment fails
         }
       }
       

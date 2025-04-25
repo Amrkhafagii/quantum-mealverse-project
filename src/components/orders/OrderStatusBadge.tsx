@@ -1,33 +1,34 @@
 
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
+import { OrderStatus } from '@/types/webhook';
 
 interface OrderStatusBadgeProps {
-  status: string;
+  status: OrderStatus | string;
 }
 
 export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status }) => {
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: OrderStatus | string) => {
     switch (status) {
-      case 'pending':
+      case OrderStatus.PENDING:
         return 'bg-yellow-500 hover:bg-yellow-600';
-      case 'awaiting_restaurant':
+      case OrderStatus.AWAITING_RESTAURANT:
         return 'bg-blue-400 hover:bg-blue-500';
-      case 'accepted':
+      case OrderStatus.RESTAURANT_ACCEPTED:
         return 'bg-green-400 hover:bg-green-500';
-      case 'preparing':
+      case OrderStatus.PREPARING:
         return 'bg-blue-500 hover:bg-blue-600';
-      case 'ready_for_pickup':
+      case OrderStatus.READY_FOR_PICKUP:
         return 'bg-purple-400 hover:bg-purple-500';
-      case 'on_the_way':
+      case OrderStatus.ON_THE_WAY:
         return 'bg-purple-500 hover:bg-purple-600';
-      case 'delivered':
+      case OrderStatus.DELIVERED:
         return 'bg-green-500 hover:bg-green-600';
-      case 'cancelled':
+      case OrderStatus.CANCELLED:
         return 'bg-red-500 hover:bg-red-600';
-      case 'no_restaurant_accepted':
+      case OrderStatus.NO_RESTAURANT_ACCEPTED:
         return 'bg-gray-500 hover:bg-gray-600';
-      case 'rejected':
+      case OrderStatus.RESTAURANT_REJECTED:
         return 'bg-red-400 hover:bg-red-500';
       default:
         return 'bg-gray-500 hover:bg-gray-600';

@@ -1,8 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
+import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from '@/services/orders/webhookService';
 
 export const saveDeliveryInfo = async (
@@ -44,12 +44,12 @@ export const createOrder = async (
   userId: string,
   data: DeliveryFormValues,
   items: CartItem[],
-  totalAmount: number
+  totalAmount: number,
+  status: OrderStatus = OrderStatus.PENDING
 ) => {
   const deliveryFee = data.deliveryMethod === "delivery" ? 50 : 0;
   const finalTotal = totalAmount + deliveryFee;
   
-  // Create order data without latitude and longitude initially
   const orderData: Omit<Order, 'id'> = {
     user_id: userId,
     customer_name: data.fullName,
@@ -63,7 +63,7 @@ export const createOrder = async (
     delivery_fee: deliveryFee,
     subtotal: totalAmount,
     total: finalTotal,
-    status: "pending"
+    status: status
   };
   
   try {
@@ -162,7 +162,7 @@ export const cancelOrder = async (orderId: string) => {
     // Update order status to cancelled
     const { error } = await supabase
       .from('orders')
-      .update({ status: 'cancelled' })
+      .update({ status: OrderStatus.CANCELLED })
       .eq('id', orderId);
 
     if (error) throw error;
@@ -202,7 +202,7 @@ export const cancelOrder = async (orderId: string) => {
       // Update status table
       await supabase.from('status').insert({
         order_id: orderId,
-        status: 'cancelled',
+        status: OrderStatus.CANCELLED,
         updated_by: 'customer'
       });
     }
