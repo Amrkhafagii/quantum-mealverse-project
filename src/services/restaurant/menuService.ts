@@ -1,7 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { MenuItem, MenuCategory } from '@/types/menu';
+import { MenuItem, MenuCategory, NutritionalInfo } from '@/types/menu';
 import { Database } from '@/integrations/supabase/types';
+import { Json } from '@/types/database';
 
 type MenuItemRow = Database['public']['Tables']['menu_items']['Row'];
 type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
@@ -31,7 +32,12 @@ export const getMenuItems = async (
     const { data, error } = await query.order('category');
     
     if (error) throw error;
-    return (data || []) as MenuItem[];
+    
+    // Transform the nutritional_info from Json to NutritionalInfo
+    return (data || []).map(item => ({
+      ...item,
+      nutritional_info: item.nutritional_info as unknown as NutritionalInfo
+    })) as MenuItem[];
   } catch (error) {
     console.error('Error fetching menu items:', error);
     return [];
@@ -53,7 +59,7 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
           price: item.price,
           category: item.category,
           image_url: item.image_url,
-          nutritional_info: item.nutritional_info,
+          nutritional_info: item.nutritional_info as unknown as Json,
           is_available: item.is_available,
           preparation_time: item.preparation_time,
           updated_at: new Date().toISOString()
@@ -64,7 +70,10 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
         .single();
         
       if (error) throw error;
-      return data as MenuItem;
+      return {
+        ...data,
+        nutritional_info: data.nutritional_info as unknown as NutritionalInfo
+      } as MenuItem;
     } else {
       // Create new item
       const { data, error } = await supabase
@@ -76,7 +85,7 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
           price: item.price,
           category: item.category,
           image_url: item.image_url,
-          nutritional_info: item.nutritional_info,
+          nutritional_info: item.nutritional_info as unknown as Json,
           is_available: item.is_available,
           preparation_time: item.preparation_time
         })
@@ -84,7 +93,10 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
         .single();
         
       if (error) throw error;
-      return data as MenuItem;
+      return {
+        ...data,
+        nutritional_info: data.nutritional_info as unknown as NutritionalInfo
+      } as MenuItem;
     }
   } catch (error) {
     console.error('Error saving menu item:', error);
@@ -127,5 +139,68 @@ export const getMenuCategories = async (restaurantId: string): Promise<MenuCateg
   } catch (error) {
     console.error('Error fetching menu categories:', error);
     return [];
+  }
+};
+
+/**
+ * Create or update a menu category
+ */
+export const saveMenuCategory = async (category: MenuCategory): Promise<MenuCategory | null> => {
+  try {
+    if (category.id) {
+      // Update existing category
+      const { data, error } = await supabase
+        .from('menu_categories')
+        .update({
+          name: category.name,
+          description: category.description,
+          order: category.order,
+          restaurant_id: category.restaurant_id
+        })
+        .eq('id', category.id)
+        .eq('restaurant_id', category.restaurant_id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data as MenuCategory;
+    } else {
+      // Create new category
+      const { data, error } = await supabase
+        .from('menu_categories')
+        .insert({
+          name: category.name,
+          description: category.description,
+          order: category.order,
+          restaurant_id: category.restaurant_id
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data as MenuCategory;
+    }
+  } catch (error) {
+    console.error('Error saving menu category:', error);
+    return null;
+  }
+};
+
+/**
+ * Delete a menu category
+ */
+export const deleteMenuCategory = async (categoryId: string, restaurantId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('menu_categories')
+      .delete()
+      .eq('id', categoryId)
+      .eq('restaurant_id', restaurantId);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting menu category:', error);
+    return false;
   }
 };
