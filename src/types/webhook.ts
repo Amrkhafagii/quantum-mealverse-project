@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export enum OrderStatus {
@@ -52,5 +53,5 @@ export interface WebhookResponse {
   success: boolean;
   result?: any;
   error?: string;
-  message?: string; // Added message property to fix type errors
+  message?: string;
 }

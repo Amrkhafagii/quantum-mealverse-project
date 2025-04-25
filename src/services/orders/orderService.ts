@@ -4,6 +4,7 @@ import { CartItem } from '@/types/cart';
 import { OrderStatus } from '@/types/webhook';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { recordOrderHistory } from './webhook/orderHistoryService';
+import { updateOrderStatus } from './webhookService';
 
 /**
  * Creates a new order in the database
@@ -148,7 +149,6 @@ export const saveUserLocation = async (
         user_id: userId,
         latitude,
         longitude,
-        // Fix: Change 'last_updated' to 'timestamp' to match the database schema
         timestamp: new Date().toISOString()
       });
       
@@ -165,24 +165,19 @@ export const saveUserLocation = async (
  */
 export const cancelOrder = async (orderId: string) => {
   try {
-    // Update order status to cancelled
-    const { error } = await supabase
-      .from('orders')
-      .update({ status: OrderStatus.CANCELLED })
-      .eq('id', orderId);
-      
-    if (error) throw error;
-    
-    // Record cancellation in order history
-    await recordOrderHistory(
+    // Update order status through the central function
+    const success = await updateOrderStatus(
       orderId,
       OrderStatus.CANCELLED,
       null,
       { cancelled_at: new Date().toISOString() },
       undefined,
-      undefined,
       'customer'
     );
+    
+    if (!success) {
+      throw new Error('Failed to cancel order');
+    }
     
     return true;
   } catch (error) {
@@ -192,6 +187,73 @@ export const cancelOrder = async (orderId: string) => {
 };
 
 /**
- * Re-export recordOrderHistory for backwards compatibility
+ * Processes a refund request
+ */
+export const requestRefund = async (
+  orderId: string, 
+  reason: string, 
+  userId: string, 
+  amount?: number
+) => {
+  try {
+    // Get the order to check if refund is allowed
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('total, status')
+      .eq('id', orderId)
+      .single();
+      
+    if (orderError || !order) {
+      throw new Error('Order not found');
+    }
+    
+    // Only allow refunds for delivered or cancelled orders
+    if (order.status !== OrderStatus.DELIVERED && order.status !== OrderStatus.CANCELLED) {
+      throw new Error(`Cannot request refund for order in ${order.status} state`);
+    }
+    
+    // If amount not provided, refund the full amount
+    const refundAmount = amount || order.total;
+    
+    // Update order status to REFUNDED
+    const success = await updateOrderStatus(
+      orderId,
+      OrderStatus.REFUNDED,
+      null,
+      { 
+        reason: reason,
+        refund_amount: refundAmount,
+        requested_at: new Date().toISOString()
+      },
+      userId,
+      'customer'
+    );
+    
+    if (!success) {
+      throw new Error('Failed to request refund');
+    }
+    
+    // Update order refund fields
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({
+        refund_status: 'requested',
+        refund_amount: refundAmount
+      })
+      .eq('id', orderId);
+      
+    if (updateError) {
+      throw updateError;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error requesting refund:', error);
+    throw error;
+  }
+};
+
+/**
+ * Central export for recordOrderHistory for backward compatibility
  */
 export { recordOrderHistory } from './webhook/orderHistoryService';
