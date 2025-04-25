@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { MealType } from '@/types/meal';  // Add this import
 import MealList from './MealList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
