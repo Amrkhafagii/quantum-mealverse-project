@@ -117,7 +117,7 @@ export const addIdempotentOrderHistory = async (
       .select('id')
       .eq('order_id', orderId)
       .eq('status', status)
-      .eq('details->idempotencyKey', idempotencyKey)
+      .eq('details->>idempotencyKey', idempotencyKey) // Changed from -> to ->>
       .maybeSingle();
       
     // If entry exists, don't create a duplicate
