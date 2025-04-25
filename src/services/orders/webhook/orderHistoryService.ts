@@ -8,7 +8,7 @@ export const recordOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId?: string | null,
-  details?: Record<string, any>, // Simplified type to avoid deep instantiation
+  details?: Record<string, unknown>, // Changed to unknown to avoid deep instantiation
   expiredAt?: string,
   changedBy?: string,
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system',
@@ -101,7 +101,7 @@ export const addIdempotentOrderHistory = async (
   status: string,
   idempotencyKey: string,
   restaurantId?: string | null,
-  details?: Record<string, unknown>, // Changed to a simpler type that won't cause deep instantiation
+  details?: Record<string, unknown>, // Simple type to avoid deep instantiation
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
 ): Promise<boolean> => {
   try {

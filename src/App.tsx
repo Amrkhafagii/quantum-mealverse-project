@@ -19,6 +19,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Restaurant Routes
 import RestaurantDashboard from './pages/restaurant/Dashboard';
+import RestaurantMenu from './pages/restaurant/Menu';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
         
         {/* Restaurant Routes */}
         <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+        <Route path="/restaurant/menu" element={<RestaurantMenu />} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
