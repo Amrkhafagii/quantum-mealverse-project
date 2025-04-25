@@ -27,7 +27,7 @@ export const createOrder = async (
     const randomPart = Math.floor(1000 + Math.random() * 9000);
     const formattedOrderId = `ORD-${timestamp}-${randomPart}`;
     
-    // Insert the order
+    // Insert the order - removing latitude and longitude from direct insertion
     const { data: insertedOrder, error } = await supabase
       .from('orders')
       .insert({
@@ -45,8 +45,6 @@ export const createOrder = async (
         subtotal,
         total: totalAmount,
         formatted_order_id: formattedOrderId,
-        latitude: deliveryInfo.latitude || null,
-        longitude: deliveryInfo.longitude || null,
       })
       .select()
       .single();
