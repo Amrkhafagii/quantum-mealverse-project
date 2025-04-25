@@ -11,9 +11,9 @@ export enum OrderStatus {
   NO_RESTAURANT_ACCEPTED = 'no_restaurant_accepted',
   PROCESSING = 'processing',
   PREPARING = 'preparing',
-  READY_FOR_PICKUP = 'ready_for_pickup',
-  ON_THE_WAY = 'on_the_way',
-  DELIVERED = 'delivered',
+  READY_FOR_PICKUP = 'ready',
+  ON_THE_WAY = 'delivering',
+  DELIVERED = 'completed',
   CANCELLED = 'cancelled',
   REFUNDED = 'refunded'
 }

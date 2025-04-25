@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
 import { Order } from '@/types/order';
+import { OrderStatus } from '@/types/webhook';
 import { OrderRestaurantStatus } from './thank-you/OrderRestaurantStatus';
 import { cancelOrder } from '@/services/orders/orderService';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { checkAssignmentStatus, checkExpiredAssignments } from '@/services/orders/webhook';
+import { mapToCanonicalStatus } from '@/utils/orderStatus';
 
 interface OrderStatusDisplayProps {
   order: Order;
@@ -48,8 +49,9 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     }
   };
 
-  // Only show restaurant selection status for pending or awaiting_restaurant orders
-  if (['pending', 'awaiting_restaurant'].includes(order.status)) {
+  const canonicalStatus = mapToCanonicalStatus(order.status);
+  
+  if ([OrderStatus.PENDING, OrderStatus.AWAITING_RESTAURANT].includes(canonicalStatus)) {
     return (
       <OrderRestaurantStatus 
         status={order.status}
@@ -62,40 +64,39 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     );
   }
 
-  // Handle different order statuses
   let statusMessage = '';
   let statusDetails = '';
 
-  switch (order.status) {
-    case 'accepted':
+  switch (canonicalStatus) {
+    case OrderStatus.RESTAURANT_ACCEPTED:
       statusMessage = 'Your order has been accepted';
       statusDetails = order.restaurant?.name ? `by ${order.restaurant.name}` : '';
       break;
-    case 'preparing':
+    case OrderStatus.PREPARING:
       statusMessage = 'Your order is being prepared';
       statusDetails = order.restaurant?.name ? `by ${order.restaurant.name}` : '';
       break;
-    case 'ready_for_pickup':
+    case OrderStatus.READY_FOR_PICKUP:
       statusMessage = 'Your order is ready for pickup';
       statusDetails = order.restaurant?.name ? `at ${order.restaurant.name}` : '';
       break;
-    case 'on_the_way':
+    case OrderStatus.ON_THE_WAY:
       statusMessage = 'Your order is on the way';
       statusDetails = 'It should arrive soon!';
       break;
-    case 'delivered':
+    case OrderStatus.DELIVERED:
       statusMessage = 'Your order has been delivered';
       statusDetails = 'Enjoy your meal!';
       break;
-    case 'cancelled':
+    case OrderStatus.CANCELLED:
       statusMessage = 'Your order was cancelled';
       statusDetails = 'No restaurant was able to accept your order';
       break;
-    case 'no_restaurant_accepted':
+    case OrderStatus.NO_RESTAURANT_ACCEPTED:
       statusMessage = 'No restaurant available';
       statusDetails = 'All restaurants were busy or too far away';
       break;
-    case 'rejected':
+    case OrderStatus.RESTAURANT_REJECTED:
       statusMessage = 'Your order was rejected';
       statusDetails = 'We apologize for the inconvenience';
       break;

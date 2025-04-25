@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Building } from 'lucide-react';
 import { Order } from '@/types/order';
@@ -54,10 +55,18 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
           details: `Attempt ${assignmentStatus?.attempt_count || 1} of 3`
         };
       case OrderStatus.PROCESSING:
+      case 'processing':
         return { 
           message: shouldShowRestaurantName ? 
+            `Your order is being processed by ${assignmentStatus.restaurant_name}!` : 
+            'Your order is being processed!' 
+        };
+      case OrderStatus.PREPARING:
+      case 'preparing':
+        return {
+          message: shouldShowRestaurantName ? 
             `Your order is being prepared by ${assignmentStatus.restaurant_name}!` : 
-            'Your order is being prepared!' 
+            'Your order is being prepared!'
         };
       case OrderStatus.NO_RESTAURANT_AVAILABLE:
         return {
@@ -65,8 +74,10 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
           details: 'Please try again later.'
         };
       case OrderStatus.ON_THE_WAY:
+      case 'delivering':
         return { message: 'Your order is on the way to you!' };
       case OrderStatus.DELIVERED:
+      case 'completed':
         return { message: 'Your order has been delivered. Enjoy!' };
       case OrderStatus.CANCELLED:
         return { message: 'Your order has been cancelled.' };
@@ -74,6 +85,18 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
         return {
           message: 'No restaurants available in your area.',
           details: 'Please try a different delivery address or try again later.'
+        };
+      case OrderStatus.RESTAURANT_ACCEPTED:
+      case 'accepted':
+        return {
+          message: `Order accepted by ${orderRestaurant?.name || 'restaurant'}`,
+          details: 'Your food is being prepared!'
+        };
+      case OrderStatus.READY_FOR_PICKUP:
+      case 'ready':
+        return {
+          message: 'Your order is ready for pickup!',
+          details: orderRestaurant?.name ? `at ${orderRestaurant.name}` : undefined
         };
       default:
         return { message: `Order Status: ${orderStatus}` };
