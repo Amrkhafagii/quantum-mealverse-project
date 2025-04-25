@@ -25,7 +25,7 @@ export const updateOrderStatus = async (
     // Get current order status
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('status')
+      .select('status, restaurant_id')
       .eq('id', orderId)
       .single();
       

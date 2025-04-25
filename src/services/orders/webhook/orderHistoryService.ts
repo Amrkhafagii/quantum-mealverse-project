@@ -101,7 +101,7 @@ export const addIdempotentOrderHistory = async (
   status: string,
   idempotencyKey: string,
   restaurantId?: string | null,
-  details?: Record<string, any>,
+  details?: Record<string, any>, // Using Record<string, any> instead of nested any type
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
 ): Promise<boolean> => {
   try {
