@@ -15,36 +15,40 @@ export const RestaurantNavbar: React.FC = () => {
   if (!restaurant) return null;
 
   return (
-    <div className="bg-gray-800 text-white p-2 mb-6 rounded-lg">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
-        <div className="text-lg font-semibold px-2">{restaurant.name}</div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Link to="/restaurant/dashboard">
-            <Button 
-              variant={isActive('/restaurant/dashboard') ? "secondary" : "ghost"}
-              size="sm"
-            >
-              Dashboard
-            </Button>
-          </Link>
+    <div className="bg-[#1A1F2C]/80 backdrop-blur-lg border-b border-[#1EAEDB]/20">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div className="text-lg font-semibold text-white">
+            {restaurant.name}
+          </div>
           
-          <Link to="/restaurant/menu">
+          <div className="flex items-center gap-2">
+            <Link to="/restaurant/dashboard">
+              <Button 
+                variant={isActive('/restaurant/dashboard') ? "secondary" : "ghost"}
+                className={`${isActive('/restaurant/dashboard') ? 'bg-[#9b87f5] text-white hover:bg-[#9b87f5]/90' : 'text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10'}`}
+              >
+                Dashboard
+              </Button>
+            </Link>
+            
+            <Link to="/restaurant/menu">
+              <Button 
+                variant={isActive('/restaurant/menu') ? "secondary" : "ghost"}
+                className={`${isActive('/restaurant/menu') ? 'bg-[#9b87f5] text-white hover:bg-[#9b87f5]/90' : 'text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10'}`}
+              >
+                Menu
+              </Button>
+            </Link>
+            
             <Button 
-              variant={isActive('/restaurant/menu') ? "secondary" : "ghost"}
-              size="sm"
+              variant="ghost" 
+              className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
+              onClick={logout}
             >
-              Menu
+              Logout
             </Button>
-          </Link>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={logout}
-          >
-            Logout
-          </Button>
+          </div>
         </div>
       </div>
     </div>
