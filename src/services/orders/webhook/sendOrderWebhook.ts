@@ -49,12 +49,21 @@ export const sendOrderToWebhook = async (
       return { success: false, error: responseData.error || 'Webhook request failed' };
     }
 
-    // Update the status table regardless of response to track the webhook call
-    await supabase.from('status').insert({
-      order_id: orderId,
-      status: 'awaiting_restaurant',
-      updated_by: 'system'
-    });
+    // Check if a status record already exists for this order
+    const { data: existingStatus } = await supabase
+      .from('status')
+      .select('order_id')
+      .eq('order_id', orderId)
+      .maybeSingle();
+
+    // Only insert a new status record if one doesn't exist already
+    if (!existingStatus) {
+      await supabase.from('status').insert({
+        order_id: orderId,
+        status: 'awaiting_restaurant',
+        updated_by: 'system'
+      });
+    }
 
     return responseData;
   } catch (error) {
