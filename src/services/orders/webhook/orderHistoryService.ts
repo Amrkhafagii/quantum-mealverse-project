@@ -101,7 +101,7 @@ export const addIdempotentOrderHistory = async (
   status: string,
   idempotencyKey: string,
   restaurantId?: string | null,
-  details?: Record<string, unknown>, // Changed from Record<string, any> to Record<string, unknown> to avoid deep instantiation
+  details?: { [key: string]: any }, // Changed to a more specific type definition
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
 ): Promise<boolean> => {
   try {
@@ -121,7 +121,7 @@ export const addIdempotentOrderHistory = async (
     
     // Add idempotency key to details
     const detailsWithKey = {
-      ...details,
+      ...(details || {}),
       idempotencyKey
     };
     
