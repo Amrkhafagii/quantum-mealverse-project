@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Review } from '@/types/review';
-import { ReviewCard } from './ReviewCard';
+import { EnhancedReviewCard } from './EnhancedReviewCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -117,7 +117,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
     <div>
       <div className="space-y-4">
         {reviews.map((review) => (
-          <ReviewCard 
+          <EnhancedReviewCard 
             key={review.id} 
             review={review} 
             onFlag={handleFlag}

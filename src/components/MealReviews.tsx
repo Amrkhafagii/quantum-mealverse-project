@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RatingsSummary } from '@/components/reviews/RatingsSummary';
 import { ReviewList } from '@/components/reviews/ReviewList';
-import { ReviewForm } from '@/components/reviews/ReviewForm';
+import { EnhancedReviewForm } from '@/components/reviews/EnhancedReviewForm';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -44,7 +44,7 @@ export const MealReviews: React.FC<MealReviewsProps> = ({
         
         {showReviewForm && (
           <div className="mb-8">
-            <ReviewForm 
+            <EnhancedReviewForm 
               mealId={mealId} 
               restaurantId={restaurantId} 
               onSuccess={handleReviewSuccess} 
