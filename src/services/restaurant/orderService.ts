@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
@@ -91,7 +90,7 @@ export const getRestaurantOrders = async (
     const { data, error } = await query.order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data as RestaurantOrder[];
+    return data as unknown as RestaurantOrder[];
   } catch (error) {
     console.error('Error fetching restaurant orders:', error);
     return [];

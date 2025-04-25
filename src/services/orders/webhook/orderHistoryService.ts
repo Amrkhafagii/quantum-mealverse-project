@@ -7,7 +7,7 @@ export const recordOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId?: string | null,
-  details?: any,
+  details?: Record<string, any>, // Simplified type to avoid deep instantiation
   expiredAt?: string,
   changedBy?: string,
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system',

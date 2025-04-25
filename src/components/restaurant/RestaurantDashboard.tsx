@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +6,7 @@ import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { RefreshCcw } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
 
 export const RestaurantDashboard = () => {
   const { restaurant, loading } = useRestaurantAuth();
@@ -26,22 +26,20 @@ export const RestaurantDashboard = () => {
         .from('orders')
         .select('*, order_items(*)')
         .eq('restaurant_id', restaurant.id)
-        .in('status', [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED])
-        .order('created_at', { ascending: false });
+        .in('status', [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED]);
         
       if (pendingError) throw pendingError;
-      setPendingOrders(pending as RestaurantOrder[]);
+      setPendingOrders(pending as unknown as RestaurantOrder[]);
       
       // Fetch active orders (accepted and in progress)
       const { data: active, error: activeError } = await supabase
         .from('orders')
         .select('*, order_items(*)')
         .eq('restaurant_id', restaurant.id)
-        .in('status', [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP, OrderStatus.ON_THE_WAY])
-        .order('created_at', { ascending: false });
+        .in('status', [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP, OrderStatus.ON_THE_WAY]);
         
       if (activeError) throw activeError;
-      setActiveOrders(active as RestaurantOrder[]);
+      setActiveOrders(active as unknown as RestaurantOrder[]);
       
       // Fetch completed orders
       const { data: completed, error: completedError } = await supabase
@@ -53,7 +51,7 @@ export const RestaurantDashboard = () => {
         .limit(10);
         
       if (completedError) throw completedError;
-      setCompletedOrders(completed as RestaurantOrder[]);
+      setCompletedOrders(completed as unknown as RestaurantOrder[]);
       
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -62,14 +60,12 @@ export const RestaurantDashboard = () => {
     }
   };
 
-  // Initial data fetch
   useEffect(() => {
     if (restaurant) {
       fetchOrders();
     }
   }, [restaurant]);
 
-  // Auto-refresh every 30 seconds
   useEffect(() => {
     if (!restaurant) return;
     
@@ -80,7 +76,6 @@ export const RestaurantDashboard = () => {
     return () => clearInterval(interval);
   }, [restaurant]);
 
-  // Subscribe to real-time order updates
   useEffect(() => {
     if (!restaurant) return;
     
@@ -125,7 +120,6 @@ export const RestaurantDashboard = () => {
         </Button>
       </div>
 
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -161,7 +155,6 @@ export const RestaurantDashboard = () => {
         </Card>
       </div>
 
-      {/* Orders Tabs */}
       <Tabs 
         defaultValue={activeTab} 
         onValueChange={setActiveTab} 
@@ -409,6 +402,3 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
     </Card>
   );
 };
-
-// Import useToast for the OrderCard component
-import { useToast } from "@/components/ui/use-toast";

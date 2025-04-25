@@ -44,7 +44,20 @@ export enum OrderStatus {
   ON_THE_WAY = 'delivering',
   DELIVERED = 'completed',
   CANCELLED = 'cancelled',
-  REFUNDED = 'refunded'
+  REFUNDED = 'refunded',
+  NO_RESTAURANT_ACCEPTED = 'no_restaurant_accepted',
+  EXPIRED_ASSIGNMENT = 'expired_assignment'
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  meal_id: string;
+  menu_item_id?: string; // Make this optional to handle both meal_id and menu_item_id
+  name: string;
+  price: number;
+  quantity: number;
+  created_at?: string;
 }
 
 export interface RestaurantOrder {
@@ -54,18 +67,13 @@ export interface RestaurantOrder {
   customer_email: string;
   customer_phone: string;
   delivery_address: string;
+  city: string;
   status: OrderStatus;
   total: number;
+  delivery_fee: number;
+  delivery_method: string;
   created_at: string;
   updated_at: string;
+  formatted_order_id?: string;
   order_items: OrderItem[];
-}
-
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  menu_item_id: string;
-  name: string;
-  price: number;
-  quantity: number;
 }
