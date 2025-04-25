@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MealType } from '@/types/meal';
 import {
@@ -17,13 +16,11 @@ import {
 
 interface MealListProps {
   meals: MealType[];
-  onEdit: (meal: MealType) => void;
-  onDelete: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 4;
 
-const MealList: React.FC<MealListProps> = ({ meals, onEdit, onDelete }) => {
+const MealList: React.FC<MealListProps> = ({ meals }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -39,7 +36,7 @@ const MealList: React.FC<MealListProps> = ({ meals, onEdit, onDelete }) => {
   return (
     <Card className="p-6 holographic-card">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-quantum-cyan">Meals</h2>
+        <h2 className="text-2xl font-bold text-quantum-cyan">Meal Catalog</h2>
         <div className="relative w-64">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <Input
@@ -55,7 +52,7 @@ const MealList: React.FC<MealListProps> = ({ meals, onEdit, onDelete }) => {
       <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
         {paginatedMeals.length === 0 ? (
           <p className="text-center text-galaxy-purple">
-            {searchQuery ? 'No meals found matching your search.' : 'No meals found. Create your first meal!'}
+            {searchQuery ? 'No meals found matching your search.' : 'No meals available in the catalog.'}
           </p>
         ) : (
           paginatedMeals.map(meal => (
@@ -74,22 +71,11 @@ const MealList: React.FC<MealListProps> = ({ meals, onEdit, onDelete }) => {
                       <h3 className="font-bold text-quantum-cyan">{meal.name}</h3>
                       <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
                       <p className="text-galaxy-purple">${meal.price.toFixed(2)} | {meal.calories} kcal</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm"
-                        variant="outline" 
-                        onClick={() => onEdit(meal)}
-                      >
-                        Edit
-                      </Button>
-                      <Button 
-                        size="sm"
-                        variant="destructive" 
-                        onClick={() => onDelete(meal.id)}
-                      >
-                        Delete
-                      </Button>
+                      <div className="mt-2 text-sm">
+                        <span className="text-green-400">Protein: {meal.protein}g</span> • 
+                        <span className="text-blue-400 ml-2">Carbs: {meal.carbs}g</span> • 
+                        <span className="text-orange-400 ml-2">Fat: {meal.fat}g</span>
+                      </div>
                     </div>
                   </div>
                 </div>

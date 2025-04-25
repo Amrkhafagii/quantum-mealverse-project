@@ -1449,6 +1449,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      check_valid_status_transition: {
+        Args: { old_status: string; new_status: string }
+        Returns: boolean
+      }
       check_verified_purchase: {
         Args: { user_id: string; meal_id: string }
         Returns: boolean
@@ -1493,6 +1497,14 @@ export type Database = {
           restaurant_email: string
           distance_km: number
         }[]
+      }
+      force_accept_order: {
+        Args: {
+          p_assignment_id: string
+          p_order_id: string
+          p_restaurant_id: string
+        }
+        Returns: Json
       }
       generate_order_id: {
         Args: Record<PropertyKey, never>

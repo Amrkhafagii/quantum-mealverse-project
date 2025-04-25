@@ -62,98 +62,9 @@ export const useAdmin = () => {
     }
   };
 
-  const initializeMeals = async () => {
-    const { data: existingMeals } = await supabase
-      .from('meals')
-      .select('*');
-
-    if (!existingMeals || existingMeals.length === 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) return;
-
-      const { data: restaurants } = await supabase
-        .from('restaurants')
-        .select('id')
-        .eq('user_id', user.id)
-        .limit(1);
-
-      let restaurant_id;
-      
-      if (restaurants && restaurants.length > 0) {
-        restaurant_id = restaurants[0].id;
-      } else {
-        const { data: newRestaurant } = await supabase
-          .from('restaurants')
-          .insert({
-            name: 'Default Restaurant',
-            user_id: user.id,
-            address: '123 Main Street',
-            location: { type: 'Point', coordinates: [0, 0] }
-          })
-          .select('id')
-          .single();
-        
-        if (newRestaurant) restaurant_id = newRestaurant.id;
-      }
-
-      if (restaurant_id) {
-        // Define initial meals
-        const initialMeals = [
-          {
-            name: 'Quantum Protein Bowl',
-            description: 'High protein meal with grilled chicken, quinoa, and vegetables',
-            price: 10.99,
-            calories: 450,
-            protein: 35,
-            carbs: 40,
-            fat: 15,
-            is_active: true,
-            restaurant_id
-          },
-          {
-            name: 'Fusion Energy Salad',
-            description: 'Mixed greens with superfoods, avocado, and citrus dressing',
-            price: 8.99,
-            calories: 320,
-            protein: 12,
-            carbs: 25,
-            fat: 22,
-            is_active: true,
-            restaurant_id
-          },
-          {
-            name: 'Particle Pasta',
-            description: 'Whole grain pasta with turkey meatballs and organic marinara',
-            price: 12.99,
-            calories: 520,
-            protein: 28,
-            carbs: 65,
-            fat: 18,
-            is_active: true,
-            restaurant_id
-          }
-        ];
-        
-        for (const meal of initialMeals) {
-          await supabase
-            .from('meals')
-            .insert(meal);
-        }
-        fetchMeals();
-      }
-    }
-  };
-
   useEffect(() => {
     checkAdminStatus();
   }, [navigate, toast]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      initializeMeals();
-    }
-  }, [isAdmin]);
 
   return {
     isAdmin,
