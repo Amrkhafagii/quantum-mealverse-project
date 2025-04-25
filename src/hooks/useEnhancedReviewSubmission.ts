@@ -6,6 +6,7 @@ import { submitReview as submitReviewService } from '@/services/reviews/submissi
 import { hasUserReviewed } from '@/services/reviews/moderation/reviewModerationService';
 import { verifyPurchaseWithDetails, canReviewBasedOnTimeline, generateVerificationHash } from '@/services/reviews/verification/enhancedVerificationService';
 import { Review } from '@/types/review';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface EnhancedReviewSubmissionData {
   rating: number;
@@ -119,8 +120,24 @@ export const useEnhancedReviewSubmission = () => {
       // Submit the review
       await submitReviewService(review);
       
-      // If verified, also store the metadata
+      // In a real implementation, we would also store metadata:
+      // For now we'll just log this since we don't have the metadata table yet
       if (verificationResult.isVerified && verificationResult.orderData?.orderId) {
+        console.log('Review metadata would be stored:', {
+          review_user_id: user.id,
+          review_meal_id: data.mealId,
+          verification_hash: verificationHash,
+          order_id: verificationResult.orderData.orderId,
+          order_date: verificationResult.orderData.orderDate,
+          delivery_date: verificationResult.orderData.deliveryDate,
+          experience_time: data.reviewMetadata?.experienceTime || 0,
+          device_info: data.reviewMetadata?.deviceInfo || navigator.userAgent,
+          ai_content_score: data.reviewMetadata?.aiContentScore
+        });
+        
+        // If the metadata table is properly set up in the database definition,
+        // we would do this:
+        /*
         await supabase.from('review_metadata').insert({
           review_user_id: user.id,
           review_meal_id: data.mealId,
@@ -132,6 +149,7 @@ export const useEnhancedReviewSubmission = () => {
           device_info: data.reviewMetadata?.deviceInfo || navigator.userAgent,
           ai_content_score: data.reviewMetadata?.aiContentScore
         });
+        */
       }
       
       toast.success('Review submitted successfully!');

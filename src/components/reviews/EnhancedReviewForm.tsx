@@ -144,7 +144,7 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
     
     if (!verificationStatus.canReview) {
       return (
-        <Alert variant="warning" className="mb-4">
+        <Alert className="mb-4">
           <Clock className="h-4 w-4" />
           <AlertTitle>Please Wait</AlertTitle>
           <AlertDescription>
@@ -156,7 +156,7 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
     }
     
     return (
-      <Alert variant="success" className="mb-4">
+      <Alert className="mb-4">
         <CheckCircle2 className="h-4 w-4" />
         <AlertTitle>Verified Purchase</AlertTitle>
         <AlertDescription>
@@ -184,7 +184,7 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
     if (!aiContentScore) return null;
     
     let message = "";
-    let variant: "default" | "destructive" | "success" = "default";
+    let variant: "default" | "destructive" = "default";
     
     if (aiContentScore < 30) {
       message = "Your review lacks detail. Consider adding specific experiences with this meal.";
@@ -194,7 +194,7 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
       variant = "default";
     } else {
       message = "Great review! Your detailed feedback will be helpful to others.";
-      variant = "success";
+      variant = "default";
     }
     
     return (

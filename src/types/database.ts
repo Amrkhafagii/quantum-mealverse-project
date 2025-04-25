@@ -1,4 +1,3 @@
-
 // Generated types from Supabase database schema
 export type Json =
   | string
@@ -163,6 +162,111 @@ export type Database = {
           updated_at: string
           is_flagged: boolean
           status: string
+        }
+      }
+      review_metadata: {
+        Row: {
+          id: string
+          review_user_id: string
+          review_meal_id: string
+          verification_hash: string
+          order_id: string
+          order_date: string
+          delivery_date: string | null
+          experience_time: number | null
+          device_info: string | null
+          ai_content_score: number | null
+          keywords_detected: string[] | null
+          sentiment_score: number | null
+          is_rushed: boolean | null
+          helpful_votes: number | null
+          unhelpful_votes: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          review_user_id: string
+          review_meal_id: string
+          verification_hash: string
+          order_id: string
+          order_date: string
+          delivery_date?: string | null
+          experience_time?: number | null
+          device_info?: string | null
+          ai_content_score?: number | null
+          keywords_detected?: string[] | null
+          sentiment_score?: number | null
+          is_rushed?: boolean | null
+          helpful_votes?: number | null
+          unhelpful_votes?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          review_user_id?: string
+          review_meal_id?: string
+          verification_hash?: string
+          order_id?: string
+          order_date?: string
+          delivery_date?: string | null
+          experience_time?: number | null
+          device_info?: string | null
+          ai_content_score?: number | null
+          keywords_detected?: string[] | null
+          sentiment_score?: number | null
+          is_rushed?: boolean | null
+          helpful_votes?: number | null
+          unhelpful_votes?: number | null
+          updated_at?: string
+        }
+        Select: {
+          id: string
+          review_user_id: string
+          review_meal_id: string
+          verification_hash: string
+          order_id: string
+          order_date: string
+          delivery_date: string | null
+          experience_time: number | null
+          device_info: string | null
+          ai_content_score: number | null
+          keywords_detected: string[] | null
+          sentiment_score: number | null
+          is_rushed: boolean | null
+          helpful_votes: number | null
+          unhelpful_votes: number | null
+          created_at: string
+          updated_at: string
+        }
+      }
+      review_votes: {
+        Row: {
+          id: string
+          review_id: string
+          user_id: string
+          vote_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          review_id: string
+          user_id: string
+          vote_type: string
+          created_at?: string
+        }
+        Update: {
+          review_id?: string
+          user_id?: string
+          vote_type?: string
+          created_at?: string
+        }
+        Select: {
+          id: string
+          review_id: string
+          user_id: string
+          vote_type: string
+          created_at: string
         }
       }
       restaurant_assignments: {
