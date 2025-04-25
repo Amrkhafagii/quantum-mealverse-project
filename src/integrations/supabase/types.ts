@@ -135,6 +135,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dietary_tags: {
+        Row: {
+          description: string | null
+          icon: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          icon?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          description?: string | null
+          icon?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       error_logs: {
         Row: {
           created_at: string
@@ -264,6 +285,83 @@ export type Database = {
             columns: ["meal_id"]
             isOneToOne: false
             referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_customizations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          meal_id: string | null
+          name: string
+          nutritional_impact: Json | null
+          price_impact: number | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          meal_id?: string | null
+          name: string
+          nutritional_impact?: Json | null
+          price_impact?: number | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          meal_id?: string | null
+          name?: string
+          nutritional_impact?: Json | null
+          price_impact?: number | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_customizations_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_dietary_tags: {
+        Row: {
+          meal_id: string
+          tag_id: number
+        }
+        Insert: {
+          meal_id: string
+          tag_id: number
+        }
+        Update: {
+          meal_id?: string
+          tag_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_dietary_tags_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_dietary_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "dietary_tags"
             referencedColumns: ["id"]
           },
         ]
@@ -401,6 +499,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      nutritional_info: {
+        Row: {
+          allergens: string[] | null
+          calories: number | null
+          carbs: number | null
+          fats: number | null
+          fiber: number | null
+          meal_id: string
+          protein: number | null
+          sodium: number | null
+          sugar: number | null
+        }
+        Insert: {
+          allergens?: string[] | null
+          calories?: number | null
+          carbs?: number | null
+          fats?: number | null
+          fiber?: number | null
+          meal_id: string
+          protein?: number | null
+          sodium?: number | null
+          sugar?: number | null
+        }
+        Update: {
+          allergens?: string[] | null
+          calories?: number | null
+          carbs?: number | null
+          fats?: number | null
+          fiber?: number | null
+          meal_id?: string
+          protein?: number | null
+          sodium?: number | null
+          sugar?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutritional_info_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: true
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_history: {
         Row: {
@@ -1445,6 +1587,18 @@ export type Database = {
         Args: { "": unknown } | { "": unknown }
         Returns: string
       }
+      calculate_health_score: {
+        Args: {
+          p_calories: number
+          p_protein: number
+          p_carbs: number
+          p_fats: number
+          p_fiber: number
+          p_sugar: number
+          p_sodium: number
+        }
+        Returns: number
+      }
       check_expired_assignments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1733,6 +1887,35 @@ export type Database = {
       geomfromewkt: {
         Args: { "": string }
         Returns: unknown
+      }
+      get_meals_with_details: {
+        Args: {
+          p_restaurant_id?: string
+          p_dietary_tag?: string
+          p_min_calories?: number
+          p_max_calories?: number
+          p_is_active?: boolean
+        }
+        Returns: {
+          meal_id: string
+          restaurant_id: string
+          meal_name: string
+          description: string
+          price: number
+          preparation_time: number
+          is_active: boolean
+          image_url: string
+          calories: number
+          protein: number
+          carbs: number
+          fats: number
+          fiber: number
+          sugar: number
+          sodium: number
+          allergens: string[]
+          dietary_tags: Json
+          health_score: number
+        }[]
       }
       get_proj4_from_srid: {
         Args: { "": number }

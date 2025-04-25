@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -10,6 +11,7 @@ import {
   saveUserLocation 
 } from '@/services/orders/orderService';
 import { sendOrderToWebhook } from '@/integrations/webhook';
+import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -71,8 +73,30 @@ export const useOrderSubmission = (
         
         if (!webhookResult.success) {
           console.error('Webhook call failed:', webhookResult.error);
+          // Even if webhook fails, record the order history
+          await recordOrderHistory(
+            insertedOrder.id,
+            'webhook_failed',
+            null,
+            { error: webhookResult.error }
+          );
         }
       }
+      
+      // Always record the order creation in history
+      await recordOrderHistory(
+        insertedOrder.id,
+        'created',
+        null,
+        { 
+          total: insertedOrder.total,
+          delivery_method: data.deliveryMethod,
+          items_count: items.length
+        },
+        undefined,
+        userId,
+        'customer'
+      );
       
       toast({
         title: "Order placed successfully",

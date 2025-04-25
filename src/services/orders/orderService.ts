@@ -3,7 +3,7 @@ import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { CartItem } from '@/types/cart';
 import { Order } from '@/types/order';
 import { OrderStatus } from '@/types/webhook';
-import { recordOrderHistory } from '@/services/orders/webhookService';
+import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 
 export const saveDeliveryInfo = async (
   userId: string, 
