@@ -101,7 +101,7 @@ export const addIdempotentOrderHistory = async (
   status: string,
   idempotencyKey: string,
   restaurantId?: string | null,
-  details?: { [key: string]: any }, // Changed to a more specific type definition
+  details?: { [key: string]: unknown }, // Changed to a simpler type that won't cause deep instantiation
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
 ): Promise<boolean> => {
   try {
