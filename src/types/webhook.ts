@@ -1,3 +1,22 @@
+import { z } from 'zod';
+
+export enum OrderStatus {
+  PENDING = 'pending',
+  AWAITING_RESTAURANT = 'awaiting_restaurant',
+  RESTAURANT_ASSIGNED = 'restaurant_assigned', 
+  RESTAURANT_ACCEPTED = 'accepted',
+  RESTAURANT_REJECTED = 'rejected',
+  EXPIRED_ASSIGNMENT = 'expired_assignment',
+  NO_RESTAURANT_AVAILABLE = 'no_restaurant_available',
+  NO_RESTAURANT_ACCEPTED = 'no_restaurant_accepted',
+  PROCESSING = 'processing',
+  PREPARING = 'preparing',
+  READY_FOR_PICKUP = 'ready_for_pickup',
+  ON_THE_WAY = 'on_the_way',
+  DELIVERED = 'delivered',
+  CANCELLED = 'cancelled',
+  REFUNDED = 'refunded'
+}
 
 export interface OrderAssignmentRequest {
   order_id: string;

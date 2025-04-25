@@ -3049,6 +3049,10 @@ export type Database = {
         }
         Returns: string
       }
+      valid_status_transition: {
+        Args: { old_status: string; new_status: string }
+        Returns: boolean
+      }
     }
     Enums: {
       log_type: "click" | "error" | "api" | "database"
