@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -101,7 +100,7 @@ export const addIdempotentOrderHistory = async (
   status: string,
   idempotencyKey: string,
   restaurantId?: string | null,
-  details?: { [key: string]: unknown }, // Changed to a simpler type that won't cause deep instantiation
+  details?: Record<string, unknown>, // Changed to a simpler type that won't cause deep instantiation
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
 ): Promise<boolean> => {
   try {

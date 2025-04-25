@@ -1,10 +1,13 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface AuthFormProps {
   isRegister?: boolean;
@@ -12,23 +15,52 @@ interface AuthFormProps {
 
 export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const [mode, setMode] = useState<'login' | 'signup'>(isRegister ? 'signup' : 'login');
+  const [userType, setUserType] = useState<'customer' | 'restaurant'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Restaurant specific fields
+  const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantAddress, setRestaurantAddress] = useState('');
+  const [restaurantCity, setRestaurantCity] = useState('');
+  const [restaurantPhone, setRestaurantPhone] = useState('');
+  const [restaurantDescription, setRestaurantDescription] = useState('');
+  
   const { toast } = useToast();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        // Sign up the user
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (signUpError) throw signUpError;
+        
+        if (userType === 'restaurant' && authData?.user) {
+          // Create restaurant profile
+          const { error: restaurantError } = await supabase.from('restaurants').insert({
+            user_id: authData.user.id,
+            name: restaurantName,
+            address: restaurantAddress,
+            city: restaurantCity,
+            phone: restaurantPhone,
+            email: email,
+            description: restaurantDescription,
+            is_active: true
+          });
+          
+          if (restaurantError) throw restaurantError;
+        }
+        
         toast({
           title: "Success!",
           description: "Please check your email to verify your account.",
@@ -41,8 +73,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           password,
         });
         if (error) throw error;
-        // After successful login, redirect to home
-        navigate('/');
+        
+        // Check if user is a restaurant owner
+        const { data: restaurantData } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+          .single();
+          
+        if (restaurantData) {
+          navigate('/restaurant/dashboard');
+        } else {
+          // Regular customer flow
+          navigate('/');
+        }
       }
     } catch (error: any) {
       toast({
@@ -58,6 +102,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   return (
     <form onSubmit={handleAuth} className="space-y-6">
       <div className="space-y-4">
+        {mode === 'signup' && (
+          <Tabs defaultValue={userType} onValueChange={(value) => setUserType(value as 'customer' | 'restaurant')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="customer">Customer</TabsTrigger>
+              <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+        
         <Input
           type="email"
           placeholder="Email"
@@ -72,6 +125,66 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        
+        {mode === 'signup' && userType === 'restaurant' && (
+          <div className="space-y-4 p-4 border rounded-md">
+            <div>
+              <Label htmlFor="restaurant-name">Restaurant Name</Label>
+              <Input
+                id="restaurant-name"
+                type="text"
+                placeholder="Restaurant Name"
+                value={restaurantName}
+                onChange={(e) => setRestaurantName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="restaurant-address">Address</Label>
+              <Input
+                id="restaurant-address"
+                type="text"
+                placeholder="Address"
+                value={restaurantAddress}
+                onChange={(e) => setRestaurantAddress(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="restaurant-city">City</Label>
+                <Input
+                  id="restaurant-city"
+                  type="text"
+                  placeholder="City"
+                  value={restaurantCity}
+                  onChange={(e) => setRestaurantCity(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="restaurant-phone">Phone</Label>
+                <Input
+                  id="restaurant-phone"
+                  type="text"
+                  placeholder="Phone"
+                  value={restaurantPhone}
+                  onChange={(e) => setRestaurantPhone(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="restaurant-description">Description</Label>
+              <Textarea
+                id="restaurant-description"
+                placeholder="Tell us about your restaurant"
+                value={restaurantDescription}
+                onChange={(e) => setRestaurantDescription(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button 
