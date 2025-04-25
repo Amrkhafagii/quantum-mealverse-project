@@ -44,7 +44,7 @@ export const recordOrderHistory = async (
         status,
         previous_status: lastStatus?.status,
         restaurant_id: restaurantId,
-        restaurant_name: restaurantName,
+        restaurant_name: restaurantName || 'Pending Assignment',
         details,
         expired_at: expiredAt,
         changed_by: changedBy,
