@@ -105,7 +105,6 @@ export const saveDeliveryInfo = async (
         .from('delivery_info')
         .update({
           full_name: deliveryInfo.fullName,
-          email: deliveryInfo.email,
           phone: deliveryInfo.phone,
           address: deliveryInfo.address,
           city: deliveryInfo.city,
@@ -121,7 +120,6 @@ export const saveDeliveryInfo = async (
         .insert({
           user_id: userId,
           full_name: deliveryInfo.fullName,
-          email: deliveryInfo.email,
           phone: deliveryInfo.phone,
           address: deliveryInfo.address,
           city: deliveryInfo.city
