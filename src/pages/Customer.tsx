@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader } from 'lucide-react';
 import { getMenuItems } from '@/services/restaurant/menuService';
+import { createTestMenuItems } from '@/utils/createTestMenuItems';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
