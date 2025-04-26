@@ -7,6 +7,7 @@ import { MealReviews } from './MealReviews';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from "@/components/ui/use-toast";
 
 interface MealDetailsProps {
   meal: MealType;
@@ -27,17 +28,21 @@ const MealDetails: React.FC<MealDetailsProps> = ({
 }) => {
   const [mealQuantity, setMealQuantity] = useState(quantity);
   const { displayPrice } = useCurrencyConverter();
+  const { toast } = useToast();
   
   const handleAddToCart = () => {
     if (meal) {
       onAddToCart(meal, mealQuantity);
+      toast({
+        title: "Added to cart",
+        description: `${mealQuantity} × ${meal.name} added to your cart`,
+      });
     }
   };
   
   return (
     <div className="bg-quantum-black text-white">
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Image Section */}
         <div className="relative group">
           <div className="relative overflow-hidden rounded-2xl border-2 border-quantum-cyan/20 aspect-video">
             <img
@@ -53,14 +58,12 @@ const MealDetails: React.FC<MealDetailsProps> = ({
           </div>
         </div>
 
-        {/* Details Section */}
         <div className="space-y-6">
           <div>
             <h1 className="text-4xl font-bold neon-text mb-2">{meal.name}</h1>
             <p className="text-gray-400 text-lg">{meal.description}</p>
           </div>
 
-          {/* Nutrition Information */}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
@@ -82,7 +85,6 @@ const MealDetails: React.FC<MealDetailsProps> = ({
             </div>
           </div>
 
-          {/* Add to Cart Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-3xl font-bold text-quantum-cyan">
@@ -104,7 +106,7 @@ const MealDetails: React.FC<MealDetailsProps> = ({
                     value={mealQuantity}
                     onChange={(e) => {
                       const value = parseInt(e.target.value);
-                      setMealQuantity(isNaN(value) ? 1 : value);
+                      setMealQuantity(isNaN(value) ? 1 : Math.max(1, value));
                     }}
                     className="w-16 text-center bg-transparent border-none text-white"
                   />
@@ -131,7 +133,6 @@ const MealDetails: React.FC<MealDetailsProps> = ({
         </div>
       </div>
 
-      {/* Ingredients and Steps Sections */}
       <div className="mt-12 space-y-6">
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="ingredients" className="border-quantum-cyan/20">
@@ -182,7 +183,6 @@ const MealDetails: React.FC<MealDetailsProps> = ({
         </Accordion>
       </div>
 
-      {/* Reviews Section */}
       <div className="mt-12">
         <MealReviews 
           mealId={meal.id || ''} 

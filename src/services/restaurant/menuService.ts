@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem, MenuCategory, NutritionalInfo } from '@/types/menu';
 import { Database } from '@/integrations/supabase/types';
@@ -55,7 +56,9 @@ export const getMenuItems = async (
       console.log(`Processing menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
       return {
         ...item,
-        nutritional_info: item.nutritional_info as unknown as NutritionalInfo
+        nutritional_info: item.nutritional_info as unknown as NutritionalInfo,
+        ingredients: item.ingredients as string[] || [],
+        steps: item.steps as string[] || []
       };
     }) as MenuItem[];
   } catch (error) {
@@ -82,6 +85,8 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
           nutritional_info: item.nutritional_info as unknown as Json,
           is_available: item.is_available,
           preparation_time: item.preparation_time,
+          ingredients: item.ingredients || [],
+          steps: item.steps || [],
           updated_at: new Date().toISOString()
         })
         .eq('id', item.id)
@@ -92,7 +97,9 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
       if (error) throw error;
       return {
         ...data,
-        nutritional_info: data.nutritional_info as unknown as NutritionalInfo
+        nutritional_info: data.nutritional_info as unknown as NutritionalInfo,
+        ingredients: data.ingredients as string[] || [],
+        steps: data.steps as string[] || []
       } as MenuItem;
     } else {
       // Create new item
@@ -107,7 +114,9 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
           image_url: item.image_url,
           nutritional_info: item.nutritional_info as unknown as Json,
           is_available: item.is_available,
-          preparation_time: item.preparation_time
+          preparation_time: item.preparation_time,
+          ingredients: item.ingredients || [],
+          steps: item.steps || []
         })
         .select()
         .single();
@@ -115,7 +124,9 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
       if (error) throw error;
       return {
         ...data,
-        nutritional_info: data.nutritional_info as unknown as NutritionalInfo
+        nutritional_info: data.nutritional_info as unknown as NutritionalInfo,
+        ingredients: data.ingredients as string[] || [],
+        steps: data.steps as string[] || []
       } as MenuItem;
     }
   } catch (error) {

@@ -14,9 +14,11 @@ import { useEnhancedReviewSubmission } from '@/hooks/useEnhancedReviewSubmission
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoIcon, Clock, CheckCircle2, ShoppingBag, CalendarIcon } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from "@/components/ui/use-toast";
 
 const reviewSchema = z.object({
-  rating: z.number().min(1).max(5),
+  rating: z.number().min(1, "Please select a rating").max(5),
   comment: z.string().min(15, 'Please provide at least 15 characters for your review').max(1000).optional(),
   images: z.array(z.string()).optional(),
 });
@@ -38,6 +40,8 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
   const { submitReview, checkVerificationStatus, verificationStatus, isSubmitting } = useEnhancedReviewSubmission();
   const [formStartTime, setFormStartTime] = useState<number>(Date.now());
   const [aiContentScore, setAiContentScore] = useState<number | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
   const form = useForm<ReviewFormValues>({
     resolver: zodResolver(reviewSchema),
@@ -50,10 +54,12 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
 
   // Check verification status when component mounts
   useEffect(() => {
-    checkVerificationStatus(mealId);
-    // Start the form timer
-    setFormStartTime(Date.now());
-  }, [mealId]);
+    if (user) {
+      checkVerificationStatus(mealId);
+      // Start the form timer
+      setFormStartTime(Date.now());
+    }
+  }, [mealId, user]);
 
   // Simulated AI content analysis (in real app, this would call an API)
   const analyzeReviewContent = (text: string): number => {
@@ -90,6 +96,15 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
   }, [form.watch]);
   
   const onSubmit = async (values: ReviewFormValues) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to submit a review",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Calculate time spent on form
     const experienceTime = Math.floor((Date.now() - formStartTime) / 1000);
     
@@ -112,6 +127,10 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
     const success = await submitReview(reviewData);
     
     if (success) {
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!"
+      });
       form.reset();
       if (onSuccess) {
         onSuccess();
@@ -126,6 +145,25 @@ export const EnhancedReviewForm: React.FC<EnhancedReviewFormProps> = ({
       form.setValue('images', newImages);
     }
   };
+
+  if (!user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Write a Review</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <InfoIcon className="h-4 w-4" />
+            <AlertTitle>Authentication Required</AlertTitle>
+            <AlertDescription>
+              Please sign in to write a review for this meal.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const renderVerificationStatus = () => {
     if (!verificationStatus) return null;

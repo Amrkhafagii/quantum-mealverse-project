@@ -67,6 +67,8 @@ export interface MenuItem {
   updated_at?: string;
   image_url?: string;
   nutritional_info: NutritionalInfo;
+  ingredients?: string[];
+  steps?: string[];
 }
 
 export interface MenuCategory {

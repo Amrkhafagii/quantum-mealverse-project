@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { MenuItem, MenuCategory, NutritionalInfo, calculateHealthScore } from '@/types/menu';
@@ -25,7 +24,9 @@ const INITIAL_MENU_ITEM: MenuItem = {
     protein: 0,
     carbs: 0,
     fat: 0
-  }
+  },
+  ingredients: [],
+  steps: []
 };
 
 const INITIAL_CATEGORY: MenuCategory = {
@@ -86,6 +87,15 @@ export const useMenuManagement = (restaurantId: string) => {
       // Calculate health score if nutritional info is provided
       if (itemToSave.nutritional_info) {
         itemToSave.nutritional_info.health_score = calculateHealthScore(itemToSave.nutritional_info);
+      }
+      
+      // Filter out empty ingredients and steps
+      if (itemToSave.ingredients) {
+        itemToSave.ingredients = itemToSave.ingredients.filter(ingredient => ingredient.trim() !== '');
+      }
+      
+      if (itemToSave.steps) {
+        itemToSave.steps = itemToSave.steps.filter(step => step.trim() !== '');
       }
       
       const savedItem = await saveMenuItem(itemToSave);
@@ -199,6 +209,8 @@ export const useMenuManagement = (restaurantId: string) => {
     setSelectedItem({
       ...INITIAL_MENU_ITEM,
       restaurant_id: restaurantId,
+      ingredients: [],
+      steps: []
     });
   };
 
