@@ -26,8 +26,8 @@ export const FeaturedMeals = () => {
     <div className="container mx-auto py-12">
       <h2 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Featured Meals</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {menuItems?.map((item: MenuItem) => {
-          // Extract nutritional info from the item
+        {menuItems?.map((item) => {
+          // Parse nutritional info from JSON
           const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
             calories: 0,
             protein: 0,

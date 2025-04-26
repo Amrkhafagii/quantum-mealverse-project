@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -22,9 +21,8 @@ export const useAdmin = () => {
       
       if (error) throw error;
       if (data) {
-        // Convert MenuItem to MealType
-        const convertedMeals: MealType[] = data.map((item: MenuItem) => {
-          // Extract nutritional info
+        // Convert MenuItem to MealType with proper type handling
+        const convertedMeals: MealType[] = data.map((item) => {
           const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
             calories: 0,
             protein: 0,

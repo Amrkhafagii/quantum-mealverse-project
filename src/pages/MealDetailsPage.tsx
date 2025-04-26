@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -33,7 +32,7 @@ const MealDetailsPage = () => {
         data.image_url = `https://picsum.photos/seed/${data.id}/600/400`;
       }
       
-      // Convert MenuItem to MealType
+      // Parse nutritional info from JSON
       const nutritionalInfo = data.nutritional_info as NutritionalInfo || {
         calories: 0,
         protein: 0,
