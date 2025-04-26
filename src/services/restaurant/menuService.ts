@@ -7,10 +7,10 @@ import { Json } from '@/types/database';
 type MenuItemRow = Database['public']['Tables']['menu_items']['Row'];
 type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
 
-// Type augmentation to add ingredients and steps fields
-interface MenuItemWithExtras extends MenuItemRow {
-  ingredients?: string[];
-  steps?: string[];
+// Fix: Type augmentation for extending the MenuItemRow without changing required properties
+interface MenuItemWithExtras extends Omit<MenuItemRow, 'ingredients' | 'steps'> {
+  ingredients: string[]; // Required property to match database schema
+  steps: string[]; // Required property to match database schema
 }
 
 /**
@@ -60,14 +60,14 @@ export const getMenuItems = async (
     // Transform the nutritional_info from Json to NutritionalInfo
     return (data || []).map(item => {
       console.log(`Processing menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
-      // Cast to our extended type
-      const extendedItem = item as MenuItemWithExtras;
+      
+      // Ensure we always have arrays for ingredients and steps
       return {
-        ...extendedItem,
-        nutritional_info: extendedItem.nutritional_info as unknown as NutritionalInfo,
-        ingredients: extendedItem.ingredients || [],
-        steps: extendedItem.steps || []
-      };
+        ...item,
+        nutritional_info: item.nutritional_info as unknown as NutritionalInfo,
+        ingredients: item.ingredients || [],
+        steps: item.steps || []
+      } as MenuItem;
     }) as MenuItem[];
   } catch (error) {
     console.error('Error fetching menu items:', error);
