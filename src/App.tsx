@@ -16,6 +16,7 @@ import Admin from './pages/Admin';
 import MealDetailsPage from './pages/MealDetailsPage';
 import Subscription from './pages/Subscription';
 import ProtectedRoute from './components/ProtectedRoute';
+import Customer from './pages/Customer';
 
 // Restaurant Routes
 import RestaurantDashboard from './pages/restaurant/Dashboard';
@@ -31,6 +32,7 @@ function App() {
         <Route path="/auth" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/customer" element={<Customer />} />
         <Route path="/meal/:id" element={<MealDetailsPage />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />

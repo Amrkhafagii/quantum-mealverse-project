@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
@@ -82,7 +81,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   };
 
   const navigateToMealDetails = () => {
-    navigate(`/meals/${meal.id}`);
+    navigate(`/meal/${meal.id}`);
   };
 
   const handleQuantityChange = (action: 'increase' | 'decrease') => (e: React.MouseEvent) => {
@@ -174,4 +173,3 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     </Card>
   );
 };
-
