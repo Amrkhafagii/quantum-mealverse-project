@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { RefreshCcw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { getRestaurantOrders } from '@/services/restaurant/orderService';
 
 export const RestaurantDashboard = () => {
   const { restaurant, loading } = useRestaurantAuth();
@@ -15,46 +17,46 @@ export const RestaurantDashboard = () => {
   const [completedOrders, setCompletedOrders] = useState<RestaurantOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
+  const { toast } = useToast();
 
   const fetchOrders = async () => {
     if (!restaurant) return;
     
     setLoadingOrders(true);
     try {
-      // Fetch pending orders (awaiting restaurant response)
-      const { data: pending, error: pendingError } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('restaurant_id', restaurant.id)
-        .in('status', [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED]);
-        
-      if (pendingError) throw pendingError;
-      setPendingOrders(pending as unknown as RestaurantOrder[]);
+      console.log('Fetching orders for restaurant:', restaurant.id);
       
-      // Fetch active orders (accepted and in progress)
-      const { data: active, error: activeError } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('restaurant_id', restaurant.id)
-        .in('status', [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP, OrderStatus.ON_THE_WAY]);
-        
-      if (activeError) throw activeError;
-      setActiveOrders(active as unknown as RestaurantOrder[]);
+      // Use the orderService to fetch pending orders
+      const pendingOrdersData = await getRestaurantOrders(
+        restaurant.id,
+        [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED]
+      );
+      console.log('Pending orders:', pendingOrdersData);
+      setPendingOrders(pendingOrdersData);
+      
+      // Fetch active orders
+      const activeOrdersData = await getRestaurantOrders(
+        restaurant.id,
+        [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP, OrderStatus.ON_THE_WAY]
+      );
+      console.log('Active orders:', activeOrdersData);
+      setActiveOrders(activeOrdersData);
       
       // Fetch completed orders
-      const { data: completed, error: completedError } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('restaurant_id', restaurant.id)
-        .in('status', [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REFUNDED])
-        .order('created_at', { ascending: false })
-        .limit(10);
-        
-      if (completedError) throw completedError;
-      setCompletedOrders(completed as unknown as RestaurantOrder[]);
+      const completedOrdersData = await getRestaurantOrders(
+        restaurant.id,
+        [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REFUNDED]
+      );
+      console.log('Completed orders:', completedOrdersData);
+      setCompletedOrders(completedOrdersData);
       
     } catch (error) {
       console.error('Error fetching orders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load restaurant orders",
+        variant: "destructive"
+      });
     } finally {
       setLoadingOrders(false);
     }
@@ -173,7 +175,13 @@ export const RestaurantDashboard = () => {
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4">
-          {pendingOrders.length === 0 ? (
+          {loadingOrders ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                Loading pending orders...
+              </CardContent>
+            </Card>
+          ) : pendingOrders.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center">
                 No pending orders at this time.
@@ -192,7 +200,13 @@ export const RestaurantDashboard = () => {
         </TabsContent>
 
         <TabsContent value="active" className="space-y-4">
-          {activeOrders.length === 0 ? (
+          {loadingOrders ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                Loading active orders...
+              </CardContent>
+            </Card>
+          ) : activeOrders.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center">
                 No active orders at this time.
@@ -211,7 +225,13 @@ export const RestaurantDashboard = () => {
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-4">
-          {completedOrders.length === 0 ? (
+          {loadingOrders ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                Loading completed orders...
+              </CardContent>
+            </Card>
+          ) : completedOrders.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center">
                 No completed orders to show.
@@ -328,12 +348,16 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
           <div>
             <h3 className="font-medium mb-1">Order Items</h3>
             <ul className="space-y-1">
-              {order.order_items.map(item => (
-                <li key={item.id} className="flex justify-between">
-                  <span>{item.quantity}x {item.name}</span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
-                </li>
-              ))}
+              {order.order_items && order.order_items.length > 0 ? (
+                order.order_items.map(item => (
+                  <li key={item.id} className="flex justify-between">
+                    <span>{item.quantity}x {item.name}</span>
+                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  </li>
+                ))
+              ) : (
+                <li>No items</li>
+              )}
             </ul>
           </div>
         </div>

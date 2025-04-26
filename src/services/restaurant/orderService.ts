@@ -79,18 +79,51 @@ export const getRestaurantOrders = async (
   statusFilter?: OrderStatus[]
 ): Promise<RestaurantOrder[]> => {
   try {
+    console.log(`Fetching orders for restaurant ${restaurantId} with status filter:`, statusFilter);
+    
+    // First check restaurant_assignments table for assignments to this restaurant
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('restaurant_assignments')
+      .select('order_id')
+      .eq('restaurant_id', restaurantId)
+      .in('status', ['pending', 'accepted']);
+      
+    if (assignmentsError) {
+      console.error('Error fetching restaurant assignments:', assignmentsError);
+    }
+    
+    // Get assigned order IDs
+    const assignedOrderIds = assignments?.map(a => a.order_id) || [];
+    console.log('Assigned order IDs from assignments table:', assignedOrderIds);
+    
+    // Create a query for orders
     let query = supabase
       .from('orders')
-      .select('*, order_items(*)')
-      .eq('restaurant_id', restaurantId);
+      .select('*, order_items(*)');
       
+    // If we have status filters, apply them
     if (statusFilter && statusFilter.length > 0) {
       query = query.in('status', statusFilter);
     }
     
+    // Apply restaurant filter - either directly assigned or through assignments table
+    if (assignedOrderIds.length > 0) {
+      // Get orders either by restaurant_id OR by being in the assigned order IDs
+      query = query.or(`restaurant_id.eq.${restaurantId},id.in.(${assignedOrderIds.join(',')})`);
+    } else {
+      // Just get by restaurant_id
+      query = query.eq('restaurant_id', restaurantId);
+    }
+    
+    // Complete the query
     const { data, error } = await query.order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching restaurant orders:', error);
+      throw error;
+    }
+    
+    console.log('Orders fetched:', data?.length);
     return data as unknown as RestaurantOrder[];
   } catch (error) {
     console.error('Error fetching restaurant orders:', error);
