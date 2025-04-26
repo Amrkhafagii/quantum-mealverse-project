@@ -12,6 +12,14 @@ export const RestaurantNavbar: React.FC = () => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
 
   if (!restaurant) return null;
 
@@ -47,7 +55,7 @@ export const RestaurantNavbar: React.FC = () => {
             <Button 
               variant="ghost" 
               className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
-              onClick={() => logout()}
+              onClick={handleLogout}
             >
               Logout
             </Button>

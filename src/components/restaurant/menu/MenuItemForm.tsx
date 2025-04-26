@@ -73,7 +73,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   const [steps, setSteps] = useState<string[]>(item.steps || []);
   const [newStep, setNewStep] = useState('');
   
-  // Initialize form with existing data
   const form = useForm<FormValues>({
     resolver: zodResolver(menuItemSchema),
     defaultValues: {
@@ -95,7 +94,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
     },
   });
 
-  // Update form when item changes
   useEffect(() => {
     form.reset({
       name: item.name || '',
@@ -119,7 +117,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   }, [item, categories, form]);
 
   const onSubmit = async (data: FormValues) => {
-    // Prepare item data with the correct nutritional_info type
     const updatedItem: MenuItem = {
       ...item,
       ...data,
@@ -134,8 +131,16 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
       steps,
     };
     
-    // Call onSave with updated data
-    await onSave(updatedItem);
+    try {
+      await onSave(updatedItem);
+    } catch (error) {
+      console.error("Error saving menu item:", error);
+      toast({
+        title: "Error saving menu item",
+        description: "There was a problem saving the menu item. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleImageUploaded = (url: string) => {
@@ -146,7 +151,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
     });
   };
   
-  // Handle ingredient management
   const addIngredient = () => {
     if (newIngredient.trim()) {
       setIngredients([...ingredients, newIngredient.trim()]);
@@ -158,7 +162,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
   
-  // Handle cooking step management
   const addStep = () => {
     if (newStep.trim()) {
       setSteps([...steps, newStep.trim()]);
