@@ -14,19 +14,21 @@ import { MapPin, Loader } from 'lucide-react';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
-  const { nearestRestaurantId, loading: loadingRestaurant } = useNearestRestaurant();
+  const { nearbyRestaurants, loading: loadingRestaurants } = useNearestRestaurant();
 
   const { data: meals, isLoading: loadingMeals, error } = useQuery({
-    queryKey: ['meals', nearestRestaurantId],
+    queryKey: ['meals', nearbyRestaurants],
     queryFn: async () => {
+      if (!nearbyRestaurants.length) return [];
+      
+      // Extract restaurant IDs from nearby restaurants
+      const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
+      
       let query = supabase
         .from('meals')
         .select('*')
-        .eq('is_active', true);
-        
-      if (nearestRestaurantId) {
-        query = query.eq('restaurant_id', nearestRestaurantId);
-      }
+        .eq('is_active', true)
+        .in('restaurant_id', restaurantIds);
       
       const { data, error } = await query;
       
@@ -37,7 +39,7 @@ const Customer = () => {
         image_url: meal.image_url || `https://picsum.photos/seed/${meal.id}/300/200`
       })) || [];
     },
-    enabled: !loadingRestaurant
+    enabled: nearbyRestaurants.length > 0
   });
 
   if (!location) {
@@ -60,14 +62,14 @@ const Customer = () => {
     );
   }
 
-  if (loadingRestaurant || loadingMeals) {
+  if (loadingRestaurants || loadingMeals) {
     return (
       <div className="min-h-screen bg-quantum-black text-white">
         <Navbar />
         <div className="container mx-auto px-4 py-24 flex items-center justify-center">
           <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
           <span className="ml-2 text-quantum-cyan">
-            {loadingRestaurant ? 'Finding nearest restaurant...' : 'Loading meals...'}
+            {loadingRestaurants ? 'Finding nearby restaurants...' : 'Loading meals...'}
           </span>
         </div>
         <Footer />
@@ -96,10 +98,33 @@ const Customer = () => {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
           
+          {nearbyRestaurants.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4 text-quantum-purple">
+                {nearbyRestaurants.length} {nearbyRestaurants.length === 1 ? 'Restaurant' : 'Restaurants'} Found Nearby
+              </h2>
+              <div className="flex flex-wrap gap-4">
+                {nearbyRestaurants.map((restaurant) => (
+                  <div key={restaurant.restaurant_id} className="bg-quantum-darkBlue/70 rounded-lg p-3 inline-flex items-center">
+                    <span className="text-quantum-cyan mr-2">{restaurant.restaurant_name}</span>
+                    <span className="text-xs text-gray-400">{restaurant.distance_km.toFixed(2)} km away</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {meals?.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-xl mb-4">No meals available from nearby restaurants</p>
-              <p className="text-gray-400">Try updating your location or check back later</p>
+              <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
+              <Button
+                onClick={() => getCurrentLocation()}
+                className="bg-quantum-cyan hover:bg-quantum-cyan/90"
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Update Location
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

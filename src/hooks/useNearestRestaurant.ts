@@ -4,13 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLocationTracker } from './useLocationTracker';
 import { useToast } from '@/components/ui/use-toast';
 
+export interface NearbyRestaurant {
+  restaurant_id: string;
+  restaurant_name: string;
+  restaurant_address: string;
+  restaurant_email: string | null;
+  distance_km: number;
+}
+
 export const useNearestRestaurant = () => {
-  const [nearestRestaurantId, setNearestRestaurantId] = useState<string | null>(null);
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const { location, locationIsValid } = useLocationTracker();
   const { toast } = useToast();
 
-  const findNearestRestaurant = async () => {
+  const findNearestRestaurants = async () => {
     if (!location) return null;
     
     try {
@@ -23,9 +31,9 @@ export const useNearestRestaurant = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        setNearestRestaurantId(data[0].restaurant_id);
+        setNearbyRestaurants(data);
       } else {
-        setNearestRestaurantId(null);
+        setNearbyRestaurants([]);
         toast({
           title: "No restaurants found",
           description: "No restaurants found within 50km of your location",
@@ -33,12 +41,13 @@ export const useNearestRestaurant = () => {
         });
       }
     } catch (error) {
-      console.error('Error finding nearest restaurant:', error);
+      console.error('Error finding nearest restaurants:', error);
       toast({
         title: "Error",
-        description: "Could not find nearest restaurant",
+        description: "Could not find nearest restaurants",
         variant: "destructive"
       });
+      setNearbyRestaurants([]);
     } finally {
       setLoading(false);
     }
@@ -46,13 +55,13 @@ export const useNearestRestaurant = () => {
 
   useEffect(() => {
     if (locationIsValid()) {
-      findNearestRestaurant();
+      findNearestRestaurants();
     }
   }, [location]);
 
   return {
-    nearestRestaurantId,
+    nearbyRestaurants,
     loading,
-    findNearestRestaurant
+    findNearestRestaurants
   };
 };
