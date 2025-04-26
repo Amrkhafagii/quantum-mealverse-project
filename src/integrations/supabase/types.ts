@@ -550,6 +550,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_menu_items_restaurant"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "menu_items_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false

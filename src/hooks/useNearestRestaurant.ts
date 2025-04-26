@@ -22,13 +22,20 @@ export const useNearestRestaurant = () => {
     if (!location) return null;
     
     try {
+      console.log('Finding nearest restaurants with location:', location);
+      
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: location.latitude,
         order_lng: location.longitude,
         max_distance_km: 50
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error in find_nearest_restaurant RPC:', error);
+        throw error;
+      }
+      
+      console.log('Nearest restaurants data:', data);
       
       if (data && data.length > 0) {
         setNearbyRestaurants(data);
@@ -55,7 +62,10 @@ export const useNearestRestaurant = () => {
 
   useEffect(() => {
     if (locationIsValid()) {
+      console.log('Location is valid, finding nearest restaurants');
       findNearestRestaurants();
+    } else {
+      console.log('Location is not valid yet');
     }
   }, [location]);
 

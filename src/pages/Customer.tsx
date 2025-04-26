@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,8 +22,11 @@ const Customer = () => {
     queryFn: async () => {
       if (!nearbyRestaurants.length) return [];
       
+      console.log('Finding menu items for restaurants:', nearbyRestaurants);
+      
       // Extract restaurant IDs from nearby restaurants
       const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
+      console.log('Restaurant IDs:', restaurantIds);
       
       let query = supabase
         .from('menu_items')
@@ -32,7 +36,12 @@ const Customer = () => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching menu items:', error);
+        throw error;
+      }
+      
+      console.log('Menu items fetched:', data?.length, data);
       
       // Convert menu_items to MealType structure with proper type handling
       return data?.map(item => {
@@ -88,6 +97,12 @@ const Customer = () => {
     },
     enabled: nearbyRestaurants.length > 0
   });
+
+  React.useEffect(() => {
+    if (nearbyRestaurants.length > 0) {
+      console.log('Nearby restaurants updated:', nearbyRestaurants);
+    }
+  }, [nearbyRestaurants]);
 
   if (!location) {
     return (
