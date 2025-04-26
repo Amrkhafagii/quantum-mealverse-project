@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,15 +10,12 @@ import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader } from 'lucide-react';
-import { NutritionalInfo } from '@/types/menu';
-import { createTestMenuItems } from '@/utils/createTestMenuItems';
 import { getMenuItems } from '@/services/restaurant/menuService';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
   const { nearbyRestaurants, loading: loadingRestaurants } = useNearestRestaurant();
 
-  // Check if there are menu items in the database
   React.useEffect(() => {
     const checkForMenuItems = async () => {
       try {
@@ -30,10 +26,8 @@ const Customer = () => {
         
         console.log('Checking menu items for restaurants:', nearbyRestaurants);
         
-        // Get the restaurant IDs
         const restaurantIds = nearbyRestaurants.map(r => r.restaurant_id);
         
-        // Check if there are menu items for each restaurant
         for (const restaurantId of restaurantIds) {
           const { data, error } = await supabase
             .from('menu_items')
@@ -48,7 +42,6 @@ const Customer = () => {
           const count = data && data[0]?.count ? parseInt(data[0].count as unknown as string) : 0;
           console.log(`Restaurant ${restaurantId} has ${count} menu items`);
           
-          // If no menu items, create test data for this restaurant
           if (count === 0) {
             console.log(`Creating test menu items for restaurant ${restaurantId}`);
             await createTestMenuItems(restaurantId);
@@ -71,17 +64,13 @@ const Customer = () => {
       
       console.log('Finding menu items for restaurants:', nearbyRestaurants);
       
-      // Extract restaurant IDs from nearby restaurants
       const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
       console.log('Restaurant IDs:', restaurantIds);
       
-      // Use our service function to get menu items - pass the array of restaurant IDs
       const items = await getMenuItems(restaurantIds as unknown as string, undefined, true);
       console.log('Menu items fetched using service:', items?.length, items);
             
-      // Convert menu_items to MealType structure with proper type handling
       return items?.map(item => {
-        // Safely parse nutritional_info as an object
         let nutritionalInfo = {
           calories: 0,
           protein: 0,
@@ -90,7 +79,6 @@ const Customer = () => {
         };
         
         try {
-          // Check if nutritional_info exists and has the expected properties
           if (item.nutritional_info && 
               typeof item.nutritional_info === 'object' && 
               !Array.isArray(item.nutritional_info)) {
@@ -131,53 +119,6 @@ const Customer = () => {
     }
   }, [nearbyRestaurants]);
 
-  if (!location) {
-    return (
-      <div className="min-h-screen bg-quantum-black text-white">
-        <Navbar />
-        <div className="container mx-auto px-4 py-24 text-center">
-          <MapPin className="h-12 w-12 mx-auto mb-4 text-quantum-cyan" />
-          <h2 className="text-2xl font-bold mb-4">Location Required</h2>
-          <p className="mb-6">Please enable location services to see meals from restaurants near you</p>
-          <Button 
-            onClick={() => getCurrentLocation()}
-            className="bg-quantum-cyan hover:bg-quantum-cyan/90"
-          >
-            Share Location
-          </Button>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (loadingRestaurants || loadingMenuItems) {
-    return (
-      <div className="min-h-screen bg-quantum-black text-white">
-        <Navbar />
-        <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-          <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
-          <span className="ml-2 text-quantum-cyan">
-            {loadingRestaurants ? 'Finding nearby restaurants...' : 'Loading menu items...'}
-          </span>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-quantum-black text-white">
-        <Navbar />
-        <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-          <div className="text-2xl text-red-500">Error loading menu items</div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
@@ -187,43 +128,74 @@ const Customer = () => {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
           
-          {nearbyRestaurants.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4 text-quantum-purple">
-                {nearbyRestaurants.length} {nearbyRestaurants.length === 1 ? 'Restaurant' : 'Restaurants'} Found Nearby
-              </h2>
-              <div className="flex flex-wrap gap-4">
-                {nearbyRestaurants.map((restaurant) => (
-                  <div key={restaurant.restaurant_id} className="bg-quantum-darkBlue/70 rounded-lg p-3 inline-flex items-center">
-                    <span className="text-quantum-cyan mr-2">{restaurant.restaurant_name}</span>
-                    <span className="text-xs text-gray-400">{restaurant.distance_km.toFixed(2)} km away</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {menuItems?.length === 0 ? (
+          {!location && (
             <div className="text-center py-12">
-              <p className="text-xl mb-4">No menu items available from nearby restaurants</p>
-              <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
-              <Button
+              <MapPin className="h-12 w-12 mx-auto mb-4 text-quantum-cyan" />
+              <h2 className="text-2xl font-bold mb-4">Location Required</h2>
+              <p className="mb-6">Please enable location services to see meals from restaurants near you</p>
+              <Button 
                 onClick={() => getCurrentLocation()}
                 className="bg-quantum-cyan hover:bg-quantum-cyan/90"
               >
-                <MapPin className="h-4 w-4 mr-2" />
-                Update Location
+                Share Location
               </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {menuItems?.map((item: MealType) => (
-                <CustomerMealCard
-                  key={item.id}
-                  meal={item}
-                />
-              ))}
+          )}
+
+          {location && (loadingRestaurants || loadingMenuItems) && (
+            <div className="flex items-center justify-center py-12">
+              <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+              <span className="ml-2 text-quantum-cyan">
+                {loadingRestaurants ? 'Finding nearby restaurants...' : 'Loading menu items...'}
+              </span>
             </div>
+          )}
+
+          {location && !loadingRestaurants && !loadingMenuItems && error && (
+            <div className="text-2xl text-red-500 text-center py-12">Error loading menu items</div>
+          )}
+          
+          {location && !loadingRestaurants && !loadingMenuItems && !error && (
+            <>
+              {nearbyRestaurants.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-semibold mb-4 text-quantum-purple">
+                    {nearbyRestaurants.length} {nearbyRestaurants.length === 1 ? 'Restaurant' : 'Restaurants'} Found Nearby
+                  </h2>
+                  <div className="flex flex-wrap gap-4">
+                    {nearbyRestaurants.map((restaurant) => (
+                      <div key={restaurant.restaurant_id} className="bg-quantum-darkBlue/70 rounded-lg p-3 inline-flex items-center">
+                        <span className="text-quantum-cyan mr-2">{restaurant.restaurant_name}</span>
+                        <span className="text-xs text-gray-400">{restaurant.distance_km.toFixed(2)} km away</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {menuItems?.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-xl mb-4">No menu items available from nearby restaurants</p>
+                  <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
+                  <Button
+                    onClick={() => getCurrentLocation()}
+                    className="bg-quantum-cyan hover:bg-quantum-cyan/90"
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Update Location
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {menuItems?.map((item: MealType) => (
+                    <CustomerMealCard
+                      key={item.id}
+                      meal={item}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>

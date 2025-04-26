@@ -21,41 +21,44 @@ import Customer from './pages/Customer';
 // Restaurant Routes
 import RestaurantDashboard from './pages/restaurant/Dashboard';
 import RestaurantMenu from './pages/restaurant/Menu';
+import { CartProvider } from './contexts/CartContext';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Customer Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/auth" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/customer" element={<Customer />} />
-        <Route path="/meal/:id" element={<MealDetailsPage />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/subscription" element={<Subscription />} />
+    <CartProvider>
+      <Router>
+        <Routes>
+          {/* Customer Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/auth" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/customer" element={<Customer />} />
+          <Route path="/meal/:id" element={<MealDetailsPage />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/subscription" element={<Subscription />} />
 
-        {/* Protected Customer Routes */}
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-        <Route path="/thank-you" element={<ProtectedRoute><ThankYou /></ProtectedRoute>} />
+          {/* Protected Customer Routes */}
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+          <Route path="/thank-you" element={<ProtectedRoute><ThankYou /></ProtectedRoute>} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        <Route path="/admin/:section" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        
-        {/* Restaurant Routes */}
-        <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
-        <Route path="/restaurant/menu" element={<RestaurantMenu />} />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/admin/:section" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          
+          {/* Restaurant Routes */}
+          <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+          <Route path="/restaurant/menu" element={<RestaurantMenu />} />
 
-        {/* 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+    </CartProvider>
   );
 }
 
