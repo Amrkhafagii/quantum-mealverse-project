@@ -493,7 +493,7 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
               <LoadingButton 
                 type="submit" 
                 loading={isLoading}
-                className="z-10"
+                className="relative z-50"
               >
                 Save
               </LoadingButton>

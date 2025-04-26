@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,12 +96,16 @@ export const MenuManagement: React.FC = () => {
     fetchMenuItems(category);
   };
 
-  const handleAddItemClick = () => {
+  const handleAddItemClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setSelectedItem(INITIAL_MENU_ITEM);
     setIsAddItemDialogOpen(true);
   };
 
-  const handleAddCategoryClick = () => {
+  const handleAddCategoryClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setSelectedCategory(INITIAL_CATEGORY);
     setIsAddCategoryDialogOpen(true);
   };
@@ -143,7 +146,7 @@ export const MenuManagement: React.FC = () => {
             fetchCategories();
           }} 
           disabled={isLoadingItems || isLoadingCategories}
-          className="z-10"
+          className="relative z-10"
         >
           <RefreshCcw className="h-4 w-4 mr-2" />
           Refresh
@@ -161,7 +164,7 @@ export const MenuManagement: React.FC = () => {
         <div className="flex gap-2">
           <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddItemClick} className="z-10">
+              <Button onClick={handleAddItemClick} className="relative z-10">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
@@ -184,7 +187,7 @@ export const MenuManagement: React.FC = () => {
 
           <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" onClick={handleAddCategoryClick} className="z-10">
+              <Button variant="outline" onClick={handleAddCategoryClick} className="relative z-10">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Category
               </Button>

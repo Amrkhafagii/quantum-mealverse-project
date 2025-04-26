@@ -146,7 +146,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
+                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20 relative z-20"
                 onClick={handleQuantityChange('decrease')}
               >
                 <Minus className="h-4 w-4" />
@@ -157,7 +157,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
+                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20 relative z-20"
                 onClick={handleQuantityChange('increase')}
               >
                 <Plus className="h-4 w-4" />
@@ -166,7 +166,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
 
             <Button
               onClick={handleAddToCart}
-              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black z-10"
+              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black relative z-20"
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
               Add

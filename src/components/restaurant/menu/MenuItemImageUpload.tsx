@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Upload, X, Image } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface MenuItemImageUploadProps {
   currentImageUrl?: string;
@@ -15,12 +16,15 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
   currentImageUrl,
   onImageUploaded
 }) => {
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const { restaurant } = useRestaurantAuth();
 
-  const handleFileSelect = () => {
+  const handleFileSelect = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     fileInputRef.current?.click();
   };
 
@@ -30,19 +34,29 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
 
     // File size validation (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File is too large. Please select an image under 5MB.');
+      toast({
+        title: "File is too large",
+        description: "Please select an image under 5MB",
+        variant: "destructive"
+      });
       return;
     }
     
     // File type validation
     if (!file.type.startsWith('image/')) {
-      alert('Only image files are allowed.');
+      toast({
+        title: "Invalid file type",
+        description: "Only image files are allowed",
+        variant: "destructive"
+      });
       return;
     }
 
     setIsUploading(true);
 
     try {
+      console.log("Starting image upload...");
+      
       // Create a temporary preview
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
@@ -51,23 +65,66 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
       const fileExt = file.name.split('.').pop();
       const fileName = `${restaurant.id}/${uuidv4()}.${fileExt}`;
       
+      console.log(`Uploading to menu-items bucket with path: ${fileName}`);
+      
+      // Check if the bucket exists
+      const { data: bucketData, error: bucketError } = await supabase.storage
+        .listBuckets();
+      
+      if (bucketError) {
+        console.error('Error listing buckets:', bucketError);
+        throw new Error('Error listing buckets');
+      }
+      
+      const menuItemsBucketExists = bucketData.some(bucket => bucket.name === 'menu-items');
+      
+      if (!menuItemsBucketExists) {
+        console.log('Creating menu-items bucket');
+        const { error: createBucketError } = await supabase.storage
+          .createBucket('menu-items', { public: true });
+          
+        if (createBucketError) {
+          console.error('Error creating bucket:', createBucketError);
+          throw new Error('Error creating storage bucket');
+        }
+      }
+      
       // Upload the file to Supabase Storage
       const { data, error } = await supabase.storage
         .from('menu-items')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+      
+      console.log('Upload successful:', data);
       
       // Get the public URL for the uploaded file
       const { data: urlData } = supabase.storage
         .from('menu-items')
         .getPublicUrl(data.path);
+      
+      console.log('Public URL:', urlData.publicUrl);
         
       // Call the callback with the URL
       onImageUploaded(urlData.publicUrl);
+      
+      toast({
+        title: "Image uploaded successfully",
+        description: "Your image has been uploaded",
+      });
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload image. Please try again.');
+      toast({
+        title: "Failed to upload image",
+        description: "Please try again",
+        variant: "destructive"
+      });
       // Reset preview on error
       if (currentImageUrl) {
         setPreviewUrl(currentImageUrl);
@@ -79,7 +136,9 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
     }
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setPreviewUrl(null);
     onImageUploaded('');
     // Reset the file input
@@ -100,7 +159,7 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
           <Button
             variant="destructive"
             size="icon"
-            className="absolute top-2 right-2"
+            className="absolute top-2 right-2 z-50"
             onClick={handleRemoveImage}
             type="button"
           >
@@ -135,7 +194,7 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
           type="button"
           variant="outline"
           onClick={handleFileSelect}
-          className="w-full"
+          className="w-full relative z-20"
           disabled={isUploading}
         >
           {isUploading ? (
