@@ -1,10 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/types/cart';
 import { OrderStatus } from '@/types/webhook';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { recordOrderHistory } from './webhook/orderHistoryService';
-import { updateOrderStatus } from './webhookService';
 
 /**
  * Creates a new order in the database
@@ -165,8 +163,21 @@ export const saveUserLocation = async (
  */
 export const cancelOrder = async (orderId: string) => {
   try {
-    // Update order status through the central function
-    const success = await updateOrderStatus(
+    // Update order status directly through supabase
+    const { error } = await supabase
+      .from('orders')
+      .update({ 
+        status: OrderStatus.CANCELLED,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
+    
+    if (error) {
+      throw error;
+    }
+    
+    // Record in order history
+    await recordOrderHistory(
       orderId,
       OrderStatus.CANCELLED,
       null,
@@ -174,10 +185,6 @@ export const cancelOrder = async (orderId: string) => {
       undefined,
       'customer'
     );
-    
-    if (!success) {
-      throw new Error('Failed to cancel order');
-    }
     
     return true;
   } catch (error) {
@@ -216,27 +223,10 @@ export const requestRefund = async (
     const refundAmount = amount || order.total;
     
     // Update order status to REFUNDED
-    const success = await updateOrderStatus(
-      orderId,
-      OrderStatus.REFUNDED,
-      null,
-      { 
-        reason: reason,
-        refund_amount: refundAmount,
-        requested_at: new Date().toISOString()
-      },
-      userId,
-      'customer'
-    );
-    
-    if (!success) {
-      throw new Error('Failed to request refund');
-    }
-    
-    // Update order refund fields
     const { error: updateError } = await supabase
       .from('orders')
       .update({
+        status: OrderStatus.REFUNDED,
         refund_status: 'requested',
         refund_amount: refundAmount
       })
@@ -245,6 +235,21 @@ export const requestRefund = async (
     if (updateError) {
       throw updateError;
     }
+    
+    // Record the refund request
+    await recordOrderHistory(
+      orderId,
+      OrderStatus.REFUNDED,
+      null,
+      { 
+        reason: reason,
+        refund_amount: refundAmount,
+        requested_at: new Date().toISOString()
+      },
+      undefined,
+      userId,
+      'customer'
+    );
     
     return true;
   } catch (error) {
