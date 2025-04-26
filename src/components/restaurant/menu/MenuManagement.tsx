@@ -1,46 +1,46 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { useMenuManagement } from '@/hooks/useMenuManagement';
 import { MenuItemForm } from './MenuItemForm';
 import { CategoryForm } from './CategoryForm';
-import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, MoreVertical, Pencil, Trash2, RefreshCcw, CircleDot, CircleDashed, Star } from 'lucide-react';
 import { MenuItemReviews } from './MenuItemReviews';
+import { MenuItemsTable } from './MenuItemsTable';
+import { CategoriesTable } from './CategoriesTable';
+import { useMenuItems } from '@/hooks/menu/useMenuItems';
+import { useCategories } from '@/hooks/menu/useCategories';
+import { PlusCircle, RefreshCcw } from 'lucide-react';
+import { MenuItem, MenuCategory } from '@/types/menu';
+
+const INITIAL_MENU_ITEM: MenuItem = {
+  id: '',
+  restaurant_id: '',
+  name: '',
+  description: '',
+  price: 0,
+  category: '',
+  is_available: true,
+  preparation_time: 15,
+  nutritional_info: {
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0
+  },
+  ingredients: [],
+  steps: []
+};
+
+const INITIAL_CATEGORY: MenuCategory = {
+  id: '',
+  name: '',
+  restaurant_id: '',
+};
 
 export const MenuManagement: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
@@ -50,27 +50,27 @@ export const MenuManagement: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [selectedItemForReview, setSelectedItemForReview] = useState<string | null>(null);
-  const { toast } = useToast();
 
   const {
     menuItems,
-    categories,
     selectedItem,
-    selectedCategory,
-    isLoading,
+    isLoading: isLoadingItems,
     fetchMenuItems,
-    fetchCategories,
     handleSaveMenuItem,
     handleDeleteMenuItem,
+    editMenuItem,
+    setSelectedItem
+  } = useMenuItems(restaurant?.id || '');
+
+  const {
+    categories,
+    selectedCategory,
+    isLoading: isLoadingCategories,
+    fetchCategories,
     handleSaveCategory,
     handleDeleteCategory,
-    createNewMenuItem,
-    createNewCategory,
-    editMenuItem,
-    editCategory,
-    setSelectedItem,
     setSelectedCategory
-  } = useMenuManagement(restaurant?.id || '');
+  } = useCategories(restaurant?.id || '');
 
   useEffect(() => {
     if (restaurant?.id) {
@@ -90,38 +90,6 @@ export const MenuManagement: React.FC = () => {
     (category.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const confirmDeleteItem = async () => {
-    if (itemToDelete) {
-      await handleDeleteMenuItem(itemToDelete);
-      setItemToDelete(null);
-    }
-  };
-
-  const confirmDeleteCategory = async () => {
-    if (categoryToDelete) {
-      await handleDeleteCategory(categoryToDelete);
-      setCategoryToDelete(null);
-    }
-  };
-
-  const handleItemDialogClose = (open: boolean) => {
-    if (!open) {
-      setSelectedItem(null);
-    }
-  };
-
-  const handleCategoryDialogClose = (open: boolean) => {
-    if (!open) {
-      setSelectedCategory(null);
-    }
-  };
-
-  const handleReviewDialogClose = (open: boolean) => {
-    if (!open) {
-      setSelectedItemForReview(null);
-    }
-  };
-
   const handleCategoryFilterChange = (category?: string) => {
     setSelectedCategoryFilter(category);
     fetchMenuItems(category);
@@ -139,10 +107,14 @@ export const MenuManagement: React.FC = () => {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Menu Management</h1>
-        <Button variant="outline" onClick={() => {
-          fetchMenuItems(selectedCategoryFilter);
-          fetchCategories();
-        }} disabled={isLoading}>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            fetchMenuItems(selectedCategoryFilter);
+            fetchCategories();
+          }} 
+          disabled={isLoadingItems || isLoadingCategories}
+        >
           <RefreshCcw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -157,9 +129,9 @@ export const MenuManagement: React.FC = () => {
           />
         </div>
         <div className="flex gap-2">
-          <Dialog onOpenChange={handleItemDialogClose}>
+          <Dialog onOpenChange={(open) => !open && setSelectedItem(null)}>
             <DialogTrigger asChild>
-              <Button onClick={createNewMenuItem}>
+              <Button onClick={() => setSelectedItem(INITIAL_MENU_ITEM)}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
@@ -174,15 +146,15 @@ export const MenuManagement: React.FC = () => {
                   categories={categories}
                   onSave={handleSaveMenuItem}
                   onCancel={() => setSelectedItem(null)}
-                  isLoading={isLoading}
+                  isLoading={isLoadingItems}
                 />
               </DialogContent>
             )}
           </Dialog>
 
-          <Dialog onOpenChange={handleCategoryDialogClose}>
+          <Dialog onOpenChange={(open) => !open && setSelectedCategory(null)}>
             <DialogTrigger asChild>
-              <Button variant="outline" onClick={createNewCategory}>
+              <Button variant="outline" onClick={() => setSelectedCategory(INITIAL_CATEGORY)}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
@@ -196,7 +168,7 @@ export const MenuManagement: React.FC = () => {
                   category={selectedCategory}
                   onSave={handleSaveCategory}
                   onCancel={() => setSelectedCategory(null)}
-                  isLoading={isLoading}
+                  isLoading={isLoadingCategories}
                 />
               </DialogContent>
             )}
@@ -241,89 +213,15 @@ export const MenuManagement: React.FC = () => {
               )}
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoadingItems ? (
                 <div className="text-center py-8">Loading menu items...</div>
-              ) : filteredMenuItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <p>No menu items found.</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {searchQuery
-                      ? "Try adjusting your search query."
-                      : "Click 'Add Item' to create your first menu item."}
-                  </p>
-                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredMenuItems.map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.category}</TableCell>
-                          <TableCell>${item.price.toFixed(2)}</TableCell>
-                          <TableCell className="text-center">
-                            {item.is_available ? (
-                              <CircleDot className="h-4 w-4 text-green-500 inline" />
-                            ) : (
-                              <CircleDashed className="h-4 w-4 text-gray-400 inline" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <Dialog onOpenChange={handleItemDialogClose}>
-                                  <DialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => {
-                                      e.preventDefault();
-                                      editMenuItem(item);
-                                    }}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                  </DialogTrigger>
-                                </Dialog>
-                                
-                                <Dialog onOpenChange={handleReviewDialogClose}>
-                                  <DialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => {
-                                      e.preventDefault();
-                                      setSelectedItemForReview(item.id);
-                                    }}>
-                                      <Star className="h-4 w-4 mr-2" />
-                                      Reviews
-                                    </DropdownMenuItem>
-                                  </DialogTrigger>
-                                </Dialog>
-                                
-                                <DropdownMenuItem 
-                                  className="text-red-600"
-                                  onSelect={() => setItemToDelete(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <MenuItemsTable
+                  items={filteredMenuItems}
+                  onEdit={editMenuItem}
+                  onDelete={setItemToDelete}
+                  onReviewsClick={setSelectedItemForReview}
+                />
               )}
             </CardContent>
           </Card>
@@ -336,68 +234,14 @@ export const MenuManagement: React.FC = () => {
               <CardDescription>Manage your menu categories</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoadingCategories ? (
                 <div className="text-center py-8">Loading categories...</div>
-              ) : filteredCategories.length === 0 ? (
-                <div className="text-center py-8">
-                  <p>No categories found.</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {searchQuery
-                      ? "Try adjusting your search query."
-                      : "Click 'Add Category' to create your first category."}
-                  </p>
-                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Display Order</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCategories.map(category => (
-                        <TableRow key={category.id}>
-                          <TableCell className="font-medium">{category.name}</TableCell>
-                          <TableCell>{category.description || '-'}</TableCell>
-                          <TableCell>{category.order !== undefined ? category.order : '-'}</TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <Dialog onOpenChange={handleCategoryDialogClose}>
-                                  <DialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => {
-                                      e.preventDefault();
-                                      editCategory(category);
-                                    }}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                  </DialogTrigger>
-                                </Dialog>
-                                <DropdownMenuItem 
-                                  className="text-red-600"
-                                  onSelect={() => setCategoryToDelete(category.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <CategoriesTable
+                  categories={filteredCategories}
+                  onEdit={(category) => setSelectedCategory(category)}
+                  onDelete={setCategoryToDelete}
+                />
               )}
             </CardContent>
           </Card>
@@ -414,7 +258,12 @@ export const MenuManagement: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteItem} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={() => {
+              if (itemToDelete) {
+                handleDeleteMenuItem(itemToDelete);
+                setItemToDelete(null);
+              }
+            }} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -431,7 +280,12 @@ export const MenuManagement: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteCategory} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={() => {
+              if (categoryToDelete) {
+                handleDeleteCategory(categoryToDelete);
+                setCategoryToDelete(null);
+              }
+            }} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -439,7 +293,7 @@ export const MenuManagement: React.FC = () => {
       </AlertDialog>
 
       {selectedItemForReview && (
-        <Dialog open={!!selectedItemForReview} onOpenChange={handleReviewDialogClose}>
+        <Dialog open={!!selectedItemForReview} onOpenChange={(open) => !open && setSelectedItemForReview(null)}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Customer Reviews</DialogTitle>
