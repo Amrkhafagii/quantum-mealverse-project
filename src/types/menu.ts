@@ -52,3 +52,27 @@ export const calculateHealthScore = (info: NutritionalInfo): number => {
   // Cap between 0-100
   return Math.max(0, Math.min(100, score));
 };
+
+// Add the missing interfaces that are being used in other components
+export interface MenuItem {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  is_available: boolean;
+  preparation_time: number;
+  created_at?: string;
+  updated_at?: string;
+  image_url?: string;
+  nutritional_info: NutritionalInfo;
+}
+
+export interface MenuCategory {
+  id: string;
+  name: string;
+  description?: string;
+  order?: number;
+  restaurant_id: string;
+}
