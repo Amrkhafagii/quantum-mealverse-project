@@ -70,27 +70,39 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     }
   }, [meal.id]);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    // Make sure to both preventDefault and stopPropagation
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log("Add to cart clicked for meal:", meal.name);
-    addItem({
-      ...meal,
-      quantity: quantity
-    });
-    setQuantity(1);
-  };
-
-  const navigateToMealDetails = () => {
+  // Separate click handler for card navigation
+  const handleCardClick = () => {
     navigate(`/meal/${meal.id}`);
   };
 
+  // Add to cart handler with stronger event stopping
+  const handleAddToCart = (e: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log("Add to cart clicked for meal:", meal.name, "quantity:", quantity);
+    
+    // Create meal object with quantity for cart
+    const mealWithQuantity = {
+      ...meal,
+      quantity: quantity
+    };
+    
+    // Add to cart
+    addItem(mealWithQuantity);
+    
+    // Reset quantity after adding
+    setQuantity(1);
+  };
+
+  // Quantity change handler with stronger event stopping
   const handleQuantityChange = (action: 'increase' | 'decrease') => (e: React.MouseEvent) => {
-    // Make sure to both preventDefault and stopPropagation
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     if (action === 'increase') {
       setQuantity(prev => prev + 1);
@@ -103,7 +115,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     <Card className="relative overflow-hidden bg-quantum-black border-quantum-cyan/20 group hover:border-quantum-cyan/40 transition-all duration-300">
       <motion.div 
         className="w-full h-48 relative overflow-hidden cursor-pointer"
-        onClick={navigateToMealDetails}
+        onClick={handleCardClick}
       >
         <img
           src={meal.image_url}
@@ -120,7 +132,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
       <CardContent className="p-4 space-y-3">
         <div 
           className="cursor-pointer space-y-2"
-          onClick={navigateToMealDetails}
+          onClick={handleCardClick}
         >
           <h3 className="text-xl font-semibold text-white hover:text-quantum-cyan transition-colors">
             {meal.name}
@@ -150,7 +162,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
                 size="icon"
                 className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('decrease')}
-                onMouseDown={e => e.stopPropagation()}
+                type="button"
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -162,7 +174,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
                 size="icon"
                 className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('increase')}
-                onMouseDown={e => e.stopPropagation()}
+                type="button"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -171,7 +183,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
             <Button
               onClick={handleAddToCart}
               className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black relative z-20"
-              onMouseDown={e => e.stopPropagation()}
+              type="button"
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
               Add

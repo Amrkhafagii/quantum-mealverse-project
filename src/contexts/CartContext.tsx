@@ -10,7 +10,6 @@ interface CartContextType {
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
   total: number;
-  // Add missing properties and methods
   addItem: (meal: MealType & { quantity: number }) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   totalAmount: number;
@@ -23,7 +22,6 @@ const defaultContext: CartContextType = {
   removeFromCart: () => {},
   clearCart: () => {},
   total: 0,
-  // Add missing properties and methods to default context
   addItem: () => {},
   updateQuantity: () => {},
   totalAmount: 0,
@@ -35,31 +33,67 @@ export const CartContext = createContext<CartContextType>(defaultContext);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
+  // Function to add a meal directly to the cart
   const addItem = (meal: MealType & { quantity: number }) => {
-    console.log("Adding item to cart:", meal.name, "quantity:", meal.quantity);
-    const existingItemIndex = items.findIndex(item => item.meal.id === meal.id);
-    
-    if (existingItemIndex !== -1) {
-      // If item already exists, update quantity
-      const updatedItems = [...items];
-      updatedItems[existingItemIndex].quantity += meal.quantity;
-      setItems(updatedItems);
+    try {
+      console.log("Adding item to cart:", meal.name, "quantity:", meal.quantity);
       
-      toast({
-        title: "Cart updated",
-        description: `Added more ${meal.name} to your cart`,
-      });
-    } else {
-      // Add new item
-      setItems([...items, { meal: meal, quantity: meal.quantity }]);
+      if (!meal || !meal.id) {
+        console.error("Invalid meal object:", meal);
+        return;
+      }
       
+      const quantity = meal.quantity || 1;
+      const existingItemIndex = items.findIndex(item => item.meal.id === meal.id);
+      
+      if (existingItemIndex !== -1) {
+        // If item already exists, update quantity
+        const updatedItems = [...items];
+        updatedItems[existingItemIndex].quantity += quantity;
+        setItems(updatedItems);
+        
+        toast({
+          title: "Cart updated",
+          description: `Added more ${meal.name} to your cart`,
+        });
+      } else {
+        // Add new item - create a proper CartItem object
+        const cartItem: CartItem = {
+          meal: {
+            id: meal.id,
+            name: meal.name,
+            description: meal.description || '',
+            price: meal.price,
+            calories: meal.calories || 0,
+            protein: meal.protein || 0,
+            carbs: meal.carbs || 0,
+            fat: meal.fat || 0,
+            image_url: meal.image_url,
+            is_active: meal.is_active,
+            restaurant_id: meal.restaurant_id,
+            created_at: meal.created_at,
+            updated_at: meal.updated_at
+          },
+          quantity: quantity
+        };
+        
+        setItems(prevItems => [...prevItems, cartItem]);
+        
+        toast({
+          title: "Added to cart",
+          description: `${meal.name} has been added to your cart`,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding item to cart:", error);
       toast({
-        title: "Added to cart",
-        description: `${meal.name} has been added to your cart`,
+        title: "Error",
+        description: "Could not add item to cart. Please try again.",
       });
     }
   };
 
+  // Original addToCart function for CartItem objects
   const addToCart = (item: CartItem) => {
     console.log("Add to cart called for:", item.meal.name, "quantity:", item.quantity);
     const existingItemIndex = items.findIndex(i => i.meal.id === item.meal.id);
@@ -76,7 +110,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } else {
       // Add new item
-      setItems([...items, item]);
+      setItems(prevItems => [...prevItems, item]);
       
       toast({
         title: "Added to cart",
@@ -85,6 +119,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Remove an item from the cart
   const removeFromCart = (itemId: string) => {
     const itemToRemove = items.find(item => item.meal.id === itemId);
     if (itemToRemove) {
@@ -97,6 +132,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update the quantity of an item in the cart
   const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(itemId);
@@ -120,6 +156,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Clear all items from the cart
   const clearCart = () => {
     setItems([]);
     toast({
@@ -144,7 +181,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromCart,
         clearCart,
         total: totalAmount,
-        // Add the new methods and properties
         addItem,
         updateQuantity,
         totalAmount,
