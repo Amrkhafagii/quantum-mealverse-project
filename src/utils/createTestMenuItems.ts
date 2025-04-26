@@ -13,7 +13,7 @@ export const createTestMenuItems = async (restaurantId: string) => {
     return;
   }
   
-  const count = existingItems && existingItems[0]?.count ? parseInt(existingItems[0].count as string) : 0;
+  const count = existingItems && existingItems[0]?.count ? parseInt(existingItems[0].count.toString()) : 0;
   console.log(`Restaurant ${restaurantId} has ${count} menu items`);
   
   if (count > 0) {

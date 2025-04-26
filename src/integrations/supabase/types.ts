@@ -228,15 +228,7 @@ export type Database = {
           rating_distribution?: Json
           review_count?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "global_meal_ratings_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: true
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       meal_categories: {
         Row: {
@@ -280,13 +272,6 @@ export type Database = {
             referencedRelation: "meal_categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "meal_category_junction_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
         ]
       }
       meal_customizations: {
@@ -326,15 +311,7 @@ export type Database = {
           type?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "meal_customizations_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       meal_dietary_tags: {
         Row: {
@@ -350,13 +327,6 @@ export type Database = {
           tag_id?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "meal_dietary_tags_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "meal_dietary_tags_tag_id_fkey"
             columns: ["tag_id"]
@@ -396,70 +366,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "meal_ratings_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "meal_ratings_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      meals: {
-        Row: {
-          calories: number | null
-          carbs: number | null
-          created_at: string | null
-          description: string | null
-          fat: number | null
-          id: string
-          image_url: string | null
-          is_active: boolean | null
-          name: string
-          price: number
-          protein: number | null
-          restaurant_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          calories?: number | null
-          carbs?: number | null
-          created_at?: string | null
-          description?: string | null
-          fat?: number | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean | null
-          name: string
-          price: number
-          protein?: number | null
-          restaurant_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          calories?: number | null
-          carbs?: number | null
-          created_at?: string | null
-          description?: string | null
-          fat?: number | null
-          id?: string
-          image_url?: string | null
-          is_active?: boolean | null
-          name?: string
-          price?: number
-          protein?: number | null
-          restaurant_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meals_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -632,15 +539,7 @@ export type Database = {
           sodium?: number | null
           sugar?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "nutritional_info_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: true
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_history: {
         Row: {
@@ -772,13 +671,6 @@ export type Database = {
           quantity?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "order_items_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
@@ -1201,13 +1093,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "reviews_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "meals"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "reviews_restaurant_id_fkey"
             columns: ["restaurant_id"]

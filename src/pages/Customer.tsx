@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +81,7 @@ const Customer = () => {
       // Convert menu_items to MealType structure with proper type handling
       return items?.map(item => {
         // Safely parse nutritional_info as an object
-        let nutritionalInfo: NutritionalInfo = {
+        let nutritionalInfo = {
           calories: 0,
           protein: 0,
           carbs: 0,
