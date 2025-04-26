@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Loader } from 'lucide-react';
 import { NutritionalInfo } from '@/types/menu';
 import { createTestMenuItems } from '@/utils/createTestMenuItems';
+import { getMenuItems } from '@/services/restaurant/menuService';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
@@ -21,19 +23,35 @@ const Customer = () => {
   React.useEffect(() => {
     const checkForMenuItems = async () => {
       try {
-        const { data, error } = await supabase
-          .from('menu_items')
-          .select('count');
+        if (nearbyRestaurants.length === 0) {
+          console.log('No nearby restaurants found yet');
+          return;
+        }
+        
+        console.log('Checking menu items for restaurants:', nearbyRestaurants);
+        
+        // Get the restaurant IDs
+        const restaurantIds = nearbyRestaurants.map(r => r.restaurant_id);
+        
+        // Check if there are menu items for each restaurant
+        for (const restaurantId of restaurantIds) {
+          const { data, error } = await supabase
+            .from('menu_items')
+            .select('count')
+            .eq('restaurant_id', restaurantId);
           
-        if (error) {
-          console.error('Error checking menu items:', error);
-        } else {
-          console.log('Menu items exist in database:', data);
+          if (error) {
+            console.error(`Error checking menu items for restaurant ${restaurantId}:`, error);
+            continue;
+          }
           
-          // If we have nearby restaurants but no menu items, create test data
-          if (nearbyRestaurants.length > 0 && (!data || data.length === 0)) {
-            console.log('Creating test menu items for the first restaurant');
-            await createTestMenuItems(nearbyRestaurants[0].restaurant_id);
+          const count = data && data[0]?.count ? parseInt(data[0].count as string) : 0;
+          console.log(`Restaurant ${restaurantId} has ${count} menu items`);
+          
+          // If no menu items, create test data for this restaurant
+          if (count === 0) {
+            console.log(`Creating test menu items for restaurant ${restaurantId}`);
+            await createTestMenuItems(restaurantId);
           }
         }
       } catch (err) {
@@ -57,25 +75,19 @@ const Customer = () => {
       const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
       console.log('Restaurant IDs:', restaurantIds);
       
-      let query = supabase
-        .from('menu_items')
-        .select('*')
-        .eq('is_available', true)
-        .in('restaurant_id', restaurantIds);
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching menu items:', error);
-        throw error;
-      }
-      
-      console.log('Menu items fetched:', data?.length, data);
-      
+      // Use our service function to get menu items - pass the array of restaurant IDs
+      const items = await getMenuItems(restaurantIds as unknown as string, undefined, true);
+      console.log('Menu items fetched using service:', items?.length, items);
+            
       // Convert menu_items to MealType structure with proper type handling
-      return data?.map(item => {
-        // Safely parse nutritional_info as an object by first converting to unknown type
-        let nutritionalInfo: NutritionalInfo;
+      return items?.map(item => {
+        // Safely parse nutritional_info as an object
+        let nutritionalInfo: NutritionalInfo = {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0
+        };
         
         try {
           // Check if nutritional_info exists and has the expected properties
@@ -88,23 +100,9 @@ const Customer = () => {
               carbs: Number(item.nutritional_info.carbs) || 0,
               fat: Number(item.nutritional_info.fat) || 0
             };
-          } else {
-            // Default values if nutritional_info is missing or malformed
-            nutritionalInfo = {
-              calories: 0,
-              protein: 0,
-              carbs: 0,
-              fat: 0
-            };
           }
         } catch (e) {
           console.error("Error parsing nutritional info:", e);
-          nutritionalInfo = {
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0
-          };
         }
 
         return {

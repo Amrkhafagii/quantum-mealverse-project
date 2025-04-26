@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem, MenuCategory, NutritionalInfo } from '@/types/menu';
 import { Database } from '@/integrations/supabase/types';
@@ -18,27 +17,20 @@ export const getMenuItems = async (
   try {
     console.log(`Fetching menu items for restaurant: ${restaurantId}, category: ${category || 'all'}, availableOnly: ${isAvailableOnly}`);
     
+    // Apply filters
     let query = supabase
       .from('menu_items')
-      .select();
+      .select('*');
       
-    // Debug: Get all menu items first to verify data exists
-    const { data: allData, error: allError } = await query;
-    console.log(`Total menu items in database: ${allData?.length || 0}`);
-    
-    if (allError) {
-      console.error('Error fetching all menu items:', allError);
+    if (Array.isArray(restaurantId)) {
+      // If restaurantId is an array, use 'in' operator
+      console.log(`Searching for menu items in multiple restaurants: ${restaurantId.join(', ')}`);
+      query = query.in('restaurant_id', restaurantId);
+    } else {
+      // Otherwise filter by a single restaurant
+      console.log(`Searching for menu items in restaurant: ${restaurantId}`);
+      query = query.eq('restaurant_id', restaurantId);
     }
-    
-    // Apply filters
-    query = supabase
-      .from('menu_items')
-      .select();
-      
-    // Check restaurant ID format
-    console.log(`Restaurant ID type: ${typeof restaurantId}, value: ${restaurantId}`);
-    
-    query = query.eq('restaurant_id', restaurantId);
     
     if (category) {
       query = query.eq('category', category);
@@ -48,18 +40,19 @@ export const getMenuItems = async (
       query = query.eq('is_available', true);
     }
     
+    // Execute the query
     const { data, error } = await query.order('category');
     
     if (error) {
-      console.error('Error fetching menu items with filters:', error);
+      console.error('Error fetching menu items:', error);
       throw error;
     }
     
-    console.log(`Found ${data?.length || 0} menu items for restaurant ${restaurantId}`);
+    console.log(`Found ${data?.length || 0} menu items for restaurant(s)`, data);
     
     // Transform the nutritional_info from Json to NutritionalInfo
     return (data || []).map(item => {
-      console.log(`Menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
+      console.log(`Processing menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
       return {
         ...item,
         nutritional_info: item.nutritional_info as unknown as NutritionalInfo
