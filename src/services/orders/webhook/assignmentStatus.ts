@@ -52,11 +52,16 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
     
     // Update status table with latest assignment status
     if (assignments.length > 0) {
-      await supabase.from('status').insert({
-        order_id: orderId,
-        status: currentStatus,
-        updated_by: 'system'
-      }).onConflict('order_id').merge();
+      // Fix: The insert operation should be completed first, then chain onConflict
+      await supabase
+        .from('status')
+        .insert({
+          order_id: orderId,
+          status: currentStatus,
+          updated_by: 'system'
+        })
+        .onConflict('order_id')
+        .merge();
     }
     
     return {
