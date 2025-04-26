@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +10,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import { MealType } from '@/types/meal';
 import { useCart } from '@/contexts/CartContext';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
+import { MenuItem, NutritionalInfo } from '@/types/menu';
 
 const MealDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,10 +18,10 @@ const MealDetailsPage = () => {
   const { displayPrice } = useCurrencyConverter();
   
   const { data: meal, isLoading, error } = useQuery({
-    queryKey: ['meal', id],
+    queryKey: ['menuItem', id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('meals')
+        .from('menu_items')
         .select('*')
         .eq('id', id)
         .single();
@@ -31,7 +33,33 @@ const MealDetailsPage = () => {
         data.image_url = `https://picsum.photos/seed/${data.id}/600/400`;
       }
       
-      return data as MealType;
+      // Convert MenuItem to MealType
+      const nutritionalInfo = data.nutritional_info as NutritionalInfo || {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0
+      };
+      
+      const mealData: MealType = {
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        price: data.price,
+        calories: nutritionalInfo.calories || 0,
+        protein: nutritionalInfo.protein || 0,
+        carbs: nutritionalInfo.carbs || 0,
+        fat: nutritionalInfo.fat || 0,
+        image_url: data.image_url,
+        is_active: data.is_available,
+        restaurant_id: data.restaurant_id,
+        created_at: data.created_at || '',
+        updated_at: data.updated_at || '',
+        ingredients: [],
+        steps: []
+      };
+      
+      return mealData;
     },
     enabled: !!id
   });

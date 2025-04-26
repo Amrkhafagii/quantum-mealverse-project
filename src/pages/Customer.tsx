@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +45,7 @@ const Customer = () => {
             continue;
           }
           
-          const count = data && data[0]?.count ? parseInt(data[0].count as string) : 0;
+          const count = data && data[0]?.count ? parseInt(data[0].count as unknown as string) : 0;
           console.log(`Restaurant ${restaurantId} has ${count} menu items`);
           
           // If no menu items, create test data for this restaurant

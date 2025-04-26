@@ -15,6 +15,7 @@ export interface MealType {
   updated_at: string;
   ingredients?: string[];
   steps?: string[];
+  quantity?: number; // Added for cart context
 }
 
 export const INITIAL_MEAL: MealType = {

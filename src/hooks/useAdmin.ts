@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { MealType } from '@/types/meal';
+import { MenuItem, NutritionalInfo } from '@/types/menu';
 
 export const useAdmin = () => {
   const navigate = useNavigate();
@@ -15,12 +16,42 @@ export const useAdmin = () => {
   const fetchMeals = async () => {
     try {
       const { data, error } = await supabase
-        .from('meals')
+        .from('menu_items')
         .select('*')
         .order('id', { ascending: true });
       
       if (error) throw error;
-      if (data) setMeals(data);
+      if (data) {
+        // Convert MenuItem to MealType
+        const convertedMeals: MealType[] = data.map((item: MenuItem) => {
+          // Extract nutritional info
+          const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0
+          };
+          
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description || '',
+            price: item.price,
+            calories: nutritionalInfo.calories || 0,
+            protein: nutritionalInfo.protein || 0,
+            carbs: nutritionalInfo.carbs || 0,
+            fat: nutritionalInfo.fat || 0,
+            image_url: item.image_url,
+            is_active: item.is_available,
+            restaurant_id: item.restaurant_id,
+            created_at: item.created_at || '',
+            updated_at: item.updated_at || '',
+            ingredients: [],
+            steps: []
+          };
+        });
+        setMeals(convertedMeals);
+      }
     } catch (error: any) {
       toast({
         title: "Error fetching meals",
