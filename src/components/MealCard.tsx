@@ -33,7 +33,13 @@ export const MealCard: React.FC<MealCardProps> = ({
       description,
       price,
       calories,
-      macros,
+      protein: macros.protein,
+      carbs: macros.carbs,
+      fat: macros.fat,
+      is_active: true,
+      restaurant_id: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       quantity: 1
     });
   };
