@@ -39,8 +39,9 @@ import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { useMenuManagement } from '@/hooks/useMenuManagement';
 import { MenuItemForm } from './MenuItemForm';
 import { CategoryForm } from './CategoryForm';
-import { useToast } from "@/components/ui/use-toast";
-import { PlusCircle, MoreVertical, Pencil, Trash2, RefreshCcw, CircleDot, CircleDashed } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import { PlusCircle, MoreVertical, Pencil, Trash2, RefreshCcw, CircleDot, CircleDashed, Star } from 'lucide-react';
+import { MenuItemReviews } from './MenuItemReviews';
 
 export const MenuManagement: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
@@ -49,6 +50,7 @@ export const MenuManagement: React.FC = () => {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | undefined>();
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [selectedItemForReview, setSelectedItemForReview] = useState<string | null>(null);
   const { toast } = useToast();
 
   const {
@@ -81,7 +83,7 @@ export const MenuManagement: React.FC = () => {
   // Filter menu items based on search query
   const filteredMenuItems = menuItems.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (selectedCategoryFilter ? item.category === selectedCategoryFilter : true)
   );
 
@@ -118,6 +120,13 @@ export const MenuManagement: React.FC = () => {
   const handleCategoryDialogClose = (open: boolean) => {
     if (!open) {
       setSelectedCategory(null);
+    }
+  };
+  
+  // Handle review dialog close
+  const handleReviewDialogClose = (open: boolean) => {
+    if (!open) {
+      setSelectedItemForReview(null);
     }
   };
 
@@ -296,6 +305,19 @@ export const MenuManagement: React.FC = () => {
                                     </DropdownMenuItem>
                                   </DialogTrigger>
                                 </Dialog>
+                                
+                                <Dialog onOpenChange={handleReviewDialogClose}>
+                                  <DialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => {
+                                      e.preventDefault();
+                                      setSelectedItemForReview(item.id);
+                                    }}>
+                                      <Star className="h-4 w-4 mr-2" />
+                                      Reviews
+                                    </DropdownMenuItem>
+                                  </DialogTrigger>
+                                </Dialog>
+                                
                                 <DropdownMenuItem 
                                   className="text-red-600"
                                   onSelect={() => setItemToDelete(item.id)}
@@ -426,6 +448,21 @@ export const MenuManagement: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reviews Dialog */}
+      {selectedItemForReview && (
+        <Dialog open={!!selectedItemForReview} onOpenChange={handleReviewDialogClose}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Customer Reviews</DialogTitle>
+            </DialogHeader>
+            <MenuItemReviews 
+              mealId={selectedItemForReview} 
+              restaurantId={restaurant.id}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

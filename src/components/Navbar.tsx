@@ -10,16 +10,17 @@ import { MobileMenu } from './navigation/MobileMenu';
 import { DesktopNavigation } from './navigation/DesktopNavigation';
 import { UserActions } from './navigation/UserActions';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
   const { itemCount } = useCart?.() || { itemCount: 0 };
   const { toast } = useToast();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     // Check admin status when user changes
@@ -29,38 +30,6 @@ const Navbar = () => {
       setIsAdmin(false);
     }
   }, [user]);
-
-  // Subscribe to order notifications if user is logged in
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel('order-updates')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'orders',
-        filter: `user_id=eq.${user.id}`,
-      }, (payload) => {
-        // Show toast notification when order status changes
-        const newStatus = payload.new.status;
-        const orderId = payload.new.id;
-        
-        toast({
-          title: `Order Status Updated`,
-          description: `Your order #${orderId.substring(0, 8)} is now ${newStatus}`,
-          duration: 5000,
-        });
-        
-        // Increment notification count
-        setNotificationCount(prev => prev + 1);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, toast]);
 
   const checkAdminStatus = async (userId) => {
     if (!userId) return;
@@ -75,8 +44,21 @@ const Navbar = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/');
+    try {
+      await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Logout Failed",
+        description: "There was a problem logging you out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const toggleUserView = (checked: boolean) => {
@@ -87,17 +69,12 @@ const Navbar = () => {
     }
   };
 
-  const handleNotificationClick = () => {
-    setNotificationCount(0);
-    navigate('/orders');
-  };
-
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
   const isCustomerView = location.pathname === '/customer' || location.pathname === '/' || 
-    !['/admin'].includes(location.pathname);
+    !['/admin', '/restaurant'].some(path => location.pathname.startsWith(path));
 
   return (
     <nav className="fixed w-full z-20 top-0 bg-black/50 backdrop-blur-md border-b border-quantum-cyan/20">
@@ -115,9 +92,8 @@ const Navbar = () => {
               session={user ? { user } : null}
               isAdmin={isAdmin}
               itemCount={itemCount}
-              notificationCount={notificationCount}
+              notificationCount={unreadCount}
               toggleUserView={toggleUserView}
-              handleNotificationClick={handleNotificationClick}
               handleLogout={handleLogout}
             />
             

@@ -2,9 +2,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Package, Bell, CreditCard, ShoppingCart, UserRound, LogOut, User } from 'lucide-react';
+import { Package, CreditCard, ShoppingCart, UserRound, LogOut, User } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 
 interface UserActionsProps {
   isCustomerView: boolean;
@@ -13,7 +14,6 @@ interface UserActionsProps {
   itemCount: number;
   notificationCount: number;
   toggleUserView: (checked: boolean) => void;
-  handleNotificationClick: () => void;
   handleLogout: () => void;
 }
 
@@ -22,9 +22,7 @@ export const UserActions = ({
   session,
   isAdmin,
   itemCount,
-  notificationCount,
   toggleUserView,
-  handleNotificationClick,
   handleLogout
 }: UserActionsProps) => {
   const { isRestaurantOwner } = useRestaurantAuth();
@@ -60,18 +58,7 @@ export const UserActions = ({
           )}
           
           {session && (
-            <Button 
-              variant="ghost" 
-              className="text-quantum-cyan hover:text-white relative"
-              onClick={handleNotificationClick}
-            >
-              <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {notificationCount}
-                </span>
-              )}
-            </Button>
+            <NotificationPanel className="text-quantum-cyan hover:text-white" />
           )}
           
           <Link to="/checkout" className="relative">
@@ -92,6 +79,11 @@ export const UserActions = ({
             </Button>
           </Link>
         </>
+      )}
+
+      {/* Show notification panel in restaurant view too */}
+      {isRestaurantOwner && !isCustomerView && session && (
+        <NotificationPanel className="text-[#1EAEDB] hover:text-white" />
       )}
       
       {session ? (

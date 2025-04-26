@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MealType } from '@/types/meal';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { MealReviews } from './MealReviews';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface MealDetailsProps {
   meal: MealType;
@@ -26,16 +27,24 @@ const MealDetails: React.FC<MealDetailsProps> = ({
   inCart = false,
   restaurantId
 }) => {
-  const [mealQuantity, setMealQuantity] = useState(quantity);
+  const [localQuantity, setLocalQuantity] = useState(quantity);
   const { displayPrice } = useCurrencyConverter();
   const { toast } = useToast();
   
+  const handleQuantityChange = (newQuantity: number) => {
+    const updatedQuantity = Math.max(1, newQuantity);
+    setLocalQuantity(updatedQuantity);
+    if (setQuantity) {
+      setQuantity(updatedQuantity);
+    }
+  };
+  
   const handleAddToCart = () => {
     if (meal) {
-      onAddToCart(meal, mealQuantity);
+      onAddToCart(meal, localQuantity);
       toast({
         title: "Added to cart",
-        description: `${mealQuantity} × ${meal.name} added to your cart`,
+        description: `${localQuantity} × ${meal.name} added to your cart`,
       });
     }
   };
@@ -68,19 +77,19 @@ const MealDetails: React.FC<MealDetailsProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Calories</p>
-                <p className="text-2xl font-bold">{meal.calories}</p>
+                <p className="text-2xl font-bold">{meal.nutritional_info?.calories || meal.calories}</p>
               </div>
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Protein</p>
-                <p className="text-2xl font-bold">{meal.protein}g</p>
+                <p className="text-2xl font-bold">{meal.nutritional_info?.protein || meal.protein}g</p>
               </div>
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Carbs</p>
-                <p className="text-2xl font-bold">{meal.carbs}g</p>
+                <p className="text-2xl font-bold">{meal.nutritional_info?.carbs || meal.carbs}g</p>
               </div>
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Fat</p>
-                <p className="text-2xl font-bold">{meal.fat}g</p>
+                <p className="text-2xl font-bold">{meal.nutritional_info?.fat || meal.fat}g</p>
               </div>
             </div>
           </div>
@@ -96,17 +105,18 @@ const MealDetails: React.FC<MealDetailsProps> = ({
                     variant="ghost"
                     size="icon"
                     className="text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
-                    onClick={() => setMealQuantity(Math.max(1, mealQuantity - 1))}
+                    onClick={() => handleQuantityChange(Math.max(1, localQuantity - 1))}
+                    type="button"
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
                   <Input
                     type="number"
                     min="1"
-                    value={mealQuantity}
+                    value={localQuantity}
                     onChange={(e) => {
                       const value = parseInt(e.target.value);
-                      setMealQuantity(isNaN(value) ? 1 : Math.max(1, value));
+                      handleQuantityChange(isNaN(value) ? 1 : value);
                     }}
                     className="w-16 text-center bg-transparent border-none text-white"
                   />
@@ -114,7 +124,8 @@ const MealDetails: React.FC<MealDetailsProps> = ({
                     variant="ghost"
                     size="icon"
                     className="text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
-                    onClick={() => setMealQuantity(mealQuantity + 1)}
+                    onClick={() => handleQuantityChange(localQuantity + 1)}
+                    type="button"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -123,6 +134,7 @@ const MealDetails: React.FC<MealDetailsProps> = ({
                   className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black font-bold px-8"
                   onClick={handleAddToCart}
                   disabled={inCart}
+                  type="button"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   {inCart ? 'In Cart' : 'Add to Cart'}
