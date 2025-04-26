@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { MenuItem, MenuCategory, NutritionalInfo, calculateHealthScore } from '@/types/menu';
 import { 
   getMenuItems, 
@@ -116,6 +116,7 @@ export const useMenuManagement = (restaurantId: string) => {
         description: `Failed to ${item.id ? 'update' : 'create'} menu item`,
         variant: "destructive",
       });
+      console.error("Error saving menu item:", error);
     } finally {
       setIsLoading(false);
     }
@@ -222,11 +223,18 @@ export const useMenuManagement = (restaurantId: string) => {
   };
 
   const editMenuItem = (item: MenuItem) => {
-    setSelectedItem(item);
+    // Make a deep copy to avoid reference issues
+    const itemCopy = JSON.parse(JSON.stringify(item));
+    
+    // Ensure ingredients and steps are arrays
+    if (!itemCopy.ingredients) itemCopy.ingredients = [];
+    if (!itemCopy.steps) itemCopy.steps = [];
+    
+    setSelectedItem(itemCopy);
   };
 
   const editCategory = (category: MenuCategory) => {
-    setSelectedCategory(category);
+    setSelectedCategory({...category});
   };
 
   return {

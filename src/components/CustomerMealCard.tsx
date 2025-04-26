@@ -71,8 +71,10 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   }, [meal.id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
+    // Stop propagation to prevent navigating to meal details
     e.preventDefault();
     e.stopPropagation();
+    
     console.log("Add to cart clicked");
     addItem({
       ...meal,
@@ -86,8 +88,10 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   };
 
   const handleQuantityChange = (action: 'increase' | 'decrease') => (e: React.MouseEvent) => {
+    // Stop propagation to prevent navigating to meal details
     e.preventDefault();
     e.stopPropagation();
+    
     if (action === 'increase') {
       setQuantity(prev => prev + 1);
     } else if (action === 'decrease' && quantity > 1) {
@@ -139,14 +143,14 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
             {displayPrice(meal.price)}
           </span>
 
-          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center bg-quantum-darkBlue rounded-lg p-1" style={{ position: 'relative', zIndex: 50 }}>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-quantum-darkBlue rounded-lg p-1">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('decrease')}
-                style={{ position: 'relative', zIndex: 50 }}
+                onMouseDown={e => e.stopPropagation()}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -158,7 +162,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
                 size="icon"
                 className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('increase')}
-                style={{ position: 'relative', zIndex: 50 }}
+                onMouseDown={e => e.stopPropagation()}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -167,7 +171,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
             <Button
               onClick={handleAddToCart}
               className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
-              style={{ position: 'relative', zIndex: 50 }}
+              onMouseDown={e => e.stopPropagation()}
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
               Add

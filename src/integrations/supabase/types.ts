@@ -419,12 +419,14 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          ingredients: string[] | null
           is_available: boolean
           name: string
           nutritional_info: Json | null
           preparation_time: number
           price: number
           restaurant_id: string
+          steps: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -433,12 +435,14 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          ingredients?: string[] | null
           is_available?: boolean
           name: string
           nutritional_info?: Json | null
           preparation_time?: number
           price?: number
           restaurant_id: string
+          steps?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -447,12 +451,14 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          ingredients?: string[] | null
           is_available?: boolean
           name?: string
           nutritional_info?: Json | null
           preparation_time?: number
           price?: number
           restaurant_id?: string
+          steps?: string[] | null
           updated_at?: string | null
         }
         Relationships: [

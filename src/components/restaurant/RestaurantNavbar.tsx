@@ -14,9 +14,12 @@ export const RestaurantNavbar: React.FC = () => {
   };
   
   const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent any default behavior
     e.preventDefault();
     e.stopPropagation();
+    
     try {
+      // Call the logout function from the auth hook
       await logout();
     } catch (error) {
       console.error("Error logging out:", error);
@@ -38,7 +41,6 @@ export const RestaurantNavbar: React.FC = () => {
               <Button 
                 variant={isActive('/restaurant/dashboard') ? "secondary" : "ghost"}
                 className={`${isActive('/restaurant/dashboard') ? 'bg-[#9b87f5] text-white hover:bg-[#9b87f5]/90' : 'text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10'}`}
-                style={{ position: 'relative', zIndex: 10 }}
               >
                 Dashboard
               </Button>
@@ -48,7 +50,6 @@ export const RestaurantNavbar: React.FC = () => {
               <Button 
                 variant={isActive('/restaurant/menu') ? "secondary" : "ghost"}
                 className={`${isActive('/restaurant/menu') ? 'bg-[#9b87f5] text-white hover:bg-[#9b87f5]/90' : 'text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10'}`}
-                style={{ position: 'relative', zIndex: 10 }}
               >
                 Menu
               </Button>
@@ -60,7 +61,6 @@ export const RestaurantNavbar: React.FC = () => {
               variant="ghost" 
               onClick={handleLogout}
               className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
-              style={{ position: 'relative', zIndex: 10 }}
             >
               Logout
             </Button>
