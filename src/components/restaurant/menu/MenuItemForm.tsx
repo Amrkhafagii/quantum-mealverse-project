@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MenuItem, MenuCategory } from '@/types/menu';
+import { MenuItemImageUpload } from './MenuItemImageUpload';
 
 interface MenuItemFormProps {
   item: MenuItem;
@@ -70,6 +70,10 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(formData);
+  };
+
+  const handleImageUploaded = (imageUrl: string) => {
+    setFormData(prev => ({ ...prev, image_url: imageUrl }));
   };
 
   return (
@@ -253,26 +257,11 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="image_url">Image URL</Label>
-            <Input
-              id="image_url"
-              name="image_url"
-              value={formData.image_url || ''}
-              onChange={handleInputChange}
-              placeholder="https://example.com/image.jpg"
+            <Label>Item Image</Label>
+            <MenuItemImageUpload
+              currentImageUrl={formData.image_url}
+              onImageUploaded={handleImageUploaded}
             />
-            {formData.image_url && (
-              <div className="mt-2">
-                <img 
-                  src={formData.image_url} 
-                  alt={formData.name} 
-                  className="w-40 h-40 object-cover rounded-md"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
-              </div>
-            )}
           </div>
         </CardContent>
         
