@@ -4,7 +4,6 @@ import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { useCart } from '@/contexts/CartContext';
-// Removed import of toast from sonner to avoid toast messages on add to cart
 import { useNavigate } from 'react-router-dom';
 import { Plus, Minus, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,16 +73,15 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log("Add to cart clicked");
     addItem({
       ...meal,
       quantity: quantity
     });
-    // Removed toast success call to prevent toast on adding meal to cart
     setQuantity(1);
   };
 
-  const navigateToMealDetails = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const navigateToMealDetails = () => {
     navigate(`/meal/${meal.id}`);
   };
 
@@ -141,13 +139,14 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
             {displayPrice(meal.price)}
           </span>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-quantum-darkBlue rounded-lg p-1">
+          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center bg-quantum-darkBlue rounded-lg p-1" style={{ position: 'relative', zIndex: 50 }}>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20 relative z-20"
+                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('decrease')}
+                style={{ position: 'relative', zIndex: 50 }}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -157,8 +156,9 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20 relative z-20"
+                className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('increase')}
+                style={{ position: 'relative', zIndex: 50 }}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -166,7 +166,8 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
 
             <Button
               onClick={handleAddToCart}
-              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black relative z-20"
+              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+              style={{ position: 'relative', zIndex: 50 }}
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
               Add

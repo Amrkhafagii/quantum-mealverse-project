@@ -25,7 +25,9 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
   const handleFileSelect = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,27 +68,41 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
       const fileName = `${restaurant.id}/${uuidv4()}.${fileExt}`;
       
       console.log(`Uploading to menu-items bucket with path: ${fileName}`);
-      
-      // Check if the bucket exists
-      const { data: bucketData, error: bucketError } = await supabase.storage
-        .listBuckets();
-      
-      if (bucketError) {
-        console.error('Error listing buckets:', bucketError);
-        throw new Error('Error listing buckets');
-      }
-      
-      const menuItemsBucketExists = bucketData.some(bucket => bucket.name === 'menu-items');
-      
-      if (!menuItemsBucketExists) {
-        console.log('Creating menu-items bucket');
-        const { error: createBucketError } = await supabase.storage
-          .createBucket('menu-items', { public: true });
-          
-        if (createBucketError) {
-          console.error('Error creating bucket:', createBucketError);
-          throw new Error('Error creating storage bucket');
+
+      // Force check and create bucket if it doesn't exist
+      try {
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        
+        if (bucketsError) {
+          console.error('Error listing buckets:', bucketsError);
+          throw new Error('Could not access storage buckets');
         }
+        
+        const menuItemsBucketExists = buckets.some(bucket => bucket.name === 'menu-items');
+        
+        if (!menuItemsBucketExists) {
+          toast({
+            title: "Creating storage bucket",
+            description: "Setting up image storage for the first time"
+          });
+          
+          const { error: createBucketError } = await supabase.storage
+            .createBucket('menu-items', { public: true });
+            
+          if (createBucketError) {
+            console.error('Error creating bucket:', createBucketError);
+            throw new Error(`Error creating storage bucket: ${createBucketError.message}`);
+          }
+        }
+      } catch (bucketError) {
+        console.error('Bucket creation error:', bucketError);
+        toast({
+          title: "Storage Error",
+          description: "Could not initialize image storage. Please try again.",
+          variant: "destructive"
+        });
+        setIsUploading(false);
+        return;
       }
       
       // Upload the file to Supabase Storage
@@ -98,8 +114,8 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
         });
         
       if (error) {
-        console.error('Upload error:', error);
-        throw error;
+        console.error('Upload error details:', error);
+        throw new Error(`Upload failed: ${error.message}`);
       }
       
       console.log('Upload successful:', data);
@@ -116,13 +132,13 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
       
       toast({
         title: "Image uploaded successfully",
-        description: "Your image has been uploaded",
+        description: "Your image has been uploaded and saved",
       });
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Failed to upload image",
-        description: "Please try again",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive"
       });
       // Reset preview on error
@@ -159,9 +175,10 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
           <Button
             variant="destructive"
             size="icon"
-            className="absolute top-2 right-2 z-50"
+            className="absolute top-2 right-2"
             onClick={handleRemoveImage}
             type="button"
+            style={{ position: 'absolute', zIndex: 50 }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -170,6 +187,7 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
         <div 
           className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center hover:border-primary/50 transition-colors cursor-pointer"
           onClick={handleFileSelect}
+          style={{ position: 'relative', zIndex: 10 }}
         >
           <Image className="h-10 w-10 text-gray-400 mb-2" />
           <p className="text-sm font-medium">
@@ -194,8 +212,9 @@ export const MenuItemImageUpload: React.FC<MenuItemImageUploadProps> = ({
           type="button"
           variant="outline"
           onClick={handleFileSelect}
-          className="w-full relative z-20"
+          className="w-full"
           disabled={isUploading}
+          style={{ position: 'relative', zIndex: 10 }}
         >
           {isUploading ? (
             <>

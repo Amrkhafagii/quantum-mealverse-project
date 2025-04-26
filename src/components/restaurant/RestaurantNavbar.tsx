@@ -33,11 +33,12 @@ export const RestaurantNavbar: React.FC = () => {
             {restaurant.name}
           </div>
           
-          <div className="flex items-center gap-2 relative">
+          <div className="flex items-center gap-2">
             <Link to="/restaurant/dashboard">
               <Button 
                 variant={isActive('/restaurant/dashboard') ? "secondary" : "ghost"}
                 className={`${isActive('/restaurant/dashboard') ? 'bg-[#9b87f5] text-white hover:bg-[#9b87f5]/90' : 'text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10'}`}
+                style={{ position: 'relative', zIndex: 10 }}
               >
                 Dashboard
               </Button>
@@ -47,6 +48,7 @@ export const RestaurantNavbar: React.FC = () => {
               <Button 
                 variant={isActive('/restaurant/menu') ? "secondary" : "ghost"}
                 className={`${isActive('/restaurant/menu') ? 'bg-[#9b87f5] text-white hover:bg-[#9b87f5]/90' : 'text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10'}`}
+                style={{ position: 'relative', zIndex: 10 }}
               >
                 Menu
               </Button>
@@ -56,8 +58,9 @@ export const RestaurantNavbar: React.FC = () => {
             
             <Button 
               variant="ghost" 
-              className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10 relative z-50"
               onClick={handleLogout}
+              className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
+              style={{ position: 'relative', zIndex: 10 }}
             >
               Logout
             </Button>
