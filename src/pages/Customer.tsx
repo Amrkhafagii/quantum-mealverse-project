@@ -16,8 +16,8 @@ const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
   const { nearbyRestaurants, loading: loadingRestaurants } = useNearestRestaurant();
 
-  const { data: meals, isLoading: loadingMeals, error } = useQuery({
-    queryKey: ['meals', nearbyRestaurants],
+  const { data: menuItems, isLoading: loadingMenuItems, error } = useQuery({
+    queryKey: ['menuItems', nearbyRestaurants],
     queryFn: async () => {
       if (!nearbyRestaurants.length) return [];
       
@@ -25,18 +25,30 @@ const Customer = () => {
       const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
       
       let query = supabase
-        .from('meals')
+        .from('menu_items')
         .select('*')
-        .eq('is_active', true)
+        .eq('is_available', true)
         .in('restaurant_id', restaurantIds);
       
       const { data, error } = await query;
       
       if (error) throw error;
       
-      return data?.map(meal => ({
-        ...meal,
-        image_url: meal.image_url || `https://picsum.photos/seed/${meal.id}/300/200`
+      // Convert menu_items to MealType structure
+      return data?.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        price: item.price,
+        calories: item.nutritional_info?.calories || 0,
+        protein: item.nutritional_info?.protein || 0,
+        carbs: item.nutritional_info?.carbs || 0,
+        fat: item.nutritional_info?.fat || 0,
+        image_url: item.image_url || `https://picsum.photos/seed/${item.id}/300/200`,
+        is_active: item.is_available,
+        restaurant_id: item.restaurant_id,
+        created_at: item.created_at,
+        updated_at: item.updated_at
       })) || [];
     },
     enabled: nearbyRestaurants.length > 0
@@ -62,14 +74,14 @@ const Customer = () => {
     );
   }
 
-  if (loadingRestaurants || loadingMeals) {
+  if (loadingRestaurants || loadingMenuItems) {
     return (
       <div className="min-h-screen bg-quantum-black text-white">
         <Navbar />
         <div className="container mx-auto px-4 py-24 flex items-center justify-center">
           <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
           <span className="ml-2 text-quantum-cyan">
-            {loadingRestaurants ? 'Finding nearby restaurants...' : 'Loading meals...'}
+            {loadingRestaurants ? 'Finding nearby restaurants...' : 'Loading menu items...'}
           </span>
         </div>
         <Footer />
@@ -82,7 +94,7 @@ const Customer = () => {
       <div className="min-h-screen bg-quantum-black text-white">
         <Navbar />
         <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-          <div className="text-2xl text-red-500">Error loading meals</div>
+          <div className="text-2xl text-red-500">Error loading menu items</div>
         </div>
         <Footer />
       </div>
@@ -114,9 +126,9 @@ const Customer = () => {
             </div>
           )}
           
-          {meals?.length === 0 ? (
+          {menuItems?.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-xl mb-4">No meals available from nearby restaurants</p>
+              <p className="text-xl mb-4">No menu items available from nearby restaurants</p>
               <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
               <Button
                 onClick={() => getCurrentLocation()}
@@ -128,10 +140,10 @@ const Customer = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {meals?.map((meal: MealType) => (
+              {menuItems?.map((item: MealType) => (
                 <CustomerMealCard
-                  key={meal.id}
-                  meal={meal}
+                  key={item.id}
+                  meal={item}
                 />
               ))}
             </div>
