@@ -10,24 +10,26 @@ import { MealType } from '@/types/meal';
 import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader } from 'lucide-react';
+import { MapPin, Loader, RefreshCw } from 'lucide-react';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
-  const { nearestRestaurantId, loading: loadingRestaurant } = useNearestRestaurant();
+  const { nearestRestaurantId, loading: loadingRestaurant, findNearestRestaurant } = useNearestRestaurant();
 
   const { data: meals, isLoading: loadingMeals, error } = useQuery({
     queryKey: ['meals', nearestRestaurantId],
     queryFn: async () => {
+      // If no restaurant found, return empty array
+      if (!nearestRestaurantId) {
+        return [];
+      }
+      
       let query = supabase
         .from('meals')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('restaurant_id', nearestRestaurantId);
         
-      if (nearestRestaurantId) {
-        query = query.eq('restaurant_id', nearestRestaurantId);
-      }
-      
       const { data, error } = await query;
       
       if (error) throw error;
@@ -39,6 +41,12 @@ const Customer = () => {
     },
     enabled: !loadingRestaurant
   });
+
+  const handleRetry = () => {
+    getCurrentLocation().then(() => {
+      findNearestRestaurant();
+    });
+  };
 
   if (!location) {
     return (
@@ -96,10 +104,17 @@ const Customer = () => {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
           
-          {meals?.length === 0 ? (
+          {!meals || meals.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-xl mb-4">No meals available from nearby restaurants</p>
-              <p className="text-gray-400">Try updating your location or check back later</p>
+              <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
+              <Button 
+                onClick={handleRetry}
+                className="bg-quantum-cyan hover:bg-quantum-cyan/90 flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Update Location
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

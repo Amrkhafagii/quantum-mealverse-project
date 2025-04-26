@@ -14,17 +14,27 @@ export const useNearestRestaurant = () => {
     if (!location) return null;
     
     try {
+      setLoading(true);
+      
+      // Using .data directly without .maybeSingle() since this is an RPC call
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: location.latitude,
         order_lng: location.longitude,
         max_distance_km: 50
       });
 
-      if (error) throw error;
+      // Handle RPC errors
+      if (error) {
+        console.error('RPC error finding nearest restaurant:', error);
+        throw error;
+      }
       
+      // Handle empty results - data will be an empty array if no restaurants found
       if (data && data.length > 0) {
         setNearestRestaurantId(data[0].restaurant_id);
+        console.log('Found nearest restaurant:', data[0].restaurant_id);
       } else {
+        console.log('No restaurants found within range');
         setNearestRestaurantId(null);
         toast({
           title: "No restaurants found",
@@ -39,6 +49,7 @@ export const useNearestRestaurant = () => {
         description: "Could not find nearest restaurant",
         variant: "destructive"
       });
+      setNearestRestaurantId(null);
     } finally {
       setLoading(false);
     }
@@ -47,6 +58,8 @@ export const useNearestRestaurant = () => {
   useEffect(() => {
     if (locationIsValid()) {
       findNearestRestaurant();
+    } else {
+      setLoading(false); // Make sure to set loading to false if location is not valid
     }
   }, [location]);
 
