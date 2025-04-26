@@ -11,6 +11,7 @@ import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader } from 'lucide-react';
+import { NutritionalInfo } from '@/types/menu';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
@@ -34,22 +35,32 @@ const Customer = () => {
       
       if (error) throw error;
       
-      // Convert menu_items to MealType structure
-      return data?.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || '',
-        price: item.price,
-        calories: item.nutritional_info?.calories || 0,
-        protein: item.nutritional_info?.protein || 0,
-        carbs: item.nutritional_info?.carbs || 0,
-        fat: item.nutritional_info?.fat || 0,
-        image_url: item.image_url || `https://picsum.photos/seed/${item.id}/300/200`,
-        is_active: item.is_available,
-        restaurant_id: item.restaurant_id,
-        created_at: item.created_at,
-        updated_at: item.updated_at
-      })) || [];
+      // Convert menu_items to MealType structure with proper type handling
+      return data?.map(item => {
+        // Safely parse nutritional_info as an object or provide defaults
+        const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0
+        };
+
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          price: item.price,
+          calories: nutritionalInfo.calories || 0,
+          protein: nutritionalInfo.protein || 0,
+          carbs: nutritionalInfo.carbs || 0,
+          fat: nutritionalInfo.fat || 0,
+          image_url: item.image_url || `https://picsum.photos/seed/${item.id}/300/200`,
+          is_active: item.is_available,
+          restaurant_id: item.restaurant_id,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        } as MealType;
+      }) || [];
     },
     enabled: nearbyRestaurants.length > 0
   });
