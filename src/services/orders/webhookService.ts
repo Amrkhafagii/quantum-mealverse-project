@@ -17,6 +17,8 @@ export const updateOrderStatus = async (
   changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
 ): Promise<boolean> => {
   try {
+    console.log(`Updating order ${orderId} status to ${newStatus}`);
+    
     // Update order status
     const { error: updateError } = await supabase
       .from('orders')

@@ -21,10 +21,12 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         created_at,
         restaurants!restaurant_assignments_restaurant_id_restaurants_fkey(id, name)
       `)
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: false });
+      .eq('order_id', orderId);
+    
+    console.log(`Assignment status for order ${orderId}:`, assignments);
     
     if (error || !assignments) {
+      console.error('Error fetching assignments:', error);
       return null;
     }
     
@@ -54,7 +56,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
         order_id: orderId,
         status: currentStatus,
         updated_by: 'system'
-      });
+      }).onConflict('order_id').merge();
     }
     
     return {
@@ -70,6 +72,7 @@ export const checkAssignmentStatus = async (orderId: string): Promise<Assignment
       expired_count: expiredCount
     };
   } catch (error) {
+    console.error('Error checking assignment status:', error);
     return null;
   }
 };

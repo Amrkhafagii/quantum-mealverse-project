@@ -84,17 +84,21 @@ export const getRestaurantOrders = async (
     // First check restaurant_assignments table for assignments to this restaurant
     const { data: assignments, error: assignmentsError } = await supabase
       .from('restaurant_assignments')
-      .select('order_id')
-      .eq('restaurant_id', restaurantId)
-      .in('status', ['pending', 'accepted']);
+      .select('order_id, status')
+      .eq('restaurant_id', restaurantId);
       
     if (assignmentsError) {
       console.error('Error fetching restaurant assignments:', assignmentsError);
     }
     
-    // Get assigned order IDs
-    const assignedOrderIds = assignments?.map(a => a.order_id) || [];
-    console.log('Assigned order IDs from assignments table:', assignedOrderIds);
+    console.log('All assignments for this restaurant:', assignments);
+    
+    // Get assigned order IDs, include both 'pending' and 'accepted' assignments
+    const assignedOrderIds = assignments
+      ?.filter(a => ['pending', 'accepted'].includes(a.status))
+      ?.map(a => a.order_id) || [];
+      
+    console.log('Filtered assigned order IDs:', assignedOrderIds);
     
     // Create a query for orders
     let query = supabase
@@ -123,7 +127,7 @@ export const getRestaurantOrders = async (
       throw error;
     }
     
-    console.log('Orders fetched:', data?.length);
+    console.log('Orders fetched:', data?.length, data);
     return data as unknown as RestaurantOrder[];
   } catch (error) {
     console.error('Error fetching restaurant orders:', error);

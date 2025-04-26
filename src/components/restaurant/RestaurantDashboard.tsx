@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,10 +25,22 @@ export const RestaurantDashboard = () => {
     try {
       console.log('Fetching orders for restaurant:', restaurant.id);
       
+      // Get all pending assignments first to debug
+      const { data: pendingAssignments, error: assignmentError } = await supabase
+        .from('restaurant_assignments')
+        .select('*')
+        .eq('restaurant_id', restaurant.id);
+        
+      if (assignmentError) {
+        console.error('Error fetching assignments:', assignmentError);
+      } else {
+        console.log('All restaurant assignments:', pendingAssignments);
+      }
+      
       // Use the orderService to fetch pending orders
       const pendingOrdersData = await getRestaurantOrders(
         restaurant.id,
-        [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED]
+        [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.PENDING]
       );
       console.log('Pending orders:', pendingOrdersData);
       setPendingOrders(pendingOrdersData);
