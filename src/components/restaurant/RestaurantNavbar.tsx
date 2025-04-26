@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 
 export const RestaurantNavbar: React.FC = () => {
   const { restaurant, logout } = useRestaurantAuth();
@@ -41,10 +42,12 @@ export const RestaurantNavbar: React.FC = () => {
               </Button>
             </Link>
             
+            <NotificationPanel className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10" />
+            
             <Button 
               variant="ghost" 
               className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
-              onClick={logout}
+              onClick={() => logout()}
             >
               Logout
             </Button>

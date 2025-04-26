@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -129,6 +128,7 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
         protein: data.nutritional_info.protein,
         carbs: data.nutritional_info.carbs,
         fat: data.nutritional_info.fat,
+        health_score: item.nutritional_info?.health_score
       } as NutritionalInfo,
       ingredients,
       steps,

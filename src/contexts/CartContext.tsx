@@ -43,9 +43,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedItems = [...items];
       updatedItems[existingItemIndex].quantity += meal.quantity;
       setItems(updatedItems);
+      
+      toast({
+        title: "Cart updated",
+        description: `Added more ${meal.name} to your cart`,
+      });
     } else {
       // Add new item
       setItems([...items, { meal: meal, quantity: meal.quantity }]);
+      
+      toast({
+        title: "Added to cart",
+        description: `${meal.name} has been added to your cart`,
+      });
     }
   };
 
@@ -57,14 +67,32 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedItems = [...items];
       updatedItems[existingItemIndex].quantity += item.quantity;
       setItems(updatedItems);
+      
+      toast({
+        title: "Cart updated",
+        description: `Added more ${item.meal.name} to your cart`,
+      });
     } else {
       // Add new item
       setItems([...items, item]);
+      
+      toast({
+        title: "Added to cart",
+        description: `${item.meal.name} has been added to your cart`,
+      });
     }
   };
 
   const removeFromCart = (itemId: string) => {
-    setItems(items.filter(item => item.meal.id !== itemId));
+    const itemToRemove = items.find(item => item.meal.id === itemId);
+    if (itemToRemove) {
+      setItems(items.filter(item => item.meal.id !== itemId));
+      
+      toast({
+        title: "Item removed",
+        description: `${itemToRemove.meal.name} has been removed from your cart`,
+      });
+    }
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -80,10 +108,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     
     setItems(updatedItems);
+    
+    const updatedItem = updatedItems.find(item => item.meal.id === itemId);
+    if (updatedItem) {
+      toast({
+        title: "Quantity updated",
+        description: `${updatedItem.meal.name} quantity updated to ${quantity}`,
+      });
+    }
   };
 
   const clearCart = () => {
     setItems([]);
+    toast({
+      title: "Cart cleared",
+      description: "All items have been removed from your cart",
+    });
   };
 
   // Calculate total amount (in USD)
