@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,23 +36,48 @@ const Customer = () => {
       
       // Convert menu_items to MealType structure with proper type handling
       return data?.map(item => {
-        // Safely parse nutritional_info as an object or provide defaults
-        const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0
-        };
+        // Safely parse nutritional_info as an object by first converting to unknown type
+        let nutritionalInfo: NutritionalInfo;
+        
+        try {
+          // Check if nutritional_info exists and has the expected properties
+          if (item.nutritional_info && 
+              typeof item.nutritional_info === 'object' && 
+              !Array.isArray(item.nutritional_info)) {
+            nutritionalInfo = {
+              calories: Number(item.nutritional_info.calories) || 0,
+              protein: Number(item.nutritional_info.protein) || 0,
+              carbs: Number(item.nutritional_info.carbs) || 0,
+              fat: Number(item.nutritional_info.fat) || 0
+            };
+          } else {
+            // Default values if nutritional_info is missing or malformed
+            nutritionalInfo = {
+              calories: 0,
+              protein: 0,
+              carbs: 0,
+              fat: 0
+            };
+          }
+        } catch (e) {
+          console.error("Error parsing nutritional info:", e);
+          nutritionalInfo = {
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0
+          };
+        }
 
         return {
           id: item.id,
           name: item.name,
           description: item.description || '',
           price: item.price,
-          calories: nutritionalInfo.calories || 0,
-          protein: nutritionalInfo.protein || 0,
-          carbs: nutritionalInfo.carbs || 0,
-          fat: nutritionalInfo.fat || 0,
+          calories: nutritionalInfo.calories,
+          protein: nutritionalInfo.protein,
+          carbs: nutritionalInfo.carbs,
+          fat: nutritionalInfo.fat,
           image_url: item.image_url || `https://picsum.photos/seed/${item.id}/300/200`,
           is_active: item.is_available,
           restaurant_id: item.restaurant_id,
