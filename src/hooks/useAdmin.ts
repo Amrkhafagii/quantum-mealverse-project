@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { MealType } from '@/types/meal';
-import { MenuItem, NutritionalInfo } from '@/types/menu';
+import { MenuItem, parseNutritionalInfo } from '@/types/menu';
 
 export const useAdmin = () => {
   const navigate = useNavigate();
@@ -21,24 +21,18 @@ export const useAdmin = () => {
       
       if (error) throw error;
       if (data) {
-        // Convert MenuItem to MealType with proper type handling
         const convertedMeals: MealType[] = data.map((item) => {
-          const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0
-          };
+          const nutritionalInfo = parseNutritionalInfo(item.nutritional_info);
           
           return {
             id: item.id,
             name: item.name,
             description: item.description || '',
             price: item.price,
-            calories: nutritionalInfo.calories || 0,
-            protein: nutritionalInfo.protein || 0,
-            carbs: nutritionalInfo.carbs || 0,
-            fat: nutritionalInfo.fat || 0,
+            calories: nutritionalInfo.calories,
+            protein: nutritionalInfo.protein,
+            carbs: nutritionalInfo.carbs,
+            fat: nutritionalInfo.fat,
             image_url: item.image_url,
             is_active: item.is_available,
             restaurant_id: item.restaurant_id,

@@ -1,21 +1,6 @@
 
 import { Json } from './database';
 
-export interface MenuItem {
-  id: string;
-  restaurant_id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image_url?: string;
-  nutritional_info?: NutritionalInfo;
-  is_available: boolean;
-  preparation_time: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface NutritionalInfo {
   calories: number;
   protein: number;
@@ -27,12 +12,27 @@ export interface NutritionalInfo {
   health_score?: number;
 }
 
-export interface MenuCategory {
-  id: string;
-  name: string;
-  description?: string;
-  restaurant_id: string;
-  order?: number;
+export function parseNutritionalInfo(jsonInfo: Json): NutritionalInfo {
+  // Safely parse nutritional info from JSON
+  if (typeof jsonInfo === 'object' && jsonInfo !== null && !Array.isArray(jsonInfo)) {
+    return {
+      calories: Number(jsonInfo['calories'] || 0),
+      protein: Number(jsonInfo['protein'] || 0),
+      carbs: Number(jsonInfo['carbs'] || 0),
+      fat: Number(jsonInfo['fat'] || 0),
+      fiber: Number(jsonInfo['fiber'] || 0),
+      sugar: Number(jsonInfo['sugar'] || 0),
+      sodium: Number(jsonInfo['sodium'] || 0)
+    };
+  }
+  
+  // Return default nutritional info if parsing fails
+  return {
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0
+  };
 }
 
 export const calculateHealthScore = (info: NutritionalInfo): number => {

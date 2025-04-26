@@ -3,8 +3,7 @@ import React from 'react';
 import { MealCard } from './MealCard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import { MealType } from '@/types/meal';
-import { MenuItem, NutritionalInfo } from '@/types/menu';
+import { MenuItem, parseNutritionalInfo } from '@/types/menu';
 
 export const FeaturedMeals = () => {
   const { data: menuItems, isLoading } = useQuery({
@@ -27,13 +26,7 @@ export const FeaturedMeals = () => {
       <h2 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Featured Meals</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {menuItems?.map((item) => {
-          // Parse nutritional info from JSON
-          const nutritionalInfo = item.nutritional_info as NutritionalInfo || {
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0
-          };
+          const nutritionalInfo = parseNutritionalInfo(item.nutritional_info);
           
           return (
             <MealCard
@@ -41,11 +34,11 @@ export const FeaturedMeals = () => {
               name={item.name}
               description={item.description || ''}
               price={item.price}
-              calories={nutritionalInfo.calories || 0}
+              calories={nutritionalInfo.calories}
               macros={{
-                protein: nutritionalInfo.protein || 0,
-                carbs: nutritionalInfo.carbs || 0,
-                fat: nutritionalInfo.fat || 0
+                protein: nutritionalInfo.protein,
+                carbs: nutritionalInfo.carbs,
+                fat: nutritionalInfo.fat
               }}
             />
           );

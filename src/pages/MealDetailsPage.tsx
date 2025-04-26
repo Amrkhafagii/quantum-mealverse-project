@@ -9,7 +9,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import { MealType } from '@/types/meal';
 import { useCart } from '@/contexts/CartContext';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
-import { MenuItem, NutritionalInfo } from '@/types/menu';
+import { parseNutritionalInfo } from '@/types/menu';
 
 const MealDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,23 +32,17 @@ const MealDetailsPage = () => {
         data.image_url = `https://picsum.photos/seed/${data.id}/600/400`;
       }
       
-      // Parse nutritional info from JSON
-      const nutritionalInfo = data.nutritional_info as NutritionalInfo || {
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0
-      };
+      const nutritionalInfo = parseNutritionalInfo(data.nutritional_info);
       
       const mealData: MealType = {
         id: data.id,
         name: data.name,
         description: data.description || '',
         price: data.price,
-        calories: nutritionalInfo.calories || 0,
-        protein: nutritionalInfo.protein || 0,
-        carbs: nutritionalInfo.carbs || 0,
-        fat: nutritionalInfo.fat || 0,
+        calories: nutritionalInfo.calories,
+        protein: nutritionalInfo.protein,
+        carbs: nutritionalInfo.carbs,
+        fat: nutritionalInfo.fat,
         image_url: data.image_url,
         is_active: data.is_available,
         restaurant_id: data.restaurant_id,
