@@ -36,6 +36,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
 
   const addItem = (meal: MealType & { quantity: number }) => {
+    console.log("Adding item to cart:", meal.name, "quantity:", meal.quantity);
     const existingItemIndex = items.findIndex(item => item.meal.id === meal.id);
     
     if (existingItemIndex !== -1) {
@@ -60,6 +61,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addToCart = (item: CartItem) => {
+    console.log("Add to cart called for:", item.meal.name, "quantity:", item.quantity);
     const existingItemIndex = items.findIndex(i => i.meal.id === item.meal.id);
     
     if (existingItemIndex !== -1) {

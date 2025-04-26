@@ -71,11 +71,11 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   }, [meal.id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    // Stop propagation to prevent navigating to meal details
+    // Make sure to both preventDefault and stopPropagation
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("Add to cart clicked");
+    console.log("Add to cart clicked for meal:", meal.name);
     addItem({
       ...meal,
       quantity: quantity
@@ -88,7 +88,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   };
 
   const handleQuantityChange = (action: 'increase' | 'decrease') => (e: React.MouseEvent) => {
-    // Stop propagation to prevent navigating to meal details
+    // Make sure to both preventDefault and stopPropagation
     e.preventDefault();
     e.stopPropagation();
     
@@ -138,7 +138,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
           <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 relative z-10">
           <span className="text-lg font-semibold text-quantum-cyan">
             {displayPrice(meal.price)}
           </span>
@@ -170,7 +170,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
 
             <Button
               onClick={handleAddToCart}
-              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black relative z-20"
               onMouseDown={e => e.stopPropagation()}
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
