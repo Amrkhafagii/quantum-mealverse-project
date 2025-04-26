@@ -22,11 +22,13 @@ import {
 interface EnhancedReviewCardProps {
   review: Review;
   onFlag?: (reviewId: string) => void;
+  showActions?: boolean; // Added this prop to fix the TypeScript error
 }
 
 export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({ 
   review,
-  onFlag
+  onFlag,
+  showActions = true // Default to true
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.email === 'admin@example.com'; // Replace with proper admin check
@@ -219,32 +221,34 @@ export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({
               </div>
             )}
             
-            {/* Review helpfulness controls */}
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                variant={userVote === 'helpful' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => handleVote('helpful')}
-                className="h-7 px-2 text-xs"
-              >
-                <ThumbsUp className="w-3 h-3 mr-1" />
-                Helpful {helpfulVotes > 0 && `(${helpfulVotes})`}
-              </Button>
-              
-              <Button
-                variant={userVote === 'unhelpful' ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => handleVote('unhelpful')}
-                className="h-7 px-2 text-xs"
-              >
-                <ThumbsDown className="w-3 h-3 mr-1" />
-                Not helpful {unhelpfulVotes > 0 && `(${unhelpfulVotes})`}
-              </Button>
-            </div>
+            {/* Review helpfulness controls - only show if showActions is true */}
+            {showActions && (
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  variant={userVote === 'helpful' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => handleVote('helpful')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <ThumbsUp className="w-3 h-3 mr-1" />
+                  Helpful {helpfulVotes > 0 && `(${helpfulVotes})`}
+                </Button>
+                
+                <Button
+                  variant={userVote === 'unhelpful' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => handleVote('unhelpful')}
+                  className="h-7 px-2 text-xs"
+                >
+                  <ThumbsDown className="w-3 h-3 mr-1" />
+                  Not helpful {unhelpfulVotes > 0 && `(${unhelpfulVotes})`}
+                </Button>
+              </div>
+            )}
           </div>
           
           <div>
-            {!isAdmin && review.user_id !== user?.id && (
+            {showActions && !isAdmin && review.user_id !== user?.id && (
               <Button 
                 variant="ghost" 
                 size="sm" 

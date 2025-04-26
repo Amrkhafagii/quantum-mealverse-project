@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { MenuItem, MenuCategory } from '@/types/menu';
+import { MenuItem, MenuCategory, NutritionalInfo } from '@/types/menu';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -119,10 +120,16 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   }, [item, categories, form]);
 
   const onSubmit = async (data: FormValues) => {
-    // Prepare item data
+    // Prepare item data with the correct nutritional_info type
     const updatedItem: MenuItem = {
       ...item,
       ...data,
+      nutritional_info: {
+        calories: data.nutritional_info.calories,
+        protein: data.nutritional_info.protein,
+        carbs: data.nutritional_info.carbs,
+        fat: data.nutritional_info.fat,
+      } as NutritionalInfo,
       ingredients,
       steps,
     };
@@ -452,9 +459,9 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button type="submit" loading={isLoading}>
+              <LoadingButton type="submit" loading={isLoading}>
                 Save
-              </Button>
+              </LoadingButton>
             </div>
           </form>
         </Form>

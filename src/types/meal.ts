@@ -16,6 +16,16 @@ export interface MealType {
   ingredients?: string[];
   steps?: string[];
   quantity?: number; // Added for cart context
+  nutritional_info?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    health_score?: number;
+  };
 }
 
 export const INITIAL_MEAL: MealType = {

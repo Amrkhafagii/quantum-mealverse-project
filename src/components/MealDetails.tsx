@@ -48,6 +48,14 @@ const MealDetails: React.FC<MealDetailsProps> = ({
       });
     }
   };
+
+  // Helper function to get nutritional values regardless of where they're stored
+  const getNutritionalValue = (key: 'calories' | 'protein' | 'carbs' | 'fat') => {
+    if (meal.nutritional_info && meal.nutritional_info[key] !== undefined) {
+      return meal.nutritional_info[key];
+    }
+    return meal[key];
+  };
   
   return (
     <div className="bg-quantum-black text-white">
@@ -77,19 +85,19 @@ const MealDetails: React.FC<MealDetailsProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Calories</p>
-                <p className="text-2xl font-bold">{meal.nutritional_info?.calories || meal.calories}</p>
+                <p className="text-2xl font-bold">{getNutritionalValue('calories')}</p>
               </div>
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Protein</p>
-                <p className="text-2xl font-bold">{meal.nutritional_info?.protein || meal.protein}g</p>
+                <p className="text-2xl font-bold">{getNutritionalValue('protein')}g</p>
               </div>
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Carbs</p>
-                <p className="text-2xl font-bold">{meal.nutritional_info?.carbs || meal.carbs}g</p>
+                <p className="text-2xl font-bold">{getNutritionalValue('carbs')}g</p>
               </div>
               <div className="bg-quantum-darkBlue p-4 rounded-xl border border-quantum-cyan/20">
                 <p className="text-quantum-cyan text-sm">Fat</p>
-                <p className="text-2xl font-bold">{meal.nutritional_info?.fat || meal.fat}g</p>
+                <p className="text-2xl font-bold">{getNutritionalValue('fat')}g</p>
               </div>
             </div>
           </div>
