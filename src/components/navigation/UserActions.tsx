@@ -27,26 +27,10 @@ export const UserActions = ({
 }: UserActionsProps) => {
   const { isRestaurantOwner } = useRestaurantAuth();
 
-  // If user is a restaurant owner, only show logout button in customer view
-  if (isRestaurantOwner && isCustomerView) {
-    return (
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          className="text-quantum-cyan hover:text-white"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          <span className="hidden md:inline">Logout</span>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="flex items-center gap-4">
-      {/* Only show customer features if not a restaurant owner */}
-      {isCustomerView && !isRestaurantOwner && (
+      {/* Always show customer features in customer view */}
+      {isCustomerView && (
         <>
           {session && (
             <Link to="/orders" className="relative">
@@ -96,7 +80,7 @@ export const UserActions = ({
             </div>
           )}
           
-          {!isRestaurantOwner && (
+          {!isRestaurantOwner && isCustomerView && (
             <Link to="/profile" className="hidden md:flex items-center gap-2">
               <UserRound className="h-4 w-4 text-quantum-cyan" />
               <span className="text-quantum-cyan">{session.user.email}</span>

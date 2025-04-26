@@ -20,15 +20,15 @@ export const MobileMenu = ({
 }: MobileMenuProps) => {
   const { isRestaurantOwner } = useRestaurantAuth();
 
-  // If user is a restaurant owner, don't show mobile menu in customer view
-  if (isRestaurantOwner && isCustomerView) {
+  // Don't show mobile menu in admin view
+  if (!isCustomerView) {
     return null;
   }
 
   return (
     <div className="md:hidden bg-black/80 backdrop-blur-lg p-4 rounded-b-lg border border-quantum-cyan/20 border-t-0">
       <div className="flex flex-col space-y-4">
-        {isCustomerView && !isRestaurantOwner && (
+        {isCustomerView && (
           <>
             <Link 
               to="/customer" 
@@ -90,7 +90,7 @@ export const MobileMenu = ({
           </div>
         )}
         
-        {session && !isRestaurantOwner && (
+        {session && (
           <div className="flex items-center gap-2 text-quantum-cyan">
             <UserRound className="h-4 w-4" />
             <span className="text-sm truncate max-w-[200px]">{session.user.email}</span>

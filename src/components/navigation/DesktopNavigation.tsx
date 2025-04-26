@@ -12,8 +12,8 @@ interface DesktopNavigationProps {
 export const DesktopNavigation = ({ isCustomerView }: DesktopNavigationProps) => {
   const { isRestaurantOwner } = useRestaurantAuth();
   
-  // Hide customer navigation for restaurant owners
-  if (!isCustomerView || isRestaurantOwner) return null;
+  // Only hide customer navigation for restaurant owners when they're not in customer view
+  if (!isCustomerView) return null;
   
   return (
     <div className="hidden md:flex items-center space-x-2">
