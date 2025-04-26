@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,10 +11,40 @@ import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader } from 'lucide-react';
 import { NutritionalInfo } from '@/types/menu';
+import { createTestMenuItems } from '@/utils/createTestMenuItems';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
   const { nearbyRestaurants, loading: loadingRestaurants } = useNearestRestaurant();
+
+  // Check if there are menu items in the database
+  React.useEffect(() => {
+    const checkForMenuItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('menu_items')
+          .select('count');
+          
+        if (error) {
+          console.error('Error checking menu items:', error);
+        } else {
+          console.log('Menu items exist in database:', data);
+          
+          // If we have nearby restaurants but no menu items, create test data
+          if (nearbyRestaurants.length > 0 && (!data || data.length === 0)) {
+            console.log('Creating test menu items for the first restaurant');
+            await createTestMenuItems(nearbyRestaurants[0].restaurant_id);
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error checking menu items:', err);
+      }
+    };
+    
+    if (nearbyRestaurants.length > 0) {
+      checkForMenuItems();
+    }
+  }, [nearbyRestaurants]);
 
   const { data: menuItems, isLoading: loadingMenuItems, error } = useQuery({
     queryKey: ['menuItems', nearbyRestaurants],

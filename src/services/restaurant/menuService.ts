@@ -16,11 +16,30 @@ export const getMenuItems = async (
   isAvailableOnly = false
 ): Promise<MenuItem[]> => {
   try {
+    console.log(`Fetching menu items for restaurant: ${restaurantId}, category: ${category || 'all'}, availableOnly: ${isAvailableOnly}`);
+    
     let query = supabase
       .from('menu_items')
-      .select()
-      .eq('restaurant_id', restaurantId);
+      .select();
       
+    // Debug: Get all menu items first to verify data exists
+    const { data: allData, error: allError } = await query;
+    console.log(`Total menu items in database: ${allData?.length || 0}`);
+    
+    if (allError) {
+      console.error('Error fetching all menu items:', allError);
+    }
+    
+    // Apply filters
+    query = supabase
+      .from('menu_items')
+      .select();
+      
+    // Check restaurant ID format
+    console.log(`Restaurant ID type: ${typeof restaurantId}, value: ${restaurantId}`);
+    
+    query = query.eq('restaurant_id', restaurantId);
+    
     if (category) {
       query = query.eq('category', category);
     }
@@ -31,13 +50,21 @@ export const getMenuItems = async (
     
     const { data, error } = await query.order('category');
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching menu items with filters:', error);
+      throw error;
+    }
+    
+    console.log(`Found ${data?.length || 0} menu items for restaurant ${restaurantId}`);
     
     // Transform the nutritional_info from Json to NutritionalInfo
-    return (data || []).map(item => ({
-      ...item,
-      nutritional_info: item.nutritional_info as unknown as NutritionalInfo
-    })) as MenuItem[];
+    return (data || []).map(item => {
+      console.log(`Menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
+      return {
+        ...item,
+        nutritional_info: item.nutritional_info as unknown as NutritionalInfo
+      };
+    }) as MenuItem[];
   } catch (error) {
     console.error('Error fetching menu items:', error);
     return [];
