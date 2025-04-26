@@ -8,6 +8,7 @@ import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { RefreshCcw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { getRestaurantOrders } from '@/services/restaurant/orderService';
+import { updateOrderStatus } from '@/services/restaurant/orderService';
 
 export const RestaurantDashboard = () => {
   const { restaurant, loading } = useRestaurantAuth();
@@ -273,8 +274,18 @@ interface OrderCardProps {
 const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { restaurant } = useRestaurantAuth();
 
   const handleOrderAction = async (action: string) => {
+    if (!restaurant || !restaurant.id) {
+      toast({
+        title: "Error",
+        description: "Restaurant information is missing",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     try {
       let status: OrderStatus;
@@ -302,15 +313,39 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
           throw new Error('Invalid action');
       }
       
-      const { data, error } = await supabase
-        .from('orders')
-        .update({ 
-          status, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', order.id);
+      // Get the assignment ID if this is an accept/reject action
+      let assignmentId = null;
+      if (action === 'accept' || action === 'reject') {
+        // Find the assignment for this order
+        const { data: assignments, error: assignmentError } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', order.id)
+          .eq('restaurant_id', restaurant.id)
+          .eq('status', 'pending')
+          .single();
+          
+        if (assignmentError || !assignments) {
+          console.error('Error finding assignment:', assignmentError);
+          throw new Error('Could not find restaurant assignment');
+        }
         
-      if (error) throw error;
+        assignmentId = assignments.id;
+      }
+      
+      console.log(`Updating order ${order.id} to status ${status} with restaurant ${restaurant.id}`);
+      
+      // Use the orderService to update the status
+      const success = await updateOrderStatus(
+        order.id,
+        status,
+        restaurant.id,
+        assignmentId ? { assignment_id: assignmentId } : undefined
+      );
+      
+      if (!success) {
+        throw new Error('Failed to update order status');
+      }
       
       toast({
         title: "Success",
@@ -322,7 +357,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
       console.error('Error updating order:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || 'An error occurred while updating the order',
         variant: "destructive"
       });
     } finally {

@@ -44,6 +44,38 @@ export const recordOrderHistory = async (
     const now = new Date().toISOString();
     const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
     
+    // For certain status types, we must have a restaurant_id
+    // As the error indicates it's a NOT NULL constraint
+    if (!restaurantId && ['restaurant_accepted', 'restaurant_rejected', 'preparing', 'ready_for_pickup', 'on_the_way', 'delivered'].includes(status)) {
+      console.error(`Error recording order history: restaurant_id is required for status ${status}`);
+      
+      // Try to fetch the restaurant_id from the order
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('restaurant_id')
+        .eq('id', orderId)
+        .single();
+      
+      if (orderData?.restaurant_id) {
+        restaurantId = orderData.restaurant_id;
+        console.log(`Successfully retrieved restaurant_id ${restaurantId} from orders table`);
+        
+        // Also get the restaurant name
+        const { data: restaurant } = await supabase
+          .from('restaurants')
+          .select('name')
+          .eq('id', restaurantId)
+          .single();
+        
+        restaurantName = restaurant?.name;
+      } else {
+        console.error('Could not retrieve restaurant_id from orders table');
+        // Default to a placeholder to satisfy the constraint
+        restaurantId = '00000000-0000-0000-0000-000000000000';
+        restaurantName = 'Unknown Restaurant';
+      }
+    }
+    
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
       status,
