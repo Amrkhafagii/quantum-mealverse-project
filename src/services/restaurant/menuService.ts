@@ -7,6 +7,12 @@ import { Json } from '@/types/database';
 type MenuItemRow = Database['public']['Tables']['menu_items']['Row'];
 type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
 
+// Type augmentation to add ingredients and steps fields
+interface MenuItemWithExtras extends MenuItemRow {
+  ingredients?: string[];
+  steps?: string[];
+}
+
 /**
  * Get menu items for a restaurant
  */
@@ -54,11 +60,13 @@ export const getMenuItems = async (
     // Transform the nutritional_info from Json to NutritionalInfo
     return (data || []).map(item => {
       console.log(`Processing menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
+      // Cast to our extended type
+      const extendedItem = item as MenuItemWithExtras;
       return {
-        ...item,
-        nutritional_info: item.nutritional_info as unknown as NutritionalInfo,
-        ingredients: item.ingredients as string[] || [],
-        steps: item.steps as string[] || []
+        ...extendedItem,
+        nutritional_info: extendedItem.nutritional_info as unknown as NutritionalInfo,
+        ingredients: extendedItem.ingredients || [],
+        steps: extendedItem.steps || []
       };
     }) as MenuItem[];
   } catch (error) {
@@ -95,11 +103,13 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
         .single();
         
       if (error) throw error;
+      // Cast to our extended type
+      const extendedData = data as MenuItemWithExtras;
       return {
-        ...data,
-        nutritional_info: data.nutritional_info as unknown as NutritionalInfo,
-        ingredients: data.ingredients as string[] || [],
-        steps: data.steps as string[] || []
+        ...extendedData,
+        nutritional_info: extendedData.nutritional_info as unknown as NutritionalInfo,
+        ingredients: extendedData.ingredients || [],
+        steps: extendedData.steps || []
       } as MenuItem;
     } else {
       // Create new item
@@ -122,11 +132,13 @@ export const saveMenuItem = async (item: MenuItem): Promise<MenuItem | null> => 
         .single();
         
       if (error) throw error;
+      // Cast to our extended type
+      const extendedData = data as MenuItemWithExtras;
       return {
-        ...data,
-        nutritional_info: data.nutritional_info as unknown as NutritionalInfo,
-        ingredients: data.ingredients as string[] || [],
-        steps: data.steps as string[] || []
+        ...extendedData,
+        nutritional_info: extendedData.nutritional_info as unknown as NutritionalInfo,
+        ingredients: extendedData.ingredients || [],
+        steps: extendedData.steps || []
       } as MenuItem;
     }
   } catch (error) {
