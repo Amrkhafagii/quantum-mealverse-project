@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { CartItem } from '@/types/cart';
 import { MealType } from '@/types/meal';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface CartContextType {
   items: CartItem[];

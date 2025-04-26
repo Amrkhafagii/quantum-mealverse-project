@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,20 +79,17 @@ export const MenuManagement: React.FC = () => {
     }
   }, [restaurant?.id]);
 
-  // Filter menu items based on search query
   const filteredMenuItems = menuItems.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (selectedCategoryFilter ? item.category === selectedCategoryFilter : true)
   );
 
-  // Filter categories based on search query
   const filteredCategories = categories.filter(category => 
     category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (category.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle item deletion
   const confirmDeleteItem = async () => {
     if (itemToDelete) {
       await handleDeleteMenuItem(itemToDelete);
@@ -101,7 +97,6 @@ export const MenuManagement: React.FC = () => {
     }
   };
 
-  // Handle category deletion
   const confirmDeleteCategory = async () => {
     if (categoryToDelete) {
       await handleDeleteCategory(categoryToDelete);
@@ -109,28 +104,24 @@ export const MenuManagement: React.FC = () => {
     }
   };
 
-  // Handle item dialog close
   const handleItemDialogClose = (open: boolean) => {
     if (!open) {
       setSelectedItem(null);
     }
   };
 
-  // Handle category dialog close
   const handleCategoryDialogClose = (open: boolean) => {
     if (!open) {
       setSelectedCategory(null);
     }
   };
-  
-  // Handle review dialog close
+
   const handleReviewDialogClose = (open: boolean) => {
     if (!open) {
       setSelectedItemForReview(null);
     }
   };
 
-  // Handle category filter change
   const handleCategoryFilterChange = (category?: string) => {
     setSelectedCategoryFilter(category);
     fetchMenuItems(category);
@@ -413,7 +404,6 @@ export const MenuManagement: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Delete Item Alert Dialog */}
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -431,7 +421,6 @@ export const MenuManagement: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Category Alert Dialog */}
       <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -449,7 +438,6 @@ export const MenuManagement: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reviews Dialog */}
       {selectedItemForReview && (
         <Dialog open={!!selectedItemForReview} onOpenChange={handleReviewDialogClose}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
