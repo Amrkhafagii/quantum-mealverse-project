@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -151,7 +152,9 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
     });
   };
   
-  const addIngredient = () => {
+  const addIngredient = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (newIngredient.trim()) {
       setIngredients([...ingredients, newIngredient.trim()]);
       setNewIngredient('');
@@ -162,7 +165,9 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
   
-  const addStep = () => {
+  const addStep = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (newStep.trim()) {
       setSteps([...steps, newStep.trim()]);
       setNewStep('');
@@ -171,6 +176,12 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   
   const removeStep = (index: number) => {
     setSteps(steps.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await form.handleSubmit(onSubmit)(e);
   };
   
   return (
@@ -184,7 +195,7 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
         </TabsList>
       
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+          <form onSubmit={handleSubmit} className="space-y-6 pt-4">
             <TabsContent value="details" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -385,7 +396,11 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
                         type="button" 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => removeIngredient(index)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeIngredient(index);
+                        }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -401,7 +416,8 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        addIngredient();
+                        e.stopPropagation();
+                        addIngredient(e as unknown as React.MouseEvent);
                       }
                     }}
                   />
@@ -431,7 +447,11 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
                         type="button" 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => removeStep(index)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeStep(index);
+                        }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -459,10 +479,22 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
             </TabsContent>
             
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onCancel}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCancel();
+                }}
+              >
                 Cancel
               </Button>
-              <LoadingButton type="submit" loading={isLoading}>
+              <LoadingButton 
+                type="submit" 
+                loading={isLoading}
+                className="z-10"
+              >
                 Save
               </LoadingButton>
             </div>

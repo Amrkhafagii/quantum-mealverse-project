@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MealType } from '@/types/meal';
 import { motion } from 'framer-motion';
@@ -71,6 +72,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   }, [meal.id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     addItem({
       ...meal,
@@ -80,11 +82,13 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     setQuantity(1);
   };
 
-  const navigateToMealDetails = () => {
+  const navigateToMealDetails = (e: React.MouseEvent) => {
+    e.preventDefault();
     navigate(`/meal/${meal.id}`);
   };
 
   const handleQuantityChange = (action: 'increase' | 'decrease') => (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (action === 'increase') {
       setQuantity(prev => prev + 1);
@@ -162,7 +166,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
 
             <Button
               onClick={handleAddToCart}
-              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black z-10"
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
               Add

@@ -13,7 +13,9 @@ export const RestaurantNavbar: React.FC = () => {
     return location.pathname === path;
   };
   
-  const handleLogout = async () => {
+  const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     try {
       await logout();
     } catch (error) {
@@ -54,7 +56,7 @@ export const RestaurantNavbar: React.FC = () => {
             
             <Button 
               variant="ghost" 
-              className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
+              className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10 z-10"
               onClick={handleLogout}
             >
               Logout

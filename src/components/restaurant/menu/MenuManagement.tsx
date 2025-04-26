@@ -50,6 +50,8 @@ export const MenuManagement: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [selectedItemForReview, setSelectedItemForReview] = useState<string | null>(null);
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
 
   const {
     menuItems,
@@ -95,6 +97,33 @@ export const MenuManagement: React.FC = () => {
     fetchMenuItems(category);
   };
 
+  const handleAddItemClick = () => {
+    setSelectedItem(INITIAL_MENU_ITEM);
+    setIsAddItemDialogOpen(true);
+  };
+
+  const handleAddCategoryClick = () => {
+    setSelectedCategory(INITIAL_CATEGORY);
+    setIsAddCategoryDialogOpen(true);
+  };
+
+  const handleEditItemClick = (item: MenuItem) => {
+    editMenuItem(item);
+    setIsAddItemDialogOpen(true);
+  };
+
+  const handleEditCategoryClick = (category: MenuCategory) => {
+    setSelectedCategory(category);
+    setIsAddCategoryDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsAddItemDialogOpen(false);
+    setIsAddCategoryDialogOpen(false);
+    setSelectedItem(null);
+    setSelectedCategory(null);
+  };
+
   if (!restaurant) {
     return (
       <div className="p-4 text-center">
@@ -114,6 +143,7 @@ export const MenuManagement: React.FC = () => {
             fetchCategories();
           }} 
           disabled={isLoadingItems || isLoadingCategories}
+          className="z-10"
         >
           <RefreshCcw className="h-4 w-4 mr-2" />
           Refresh
@@ -129,14 +159,14 @@ export const MenuManagement: React.FC = () => {
           />
         </div>
         <div className="flex gap-2">
-          <Dialog onOpenChange={(open) => !open && setSelectedItem(null)}>
+          <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setSelectedItem(INITIAL_MENU_ITEM)}>
+              <Button onClick={handleAddItemClick} className="z-10">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
             </DialogTrigger>
-            {selectedItem && (
+            {selectedItem && isAddItemDialogOpen && (
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>{selectedItem.id ? 'Edit' : 'Add'} Menu Item</DialogTitle>
@@ -145,21 +175,21 @@ export const MenuManagement: React.FC = () => {
                   item={selectedItem}
                   categories={categories}
                   onSave={handleSaveMenuItem}
-                  onCancel={() => setSelectedItem(null)}
+                  onCancel={handleDialogClose}
                   isLoading={isLoadingItems}
                 />
               </DialogContent>
             )}
           </Dialog>
 
-          <Dialog onOpenChange={(open) => !open && setSelectedCategory(null)}>
+          <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" onClick={() => setSelectedCategory(INITIAL_CATEGORY)}>
+              <Button variant="outline" onClick={handleAddCategoryClick} className="z-10">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
             </DialogTrigger>
-            {selectedCategory && (
+            {selectedCategory && isAddCategoryDialogOpen && (
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{selectedCategory.id ? 'Edit' : 'Add'} Category</DialogTitle>
@@ -167,7 +197,7 @@ export const MenuManagement: React.FC = () => {
                 <CategoryForm
                   category={selectedCategory}
                   onSave={handleSaveCategory}
-                  onCancel={() => setSelectedCategory(null)}
+                  onCancel={handleDialogClose}
                   isLoading={isLoadingCategories}
                 />
               </DialogContent>
@@ -218,7 +248,7 @@ export const MenuManagement: React.FC = () => {
               ) : (
                 <MenuItemsTable
                   items={filteredMenuItems}
-                  onEdit={editMenuItem}
+                  onEdit={handleEditItemClick}
                   onDelete={setItemToDelete}
                   onReviewsClick={setSelectedItemForReview}
                 />
@@ -239,7 +269,7 @@ export const MenuManagement: React.FC = () => {
               ) : (
                 <CategoriesTable
                   categories={filteredCategories}
-                  onEdit={(category) => setSelectedCategory(category)}
+                  onEdit={handleEditCategoryClick}
                   onDelete={setCategoryToDelete}
                 />
               )}
