@@ -122,18 +122,12 @@ export const updateOrderStatus = async (
         }
       }
       
-      // Ensure restaurantId is always set for order history
-      const historyRestaurantId = restaurantId || 'unknown';
-      
-      // Record to order history
+      // Record to order history with the restaurant ID that accepted/rejected
       await recordOrderHistory(
         orderId,
         newStatus,
-        historyRestaurantId,
-        details,
-        undefined,
-        undefined,
-        'restaurant'
+        restaurantId,  // Always use the provided restaurant ID
+        details
       );
       
       return true;

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -37,14 +38,15 @@ export const recordOrderHistory = async (
         console.log(`Successfully retrieved restaurant_id ${restaurantId} from orders table`);
       } else {
         console.warn('Could not retrieve restaurant_id from orders table');
-        // Default to a placeholder to satisfy the constraint
-        restaurantId = '00000000-0000-0000-0000-000000000000';
+        // Default to a placeholder to satisfy the constraint - using null instead of placeholder
+        // as placeholder UUID might violate foreign key constraints
+        restaurantId = null;
       }
     }
     
     // Get restaurant name if restaurantId is provided
     let restaurantName = null;
-    if (restaurantId && restaurantId !== '00000000-0000-0000-0000-000000000000') {
+    if (restaurantId) {
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('name')
@@ -68,6 +70,7 @@ export const recordOrderHistory = async (
     const now = new Date().toISOString();
     const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
     
+    // Create history entry with conditional restaurant data
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
       status,
@@ -94,7 +97,7 @@ export const recordOrderHistory = async (
     }
 
     // Log to console for debugging
-    console.log(`Order ${orderId} status updated to ${status} by restaurant ${restaurantId}`);
+    console.log(`Order ${orderId} status updated to ${status} by restaurant ${restaurantId || 'unknown'}`);
   } catch (error) {
     console.error('Error recording order history:', error);
   }
