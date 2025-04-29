@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { OrderStatus } from '@/types/restaurant';
 
 type OrderHistoryInsert = Database['public']['Tables']['order_history']['Insert'];
 type OrderHistoryRow = Database['public']['Tables']['order_history']['Row'];
@@ -29,7 +30,7 @@ export const recordOrderHistory = async (
       // Try to fetch the restaurant_id from the order
       const { data: orderData } = await supabase
         .from('orders')
-        .select('restaurant_id')
+        .select('restaurant_id, status')
         .eq('id', orderId)
         .single();
       
@@ -57,14 +58,28 @@ export const recordOrderHistory = async (
       console.log(`Retrieved restaurant name: ${restaurantName || 'null'}`);
     }
 
-    // Get previous status for this order
-    const { data: lastStatus } = await supabase
-      .from('order_history')
+    // Get previous status directly from the order table
+    const { data: orderData } = await supabase
+      .from('orders')
       .select('status')
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', orderId)
       .single();
+    
+    const previousStatus = orderData?.status;
+    console.log(`Previous status from order table: ${previousStatus || 'null'}`);
+
+    // Get the latest status from order_history as a fallback
+    if (!previousStatus) {
+      const { data: lastStatus } = await supabase
+        .from('order_history')
+        .select('status')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      console.log(`Fallback previous status from order_history: ${lastStatus?.status || 'null'}`);
+    }
     
     // Ensure timestamps are in UTC
     const now = new Date().toISOString();
@@ -74,7 +89,7 @@ export const recordOrderHistory = async (
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
       status,
-      previous_status: lastStatus?.status,
+      previous_status: previousStatus || null,
       restaurant_id: restaurantId,
       restaurant_name: restaurantName || 'Unknown Restaurant',
       details: details as any, // Type cast since we can't guarantee the shape

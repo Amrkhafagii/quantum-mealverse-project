@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
@@ -45,6 +46,15 @@ export const updateOrderStatus = async (
         
       if (baseOrderError || !baseOrder) {
         console.error('Failed to fetch order without restaurant constraint:', baseOrderError);
+        return false;
+      }
+      
+      const currentStatus = baseOrder.status;
+      console.log(`Current order status: ${currentStatus}`);
+      
+      // Validate the status transition
+      if (!isValidStatusTransition(currentStatus, newStatus)) {
+        console.error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
         return false;
       }
       
@@ -127,7 +137,10 @@ export const updateOrderStatus = async (
         orderId,
         newStatus,
         restaurantId,  // Always use the provided restaurant ID
-        details
+        details,
+        undefined,
+        undefined,
+        'restaurant'  // Explicitly set changed_by_type
       );
       
       return true;
@@ -255,6 +268,8 @@ const isValidStatusTransition = (currentStatus: string, newStatus: string): bool
     [OrderStatus.PREPARING]: [OrderStatus.READY_FOR_PICKUP],
     [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.ON_THE_WAY],
     [OrderStatus.ON_THE_WAY]: [OrderStatus.DELIVERED],
+    // Pending state is used when initially creating an order
+    [OrderStatus.PENDING]: [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED],
     // Terminal states
     [OrderStatus.DELIVERED]: [],
     [OrderStatus.CANCELLED]: [],
