@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
@@ -70,13 +69,16 @@ export const updateOrderStatus = async (
         
         // Update assignment status if assignment_id is provided in details
         if (details && details.assignment_id) {
+          // Properly type cast the assignment_id to string
+          const assignmentId = String(details.assignment_id);
+          
           const { error: assignmentError } = await supabase
             .from('restaurant_assignments')
             .update({ 
               status: 'accepted',
               updated_at: new Date().toISOString()
             })
-            .eq('id', details.assignment_id);
+            .eq('id', assignmentId);
             
           if (assignmentError) {
             console.error('Failed to update assignment status:', assignmentError);
@@ -102,13 +104,16 @@ export const updateOrderStatus = async (
         
         // Update assignment status if assignment_id is provided in details
         if (details && details.assignment_id) {
+          // Properly type cast the assignment_id to string
+          const assignmentId = String(details.assignment_id);
+          
           const { error: assignmentError } = await supabase
             .from('restaurant_assignments')
             .update({ 
               status: 'rejected',
               updated_at: new Date().toISOString()
             })
-            .eq('id', details.assignment_id);
+            .eq('id', assignmentId);
             
           if (assignmentError) {
             console.error('Failed to update assignment status:', assignmentError);
