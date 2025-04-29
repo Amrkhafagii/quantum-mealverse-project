@@ -277,7 +277,14 @@ const isValidStatusTransition = (currentStatus: string, newStatus: string): bool
     [OrderStatus.RESTAURANT_REJECTED]: []
   };
   
+  // Handle "accepted" status as alias for "restaurant_accepted"
+  let normalizedCurrent = currentStatus;
+  let normalizedNew = newStatus;
+  
+  if (currentStatus === 'accepted') normalizedCurrent = OrderStatus.RESTAURANT_ACCEPTED;
+  if (newStatus === 'accepted') normalizedNew = OrderStatus.RESTAURANT_ACCEPTED;
+  
   // Check if the transition is valid
-  const allowed = validTransitions[currentStatus];
-  return allowed ? allowed.includes(newStatus as OrderStatus) : false;
+  const allowed = validTransitions[normalizedCurrent];
+  return allowed ? allowed.includes(normalizedNew as OrderStatus) : false;
 };

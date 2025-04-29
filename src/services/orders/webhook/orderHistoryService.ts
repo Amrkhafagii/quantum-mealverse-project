@@ -86,10 +86,31 @@ export const recordOrderHistory = async (
     const now = new Date().toISOString();
     const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
     
+    // Normalize status for order_history
+    let normalizedStatus = status;
+    
+    // Map any simplified status names to their canonical form for order_history
+    if (status === 'accepted') {
+      normalizedStatus = 'restaurant_accepted';
+      console.log(`Mapped status 'accepted' to 'restaurant_accepted' for order_history`);
+    } else if (status === 'rejected') {
+      normalizedStatus = 'restaurant_rejected';
+      console.log(`Mapped status 'rejected' to 'restaurant_rejected' for order_history`);
+    } else if (status === 'ready') {
+      normalizedStatus = 'ready_for_pickup';
+      console.log(`Mapped status 'ready' to 'ready_for_pickup' for order_history`);
+    } else if (status === 'delivering') {
+      normalizedStatus = 'on_the_way';
+      console.log(`Mapped status 'delivering' to 'on_the_way' for order_history`);
+    } else if (status === 'completed') {
+      normalizedStatus = 'delivered';
+      console.log(`Mapped status 'completed' to 'delivered' for order_history`);
+    }
+    
     // Create history entry with conditional restaurant data
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
-      status,
+      status: normalizedStatus,
       previous_status: previousStatus || fallbackPreviousStatus || null,
       restaurant_id: restaurantId,
       restaurant_name: restaurantName || 'Unknown Restaurant',
