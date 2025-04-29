@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -19,9 +18,33 @@ export const recordOrderHistory = async (
   visibility: boolean = true
 ): Promise<void> => {
   try {
+    console.log(`Recording order history for order ${orderId} with status ${status}, restaurant ${restaurantId || 'null'}`);
+    
+    // For certain status types, we must have a restaurant_id
+    // Due to NOT NULL constraint
+    if (!restaurantId || restaurantId === 'unknown') {
+      console.log(`Restaurant ID is missing or unknown, attempting to find it from order data`);
+      
+      // Try to fetch the restaurant_id from the order
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('restaurant_id')
+        .eq('id', orderId)
+        .single();
+      
+      if (orderData?.restaurant_id) {
+        restaurantId = orderData.restaurant_id;
+        console.log(`Successfully retrieved restaurant_id ${restaurantId} from orders table`);
+      } else {
+        console.warn('Could not retrieve restaurant_id from orders table');
+        // Default to a placeholder to satisfy the constraint
+        restaurantId = '00000000-0000-0000-0000-000000000000';
+      }
+    }
+    
     // Get restaurant name if restaurantId is provided
     let restaurantName = null;
-    if (restaurantId) {
+    if (restaurantId && restaurantId !== '00000000-0000-0000-0000-000000000000') {
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('name')
@@ -29,6 +52,7 @@ export const recordOrderHistory = async (
         .single();
       
       restaurantName = restaurant?.name;
+      console.log(`Retrieved restaurant name: ${restaurantName || 'null'}`);
     }
 
     // Get previous status for this order
@@ -44,44 +68,12 @@ export const recordOrderHistory = async (
     const now = new Date().toISOString();
     const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
     
-    // For certain status types, we must have a restaurant_id
-    // As the error indicates it's a NOT NULL constraint
-    if (!restaurantId && ['restaurant_accepted', 'restaurant_rejected', 'preparing', 'ready_for_pickup', 'on_the_way', 'delivered'].includes(status)) {
-      console.error(`Error recording order history: restaurant_id is required for status ${status}`);
-      
-      // Try to fetch the restaurant_id from the order
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select('restaurant_id')
-        .eq('id', orderId)
-        .single();
-      
-      if (orderData?.restaurant_id) {
-        restaurantId = orderData.restaurant_id;
-        console.log(`Successfully retrieved restaurant_id ${restaurantId} from orders table`);
-        
-        // Also get the restaurant name
-        const { data: restaurant } = await supabase
-          .from('restaurants')
-          .select('name')
-          .eq('id', restaurantId)
-          .single();
-        
-        restaurantName = restaurant?.name;
-      } else {
-        console.error('Could not retrieve restaurant_id from orders table');
-        // Default to a placeholder to satisfy the constraint
-        restaurantId = '00000000-0000-0000-0000-000000000000';
-        restaurantName = 'Unknown Restaurant';
-      }
-    }
-    
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
       status,
       previous_status: lastStatus?.status,
-      restaurant_id: restaurantId || null,
-      restaurant_name: restaurantName || 'Pending Assignment',
+      restaurant_id: restaurantId,
+      restaurant_name: restaurantName || 'Unknown Restaurant',
       details: details as any, // Type cast since we can't guarantee the shape
       expired_at: expiredAtUTC,
       changed_by: changedBy,
@@ -89,8 +81,10 @@ export const recordOrderHistory = async (
       visibility
     };
     
+    console.log('Adding history entry:', historyEntry);
+    
     // Insert record into order_history table
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('order_history')
       .insert(historyEntry);
       
@@ -100,7 +94,7 @@ export const recordOrderHistory = async (
     }
 
     // Log to console for debugging
-    console.log(`Order ${orderId} status updated to ${status}${restaurantId ? ` by restaurant ${restaurantId}` : ''}`);
+    console.log(`Order ${orderId} status updated to ${status} by restaurant ${restaurantId}`);
   } catch (error) {
     console.error('Error recording order history:', error);
   }

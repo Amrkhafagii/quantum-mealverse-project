@@ -18,13 +18,15 @@ export const updateOrderStatus = async (
   details?: Record<string, unknown>
 ): Promise<boolean> => {
   try {
+    console.log(`Starting to update order ${orderId} to status ${newStatus} by restaurant ${restaurantId}`);
+    
     // Get current order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('status')
       .eq('id', orderId)
       .eq('restaurant_id', restaurantId)
-      .maybeSingle(); // Changed from single() to maybeSingle()
+      .maybeSingle();
       
     if (orderError) {
       console.error('Failed to fetch order:', orderError);
@@ -33,6 +35,8 @@ export const updateOrderStatus = async (
     
     // For accept/reject actions, we don't need to check current status as restaurant_id might not be set yet
     if (!order && (newStatus === OrderStatus.RESTAURANT_ACCEPTED || newStatus === OrderStatus.RESTAURANT_REJECTED)) {
+      console.log(`Order not found with restaurant_id constraint, handling accept/reject case`);
+      
       // Fetch order without restaurant_id constraint for accept/reject actions
       const { data: baseOrder, error: baseOrderError } = await supabase
         .from('orders')
@@ -47,6 +51,8 @@ export const updateOrderStatus = async (
       
       // For acceptance, also update restaurant_id
       if (newStatus === OrderStatus.RESTAURANT_ACCEPTED) {
+        console.log(`Accepting order ${orderId}, setting restaurant_id to ${restaurantId}`);
+        
         // Update order status and restaurant_id
         const { error: updateError } = await supabase
           .from('orders')
@@ -61,8 +67,26 @@ export const updateOrderStatus = async (
           console.error('Failed to update order status:', updateError);
           return false;
         }
+        
+        // Update assignment status if assignment_id is provided in details
+        if (details && details.assignment_id) {
+          const { error: assignmentError } = await supabase
+            .from('restaurant_assignments')
+            .update({ 
+              status: 'accepted',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', details.assignment_id);
+            
+          if (assignmentError) {
+            console.error('Failed to update assignment status:', assignmentError);
+            // Continue anyway, as the order status has been updated
+          }
+        }
       } else {
         // For rejection, just update status
+        console.log(`Rejecting order ${orderId}`);
+        
         const { error: updateError } = await supabase
           .from('orders')
           .update({ 
@@ -75,13 +99,32 @@ export const updateOrderStatus = async (
           console.error('Failed to update order status:', updateError);
           return false;
         }
+        
+        // Update assignment status if assignment_id is provided in details
+        if (details && details.assignment_id) {
+          const { error: assignmentError } = await supabase
+            .from('restaurant_assignments')
+            .update({ 
+              status: 'rejected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', details.assignment_id);
+            
+          if (assignmentError) {
+            console.error('Failed to update assignment status:', assignmentError);
+            // Continue anyway, as the order status has been updated
+          }
+        }
       }
+      
+      // Ensure restaurantId is always set for order history
+      const historyRestaurantId = restaurantId || 'unknown';
       
       // Record to order history
       await recordOrderHistory(
         orderId,
         newStatus,
-        restaurantId,
+        historyRestaurantId,
         details,
         undefined,
         undefined,

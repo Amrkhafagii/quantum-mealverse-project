@@ -331,6 +331,23 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
         }
         
         if (!assignments) {
+          // If no assignment found with pending status, check if this restaurant has any assignment
+          const { data: anyAssignment, error: anyAssignmentError } = await supabase
+            .from('restaurant_assignments')
+            .select('id, status')
+            .eq('order_id', order.id)
+            .eq('restaurant_id', restaurant.id)
+            .maybeSingle();
+            
+          if (anyAssignment) {
+            console.log(`Found non-pending assignment with status: ${anyAssignment.status}`);
+            if (anyAssignment.status === 'expired') {
+              throw new Error('This assignment has expired. The order may have been assigned to another restaurant.');
+            } else if (anyAssignment.status === 'rejected') {
+              throw new Error('You have already rejected this order.');
+            }
+          }
+          
           console.error('No pending assignment found for this restaurant and order');
           throw new Error('No pending assignment found for this restaurant. The assignment may have expired or been cancelled.');
         }
@@ -338,14 +355,14 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
         assignmentId = assignments.id;
       }
       
-      console.log(`Updating order ${order.id} to status ${status} with restaurant ${restaurant.id}`);
+      console.log(`Updating order ${order.id} to status ${status} with restaurant ${restaurant.id} and assignmentId ${assignmentId || 'none'}`);
       
       // Use the orderService to update the status
       const success = await updateOrderStatus(
         order.id,
         status,
         restaurant.id,
-        assignmentId ? { assignment_id: assignmentId } : undefined
+        { assignment_id: assignmentId }
       );
       
       if (!success) {
