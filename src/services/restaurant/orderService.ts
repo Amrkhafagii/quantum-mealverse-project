@@ -24,10 +24,76 @@ export const updateOrderStatus = async (
       .select('status')
       .eq('id', orderId)
       .eq('restaurant_id', restaurantId)
-      .single();
+      .maybeSingle(); // Changed from single() to maybeSingle()
       
-    if (orderError || !order) {
+    if (orderError) {
       console.error('Failed to fetch order:', orderError);
+      return false;
+    }
+    
+    // For accept/reject actions, we don't need to check current status as restaurant_id might not be set yet
+    if (!order && (newStatus === OrderStatus.RESTAURANT_ACCEPTED || newStatus === OrderStatus.RESTAURANT_REJECTED)) {
+      // Fetch order without restaurant_id constraint for accept/reject actions
+      const { data: baseOrder, error: baseOrderError } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+        
+      if (baseOrderError || !baseOrder) {
+        console.error('Failed to fetch order without restaurant constraint:', baseOrderError);
+        return false;
+      }
+      
+      // For acceptance, also update restaurant_id
+      if (newStatus === OrderStatus.RESTAURANT_ACCEPTED) {
+        // Update order status and restaurant_id
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: newStatus,
+            restaurant_id: restaurantId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+          
+        if (updateError) {
+          console.error('Failed to update order status:', updateError);
+          return false;
+        }
+      } else {
+        // For rejection, just update status
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+          
+        if (updateError) {
+          console.error('Failed to update order status:', updateError);
+          return false;
+        }
+      }
+      
+      // Record to order history
+      await recordOrderHistory(
+        orderId,
+        newStatus,
+        restaurantId,
+        details,
+        undefined,
+        undefined,
+        'restaurant'
+      );
+      
+      return true;
+    }
+    
+    // For non-accept/reject actions or if order exists with restaurant id
+    if (!order) {
+      console.error(`Order not found with id ${orderId} and restaurant_id ${restaurantId}`);
       return false;
     }
     

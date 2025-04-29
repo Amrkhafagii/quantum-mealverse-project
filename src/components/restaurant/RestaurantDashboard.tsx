@@ -323,11 +323,16 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
           .eq('order_id', order.id)
           .eq('restaurant_id', restaurant.id)
           .eq('status', 'pending')
-          .single();
+          .maybeSingle();
           
-        if (assignmentError || !assignments) {
+        if (assignmentError) {
           console.error('Error finding assignment:', assignmentError);
-          throw new Error('Could not find restaurant assignment');
+          throw new Error('Error fetching restaurant assignment');
+        }
+        
+        if (!assignments) {
+          console.error('No pending assignment found for this restaurant and order');
+          throw new Error('No pending assignment found for this restaurant. The assignment may have expired or been cancelled.');
         }
         
         assignmentId = assignments.id;
