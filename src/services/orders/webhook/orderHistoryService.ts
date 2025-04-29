@@ -39,8 +39,7 @@ export const recordOrderHistory = async (
         console.log(`Successfully retrieved restaurant_id ${restaurantId} from orders table`);
       } else {
         console.warn('Could not retrieve restaurant_id from orders table');
-        // Default to a placeholder to satisfy the constraint - using null instead of placeholder
-        // as placeholder UUID might violate foreign key constraints
+        // Default to null to satisfy the constraint
         restaurantId = null;
       }
     }
@@ -69,6 +68,7 @@ export const recordOrderHistory = async (
     console.log(`Previous status from order table: ${previousStatus || 'null'}`);
 
     // Get the latest status from order_history as a fallback
+    let fallbackPreviousStatus = null;
     if (!previousStatus) {
       const { data: lastStatus } = await supabase
         .from('order_history')
@@ -78,7 +78,8 @@ export const recordOrderHistory = async (
         .limit(1)
         .single();
       
-      console.log(`Fallback previous status from order_history: ${lastStatus?.status || 'null'}`);
+      fallbackPreviousStatus = lastStatus?.status;
+      console.log(`Fallback previous status from order_history: ${fallbackPreviousStatus || 'null'}`);
     }
     
     // Ensure timestamps are in UTC
@@ -89,7 +90,7 @@ export const recordOrderHistory = async (
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
       status,
-      previous_status: previousStatus || null,
+      previous_status: previousStatus || fallbackPreviousStatus || null,
       restaurant_id: restaurantId,
       restaurant_name: restaurantName || 'Unknown Restaurant',
       details: details as any, // Type cast since we can't guarantee the shape

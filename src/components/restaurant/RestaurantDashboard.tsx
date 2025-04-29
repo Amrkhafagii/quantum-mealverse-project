@@ -374,6 +374,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
         description: `Order ${action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'updated'} successfully.`
       });
       
+      // Immediately refresh the data to show the updated status
       onRefresh();
     } catch (error: any) {
       console.error('Error updating order:', error);

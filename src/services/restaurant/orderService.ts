@@ -269,7 +269,7 @@ const isValidStatusTransition = (currentStatus: string, newStatus: string): bool
     [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.ON_THE_WAY],
     [OrderStatus.ON_THE_WAY]: [OrderStatus.DELIVERED],
     // Pending state is used when initially creating an order
-    [OrderStatus.PENDING]: [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED],
+    [OrderStatus.PENDING]: [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.RESTAURANT_ACCEPTED],
     // Terminal states
     [OrderStatus.DELIVERED]: [],
     [OrderStatus.CANCELLED]: [],
