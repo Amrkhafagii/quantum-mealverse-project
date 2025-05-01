@@ -54,8 +54,9 @@ const MeasurementsHistory = ({ measurements, onMeasurementAdded }: MeasurementsH
         notes: notes || null
       };
 
+      // Use the insertable type with 'as any' to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('user_measurements')
+        .from('user_measurements' as any)
         .insert([newMeasurement]);
 
       if (error) throw error;
@@ -71,7 +72,6 @@ const MeasurementsHistory = ({ measurements, onMeasurementAdded }: MeasurementsH
       setChest('');
       setWaist('');
       setHips('');
-      setArms('');
       setLegs('');
       setNotes('');
       

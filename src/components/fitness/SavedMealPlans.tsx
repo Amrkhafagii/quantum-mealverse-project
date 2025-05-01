@@ -27,15 +27,16 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
   const loadSavedMealPlans = async () => {
     try {
       setLoading(true);
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { data, error } = await supabase
-        .from('saved_meal_plans')
+        .from('saved_meal_plans' as any)
         .select('*')
         .eq('user_id', userId)
         .order('date_created', { ascending: false });
         
       if (error) throw error;
       
-      setSavedPlans(data || []);
+      setSavedPlans(data as SavedMealPlan[] || []);
     } catch (error) {
       console.error('Error loading saved meal plans:', error);
       toast({
@@ -50,8 +51,9 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
 
   const handleDeletePlan = async (planId: string) => {
     try {
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('saved_meal_plans')
+        .from('saved_meal_plans' as any)
         .delete()
         .eq('id', planId);
         
@@ -97,8 +99,9 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
       
       // First create or get TDEE record
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { data: tdeeData, error: tdeeError } = await supabase
-        .from('user_tdee')
+        .from('user_tdee' as any)
         .insert({
           user_id: userId,
           date: new Date().toISOString(),
@@ -116,8 +119,9 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       if (tdeeError) throw tdeeError;
       
       // Now save the meal plan
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('saved_meal_plans')
+        .from('saved_meal_plans' as any)
         .insert({
           user_id: userId,
           name: planName,

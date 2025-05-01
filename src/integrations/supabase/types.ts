@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          criteria: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          points: number
+        }
+        Insert: {
+          criteria: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+          points: number
+        }
+        Update: {
+          criteria?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          points?: number
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           created_at: string
@@ -202,6 +229,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fitness_goals: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          status: string
+          target_body_fat: number | null
+          target_date: string | null
+          target_weight: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          status?: string
+          target_body_fat?: number | null
+          target_date?: string | null
+          target_weight?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          status?: string
+          target_body_fat?: number | null
+          target_date?: string | null
+          target_weight?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fitness_profiles: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          dietary_preferences: string[] | null
+          dietary_restrictions: string[] | null
+          display_name: string | null
+          fitness_goals: string[] | null
+          fitness_level: string | null
+          gender: string | null
+          goal_weight: number | null
+          height: number | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          dietary_preferences?: string[] | null
+          dietary_restrictions?: string[] | null
+          display_name?: string | null
+          fitness_goals?: string[] | null
+          fitness_level?: string | null
+          gender?: string | null
+          goal_weight?: number | null
+          height?: number | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          dietary_preferences?: string[] | null
+          dietary_restrictions?: string[] | null
+          display_name?: string | null
+          fitness_goals?: string[] | null
+          fitness_level?: string | null
+          gender?: string | null
+          goal_weight?: number | null
+          height?: number | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       global_meal_ratings: {
         Row: {
@@ -1108,6 +1222,41 @@ export type Database = {
           },
         ]
       }
+      saved_meal_plans: {
+        Row: {
+          date_created: string
+          id: string
+          meal_plan: Json
+          name: string
+          tdee_id: string | null
+          user_id: string
+        }
+        Insert: {
+          date_created?: string
+          id?: string
+          meal_plan: Json
+          name: string
+          tdee_id?: string | null
+          user_id: string
+        }
+        Update: {
+          date_created?: string
+          id?: string
+          meal_plan?: Json
+          name?: string
+          tdee_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_meal_plans_tdee_id_fkey"
+            columns: ["tdee_id"]
+            isOneToOne: false
+            referencedRelation: "user_tdee"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -1239,6 +1388,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          date_achieved: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          date_achieved?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          date_achieved?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_locations: {
         Row: {
           id: string
@@ -1263,6 +1441,48 @@ export type Database = {
           source?: string | null
           timestamp?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_measurements: {
+        Row: {
+          arms: number | null
+          body_fat: number | null
+          chest: number | null
+          date: string
+          hips: number | null
+          id: string
+          legs: number | null
+          notes: string | null
+          user_id: string
+          waist: number | null
+          weight: number
+        }
+        Insert: {
+          arms?: number | null
+          body_fat?: number | null
+          chest?: number | null
+          date?: string
+          hips?: number | null
+          id?: string
+          legs?: number | null
+          notes?: string | null
+          user_id: string
+          waist?: number | null
+          weight: number
+        }
+        Update: {
+          arms?: number | null
+          body_fat?: number | null
+          chest?: number | null
+          date?: string
+          hips?: number | null
+          id?: string
+          legs?: number | null
+          notes?: string | null
+          user_id?: string
+          waist?: number | null
+          weight?: number
         }
         Relationships: []
       }
@@ -1301,6 +1521,48 @@ export type Database = {
           id?: string
           protein_target?: number | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_tdee: {
+        Row: {
+          activity_level: string
+          bmr: number
+          carbs_target: number
+          date: string
+          fat_target: number
+          goal: string
+          id: string
+          notes: string | null
+          protein_target: number
+          tdee: number
+          user_id: string
+        }
+        Insert: {
+          activity_level: string
+          bmr: number
+          carbs_target: number
+          date?: string
+          fat_target: number
+          goal: string
+          id?: string
+          notes?: string | null
+          protein_target: number
+          tdee: number
+          user_id: string
+        }
+        Update: {
+          activity_level?: string
+          bmr?: number
+          carbs_target?: number
+          date?: string
+          fat_target?: number
+          goal?: string
+          id?: string
+          notes?: string | null
+          protein_target?: number
+          tdee?: number
           user_id?: string
         }
         Relationships: []

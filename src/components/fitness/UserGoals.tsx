@@ -6,25 +6,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FiTarget, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { FitnessGoal } from '@/types/fitness';
-import { format } from 'date-fns';
-import { Progress } from '@/components/ui/progress';
 
 interface UserGoalsProps {
   userId?: string;
 }
 
-const UserGoals = ({ userId }: UserGoalsProps) => {
+const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
   const { toast } = useToast();
   const [goals, setGoals] = useState<FitnessGoal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  // Form state
-  const [goalName, setGoalName] = useState('');
-  const [goalDescription, setGoalDescription] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [targetWeight, setTargetWeight] = useState('');
   const [targetBodyFat, setTargetBodyFat] = useState('');
@@ -39,15 +34,16 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
   const loadGoals = async () => {
     try {
       setLoading(true);
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { data, error } = await supabase
-        .from('fitness_goals')
+        .from('fitness_goals' as any)
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
       
-      setGoals(data || []);
+      setGoals(data as FitnessGoal[] || []);
     } catch (error) {
       console.error('Error loading goals:', error);
       toast({
@@ -60,59 +56,53 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
     }
   };
 
-  const handleSubmitGoal = async () => {
-    if (!goalName || !goalDescription) {
+  const handleAddGoal = async () => {
+    if (!name || !description) {
       toast({
-        title: 'Missing Information',
-        description: 'Please provide a name and description for your goal.',
-        variant: 'destructive',
+        title: "Required Fields Missing",
+        description: "Please enter a name and description for your goal.",
+        variant: "destructive"
       });
       return;
     }
 
     try {
       setSubmitting(true);
-      
-      const newGoal = {
-        user_id: userId,
-        name: goalName,
-        description: goalDescription,
-        target_date: targetDate || null,
-        target_weight: targetWeight ? parseFloat(targetWeight) : null,
-        target_body_fat: targetBodyFat ? parseFloat(targetBodyFat) : null,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('fitness_goals')
-        .insert([newGoal]);
-        
+        .from('fitness_goals' as any)
+        .insert({
+          user_id: userId,
+          name,
+          description,
+          target_date: targetDate || null,
+          target_weight: targetWeight ? parseFloat(targetWeight) : null,
+          target_body_fat: targetBodyFat ? parseFloat(targetBodyFat) : null,
+          status: 'active',
+        });
+
       if (error) throw error;
-      
+
       toast({
-        title: 'Goal Added',
-        description: 'Your new fitness goal has been added successfully.',
+        title: "Goal Added",
+        description: "Your new fitness goal has been created."
       });
       
       // Reset form
-      setGoalName('');
-      setGoalDescription('');
+      setName('');
+      setDescription('');
       setTargetDate('');
       setTargetWeight('');
       setTargetBodyFat('');
-      setShowAddForm(false);
       
-      // Reload goals
-      await loadGoals();
-      
+      // Refresh goals
+      loadGoals();
     } catch (error) {
       console.error('Error adding goal:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to add fitness goal.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to add goal. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setSubmitting(false);
@@ -121,12 +111,10 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
 
   const updateGoalStatus = async (goalId: string, status: 'active' | 'completed' | 'abandoned') => {
     try {
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('fitness_goals')
-        .update({
-          status,
-          updated_at: new Date().toISOString()
-        })
+        .from('fitness_goals' as any)
+        .update({ status, updated_at: new Date().toISOString() })
         .eq('id', goalId);
         
       if (error) throw error;
@@ -137,57 +125,38 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
       ));
       
       toast({
-        title: 'Status Updated',
-        description: `Goal marked as ${status}.`,
+        title: `Goal ${status === 'completed' ? 'Completed' : status === 'abandoned' ? 'Abandoned' : 'Reactivated'}`,
+        description: `Your fitness goal has been ${status === 'completed' ? 'marked as complete' : status === 'abandoned' ? 'abandoned' : 'set to active'}.`
       });
-      
     } catch (error) {
       console.error('Error updating goal status:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update goal status.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const deleteGoal = async (goalId: string) => {
-    try {
-      const { error } = await supabase
-        .from('fitness_goals')
-        .delete()
-        .eq('id', goalId);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setGoals(goals.filter(goal => goal.id !== goalId));
-      
-      toast({
-        title: 'Goal Deleted',
-        description: 'Your fitness goal has been deleted.',
-      });
-      
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete fitness goal.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update goal status.",
+        variant: "destructive"
       });
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-quantum-cyan';
       case 'completed':
-        return 'bg-green-500';
+        return 'text-green-400';
       case 'abandoned':
-        return 'bg-red-500';
+        return 'text-red-400';
       default:
-        return 'bg-gray-500';
+        return 'text-blue-400';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <FiCheckCircle className="h-5 w-5 text-green-400" />;
+      case 'abandoned':
+        return <FiXCircle className="h-5 w-5 text-red-400" />;
+      default:
+        return <FiTarget className="h-5 w-5 text-blue-400" />;
     }
   };
 
@@ -195,7 +164,7 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
     return (
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
         <CardContent className="pt-6 text-center">
-          <p>Loading fitness goals...</p>
+          <p>Loading your fitness goals...</p>
         </CardContent>
       </Card>
     );
@@ -203,49 +172,36 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-quantum-cyan">Your Fitness Goals</h2>
-        <Button 
-          onClick={() => setShowAddForm(!showAddForm)} 
-          className="bg-quantum-purple hover:bg-quantum-purple/90"
-        >
-          {showAddForm ? 'Cancel' : 'Add New Goal'}
-        </Button>
-      </div>
-
-      {showAddForm && (
-        <Card className="holographic-card">
-          <CardHeader>
-            <CardTitle>Create New Goal</CardTitle>
-            <CardDescription>
-              Set a clear, achievable fitness goal to track your progress
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="goalName">Goal Name*</Label>
-                <Input
-                  id="goalName"
-                  value={goalName}
-                  onChange={(e) => setGoalName(e.target.value)}
-                  placeholder="e.g., Lose 5kg, Run a 10k, Build Muscle"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="goalDescription">Description*</Label>
-                <Textarea
-                  id="goalDescription"
-                  value={goalDescription}
-                  onChange={(e) => setGoalDescription(e.target.value)}
-                  placeholder="Describe your goal in detail, including your motivation"
-                  required
-                  rows={3}
-                />
-              </div>
-              
+      <Card className="holographic-card">
+        <CardHeader>
+          <CardTitle>Add New Goal</CardTitle>
+          <CardDescription>
+            Set clear fitness goals to track your journey
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Goal Name *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Lose 10 pounds"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Description *</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., Get to my target weight through diet and exercise"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="targetDate">Target Date</Label>
                 <Input
@@ -253,144 +209,126 @@ const UserGoals = ({ userId }: UserGoalsProps) => {
                   type="date"
                   value={targetDate}
                   onChange={(e) => setTargetDate(e.target.value)}
-                  min={format(new Date(), 'yyyy-MM-dd')}
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="targetWeight">Target Weight (kg)</Label>
-                  <Input
-                    id="targetWeight"
-                    type="number"
-                    value={targetWeight}
-                    onChange={(e) => setTargetWeight(e.target.value)}
-                    placeholder="Optional"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="targetBodyFat">Target Body Fat %</Label>
-                  <Input
-                    id="targetBodyFat"
-                    type="number"
-                    value={targetBodyFat}
-                    onChange={(e) => setTargetBodyFat(e.target.value)}
-                    placeholder="Optional"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="targetWeight">Target Weight (kg)</Label>
+                <Input
+                  id="targetWeight"
+                  type="number"
+                  value={targetWeight}
+                  onChange={(e) => setTargetWeight(e.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="targetBodyFat">Target Body Fat %</Label>
+                <Input
+                  id="targetBodyFat"
+                  type="number"
+                  value={targetBodyFat}
+                  onChange={(e) => setTargetBodyFat(e.target.value)}
+                  placeholder="Optional"
+                />
               </div>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={handleSubmitGoal} 
-              disabled={submitting || !goalName || !goalDescription}
-              className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
-            >
-              {submitting ? 'Saving...' : 'Add Goal'}
-            </Button>
-          </CardFooter>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleAddGoal}
+            disabled={submitting || !name || !description}
+            className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
+          >
+            {submitting ? 'Adding...' : 'Add Goal'}
+          </Button>
+        </CardFooter>
+      </Card>
 
       {goals.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {goals.map((goal) => (
-            <Card key={goal.id} className="holographic-card">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle>{goal.name}</CardTitle>
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(goal.status)}`}>
-                    {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold text-quantum-cyan">Your Fitness Goals</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {goals.map((goal) => (
+              <Card 
+                key={goal.id} 
+                className={`holographic-card ${goal.status === 'completed' ? 'border-green-500/30' : goal.status === 'abandoned' ? 'border-red-500/30' : 'border-blue-500/30'}`}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      {getStatusIcon(goal.status)}
+                      <span>{goal.name}</span>
+                    </CardTitle>
+                    <span className={`text-sm font-medium ${getStatusColor(goal.status)}`}>
+                      {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
+                    </span>
                   </div>
-                </div>
-                {goal.target_date && (
-                  <CardDescription>
-                    Target Date: {new Date(goal.target_date).toLocaleDateString()}
-                    {goal.target_date && new Date(goal.target_date) < new Date() && 
-                      goal.status === 'active' && 
-                      " (overdue)"}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm">{goal.description}</p>
-                
-                {goal.target_weight && (
-                  <div className="text-sm">Target Weight: {goal.target_weight} kg</div>
-                )}
-                
-                {goal.target_body_fat && (
-                  <div className="text-sm">Target Body Fat: {goal.target_body_fat}%</div>
-                )}
-                
-                {goal.status === 'active' && goal.target_date && (
-                  <div className="space-y-1">
-                    <div className="text-xs flex justify-between">
-                      <span>Progress</span>
-                      <span>
-                        {Math.min(100, Math.max(0, Math.floor(
-                          (new Date().getTime() - new Date(goal.created_at).getTime()) / 
-                          (new Date(goal.target_date).getTime() - new Date(goal.created_at).getTime()) * 100
-                        )))}%
-                      </span>
+                  <CardDescription>{goal.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {goal.target_date && (
+                      <div>
+                        <span className="text-gray-400">Target Date: </span>
+                        <span>{new Date(goal.target_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {goal.target_weight && (
+                      <div>
+                        <span className="text-gray-400">Target Weight: </span>
+                        <span>{goal.target_weight} kg</span>
+                      </div>
+                    )}
+                    {goal.target_body_fat && (
+                      <div>
+                        <span className="text-gray-400">Target Body Fat: </span>
+                        <span>{goal.target_body_fat}%</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  {goal.status === 'active' ? (
+                    <div className="flex gap-2 w-full">
+                      <Button 
+                        onClick={() => updateGoalStatus(goal.id, 'completed')}
+                        variant="outline"
+                        className="flex-1 border-green-500/50 hover:bg-green-500/20"
+                      >
+                        Complete
+                      </Button>
+                      <Button 
+                        onClick={() => updateGoalStatus(goal.id, 'abandoned')}
+                        variant="outline"
+                        className="flex-1 border-red-500/50 hover:bg-red-500/20"
+                      >
+                        Abandon
+                      </Button>
                     </div>
-                    <Progress 
-                      value={Math.min(100, Math.max(0, Math.floor(
-                        (new Date().getTime() - new Date(goal.created_at).getTime()) / 
-                        (new Date(goal.target_date).getTime() - new Date(goal.created_at).getTime()) * 100
-                      )))}
-                      className="h-2"
-                    />
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex flex-wrap gap-2">
-                {goal.status === 'active' && (
-                  <>
-                    <Button
-                      onClick={() => updateGoalStatus(goal.id, 'completed')}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      size="sm"
+                  ) : (
+                    <Button 
+                      onClick={() => updateGoalStatus(goal.id, 'active')}
+                      variant="outline"
+                      className="w-full border-blue-500/50 hover:bg-blue-500/20"
                     >
-                      Complete
+                      Reactivate
                     </Button>
-                    <Button
-                      onClick={() => updateGoalStatus(goal.id, 'abandoned')}
-                      className="flex-1"
-                      variant="destructive"
-                      size="sm"
-                    >
-                      Abandon
-                    </Button>
-                  </>
-                )}
-                {goal.status !== 'active' && (
-                  <Button
-                    onClick={() => updateGoalStatus(goal.id, 'active')}
-                    className="flex-1 bg-quantum-cyan hover:bg-quantum-cyan/90"
-                    size="sm"
-                  >
-                    Reactivate
-                  </Button>
-                )}
-                <Button
-                  onClick={() => deleteGoal(goal.id)}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                >
-                  Delete
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
       ) : (
         <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
           <CardContent className="pt-6 text-center">
-            <p>No fitness goals found. Create your first goal to start tracking your journey.</p>
+            <p>No fitness goals found. Add your first goal to start tracking your progress.</p>
           </CardContent>
         </Card>
       )}

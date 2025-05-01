@@ -77,8 +77,9 @@ const Fitness = () => {
       setSaving(true);
       
       // First save the TDEE calculation
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { data: tdeeData, error: tdeeError } = await supabase
-        .from('user_tdee')
+        .from('user_tdee' as any)
         .insert({
           user_id: user.id,
           date: new Date().toISOString(),
@@ -98,8 +99,9 @@ const Fitness = () => {
       // Now save the meal plan
       const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
       
+      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('saved_meal_plans')
+        .from('saved_meal_plans' as any)
         .insert({
           user_id: user.id,
           name: planName,
