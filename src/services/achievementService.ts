@@ -148,7 +148,7 @@ export const checkAchievements = async (userId: string, workoutLog?: WorkoutLog)
       // Complete workout achievement (all exercises completed)
       const totalExercises = workoutLog.completed_exercises.length;
       const completedSets = workoutLog.completed_exercises.reduce(
-        (total, exercise) => total + exercise.sets_completed.length, 0
+        (total, exercise) => total + getCompletedSetsCount(exercise.sets_completed), 0
       );
       
       if (completedSets >= 20) {
@@ -159,6 +159,16 @@ export const checkAchievements = async (userId: string, workoutLog?: WorkoutLog)
     console.error('Error checking achievements:', error);
   }
 };
+
+/**
+ * Helper function to safely get the count of completed sets, handling both number and array types
+ */
+function getCompletedSetsCount(sets: number | { set_number: number; weight: number; reps: number; }[]): number {
+  if (typeof sets === 'number') {
+    return sets;
+  }
+  return sets.length;
+}
 
 // Helper function to check and update streak after a workout is logged
 export const updateWorkoutStreak = async (userId: string, workoutDate: string): Promise<void> => {
@@ -228,3 +238,4 @@ export const updateWorkoutStreak = async (userId: string, workoutDate: string): 
     console.error('Error updating workout streak:', error);
   }
 };
+
