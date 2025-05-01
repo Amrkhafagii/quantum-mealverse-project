@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -59,8 +58,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
 
     setIsSubmitting(true);
     try {
-      // Ensure user_id is included and is non-optional
-      const newMeasurement: Partial<UserMeasurement> & { user_id: string } = {
+      // Create a measurement object with required fields
+      const newMeasurement = {
         ...data,
         user_id: userId,
         date: new Date().toISOString(),
