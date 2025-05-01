@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -203,7 +202,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
     if (!history.length || !userId) {
       return {
         user_id: userId || '',
-        total_workouts: 0,
+        totalWorkouts: 0,
         total_time: 0,
         total_calories: 0,
         favorite_exercise: 'None',
@@ -217,8 +216,8 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
           exercise_name: 'None',
           improvement_percentage: 0
         },
-        current_streak: 0,
-        longest_streak: 0,
+        currentStreak: 0,
+        longestStreak: 0,
         weekly_goal_completion: 0
       };
     }
@@ -328,7 +327,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
     
     return {
       user_id: userId,
-      total_workouts,
+      totalWorkouts,
       total_time: totalTime,
       total_calories: totalCalories,
       favorite_exercise: favoriteExercise,
@@ -338,8 +337,8 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
         exercise_name: 'Bench Press', // Mock data
         improvement_percentage: 15 // Mock data
       },
-      current_streak,
-      longest_streak,
+      currentStreak,
+      longestStreak,
       weekly_goal_completion: weeklyGoalCompletion
     };
   };
@@ -646,6 +645,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
         
         <TabsContent value="stats" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Weekly activity chart */}
             <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
               <CardHeader>
                 <CardTitle>Weekly Activity</CardTitle>
@@ -667,6 +667,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
               </CardContent>
             </Card>
             
+            {/* Your stats */}
             <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
               <CardHeader>
                 <CardTitle>Your Stats</CardTitle>
@@ -695,10 +696,11 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                       
                       <div className="p-3 rounded-lg bg-quantum-black/50">
                         <p className="text-sm text-gray-400">Longest Streak</p>
-                        <p className="font-medium">{workoutStats.longest_streak} days</p>
+                        <p className="font-medium">{workoutStats.longestStreak} days</p>
                       </div>
                     </div>
                     
+                    {/* Weekly goal progress bar */}
                     <div className="mt-4">
                       <p className="text-sm text-gray-400 mb-2">Weekly Goal Progress</p>
                       <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
