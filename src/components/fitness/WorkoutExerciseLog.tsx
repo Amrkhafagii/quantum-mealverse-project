@@ -125,17 +125,22 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
         
         if (completedSets.length === 0) return null;
         
-        return {
+        // Create a base object without notes
+        const baseExercise = {
           exercise_id: exercise.exercise_id,
           name: exercise.name,
           exercise_name: exercise.exercise_name,
           sets_completed: completedSets,
           reps_completed: completedSets.map((set: any) => set.reps),
           weight_used: completedSets.map((set: any) => set.weight),
-          notes: exercise.notes || undefined // Make sure notes is undefined when not provided
         };
+        
+        // Only add notes if it exists
+        return exercise.notes 
+          ? { ...baseExercise, notes: exercise.notes }
+          : baseExercise;
       })
-      // Fix the type predicate to correctly match the CompletedExercise type
+      // Use type predicate to filter out null entries and correctly type as CompletedExercise
       .filter((ex): ex is CompletedExercise => ex !== null);
 
     try {
