@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +12,10 @@ import MeasurementForm from './MeasurementForm';
 
 interface MeasurementsHistoryProps {
   userId?: string;
+  measurements?: UserMeasurement[];
 }
 
-const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId }) => {
+const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId, measurements: propMeasurements }) => {
   const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -51,8 +51,15 @@ const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId }) => 
   };
 
   useEffect(() => {
-    loadMeasurements();
-  }, [userId]);
+    // If measurements are provided as prop, use them
+    if (propMeasurements) {
+      setMeasurements(propMeasurements);
+      setLoading(false);
+    } else {
+      // Otherwise, load from the database
+      loadMeasurements();
+    }
+  }, [userId, propMeasurements]);
 
   const handleRefresh = () => {
     loadMeasurements();

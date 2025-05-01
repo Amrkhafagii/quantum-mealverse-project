@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,16 +49,17 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
     try {
       setSubmitting(true);
 
-      const measurement: Partial<UserMeasurement> = {
+      // Create a properly typed measurement object
+      const measurement = {
         user_id: userId,
         weight: Number(weight),
-        body_fat: bodyFat !== '' ? Number(bodyFat) : undefined,
-        chest: chest !== '' ? Number(chest) : undefined,
-        waist: waist !== '' ? Number(waist) : undefined,
-        hips: hips !== '' ? Number(hips) : undefined,
-        arms: arms !== '' ? Number(arms) : undefined,
-        legs: legs !== '' ? Number(legs) : undefined,
-        notes: notes || undefined,
+        body_fat: bodyFat !== '' ? Number(bodyFat) : null,
+        chest: chest !== '' ? Number(chest) : null,
+        waist: waist !== '' ? Number(waist) : null,
+        hips: hips !== '' ? Number(hips) : null,
+        arms: arms !== '' ? Number(arms) : null,
+        legs: legs !== '' ? Number(legs) : null,
+        notes: notes || null,
       };
 
       const { error } = await supabase.from('user_measurements').insert(measurement);
@@ -77,7 +77,6 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
       setChest('');
       setWaist('');
       setHips('');
-      setArms('');
       setLegs('');
       setNotes('');
 

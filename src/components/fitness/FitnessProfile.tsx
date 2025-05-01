@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,7 +18,11 @@ import SavedMealPlans from '@/components/fitness/SavedMealPlans';
 import UserGoals from '@/components/fitness/UserGoals';
 import UserAchievements from '@/components/fitness/UserAchievements';
 
-const FitnessProfile = () => {
+interface FitnessProfileProps {
+  userId?: string;
+}
+
+const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -38,23 +41,25 @@ const FitnessProfile = () => {
   const [fitnessLevel, setFitnessLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
   
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !userId) {
       navigate('/auth');
       return;
     }
     
-    if (user) {
-      loadProfile();
-      loadMeasurements();
+    const effectiveUserId = userId || (user ? user.id : undefined);
+    
+    if (effectiveUserId) {
+      loadProfile(effectiveUserId);
+      loadMeasurements(effectiveUserId);
     }
-  }, [user, loading]);
+  }, [user, loading, userId]);
 
-  const loadProfile = async () => {
+  const loadProfile = async (id: string) => {
     try {
       const { data, error } = await supabase
         .from('fitness_profiles')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', id)
         .maybeSingle();
 
       if (error) throw error;
@@ -73,12 +78,12 @@ const FitnessProfile = () => {
     }
   };
 
-  const loadMeasurements = async () => {
+  const loadMeasurements = async (id: string) => {
     try {
       const { data, error } = await supabase
         .from('user_measurements')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', id)
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -98,11 +103,22 @@ const FitnessProfile = () => {
   };
 
   const saveProfile = async () => {
+    const effectiveUserId = userId || (user ? user.id : undefined);
+    
+    if (!effectiveUserId) {
+      toast({
+        title: "Error",
+        description: "User ID not available. Please log in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setSaving(true);
       
       const profileData = {
-        user_id: user?.id,
+        user_id: effectiveUserId,
         display_name: displayName,
         gender,
         date_of_birth: dob || null,
@@ -136,7 +152,7 @@ const FitnessProfile = () => {
         const { error } = await supabase
           .from('user_measurements')
           .insert([{
-            user_id: user?.id,
+            user_id: effectiveUserId,
             date: new Date().toISOString(),
             weight: parseFloat(currentWeight),
             body_fat: bodyFat ? parseFloat(bodyFat) : null
@@ -145,8 +161,8 @@ const FitnessProfile = () => {
         if (error) throw error;
       }
       
-      await loadProfile();
-      await loadMeasurements();
+      await loadProfile(effectiveUserId);
+      await loadMeasurements(effectiveUserId);
       
       toast({
         title: "Profile Updated",
@@ -171,6 +187,8 @@ const FitnessProfile = () => {
       </div>
     );
   }
+
+  const effectiveUserId = userId || (user ? user.id : undefined);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -334,21 +352,20 @@ const FitnessProfile = () => {
           
           <TabsContent value="measurements">
             <MeasurementsHistory 
-              measurements={measurements}
-              onMeasurementAdded={loadMeasurements}
+              userId={effectiveUserId} 
             />
           </TabsContent>
           
           <TabsContent value="meal-plans">
-            <SavedMealPlans userId={user?.id} />
+            <SavedMealPlans userId={effectiveUserId} />
           </TabsContent>
           
           <TabsContent value="goals">
-            <UserGoals userId={user?.id} />
+            <UserGoals userId={effectiveUserId} />
           </TabsContent>
           
           <TabsContent value="achievements">
-            <UserAchievements userId={user?.id} />
+            <UserAchievements userId={effectiveUserId} />
           </TabsContent>
         </Tabs>
       </main>

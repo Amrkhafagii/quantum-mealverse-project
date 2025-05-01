@@ -1,3 +1,4 @@
+
 // Import the base Database type
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 
@@ -178,8 +179,7 @@ export interface DatabaseExtensions {
   };
 }
 
-// Use module augmentation to extend the base Database type
+// Use module augmentation to extend the base Database type with our extensions
 declare module "@/integrations/supabase/types" {
-  // Extend the base database definition with our extensions
-  export interface Database extends DatabaseExtensions {}
+  interface Database extends SupabaseDatabase, DatabaseExtensions {}
 }

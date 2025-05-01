@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, UserWorkoutStats, UserMeasurement, WorkoutHistoryItem } from '@/types/fitness';
+import { UserWorkoutStats, UserMeasurement, WorkoutHistoryItem } from '@/types/fitness';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
 import { useToast } from '@/hooks/use-toast';
 import { Activity, Calendar, Dumbbell, Flame, Award, TrendingUp } from 'lucide-react';
