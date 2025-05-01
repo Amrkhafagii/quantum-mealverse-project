@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,9 +53,8 @@ const MeasurementsHistory = ({ measurements, onMeasurementAdded }: MeasurementsH
         notes: notes || null
       };
 
-      // Use the insertable type with 'as any' to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('user_measurements' as any)
+        .from('user_measurements')
         .insert([newMeasurement]);
 
       if (error) throw error;

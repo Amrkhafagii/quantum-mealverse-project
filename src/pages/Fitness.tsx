@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -77,15 +76,14 @@ const Fitness = () => {
       setSaving(true);
       
       // First save the TDEE calculation
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { data: tdeeData, error: tdeeError } = await supabase
-        .from('user_tdee' as any)
+        .from('user_tdee')
         .insert({
           user_id: user.id,
           date: new Date().toISOString(),
           tdee: tdeeResult.tdee,
           bmr: tdeeResult.bmr,
-          goal: tdeeResult.goal,
+          goal: tdeeResult.goal as 'maintain' | 'cut' | 'bulk',
           activity_level: 'moderate', // Default value
           protein_target: tdeeResult.proteinGrams,
           carbs_target: tdeeResult.carbsGrams,
@@ -99,9 +97,8 @@ const Fitness = () => {
       // Now save the meal plan
       const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
       
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('saved_meal_plans' as any)
+        .from('saved_meal_plans')
         .insert({
           user_id: user.id,
           name: planName,

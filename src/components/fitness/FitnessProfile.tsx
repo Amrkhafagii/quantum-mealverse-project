@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,13 +60,13 @@ const FitnessProfile = () => {
       if (error) throw error;
 
       if (data) {
-        setProfile(data);
+        setProfile(data as UserProfile);
         setDisplayName(data.display_name || '');
         setGender(data.gender || '');
         setDob(data.date_of_birth || '');
         setHeight(data.height?.toString() || '');
         setGoalWeight(data.goal_weight?.toString() || '');
-        setFitnessLevel(data.fitness_level || 'beginner');
+        setFitnessLevel((data.fitness_level as 'beginner' | 'intermediate' | 'advanced') || 'beginner');
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -83,7 +84,7 @@ const FitnessProfile = () => {
       if (error) throw error;
 
       if (data) {
-        setMeasurements(data);
+        setMeasurements(data as UserMeasurement[]);
         
         // Set current weight from latest measurement if available
         if (data.length > 0) {

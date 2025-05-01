@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -34,9 +33,8 @@ const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
   const loadGoals = async () => {
     try {
       setLoading(true);
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { data, error } = await supabase
-        .from('fitness_goals' as any)
+        .from('fitness_goals')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
@@ -68,9 +66,8 @@ const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
 
     try {
       setSubmitting(true);
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('fitness_goals' as any)
+        .from('fitness_goals')
         .insert({
           user_id: userId,
           name,
@@ -111,9 +108,8 @@ const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
 
   const updateGoalStatus = async (goalId: string, status: 'active' | 'completed' | 'abandoned') => {
     try {
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('fitness_goals' as any)
+        .from('fitness_goals')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', goalId);
         

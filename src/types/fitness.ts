@@ -60,7 +60,7 @@ export interface UserProfile {
   height?: number;
   starting_weight?: number;
   goal_weight?: number;
-  fitness_level?: 'beginner' | 'intermediate' | 'advanced';
+  fitness_level: 'beginner' | 'intermediate' | 'advanced';
   fitness_goals?: string[];
   dietary_preferences?: string[];
   dietary_restrictions?: string[];

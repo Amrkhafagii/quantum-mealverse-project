@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -28,17 +27,15 @@ const UserAchievements = ({ userId }: UserAchievementsProps) => {
     try {
       setLoading(true);
       // Load all achievements (public data)
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { data: achievementsData, error: achievementsError } = await supabase
-        .from('achievements' as any)
+        .from('achievements')
         .select('*');
         
       if (achievementsError) throw achievementsError;
       
       // Load user achievements
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { data: userAchievementsData, error: userError } = await supabase
-        .from('user_achievements' as any)
+        .from('user_achievements')
         .select(`
           id, 
           user_id, 

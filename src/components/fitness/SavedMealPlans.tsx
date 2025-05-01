@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,9 +26,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
   const loadSavedMealPlans = async () => {
     try {
       setLoading(true);
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { data, error } = await supabase
-        .from('saved_meal_plans' as any)
+        .from('saved_meal_plans')
         .select('*')
         .eq('user_id', userId)
         .order('date_created', { ascending: false });
@@ -51,9 +49,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
 
   const handleDeletePlan = async (planId: string) => {
     try {
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('saved_meal_plans' as any)
+        .from('saved_meal_plans')
         .delete()
         .eq('id', planId);
         
@@ -99,9 +96,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
       
       // First create or get TDEE record
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { data: tdeeData, error: tdeeError } = await supabase
-        .from('user_tdee' as any)
+        .from('user_tdee')
         .insert({
           user_id: userId,
           date: new Date().toISOString(),
@@ -119,9 +115,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       if (tdeeError) throw tdeeError;
       
       // Now save the meal plan
-      // Use any cast to bypass TypeScript check until we regenerate types
       const { error } = await supabase
-        .from('saved_meal_plans' as any)
+        .from('saved_meal_plans')
         .insert({
           user_id: userId,
           name: planName,
