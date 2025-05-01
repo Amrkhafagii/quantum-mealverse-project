@@ -131,9 +131,10 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
           sets_completed: completedSets,
           reps_completed: completedSets.map((set: any) => set.reps),
           weight_used: completedSets.map((set: any) => set.weight),
-          notes: exercise.notes
+          notes: exercise.notes || undefined // Make sure notes is only included if it has a value
         };
       })
+      // Fix the type predicate to match the optional notes property in CompletedExercise
       .filter((ex): ex is CompletedExercise => ex !== null);
 
     try {
