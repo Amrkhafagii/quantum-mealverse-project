@@ -175,6 +175,47 @@ export interface DatabaseExtensions {
           active?: boolean;
         };
       };
+      user_measurements: {
+        Row: {
+          id: string;
+          user_id: string;
+          date: string;
+          weight: number;
+          body_fat?: number;
+          chest?: number;
+          waist?: number;
+          hips?: number;
+          arms?: number;
+          legs?: number;
+          notes?: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          date?: string;
+          weight: number; // This is required
+          body_fat?: number;
+          chest?: number;
+          waist?: number;
+          hips?: number;
+          arms?: number;
+          legs?: number;
+          notes?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          date?: string;
+          weight?: number;
+          body_fat?: number;
+          chest?: number;
+          waist?: number;
+          hips?: number;
+          arms?: number;
+          legs?: number;
+          notes?: string;
+        };
+      };
     };
   };
 }

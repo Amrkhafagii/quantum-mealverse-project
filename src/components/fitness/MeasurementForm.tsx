@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,6 +64,7 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
         ...data,
         user_id: userId,
         date: new Date().toISOString(),
+        weight: data.weight, // Ensure weight is explicitly included and required
       };
 
       const { error } = await supabase.from('user_measurements').insert(newMeasurement);
