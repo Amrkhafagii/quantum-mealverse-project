@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -419,7 +420,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                 <p className="text-sm text-gray-400">Total Workouts</p>
                 <Activity className="h-5 w-5 text-quantum-cyan" />
               </div>
-              <p className="text-3xl font-bold mt-2">{workoutStats.total_workouts}</p>
+              <p className="text-3xl font-bold mt-2">{workoutStats.totalWorkouts}</p>
             </CardContent>
           </Card>
           
@@ -429,7 +430,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                 <p className="text-sm text-gray-400">Current Streak</p>
                 <Trophy className="h-5 w-5 text-quantum-purple" />
               </div>
-              <p className="text-3xl font-bold mt-2">{workoutStats.current_streak} {workoutStats.current_streak === 1 ? 'day' : 'days'}</p>
+              <p className="text-3xl font-bold mt-2">{workoutStats.currentStreak} {workoutStats.currentStreak === 1 ? 'day' : 'days'}</p>
             </CardContent>
           </Card>
           
@@ -484,7 +485,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                   components={{
                     DayContent: (props) => (
                       <div className="relative">
-                        {props.day}
+                        {props.date.getDate()}
                         {renderWorkoutDayIndicator(props.date)}
                       </div>
                     )

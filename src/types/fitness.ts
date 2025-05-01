@@ -1,3 +1,4 @@
+
 import { MealPlan } from './food';
 
 export interface UserMeasurement {
@@ -207,7 +208,7 @@ export interface WorkoutHistoryItem {
 
 export interface UserWorkoutStats {
   user_id: string;
-  total_workouts: number;
+  totalWorkouts: number;
   total_time: number; // In minutes
   total_calories: number;
   favorite_exercise: string;
@@ -221,7 +222,7 @@ export interface UserWorkoutStats {
     exercise_name: string;
     improvement_percentage: number;
   };
-  current_streak: number;
-  longest_streak: number;
+  currentStreak: number;
+  longestStreak: number;
   weekly_goal_completion: number; // Percentage
 }
