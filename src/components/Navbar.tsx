@@ -19,7 +19,7 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { itemCount } = useCart?.() || { itemCount: 0 };
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { user, logout, session } = useAuth();
   const { unreadCount } = useNotifications();
 
   useEffect(() => {
@@ -89,7 +89,7 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             <UserActions 
               isCustomerView={isCustomerView}
-              session={user ? { user } : null}
+              session={session}
               isAdmin={isAdmin}
               itemCount={itemCount}
               notificationCount={unreadCount}
@@ -112,7 +112,7 @@ const Navbar = () => {
           <MobileMenu 
             isCustomerView={isCustomerView}
             isAdmin={isAdmin}
-            session={user ? { user } : null}
+            session={session}
             toggleUserView={toggleUserView}
           />
         )}

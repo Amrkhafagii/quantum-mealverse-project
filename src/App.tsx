@@ -18,6 +18,8 @@ import Subscription from './pages/Subscription';
 import ProtectedRoute from './components/ProtectedRoute';
 import Customer from './pages/Customer';
 import Fitness from './pages/Fitness';
+import FitnessProfile from './pages/FitnessProfile';
+import Workouts from './pages/Workouts';
 
 // Restaurant Routes
 import RestaurantDashboard from './pages/restaurant/Dashboard';
@@ -42,6 +44,8 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/fitness" element={<Fitness />} />
+          <Route path="/fitness-profile" element={<ProtectedRoute><FitnessProfile /></ProtectedRoute>} />
+          <Route path="/workouts" element={<Workouts />} />
 
           {/* Protected Customer Routes */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
