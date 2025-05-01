@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Exercise, CompletedExercise } from '@/types/fitness';
-import { logWorkout } from '@/services/workoutService';
 import { Timer, Dumbbell, Check } from 'lucide-react';
+import { formatWorkoutLogForSupabase } from '@/utils/supabaseUtils';
+import { logWorkout } from '@/services/workoutService';
 
 interface WorkoutExerciseLogProps {
   userId?: string;
@@ -32,6 +32,7 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
   const [completedExercises, setCompletedExercises] = useState<any[]>(
     exercises.map(exercise => ({
       exercise_id: exercise.exercise_id || exercise.id,
+      name: exercise.name,
       exercise_name: exercise.exercise_name || exercise.name,
       sets_completed: Array(exercise.sets).fill(0).map((_, index) => ({
         set_number: index + 1,
@@ -125,18 +126,19 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
         
         return {
           exercise_id: exercise.exercise_id,
-          name: exercise.exercise_name,
+          name: exercise.name,
           exercise_name: exercise.exercise_name,
           sets_completed: completedSets,
           reps_completed: completedSets.map((set: any) => set.reps),
-          weight_used: completedSets.map((set: any) => set.weight)
+          weight_used: completedSets.map((set: any) => set.weight),
+          notes: exercise.notes
         };
       })
       .filter((ex): ex is CompletedExercise => ex !== null);
 
     try {
-      // Call the API to log the workout
-      const result = await logWorkout({
+      // Prepare workout log for Supabase
+      const workoutLog = formatWorkoutLogForSupabase({
         id: crypto.randomUUID(),
         user_id: userId,
         workout_plan_id: workoutPlanId,
@@ -146,6 +148,13 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
         notes: notes || null,
         completed_exercises: formattedCompletedExercises
       });
+
+      // Call the API to log the workout
+      const { data: result, error } = await logWorkout(workoutLog);
+
+      if (error) {
+        throw error;
+      }
 
       if (result) {
         toast({

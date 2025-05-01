@@ -56,7 +56,7 @@ export interface DatabaseExtensions {
           duration: number;
           calories_burned: number | null;
           notes: string | null;
-          completed_exercises: any;
+          completed_exercises: Json;
         };
         Insert: {
           id?: string;
@@ -66,7 +66,7 @@ export interface DatabaseExtensions {
           duration: number;
           calories_burned?: number | null;
           notes?: string | null;
-          completed_exercises: any;
+          completed_exercises: Json;
         };
         Update: {
           id?: string;
@@ -76,7 +76,7 @@ export interface DatabaseExtensions {
           duration?: number;
           calories_burned?: number | null;
           notes?: string | null;
-          completed_exercises?: any;
+          completed_exercises?: Json;
         };
       };
       workout_history: {
@@ -220,8 +220,10 @@ export interface DatabaseExtensions {
   };
 }
 
-// Instead of using interface augmentation, create a merged type
-export type MergedDatabase = SupabaseDatabase & DatabaseExtensions;
+// Use type merging instead of interface extension to avoid conflicts
+export type MergedDatabase = {
+  public: SupabaseDatabase['public'] & DatabaseExtensions['public'];
+};
 
 // Export a helper type to use in supabase client
 export type SupabaseSchema = MergedDatabase;

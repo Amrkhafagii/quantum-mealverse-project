@@ -148,7 +148,7 @@ export interface UserAchievement {
   date_achieved: string;
 }
 
-// Add types needed for other components
+// User profile type
 export interface UserProfile {
   id: string;
   user_id: string;
@@ -165,6 +165,7 @@ export interface UserProfile {
   updated_at: string;
 }
 
+// Saved meal plan type
 export interface SavedMealPlan {
   id: string;
   user_id: string;
@@ -174,6 +175,7 @@ export interface SavedMealPlan {
   tdee_id?: string;
 }
 
+// User workout statistics
 export interface UserWorkoutStats {
   user_id: string;
   totalWorkouts: number;

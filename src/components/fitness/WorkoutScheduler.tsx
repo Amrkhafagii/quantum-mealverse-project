@@ -1,13 +1,13 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { WorkoutPlan, WorkoutDay } from '@/types/fitness';
+import { WorkoutPlan, WorkoutDay, Exercise } from '@/types/fitness';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Play, Check } from 'lucide-react';
 import { format, isSameDay, startOfWeek, addDays, isAfter, isBefore, isToday } from 'date-fns';
 import WorkoutExerciseLog from './WorkoutExerciseLog';
+import { convertExerciseToWorkoutSet } from '@/utils/fitnessUtils';
 
 interface WorkoutSchedulerProps {
   userId?: string;
