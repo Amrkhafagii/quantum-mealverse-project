@@ -44,7 +44,7 @@ export const evaluateGoalProgress = async (goalId: string): Promise<{
 
     // Calculate progress based on goal type
     if (goal.target_weight && latestMeasurement.weight) {
-      const startingGoalData = await getGoalStartingData(goal);
+      const startingGoalData = await getGoalStartingData(goal as FitnessGoal);
       const startingWeight = startingGoalData?.weight || latestMeasurement.weight;
       
       // Calculate if this is a weight loss or gain goal
@@ -81,7 +81,7 @@ export const evaluateGoalProgress = async (goalId: string): Promise<{
     
     // For body fat goals
     else if (goal.target_body_fat !== null && latestMeasurement.body_fat !== null) {
-      const startingGoalData = await getGoalStartingData(goal);
+      const startingGoalData = await getGoalStartingData(goal as FitnessGoal);
       const startingBodyFat = startingGoalData?.body_fat || latestMeasurement.body_fat;
       
       // Assuming body fat goals are always reduction goals
@@ -159,44 +159,50 @@ export const updateGoalStatusBasedOnProgress = async (userId: string, goalId?: s
     
     // Check each goal's progress
     for (const goal of goals) {
-      const { progress, isAchieved } = await evaluateGoalProgress(goal.id);
+      // Need to type cast the goal status to ensure it matches the expected type
+      const typedGoal = {
+        ...goal,
+        status: goal.status as "active" | "completed" | "abandoned"
+      };
+      
+      const { progress, isAchieved } = await evaluateGoalProgress(typedGoal.id);
       
       // Update completed goals
-      if (isAchieved && goal.status !== 'completed') {
+      if (isAchieved && typedGoal.status !== 'completed') {
         await fromTable('fitness_goals')
           .update({ 
             status: 'completed',
             updated_at: new Date().toISOString()
           })
-          .eq('id', goal.id);
+          .eq('id', typedGoal.id);
           
         // Create notification for the achievement
         await createNotification(
           userId,
           'Goal Achieved!', 
-          `You've reached your goal: ${goal.name}!`,
+          `You've reached your goal: ${typedGoal.name}!`,
           'goal'
         );
       }
       
       // Check if target date has passed for goals not achieved
-      if (goal.target_date && !isAchieved) {
-        const targetDate = new Date(goal.target_date);
+      if (typedGoal.target_date && !isAchieved) {
+        const targetDate = new Date(typedGoal.target_date);
         const now = new Date();
         
-        if (targetDate < now && goal.status !== 'abandoned') {
+        if (targetDate < now && typedGoal.status !== 'abandoned') {
           await fromTable('fitness_goals')
             .update({ 
               status: 'abandoned',
               updated_at: new Date().toISOString()
             })
-            .eq('id', goal.id);
+            .eq('id', typedGoal.id);
             
           // Create notification for the missed goal
           await createNotification(
             userId,
             'Goal Deadline Passed',
-            `Your goal "${goal.name}" has passed its target date. You can update or reset it.`,
+            `Your goal "${typedGoal.name}" has passed its target date. You can update or reset it.`,
             'goal'
           );
         }
