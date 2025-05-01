@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -8,7 +7,7 @@ import MealPlanDisplay from '@/components/fitness/MealPlanDisplay';
 import { MealPlan } from '@/types/food';
 import { generateMealPlan } from '@/services/mealPlanService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HeartPulse, Utensils, TrendingUp, Zap, MapPin, Award, Goal, LineChart } from 'lucide-react';
+import { HeartPulse, Utensils, TrendingUp, Zap, MapPin, Award, Goal, LineChart, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,7 @@ import AchievementSystem from '@/components/fitness/AchievementSystem';
 import GoalManagement from '@/components/fitness/GoalManagement';
 import { UserMeasurement } from '@/types/fitness';
 import { getUserMeasurements } from '@/services/measurementService';
+import FitnessAnalyticsDashboard from '@/components/fitness/FitnessAnalyticsDashboard';
 
 const Fitness = () => {
   const navigate = useNavigate();
@@ -201,7 +201,7 @@ const Fitness = () => {
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8">
+          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9">
             <TabsTrigger value="calculator" className="flex items-center gap-1">
               <HeartPulse className="h-4 w-4" /> Calculator
             </TabsTrigger>
@@ -212,7 +212,10 @@ const Fitness = () => {
               <MapPin className="h-4 w-4" /> Find Food
             </TabsTrigger>
             <TabsTrigger value="track" className="flex items-center gap-1">
-              <LineChart className="h-4 w-4" /> Analytics
+              <LineChart className="h-4 w-4" /> Progress
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1">
+              <BarChart3 className="h-4 w-4" /> Analytics
             </TabsTrigger>
             <TabsTrigger value="goals" className="flex items-center gap-1">
               <Goal className="h-4 w-4" /> Goals
@@ -220,11 +223,11 @@ const Fitness = () => {
             <TabsTrigger value="achievements" className="flex items-center gap-1">
               <Award className="h-4 w-4" /> Achievements
             </TabsTrigger>
-            <TabsTrigger value="progress" className="flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" /> Progress
-            </TabsTrigger>
             <TabsTrigger value="workouts" className="flex items-center gap-1" onClick={() => navigate('/workouts')}>
               <Zap className="h-4 w-4" /> Workouts
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-1" onClick={() => navigate('/fitness-profile')}>
+              <TrendingUp className="h-4 w-4" /> Profile
             </TabsTrigger>
           </TabsList>
           
@@ -309,6 +312,10 @@ const Fitness = () => {
           
           <TabsContent value="track" className="mt-8">
             <AdvancedProgressCharts userId={user?.id} measurements={measurements} />
+          </TabsContent>
+          
+          <TabsContent value="analytics" className="mt-8">
+            <FitnessAnalyticsDashboard userId={user?.id} />
           </TabsContent>
           
           <TabsContent value="goals" className="mt-8">

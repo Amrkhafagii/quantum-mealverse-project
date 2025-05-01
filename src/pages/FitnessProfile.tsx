@@ -14,9 +14,11 @@ import MeasurementsHistory from '@/components/fitness/MeasurementsHistory';
 import SavedMealPlans from '@/components/fitness/SavedMealPlans';
 import UserGoals from '@/components/fitness/UserGoals';
 import EnhancedFitnessProfile from '@/components/fitness/EnhancedFitnessProfile';
+import ProgressInsights from '@/components/fitness/ProgressInsights';
 import { UserProfile, UserMeasurement } from '@/types/fitness';
 import { getUserMeasurements } from '@/services/measurementService';
-import { checkGoalAchievement } from '@/services/fitnessGoalService';
+import { updateGoalStatusBasedOnProgress } from '@/services/goalTrackingService';
+import { FitnessNotifications } from '@/components/ui/fitness-notification';
 
 const FitnessProfilePage = () => {
   const { user } = useAuth();
@@ -24,6 +26,7 @@ const FitnessProfilePage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('profile');
 
   useEffect(() => {
     if (!user) {
@@ -52,9 +55,9 @@ const FitnessProfilePage = () => {
 
       setUserProfile(data as UserProfile);
       
-      // Check for goal achievements whenever profile is loaded
+      // Check goals when profile is loaded
       if (data) {
-        checkGoalAchievement(user.id);
+        updateGoalStatusBasedOnProgress(user.id);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -85,7 +88,7 @@ const FitnessProfilePage = () => {
     await fetchMeasurements();
     // Check goals after adding a measurement
     if (user) {
-      checkGoalAchievement(user.id);
+      updateGoalStatusBasedOnProgress(user.id);
     }
   };
 
@@ -114,14 +117,22 @@ const FitnessProfilePage = () => {
         <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan mb-4 neon-text">
           Fitness Profile
         </h1>
-        <p className="text-xl text-gray-300 max-w-3xl mb-12">
+        <p className="text-xl text-gray-300 max-w-3xl mb-6">
           Manage your health metrics, body measurements, and fitness goals in one place.
         </p>
 
+        <div className="mb-8">
+          <FitnessNotifications userId={user.id} limit={3} />
+        </div>
+
         <EnhancedFitnessProfile userId={user.id} userProfile={userProfile || undefined} />
         
+        <div className="mt-8">
+          <ProgressInsights userId={user.id} />
+        </div>
+        
         <div className="mt-12">
-          <Tabs defaultValue="profile">
+          <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-quantum-darkBlue/50 w-full justify-start">
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="measurements">Measurements</TabsTrigger>
@@ -154,7 +165,8 @@ const FitnessProfilePage = () => {
                   </div>
                   <div className="lg:col-span-7">
                     <MeasurementsHistory 
-                      userId={user.id} 
+                      userId={user.id}
+                      measurements={measurements} 
                     />
                   </div>
                 </div>
