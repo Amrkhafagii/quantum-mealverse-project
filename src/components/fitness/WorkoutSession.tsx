@@ -10,6 +10,7 @@ import { useWorkoutData } from '@/hooks/useWorkoutData';
 import { Check, X } from 'lucide-react';
 import ExerciseLogForm from './ExerciseLogForm';
 import WorkoutTimer from './WorkoutTimer';
+import { checkAchievements, updateWorkoutStreak } from '@/services/achievementService';
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
@@ -73,6 +74,12 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
       const result = await logWorkout(workoutLog);
       
       if (result) {
+        // Update streak data
+        await updateWorkoutStreak(plan.user_id, workoutLog.date);
+        
+        // Check for achievements earned
+        await checkAchievements(plan.user_id, workoutLog);
+        
         toast({
           title: "Workout logged successfully",
           description: "Your workout has been saved.",

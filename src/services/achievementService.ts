@@ -1,6 +1,6 @@
 
 import { fromTable, supabase } from './supabaseClient';
-import { Achievement, UserAchievement } from '@/types/fitness';
+import { Achievement, UserAchievement, WorkoutLog } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -87,14 +87,16 @@ export const awardAchievement = async (userId: string, achievementId: string): P
  * Checks for achievements that can be awarded based on the user's activity
  * This function should be called after key actions like logging a workout
  */
-export const checkAchievements = async (userId: string): Promise<void> => {
+export const checkAchievements = async (userId: string, workoutLog?: WorkoutLog): Promise<void> => {
   try {
     // Get the user's workout history
     const { data: workoutHistory } = await fromTable('workout_history')
       .select('*')
       .eq('user_id', userId);
     
-    if (!workoutHistory || workoutHistory.length === 0) return;
+    if (!workoutHistory) return;
+    
+    const workoutCount = workoutHistory.length;
     
     // Get the user's current streak
     const { data: userStreak } = await fromTable('user_streaks')
@@ -103,22 +105,126 @@ export const checkAchievements = async (userId: string): Promise<void> => {
       .eq('streak_type', 'workout')
       .single();
     
-    // Check for first workout achievement
-    if (workoutHistory.length === 1) {
+    // First workout achievement
+    if (workoutCount === 1) {
       await awardAchievement(userId, '1'); // First workout achievement ID
+    }
+    
+    // 10 workouts achievement
+    if (workoutCount === 10) {
+      await awardAchievement(userId, '7'); // 10 workouts achievement ID
+    }
+    
+    // 50 workouts achievement
+    if (workoutCount === 50) {
+      await awardAchievement(userId, '8'); // 50 workouts achievement ID
     }
     
     // Check for streak-based achievements
     if (userStreak) {
+      // Week streak achievement - 7 days
+      if (userStreak.currentstreak >= 7) {
+        await awardAchievement(userId, '9'); // Week streak achievement ID
+      }
+      
       // Month streak achievement - 30 days
       if (userStreak.currentstreak >= 30) {
         await awardAchievement(userId, '6'); // Month streak achievement ID
       }
     }
     
-    // Additional achievement checks can be added here
-    
+    // If we have a specific workout log, check for workout-specific achievements
+    if (workoutLog) {
+      // Long workout achievement (60+ minutes)
+      if (workoutLog.duration >= 60) {
+        await awardAchievement(userId, '10'); // Long workout achievement ID
+      }
+      
+      // High intensity workout (500+ calories)
+      if (workoutLog.calories_burned && workoutLog.calories_burned >= 500) {
+        await awardAchievement(userId, '11'); // High intensity workout achievement ID
+      }
+      
+      // Complete workout achievement (all exercises completed)
+      const totalExercises = workoutLog.completed_exercises.length;
+      const completedSets = workoutLog.completed_exercises.reduce(
+        (total, exercise) => total + exercise.sets_completed.length, 0
+      );
+      
+      if (completedSets >= 20) {
+        await awardAchievement(userId, '12'); // 20+ sets in one workout achievement ID
+      }
+    }
   } catch (error) {
     console.error('Error checking achievements:', error);
+  }
+};
+
+// Helper function to check and update streak after a workout is logged
+export const updateWorkoutStreak = async (userId: string, workoutDate: string): Promise<void> => {
+  try {
+    // Get the user's current streak
+    const { data, error } = await fromTable('user_streaks')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('streak_type', 'workout')
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    const today = new Date(workoutDate);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Format dates for comparison (YYYY-MM-DD)
+    const todayStr = today.toISOString().split('T')[0];
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    if (!data) {
+      // Create a new streak record
+      const { error: insertError } = await fromTable('user_streaks').insert({
+        user_id: userId,
+        currentstreak: 1,
+        longeststreak: 1,
+        last_activity_date: todayStr,
+        streak_type: 'workout'
+      });
+      
+      if (insertError) throw insertError;
+    } else {
+      const lastActivityDate = data.last_activity_date.split('T')[0];
+      
+      // Check if the workout was done today (don't increment)
+      if (lastActivityDate === todayStr) {
+        return;
+      }
+      
+      let newCurrentStreak = data.currentstreak;
+      let newLongestStreak = data.longeststreak;
+      
+      // If workout was yesterday, increment streak
+      if (lastActivityDate === yesterdayStr) {
+        newCurrentStreak += 1;
+        
+        // Update longest streak if needed
+        if (newCurrentStreak > newLongestStreak) {
+          newLongestStreak = newCurrentStreak;
+        }
+      } else {
+        // Streak broken, start a new one
+        newCurrentStreak = 1;
+      }
+      
+      // Update the streak
+      const { error: updateError } = await fromTable('user_streaks').update({
+        currentstreak: newCurrentStreak,
+        longeststreak: newLongestStreak,
+        last_activity_date: todayStr
+      }).eq('id', data.id);
+      
+      if (updateError) throw updateError;
+    }
+  } catch (error) {
+    console.error('Error updating workout streak:', error);
   }
 };

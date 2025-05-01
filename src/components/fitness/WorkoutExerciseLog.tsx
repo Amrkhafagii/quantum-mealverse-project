@@ -10,6 +10,7 @@ import { formatWorkoutLogForSupabase } from '@/utils/supabaseUtils';
 import { logWorkout } from '@/services/workoutService';
 import ExerciseLogForm from './ExerciseLogForm';
 import WorkoutTimer from './WorkoutTimer';
+import { checkAchievements, updateWorkoutStreak } from '@/services/achievementService';
 
 interface WorkoutExerciseLogProps {
   userId?: string;
@@ -82,7 +83,7 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
           weight_used: completedSets.map((set: any) => set.weight),
         };
         
-        // Only add notes if it exists
+        // Only add notes if it exists and is not empty
         return exercise.notes 
           ? { ...baseExercise, notes: exercise.notes }
           : baseExercise;
@@ -111,6 +112,10 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
       }
 
       if (result) {
+        // Update streak and check for achievements
+        await updateWorkoutStreak(userId, workoutLog.date);
+        await checkAchievements(userId, workoutLog);
+        
         toast({
           title: "Workout Logged",
           description: "Your workout has been saved successfully."

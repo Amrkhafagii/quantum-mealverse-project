@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Achievement, UserAchievement } from '@/types/fitness';
-import { supabase } from '@/integrations/supabase/client';
-import { Award, Star, TrendingUp, Dumbbell, Utensils, Calendar, Target, Clock } from 'lucide-react';
+import { Award, Star, TrendingUp, Dumbbell, Utensils, Calendar, Target, Clock, Sunrise, Medal } from 'lucide-react';
 import { getAchievements, getUserAchievements } from '@/services/achievementService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,25 +36,23 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
     try {
       setLoading(true);
       
-      // We still need to handle the case where the database tables might not exist yet
-      let achievementsData: Achievement[] = [];
-      let userAchievementsData: ExtendedUserAchievement[] = [];
-      
-      // Try to fetch real data
+      // Fetch real data from the database
       const { data: fetchedAchievements, error: achievementsError } = await getAchievements();
       const { data: fetchedUserAchievements, error: userAchievementsError } = await getUserAchievements(userId || '');
+
+      // Use fetched data if available, otherwise use mock data
+      const achievementsData = fetchedAchievements || getMockAchievements();
       
-      if (fetchedAchievements && !achievementsError) {
-        achievementsData = fetchedAchievements;
+      let userAchievementsData: ExtendedUserAchievement[];
+      if (fetchedUserAchievements) {
+        userAchievementsData = fetchedUserAchievements.map(ua => {
+          const matchingAchievement = achievementsData.find(a => a.id === ua.achievement_id);
+          return {
+            ...ua,
+            achievement: matchingAchievement
+          };
+        });
       } else {
-        // Fallback to mock data if the table doesn't exist or there's an error
-        achievementsData = getMockAchievements();
-      }
-      
-      if (fetchedUserAchievements && !userAchievementsError) {
-        userAchievementsData = fetchedUserAchievements;
-      } else {
-        // Fallback to mock user achievements
         userAchievementsData = getMockUserAchievements(userId || '', achievementsData);
       }
       
@@ -72,7 +70,6 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
       // Calculate level (1 level per 50 points)
       setUserLevel(Math.max(1, Math.floor(points / 50) + 1));
       
-      setLoading(false);
     } catch (error) {
       console.error('Error loading achievements:', error);
       toast({
@@ -80,6 +77,7 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
         description: "Failed to load achievements",
         variant: "destructive"
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -134,6 +132,54 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
         icon: "Calendar",
         criteria: "30 days of activity",
         points: 50
+      },
+      {
+        id: "7",
+        name: "Dedicated Athlete",
+        description: "Complete 10 workouts",
+        icon: "Medal",
+        criteria: "Complete 10 workouts",
+        points: 20
+      },
+      {
+        id: "8",
+        name: "Fitness Enthusiast",
+        description: "Complete 50 workouts",
+        icon: "Award",
+        criteria: "Complete 50 workouts",
+        points: 50
+      },
+      {
+        id: "9",
+        name: "Weekly Warrior",
+        description: "Maintain a 7-day workout streak",
+        icon: "Calendar",
+        criteria: "7 days of activity",
+        points: 25
+      },
+      {
+        id: "10",
+        name: "Endurance Champion",
+        description: "Complete a workout lasting over 60 minutes",
+        icon: "Clock",
+        criteria: "60+ minute workout",
+        points: 15
+      },
+      {
+        id: "11",
+        name: "High Intensity",
+        description: "Burn 500+ calories in a single workout",
+        icon: "Flame",
+        criteria: "Burn 500+ calories",
+        points: 20
+      },
+      {
+        id: "12",
+        name: "Volume Master",
+        description: "Complete 20+ sets in a single workout",
+        icon: "Dumbbell",
+        criteria: "20+ sets in one workout",
+        points: 15
       }
     ];
   };
@@ -146,14 +192,14 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
         user_id: userId,
         achievement_id: "1",
         date_achieved: new Date().toISOString(),
-        achievement: achievements[0]
+        achievement: achievements.find(a => a.id === "1")
       },
       {
         id: "ua2",
         user_id: userId,
         achievement_id: "3",
         date_achieved: new Date().toISOString(),
-        achievement: achievements[2]
+        achievement: achievements.find(a => a.id === "3")
       }
     ];
   };
@@ -163,9 +209,12 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
       case 'Dumbbell': return <Dumbbell className="h-6 w-6 text-quantum-purple" />;
       case 'LineChart': return <TrendingUp className="h-6 w-6 text-quantum-cyan" />;
       case 'Utensils': return <Utensils className="h-6 w-6 text-green-400" />;
-      case 'Sunrise': return <Clock className="h-6 w-6 text-amber-400" />;
+      case 'Sunrise': return <Sunrise className="h-6 w-6 text-amber-400" />;
       case 'Target': return <Target className="h-6 w-6 text-red-400" />;
       case 'Calendar': return <Calendar className="h-6 w-6 text-blue-400" />;
+      case 'Medal': return <Medal className="h-6 w-6 text-yellow-400" />;
+      case 'Award': return <Award className="h-6 w-6 text-purple-400" />;
+      case 'Clock': return <Clock className="h-6 w-6 text-indigo-400" />;
       default: return <Award className="h-6 w-6 text-quantum-purple" />;
     }
   };
@@ -234,7 +283,8 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
             {userAchievements.length > 0 ? (
               <div className="space-y-3">
                 {userAchievements.map((userAchievement) => {
-                  const achievement = allAchievements.find(a => a.id === userAchievement.achievement_id);
+                  const achievement = userAchievement.achievement || 
+                                     allAchievements.find(a => a.id === userAchievement.achievement_id);
                   if (!achievement) return null;
                   
                   return (
