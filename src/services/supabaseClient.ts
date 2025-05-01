@@ -9,7 +9,7 @@ export { originalSupabase };
 export function fromTable<T extends keyof Database['public']['Tables']>(
   table: T
 ) {
-  return originalSupabase.from(table) as any;
+  return originalSupabase.from(table);
 }
 
 // Use the original client as the default export

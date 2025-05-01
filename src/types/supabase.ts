@@ -143,7 +143,43 @@ declare module "@/integrations/supabase/types" {
             streak_type?: string;
           };
         };
-      };
+        workout_schedules: {
+          Row: {
+            id: string;
+            user_id: string;
+            workout_plan_id: string;
+            start_date: string;
+            end_date: string | null;
+            days_of_week: number[];
+            preferred_time: string | null;
+            active: boolean;
+          };
+          Insert: {
+            id?: string;
+            user_id: string;
+            workout_plan_id: string;
+            start_date: string;
+            end_date?: string | null;
+            days_of_week: number[];
+            preferred_time?: string | null;
+            active?: boolean;
+          };
+          Update: {
+            id?: string;
+            user_id?: string;
+            workout_plan_id?: string;
+            start_date?: string;
+            end_date?: string | null;
+            days_of_week?: number[];
+            preferred_time?: string | null;
+            active?: boolean;
+          };
+        };
+      } & SupabaseDatabase['public']['Tables'];
+      Views: SupabaseDatabase['public']['Views'];
+      Functions: SupabaseDatabase['public']['Functions'];
+      Enums: SupabaseDatabase['public']['Enums'];
+      CompositeTypes: SupabaseDatabase['public']['CompositeTypes'];
     };
   }
 }
