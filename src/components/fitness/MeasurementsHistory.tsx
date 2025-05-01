@@ -1,311 +1,151 @@
-import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { UserMeasurement } from '@/types/fitness';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, RefreshCw } from 'lucide-react';
+import { format } from 'date-fns';
+import MeasurementForm from './MeasurementForm';
 
 interface MeasurementsHistoryProps {
-  measurements: UserMeasurement[];
-  onMeasurementAdded: () => void;
+  userId?: string;
 }
 
-const MeasurementsHistory = ({ measurements, onMeasurementAdded }: MeasurementsHistoryProps) => {
-  const { user } = useAuth();
+const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId }) => {
+  const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
-  const [weight, setWeight] = useState('');
-  const [bodyFat, setBodyFat] = useState('');
-  const [chest, setChest] = useState('');
-  const [waist, setWaist] = useState('');
-  const [hips, setHips] = useState('');
-  const [arms, setArms] = useState('');
-  const [legs, setLegs] = useState('');
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleAddMeasurement = async () => {
-    if (!weight) {
-      toast({
-        title: "Weight Required",
-        description: "Please enter your current weight to add a measurement.",
-        variant: "destructive"
-      });
+  const loadMeasurements = async () => {
+    if (!userId) {
+      setMeasurements([]);
+      setLoading(false);
       return;
     }
 
     try {
-      setSubmitting(true);
-      const newMeasurement = {
-        user_id: user?.id,
-        date: new Date().toISOString(),
-        weight: parseFloat(weight),
-        body_fat: bodyFat ? parseFloat(bodyFat) : null,
-        chest: chest ? parseFloat(chest) : null,
-        waist: waist ? parseFloat(waist) : null,
-        hips: hips ? parseFloat(hips) : null,
-        arms: arms ? parseFloat(arms) : null,
-        legs: legs ? parseFloat(legs) : null,
-        notes: notes || null
-      };
-
-      const { error } = await supabase
+      setLoading(true);
+      const { data, error } = await supabase
         .from('user_measurements')
-        .insert([newMeasurement]);
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
 
       if (error) throw error;
-
+      setMeasurements(data || []);
+    } catch (error: any) {
+      console.error('Error loading measurements:', error);
       toast({
-        title: "Measurement Added",
-        description: "Your new measurement has been recorded successfully."
-      });
-      
-      // Reset form
-      setWeight('');
-      setBodyFat('');
-      setChest('');
-      setWaist('');
-      setHips('');
-      setLegs('');
-      setNotes('');
-      
-      // Refresh data
-      if (onMeasurementAdded) onMeasurementAdded();
-      
-    } catch (error) {
-      console.error('Error adding measurement:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add measurement. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to load measurement history',
+        variant: 'destructive',
       });
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Format data for charts
-  const chartData = [...measurements]
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .map(m => ({
-      date: new Date(m.date).toLocaleDateString(),
-      weight: m.weight,
-      bodyFat: m.body_fat,
-      chest: m.chest,
-      waist: m.waist,
-      hips: m.hips
-    }));
+  useEffect(() => {
+    loadMeasurements();
+  }, [userId]);
+
+  const handleRefresh = () => {
+    loadMeasurements();
+  };
+
+  const handleMeasurementAdded = () => {
+    setAddDialogOpen(false);
+    loadMeasurements();
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch (e) {
+      return dateString;
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <Card className="holographic-card">
-        <CardHeader>
-          <CardTitle>Add New Measurement</CardTitle>
-          <CardDescription>
-            Track your progress by regularly updating your measurements
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight">Weight (kg) *</Label>
-              <Input
-                id="weight"
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="Required"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="bodyFat">Body Fat %</Label>
-              <Input
-                id="bodyFat"
-                type="number"
-                value={bodyFat}
-                onChange={(e) => setBodyFat(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="chest">Chest (cm)</Label>
-              <Input
-                id="chest"
-                type="number"
-                value={chest}
-                onChange={(e) => setChest(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="waist">Waist (cm)</Label>
-              <Input
-                id="waist"
-                type="number"
-                value={waist}
-                onChange={(e) => setWaist(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="hips">Hips (cm)</Label>
-              <Input
-                id="hips"
-                type="number"
-                value={hips}
-                onChange={(e) => setHips(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="arms">Arms (cm)</Label>
-              <Input
-                id="arms"
-                type="number"
-                value={arms}
-                onChange={(e) => setArms(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="legs">Legs (cm)</Label>
-              <Input
-                id="legs"
-                type="number"
-                value={legs}
-                onChange={(e) => setLegs(e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional: add any relevant information"
-              />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button 
-            onClick={handleAddMeasurement} 
-            disabled={submitting || !weight}
-            className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-quantum-cyan">Measurements History</h2>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={loading}
           >
-            {submitting ? 'Adding...' : 'Add Measurement'}
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-        </CardFooter>
+          
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-quantum-purple hover:bg-quantum-purple/90">
+                <Plus className="h-4 w-4 mr-2" /> Add Measurement
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-quantum-darkBlue border-quantum-cyan/30 text-white max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-quantum-cyan text-2xl">Add New Measurement</DialogTitle>
+              </DialogHeader>
+              <MeasurementForm userId={userId} onMeasurementAdded={handleMeasurementAdded} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Card className="bg-quantum-darkBlue/30 border border-quantum-cyan/20">
+        <CardContent className="p-0 overflow-auto">
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-quantum-cyan"></div>
+            </div>
+          ) : measurements.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400">No measurement history found</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Start tracking your progress by adding your first measurement
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Weight (kg)</TableHead>
+                  <TableHead>Body Fat %</TableHead>
+                  <TableHead>Chest (cm)</TableHead>
+                  <TableHead>Waist (cm)</TableHead>
+                  <TableHead>Hips (cm)</TableHead>
+                  <TableHead>Arms (cm)</TableHead>
+                  <TableHead>Legs (cm)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {measurements.map((measurement) => (
+                  <TableRow key={measurement.id}>
+                    <TableCell>{formatDate(measurement.date)}</TableCell>
+                    <TableCell>{measurement.weight}</TableCell>
+                    <TableCell>{measurement.body_fat || '-'}</TableCell>
+                    <TableCell>{measurement.chest || '-'}</TableCell>
+                    <TableCell>{measurement.waist || '-'}</TableCell>
+                    <TableCell>{measurement.hips || '-'}</TableCell>
+                    <TableCell>{measurement.arms || '-'}</TableCell>
+                    <TableCell>{measurement.legs || '-'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
-
-      {chartData.length > 0 && (
-        <Card className="holographic-card">
-          <CardHeader>
-            <CardTitle>Weight Progress</CardTitle>
-            <CardDescription>
-              Track your weight changes over time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="date" stroke="#888" />
-                  <YAxis stroke="#888" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#111', 
-                      border: '1px solid #333',
-                      color: '#fff' 
-                    }}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="weight" 
-                    stroke="#00ffff" 
-                    activeDot={{ r: 8 }} 
-                    name="Weight (kg)"
-                  />
-                  {chartData.some(d => d.bodyFat) && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="bodyFat" 
-                      stroke="#ff00ff" 
-                      name="Body Fat %"
-                    />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {measurements.length > 0 && (
-        <Card className="holographic-card overflow-hidden">
-          <CardHeader>
-            <CardTitle>Measurement History</CardTitle>
-            <CardDescription>
-              Your recorded measurements over time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="px-4 py-2 text-left">Date</th>
-                    <th className="px-4 py-2 text-right">Weight</th>
-                    <th className="px-4 py-2 text-right">Body Fat</th>
-                    <th className="px-4 py-2 text-right">Chest</th>
-                    <th className="px-4 py-2 text-right">Waist</th>
-                    <th className="px-4 py-2 text-right">Hips</th>
-                    <th className="px-4 py-2">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {measurements.map((m) => (
-                    <tr key={m.id} className="border-b border-gray-800 hover:bg-gray-900/30">
-                      <td className="px-4 py-2">
-                        <div>{new Date(m.date).toLocaleDateString()}</div>
-                        <div className="text-xs text-gray-400">{formatDistanceToNow(new Date(m.date), { addSuffix: true })}</div>
-                      </td>
-                      <td className="px-4 py-2 text-right">{m.weight} kg</td>
-                      <td className="px-4 py-2 text-right">{m.body_fat ? `${m.body_fat}%` : '-'}</td>
-                      <td className="px-4 py-2 text-right">{m.chest ? `${m.chest} cm` : '-'}</td>
-                      <td className="px-4 py-2 text-right">{m.waist ? `${m.waist} cm` : '-'}</td>
-                      <td className="px-4 py-2 text-right">{m.hips ? `${m.hips} cm` : '-'}</td>
-                      <td className="px-4 py-2">{m.notes || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {measurements.length === 0 && (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="pt-6 text-center">
-            <p>No measurement history found. Add your first measurement to start tracking your progress.</p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

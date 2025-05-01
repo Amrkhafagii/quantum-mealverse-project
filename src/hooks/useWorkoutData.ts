@@ -217,7 +217,13 @@ export const useWorkoutData = () => {
       // Ensure the user ID is set
       log.user_id = user.id;
       
-      const { data, error } = await logWorkout(log);
+      // Convert completed_exercises to JSON before sending to Supabase
+      const logForStorage = {
+        ...log,
+        completed_exercises: JSON.parse(JSON.stringify(log.completed_exercises))
+      };
+      
+      const { data, error } = await logWorkout(logForStorage);
 
       if (error) {
         throw error;
