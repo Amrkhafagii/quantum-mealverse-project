@@ -151,6 +151,26 @@ export interface WorkoutLog {
   }[];
 }
 
+export interface WorkoutSchedule {
+  id: string;
+  user_id: string;
+  workout_plan_id: string;
+  start_date: string;
+  end_date?: string;
+  days_of_week: number[]; // 0 = Sunday, 6 = Saturday
+  preferred_time?: string;
+  active: boolean;
+}
+
+export interface UserStreak {
+  id: string;
+  user_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_activity_date: string;
+  streak_type: 'workout' | 'nutrition' | 'measurement';
+}
+
 export interface ProgressAnalytics {
   user_id: string;
   date_range: {

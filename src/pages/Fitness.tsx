@@ -8,13 +8,16 @@ import MealPlanDisplay from '@/components/fitness/MealPlanDisplay';
 import { MealPlan } from '@/types/food';
 import { generateMealPlan } from '@/services/mealPlanService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HeartPulse, Utensils, TrendingUp, Zap, MapPin } from 'lucide-react';
+import { HeartPulse, Utensils, TrendingUp, Zap, MapPin, Award } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import RestaurantMealFinder from '@/components/fitness/RestaurantMealFinder';
+import ProgressAnalytics from '@/components/fitness/ProgressAnalytics';
+import AchievementSystem from '@/components/fitness/AchievementSystem';
+import { UserMeasurement } from '@/types/fitness';
 
 const Fitness = () => {
   const navigate = useNavigate();
@@ -25,6 +28,7 @@ const Fitness = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('calculator');
   const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
+  const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
   
   useEffect(() => {
     // Try to load meal plan from session storage on initial render
@@ -54,7 +58,29 @@ const Fitness = () => {
         }
       );
     }
-  }, []);
+    
+    if (user) {
+      loadMeasurements();
+    }
+  }, [user]);
+  
+  const loadMeasurements = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_measurements')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      
+      setMeasurements(data || []);
+    } catch (error) {
+      console.error('Error loading measurements:', error);
+    }
+  };
   
   const handleCalculationComplete = (result: TDEEResult) => {
     setTdeeResult(result);
@@ -178,7 +204,7 @@ const Fitness = () => {
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-5">
+          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-6">
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <HeartPulse className="h-4 w-4" /> Calculator
             </TabsTrigger>
@@ -188,8 +214,11 @@ const Fitness = () => {
             <TabsTrigger value="restaurants" className="flex items-center gap-2" disabled={!mealPlan}>
               <MapPin className="h-4 w-4" /> Find Food
             </TabsTrigger>
-            <TabsTrigger value="progress" className="flex items-center gap-2" onClick={() => navigate('/fitness-profile')}>
-              <TrendingUp className="h-4 w-4" /> Progress
+            <TabsTrigger value="progress" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" /> Analytics
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="flex items-center gap-2">
+              <Award className="h-4 w-4" /> Achievements
             </TabsTrigger>
             <TabsTrigger value="workouts" className="flex items-center gap-2" onClick={() => navigate('/workouts')}>
               <Zap className="h-4 w-4" /> Workouts
@@ -275,15 +304,19 @@ const Fitness = () => {
             )}
           </TabsContent>
           
-          <TabsContent value="progress">
-            <div className="text-center p-12">
-              <p>Progress tracking coming soon!</p>
-            </div>
+          <TabsContent value="progress" className="mt-8">
+            <ProgressAnalytics userId={user?.id} measurements={measurements} />
+          </TabsContent>
+          
+          <TabsContent value="achievements" className="mt-8">
+            <AchievementSystem userId={user?.id} />
           </TabsContent>
           
           <TabsContent value="workouts">
             <div className="text-center p-12">
-              <p>Workout plans coming soon!</p>
+              <Button onClick={() => navigate('/workouts')} className="bg-quantum-purple hover:bg-quantum-purple/90">
+                Go to Workout Planner
+              </Button>
             </div>
           </TabsContent>
         </Tabs>
