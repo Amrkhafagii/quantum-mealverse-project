@@ -8,9 +8,9 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-xl font-bold text-quantum-cyan mb-4">QUANTUM<span className="text-quantum-purple">MEALS</span></h3>
+            <h3 className="text-xl font-bold text-quantum-cyan mb-4">HEALTH<span className="text-quantum-purple">ANDFIX</span></h3>
             <p className="text-gray-400 mb-4">
-              The future of nutrition, delivered today. Our AI-powered meal plans 
+              The future of wellness, personalized for you. Our health solutions 
               adapt to your needs for optimal health and performance.
             </p>
             <div className="flex space-x-4">
@@ -25,7 +25,7 @@ const Footer = () => {
             <h3 className="text-lg font-bold text-quantum-cyan mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <FooterLink href="#">Home</FooterLink>
-              <FooterLink href="#meals">Meals</FooterLink>
+              <FooterLink href="#solutions">Solutions</FooterLink>
               <FooterLink href="#subscription">Subscription</FooterLink>
               <FooterLink href="#about">About Us</FooterLink>
               <FooterLink href="#faq">FAQ</FooterLink>
@@ -38,7 +38,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-start">
                 <MapPin className="w-5 h-5 text-quantum-purple mr-3 mt-0.5" />
-                <span className="text-gray-400">123 Quantum Street, Neo City, NC 75001</span>
+                <span className="text-gray-400">123 Health Street, Wellness City, WC 75001</span>
               </li>
               <li className="flex items-center">
                 <Phone className="w-5 h-5 text-quantum-purple mr-3" />
@@ -46,7 +46,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center">
                 <Mail className="w-5 h-5 text-quantum-purple mr-3" />
-                <span className="text-gray-400">contact@quantummeals.com</span>
+                <span className="text-gray-400">contact@healthandfix.com</span>
               </li>
             </ul>
           </div>
@@ -55,7 +55,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold text-quantum-cyan mb-4">Newsletter</h3>
             <p className="text-gray-400 mb-4">
-              Subscribe to our newsletter for the latest meal innovations and exclusive offers.
+              Subscribe to our newsletter for the latest health innovations and exclusive offers.
             </p>
             <div className="flex">
               <input
@@ -72,7 +72,7 @@ const Footer = () => {
 
         <div className="border-t border-quantum-cyan/10 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} QuantumMeals. All rights reserved.
+            &copy; {new Date().getFullYear()} HealthAndFix. All rights reserved.
           </p>
           <div className="flex space-x-4">
             <a href="#" className="text-gray-500 hover:text-quantum-cyan text-sm">Privacy Policy</a>

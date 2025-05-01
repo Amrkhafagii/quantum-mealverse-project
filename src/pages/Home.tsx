@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 const Home = () => {
   const navigate = useNavigate();
 
-  const exploreMeals = () => {
+  const exploreSolutions = () => {
     navigate('/customer');
   };
 
@@ -21,17 +21,17 @@ const Home = () => {
         <section className="h-screen flex items-center justify-center text-center px-4">
           <div className="space-y-6">
             <h1 className="text-6xl md:text-8xl font-bold text-quantum-cyan neon-text">
-              Zenith Meals
+              HealthAndFix
             </h1>
             <p className="text-xl md:text-2xl text-galaxy-purple max-w-2xl mx-auto">
-              Experience the future of food delivery with our smart meal recommendations
-              and real-time meal previews
+              Experience the future of health and wellness with our smart personalized solutions
+              and holistic wellness approach
             </p>
             <button 
               className="cyber-button text-lg"
-              onClick={exploreMeals}
+              onClick={exploreSolutions}
             >
-              Explore Meals
+              Explore Solutions
             </button>
           </div>
         </section>

@@ -39,7 +39,7 @@ const Index = () => {
     navigate('/admin');
   };
 
-  const exploreMeals = () => {
+  const exploreSolutions = () => {
     navigate('/customer');
   };
 
@@ -53,17 +53,17 @@ const Index = () => {
         <section className="h-screen flex items-center justify-center text-center px-4">
           <div className="space-y-6">
             <h1 className="text-6xl md:text-8xl font-bold text-quantum-cyan neon-text">
-              ZenithMeals
+              HealthAndFix
             </h1>
             <p className="text-xl md:text-2xl text-galaxy-purple max-w-2xl mx-auto">
-              Experience the future of food delivery with our AI-powered meal recommendations
-              and augmented reality previews
+              Experience the future of health and wellness with our AI-powered personalized solutions
+              and holistic wellness approach
             </p>
             <button 
               className="cyber-button text-lg"
-              onClick={exploreMeals}
+              onClick={exploreSolutions}
             >
-              Explore Meals
+              Explore Solutions
             </button>
 
             {/* Admin section */}
@@ -83,7 +83,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Featured Meals Section */}
+        {/* Featured Solutions Section */}
         <FeaturedMeals />
       </main>
     </div>

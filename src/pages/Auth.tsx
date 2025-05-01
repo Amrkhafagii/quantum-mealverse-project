@@ -27,7 +27,7 @@ const Auth = () => {
       <div className="relative z-10 flex items-center justify-center min-h-screen py-20">
         <div className="w-full max-w-md px-4">
           <Card className="holographic-card p-8">
-            <h1 className="text-4xl font-bold text-quantum-cyan mb-8 text-center neon-text">ZenithMeals</h1>
+            <h1 className="text-4xl font-bold text-quantum-cyan mb-8 text-center neon-text">HealthAndFix</h1>
             <AuthForm />
           </Card>
         </div>
