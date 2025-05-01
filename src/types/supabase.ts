@@ -3,8 +3,8 @@ import type { Database as SupabaseDatabase } from "@/integrations/supabase/types
 
 // Extend the Database type to include our workout tables
 declare module "@/integrations/supabase/types" {
-  // Use 'export' to make it visible outside this module
-  export interface Database extends SupabaseDatabase {
+  // We're augmenting the existing Database interface, not creating a new one
+  interface Database extends SupabaseDatabase {
     public: {
       Tables: {
         workout_plans: {
