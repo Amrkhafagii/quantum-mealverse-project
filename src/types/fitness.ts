@@ -165,8 +165,8 @@ export interface WorkoutSchedule {
 export interface UserStreak {
   id: string;
   user_id: string;
-  current_streak: number;
-  longest_streak: number;
+  currentStreak: number;
+  longestStreak: number;
   last_activity_date: string;
   streak_type: 'workout' | 'nutrition' | 'measurement';
 }

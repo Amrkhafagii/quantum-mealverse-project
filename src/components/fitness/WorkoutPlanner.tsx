@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { WorkoutPlan, WorkoutDay, WorkoutSet } from '@/types/fitness';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dumbbell, Plus, Save, X, Edit, Calendar, Check } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { WorkoutPlan, WorkoutDay, WorkoutSet } from '@/types/fitness';
+import { Plus, Trash, Save, Dumbbell, Calendar, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { saveWorkoutPlan, getWorkoutPlans } from '@/services/workoutService';
 
 interface WorkoutPlannerProps {
   userId?: string;
@@ -22,561 +22,760 @@ const WorkoutPlanner = ({ userId, onPlanSelect }: WorkoutPlannerProps) => {
   const { toast } = useToast();
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newPlanDialog, setNewPlanDialog] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<WorkoutPlan | null>(null);
-
-  // New plan form state
-  const [planName, setPlanName] = useState('');
-  const [planDescription, setPlanDescription] = useState('');
-  const [planGoal, setPlanGoal] = useState<'strength' | 'hypertrophy' | 'endurance' | 'weight_loss' | 'general'>('general');
-  const [planFrequency, setPlanFrequency] = useState(3); // Default 3 days per week
-  const [planDifficulty, setPlanDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
-  const [planDuration, setPlanDuration] = useState(4); // Default 4 weeks
-  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([]);
-
+  const [showNewPlanDialog, setShowNewPlanDialog] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  
+  // New plan template
+  const [newPlan, setNewPlan] = useState<WorkoutPlan>({
+    id: '',
+    user_id: userId || '',
+    name: '',
+    description: '',
+    goal: 'strength',
+    frequency: 3,
+    difficulty: 'beginner',
+    duration_weeks: 4,
+    created_at: '',
+    updated_at: '',
+    workout_days: []
+  });
+  
+  // Get plans on component mount
   useEffect(() => {
     if (userId) {
-      loadWorkoutPlans();
+      fetchWorkoutPlans();
     }
   }, [userId]);
-
-  useEffect(() => {
-    // Generate workout days based on frequency
-    if (planFrequency > 0) {
-      const newWorkoutDays: WorkoutDay[] = [];
-      for (let i = 1; i <= planFrequency; i++) {
-        newWorkoutDays.push({
-          day_name: `Day ${i}`,
-          exercises: [],
-          completed: false,
-        });
-      }
-      setWorkoutDays(newWorkoutDays);
-    }
-  }, [planFrequency]);
-
-  const loadWorkoutPlans = async () => {
+  
+  // Fetch workout plans from database
+  const fetchWorkoutPlans = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      // In a real implementation, we would fetch from a workout_plans table
-      // This is a placeholder until the database schema is updated
-      // const { data, error } = await supabase
-      //   .from('workout_plans')
-      //   .select('*')
-      //   .eq('user_id', userId)
-      //   .order('created_at', { ascending: false });
-
-      // if (error) throw error;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
       
-      // Mocked data for now - would come from database
-      const mockPlans: WorkoutPlan[] = [
-        {
-          id: "1",
-          user_id: userId || "",
-          name: "Beginner Strength Training",
-          description: "A simple strength training routine for beginners",
-          goal: "strength",
-          frequency: 3,
-          difficulty: "beginner",
-          duration_weeks: 4,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          workout_days: [
-            {
-              day_name: "Day 1 - Push",
-              exercises: [
-                {
-                  exercise_id: "ex1",
-                  exercise_name: "Push-ups",
-                  sets: 3,
-                  reps: 10,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex2",
-                  exercise_name: "Dumbbell Shoulder Press",
-                  sets: 3,
-                  reps: 10,
-                  weight: 10,
-                  completed: false
-                }
-              ],
-              completed: false
-            },
-            {
-              day_name: "Day 2 - Pull",
-              exercises: [
-                {
-                  exercise_id: "ex3",
-                  exercise_name: "Dumbbell Rows",
-                  sets: 3,
-                  reps: 10,
-                  weight: 15,
-                  completed: false
-                }
-              ],
-              completed: false
-            },
-            {
-              day_name: "Day 3 - Legs",
-              exercises: [
-                {
-                  exercise_id: "ex4",
-                  exercise_name: "Bodyweight Squats",
-                  sets: 3,
-                  reps: 15,
-                  completed: false
-                }
-              ],
-              completed: false
-            }
-          ]
-        },
-        {
-          id: "2",
-          user_id: userId || "",
-          name: "Intermediate Hypertrophy Program",
-          description: "A program designed to build muscle mass efficiently",
-          goal: "hypertrophy",
-          frequency: 4,
-          difficulty: "intermediate",
-          duration_weeks: 8,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          workout_days: [
-            {
-              day_name: "Day 1 - Chest & Triceps",
-              exercises: [
-                {
-                  exercise_id: "ex5",
-                  exercise_name: "Barbell Bench Press",
-                  sets: 4,
-                  reps: 8,
-                  weight: 60,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex6",
-                  exercise_name: "Incline Dumbbell Press",
-                  sets: 3,
-                  reps: 10,
-                  weight: 20,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex7",
-                  exercise_name: "Tricep Pushdowns",
-                  sets: 3,
-                  reps: 12,
-                  weight: 25,
-                  completed: false
-                }
-              ],
-              completed: false
-            },
-            {
-              day_name: "Day 2 - Back & Biceps",
-              exercises: [
-                {
-                  exercise_id: "ex8",
-                  exercise_name: "Pull-Ups",
-                  sets: 4,
-                  reps: 8,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex9",
-                  exercise_name: "Barbell Rows",
-                  sets: 3,
-                  reps: 10,
-                  weight: 50,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex10",
-                  exercise_name: "Bicep Curls",
-                  sets: 3,
-                  reps: 12,
-                  weight: 15,
-                  completed: false
-                }
-              ],
-              completed: false
-            },
-            {
-              day_name: "Day 3 - Legs",
-              exercises: [
-                {
-                  exercise_id: "ex11",
-                  exercise_name: "Squats",
-                  sets: 4,
-                  reps: 8,
-                  weight: 80,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex12",
-                  exercise_name: "Leg Press",
-                  sets: 3,
-                  reps: 12,
-                  weight: 120,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex13",
-                  exercise_name: "Calf Raises",
-                  sets: 4,
-                  reps: 15,
-                  weight: 40,
-                  completed: false
-                }
-              ],
-              completed: false
-            },
-            {
-              day_name: "Day 4 - Shoulders & Abs",
-              exercises: [
-                {
-                  exercise_id: "ex14",
-                  exercise_name: "Overhead Press",
-                  sets: 4,
-                  reps: 8,
-                  weight: 40,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex15",
-                  exercise_name: "Lateral Raises",
-                  sets: 3,
-                  reps: 12,
-                  weight: 10,
-                  completed: false
-                },
-                {
-                  exercise_id: "ex16",
-                  exercise_name: "Hanging Leg Raises",
-                  sets: 3,
-                  reps: 15,
-                  completed: false
-                }
-              ],
-              completed: false
-            }
-          ]
-        }
-      ];
+      const { data, error } = await getWorkoutPlans(userId);
       
-      setWorkoutPlans(mockPlans);
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        setWorkoutPlans(data);
+      } else {
+        // Generate some default templates if no plans exist
+        setWorkoutPlans(generateDefaultTemplates());
+      }
     } catch (error) {
-      console.error('Error loading workout plans:', error);
+      console.error('Error fetching workout plans:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load workout plans.',
+        description: 'Failed to load workout plans. Using default templates.',
         variant: 'destructive',
       });
+      setWorkoutPlans(generateDefaultTemplates());
     } finally {
       setLoading(false);
     }
   };
-
-  const handleCreatePlan = async () => {
-    try {
-      if (!userId) {
-        toast({
-          title: 'Login Required',
-          description: 'Please log in to create workout plans.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (!planName) {
-        toast({
-          title: 'Name Required',
-          description: 'Please provide a name for your workout plan.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const newPlan: WorkoutPlan = {
-        id: `temp-${Date.now()}`, // In production, this would be generated by the database
-        user_id: userId,
-        name: planName,
-        description: planDescription,
-        goal: planGoal,
-        frequency: planFrequency,
-        difficulty: planDifficulty,
-        duration_weeks: planDuration,
+  
+  // Generate some default workout plan templates
+  const generateDefaultTemplates = (): WorkoutPlan[] => {
+    return [
+      {
+        id: 'template-1',
+        user_id: userId || '',
+        name: 'Beginner Strength Training',
+        description: 'A simple plan to build basic strength for beginners',
+        goal: 'strength',
+        frequency: 3,
+        difficulty: 'beginner',
+        duration_weeks: 4,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        workout_days: workoutDays
+        workout_days: [
+          {
+            day_name: 'Day 1 - Full Body',
+            exercises: [
+              {
+                exercise_id: 'ex1',
+                exercise_name: 'Squats',
+                sets: 3,
+                reps: 10,
+                weight: 0,
+                rest_time: 60,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex2',
+                exercise_name: 'Push-ups',
+                sets: 3,
+                reps: 10,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex3',
+                exercise_name: 'Dumbbell Rows',
+                sets: 3,
+                reps: 10,
+                weight: 5,
+                completed: false,
+              }
+            ],
+            completed: false,
+          },
+          {
+            day_name: 'Day 2 - Full Body',
+            exercises: [
+              {
+                exercise_id: 'ex4',
+                exercise_name: 'Lunges',
+                sets: 3,
+                reps: 10,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex5',
+                exercise_name: 'Dumbbell Shoulder Press',
+                sets: 3,
+                reps: 10,
+                weight: 5,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex6',
+                exercise_name: 'Plank',
+                sets: 3,
+                duration: 30,
+                completed: false,
+              }
+            ],
+            completed: false,
+          },
+          {
+            day_name: 'Day 3 - Full Body',
+            exercises: [
+              {
+                exercise_id: 'ex7',
+                exercise_name: 'Deadlifts',
+                sets: 3,
+                reps: 10,
+                weight: 10,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex8',
+                exercise_name: 'Bench Press',
+                sets: 3,
+                reps: 10,
+                weight: 15,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex9',
+                exercise_name: 'Pull-ups',
+                sets: 3,
+                reps: 5,
+                completed: false,
+              }
+            ],
+            completed: false,
+          }
+        ]
+      },
+      {
+        id: 'template-2',
+        user_id: userId || '',
+        name: 'Hypertrophy Focus',
+        description: 'Build muscle mass with higher volume training',
+        goal: 'hypertrophy',
+        frequency: 4,
+        difficulty: 'intermediate',
+        duration_weeks: 6,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        workout_days: [
+          {
+            day_name: 'Day 1 - Chest & Triceps',
+            exercises: [
+              {
+                exercise_id: 'ex10',
+                exercise_name: 'Bench Press',
+                sets: 4,
+                reps: 12,
+                weight: 20,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex11',
+                exercise_name: 'Incline Dumbbell Press',
+                sets: 3,
+                reps: 12,
+                weight: 15,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex12',
+                exercise_name: 'Tricep Pushdowns',
+                sets: 3,
+                reps: 15,
+                weight: 15,
+                completed: false,
+              }
+            ],
+            completed: false,
+          },
+          {
+            day_name: 'Day 2 - Back & Biceps',
+            exercises: [
+              {
+                exercise_id: 'ex13',
+                exercise_name: 'Lat Pulldown',
+                sets: 4,
+                reps: 12,
+                weight: 30,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex14',
+                exercise_name: 'Seated Row',
+                sets: 3,
+                reps: 12,
+                weight: 25,
+                completed: false,
+              },
+              {
+                exercise_id: 'ex15',
+                exercise_name: 'Bicep Curls',
+                sets: 4,
+                reps: 12,
+                weight: 10,
+                completed: false,
+              }
+            ],
+            completed: false,
+          }
+        ]
+      }
+    ];
+  };
+  
+  // Handle input changes for new plan
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewPlan(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Handle adding a new workout day
+  const addWorkoutDay = () => {
+    const newDay: WorkoutDay = {
+      day_name: `Day ${newPlan.workout_days.length + 1}`,
+      exercises: [],
+      completed: false,
+    };
+    
+    setNewPlan(prev => ({
+      ...prev,
+      workout_days: [...prev.workout_days, newDay]
+    }));
+  };
+  
+  // Handle updating a workout day
+  const updateWorkoutDay = (index: number, field: keyof WorkoutDay, value: any) => {
+    setNewPlan(prev => {
+      const updatedDays = [...prev.workout_days];
+      updatedDays[index] = {
+        ...updatedDays[index],
+        [field]: value
       };
-
-      // In a real implementation, we would save to database
-      // const { data, error } = await supabase
-      //   .from('workout_plans')
-      //   .insert(newPlan)
-      //   .select()
-      //   .single();
+      return {
+        ...prev,
+        workout_days: updatedDays
+      };
+    });
+  };
+  
+  // Add exercise to a workout day
+  const addExercise = (dayIndex: number) => {
+    const newExercise: WorkoutSet = {
+      exercise_id: `temp-${Date.now()}`,
+      exercise_name: 'New Exercise',
+      sets: 3,
+      reps: 10,
+      completed: false,
+    };
+    
+    setNewPlan(prev => {
+      const updatedDays = [...prev.workout_days];
+      updatedDays[dayIndex] = {
+        ...updatedDays[dayIndex],
+        exercises: [...updatedDays[dayIndex].exercises, newExercise]
+      };
+      return {
+        ...prev,
+        workout_days: updatedDays
+      };
+    });
+  };
+  
+  // Update exercise
+  const updateExercise = (dayIndex: number, exerciseIndex: number, field: keyof WorkoutSet, value: any) => {
+    setNewPlan(prev => {
+      const updatedDays = [...prev.workout_days];
+      updatedDays[dayIndex] = {
+        ...updatedDays[dayIndex],
+        exercises: updatedDays[dayIndex].exercises.map((ex, idx) =>
+          idx === exerciseIndex ? { ...ex, [field]: value } : ex
+        )
+      };
+      return {
+        ...prev,
+        workout_days: updatedDays
+      };
+    });
+  };
+  
+  // Delete exercise
+  const deleteExercise = (dayIndex: number, exerciseIndex: number) => {
+    setNewPlan(prev => {
+      const updatedDays = [...prev.workout_days];
+      updatedDays[dayIndex] = {
+        ...updatedDays[dayIndex],
+        exercises: updatedDays[dayIndex].exercises.filter((_, idx) => idx !== exerciseIndex)
+      };
+      return {
+        ...prev,
+        workout_days: updatedDays
+      };
+    });
+  };
+  
+  // Save workout plan
+  const handleSavePlan = async () => {
+    try {
+      setSavingPlan(true);
       
-      // if (error) throw error;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
       
-      // Simulate saving to database
-      setWorkoutPlans([newPlan, ...workoutPlans]);
+      // Complete the plan with current timestamp
+      const planToSave: WorkoutPlan = {
+        ...newPlan,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Call API to save the plan
+      const { data, error } = await saveWorkoutPlan(planToSave);
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
-        title: 'Plan Created',
-        description: 'Your workout plan has been created successfully.',
+        title: 'Success',
+        description: 'Workout plan saved successfully'
       });
+      
+      // Refresh workout plans
+      fetchWorkoutPlans();
+      
+      // Close dialog
+      setShowNewPlanDialog(false);
       
       // Reset form
-      resetForm();
-      setNewPlanDialog(false);
+      setNewPlan({
+        id: '',
+        user_id: userId,
+        name: '',
+        description: '',
+        goal: 'strength',
+        frequency: 3,
+        difficulty: 'beginner',
+        duration_weeks: 4,
+        created_at: '',
+        updated_at: '',
+        workout_days: []
+      });
+      
     } catch (error) {
-      console.error('Error creating workout plan:', error);
+      console.error('Error saving workout plan:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create workout plan.',
+        description: 'Failed to save workout plan',
         variant: 'destructive',
       });
+    } finally {
+      setSavingPlan(false);
     }
   };
-
-  const resetForm = () => {
-    setPlanName('');
-    setPlanDescription('');
-    setPlanGoal('general');
-    setPlanFrequency(3);
-    setPlanDifficulty('beginner');
-    setPlanDuration(4);
-    setWorkoutDays([]);
-  };
-
-  const handleSelectPlan = (plan: WorkoutPlan) => {
-    if (onPlanSelect) {
-      onPlanSelect(plan);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <p>Loading workout plans...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-quantum-cyan">Your Workout Plans</h2>
-        <Dialog open={newPlanDialog} onOpenChange={setNewPlanDialog}>
-          <DialogTrigger asChild>
-            <Button 
-              className="bg-quantum-purple hover:bg-quantum-purple/90"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Plan
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] bg-quantum-darkBlue text-white border-quantum-cyan/20">
-            <DialogHeader>
-              <DialogTitle>Create New Workout Plan</DialogTitle>
-              <DialogDescription>
-                Design your custom workout plan. You can add exercises to each day after creating the plan.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Plan Name</Label>
-                <Input 
-                  id="name" 
-                  value={planName} 
-                  onChange={(e) => setPlanName(e.target.value)} 
-                  placeholder="My Workout Plan" 
-                  className="bg-quantum-black border-quantum-cyan/20"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea 
-                  id="description" 
-                  value={planDescription} 
-                  onChange={(e) => setPlanDescription(e.target.value)} 
-                  placeholder="Describe your workout plan" 
-                  className="bg-quantum-black border-quantum-cyan/20"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="goal">Goal</Label>
-                  <Select value={planGoal} onValueChange={(value: 'strength' | 'hypertrophy' | 'endurance' | 'weight_loss' | 'general') => setPlanGoal(value)}>
-                    <SelectTrigger className="bg-quantum-black border-quantum-cyan/20">
-                      <SelectValue placeholder="Select a goal" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-quantum-black border-quantum-cyan/20">
-                      <SelectItem value="strength">Strength</SelectItem>
-                      <SelectItem value="hypertrophy">Muscle Building</SelectItem>
-                      <SelectItem value="endurance">Endurance</SelectItem>
-                      <SelectItem value="weight_loss">Weight Loss</SelectItem>
-                      <SelectItem value="general">General Fitness</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="difficulty">Difficulty</Label>
-                  <Select value={planDifficulty} onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') => setPlanDifficulty(value)}>
-                    <SelectTrigger className="bg-quantum-black border-quantum-cyan/20">
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-quantum-black border-quantum-cyan/20">
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Days Per Week</Label>
-                  <Select 
-                    value={planFrequency.toString()} 
-                    onValueChange={(value) => setPlanFrequency(parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-quantum-black border-quantum-cyan/20">
-                      <SelectValue placeholder="Select frequency" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-quantum-black border-quantum-cyan/20">
-                      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>{num} day{num > 1 ? 's' : ''}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (Weeks)</Label>
-                  <Select 
-                    value={planDuration.toString()} 
-                    onValueChange={(value) => setPlanDuration(parseInt(value))}
-                  >
-                    <SelectTrigger className="bg-quantum-black border-quantum-cyan/20">
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-quantum-black border-quantum-cyan/20">
-                      {[1, 2, 4, 6, 8, 12].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>{num} week{num > 1 ? 's' : ''}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="pt-2">
-                <h4 className="text-sm font-medium mb-2">Workout Days Generated:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {workoutDays.map((day, index) => (
-                    <div key={index} className="px-3 py-1 bg-quantum-black/50 rounded-full text-sm">
-                      {day.day_name}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setNewPlanDialog(false)}
-                className="border-quantum-cyan/20"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreatePlan}
-                className="bg-quantum-purple hover:bg-quantum-purple/90"
-              >
-                Create Plan
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <h2 className="text-2xl font-semibold text-quantum-cyan">Workout Plans</h2>
+        <Button 
+          onClick={() => setShowNewPlanDialog(true)}
+          className="bg-quantum-purple hover:bg-quantum-purple/90"
+        >
+          <Plus className="h-4 w-4 mr-2" /> Create New Plan
+        </Button>
       </div>
-
-      {workoutPlans.length > 0 ? (
+      
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <p>Loading workout plans...</p>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workoutPlans.map((plan) => (
-            <Card key={plan.id} className="holographic-card overflow-hidden">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Dumbbell className="text-quantum-purple h-5 w-5" />
-                  <span>{plan.name}</span>
-                </CardTitle>
-                <CardDescription>
-                  {plan.description || `${plan.frequency} days/week, ${plan.difficulty} level`}
-                </CardDescription>
+            <Card 
+              key={plan.id}
+              className="bg-quantum-darkBlue/30 border-quantum-cyan/20 hover:border-quantum-cyan/50 cursor-pointer transition-all"
+              onClick={() => onPlanSelect && onPlanSelect(plan)}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{plan.name}</CardTitle>
+                  <span className={`text-xs font-medium rounded-full px-2 py-1 ${
+                    plan.difficulty === 'beginner' ? 'bg-green-900/50 text-green-400' : 
+                    plan.difficulty === 'intermediate' ? 'bg-amber-900/50 text-amber-400' : 
+                    'bg-red-900/50 text-red-400'
+                  }`}>
+                    {plan.difficulty.charAt(0).toUpperCase() + plan.difficulty.slice(1)}
+                  </span>
+                </div>
+                <CardDescription>{plan.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-purple-900/30 p-2 rounded">
-                      <div className="text-xs">Goal</div>
-                      <div className="font-semibold capitalize">{plan.goal.replace('_', ' ')}</div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <Dumbbell className="h-4 w-4 mr-2 text-quantum-purple" />
+                      <span className="text-sm">
+                        {plan.goal.charAt(0).toUpperCase() + plan.goal.slice(1)}
+                      </span>
                     </div>
-                    <div className="bg-blue-900/30 p-2 rounded">
-                      <div className="text-xs">Frequency</div>
-                      <div className="font-semibold">{plan.frequency} days/wk</div>
-                    </div>
-                    <div className="bg-green-900/30 p-2 rounded">
-                      <div className="text-xs">Duration</div>
-                      <div className="font-semibold">{plan.duration_weeks} weeks</div>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-2 text-quantum-purple" />
+                      <span className="text-sm">{plan.frequency} days/week</span>
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Workout Days:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {plan.workout_days.map((day, idx) => (
-                        <div key={idx} className="px-3 py-1 bg-quantum-darkBlue/70 rounded-full text-xs flex items-center">
-                          {day.day_name}
-                          {day.completed && <Check className="ml-1 h-3 w-3 text-green-400" />}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2 text-gray-400">Workout Days:</h4>
+                    <div className="space-y-1">
+                      {plan.workout_days.slice(0, 3).map((day, index) => (
+                        <div key={index} className="text-sm flex justify-between">
+                          <span>{day.day_name}</span>
+                          <span className="text-gray-400">{day.exercises.length} exercises</span>
                         </div>
                       ))}
+                      {plan.workout_days.length > 3 && (
+                        <div className="text-sm text-gray-400">
+                          +{plan.workout_days.length - 3} more days
+                        </div>
+                      )}
                     </div>
                   </div>
+                  
+                  <Button 
+                    className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPlanSelect && onPlanSelect(plan);
+                    }}
+                  >
+                    Use This Plan
+                  </Button>
                 </div>
               </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1 border-quantum-cyan/20 hover:bg-quantum-cyan/10"
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-                <Button 
-                  className="flex-1 bg-quantum-purple hover:bg-quantum-purple/90"
-                  onClick={() => handleSelectPlan(plan)}
-                >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Start
-                </Button>
-              </CardFooter>
             </Card>
           ))}
         </div>
-      ) : (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="pt-6 text-center">
-            <p>No workout plans found. Create a new workout plan to get started.</p>
-          </CardContent>
-        </Card>
       )}
+      
+      {/* Create New Plan Dialog */}
+      <Dialog open={showNewPlanDialog} onOpenChange={setShowNewPlanDialog}>
+        <DialogContent className="sm:max-w-[900px] bg-quantum-darkBlue text-white border-quantum-cyan/20">
+          <DialogHeader>
+            <DialogTitle>Create New Workout Plan</DialogTitle>
+          </DialogHeader>
+          
+          <Tabs defaultValue="details" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Plan Details</TabsTrigger>
+              <TabsTrigger value="workouts">Workout Days</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Plan Name</Label>
+                  <Input 
+                    id="name" 
+                    name="name"
+                    value={newPlan.name} 
+                    onChange={handleInputChange} 
+                    placeholder="e.g., 5x5 Strength Program" 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea 
+                    id="description" 
+                    name="description"
+                    value={newPlan.description} 
+                    onChange={handleInputChange} 
+                    placeholder="What's this plan about?" 
+                    rows={3} 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="goal">Goal</Label>
+                    <Select 
+                      name="goal" 
+                      value={newPlan.goal}
+                      onValueChange={(value) => setNewPlan(prev => ({ ...prev, goal: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a goal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="strength">Strength</SelectItem>
+                        <SelectItem value="hypertrophy">Hypertrophy</SelectItem>
+                        <SelectItem value="endurance">Endurance</SelectItem>
+                        <SelectItem value="weight_loss">Weight Loss</SelectItem>
+                        <SelectItem value="general">General Fitness</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="difficulty">Difficulty</Label>
+                    <Select 
+                      name="difficulty" 
+                      value={newPlan.difficulty}
+                      onValueChange={(value) => setNewPlan(prev => ({ ...prev, difficulty: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="frequency">Days per Week</Label>
+                    <Select 
+                      name="frequency" 
+                      value={newPlan.frequency.toString()}
+                      onValueChange={(value) => setNewPlan(prev => ({ ...prev, frequency: parseInt(value) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Days per week" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 day</SelectItem>
+                        <SelectItem value="2">2 days</SelectItem>
+                        <SelectItem value="3">3 days</SelectItem>
+                        <SelectItem value="4">4 days</SelectItem>
+                        <SelectItem value="5">5 days</SelectItem>
+                        <SelectItem value="6">6 days</SelectItem>
+                        <SelectItem value="7">7 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="duration_weeks">Program Duration (Weeks)</Label>
+                    <Select 
+                      name="duration_weeks" 
+                      value={newPlan.duration_weeks.toString()}
+                      onValueChange={(value) => setNewPlan(prev => ({ ...prev, duration_weeks: parseInt(value) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Duration in weeks" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 week</SelectItem>
+                        <SelectItem value="2">2 weeks</SelectItem>
+                        <SelectItem value="4">4 weeks</SelectItem>
+                        <SelectItem value="6">6 weeks</SelectItem>
+                        <SelectItem value="8">8 weeks</SelectItem>
+                        <SelectItem value="12">12 weeks</SelectItem>
+                        <SelectItem value="16">16 weeks</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end pt-4">
+                <Button type="button" variant="outline" className="mr-2" onClick={() => setShowNewPlanDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="button" 
+                  disabled={!newPlan.name || newPlan.workout_days.length === 0}
+                  onClick={() => document.querySelector('[data-value="workouts"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+                  className="bg-quantum-purple hover:bg-quantum-purple/90"
+                >
+                  Next: Add Workouts
+                </Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="workouts" className="space-y-4 mt-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Workout Days</h3>
+                <Button 
+                  type="button" 
+                  onClick={addWorkoutDay}
+                  variant="outline"
+                  className="text-quantum-purple border-quantum-purple"
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Day
+                </Button>
+              </div>
+              
+              {newPlan.workout_days.length === 0 ? (
+                <div className="text-center p-8 border border-dashed border-gray-500 rounded-lg">
+                  <p className="text-gray-400">No workout days added yet. Click "Add Day" to create your workout.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {newPlan.workout_days.map((day, dayIndex) => (
+                    <Card key={dayIndex} className="bg-quantum-black/30 border-quantum-cyan/10">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <Input 
+                            value={day.day_name}
+                            onChange={(e) => updateWorkoutDay(dayIndex, 'day_name', e.target.value)}
+                            className="text-lg font-semibold border-none p-0 h-auto focus-visible:ring-0"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addExercise(dayIndex)}
+                            className="text-quantum-purple border-quantum-purple"
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> Exercise
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {day.exercises.length === 0 ? (
+                            <p className="text-sm text-gray-400">No exercises added yet.</p>
+                          ) : (
+                            day.exercises.map((exercise, exerciseIndex) => (
+                              <div 
+                                key={exerciseIndex} 
+                                className="grid grid-cols-12 gap-2 items-center bg-quantum-black/20 p-2 rounded-md"
+                              >
+                                <div className="col-span-4 md:col-span-3">
+                                  <Input
+                                    value={exercise.exercise_name}
+                                    onChange={(e) => updateExercise(dayIndex, exerciseIndex, 'exercise_name', e.target.value)}
+                                    placeholder="Exercise name"
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="col-span-2 md:col-span-2">
+                                  <div className="flex items-center">
+                                    <span className="text-xs text-gray-400 mr-2">Sets:</span>
+                                    <Input
+                                      type="number"
+                                      value={exercise.sets}
+                                      onChange={(e) => updateExercise(dayIndex, exerciseIndex, 'sets', parseInt(e.target.value))}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-span-2 md:col-span-2">
+                                  <div className="flex items-center">
+                                    <span className="text-xs text-gray-400 mr-2">Reps:</span>
+                                    <Input
+                                      type="number"
+                                      value={exercise.reps}
+                                      onChange={(e) => updateExercise(dayIndex, exerciseIndex, 'reps', parseInt(e.target.value))}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-span-3 md:col-span-2">
+                                  <div className="flex items-center">
+                                    <span className="text-xs text-gray-400 mr-2">Kg:</span>
+                                    <Input
+                                      type="number"
+                                      value={exercise.weight || 0}
+                                      onChange={(e) => updateExercise(dayIndex, exerciseIndex, 'weight', parseInt(e.target.value))}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="col-span-1 text-right">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-950/20"
+                                    onClick={() => deleteExercise(dayIndex, exerciseIndex)}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex justify-between pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => document.querySelector('[data-value="details"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}
+                >
+                  Back to Details
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={handleSavePlan}
+                  disabled={savingPlan || !newPlan.name || newPlan.workout_days.length === 0}
+                  className="bg-quantum-purple hover:bg-quantum-purple/90"
+                >
+                  {savingPlan ? (
+                    <>Saving...</>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" /> Save Workout Plan
+                    </>
+                  )}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

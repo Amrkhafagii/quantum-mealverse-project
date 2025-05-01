@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Activity, Calendar as CalendarIcon, Clock, Dumbbell, Flame, Calendar as CalIcon, Trophy, TrendingUp } from 'lucide-react';
+import { getWorkoutHistory, getWorkoutStats } from '@/services/workoutService';
 
 interface WorkoutHistoryProps {
   userId?: string;
@@ -37,16 +39,31 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
     
     setLoading(true);
     try {
-      // In a real app, we would fetch from the database
-      // For now, we'll use mock data
-      const mockHistory: WorkoutHistoryItem[] = generateMockWorkoutHistory(userId);
-      const filteredHistory = filterWorkoutHistoryByDate(mockHistory, dateFilter);
+      // Try to load real data from database
+      const { data: historyData, error } = await getWorkoutHistory(userId, dateFilter);
       
-      setWorkoutHistory(filteredHistory);
+      if (error) throw error;
       
-      // Calculate stats from filtered history
-      const stats = calculateWorkoutStats(filteredHistory);
-      setWorkoutStats(stats);
+      // If we have history data, use it
+      if (historyData && historyData.length > 0) {
+        setWorkoutHistory(historyData);
+        
+        // Load stats
+        const { data: statsData } = await getWorkoutStats(userId);
+        if (statsData) {
+          setWorkoutStats(statsData);
+        }
+      } else {
+        // Fall back to mock data for now
+        const mockHistory = generateMockWorkoutHistory(userId);
+        const filteredHistory = filterWorkoutHistoryByDate(mockHistory, dateFilter);
+        
+        setWorkoutHistory(filteredHistory);
+        
+        // Calculate stats from filtered history
+        const stats = calculateWorkoutStats(filteredHistory);
+        setWorkoutStats(stats);
+      }
     } catch (error) {
       console.error('Error loading workout history:', error);
       toast({
@@ -54,6 +71,16 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
         description: 'Failed to load your workout history.',
         variant: 'destructive',
       });
+      
+      // Fall back to mock data on error
+      const mockHistory = generateMockWorkoutHistory(userId);
+      const filteredHistory = filterWorkoutHistoryByDate(mockHistory, dateFilter);
+      
+      setWorkoutHistory(filteredHistory);
+      
+      // Calculate stats from filtered history
+      const stats = calculateWorkoutStats(filteredHistory);
+      setWorkoutStats(stats);
     } finally {
       setLoading(false);
     }
