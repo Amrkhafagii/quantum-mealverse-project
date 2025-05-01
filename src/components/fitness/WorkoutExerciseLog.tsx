@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -131,10 +132,10 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
           sets_completed: completedSets,
           reps_completed: completedSets.map((set: any) => set.reps),
           weight_used: completedSets.map((set: any) => set.weight),
-          notes: exercise.notes || undefined // Make sure notes is only included if it has a value
+          notes: exercise.notes || undefined // Make sure notes is undefined when not provided
         };
       })
-      // Fix the type predicate to match the optional notes property in CompletedExercise
+      // Fix the type predicate to correctly match the CompletedExercise type
       .filter((ex): ex is CompletedExercise => ex !== null);
 
     try {
