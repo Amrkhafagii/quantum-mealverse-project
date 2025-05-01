@@ -1,99 +1,133 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UserRound } from 'lucide-react';
+import { ShoppingCart, Home, Info, MessageSquare, Utensils, User, LogIn, ActivitySquare } from 'lucide-react';
+import { Session } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { Label } from "@/components/ui/label";
 
 interface MobileMenuProps {
   isCustomerView: boolean;
   isAdmin: boolean;
-  session: any;
+  session: Session | null;
   toggleUserView: (checked: boolean) => void;
 }
 
 export const MobileMenu = ({ 
   isCustomerView, 
   isAdmin, 
-  session, 
-  toggleUserView 
+  session,
+  toggleUserView
 }: MobileMenuProps) => {
-  const { isRestaurantOwner } = useRestaurantAuth();
-
-  // Don't show mobile menu in admin view
-  if (!isCustomerView) {
-    return null;
-  }
-
   return (
-    <div className="md:hidden bg-black/80 backdrop-blur-lg p-4 rounded-b-lg border border-quantum-cyan/20 border-t-0">
-      <div className="flex flex-col space-y-4">
-        {isCustomerView && (
+    <div className="p-4 border-t border-quantum-cyan/20 md:hidden">
+      <div className="space-y-4">
+        {isCustomerView ? (
           <>
             <Link 
-              to="/customer" 
-              className="text-quantum-cyan hover:text-white"
+              to="/" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
             >
-              Meals
+              <Home className="h-5 w-5 text-quantum-cyan" />
+              <span>Home</span>
             </Link>
+            
             <Link 
-              to="/subscription" 
-              className="text-quantum-cyan hover:text-white"
+              to="/customer" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
             >
-              Subscription
+              <Utensils className="h-5 w-5 text-quantum-cyan" />
+              <span>Order Food</span>
             </Link>
+
+            <Link 
+              to="/fitness" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <ActivitySquare className="h-5 w-5 text-quantum-cyan" />
+              <span>Fitness</span>
+            </Link>
+            
             <Link 
               to="/about" 
-              className="text-quantum-cyan hover:text-white"
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
             >
-              About
+              <Info className="h-5 w-5 text-quantum-cyan" />
+              <span>About</span>
             </Link>
+            
             <Link 
               to="/contact" 
-              className="text-quantum-cyan hover:text-white"
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
             >
-              Contact
+              <MessageSquare className="h-5 w-5 text-quantum-cyan" />
+              <span>Contact</span>
             </Link>
-            {session && (
-              <Link 
-                to="/orders" 
-                className="text-quantum-cyan hover:text-white"
-              >
-                Track Orders
-              </Link>
-            )}
+            
             <Link 
-              to="/checkout" 
-              className="text-quantum-cyan hover:text-white"
+              to="/cart" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
             >
-              Checkout
+              <ShoppingCart className="h-5 w-5 text-quantum-cyan" />
+              <span>Cart</span>
             </Link>
-            {session && !isRestaurantOwner && (
+            
+            {session ? (
               <Link 
                 to="/profile" 
-                className="text-quantum-cyan hover:text-white"
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
               >
-                Profile
+                <User className="h-5 w-5 text-quantum-cyan" />
+                <span>Profile</span>
+              </Link>
+            ) : (
+              <Link 
+                to="/auth" 
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+              >
+                <LogIn className="h-5 w-5 text-quantum-cyan" />
+                <span>Log In</span>
               </Link>
             )}
+          </>
+        ) : (
+          // Admin navigation options
+          <>
+            <Link 
+              to="/admin" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <span>Dashboard</span>
+            </Link>
+            <Link 
+              to="/admin/menu" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <span>Menu</span>
+            </Link>
+            <Link 
+              to="/admin/orders" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <span>Orders</span>
+            </Link>
+            <Link 
+              to="/admin/settings" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <span>Settings</span>
+            </Link>
           </>
         )}
         
         {isAdmin && (
-          <div className="flex items-center gap-2 text-quantum-cyan pt-2 border-t border-quantum-cyan/20">
-            <span className="text-sm">Customer</span>
+          <div className="flex items-center space-x-2 pt-4 border-t border-quantum-cyan/20">
             <Switch 
-              onCheckedChange={(checked) => toggleUserView(checked)} 
-              checked={!isCustomerView} 
+              id="user-view-toggle" 
+              checked={!isCustomerView}
+              onCheckedChange={toggleUserView}
             />
-            <span className="text-sm">Admin</span>
-          </div>
-        )}
-        
-        {session && (
-          <div className="flex items-center gap-2 text-quantum-cyan">
-            <UserRound className="h-4 w-4" />
-            <span className="text-sm truncate max-w-[200px]">{session.user.email}</span>
+            <Label htmlFor="user-view-toggle">Admin View</Label>
           </div>
         )}
       </div>

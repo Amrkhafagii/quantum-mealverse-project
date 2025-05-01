@@ -43,6 +43,10 @@ const Index = () => {
     navigate('/customer');
   };
 
+  const exploreFitness = () => {
+    navigate('/fitness');
+  };
+
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
@@ -59,12 +63,22 @@ const Index = () => {
               Experience the future of health and wellness with our AI-powered personalized solutions
               and holistic wellness approach
             </p>
-            <button 
-              className="cyber-button text-lg"
-              onClick={exploreSolutions}
-            >
-              Explore Solutions
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button 
+                className="cyber-button text-lg"
+                onClick={exploreSolutions}
+              >
+                Order Food
+              </button>
+
+              <button 
+                className="cyber-button text-lg bg-quantum-purple"
+                onClick={exploreFitness}
+              >
+                Fitness Planner
+              </button>
+            </div>
 
             {/* Admin section */}
             {isAdmin && (
