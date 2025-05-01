@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -149,6 +148,7 @@ const WorkoutPlanner = ({ userId, onPlanSelect }: WorkoutPlannerProps) => {
                 sets: 3,
                 duration: 30,
                 completed: false,
+                reps: 0,
               }
             ],
             completed: false,
