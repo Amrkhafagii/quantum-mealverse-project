@@ -84,3 +84,89 @@ export interface UserAchievement {
   date_achieved: string;
   achievement?: Achievement;
 }
+
+// Workout Types
+export interface Exercise {
+  id: string;
+  name: string;
+  description?: string;
+  muscle_groups: string[];
+  equipment_needed?: string[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  instructions: string[];
+  video_url?: string;
+  image_url?: string;
+}
+
+export interface WorkoutSet {
+  exercise_id: string;
+  exercise_name: string;
+  sets: number;
+  reps: number; 
+  weight?: number;
+  duration?: number; // For timed exercises (in seconds)
+  rest_time?: number; // Rest time in seconds
+  completed: boolean;
+  notes?: string;
+}
+
+export interface WorkoutDay {
+  day_name: string; // e.g., "Monday", "Day 1", etc.
+  exercises: WorkoutSet[];
+  completed: boolean;
+  notes?: string;
+}
+
+export interface WorkoutPlan {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  goal: 'strength' | 'hypertrophy' | 'endurance' | 'weight_loss' | 'general';
+  frequency: number; // Number of days per week
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  duration_weeks: number;
+  created_at: string;
+  updated_at: string;
+  workout_days: WorkoutDay[];
+}
+
+export interface WorkoutLog {
+  id: string;
+  user_id: string;
+  workout_plan_id: string;
+  date: string;
+  duration: number; // In minutes
+  calories_burned?: number;
+  notes?: string;
+  completed_exercises: {
+    exercise_id: string;
+    exercise_name: string;
+    sets_completed: {
+      set_number: number;
+      weight?: number;
+      reps?: number;
+      duration?: number;
+    }[];
+  }[];
+}
+
+export interface ProgressAnalytics {
+  user_id: string;
+  date_range: {
+    start: string;
+    end: string;
+  };
+  weight_change?: number;
+  body_fat_change?: number;
+  strength_progress?: {
+    exercise_id: string;
+    exercise_name: string;
+    start_weight: number;
+    current_weight: number;
+    improvement_percentage: number;
+  }[];
+  workout_consistency: number; // Percentage of planned workouts completed
+  calories_burned_total?: number;
+  achievement_count: number;
+}

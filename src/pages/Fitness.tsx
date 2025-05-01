@@ -8,12 +8,13 @@ import MealPlanDisplay from '@/components/fitness/MealPlanDisplay';
 import { MealPlan } from '@/types/food';
 import { generateMealPlan } from '@/services/mealPlanService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HeartPulse, Utensils, TrendingUp, Zap } from 'lucide-react';
+import { HeartPulse, Utensils, TrendingUp, Zap, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import RestaurantMealFinder from '@/components/fitness/RestaurantMealFinder';
 
 const Fitness = () => {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ const Fitness = () => {
   const [tdeeResult, setTdeeResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('calculator');
+  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
   
   useEffect(() => {
     // Try to load meal plan from session storage on initial render
@@ -35,6 +38,21 @@ const Fitness = () => {
       } catch (error) {
         console.error('Error parsing stored meal plan:', error);
       }
+    }
+    
+    // Get user location if they allow it
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        }
+      );
     }
   }, []);
   
@@ -159,13 +177,16 @@ const Fitness = () => {
           Calculate your needs, generate meal plans, and achieve your goals.
         </p>
         
-        <Tabs defaultValue="calculator" className="mb-12">
-          <TabsList className="w-full max-w-2xl mx-auto grid grid-cols-2 md:grid-cols-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
+          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-5">
             <TabsTrigger value="calculator" className="flex items-center gap-2">
               <HeartPulse className="h-4 w-4" /> Calculator
             </TabsTrigger>
             <TabsTrigger value="meal-plan" className="flex items-center gap-2" disabled={!mealPlan}>
               <Utensils className="h-4 w-4" /> Meal Plan
+            </TabsTrigger>
+            <TabsTrigger value="restaurants" className="flex items-center gap-2" disabled={!mealPlan}>
+              <MapPin className="h-4 w-4" /> Find Food
             </TabsTrigger>
             <TabsTrigger value="progress" className="flex items-center gap-2" onClick={() => navigate('/fitness-profile')}>
               <TrendingUp className="h-4 w-4" /> Progress
@@ -234,6 +255,19 @@ const Fitness = () => {
                   </div>
                 )}
               </>
+            ) : (
+              <div className="text-center p-12">
+                <p>Please calculate your TDEE first to generate a meal plan.</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="restaurants" className="mt-8">
+            {mealPlan ? (
+              <RestaurantMealFinder 
+                mealPlan={mealPlan} 
+                userLocation={userLocation || undefined}
+              />
             ) : (
               <div className="text-center p-12">
                 <p>Please calculate your TDEE first to generate a meal plan.</p>
