@@ -117,7 +117,11 @@ const FitnessProfilePage = () => {
           </TabsContent>
           
           <TabsContent value="measurements" className="mt-8">
-            <MeasurementsHistory userId={user.id} />
+            <MeasurementsHistory 
+              userId={user.id} 
+              measurements={measurements}
+              onMeasurementAdded={loadMeasurements}
+            />
           </TabsContent>
           
           <TabsContent value="goals" className="mt-8">
@@ -125,7 +129,10 @@ const FitnessProfilePage = () => {
           </TabsContent>
           
           <TabsContent value="progress" className="mt-8">
-            <ProgressAnalytics userId={user.id} measurements={measurements} />
+            <ProgressAnalytics 
+              userId={user.id} 
+              measurements={measurements} 
+            />
           </TabsContent>
           
           <TabsContent value="achievements" className="mt-8">

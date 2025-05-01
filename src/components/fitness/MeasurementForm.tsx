@@ -1,229 +1,223 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { UserMeasurement } from '@/types/fitness';
-import { supabase } from '@/integrations/supabase/client';
+
+const measurementFormSchema = z.object({
+  weight: z.coerce.number().min(20, 'Weight must be at least 20').max(500, 'Weight must be less than 500'),
+  body_fat: z.coerce.number().min(1, 'Body fat must be at least 1%').max(80, 'Body fat must be less than 80%').optional(),
+  chest: z.coerce.number().min(30, 'Chest must be at least 30cm').max(200, 'Chest must be less than 200cm').optional(),
+  waist: z.coerce.number().min(30, 'Waist must be at least 30cm').max(200, 'Waist must be less than 200cm').optional(),
+  hips: z.coerce.number().min(30, 'Hips must be at least 30cm').max(200, 'Hips must be less than 200cm').optional(),
+  arms: z.coerce.number().min(10, 'Arms must be at least 10cm').max(100, 'Arms must be less than 100cm').optional(),
+  legs: z.coerce.number().min(20, 'Legs must be at least 20cm').max(150, 'Legs must be less than 150cm').optional(),
+  notes: z.string().optional(),
+});
+
+type MeasurementFormValues = z.infer<typeof measurementFormSchema>;
 
 interface MeasurementFormProps {
   userId?: string;
-  onMeasurementAdded: () => void;
+  onMeasurementAdded?: () => void;
 }
 
 const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurementAdded }) => {
-  const [weight, setWeight] = useState<number | ''>('');
-  const [bodyFat, setBodyFat] = useState<number | ''>('');
-  const [chest, setChest] = useState<number | ''>('');
-  const [waist, setWaist] = useState<number | ''>('');
-  const [hips, setHips] = useState<number | ''>('');
-  const [arms, setArms] = useState<number | ''>('');
-  const [legs, setLegs] = useState<number | ''>('');
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<MeasurementFormValues>({
+    resolver: zodResolver(measurementFormSchema),
+    defaultValues: {
+      weight: undefined,
+      body_fat: undefined,
+      chest: undefined,
+      waist: undefined,
+      hips: undefined,
+      arms: undefined,
+      legs: undefined,
+      notes: '',
+    },
+  });
 
+  const onSubmit = async (data: MeasurementFormValues) => {
     if (!userId) {
       toast({
-        title: 'Authentication required',
-        description: 'Please log in to add measurements',
+        title: 'Error',
+        description: 'User ID is required to add measurements',
         variant: 'destructive',
       });
       return;
     }
 
-    if (weight === '') {
-      toast({
-        title: 'Weight is required',
-        description: 'Please enter your weight to continue',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    setIsSubmitting(true);
     try {
-      setSubmitting(true);
-
-      // Create a properly typed measurement object
-      const measurement = {
+      // Ensure user_id is included and is non-optional
+      const newMeasurement: Partial<UserMeasurement> & { user_id: string } = {
+        ...data,
         user_id: userId,
-        weight: Number(weight),
-        body_fat: bodyFat !== '' ? Number(bodyFat) : null,
-        chest: chest !== '' ? Number(chest) : null,
-        waist: waist !== '' ? Number(waist) : null,
-        hips: hips !== '' ? Number(hips) : null,
-        arms: arms !== '' ? Number(arms) : null,
-        legs: legs !== '' ? Number(legs) : null,
-        notes: notes || null,
+        date: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from('user_measurements').insert(measurement);
-
+      const { error } = await supabase.from('user_measurements').insert(newMeasurement);
+      
       if (error) throw error;
-
+      
       toast({
-        title: 'Measurement added',
-        description: 'Your measurements have been saved successfully',
+        title: 'Success',
+        description: 'Measurement added successfully',
       });
-
-      // Reset form
-      setWeight('');
-      setBodyFat('');
-      setChest('');
-      setWaist('');
-      setHips('');
-      setLegs('');
-      setNotes('');
-
-      // Notify parent component
-      onMeasurementAdded();
-    } catch (error: any) {
+      
+      form.reset();
+      
+      if (onMeasurementAdded) {
+        onMeasurementAdded();
+      }
+    } catch (error) {
       console.error('Error adding measurement:', error);
       toast({
-        title: 'Error adding measurement',
-        description: error.message || 'Failed to save your measurements',
+        title: 'Error',
+        description: 'Failed to add measurement',
         variant: 'destructive',
       });
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="bg-quantum-darkBlue/30 border border-quantum-cyan/20">
-      <CardHeader>
-        <CardTitle className="text-quantum-cyan">Add New Measurements</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight" className="text-white">Weight (kg) *</Label>
-              <Input
-                id="weight"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="70.5"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value ? Number(e.target.value) : '')}
-                required
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bodyFat" className="text-white">Body Fat %</Label>
-              <Input
-                id="bodyFat"
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                placeholder="15.0"
-                value={bodyFat}
-                onChange={(e) => setBodyFat(e.target.value ? Number(e.target.value) : '')}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="chest" className="text-white">Chest (cm)</Label>
-              <Input
-                id="chest"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="95.0"
-                value={chest}
-                onChange={(e) => setChest(e.target.value ? Number(e.target.value) : '')}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="waist" className="text-white">Waist (cm)</Label>
-              <Input
-                id="waist"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="80.0"
-                value={waist}
-                onChange={(e) => setWaist(e.target.value ? Number(e.target.value) : '')}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="hips" className="text-white">Hips (cm)</Label>
-              <Input
-                id="hips"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="90.0"
-                value={hips}
-                onChange={(e) => setHips(e.target.value ? Number(e.target.value) : '')}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="arms" className="text-white">Arms (cm)</Label>
-              <Input
-                id="arms"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="35.0"
-                value={arms}
-                onChange={(e) => setArms(e.target.value ? Number(e.target.value) : '')}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="legs" className="text-white">Legs (cm)</Label>
-              <Input
-                id="legs"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="55.0"
-                value={legs}
-                onChange={(e) => setLegs(e.target.value ? Number(e.target.value) : '')}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-white">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Additional notes about your measurements"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="bg-quantum-black/50 border-quantum-cyan/20 min-h-[100px]"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-quantum-purple hover:bg-quantum-purple/90"
-            disabled={submitting}
-          >
-            {submitting ? 'Saving...' : 'Save Measurements'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="weight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Weight (kg) *</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="70.5" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="body_fat"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Body Fat (%)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="15.0" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="chest"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Chest (cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="90" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="waist"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Waist (cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="80" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="hips"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hips (cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="95" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="arms"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Arms (cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="35" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="legs"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Legs (cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.1" placeholder="55" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Add any additional notes about this measurement..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <Button 
+          type="submit" 
+          className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Adding...' : 'Add Measurement'}
+        </Button>
+      </form>
+    </Form>
   );
 };
 

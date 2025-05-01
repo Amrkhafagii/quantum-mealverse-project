@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,12 +11,13 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import MeasurementForm from './MeasurementForm';
 
-interface MeasurementsHistoryProps {
+export interface MeasurementsHistoryProps {
   userId?: string;
   measurements?: UserMeasurement[];
+  onMeasurementAdded?: () => Promise<void> | void;
 }
 
-const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId, measurements: propMeasurements }) => {
+const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId, measurements: propMeasurements, onMeasurementAdded }) => {
   const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -67,7 +69,11 @@ const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId, measu
 
   const handleMeasurementAdded = () => {
     setAddDialogOpen(false);
-    loadMeasurements();
+    if (onMeasurementAdded) {
+      onMeasurementAdded();
+    } else {
+      loadMeasurements();
+    }
   };
 
   const formatDate = (dateString: string) => {
