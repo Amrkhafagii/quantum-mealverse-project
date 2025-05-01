@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -11,8 +10,12 @@ interface AchievementSystemProps {
   userId?: string;
 }
 
+type ExtendedUserAchievement = UserAchievement & { 
+  achievement?: Achievement 
+};
+
 const AchievementSystem = ({ userId }: AchievementSystemProps) => {
-  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
+  const [userAchievements, setUserAchievements] = useState<ExtendedUserAchievement[]>([]);
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [userPoints, setUserPoints] = useState(0);
@@ -84,7 +87,7 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
         }
       ];
       
-      const mockUserAchievements: UserAchievement[] = [
+      const mockUserAchievements: ExtendedUserAchievement[] = [
         {
           id: "ua1",
           user_id: userId || "",

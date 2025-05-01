@@ -1,12 +1,15 @@
+
 import { fromTable } from './supabaseClient';
 import { 
   WorkoutPlan, 
   WorkoutLog, 
   WorkoutHistoryItem, 
   UserWorkoutStats, 
-  WorkoutSchedule 
+  WorkoutSchedule,
+  WorkoutDay 
 } from '@/types/fitness';
 import { Json } from '@/integrations/supabase/types';
+import { toSupabaseJson, fromSupabaseJson } from '@/utils/supabaseUtils';
 
 /**
  * Saves a workout plan to the database
@@ -17,7 +20,7 @@ export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Workou
     const planForStorage = {
       ...plan,
       // Properly convert the workout_days array to a JSON-serializable object
-      workout_days: JSON.parse(JSON.stringify(plan.workout_days))
+      workout_days: toSupabaseJson(plan.workout_days)
     };
     
     const { data, error } = await fromTable('workout_plans')
@@ -27,7 +30,13 @@ export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Workou
     
     if (error) throw error;
     
-    return { data: data as unknown as WorkoutPlan, error: null };
+    // Convert the JSON data back to our WorkoutPlan type
+    const resultPlan = data ? {
+      ...data,
+      workout_days: fromSupabaseJson<WorkoutDay[]>(data.workout_days as Json)
+    } : null;
+    
+    return { data: resultPlan as WorkoutPlan, error: null };
   } catch (error) {
     console.error('Error saving workout plan:', error);
     return { data: null, error };
@@ -64,16 +73,27 @@ export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPl
  */
 export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: WorkoutLog | null, error: any }> => {
   try {
+    // Convert completed_exercises to a JSON compatible format
+    const logForStorage = {
+      ...workoutLog,
+      completed_exercises: toSupabaseJson(workoutLog.completed_exercises)
+    };
+    
     // Insert workout log
     const { data, error } = await fromTable('workout_logs')
-      .insert(workoutLog)
+      .insert(logForStorage)
       .select()
       .single();
     
     if (error) throw error;
 
     // Update workout history
-    await updateWorkoutHistory(data as unknown as WorkoutLog);
+    if (data) {
+      await updateWorkoutHistory({
+        ...data,
+        completed_exercises: fromSupabaseJson(data.completed_exercises)
+      } as WorkoutLog);
+    }
     
     // Update user streak
     await updateUserStreak(workoutLog.user_id);
@@ -103,13 +123,12 @@ const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
     }
     
     // Find the workout day name by counting completed exercises per day
-    const typedPlanData = planData as unknown as WorkoutPlan;
-    const workoutDays = typedPlanData.workout_days;
-    const dayName = workoutDays[0]?.day_name || 'Unknown Day';
+    const workoutDays = fromSupabaseJson<WorkoutDay[]>(planData.workout_days as Json);
+    const dayName = workoutDays[0]?.name || workoutDays[0]?.day_name || 'Unknown Day';
     
     const totalExercises = workoutLog.completed_exercises.length;
     const exercisesCompleted = workoutLog.completed_exercises.filter(ex => 
-      ex.sets_completed && ex.sets_completed.length > 0
+      (Array.isArray(ex.sets_completed) ? ex.sets_completed.length > 0 : ex.sets_completed > 0)
     ).length;
     
     const historyItem: WorkoutHistoryItem = {
@@ -117,7 +136,7 @@ const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
       user_id: workoutLog.user_id,
       date: workoutLog.date,
       workout_log_id: workoutLog.id,
-      workout_plan_name: typedPlanData.name,
+      workout_plan_name: planData.name,
       workout_day_name: dayName,
       duration: workoutLog.duration,
       exercises_completed: exercisesCompleted,

@@ -1,6 +1,6 @@
-
 // Import the base Database type
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
+import { Json } from "@/integrations/supabase/types";
 
 // Define our extensions to the Database type
 export interface DatabaseExtensions {
@@ -18,7 +18,7 @@ export interface DatabaseExtensions {
           duration_weeks: number;
           created_at: string;
           updated_at: string;
-          workout_days: any; // JSON structure
+          workout_days: Json; // JSON structure
         };
         Insert: {
           id?: string;
@@ -31,7 +31,7 @@ export interface DatabaseExtensions {
           duration_weeks: number;
           created_at?: string;
           updated_at?: string;
-          workout_days: any;
+          workout_days: Json;
         };
         Update: {
           id?: string;
@@ -44,7 +44,7 @@ export interface DatabaseExtensions {
           duration_weeks?: number;
           created_at?: string;
           updated_at?: string;
-          workout_days?: any;
+          workout_days?: Json;
         };
       };
       workout_logs: {
@@ -221,6 +221,12 @@ export interface DatabaseExtensions {
 }
 
 // Use module augmentation to extend the base Database type with our extensions
-declare module "@/integrations/supabase/types" {
-  interface Database extends SupabaseDatabase, DatabaseExtensions {}
+// This must be a declaration merging, not a redefinition
+declare global {
+  namespace Database {
+    interface Database extends SupabaseDatabase, DatabaseExtensions {}
+  }
 }
+
+// Export a helper type to use in supabase client
+export type SupabaseSchema = SupabaseDatabase & DatabaseExtensions;

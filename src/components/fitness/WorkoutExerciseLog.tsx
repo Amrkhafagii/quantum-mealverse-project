@@ -4,10 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { WorkoutSet, WorkoutLog, Exercise } from '@/types/fitness';
+import { WorkoutLog, Exercise, CompletedExercise } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, Plus, X, Dumbbell, Clock } from 'lucide-react';
+import { convertCompletedExercises } from '@/utils/fitnessUtils';
+
+// Define a custom type for this component
+interface WorkoutSet {
+  exercise_id: string;
+  exercise_name: string;
+  sets: number;
+  reps: number;
+  weight?: number;
+  duration?: number;
+  rest?: number;
+}
 
 interface WorkoutExerciseLogProps {
   userId?: string;
@@ -132,11 +144,12 @@ const WorkoutExerciseLog = ({ userId, workoutPlanId, workoutDay, exercises, onLo
     try {
       setIsActive(false);
       
-      const completedExercises = Object.entries(exerciseLogs).map(([exerciseId, log]) => {
+      // Convert to the format expected by our API
+      const completedExercisesData = Object.entries(exerciseLogs).map(([exerciseId, log]) => {
         const exercise = exercises.find(e => e.exercise_id === exerciseId);
         return {
           exercise_id: exerciseId,
-          exercise_name: exercise?.exercise_name || "",
+          name: exercise?.exercise_name || "",
           sets_completed: log.sets.map((set, index) => ({
             set_number: index + 1,
             weight: set.weight,
@@ -151,6 +164,9 @@ const WorkoutExerciseLog = ({ userId, workoutPlanId, workoutDay, exercises, onLo
       // Estimate calories burned (very rough estimate)
       const caloriesBurned = Math.round(duration * 8);
 
+      // Convert to CompletedExercise format needed by WorkoutLog
+      const compatibleCompletedExercises = convertCompletedExercises(completedExercisesData);
+
       const workoutLog: WorkoutLog = {
         id: `temp-${Date.now()}`, // This will be replaced by the database
         user_id: userId,
@@ -159,7 +175,7 @@ const WorkoutExerciseLog = ({ userId, workoutPlanId, workoutDay, exercises, onLo
         duration,
         calories_burned: caloriesBurned,
         notes: `Completed ${workoutDay}`,
-        completed_exercises: completedExercises,
+        completed_exercises: compatibleCompletedExercises,
       };
 
       // In a real implementation, we would save this to the database

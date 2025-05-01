@@ -16,22 +16,37 @@ export interface WorkoutPlan {
 
 export interface WorkoutDay {
   name: string;
+  day_name?: string; // Adding this to fix compatibility issues
   exercises: Exercise[];
   order: number;
 }
 
 export interface Exercise {
   id: string;
+  exercise_id?: string; // Adding this to fix compatibility issues
   name: string;
+  exercise_name?: string; // Adding this to fix compatibility issues
   sets: number;
   reps: number;
   weight?: number;
   duration?: number;
   rest?: number;
+  rest_time?: number; // Adding this to fix compatibility issues
   notes?: string;
   completed?: boolean;
   category?: string;
   muscle_group?: string;
+}
+
+// Adding this type to fix compatibility issues
+export interface WorkoutSet {
+  exercise_id: string;
+  exercise_name: string;
+  sets: number;
+  reps: number;
+  weight?: number;
+  duration?: number;
+  rest_time?: number;
 }
 
 export interface WorkoutLog {
@@ -48,7 +63,8 @@ export interface WorkoutLog {
 export interface CompletedExercise {
   exercise_id: string;
   name: string;
-  sets_completed: number;
+  exercise_name?: string; // Adding this to fix compatibility issues
+  sets_completed: number | { set_number: number; weight: number; reps: number }[];
   reps_completed: number[];
   weight_used: number[];
   notes?: string;
@@ -128,4 +144,51 @@ export interface UserAchievement {
   user_id: string;
   achievement_id: string;
   date_achieved: string;
+}
+
+// Adding missing types that are referenced in error messages
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  display_name?: string;
+  gender?: string;
+  date_of_birth?: string;
+  height?: number;
+  goal_weight?: number;
+  fitness_level?: string;
+  fitness_goals?: string[];
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedMealPlan {
+  id: string;
+  user_id: string;
+  name: string;
+  meal_plan: any; // JSON structure
+  date_created: string;
+  tdee_id?: string;
+}
+
+export interface UserWorkoutStats {
+  user_id: string;
+  totalWorkouts: number;
+  total_time: number;
+  total_calories: number;
+  favorite_exercise: string;
+  strongest_exercise: {
+    exercise_id: string;
+    exercise_name: string;
+    max_weight: number;
+  };
+  most_improved_exercise: {
+    exercise_id: string;
+    exercise_name: string;
+    improvement_percentage: number;
+  };
+  currentStreak: number;
+  longestStreak: number;
+  weekly_goal_completion: number;
 }
