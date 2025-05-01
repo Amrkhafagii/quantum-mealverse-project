@@ -9,6 +9,7 @@ import {
 } from '@/types/fitness';
 import { Json } from '@/integrations/supabase/types';
 import { toSupabaseJson, fromSupabaseJson } from '@/utils/supabaseUtils';
+import { checkAchievements } from './achievementService';
 
 /**
  * Saves a workout plan to the database
@@ -96,6 +97,9 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: Workou
     
     // Update user streak
     await updateUserStreak(workoutLog.user_id);
+    
+    // Check for achievements
+    await checkAchievements(workoutLog.user_id);
     
     return { data: data as unknown as WorkoutLog, error: null };
   } catch (error) {

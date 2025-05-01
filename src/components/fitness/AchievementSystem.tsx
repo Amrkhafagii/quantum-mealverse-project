@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Achievement, UserAchievement } from '@/types/fitness';
 import { supabase } from '@/integrations/supabase/client';
 import { Award, Star, TrendingUp, Dumbbell, Utensils, Calendar, Target, Clock } from 'lucide-react';
+import { getAchievements, getUserAchievements } from '@/services/achievementService';
+import { useToast } from '@/hooks/use-toast';
 
 interface AchievementSystemProps {
   userId?: string;
@@ -15,6 +17,7 @@ type ExtendedUserAchievement = UserAchievement & {
 };
 
 const AchievementSystem = ({ userId }: AchievementSystemProps) => {
+  const { toast } = useToast();
   const [userAchievements, setUserAchievements] = useState<ExtendedUserAchievement[]>([]);
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,83 +36,34 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
     try {
       setLoading(true);
       
-      // In a real implementation, we would fetch from the database
-      // For now, we'll use mock data
+      // We still need to handle the case where the database tables might not exist yet
+      let achievementsData: Achievement[] = [];
+      let userAchievementsData: ExtendedUserAchievement[] = [];
       
-      const mockAchievements: Achievement[] = [
-        {
-          id: "1",
-          name: "First Workout",
-          description: "Complete your first workout session",
-          icon: "Dumbbell",
-          criteria: "Complete 1 workout",
-          points: 10
-        },
-        {
-          id: "2",
-          name: "Consistent Tracker",
-          description: "Log your measurements for 4 consecutive weeks",
-          icon: "LineChart",
-          criteria: "Log measurements weekly for 4 weeks",
-          points: 25
-        },
-        {
-          id: "3",
-          name: "Nutrition Master",
-          description: "Create and follow 5 different meal plans",
-          icon: "Utensils",
-          criteria: "Create 5 meal plans",
-          points: 30
-        },
-        {
-          id: "4",
-          name: "Early Bird",
-          description: "Complete 5 morning workouts before 8 AM",
-          icon: "Sunrise",
-          criteria: "5 workouts before 8 AM",
-          points: 40
-        },
-        {
-          id: "5",
-          name: "Weight Goal Achieved",
-          description: "Reach your target weight goal",
-          icon: "Target",
-          criteria: "Reach target weight",
-          points: 100
-        },
-        {
-          id: "6",
-          name: "Month Streak",
-          description: "Work out consistently for an entire month",
-          icon: "Calendar",
-          criteria: "30 days of activity",
-          points: 50
-        }
-      ];
+      // Try to fetch real data
+      const { data: fetchedAchievements, error: achievementsError } = await getAchievements();
+      const { data: fetchedUserAchievements, error: userAchievementsError } = await getUserAchievements(userId || '');
       
-      const mockUserAchievements: ExtendedUserAchievement[] = [
-        {
-          id: "ua1",
-          user_id: userId || "",
-          achievement_id: "1",
-          date_achieved: new Date().toISOString(),
-          achievement: mockAchievements[0]
-        },
-        {
-          id: "ua2",
-          user_id: userId || "",
-          achievement_id: "3",
-          date_achieved: new Date().toISOString(),
-          achievement: mockAchievements[2]
-        }
-      ];
+      if (fetchedAchievements && !achievementsError) {
+        achievementsData = fetchedAchievements;
+      } else {
+        // Fallback to mock data if the table doesn't exist or there's an error
+        achievementsData = getMockAchievements();
+      }
       
-      setAllAchievements(mockAchievements);
-      setUserAchievements(mockUserAchievements);
+      if (fetchedUserAchievements && !userAchievementsError) {
+        userAchievementsData = fetchedUserAchievements;
+      } else {
+        // Fallback to mock user achievements
+        userAchievementsData = getMockUserAchievements(userId || '', achievementsData);
+      }
+      
+      setAllAchievements(achievementsData);
+      setUserAchievements(userAchievementsData);
       
       // Calculate user points
-      const points = mockUserAchievements.reduce((total, ua) => {
-        const achievement = mockAchievements.find(a => a.id === ua.achievement_id);
+      const points = userAchievementsData.reduce((total, ua) => {
+        const achievement = achievementsData.find(a => a.id === ua.achievement_id);
         return total + (achievement?.points || 0);
       }, 0);
       
@@ -121,8 +75,87 @@ const AchievementSystem = ({ userId }: AchievementSystemProps) => {
       setLoading(false);
     } catch (error) {
       console.error('Error loading achievements:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load achievements",
+        variant: "destructive"
+      });
       setLoading(false);
     }
+  };
+
+  // Helper function to get mock achievements for development
+  const getMockAchievements = (): Achievement[] => {
+    return [
+      {
+        id: "1",
+        name: "First Workout",
+        description: "Complete your first workout session",
+        icon: "Dumbbell",
+        criteria: "Complete 1 workout",
+        points: 10
+      },
+      {
+        id: "2",
+        name: "Consistent Tracker",
+        description: "Log your measurements for 4 consecutive weeks",
+        icon: "LineChart",
+        criteria: "Log measurements weekly for 4 weeks",
+        points: 25
+      },
+      {
+        id: "3",
+        name: "Nutrition Master",
+        description: "Create and follow 5 different meal plans",
+        icon: "Utensils",
+        criteria: "Create 5 meal plans",
+        points: 30
+      },
+      {
+        id: "4",
+        name: "Early Bird",
+        description: "Complete 5 morning workouts before 8 AM",
+        icon: "Sunrise",
+        criteria: "5 workouts before 8 AM",
+        points: 40
+      },
+      {
+        id: "5",
+        name: "Weight Goal Achieved",
+        description: "Reach your target weight goal",
+        icon: "Target",
+        criteria: "Reach target weight",
+        points: 100
+      },
+      {
+        id: "6",
+        name: "Month Streak",
+        description: "Work out consistently for an entire month",
+        icon: "Calendar",
+        criteria: "30 days of activity",
+        points: 50
+      }
+    ];
+  };
+
+  // Helper function to get mock user achievements
+  const getMockUserAchievements = (userId: string, achievements: Achievement[]): ExtendedUserAchievement[] => {
+    return [
+      {
+        id: "ua1",
+        user_id: userId,
+        achievement_id: "1",
+        date_achieved: new Date().toISOString(),
+        achievement: achievements[0]
+      },
+      {
+        id: "ua2",
+        user_id: userId,
+        achievement_id: "3",
+        date_achieved: new Date().toISOString(),
+        achievement: achievements[2]
+      }
+    ];
   };
 
   const getAchievementIcon = (iconName: string) => {

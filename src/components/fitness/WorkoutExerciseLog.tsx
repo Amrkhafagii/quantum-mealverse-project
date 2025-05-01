@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Exercise, CompletedExercise } from '@/types/fitness';
-import { Timer, Dumbbell, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { formatWorkoutLogForSupabase } from '@/utils/supabaseUtils';
 import { logWorkout } from '@/services/workoutService';
+import ExerciseLogForm from './ExerciseLogForm';
+import WorkoutTimer from './WorkoutTimer';
 
 interface WorkoutExerciseLogProps {
   userId?: string;
@@ -27,65 +28,15 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
 }) => {
   const { toast } = useToast();
   const [duration, setDuration] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
   const [caloriesBurned, setCaloriesBurned] = useState<number | undefined>(undefined);
   const [notes, setNotes] = useState('');
-  const [completedExercises, setCompletedExercises] = useState<any[]>(
-    exercises.map(exercise => ({
-      exercise_id: exercise.exercise_id || exercise.id,
-      name: exercise.name,
-      exercise_name: exercise.exercise_name || exercise.name,
-      sets_completed: Array(exercise.sets).fill(0).map((_, index) => ({
-        set_number: index + 1,
-        weight: exercise.weight || 0,
-        reps: exercise.reps || 0,
-        completed: false
-      }))
-    }))
-  );
+  const [completedExercises, setCompletedExercises] = useState<any[]>([]);
 
-  // Timer logic
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (timerRunning) {
-      interval = setInterval(() => {
-        setDuration(prev => prev + 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timerRunning]);
-
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const handleDurationChange = (newDuration: number) => {
+    setDuration(newDuration);
   };
 
-  const toggleTimer = () => {
-    setTimerRunning(!timerRunning);
-  };
-
-  const handleSetCompletion = (exerciseIndex: number, setIndex: number, completed: boolean) => {
-    const updatedExercises = [...completedExercises];
-    updatedExercises[exerciseIndex].sets_completed[setIndex].completed = completed;
-    setCompletedExercises(updatedExercises);
-  };
-
-  const handleSetWeightChange = (exerciseIndex: number, setIndex: number, weight: number) => {
-    const updatedExercises = [...completedExercises];
-    updatedExercises[exerciseIndex].sets_completed[setIndex].weight = weight;
-    setCompletedExercises(updatedExercises);
-  };
-
-  const handleSetRepsChange = (exerciseIndex: number, setIndex: number, reps: number) => {
-    const updatedExercises = [...completedExercises];
-    updatedExercises[exerciseIndex].sets_completed[setIndex].reps = reps;
+  const handleExerciseUpdate = (updatedExercises: any[]) => {
     setCompletedExercises(updatedExercises);
   };
 
@@ -97,10 +48,6 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
         variant: "destructive"
       });
       return;
-    }
-
-    if (timerRunning) {
-      toggleTimer(); // Stop the timer
     }
 
     // Check if any sets were completed
@@ -185,81 +132,29 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>{workoutDay}</span>
-          <div className="text-quantum-cyan">{formatTime(duration)}</div>
         </CardTitle>
       </CardHeader>
       
       <CardContent className="space-y-6">
-        <div className="flex justify-between">
-          <Button 
-            onClick={toggleTimer}
-            className={timerRunning ? "bg-red-500 hover:bg-red-600" : "bg-quantum-cyan hover:bg-quantum-cyan/90"}
-          >
-            {timerRunning ? "Pause Timer" : "Start Timer"}
-          </Button>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm">Calories:</span>
-            <Input
-              type="number"
-              value={caloriesBurned || ''}
-              onChange={(e) => setCaloriesBurned(Number(e.target.value))}
-              placeholder="0"
-              className="w-20 h-8"
-            />
-          </div>
+        {/* Timer component */}
+        <WorkoutTimer onDurationChange={handleDurationChange} />
+        
+        <div className="flex items-center space-x-2">
+          <span className="text-sm">Calories:</span>
+          <Input
+            type="number"
+            value={caloriesBurned || ''}
+            onChange={(e) => setCaloriesBurned(Number(e.target.value))}
+            placeholder="0"
+            className="w-20 h-8"
+          />
         </div>
         
-        <div className="space-y-6">
-          {exercises.map((exercise, exerciseIndex) => (
-            <div key={exercise.id || exercise.exercise_id} className="bg-quantum-darkBlue/50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <Dumbbell className="h-5 w-5 mr-2 text-quantum-cyan" />
-                {exercise.exercise_name || exercise.name}
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-400">Target</p>
-                  <p>{exercise.sets} sets × {exercise.reps} reps{exercise.weight ? ` @ ${exercise.weight}kg` : ''}</p>
-                  {(exercise.rest || exercise.rest_time) && <p className="text-sm text-gray-400">Rest: {exercise.rest || exercise.rest_time}s</p>}
-                </div>
-                
-                <div className="space-y-2">
-                  {completedExercises[exerciseIndex]?.sets_completed.map((set: any, setIndex: number) => (
-                    <div key={setIndex} className="flex items-center space-x-2 p-2 bg-quantum-black/40 rounded">
-                      <div className="w-12 text-center text-sm">Set {set.set_number}</div>
-                      
-                      <div className="flex-1 flex items-center space-x-2">
-                        <Input
-                          type="number"
-                          value={set.weight}
-                          onChange={(e) => handleSetWeightChange(exerciseIndex, setIndex, Number(e.target.value))}
-                          className="w-16 h-8 text-sm"
-                          placeholder="kg"
-                        />
-                        
-                        <Input
-                          type="number"
-                          value={set.reps}
-                          onChange={(e) => handleSetRepsChange(exerciseIndex, setIndex, Number(e.target.value))}
-                          className="w-16 h-8 text-sm"
-                          placeholder="reps"
-                        />
-                        
-                        <Checkbox
-                          checked={set.completed}
-                          onCheckedChange={(checked) => handleSetCompletion(exerciseIndex, setIndex, !!checked)}
-                          className="h-5 w-5"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Exercise log form */}
+        <ExerciseLogForm 
+          exercises={exercises} 
+          onSetComplete={handleExerciseUpdate}
+        />
         
         <div>
           <Input
