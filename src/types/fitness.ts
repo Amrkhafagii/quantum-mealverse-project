@@ -1,4 +1,3 @@
-
 // Define types for fitness data that can be used throughout the application
 export interface WorkoutPlan {
   id: string;
@@ -139,6 +138,7 @@ export interface Achievement {
   criteria: string;
   icon: string;
   points: number;
+  level?: 'bronze' | 'silver' | 'gold' | 'platinum';
 }
 
 export interface UserAchievement {
@@ -146,6 +146,7 @@ export interface UserAchievement {
   user_id: string;
   achievement_id: string;
   date_achieved: string;
+  achievement?: Achievement;
 }
 
 // User profile type
@@ -195,4 +196,25 @@ export interface UserWorkoutStats {
   currentStreak: number;
   longestStreak: number;
   weekly_goal_completion: number;
+}
+
+// Daily quest type
+export interface DailyQuest {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  points: number;
+  completed: boolean;
+  created_at: string;
+  expires_at: string;
+}
+
+// User points system
+export interface UserPoints {
+  user_id: string;
+  total_points: number;
+  level: string;
+  progress_to_next_level: number;
+  last_updated: string;
 }

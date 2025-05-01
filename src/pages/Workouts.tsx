@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dumbbell, LineChart, History, PlayCircle, Calendar, Award, Goal, TrendingUp } from 'lucide-react';
+import { Dumbbell, LineChart, History, PlayCircle, Calendar, Award, Goal, TrendingUp, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
@@ -23,6 +23,10 @@ import { getUserMeasurements } from '@/services/measurementService';
 import { motion } from 'framer-motion';
 import AchievementNotification from '@/components/fitness/AchievementNotification';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import ProgressInsights from '@/components/fitness/ProgressInsights';
+import UserProgressJourney from '@/components/fitness/UserProgressJourney';
+import DailyQuests from '@/components/fitness/DailyQuests';
+import PointsDisplay from '@/components/fitness/PointsDisplay';
 
 const Workouts = () => {
   const navigate = useNavigate();
@@ -35,11 +39,18 @@ const Workouts = () => {
   const [achievementDetails, setAchievementDetails] = useState({
     title: '',
     description: '',
+    points: 10,
+    level: 'bronze' as 'bronze' | 'silver' | 'gold' | 'platinum'
   });
+  const [userPoints, setUserPoints] = useState(0);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [userAchievements, setUserAchievements] = useState<any[]>([]);
   
   useEffect(() => {
     if (user) {
       loadMeasurements();
+      loadAchievements();
+      loadUserPoints();
       
       // Simulate achievement for demo purposes
       const hasSeenAchievement = localStorage.getItem('hasSeenWorkoutAchievement');
@@ -47,7 +58,9 @@ const Workouts = () => {
         setTimeout(() => {
           setAchievementDetails({
             title: 'Workout Explorer',
-            description: 'You\'ve discovered the workout section! Time to start your fitness journey.'
+            description: 'You\'ve discovered the workout section! Time to start your fitness journey.',
+            points: 10,
+            level: 'bronze'
           });
           setShowAchievement(true);
           localStorage.setItem('hasSeenWorkoutAchievement', 'true');
@@ -70,6 +83,66 @@ const Workouts = () => {
       console.error('Error loading measurements:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAchievements = async () => {
+    if (!user) return;
+    
+    try {
+      // Get all achievements
+      const { data: achievementsData, error: achievementsError } = await supabase
+        .from('achievements')
+        .select('*');
+        
+      if (achievementsError) throw achievementsError;
+      
+      // Get user achievements
+      const { data: userAchievementsData, error: userError } = await supabase
+        .from('user_achievements')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (userError) throw userError;
+      
+      setAchievements(achievementsData || []);
+      setUserAchievements(userAchievementsData || []);
+    } catch (error) {
+      console.error('Error loading achievements data:', error);
+    }
+  };
+  
+  const loadUserPoints = async () => {
+    if (!user) return;
+    
+    try {
+      // Calculate total points from achievements
+      const { data: userAchievementsData, error: userError } = await supabase
+        .from('user_achievements')
+        .select('achievement_id')
+        .eq('user_id', user.id);
+        
+      if (userError) throw userError;
+      
+      // Get points for each achievement
+      let totalPoints = 0;
+      
+      if (userAchievementsData && userAchievementsData.length > 0) {
+        const achievementIds = userAchievementsData.map(ua => ua.achievement_id);
+        
+        const { data: pointsData, error: pointsError } = await supabase
+          .from('achievements')
+          .select('points')
+          .in('id', achievementIds);
+          
+        if (pointsError) throw pointsError;
+        
+        totalPoints = pointsData?.reduce((sum, a) => sum + a.points, 0) || 0;
+      }
+      
+      setUserPoints(totalPoints);
+    } catch (error) {
+      console.error('Error loading user points:', error);
     }
   };
   
@@ -154,13 +227,20 @@ const Workouts = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
+          className="flex justify-between items-center mb-6"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan mb-4 neon-text">
-            HealthAndFix Workouts
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mb-12">
-            Find the perfect workout routine to match your fitness level and goals.
-          </p>
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan mb-4 neon-text">
+              HealthAndFix Workouts
+            </h1>
+            <p className="text-xl text-gray-300 max-w-3xl">
+              Find the perfect workout routine to match your fitness level and goals.
+            </p>
+          </div>
+          
+          {user && (
+            <PointsDisplay points={userPoints} size="large" />
+          )}
         </motion.div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
@@ -203,6 +283,19 @@ const Workouts = () => {
             </motion.div>
           </TabsContent>
         </Tabs>
+        
+        {user && activeTab === 'workout' && (
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <ProgressInsights userId={user.id} />
+            <UserProgressJourney 
+              userId={user.id} 
+              achievements={achievements} 
+              userAchievements={userAchievements} 
+              points={userPoints}
+            />
+            <DailyQuests userId={user.id} />
+          </div>
+        )}
         
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -250,6 +343,8 @@ const Workouts = () => {
         description={achievementDetails.description}
         isVisible={showAchievement}
         onClose={handleCloseAchievement}
+        points={achievementDetails.points}
+        level={achievementDetails.level}
       />
       
       <Footer />
