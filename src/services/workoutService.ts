@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   WorkoutPlan, 
@@ -12,7 +13,8 @@ import {
  */
 export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
   try {
-    const { data, error } = await supabase
+    // Cast to any to bypass type checking since we're extending the schema
+    const { data, error } = await (supabase as any)
       .from('workout_plans')
       .insert(plan)
       .select()
@@ -33,7 +35,7 @@ export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Workou
 export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPlan[] | null, error: any }> => {
   try {
     // First try to get user's saved workout plans
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('workout_plans')
       .select('*')
       .eq('user_id', userId);
@@ -59,7 +61,7 @@ export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPl
 export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: WorkoutLog | null, error: any }> => {
   try {
     // Insert workout log
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('workout_logs')
       .insert(workoutLog)
       .select()
@@ -86,7 +88,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: Workou
 const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
   try {
     // Get workout plan details to extract plan name and day name
-    const { data: planData, error: planError } = await supabase
+    const { data: planData, error: planError } = await (supabase as any)
       .from('workout_plans')
       .select('name, workout_days')
       .eq('id', workoutLog.workout_plan_id)
@@ -121,7 +123,7 @@ const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
       calories_burned: workoutLog.calories_burned
     };
     
-    await supabase.from('workout_history').insert(historyItem);
+    await (supabase as any).from('workout_history').insert(historyItem);
   } catch (error) {
     console.error('Error updating workout history:', error);
   }
@@ -135,7 +137,7 @@ const updateUserStreak = async (userId: string): Promise<void> => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
     // Get user's current streak
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_streaks')
       .select('*')
       .eq('user_id', userId)
@@ -172,7 +174,7 @@ const updateUserStreak = async (userId: string): Promise<void> => {
     }
     
     // Upsert the streak record
-    await supabase
+    await (supabase as any)
       .from('user_streaks')
       .upsert({
         user_id: userId,
@@ -191,7 +193,7 @@ const updateUserStreak = async (userId: string): Promise<void> => {
  */
 export const getWorkoutHistory = async (userId: string, dateFilter?: string): Promise<{ data: WorkoutHistoryItem[] | null, error: any }> => {
   try {
-    let query = supabase
+    let query = (supabase as any)
       .from('workout_history')
       .select('*')
       .eq('user_id', userId);
@@ -219,7 +221,7 @@ export const getWorkoutHistory = async (userId: string, dateFilter?: string): Pr
 export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorkoutStats | null, error: any }> => {
   try {
     // Get workout history
-    const { data: historyData, error: historyError } = await supabase
+    const { data: historyData, error: historyError } = await (supabase as any)
       .from('workout_history')
       .select('*')
       .eq('user_id', userId);
@@ -227,7 +229,7 @@ export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorko
     if (historyError) throw historyError;
     
     // Get user streak
-    const { data: streakData, error: streakError } = await supabase
+    const { data: streakData, error: streakError } = await (supabase as any)
       .from('user_streaks')
       .select('*')
       .eq('user_id', userId)
@@ -305,7 +307,7 @@ export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorko
  */
 export const getWorkoutSchedule = async (userId: string): Promise<{ data: WorkoutSchedule[] | null, error: any }> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('workout_schedules')
       .select('*')
       .eq('user_id', userId)
@@ -325,7 +327,7 @@ export const getWorkoutSchedule = async (userId: string): Promise<{ data: Workou
  */
 export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<{ data: WorkoutSchedule | null, error: any }> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('workout_schedules')
       .insert(schedule)
       .select()
