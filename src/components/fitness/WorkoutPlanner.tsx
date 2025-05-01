@@ -212,6 +212,22 @@ const WorkoutPlanCard: React.FC<WorkoutPlanCardProps> = ({
 }) => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   
+  // Define addNewExercise function that was missing
+  const addNewExercise = (dayIndex: number) => {
+    // Create a new empty exercise
+    const newExercise: WorkoutSet = {
+      exercise_id: `ex-${Date.now()}`,
+      exercise_name: 'New Exercise',
+      sets: 3,
+      reps: 10,
+      weight: 0,
+      completed: false,
+    };
+    
+    // Example of how to add it - in a real app, you'd update the state and database
+    console.log('Adding exercise:', newExercise, 'to day:', dayIndex);
+  };
+  
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 hover:border-quantum-cyan/50 transition-colors">
       <CardHeader>

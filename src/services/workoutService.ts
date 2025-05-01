@@ -1,5 +1,4 @@
-
-import { supabase } from '@/integrations/supabase/client';
+import { fromTable } from './supabaseClient';
 import { 
   WorkoutPlan, 
   WorkoutLog, 
@@ -13,16 +12,14 @@ import {
  */
 export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
   try {
-    // Cast to any to bypass type checking since we're extending the schema
-    const { data, error } = await (supabase as any)
-      .from('workout_plans')
+    const { data, error } = await fromTable('workout_plans')
       .insert(plan)
       .select()
       .single();
     
     if (error) throw error;
     
-    return { data: data as WorkoutPlan, error: null };
+    return { data: data as unknown as WorkoutPlan, error: null };
   } catch (error) {
     console.error('Error saving workout plan:', error);
     return { data: null, error };
@@ -35,8 +32,7 @@ export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Workou
 export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPlan[] | null, error: any }> => {
   try {
     // First try to get user's saved workout plans
-    const { data, error } = await (supabase as any)
-      .from('workout_plans')
+    const { data, error } = await fromTable('workout_plans')
       .select('*')
       .eq('user_id', userId);
 
@@ -48,7 +44,7 @@ export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPl
       return { data: defaultTemplates, error: null };
     }
     
-    return { data: data as WorkoutPlan[], error: null };
+    return { data: data as unknown as WorkoutPlan[], error: null };
   } catch (error) {
     console.error('Error fetching workout plans:', error);
     return { data: null, error };
@@ -61,8 +57,7 @@ export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPl
 export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: WorkoutLog | null, error: any }> => {
   try {
     // Insert workout log
-    const { data, error } = await (supabase as any)
-      .from('workout_logs')
+    const { data, error } = await fromTable('workout_logs')
       .insert(workoutLog)
       .select()
       .single();
@@ -70,12 +65,12 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: Workou
     if (error) throw error;
 
     // Update workout history
-    await updateWorkoutHistory(data as WorkoutLog);
+    await updateWorkoutHistory(data as unknown as WorkoutLog);
     
     // Update user streak
     await updateUserStreak(workoutLog.user_id);
     
-    return { data: data as WorkoutLog, error: null };
+    return { data: data as unknown as WorkoutLog, error: null };
   } catch (error) {
     console.error('Error logging workout:', error);
     return { data: null, error };
@@ -88,8 +83,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: Workou
 const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
   try {
     // Get workout plan details to extract plan name and day name
-    const { data: planData, error: planError } = await (supabase as any)
-      .from('workout_plans')
+    const { data: planData, error: planError } = await fromTable('workout_plans')
       .select('name, workout_days')
       .eq('id', workoutLog.workout_plan_id)
       .single();
@@ -101,8 +95,8 @@ const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
     }
     
     // Find the workout day name by counting completed exercises per day
-    // This is a simplistic approach - you might need a better way to track which day was completed
-    const workoutDays = planData.workout_days as any[];
+    const typedPlanData = planData as unknown as WorkoutPlan;
+    const workoutDays = typedPlanData.workout_days;
     const dayName = workoutDays[0]?.day_name || 'Unknown Day';
     
     const totalExercises = workoutLog.completed_exercises.length;
@@ -115,7 +109,7 @@ const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
       user_id: workoutLog.user_id,
       date: workoutLog.date,
       workout_log_id: workoutLog.id,
-      workout_plan_name: planData.name,
+      workout_plan_name: typedPlanData.name,
       workout_day_name: dayName,
       duration: workoutLog.duration,
       exercises_completed: exercisesCompleted,
@@ -123,7 +117,7 @@ const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
       calories_burned: workoutLog.calories_burned
     };
     
-    await (supabase as any).from('workout_history').insert(historyItem);
+    await fromTable('workout_history').insert(historyItem);
   } catch (error) {
     console.error('Error updating workout history:', error);
   }
@@ -137,8 +131,7 @@ const updateUserStreak = async (userId: string): Promise<void> => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
     // Get user's current streak
-    const { data, error } = await (supabase as any)
-      .from('user_streaks')
+    const { data, error } = await fromTable('user_streaks')
       .select('*')
       .eq('user_id', userId)
       .eq('streak_type', 'workout')
@@ -174,8 +167,7 @@ const updateUserStreak = async (userId: string): Promise<void> => {
     }
     
     // Upsert the streak record
-    await (supabase as any)
-      .from('user_streaks')
+    await fromTable('user_streaks')
       .upsert({
         user_id: userId,
         currentStreak,
@@ -193,8 +185,7 @@ const updateUserStreak = async (userId: string): Promise<void> => {
  */
 export const getWorkoutHistory = async (userId: string, dateFilter?: string): Promise<{ data: WorkoutHistoryItem[] | null, error: any }> => {
   try {
-    let query = (supabase as any)
-      .from('workout_history')
+    let query = fromTable('workout_history')
       .select('*')
       .eq('user_id', userId);
     
@@ -208,7 +199,7 @@ export const getWorkoutHistory = async (userId: string, dateFilter?: string): Pr
     
     if (error) throw error;
     
-    return { data: data as WorkoutHistoryItem[], error: null };
+    return { data: data as unknown as WorkoutHistoryItem[], error: null };
   } catch (error) {
     console.error('Error fetching workout history:', error);
     return { data: null, error };
@@ -221,16 +212,14 @@ export const getWorkoutHistory = async (userId: string, dateFilter?: string): Pr
 export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorkoutStats | null, error: any }> => {
   try {
     // Get workout history
-    const { data: historyData, error: historyError } = await (supabase as any)
-      .from('workout_history')
+    const { data: historyData, error: historyError } = await fromTable('workout_history')
       .select('*')
       .eq('user_id', userId);
     
     if (historyError) throw historyError;
     
     // Get user streak
-    const { data: streakData, error: streakError } = await (supabase as any)
-      .from('user_streaks')
+    const { data: streakData, error: streakError } = await fromTable('user_streaks')
       .select('*')
       .eq('user_id', userId)
       .eq('streak_type', 'workout')
@@ -307,8 +296,7 @@ export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorko
  */
 export const getWorkoutSchedule = async (userId: string): Promise<{ data: WorkoutSchedule[] | null, error: any }> => {
   try {
-    const { data, error } = await (supabase as any)
-      .from('workout_schedules')
+    const { data, error } = await fromTable('workout_schedules')
       .select('*')
       .eq('user_id', userId)
       .eq('active', true);
@@ -327,8 +315,7 @@ export const getWorkoutSchedule = async (userId: string): Promise<{ data: Workou
  */
 export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<{ data: WorkoutSchedule | null, error: any }> => {
   try {
-    const { data, error } = await (supabase as any)
-      .from('workout_schedules')
+    const { data, error } = await fromTable('workout_schedules')
       .insert(schedule)
       .select()
       .single();
