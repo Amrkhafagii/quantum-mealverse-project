@@ -1,316 +1,266 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { WorkoutLog, Exercise, CompletedExercise } from '@/types/fitness';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Check, Plus, X, Dumbbell, Clock } from 'lucide-react';
-import { convertCompletedExercises } from '@/utils/fitnessUtils';
-
-// Define a custom type for this component
-interface WorkoutSet {
-  exercise_id: string;
-  exercise_name: string;
-  sets: number;
-  reps: number;
-  weight?: number;
-  duration?: number;
-  rest?: number;
-}
+import { Exercise, CompletedExercise } from '@/types/fitness';
+import { logWorkout } from '@/services/workoutService';
+import { Timer, Dumbbell, Check } from 'lucide-react';
 
 interface WorkoutExerciseLogProps {
   userId?: string;
   workoutPlanId: string;
   workoutDay: string;
-  exercises: WorkoutSet[];
-  onLogComplete?: (log: WorkoutLog) => void;
+  exercises: Exercise[];
+  onLogComplete: () => void;
 }
 
-const WorkoutExerciseLog = ({ userId, workoutPlanId, workoutDay, exercises, onLogComplete }: WorkoutExerciseLogProps) => {
+const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
+  userId,
+  workoutPlanId,
+  workoutDay,
+  exercises,
+  onLogComplete
+}) => {
   const { toast } = useToast();
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isActive, setIsActive] = useState(false);
-  const [exerciseLogs, setExerciseLogs] = useState<{
-    [exerciseId: string]: {
-      sets: {
-        weight?: number;
-        reps?: number;
-        completed: boolean;
-      }[];
-    };
-  }>({});
+  const [duration, setDuration] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [caloriesBurned, setCaloriesBurned] = useState<number | undefined>(undefined);
+  const [notes, setNotes] = useState('');
+  const [completedExercises, setCompletedExercises] = useState<any[]>(
+    exercises.map(exercise => ({
+      exercise_id: exercise.exercise_id || exercise.id,
+      exercise_name: exercise.exercise_name || exercise.name,
+      sets_completed: Array(exercise.sets).fill(0).map((_, index) => ({
+        set_number: index + 1,
+        weight: exercise.weight || 0,
+        reps: exercise.reps || 0,
+        completed: false
+      }))
+    }))
+  );
 
-  // Initialize exercise logs
-  useEffect(() => {
-    const initialLogs: {
-      [exerciseId: string]: {
-        sets: {
-          weight?: number;
-          reps?: number;
-          completed: boolean;
-        }[];
-      };
-    } = {};
-
-    exercises.forEach((exercise) => {
-      initialLogs[exercise.exercise_id] = {
-        sets: Array(exercise.sets).fill({
-          weight: exercise.weight,
-          reps: exercise.reps,
-          completed: false,
-        }),
-      };
-    });
-
-    setExerciseLogs(initialLogs);
-  }, [exercises]);
-
-  // Timer functionality
-  useEffect(() => {
+  // Timer logic
+  React.useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
-    if (isActive) {
+    if (timerRunning) {
       interval = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
+        setDuration(prev => prev + 1);
       }, 1000);
-    } else if (interval) {
-      clearInterval(interval);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive]);
-
-  const startWorkout = () => {
-    setStartTime(new Date());
-    setIsActive(true);
-    toast({
-      title: "Workout Started",
-      description: "Your workout timer has started. Good luck!",
-    });
-  };
+  }, [timerRunning]);
 
   const formatTime = (seconds: number): string => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSetComplete = (exerciseId: string, setIndex: number) => {
-    setExerciseLogs((prev) => {
-      const updatedLogs = { ...prev };
-      const exercise = { ...updatedLogs[exerciseId] };
-      const sets = [...exercise.sets];
-      sets[setIndex] = { ...sets[setIndex], completed: !sets[setIndex].completed };
-      exercise.sets = sets;
-      updatedLogs[exerciseId] = exercise;
-      return updatedLogs;
-    });
+  const toggleTimer = () => {
+    setTimerRunning(!timerRunning);
   };
 
-  const handleInputChange = (
-    exerciseId: string,
-    setIndex: number,
-    field: 'weight' | 'reps',
-    value: string
-  ) => {
-    setExerciseLogs((prev) => {
-      const updatedLogs = { ...prev };
-      const exercise = { ...updatedLogs[exerciseId] };
-      const sets = [...exercise.sets];
-      sets[setIndex] = { ...sets[setIndex], [field]: value ? Number(value) : undefined };
-      exercise.sets = sets;
-      updatedLogs[exerciseId] = exercise;
-      return updatedLogs;
-    });
+  const handleSetCompletion = (exerciseIndex: number, setIndex: number, completed: boolean) => {
+    const updatedExercises = [...completedExercises];
+    updatedExercises[exerciseIndex].sets_completed[setIndex].completed = completed;
+    setCompletedExercises(updatedExercises);
   };
 
-  const completeWorkout = async () => {
+  const handleSetWeightChange = (exerciseIndex: number, setIndex: number, weight: number) => {
+    const updatedExercises = [...completedExercises];
+    updatedExercises[exerciseIndex].sets_completed[setIndex].weight = weight;
+    setCompletedExercises(updatedExercises);
+  };
+
+  const handleSetRepsChange = (exerciseIndex: number, setIndex: number, reps: number) => {
+    const updatedExercises = [...completedExercises];
+    updatedExercises[exerciseIndex].sets_completed[setIndex].reps = reps;
+    setCompletedExercises(updatedExercises);
+  };
+
+  const handleCompleteWorkout = async () => {
     if (!userId) {
       toast({
-        title: "Login Required",
+        title: "Authentication Required",
         description: "Please log in to save your workout.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
-    try {
-      setIsActive(false);
-      
-      // Convert to the format expected by our API
-      const completedExercisesData = Object.entries(exerciseLogs).map(([exerciseId, log]) => {
-        const exercise = exercises.find(e => e.exercise_id === exerciseId);
-        return {
-          exercise_id: exerciseId,
-          name: exercise?.exercise_name || "",
-          sets_completed: log.sets.map((set, index) => ({
-            set_number: index + 1,
-            weight: set.weight,
-            reps: set.reps,
-          })),
-        };
+    if (timerRunning) {
+      toggleTimer(); // Stop the timer
+    }
+
+    // Check if any sets were completed
+    const anySetCompleted = completedExercises.some(exercise => 
+      exercise.sets_completed.some((set: any) => set.completed)
+    );
+
+    if (!anySetCompleted) {
+      toast({
+        title: "No exercises completed",
+        description: "Please complete at least one set before finishing the workout.",
+        variant: "destructive"
       });
+      return;
+    }
 
-      // Calculate duration in minutes
-      const duration = Math.ceil(elapsedTime / 60);
-      
-      // Estimate calories burned (very rough estimate)
-      const caloriesBurned = Math.round(duration * 8);
+    // Convert the completed exercises to the format expected by the API
+    const formattedCompletedExercises: CompletedExercise[] = completedExercises
+      .map(exercise => {
+        // Filter out sets that weren't completed
+        const completedSets = exercise.sets_completed.filter((set: any) => set.completed);
+        
+        if (completedSets.length === 0) return null;
+        
+        return {
+          exercise_id: exercise.exercise_id,
+          name: exercise.exercise_name,
+          exercise_name: exercise.exercise_name,
+          sets_completed: completedSets,
+          reps_completed: completedSets.map((set: any) => set.reps),
+          weight_used: completedSets.map((set: any) => set.weight)
+        };
+      })
+      .filter((ex): ex is CompletedExercise => ex !== null);
 
-      // Convert to CompletedExercise format needed by WorkoutLog
-      const compatibleCompletedExercises = convertCompletedExercises(completedExercisesData);
-
-      const workoutLog: WorkoutLog = {
-        id: `temp-${Date.now()}`, // This will be replaced by the database
+    try {
+      // Call the API to log the workout
+      const result = await logWorkout({
+        id: crypto.randomUUID(),
         user_id: userId,
         workout_plan_id: workoutPlanId,
         date: new Date().toISOString(),
-        duration,
-        calories_burned: caloriesBurned,
-        notes: `Completed ${workoutDay}`,
-        completed_exercises: compatibleCompletedExercises,
-      };
-
-      // In a real implementation, we would save this to the database
-      // const { data, error } = await supabase
-      //   .from('workout_logs')
-      //   .insert(workoutLog)
-      //   .select()
-      //   .single();
-      
-      // if (error) throw error;
-
-      toast({
-        title: "Workout Completed",
-        description: `Great job! You worked out for ${formatTime(elapsedTime)}.`,
+        duration: Math.round(duration / 60), // Convert to minutes
+        calories_burned: caloriesBurned || null,
+        notes: notes || null,
+        completed_exercises: formattedCompletedExercises
       });
 
-      if (onLogComplete) onLogComplete(workoutLog);
-      
+      if (result) {
+        toast({
+          title: "Workout Logged",
+          description: "Your workout has been saved successfully."
+        });
+        onLogComplete();
+      }
     } catch (error) {
-      console.error('Error logging workout:', error);
+      console.error("Error logging workout:", error);
       toast({
         title: "Error",
-        description: "Failed to save workout log.",
-        variant: "destructive",
+        description: "There was a problem saving your workout. Please try again.",
+        variant: "destructive"
       });
     }
   };
 
-  const allSetsCompleted = () => {
-    return Object.values(exerciseLogs).every(exercise => 
-      exercise.sets.every(set => set.completed)
-    );
-  };
-
   return (
-    <div className="space-y-6">
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-quantum-cyan">{workoutDay}</CardTitle>
-            <CardDescription>Track your progress for today's workout</CardDescription>
-          </div>
+    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <CardHeader>
+        <CardTitle className="flex justify-between items-center">
+          <span>{workoutDay}</span>
+          <div className="text-quantum-cyan">{formatTime(duration)}</div>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        <div className="flex justify-between">
+          <Button 
+            onClick={toggleTimer}
+            className={timerRunning ? "bg-red-500 hover:bg-red-600" : "bg-quantum-cyan hover:bg-quantum-cyan/90"}
+          >
+            {timerRunning ? "Pause Timer" : "Start Timer"}
+          </Button>
+          
           <div className="flex items-center space-x-2">
-            <Clock className="text-quantum-purple" />
-            <span className="text-2xl font-mono">{formatTime(elapsedTime)}</span>
+            <span className="text-sm">Calories:</span>
+            <Input
+              type="number"
+              value={caloriesBurned || ''}
+              onChange={(e) => setCaloriesBurned(Number(e.target.value))}
+              placeholder="0"
+              className="w-20 h-8"
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          {!isActive && !startTime ? (
-            <div className="flex justify-center pb-4">
-              <Button onClick={startWorkout} className="bg-quantum-purple hover:bg-quantum-purple/90">
-                Start Workout
-              </Button>
-            </div>
-          ) : null}
-
-          {(isActive || startTime) && (
-            <div className="space-y-6">
-              {exercises.map((exercise) => (
-                <Card key={exercise.exercise_id} className="bg-quantum-black/50 border-quantum-purple/30">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Dumbbell className="h-5 w-5 text-quantum-purple" />
-                      {exercise.exercise_name}
-                    </CardTitle>
-                    <CardDescription>
-                      {exercise.sets} sets × {exercise.reps} reps
-                      {exercise.weight ? ` @ ${exercise.weight} kg` : ''}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {exerciseLogs[exercise.exercise_id]?.sets.map((set, setIndex) => (
-                        <div key={setIndex} className="flex items-center gap-3">
-                          <span className="text-sm font-medium w-10">Set {setIndex + 1}</span>
-                          <div className="flex-1 grid grid-cols-2 gap-2">
-                            <div>
-                              <Label htmlFor={`weight-${exercise.exercise_id}-${setIndex}`} className="text-xs">
-                                Weight (kg)
-                              </Label>
-                              <Input
-                                id={`weight-${exercise.exercise_id}-${setIndex}`}
-                                type="number"
-                                value={set.weight || ''}
-                                onChange={(e) => handleInputChange(exercise.exercise_id, setIndex, 'weight', e.target.value)}
-                                className="h-8 bg-quantum-darkBlue/50"
-                                disabled={!isActive}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor={`reps-${exercise.exercise_id}-${setIndex}`} className="text-xs">
-                                Reps
-                              </Label>
-                              <Input
-                                id={`reps-${exercise.exercise_id}-${setIndex}`}
-                                type="number"
-                                value={set.reps || ''}
-                                onChange={(e) => handleInputChange(exercise.exercise_id, setIndex, 'reps', e.target.value)}
-                                className="h-8 bg-quantum-darkBlue/50"
-                                disabled={!isActive}
-                              />
-                            </div>
-                          </div>
-                          <Button
-                            variant={set.completed ? "default" : "outline"}
-                            size="sm"
-                            className={set.completed ? "bg-green-600 hover:bg-green-700" : "border-quantum-cyan/30"}
-                            onClick={() => handleSetComplete(exercise.exercise_id, setIndex)}
-                            disabled={!isActive}
-                          >
-                            {set.completed ? <Check className="h-4 w-4" /> : "Done"}
-                          </Button>
-                        </div>
-                      ))}
+        </div>
+        
+        <div className="space-y-6">
+          {exercises.map((exercise, exerciseIndex) => (
+            <div key={exercise.id || exercise.exercise_id} className="bg-quantum-darkBlue/50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Dumbbell className="h-5 w-5 mr-2 text-quantum-cyan" />
+                {exercise.exercise_name || exercise.name}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-400">Target</p>
+                  <p>{exercise.sets} sets × {exercise.reps} reps{exercise.weight ? ` @ ${exercise.weight}kg` : ''}</p>
+                  {(exercise.rest || exercise.rest_time) && <p className="text-sm text-gray-400">Rest: {exercise.rest || exercise.rest_time}s</p>}
+                </div>
+                
+                <div className="space-y-2">
+                  {completedExercises[exerciseIndex]?.sets_completed.map((set: any, setIndex: number) => (
+                    <div key={setIndex} className="flex items-center space-x-2 p-2 bg-quantum-black/40 rounded">
+                      <div className="w-12 text-center text-sm">Set {set.set_number}</div>
+                      
+                      <div className="flex-1 flex items-center space-x-2">
+                        <Input
+                          type="number"
+                          value={set.weight}
+                          onChange={(e) => handleSetWeightChange(exerciseIndex, setIndex, Number(e.target.value))}
+                          className="w-16 h-8 text-sm"
+                          placeholder="kg"
+                        />
+                        
+                        <Input
+                          type="number"
+                          value={set.reps}
+                          onChange={(e) => handleSetRepsChange(exerciseIndex, setIndex, Number(e.target.value))}
+                          className="w-16 h-8 text-sm"
+                          placeholder="reps"
+                        />
+                        
+                        <Checkbox
+                          checked={set.completed}
+                          onCheckedChange={(checked) => handleSetCompletion(exerciseIndex, setIndex, !!checked)}
+                          className="h-5 w-5"
+                        />
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              <div className="flex justify-center pt-4">
-                {isActive && (
-                  <Button 
-                    onClick={completeWorkout} 
-                    className="bg-quantum-cyan hover:bg-quantum-cyan/90"
-                    disabled={!allSetsCompleted()}
-                  >
-                    Complete Workout
-                  </Button>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          ))}
+        </div>
+        
+        <div>
+          <Input
+            placeholder="Add notes about your workout"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+        
+        <Button 
+          onClick={handleCompleteWorkout} 
+          className="w-full bg-green-500 hover:bg-green-600"
+        >
+          <Check className="h-4 w-4 mr-2" /> Complete Workout
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

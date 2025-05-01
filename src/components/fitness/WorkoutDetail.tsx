@@ -79,20 +79,31 @@ const WorkoutDetail: React.FC<WorkoutDetailProps> = ({ workout, workoutLog }) =>
               <div className="space-y-3">
                 {workoutLog.completed_exercises.map((exercise, index) => (
                   <div key={index} className="bg-quantum-darkBlue/40 p-3 rounded-md">
-                    <h4 className="font-medium mb-2">{exercise.exercise_name}</h4>
+                    <h4 className="font-medium mb-2">{exercise.exercise_name || exercise.name}</h4>
                     
                     <div className="space-y-2">
-                      {exercise.sets_completed.map((set: any, setIndex: number) => (
-                        <div key={setIndex} className="flex items-center text-sm bg-quantum-black/40 p-2 rounded">
-                          <div className="w-14 font-medium">Set {setIndex + 1}:</div>
+                      {Array.isArray(exercise.sets_completed) ? (
+                        exercise.sets_completed.map((set: any, setIndex: number) => (
+                          <div key={setIndex} className="flex items-center text-sm bg-quantum-black/40 p-2 rounded">
+                            <div className="w-14 font-medium">Set {setIndex + 1}:</div>
+                            <div className="flex-1">
+                              {set.reps && <span>{set.reps} reps</span>}
+                              {set.weight ? <span> @ {set.weight} kg</span> : ''}
+                              {set.duration ? <span> for {set.duration}s</span> : ''}
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-quantum-cyan" />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex items-center text-sm bg-quantum-black/40 p-2 rounded">
+                          <div className="w-14 font-medium">Sets:</div>
                           <div className="flex-1">
-                            {set.reps && <span>{set.reps} reps</span>}
-                            {set.weight ? <span> @ {set.weight} kg</span> : ''}
-                            {set.duration ? <span> for {set.duration}s</span> : ''}
+                            {exercise.sets_completed} sets × {exercise.reps_completed?.[0] || 0} reps
+                            {exercise.weight_used && exercise.weight_used[0] ? ` @ ${exercise.weight_used[0]} kg` : ''}
                           </div>
                           <ChevronRight className="h-4 w-4 text-quantum-cyan" />
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 ))}

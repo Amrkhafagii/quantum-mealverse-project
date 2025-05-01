@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { WorkoutPlan, WorkoutSet } from '@/types/fitness';
+import { WorkoutPlan, WorkoutDay, Exercise } from '@/types/fitness';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -106,13 +106,14 @@ const WorkoutPlanner: React.FC<WorkoutPlannerProps> = ({ userId, onPlanSelect })
   
   const addNewExercise = (dayIndex: number) => {
     // Create a new empty exercise
-    const newExercise: WorkoutSet = {
+    const newExercise: Exercise = {
+      id: `ex-${Date.now()}`,
       exercise_id: `ex-${Date.now()}`,
+      name: 'New Exercise',
       exercise_name: 'New Exercise',
       sets: 3,
       reps: 10,
-      weight: 0,
-      completed: false,
+      weight: 0
     };
     
     // Example of how to add it - in a real app, you'd update the state and database
@@ -215,13 +216,14 @@ const WorkoutPlanCard: React.FC<WorkoutPlanCardProps> = ({
   // Define addNewExercise function that was missing
   const addNewExercise = (dayIndex: number) => {
     // Create a new empty exercise
-    const newExercise: WorkoutSet = {
+    const newExercise: Exercise = {
+      id: `ex-${Date.now()}`,
       exercise_id: `ex-${Date.now()}`,
+      name: 'New Exercise',
       exercise_name: 'New Exercise',
       sets: 3,
       reps: 10,
-      weight: 0,
-      completed: false,
+      weight: 0
     };
     
     // Example of how to add it - in a real app, you'd update the state and database

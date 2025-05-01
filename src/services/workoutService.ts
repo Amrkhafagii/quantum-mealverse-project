@@ -1,4 +1,3 @@
-
 import { fromTable } from './supabaseClient';
 import { 
   WorkoutPlan, 
@@ -372,26 +371,34 @@ const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
       updated_at: new Date().toISOString(),
       workout_days: [
         {
+          name: 'Day 1 - Full Body',
           day_name: 'Day 1 - Full Body',
           exercises: [
             {
+              id: 'ex1',
               exercise_id: 'ex1',
+              name: 'Squats',
               exercise_name: 'Squats',
               sets: 3,
               reps: 10,
               weight: 0,
+              rest: 60,
               rest_time: 60,
               completed: false,
             },
             {
+              id: 'ex2',
               exercise_id: 'ex2',
+              name: 'Push-ups',
               exercise_name: 'Push-ups',
               sets: 3,
               reps: 10,
               completed: false,
             },
             {
+              id: 'ex3',
               exercise_id: 'ex3',
+              name: 'Dumbbell Rows',
               exercise_name: 'Dumbbell Rows',
               sets: 3,
               reps: 10,
@@ -399,20 +406,25 @@ const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
               completed: false,
             }
           ],
-          completed: false,
+          order: 1,
         },
         {
+          name: 'Day 2 - Full Body',
           day_name: 'Day 2 - Full Body',
           exercises: [
             {
+              id: 'ex4',
               exercise_id: 'ex4',
+              name: 'Lunges',
               exercise_name: 'Lunges',
               sets: 3,
               reps: 10,
               completed: false,
             },
             {
+              id: 'ex5',
               exercise_id: 'ex5',
+              name: 'Dumbbell Shoulder Press',
               exercise_name: 'Dumbbell Shoulder Press',
               sets: 3,
               reps: 10,
@@ -420,15 +432,17 @@ const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
               completed: false,
             },
             {
+              id: 'ex6',
               exercise_id: 'ex6',
+              name: 'Plank',
               exercise_name: 'Plank',
               sets: 3,
               duration: 30,
-              reps: 1, // Adding reps for time-based exercises
+              reps: 1,
               completed: false,
             }
           ],
-          completed: false,
+          order: 2,
         }
       ]
     },
@@ -445,10 +459,13 @@ const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
       updated_at: new Date().toISOString(),
       workout_days: [
         {
+          name: 'Day 1 - Chest & Triceps',
           day_name: 'Day 1 - Chest & Triceps',
           exercises: [
             {
+              id: 'ex10',
               exercise_id: 'ex10',
+              name: 'Bench Press',
               exercise_name: 'Bench Press',
               sets: 4,
               reps: 12,
@@ -456,7 +473,9 @@ const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
               completed: false,
             },
             {
+              id: 'ex11',
               exercise_id: 'ex11',
+              name: 'Incline Dumbbell Press',
               exercise_name: 'Incline Dumbbell Press',
               sets: 3,
               reps: 12,
@@ -464,7 +483,7 @@ const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
               completed: false,
             }
           ],
-          completed: false,
+          order: 1,
         }
       ]
     }

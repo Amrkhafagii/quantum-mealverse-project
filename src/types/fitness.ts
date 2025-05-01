@@ -16,29 +16,30 @@ export interface WorkoutPlan {
 
 export interface WorkoutDay {
   name: string;
-  day_name?: string; // Adding this to fix compatibility issues
+  day_name: string; // Keep this consistent for compatibility
   exercises: Exercise[];
   order: number;
+  completed?: boolean;
 }
 
 export interface Exercise {
   id: string;
-  exercise_id?: string; // Adding this to fix compatibility issues
+  exercise_id: string; // Keep this consistent for compatibility
   name: string;
-  exercise_name?: string; // Adding this to fix compatibility issues
+  exercise_name: string; // Keep this consistent for compatibility
   sets: number;
   reps: number;
   weight?: number;
   duration?: number;
   rest?: number;
-  rest_time?: number; // Adding this to fix compatibility issues
+  rest_time?: number; // Keep this consistent for compatibility
   notes?: string;
   completed?: boolean;
   category?: string;
   muscle_group?: string;
 }
 
-// Adding this type to fix compatibility issues
+// This type is for compatibility with existing components
 export interface WorkoutSet {
   exercise_id: string;
   exercise_name: string;
@@ -47,6 +48,7 @@ export interface WorkoutSet {
   weight?: number;
   duration?: number;
   rest_time?: number;
+  completed?: boolean;
 }
 
 export interface WorkoutLog {
@@ -63,7 +65,7 @@ export interface WorkoutLog {
 export interface CompletedExercise {
   exercise_id: string;
   name: string;
-  exercise_name?: string; // Adding this to fix compatibility issues
+  exercise_name: string; // Keep this consistent for compatibility
   sets_completed: number | { set_number: number; weight: number; reps: number }[];
   reps_completed: number[];
   weight_used: number[];
@@ -146,7 +148,7 @@ export interface UserAchievement {
   date_achieved: string;
 }
 
-// Adding missing types that are referenced in error messages
+// Add types needed for other components
 export interface UserProfile {
   id: string;
   user_id: string;

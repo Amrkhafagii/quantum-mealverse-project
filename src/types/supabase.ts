@@ -220,13 +220,8 @@ export interface DatabaseExtensions {
   };
 }
 
-// Use module augmentation to extend the base Database type with our extensions
-// This must be a declaration merging, not a redefinition
-declare global {
-  namespace Database {
-    interface Database extends SupabaseDatabase, DatabaseExtensions {}
-  }
-}
+// Instead of using interface augmentation, create a merged type
+export type MergedDatabase = SupabaseDatabase & DatabaseExtensions;
 
 // Export a helper type to use in supabase client
-export type SupabaseSchema = SupabaseDatabase & DatabaseExtensions;
+export type SupabaseSchema = MergedDatabase;

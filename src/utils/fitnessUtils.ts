@@ -9,7 +9,9 @@ export function normalizeExercise(exercise: Exercise): Exercise {
     ...exercise,
     id: exercise.id || exercise.exercise_id || crypto.randomUUID(),
     name: exercise.name || exercise.exercise_name || '',
-    rest: exercise.rest || exercise.rest_time || 0
+    exercise_name: exercise.exercise_name || exercise.name || '',
+    rest: exercise.rest || exercise.rest_time || 0,
+    rest_time: exercise.rest_time || exercise.rest || 0
   };
 }
 
@@ -21,7 +23,8 @@ export function normalizeWorkoutDay(day: WorkoutDay): WorkoutDay {
     ...day,
     name: day.name || day.day_name || '',
     day_name: day.day_name || day.name || '',
-    exercises: day.exercises?.map(normalizeExercise) || []
+    exercises: day.exercises?.map(normalizeExercise) || [],
+    order: day.order || 0
   };
 }
 
@@ -43,7 +46,7 @@ export function countCompletedExercises(completedExercises: CompletedExercise[])
     if (Array.isArray(ex.sets_completed)) {
       return ex.sets_completed.length > 0;
     }
-    return ex.sets_completed > 0;
+    return typeof ex.sets_completed === 'number' && ex.sets_completed > 0;
   }).length;
 }
 
@@ -59,8 +62,9 @@ export function getExerciseById(exercises: Exercise[], id: string): Exercise | u
  */
 export function convertCompletedExercises(exercises: any[]): CompletedExercise[] {
   return exercises.map(ex => ({
-    exercise_id: ex.exercise_id,
-    name: ex.exercise_name || ex.name,
+    exercise_id: ex.exercise_id || ex.id,
+    name: ex.name || ex.exercise_name,
+    exercise_name: ex.exercise_name || ex.name,
     reps_completed: Array.isArray(ex.sets_completed) 
       ? ex.sets_completed.map((set: any) => set.reps) 
       : [],
