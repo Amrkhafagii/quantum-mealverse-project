@@ -11,7 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
 import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
-import WorkoutExerciseLog from '@/components/fitness/WorkoutExerciseLog';
+import WorkoutHistory from '@/components/fitness/WorkoutHistory';
+import ExerciseLibrary from '@/components/fitness/ExerciseLibrary';
 import AchievementSystem from '@/components/fitness/AchievementSystem';
 import ProgressAnalytics from '@/components/fitness/ProgressAnalytics';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,7 +61,7 @@ const Workouts = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'plans':
-        return <WorkoutPlanner userId={user?.id} />;
+        return <WorkoutPlanner userId={user?.id} onPlanSelect={handlePlanSelect} />;
         
       case 'schedule':
         return selectedPlan ? (
@@ -86,46 +87,18 @@ const Workouts = () => {
             </CardContent>
           </Card>
         );
+      
+      case 'history':
+        return <WorkoutHistory userId={user?.id} />;
         
       case 'track':
         return <ProgressAnalytics userId={user?.id} measurements={measurements} />;
         
-      case 'history':
-        return (
-          <Card className="w-full bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="pt-6 text-center">
-              <History className="h-16 w-16 mx-auto mb-4 text-quantum-cyan" />
-              <h2 className="text-2xl font-bold mb-4">Workout History</h2>
-              <p className="text-gray-300 mb-6">
-                Your recent workout sessions will appear here.
-              </p>
-            </CardContent>
-          </Card>
-        );
+      case 'exercises':
+        return <ExerciseLibrary userId={user?.id} />;
         
       case 'achievements':
         return <AchievementSystem userId={user?.id} />;
-        
-      case 'video':
-        return (
-          <Card className="w-full bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="pt-6 text-center">
-              <PlayCircle className="h-16 w-16 mx-auto mb-4 text-quantum-cyan" />
-              <h2 className="text-2xl font-bold mb-4">Exercise Library Coming Soon!</h2>
-              <p className="text-gray-300 mb-6">
-                Our team is working on a comprehensive video library with proper form demonstrations
-                for hundreds of exercises to help you train safely and effectively.
-              </p>
-              
-              <Button
-                onClick={() => navigate('/fitness')}
-                className="bg-quantum-cyan hover:bg-quantum-cyan/90"
-              >
-                Return to Nutrition Planner
-              </Button>
-            </CardContent>
-          </Card>
-        );
         
       default:
         return null;
@@ -153,17 +126,17 @@ const Workouts = () => {
             <TabsTrigger value="schedule" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" /> Schedule
             </TabsTrigger>
-            <TabsTrigger value="track" className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" /> Analytics
-            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" /> History
             </TabsTrigger>
+            <TabsTrigger value="exercises" className="flex items-center gap-2">
+              <PlayCircle className="h-4 w-4" /> Exercises
+            </TabsTrigger>
+            <TabsTrigger value="track" className="flex items-center gap-2">
+              <LineChart className="h-4 w-4" /> Analytics
+            </TabsTrigger>
             <TabsTrigger value="achievements" className="flex items-center gap-2">
               <Award className="h-4 w-4" /> Achievements
-            </TabsTrigger>
-            <TabsTrigger value="video" className="flex items-center gap-2">
-              <PlayCircle className="h-4 w-4" /> Exercise Library
             </TabsTrigger>
           </TabsList>
           

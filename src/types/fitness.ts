@@ -190,3 +190,39 @@ export interface ProgressAnalytics {
   calories_burned_total?: number;
   achievement_count: number;
 }
+
+// New interfaces for workout history
+export interface WorkoutHistoryItem {
+  id: string;
+  user_id: string;
+  date: string;
+  workout_log_id: string;
+  workout_plan_name: string;
+  workout_day_name: string;
+  duration: number;
+  exercises_completed: number;
+  total_exercises: number;
+  calories_burned?: number;
+  workout_log?: WorkoutLog;
+}
+
+export interface UserWorkoutStats {
+  user_id: string;
+  total_workouts: number;
+  total_time: number; // In minutes
+  total_calories: number;
+  favorite_exercise: string;
+  strongest_exercise: {
+    exercise_id: string;
+    exercise_name: string;
+    max_weight: number;
+  };
+  most_improved_exercise: {
+    exercise_id: string;
+    exercise_name: string;
+    improvement_percentage: number;
+  };
+  current_streak: number;
+  longest_streak: number;
+  weekly_goal_completion: number; // Percentage
+}

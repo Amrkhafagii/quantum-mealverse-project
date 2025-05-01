@@ -15,9 +15,10 @@ import { Dumbbell, Plus, Save, X, Edit, Calendar, Check } from 'lucide-react';
 
 interface WorkoutPlannerProps {
   userId?: string;
+  onPlanSelect?: (plan: WorkoutPlan) => void;
 }
 
-const WorkoutPlanner = ({ userId }: WorkoutPlannerProps) => {
+const WorkoutPlanner = ({ userId, onPlanSelect }: WorkoutPlannerProps) => {
   const { toast } = useToast();
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,6 +131,138 @@ const WorkoutPlanner = ({ userId }: WorkoutPlannerProps) => {
               completed: false
             }
           ]
+        },
+        {
+          id: "2",
+          user_id: userId || "",
+          name: "Intermediate Hypertrophy Program",
+          description: "A program designed to build muscle mass efficiently",
+          goal: "hypertrophy",
+          frequency: 4,
+          difficulty: "intermediate",
+          duration_weeks: 8,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          workout_days: [
+            {
+              day_name: "Day 1 - Chest & Triceps",
+              exercises: [
+                {
+                  exercise_id: "ex5",
+                  exercise_name: "Barbell Bench Press",
+                  sets: 4,
+                  reps: 8,
+                  weight: 60,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex6",
+                  exercise_name: "Incline Dumbbell Press",
+                  sets: 3,
+                  reps: 10,
+                  weight: 20,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex7",
+                  exercise_name: "Tricep Pushdowns",
+                  sets: 3,
+                  reps: 12,
+                  weight: 25,
+                  completed: false
+                }
+              ],
+              completed: false
+            },
+            {
+              day_name: "Day 2 - Back & Biceps",
+              exercises: [
+                {
+                  exercise_id: "ex8",
+                  exercise_name: "Pull-Ups",
+                  sets: 4,
+                  reps: 8,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex9",
+                  exercise_name: "Barbell Rows",
+                  sets: 3,
+                  reps: 10,
+                  weight: 50,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex10",
+                  exercise_name: "Bicep Curls",
+                  sets: 3,
+                  reps: 12,
+                  weight: 15,
+                  completed: false
+                }
+              ],
+              completed: false
+            },
+            {
+              day_name: "Day 3 - Legs",
+              exercises: [
+                {
+                  exercise_id: "ex11",
+                  exercise_name: "Squats",
+                  sets: 4,
+                  reps: 8,
+                  weight: 80,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex12",
+                  exercise_name: "Leg Press",
+                  sets: 3,
+                  reps: 12,
+                  weight: 120,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex13",
+                  exercise_name: "Calf Raises",
+                  sets: 4,
+                  reps: 15,
+                  weight: 40,
+                  completed: false
+                }
+              ],
+              completed: false
+            },
+            {
+              day_name: "Day 4 - Shoulders & Abs",
+              exercises: [
+                {
+                  exercise_id: "ex14",
+                  exercise_name: "Overhead Press",
+                  sets: 4,
+                  reps: 8,
+                  weight: 40,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex15",
+                  exercise_name: "Lateral Raises",
+                  sets: 3,
+                  reps: 12,
+                  weight: 10,
+                  completed: false
+                },
+                {
+                  exercise_id: "ex16",
+                  exercise_name: "Hanging Leg Raises",
+                  sets: 3,
+                  reps: 15,
+                  completed: false
+                }
+              ],
+              completed: false
+            }
+          ]
         }
       ];
       
@@ -218,6 +351,12 @@ const WorkoutPlanner = ({ userId }: WorkoutPlannerProps) => {
     setPlanDifficulty('beginner');
     setPlanDuration(4);
     setWorkoutDays([]);
+  };
+
+  const handleSelectPlan = (plan: WorkoutPlan) => {
+    if (onPlanSelect) {
+      onPlanSelect(plan);
+    }
   };
 
   if (loading) {
@@ -387,7 +526,7 @@ const WorkoutPlanner = ({ userId }: WorkoutPlannerProps) => {
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-purple-900/30 p-2 rounded">
                       <div className="text-xs">Goal</div>
-                      <div className="font-semibold capitalize">{plan.goal}</div>
+                      <div className="font-semibold capitalize">{plan.goal.replace('_', ' ')}</div>
                     </div>
                     <div className="bg-blue-900/30 p-2 rounded">
                       <div className="text-xs">Frequency</div>
@@ -422,6 +561,7 @@ const WorkoutPlanner = ({ userId }: WorkoutPlannerProps) => {
                 </Button>
                 <Button 
                   className="flex-1 bg-quantum-purple hover:bg-quantum-purple/90"
+                  onClick={() => handleSelectPlan(plan)}
                 >
                   <Calendar className="h-4 w-4 mr-1" />
                   Start
@@ -437,22 +577,6 @@ const WorkoutPlanner = ({ userId }: WorkoutPlannerProps) => {
           </CardContent>
         </Card>
       )}
-
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 p-6">
-        <div className="flex flex-col md:flex-row items-center gap-6 justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-quantum-cyan mb-2">Coming Soon: Workout Tracking</h3>
-            <p className="text-gray-300">We're working on features to track your workout progress, log your exercises, and analyze your performance over time.</p>
-          </div>
-          <Button 
-            variant="outline"
-            className="border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
-            disabled
-          >
-            Join Waitlist
-          </Button>
-        </div>
-      </Card>
     </div>
   );
 };
