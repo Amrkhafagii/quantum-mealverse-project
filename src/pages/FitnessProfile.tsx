@@ -41,7 +41,7 @@ const FitnessProfilePage = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('fitness_profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
@@ -136,9 +136,7 @@ const FitnessProfilePage = () => {
                   <p>Loading profile...</p>
                 ) : (
                   <FitnessProfile 
-                    userId={user.id} 
-                    initialProfile={userProfile || undefined} 
-                    onProfileUpdate={handleProfileUpdate}
+                    userId={user.id}
                   />
                 )}
               </div>
@@ -157,8 +155,6 @@ const FitnessProfilePage = () => {
                   <div className="lg:col-span-7">
                     <MeasurementsHistory 
                       userId={user.id} 
-                      measurements={measurements}
-                      onMeasurementDeleted={fetchMeasurements} 
                     />
                   </div>
                 </div>
@@ -169,9 +165,7 @@ const FitnessProfilePage = () => {
               <div className="bg-quantum-darkBlue/30 rounded-lg border border-quantum-cyan/20 p-6">
                 <h2 className="text-2xl font-bold text-quantum-cyan mb-6">Fitness Goals</h2>
                 <UserGoals 
-                  userId={user.id} 
-                  userProfile={userProfile || undefined} 
-                  onGoalUpdated={handleProfileUpdate} 
+                  userId={user.id}
                 />
               </div>
             </TabsContent>

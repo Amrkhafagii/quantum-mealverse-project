@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -300,6 +299,15 @@ const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({
     exercises: '#10b981', // Green
   };
   
+  // Fix for NameType formatting issue in Tooltip formatter
+  const formatTooltipName = (name: string | number): string => {
+    if (typeof name === 'number') {
+      return name.toString();
+    }
+    
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+  
   return (
     <div className="space-y-6">
       <Card className="bg-quantum-darkBlue/30 border border-quantum-cyan/20">
@@ -449,7 +457,7 @@ const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({
                             if (name === 'weight') return [`${value} kg`, 'Weight'];
                             if (name === 'bodyFat') return [`${value}%`, 'Body Fat'];
                             if (name === 'leanMass') return [`${value} kg`, 'Lean Mass'];
-                            return [value, name];
+                            return [value, formatTooltipName(name)];
                           }}
                         />
                         <Legend />
@@ -507,7 +515,7 @@ const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #16213e', color: '#fff' }}
                           formatter={(value, name) => {
-                            return [`${value} cm`, name.charAt(0).toUpperCase() + name.slice(1)];
+                            return [`${value} cm`, formatTooltipName(name)];
                           }}
                         />
                         <Legend />
@@ -578,7 +586,7 @@ const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({
                           formatter={(value, name) => {
                             if (name === 'avgCalories') return [`${value} cal`, 'Avg. Calories'];
                             if (name === 'avgDuration') return [`${value} min`, 'Avg. Duration'];
-                            return [value, name];
+                            return [value, formatTooltipName(name)];
                           }}
                         />
                         <Legend />
@@ -622,7 +630,7 @@ const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({
                           formatter={(value, name) => {
                             if (name === 'exercises') return [value, 'Exercises'];
                             if (name === 'duration') return [`${value} min`, 'Duration'];
-                            return [value, name];
+                            return [value, formatTooltipName(name)];
                           }}
                         />
                         <Legend />
