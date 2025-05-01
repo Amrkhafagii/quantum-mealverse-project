@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,7 +132,7 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
     try {
       const result = await logWorkout(workoutLog);
       
-      if (result && result.data) {
+      if (result) {
         toast({
           title: "Workout logged successfully",
           description: "Your workout has been saved.",

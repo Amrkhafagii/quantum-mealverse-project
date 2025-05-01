@@ -1,3 +1,4 @@
+
 import { fromTable } from './supabaseClient';
 import { 
   WorkoutPlan, 
@@ -6,6 +7,7 @@ import {
   UserWorkoutStats, 
   WorkoutSchedule 
 } from '@/types/fitness';
+import { Json } from '@/integrations/supabase/types';
 
 /**
  * Saves a workout plan to the database
@@ -16,8 +18,8 @@ export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Workou
     // This ensures that the complex object is properly serialized
     const planForStorage = {
       ...plan,
-      // Stringify and then parse to ensure it's a proper JSON object
-      workout_days: plan.workout_days
+      // Ensure workout_days is properly converted to a JSON-compatible format
+      workout_days: plan.workout_days as unknown as Json
     };
     
     const { data, error } = await fromTable('workout_plans')
