@@ -1,6 +1,6 @@
 
 import { supabase as originalSupabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
 
 // Export the original client for when we need it
 export { originalSupabase };

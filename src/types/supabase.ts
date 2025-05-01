@@ -3,7 +3,7 @@ import type { Database as SupabaseDatabase } from "@/integrations/supabase/types
 
 // Extend the Database type to include our workout tables
 declare module "@/integrations/supabase/types" {
-  export interface Database extends SupabaseDatabase {
+  interface Database extends SupabaseDatabase {
     public: {
       Tables: {
         workout_plans: {
@@ -121,24 +121,24 @@ declare module "@/integrations/supabase/types" {
           Row: {
             id: string;
             user_id: string;
-            currentStreak: number;
-            longestStreak: number;
+            currentstreak: number;
+            longeststreak: number;
             last_activity_date: string;
             streak_type: string;
           };
           Insert: {
             id?: string;
             user_id: string;
-            currentStreak?: number;
-            longestStreak?: number;
+            currentstreak?: number;
+            longeststreak?: number;
             last_activity_date: string;
             streak_type: string;
           };
           Update: {
             id?: string;
             user_id?: string;
-            currentStreak?: number;
-            longestStreak?: number;
+            currentstreak?: number;
+            longeststreak?: number;
             last_activity_date?: string;
             streak_type?: string;
           };

@@ -12,8 +12,14 @@ import {
  */
 export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
   try {
+    // Convert workout_days to a JSON string for storage
+    const planForStorage = {
+      ...plan,
+      workout_days: plan.workout_days // This will be automatically serialized
+    };
+    
     const { data, error } = await fromTable('workout_plans')
-      .insert(plan)
+      .insert(planForStorage)
       .select()
       .single();
     
@@ -151,18 +157,18 @@ const updateUserStreak = async (userId: string): Promise<void> => {
       
       // If last activity was yesterday, increment streak
       if (lastActivityDate.toISOString().split('T')[0] === yesterday.toISOString().split('T')[0]) {
-        currentStreak = data.currentStreak + 1;
-        longestStreak = Math.max(currentStreak, data.longestStreak);
+        currentStreak = data.currentstreak + 1;
+        longestStreak = Math.max(currentStreak, data.longeststreak);
       } 
       // If last activity was today, don't change streak
       else if (lastActivityDate.toISOString().split('T')[0] === today) {
-        currentStreak = data.currentStreak;
-        longestStreak = data.longestStreak;
+        currentStreak = data.currentstreak;
+        longestStreak = data.longeststreak;
       } 
       // Otherwise reset streak to 1
       else {
         currentStreak = 1;
-        longestStreak = Math.max(1, data.longestStreak);
+        longestStreak = Math.max(1, data.longeststreak);
       }
     }
     
@@ -170,8 +176,8 @@ const updateUserStreak = async (userId: string): Promise<void> => {
     await fromTable('user_streaks')
       .upsert({
         user_id: userId,
-        currentStreak,
-        longestStreak,
+        currentstreak: currentStreak,
+        longeststreak: longestStreak,
         last_activity_date: today,
         streak_type: 'workout'
       });
@@ -253,8 +259,8 @@ export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorko
             exercise_name: 'None yet',
             improvement_percentage: 0
           },
-          currentStreak: streakData?.currentStreak || 0,
-          longestStreak: streakData?.longestStreak || 0,
+          currentStreak: streakData?.currentstreak || 0,
+          longestStreak: streakData?.longeststreak || 0,
           weekly_goal_completion: 0
         },
         error: null
@@ -279,8 +285,8 @@ export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorko
         exercise_name: 'Bench Press',
         improvement_percentage: 15
       },
-      currentStreak: streakData?.currentStreak || 0,
-      longestStreak: streakData?.longestStreak || 0,
+      currentStreak: streakData?.currentstreak || 0,
+      longestStreak: streakData?.longeststreak || 0,
       weekly_goal_completion: 85 // This would need to be calculated
     };
     

@@ -1,4 +1,3 @@
-
 import { MealPlan } from './food';
 
 export interface UserMeasurement {
@@ -165,8 +164,8 @@ export interface WorkoutSchedule {
 export interface UserStreak {
   id: string;
   user_id: string;
-  currentStreak: number;
-  longestStreak: number;
+  currentstreak: number;
+  longeststreak: number;
   last_activity_date: string;
   streak_type: 'workout' | 'nutrition' | 'measurement';
 }
