@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +35,17 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         
       if (error) throw error;
       
-      setSavedPlans(data as SavedMealPlan[] || []);
+      if (data) {
+        // Convert database JSON to our type
+        const typedData = data.map(item => ({
+          ...item,
+          meal_plan: item.meal_plan as unknown as MealPlan
+        })) as SavedMealPlan[];
+        
+        setSavedPlans(typedData);
+      } else {
+        setSavedPlans([]);
+      }
     } catch (error) {
       console.error('Error loading saved meal plans:', error);
       toast({
@@ -114,7 +125,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         
       if (tdeeError) throw tdeeError;
       
-      // Now save the meal plan
+      // Now save the meal plan - using stringify to convert MealPlan to Json
       const { error } = await supabase
         .from('saved_meal_plans')
         .insert({
@@ -122,7 +133,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
           name: planName,
           date_created: new Date().toISOString(),
           tdee_id: tdeeData.id,
-          meal_plan: mealPlan,
+          meal_plan: JSON.parse(JSON.stringify(mealPlan)), // Convert to plain object
         });
         
       if (error) throw error;

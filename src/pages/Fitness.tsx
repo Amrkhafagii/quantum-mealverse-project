@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -97,6 +98,9 @@ const Fitness = () => {
       // Now save the meal plan
       const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
       
+      // Convert MealPlan to a format Supabase can handle
+      const mealPlanJson = JSON.parse(JSON.stringify(mealPlan));
+      
       const { error } = await supabase
         .from('saved_meal_plans')
         .insert({
@@ -104,7 +108,7 @@ const Fitness = () => {
           name: planName,
           date_created: new Date().toISOString(),
           tdee_id: tdeeData.id,
-          meal_plan: mealPlan,
+          meal_plan: mealPlanJson,
         });
         
       if (error) throw error;
