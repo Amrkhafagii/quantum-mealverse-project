@@ -8,16 +8,18 @@ import MealPlanDisplay from '@/components/fitness/MealPlanDisplay';
 import { MealPlan } from '@/types/food';
 import { generateMealPlan } from '@/services/mealPlanService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HeartPulse, Utensils, TrendingUp, Zap, MapPin, Award } from 'lucide-react';
+import { HeartPulse, Utensils, TrendingUp, Zap, MapPin, Award, Goal, LineChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import RestaurantMealFinder from '@/components/fitness/RestaurantMealFinder';
-import ProgressAnalytics from '@/components/fitness/ProgressAnalytics';
+import AdvancedProgressCharts from '@/components/fitness/AdvancedProgressCharts';
 import AchievementSystem from '@/components/fitness/AchievementSystem';
+import GoalManagement from '@/components/fitness/GoalManagement';
 import { UserMeasurement } from '@/types/fitness';
+import { getUserMeasurements } from '@/services/measurementService';
 
 const Fitness = () => {
   const navigate = useNavigate();
@@ -68,12 +70,7 @@ const Fitness = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('user_measurements')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-
+      const { data, error } = await getUserMeasurements(user.id);
       if (error) throw error;
       
       setMeasurements(data || []);
@@ -204,23 +201,29 @@ const Fitness = () => {
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-6">
-            <TabsTrigger value="calculator" className="flex items-center gap-2">
+          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8">
+            <TabsTrigger value="calculator" className="flex items-center gap-1">
               <HeartPulse className="h-4 w-4" /> Calculator
             </TabsTrigger>
-            <TabsTrigger value="meal-plan" className="flex items-center gap-2" disabled={!mealPlan}>
+            <TabsTrigger value="meal-plan" className="flex items-center gap-1" disabled={!mealPlan}>
               <Utensils className="h-4 w-4" /> Meal Plan
             </TabsTrigger>
-            <TabsTrigger value="restaurants" className="flex items-center gap-2" disabled={!mealPlan}>
+            <TabsTrigger value="restaurants" className="flex items-center gap-1" disabled={!mealPlan}>
               <MapPin className="h-4 w-4" /> Find Food
             </TabsTrigger>
-            <TabsTrigger value="progress" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Analytics
+            <TabsTrigger value="track" className="flex items-center gap-1">
+              <LineChart className="h-4 w-4" /> Analytics
             </TabsTrigger>
-            <TabsTrigger value="achievements" className="flex items-center gap-2">
+            <TabsTrigger value="goals" className="flex items-center gap-1">
+              <Goal className="h-4 w-4" /> Goals
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="flex items-center gap-1">
               <Award className="h-4 w-4" /> Achievements
             </TabsTrigger>
-            <TabsTrigger value="workouts" className="flex items-center gap-2" onClick={() => navigate('/workouts')}>
+            <TabsTrigger value="progress" className="flex items-center gap-1">
+              <TrendingUp className="h-4 w-4" /> Progress
+            </TabsTrigger>
+            <TabsTrigger value="workouts" className="flex items-center gap-1" onClick={() => navigate('/workouts')}>
               <Zap className="h-4 w-4" /> Workouts
             </TabsTrigger>
           </TabsList>
@@ -304,12 +307,20 @@ const Fitness = () => {
             )}
           </TabsContent>
           
-          <TabsContent value="progress" className="mt-8">
-            <ProgressAnalytics userId={user?.id} measurements={measurements} />
+          <TabsContent value="track" className="mt-8">
+            <AdvancedProgressCharts userId={user?.id} measurements={measurements} />
+          </TabsContent>
+          
+          <TabsContent value="goals" className="mt-8">
+            <GoalManagement userId={user?.id} />
           </TabsContent>
           
           <TabsContent value="achievements" className="mt-8">
             <AchievementSystem userId={user?.id} />
+          </TabsContent>
+          
+          <TabsContent value="progress" className="mt-8">
+            <AdvancedProgressCharts userId={user?.id} measurements={measurements} />
           </TabsContent>
           
           <TabsContent value="workouts">

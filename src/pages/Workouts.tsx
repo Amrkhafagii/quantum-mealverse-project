@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dumbbell, LineChart, History, PlayCircle, Calendar, Award } from 'lucide-react';
+import { Dumbbell, LineChart, History, PlayCircle, Calendar, Award, Goal, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
@@ -14,10 +14,12 @@ import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import ExerciseLibrary from '@/components/fitness/ExerciseLibrary';
 import AchievementSystem from '@/components/fitness/AchievementSystem';
-import ProgressAnalytics from '@/components/fitness/ProgressAnalytics';
+import AdvancedProgressCharts from '@/components/fitness/AdvancedProgressCharts';
+import GoalManagement from '@/components/fitness/GoalManagement';
 import StartWorkout from '@/components/fitness/StartWorkout';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutPlan, UserMeasurement } from '@/types/fitness';
+import { getUserMeasurements } from '@/services/measurementService';
 
 const Workouts = () => {
   const navigate = useNavigate();
@@ -38,11 +40,7 @@ const Workouts = () => {
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('user_measurements')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
+      const { data, error } = await getUserMeasurements(user.id);
 
       if (error) throw error;
       
@@ -96,13 +94,16 @@ const Workouts = () => {
         return <WorkoutHistory userId={user?.id} />;
         
       case 'track':
-        return <ProgressAnalytics userId={user?.id} measurements={measurements} />;
+        return <AdvancedProgressCharts userId={user?.id} measurements={measurements} />;
         
       case 'exercises':
         return <ExerciseLibrary userId={user?.id} />;
         
       case 'achievements':
         return <AchievementSystem userId={user?.id} />;
+        
+      case 'goals':
+        return <GoalManagement userId={user?.id} />;
         
       default:
         return null;
@@ -123,26 +124,29 @@ const Workouts = () => {
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-7">
-            <TabsTrigger value="workout" className="flex items-center gap-2">
+          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8">
+            <TabsTrigger value="workout" className="flex items-center gap-1">
               <PlayCircle className="h-4 w-4" /> Workout
             </TabsTrigger>
-            <TabsTrigger value="plans" className="flex items-center gap-2">
+            <TabsTrigger value="plans" className="flex items-center gap-1">
               <Dumbbell className="h-4 w-4" /> Plans
             </TabsTrigger>
-            <TabsTrigger value="schedule" className="flex items-center gap-2">
+            <TabsTrigger value="schedule" className="flex items-center gap-1">
               <Calendar className="h-4 w-4" /> Schedule
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
+            <TabsTrigger value="history" className="flex items-center gap-1">
               <History className="h-4 w-4" /> History
             </TabsTrigger>
-            <TabsTrigger value="exercises" className="flex items-center gap-2">
+            <TabsTrigger value="exercises" className="flex items-center gap-1">
               <PlayCircle className="h-4 w-4" /> Exercises
             </TabsTrigger>
-            <TabsTrigger value="track" className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" /> Analytics
+            <TabsTrigger value="track" className="flex items-center gap-1">
+              <TrendingUp className="h-4 w-4" /> Analytics
             </TabsTrigger>
-            <TabsTrigger value="achievements" className="flex items-center gap-2">
+            <TabsTrigger value="goals" className="flex items-center gap-1">
+              <Goal className="h-4 w-4" /> Goals
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="flex items-center gap-1">
               <Award className="h-4 w-4" /> Achievements
             </TabsTrigger>
           </TabsList>
