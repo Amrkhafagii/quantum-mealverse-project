@@ -18,7 +18,7 @@ import {
 import { WorkoutHistoryItem, UserMeasurement } from '@/types/fitness';
 
 export interface ProgressChartProps {
-  data: UserMeasurement[];
+  data: UserMeasurement[] | WorkoutHistoryItem[];
   dataKey: string;
   label?: string;
   color: string;
@@ -82,7 +82,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .map(m => ({
         date: new Date(m.date).toISOString().split('T')[0],
-        [dataKey]: m[dataKey as keyof UserMeasurement],
+        [dataKey]: (m as any)[dataKey],
       }));
   };
   

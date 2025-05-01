@@ -61,10 +61,16 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
     try {
       // Create a measurement object with required fields
       const newMeasurement = {
-        ...data,
         user_id: userId,
         date: new Date().toISOString(),
-        weight: data.weight, // Ensure weight is explicitly included and required
+        weight: data.weight, // Ensure weight is explicitly included as required
+        body_fat: data.body_fat,
+        chest: data.chest,
+        waist: data.waist,
+        hips: data.hips,
+        arms: data.arms,
+        legs: data.legs,
+        notes: data.notes,
       };
 
       const { error } = await supabase.from('user_measurements').insert(newMeasurement);
