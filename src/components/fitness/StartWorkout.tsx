@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,13 +9,15 @@ import { PlayCircle, Calendar, ClipboardList, ChevronRight } from 'lucide-react'
 import { WorkoutPlan, WorkoutSchedule } from '@/types/fitness';
 import WorkoutSession from './WorkoutSession';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
+import LoadingSpinner from '@/components/ui/loading-spinner';
+import { motion } from 'framer-motion';
 
 interface StartWorkoutProps {
   userId?: string;
 }
 
 const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
-  const { plans, schedules } = useWorkoutData();
+  const { plans, schedules, loading } = useWorkoutData();
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [activeTab, setActiveTab] = useState('plans');
@@ -95,12 +97,24 @@ const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
           </TabsList>
           
           <TabsContent value="plans" className="space-y-4">
-            {plans.length === 0 ? (
-              <p className="text-center text-gray-400">
+            {loading.plans ? (
+              <div className="py-8">
+                <LoadingSpinner text="Loading your workout plans..." />
+              </div>
+            ) : plans.length === 0 ? (
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-gray-400 py-8"
+              >
                 No workout plans found. Create a plan first.
-              </p>
+              </motion.p>
             ) : (
-              <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="plan-select">Select a Workout Plan</Label>
                   <Select value={selectedPlanId} onValueChange={handlePlanSelect}>
@@ -118,7 +132,11 @@ const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
                 </div>
                 
                 {selectedPlan && (
-                  <div className="space-y-4 mt-4">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4 mt-4"
+                  >
                     <div className="bg-quantum-darkBlue/40 p-4 rounded-md">
                       <h3 className="font-bold text-lg">{selectedPlan.name}</h3>
                       <p className="text-sm text-gray-300">{selectedPlan.description}</p>
@@ -155,12 +173,18 @@ const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
                         <h4 className="font-medium mb-2">Exercises in this workout:</h4>
                         <ul className="space-y-2">
                           {selectedPlan.workout_days[selectedDayIndex].exercises.map((exercise, index) => (
-                            <li key={index} className="bg-quantum-darkBlue/20 p-2 rounded flex justify-between items-center">
+                            <motion.li 
+                              key={index} 
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="bg-quantum-darkBlue/20 p-2 rounded flex justify-between items-center"
+                            >
                               <span>{exercise.exercise_name}</span>
                               <span className="text-sm text-gray-400">
                                 {exercise.sets} × {exercise.reps} {exercise.weight ? `@ ${exercise.weight}kg` : ''}
                               </span>
-                            </li>
+                            </motion.li>
                           ))}
                         </ul>
                       </div>
@@ -173,28 +197,46 @@ const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
                     >
                       <PlayCircle className="h-5 w-5 mr-2" /> Start This Workout
                     </Button>
-                  </div>
+                  </motion.div>
                 )}
-              </>
+              </motion.div>
             )}
           </TabsContent>
           
           <TabsContent value="scheduled" className="space-y-4">
-            {todaysSchedules.length === 0 ? (
-              <p className="text-center text-gray-400">
+            {loading.schedules ? (
+              <div className="py-8">
+                <LoadingSpinner text="Loading today's schedule..." />
+              </div>
+            ) : todaysSchedules.length === 0 ? (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-gray-400 py-8"
+              >
                 No workouts scheduled for today. Go to the Schedule tab to set up your weekly routines.
-              </p>
+              </motion.p>
             ) : (
-              <div className="space-y-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
                 <h3 className="text-lg font-semibold text-quantum-cyan">Today's Workouts</h3>
                 
-                {todaysSchedules.map((schedule) => {
+                {todaysSchedules.map((schedule, idx) => {
                   const scheduledPlan = plans.find(plan => plan.id === schedule.workout_plan_id);
                   if (!scheduledPlan) return null;
                   
                   return (
-                    <div key={schedule.id} className="bg-quantum-darkBlue/40 p-4 rounded-md">
-                      <div className="flex justify-between items-start">
+                    <motion.div 
+                      key={schedule.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="bg-quantum-darkBlue/40 p-4 rounded-md"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                         <div>
                           <h4 className="font-bold">{scheduledPlan.name}</h4>
                           {schedule.preferred_time && (
@@ -205,7 +247,7 @@ const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
                         </div>
                         
                         <Button 
-                          className="bg-quantum-cyan hover:bg-quantum-cyan/90" 
+                          className="bg-quantum-cyan hover:bg-quantum-cyan/90 w-full sm:w-auto" 
                           size="sm"
                           onClick={() => {
                             setSelectedPlanId(scheduledPlan.id);
@@ -216,50 +258,67 @@ const StartWorkout: React.FC<StartWorkoutProps> = ({ userId }) => {
                           Start <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
           </TabsContent>
           
           <TabsContent value="quick" className="space-y-4">
-            <p className="text-gray-300 mb-4">
-              Quick start a workout from your saved plans:
-            </p>
-            
-            <div className="space-y-3">
-              {plans.length === 0 ? (
-                <p className="text-center text-gray-400">
-                  No workout plans found. Create a plan first.
+            {loading.plans ? (
+              <div className="py-8">
+                <LoadingSpinner text="Loading quick start options..." />
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p className="text-gray-300 mb-4">
+                  Quick start a workout from your saved plans:
                 </p>
-              ) : (
-                plans.slice(0, 5).map(plan => (
-                  <div key={plan.id} className="bg-quantum-darkBlue/40 p-3 rounded-md">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-medium">{plan.name}</h4>
-                        <p className="text-xs text-gray-400 capitalize">
-                          {plan.difficulty} · {plan.goal} · {plan.workout_days.length} days
-                        </p>
-                      </div>
-                      
-                      <Button 
-                        className="bg-quantum-cyan hover:bg-quantum-cyan/90" 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPlanId(plan.id);
-                          setSelectedDayIndex(0);
-                          handleStartWorkout();
-                        }}
+                
+                <div className="space-y-3">
+                  {plans.length === 0 ? (
+                    <p className="text-center text-gray-400">
+                      No workout plans found. Create a plan first.
+                    </p>
+                  ) : (
+                    plans.slice(0, 5).map((plan, idx) => (
+                      <motion.div 
+                        key={plan.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="bg-quantum-darkBlue/40 p-3 rounded-md"
                       >
-                        Start <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                          <div>
+                            <h4 className="font-medium">{plan.name}</h4>
+                            <p className="text-xs text-gray-400 capitalize">
+                              {plan.difficulty} · {plan.goal} · {plan.workout_days.length} days
+                            </p>
+                          </div>
+                          
+                          <Button 
+                            className="bg-quantum-cyan hover:bg-quantum-cyan/90 w-full sm:w-auto" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPlanId(plan.id);
+                              setSelectedDayIndex(0);
+                              handleStartWorkout();
+                            }}
+                          >
+                            Start <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>

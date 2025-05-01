@@ -2,8 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateProgressInsights } from '@/services/goalTrackingService';
-import { Lightbulb, ArrowUp, ArrowDown, Minus, Loader2 } from 'lucide-react';
+import { Lightbulb, ArrowUp, ArrowDown, Minus, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import LoadingSpinner from '@/components/ui/loading-spinner';
 
 interface ProgressInsightsProps {
   userId?: string;
@@ -19,6 +21,7 @@ const ProgressInsights: React.FC<ProgressInsightsProps> = ({ userId }) => {
     bodyFat: 'insufficient_data'
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   useEffect(() => {
     if (userId) {
@@ -37,7 +40,14 @@ const ProgressInsights: React.FC<ProgressInsightsProps> = ({ userId }) => {
       setInsights(['Unable to generate insights at this time.']);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+  
+  const handleRefresh = () => {
+    if (refreshing || !userId) return;
+    setRefreshing(true);
+    loadInsights();
   };
   
   const getTrendIcon = (trend: string) => {
@@ -76,21 +86,40 @@ const ProgressInsights: React.FC<ProgressInsightsProps> = ({ userId }) => {
   
   return (
     <Card className="bg-quantum-darkBlue/30 border border-quantum-cyan/20">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-yellow-400" />
           Progress Insights
         </CardTitle>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0" 
+          onClick={handleRefresh}
+          disabled={loading || refreshing}
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="sr-only">Refresh insights</span>
+        </Button>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+            <LoadingSpinner size="medium" text="Analyzing your progress..." />
           </div>
         ) : (
-          <div className="space-y-6">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-quantum-black/40 rounded-lg p-4 flex items-center justify-between">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-quantum-black/40 rounded-lg p-4 flex items-center justify-between"
+              >
                 <div>
                   <p className="text-sm text-gray-400">Weight Trend</p>
                   <p className="font-medium">
@@ -98,9 +127,14 @@ const ProgressInsights: React.FC<ProgressInsightsProps> = ({ userId }) => {
                   </p>
                 </div>
                 {getTrendIcon(trends.weight)}
-              </div>
+              </motion.div>
               
-              <div className="bg-quantum-black/40 rounded-lg p-4 flex items-center justify-between">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-quantum-black/40 rounded-lg p-4 flex items-center justify-between"
+              >
                 <div>
                   <p className="text-sm text-gray-400">Body Fat Trend</p>
                   <p className="font-medium">
@@ -108,26 +142,36 @@ const ProgressInsights: React.FC<ProgressInsightsProps> = ({ userId }) => {
                   </p>
                 </div>
                 {getTrendIcon(trends.bodyFat)}
-              </div>
+              </motion.div>
             </div>
             
             <div>
               <h3 className="text-sm font-medium text-gray-300 mb-2">Insights</h3>
               <ul className="space-y-3">
-                {insights.map((insight, index) => (
-                  <motion.li 
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
+                {insights.length === 0 ? (
+                  <motion.li
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className="bg-quantum-black/40 rounded-lg p-3 text-sm"
                   >
-                    {insight}
+                    No insights available yet. Add more measurements to see progress analysis.
                   </motion.li>
-                ))}
+                ) : (
+                  insights.map((insight, index) => (
+                    <motion.li 
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-quantum-black/40 rounded-lg p-3 text-sm"
+                    >
+                      {insight}
+                    </motion.li>
+                  ))
+                )}
               </ul>
             </div>
-          </div>
+          </motion.div>
         )}
       </CardContent>
     </Card>

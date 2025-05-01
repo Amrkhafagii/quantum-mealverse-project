@@ -20,6 +20,9 @@ import StartWorkout from '@/components/fitness/StartWorkout';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutPlan, UserMeasurement } from '@/types/fitness';
 import { getUserMeasurements } from '@/services/measurementService';
+import { motion } from 'framer-motion';
+import AchievementNotification from '@/components/fitness/AchievementNotification';
+import LoadingSpinner from '@/components/ui/loading-spinner';
 
 const Workouts = () => {
   const navigate = useNavigate();
@@ -27,11 +30,29 @@ const Workouts = () => {
   const [activeTab, setActiveTab] = useState('workout');
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
   const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
-  const [loading, setLoading] = useState(false);
-
+  const [loading, setLoading] = useState(true);
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [achievementDetails, setAchievementDetails] = useState({
+    title: '',
+    description: '',
+  });
+  
   useEffect(() => {
     if (user) {
       loadMeasurements();
+      
+      // Simulate achievement for demo purposes
+      const hasSeenAchievement = localStorage.getItem('hasSeenWorkoutAchievement');
+      if (!hasSeenAchievement && activeTab === 'workout') {
+        setTimeout(() => {
+          setAchievementDetails({
+            title: 'Workout Explorer',
+            description: 'You\'ve discovered the workout section! Time to start your fitness journey.'
+          });
+          setShowAchievement(true);
+          localStorage.setItem('hasSeenWorkoutAchievement', 'true');
+        }, 2000);
+      }
     }
   }, [user]);
   
@@ -57,7 +78,19 @@ const Workouts = () => {
     setActiveTab('schedule');
   };
   
+  const handleCloseAchievement = () => {
+    setShowAchievement(false);
+  };
+  
   const renderContent = () => {
+    if (loading && activeTab !== 'workout') {
+      return (
+        <div className="flex justify-center items-center py-16">
+          <LoadingSpinner size="large" text={`Loading ${activeTab}...`} />
+        </div>
+      );
+    }
+    
     switch (activeTab) {
       case 'workout':
         return <StartWorkout userId={user?.id} />;
@@ -70,6 +103,7 @@ const Workouts = () => {
           <WorkoutScheduler 
             userId={user?.id}
             plan={selectedPlan}
+            loading={loading}
           />
         ) : (
           <Card className="w-full bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -116,15 +150,21 @@ const Workouts = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
-        <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan mb-4 neon-text">
-          HealthAndFix Workouts
-        </h1>
-        <p className="text-xl text-gray-300 max-w-3xl mb-12">
-          Find the perfect workout routine to match your fitness level and goals.
-        </p>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan mb-4 neon-text">
+            HealthAndFix Workouts
+          </h1>
+          <p className="text-xl text-gray-300 max-w-3xl mb-12">
+            Find the perfect workout routine to match your fitness level and goals.
+          </p>
+        </motion.div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8">
+          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 p-1">
             <TabsTrigger value="workout" className="flex items-center gap-1">
               <PlayCircle className="h-4 w-4" /> Workout
             </TabsTrigger>
@@ -152,36 +192,65 @@ const Workouts = () => {
           </TabsList>
           
           <TabsContent value={activeTab} className="mt-8">
-            {renderContent()}
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderContent()}
+            </motion.div>
           </TabsContent>
         </Tabs>
         
-        <div className="mt-16 grid md:grid-cols-3 gap-8">
-          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-16 grid md:grid-cols-3 gap-8"
+        >
+          <motion.div 
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20"
+          >
             <h3 className="text-xl font-bold text-quantum-cyan mb-3">Evidence-Based Training</h3>
             <p className="text-gray-300">
               Our workout plans are designed by certified trainers and based on scientific research
               to ensure optimal results while minimizing injury risk.
             </p>
-          </div>
+          </motion.div>
           
-          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20">
+          <motion.div 
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20"
+          >
             <h3 className="text-xl font-bold text-quantum-cyan mb-3">Progress Tracking</h3>
             <p className="text-gray-300">
               Track your strength gains, body measurements, and workout consistency to stay
               motivated and see your improvements over time.
             </p>
-          </div>
+          </motion.div>
           
-          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20">
+          <motion.div 
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20"
+          >
             <h3 className="text-xl font-bold text-quantum-cyan mb-3">Integrated Approach</h3>
             <p className="text-gray-300">
               Combine nutrition planning with workout routines for a holistic approach to
               health and fitness that maximizes your results.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </main>
+      
+      <AchievementNotification
+        title={achievementDetails.title}
+        description={achievementDetails.description}
+        isVisible={showAchievement}
+        onClose={handleCloseAchievement}
+      />
       
       <Footer />
     </div>
