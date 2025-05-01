@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,7 @@ import { format, parseISO, isToday, subDays, differenceInDays, isSameDay, format
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { Activity, Calendar as CalendarIcon, Clock, Dumbbell, Fire, Calendar as CalIcon, Trophy, TrendingUp } from 'lucide-react';
+import { Activity, Calendar as CalendarIcon, Clock, Dumbbell, Flame, Calendar as CalIcon, Trophy, TrendingUp } from 'lucide-react';
 
 interface WorkoutHistoryProps {
   userId?: string;
@@ -448,7 +447,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-400">Calories Burned</p>
-                <Fire className="h-5 w-5 text-quantum-purple" />
+                <Flame className="h-5 w-5 text-quantum-purple" />
               </div>
               <p className="text-3xl font-bold mt-2">{workoutStats.total_calories}</p>
             </CardContent>
@@ -485,7 +484,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                   components={{
                     DayContent: (props) => (
                       <div className="relative">
-                        {props.children}
+                        {props.day}
                         {renderWorkoutDayIndicator(props.date)}
                       </div>
                     )
@@ -519,7 +518,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                         <span>{selectedWorkout.duration} mins</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Fire className="h-4 w-4 text-gray-400" />
+                        <Flame className="h-4 w-4 text-gray-400" />
                         <span>{selectedWorkout.calories_burned} calories</span>
                       </div>
                     </div>
@@ -621,7 +620,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId }) => {
                               <span className="text-sm">{workout.duration} mins</span>
                             </div>
                             <div className="flex items-center gap-1 justify-end">
-                              <Fire className="h-4 w-4 text-gray-400" />
+                              <Flame className="h-4 w-4 text-gray-400" />
                               <span className="text-sm">{workout.calories_burned} cal</span>
                             </div>
                           </div>

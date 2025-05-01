@@ -1,4 +1,3 @@
-
 import { MealPlan } from './food';
 
 export interface UserMeasurement {

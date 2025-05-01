@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Exercise } from '@/types/fitness';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Filter, Search, Video, Dumbbell, List, Grid, BarChart4, Info } from 'lucide-react';
+import { CheckCircle, Filter, Search, Video, Dumbbell, List, Grid, BarChart4, Info, X } from 'lucide-react';
 
 interface ExerciseLibraryProps {
   userId?: string;
