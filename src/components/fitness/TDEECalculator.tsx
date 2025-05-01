@@ -59,12 +59,14 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
     const ageNum = parseFloat(age);
     const activityMultiplier = parseFloat(activityLevel);
 
-    // Martin Berkhan's LeanGains formula
+    // Harris-Benedict formula for BMR calculation
     let bmr;
     if (gender === 'female') {
-      bmr = 370 + (9.8 * weightKg) + (1.8 * heightCm) - (4.7 * ageNum);
+      // For women: BMR = 447.593 + (9.247 × weight in kg) + (3.098 × height in cm) – (4.330 × age in years)
+      bmr = 447.593 + (9.247 * weightKg) + (3.098 * heightCm) - (4.330 * ageNum);
     } else {
-      bmr = 88.4 + (13.4 * weightKg) + (4.8 * heightCm) - (5.68 * ageNum);
+      // For men: BMR = 88.362 + (13.397 × weight in kg) + (4.799 × height in cm) – (5.677 × age in years)
+      bmr = 88.362 + (13.397 * weightKg) + (4.799 * heightCm) - (5.677 * ageNum);
     }
 
     // Calculate TDEE based on activity level
