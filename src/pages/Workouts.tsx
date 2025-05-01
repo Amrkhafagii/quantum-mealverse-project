@@ -15,13 +15,14 @@ import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import ExerciseLibrary from '@/components/fitness/ExerciseLibrary';
 import AchievementSystem from '@/components/fitness/AchievementSystem';
 import ProgressAnalytics from '@/components/fitness/ProgressAnalytics';
+import StartWorkout from '@/components/fitness/StartWorkout';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutPlan, UserMeasurement } from '@/types/fitness';
 
 const Workouts = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('plans');
+  const [activeTab, setActiveTab] = useState('workout');
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
   const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,6 +61,9 @@ const Workouts = () => {
   
   const renderContent = () => {
     switch (activeTab) {
+      case 'workout':
+        return <StartWorkout userId={user?.id} />;
+        
       case 'plans':
         return <WorkoutPlanner userId={user?.id} onPlanSelect={handlePlanSelect} />;
         
@@ -119,7 +123,10 @@ const Workouts = () => {
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-6">
+          <TabsList className="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-7">
+            <TabsTrigger value="workout" className="flex items-center gap-2">
+              <PlayCircle className="h-4 w-4" /> Workout
+            </TabsTrigger>
             <TabsTrigger value="plans" className="flex items-center gap-2">
               <Dumbbell className="h-4 w-4" /> Plans
             </TabsTrigger>

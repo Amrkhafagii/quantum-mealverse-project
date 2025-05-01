@@ -1,4 +1,3 @@
-
 import { fromTable } from './supabaseClient';
 import { 
   WorkoutPlan, 
@@ -18,7 +17,7 @@ export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Workou
     const planForStorage = {
       ...plan,
       // Stringify and then parse to ensure it's a proper JSON object
-      workout_days: JSON.parse(JSON.stringify(plan.workout_days))
+      workout_days: plan.workout_days
     };
     
     const { data, error } = await fromTable('workout_plans')
