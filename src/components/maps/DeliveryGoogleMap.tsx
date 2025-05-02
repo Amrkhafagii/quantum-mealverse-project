@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer, DirectionsService } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
@@ -234,18 +233,12 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     );
   }
   
-  if (!isLoaded || !googleMapsApiKey) {
+  if (!isLoaded) {
     return (
       <div className={`${className} flex items-center justify-center bg-gray-100 rounded-md border`}>
         <div className="text-center p-4">
-          {!googleMapsApiKey ? (
-            <>
-              <p className="text-red-500 font-medium mb-2">Google Maps API key not found!</p>
-              <p className="text-sm text-gray-600">Please set VITE_GOOGLE_MAPS_API_KEY in your environment or provide a key through the form.</p>
-            </>
-          ) : (
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto" />
-          )}
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto" />
+          <p className="text-sm text-gray-600 mt-2">Loading map...</p>
         </div>
       </div>
     );

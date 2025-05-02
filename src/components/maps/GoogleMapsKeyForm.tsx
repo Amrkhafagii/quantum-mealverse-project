@@ -31,6 +31,7 @@ export const GoogleMapsKeyForm: React.FC<GoogleMapsKeyFormProps> = ({
     setIsSubmitting(false);
   };
 
+  // Component is now preserved for future use but not actively used in the UI
   return (
     <Card className={`${className} max-w-md mx-auto`}>
       <CardHeader>
