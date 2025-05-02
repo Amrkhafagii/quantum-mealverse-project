@@ -23,6 +23,7 @@ import Nutrition from './pages/Nutrition';
 import Fitness from './pages/Fitness';
 import Workouts from './pages/Workouts';
 import FitnessProfile from './pages/FitnessProfile';
+import Orders from './pages/Orders';
 
 // Restaurant admin routes
 import RestaurantDashboard from './pages/restaurant/Dashboard';
@@ -54,6 +55,8 @@ function App() {
                 <Route path="/meal/:id" element={<MealDetail />} />
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/order/status/:id" element={<OrderStatus />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/orders/:id" element={<Orders />} />
                 <Route path="/nutrition" element={<Nutrition />} />
                 <Route path="/fitness" element={<Fitness />} />
                 <Route path="/workouts" element={<Workouts />} />

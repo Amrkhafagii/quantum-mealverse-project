@@ -2,228 +2,213 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import { updateDeliveryUserStatus } from '@/services/delivery/deliveryService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Clock, 
-  PackageCheck, 
-  TrendingUp, 
-  Calendar, 
-  ChevronDown, 
-  DollarSign, 
-  Bike, 
-  MapPin,
-  User,
-  AlertTriangle,
-  CheckCircle2
-} from 'lucide-react';
-import { DeliveryUser } from '@/types/delivery';
-import ParticleBackground from '@/components/ParticleBackground';
-import Navbar from '@/components/Navbar';
-import { ActiveDeliveries } from '@/components/delivery/dashboard/ActiveDeliveries';
-import { DeliveryHistory } from '@/components/delivery/dashboard/DeliveryHistory';
-import { EarningsSummary } from '@/components/delivery/dashboard/EarningsSummary';
+import { toast } from '@/hooks/use-toast';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import { ActiveDeliveries } from '@/components/delivery/ActiveDeliveries';
+import { DeliveryHistory } from '@/components/delivery/DeliveryHistory';
+import { EarningsSummary } from '@/components/delivery/EarningsSummary';
+import { AvailableOrders } from '@/components/delivery/AvailableOrders';
 
-const DeliveryDashboard: React.FC = () => {
+const DeliveryDashboard = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const [isOnline, setIsOnline] = useState(false);
-  const [activeTab, setActiveTab] = useState('current');
-  
-  const { 
-    deliveryUser,
-    loading: deliveryUserLoading, 
-    error: deliveryUserError,
-    refreshDeliveryUser
-  } = useDeliveryUser(user?.id);
+  const { deliveryUser, loading, error, refreshDeliveryUser } = useDeliveryUser(user?.id);
+  const [activeTab, setActiveTab] = useState('available');
+  const [toggleStatus, setToggleStatus] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   
   useEffect(() => {
-    // If user is not a delivery user yet, redirect to onboarding
-    if (!authLoading && !deliveryUserLoading && !deliveryUser && !deliveryUserError) {
-      navigate('/delivery/onboarding');
+    // If user isn't authenticated, redirect to login
+    if (!user && !loading) {
+      navigate('/login');
     }
-  }, [authLoading, deliveryUserLoading, deliveryUser, deliveryUserError, navigate]);
-
-  // Set initial online status based on delivery user status
+  }, [user, loading, navigate]);
+  
   useEffect(() => {
+    // Set initial status toggle based on user status
     if (deliveryUser) {
-      setIsOnline(deliveryUser.status === 'active');
+      setToggleStatus(deliveryUser.status === 'active');
     }
   }, [deliveryUser]);
-
-  const handleStatusToggle = async () => {
-    if (!user?.id || !deliveryUser) return;
+  
+  const handleStatusToggle = async (newStatus: boolean) => {
+    if (!deliveryUser) return;
     
     try {
-      const newStatus = isOnline ? 'inactive' : 'active';
-      await updateDeliveryUserStatus(user.id, newStatus);
-      setIsOnline(!isOnline);
+      setUpdatingStatus(true);
+      await updateDeliveryUserStatus(user.id, newStatus ? 'active' : 'inactive');
+      setToggleStatus(newStatus);
+      refreshDeliveryUser();
       
       toast({
-        title: isOnline ? "You're now offline" : "You're now online",
-        description: isOnline 
-          ? "You won't receive new delivery requests" 
-          : "You'll start receiving delivery requests",
+        title: newStatus ? "You're now active" : "You're now inactive",
+        description: newStatus 
+          ? "You can now receive delivery requests" 
+          : "You won't receive any delivery requests",
       });
-      
-      refreshDeliveryUser();
     } catch (error) {
       console.error('Error updating status:', error);
       toast({
-        title: "Status update failed",
-        description: "Couldn't update your availability status.",
+        title: "Error",
+        description: "Failed to update your status",
         variant: "destructive"
       });
+    } finally {
+      setUpdatingStatus(false);
     }
   };
-
-  if (authLoading || deliveryUserLoading) {
-    return (
-      <div className="min-h-screen bg-quantum-black flex flex-col items-center justify-center">
-        <div className="animate-pulse text-quantum-cyan">Loading dashboard...</div>
-      </div>
-    );
-  }
   
-  if (!deliveryUser) {
+  // Handle case where user isn't onboarded yet
+  if (!loading && !error && !deliveryUser) {
     return (
-      <div className="min-h-screen bg-quantum-black flex flex-col items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Complete Your Profile</h2>
-          <p className="text-gray-400 mb-6">You need to complete your delivery profile before accessing the dashboard.</p>
-          <Button onClick={() => navigate('/delivery/onboarding')}>
-            Complete Profile
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="min-h-screen bg-quantum-black flex flex-col">
-      <ParticleBackground />
-      <Navbar />
-      
-      <div className="container mx-auto px-4 pt-24 pb-10 relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Delivery Dashboard</h1>
-            <p className="text-gray-400">Welcome back, {deliveryUser.first_name}</p>
-          </div>
-          
-          <div className="flex items-center mt-4 md:mt-0">
-            <div className="mr-4 flex items-center">
-              <div className={`h-3 w-3 rounded-full mr-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-300">{isOnline ? 'Online' : 'Offline'}</span>
-            </div>
-            <Switch 
-              checked={isOnline} 
-              onCheckedChange={handleStatusToggle}
-              disabled={!deliveryUser.is_approved}
-            />
-          </div>
-        </div>
-        
-        {!deliveryUser.is_approved && (
-          <Card className="mb-8 bg-amber-900/20 border-amber-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-start">
-                <AlertTriangle className="h-5 w-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-amber-500">Account Pending Approval</h3>
-                  <p className="text-sm text-gray-300">
-                    Your delivery account is currently under review. You'll be able to receive delivery
-                    requests once your account is approved.
-                  </p>
-                </div>
-              </div>
+      <div className="min-h-screen bg-quantum-black text-white">
+        <div className="container mx-auto px-4 pt-24 pb-12">
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle>Welcome to Delivery</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <AlertCircle className="h-16 w-16 text-red-400 mb-4" />
+              <h2 className="text-xl font-bold mb-2">Not Registered</h2>
+              <p className="text-center mb-6 text-gray-400">
+                You need to complete the onboarding process before you can start making deliveries.
+              </p>
+              <Button 
+                className="bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+                onClick={() => navigate('/delivery/onboarding')}
+              >
+                Start Onboarding
+              </Button>
             </CardContent>
           </Card>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <StatusCard 
-            title="Account Status" 
-            icon={<User className="h-5 w-5" />}
-            value={deliveryUser.is_approved ? "Approved" : "Pending Approval"}
-            variant={deliveryUser.is_approved ? "success" : "warning"}
-          />
-          <StatusCard 
-            title="Total Deliveries" 
-            icon={<PackageCheck className="h-5 w-5" />}
-            value={deliveryUser.total_deliveries.toString()}
-            variant="default"
-          />
-          <StatusCard 
-            title="Rating" 
-            icon={<TrendingUp className="h-5 w-5" />}
-            value={`${deliveryUser.average_rating.toFixed(1)} / 5.0`}
-            variant={deliveryUser.average_rating >= 4.5 ? "success" : "default"}
-          />
         </div>
-        
-        <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="current">Current Deliveries</TabsTrigger>
-            <TabsTrigger value="history">Delivery History</TabsTrigger>
-            <TabsTrigger value="earnings">Earnings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="current" className="space-y-4">
-            <ActiveDeliveries deliveryUserId={deliveryUser.id} />
-          </TabsContent>
-          
-          <TabsContent value="history" className="space-y-4">
-            <DeliveryHistory deliveryUserId={deliveryUser.id} />
-          </TabsContent>
-          
-          <TabsContent value="earnings" className="space-y-4">
-            <EarningsSummary deliveryUserId={deliveryUser.id} />
-          </TabsContent>
-        </Tabs>
       </div>
-    </div>
-  );
-};
-
-interface StatusCardProps {
-  title: string;
-  icon: React.ReactNode;
-  value: string;
-  variant: 'default' | 'success' | 'warning' | 'error';
-}
-
-const StatusCard: React.FC<StatusCardProps> = ({ title, icon, value, variant = 'default' }) => {
-  const variantStyles = {
-    default: "bg-quantum-darkBlue/50 border-quantum-cyan/20",
-    success: "bg-green-900/20 border-green-500/30",
-    warning: "bg-amber-900/20 border-amber-500/30",
-    error: "bg-red-900/20 border-red-500/30"
-  };
+    );
+  }
+  
+  // Handle approval status
+  if (deliveryUser && !deliveryUser.is_approved) {
+    return (
+      <div className="min-h-screen bg-quantum-black text-white">
+        <div className="container mx-auto px-4 pt-24 pb-12">
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle>Account Pending Approval</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <AlertCircle className="h-16 w-16 text-yellow-400 mb-4" />
+              <h2 className="text-xl font-bold mb-2">Under Review</h2>
+              <p className="text-center mb-6 text-gray-400">
+                Your delivery account is currently being reviewed. 
+                We'll notify you once your account has been approved.
+              </p>
+              <p className="text-sm text-gray-500">
+                This process usually takes 1-2 business days.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <Card className={`${variantStyles[variant]}`}>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="mr-3 bg-quantum-black/30 p-2 rounded-full">
-              {icon}
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">{title}</p>
-              <p className="text-xl font-semibold mt-1">{value}</p>
-            </div>
+    <div className="min-h-screen bg-quantum-black text-white">
+      <div className="container mx-auto px-4 pt-24 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Status Card */}
+            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardHeader className="pb-2">
+                <CardTitle>Delivery Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg">Available for Orders</span>
+                  <Switch
+                    checked={toggleStatus}
+                    onCheckedChange={handleStatusToggle}
+                    disabled={updatingStatus}
+                  />
+                </div>
+                <p className="mt-2 text-sm text-gray-400">
+                  {toggleStatus 
+                    ? "You're available to receive delivery requests" 
+                    : "You're currently offline"}
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* User Stats */}
+            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardHeader className="pb-2">
+                <CardTitle>Your Stats</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span>Total Deliveries</span>
+                    <span className="font-bold text-quantum-cyan">
+                      {deliveryUser?.total_deliveries || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Rating</span>
+                    <span className="font-bold text-quantum-cyan">
+                      {deliveryUser?.average_rating?.toFixed(1) || '5.0'} ★
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Status</span>
+                    <span className={`font-bold ${toggleStatus ? 'text-green-500' : 'text-yellow-500'}`}>
+                      {toggleStatus ? 'Active' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Earnings Summary */}
+            <EarningsSummary />
+          </div>
+          
+          {/* Right Column */}
+          <div className="lg:col-span-2">
+            <Tabs 
+              defaultValue="available" 
+              value={activeTab} 
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="available">Available</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="available">
+                <AvailableOrders />
+              </TabsContent>
+              
+              <TabsContent value="active">
+                <ActiveDeliveries />
+              </TabsContent>
+              
+              <TabsContent value="history">
+                <DeliveryHistory />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
