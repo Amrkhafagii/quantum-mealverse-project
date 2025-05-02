@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Order } from '@/types/order';
+import { CurrencyDisplay } from '../common/CurrencyDisplay';
 
 interface OrderDetailsDisplayProps {
   order: Order;
@@ -19,9 +20,11 @@ export const OrderDetailsDisplay: React.FC<OrderDetailsDisplayProps> = ({ order 
         </div>
         <div>
           <h3 className="font-semibold mb-2">Order Summary</h3>
-          <p className="text-sm text-gray-300">Subtotal: {order.subtotal.toFixed(2)} EGP</p>
-          <p className="text-sm text-gray-300">Delivery: {order.delivery_fee.toFixed(2)} EGP</p>
-          <p className="text-sm font-semibold text-quantum-cyan">Total: {order.total.toFixed(2)} EGP</p>
+          <p className="text-sm text-gray-300">Subtotal: <CurrencyDisplay amount={order.subtotal} /></p>
+          <p className="text-sm text-gray-300">Delivery: <CurrencyDisplay amount={order.delivery_fee} /></p>
+          <p className="text-sm font-semibold text-quantum-cyan">
+            Total: <CurrencyDisplay amount={order.total} />
+          </p>
         </div>
       </div>
       

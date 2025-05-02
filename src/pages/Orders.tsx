@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -13,6 +12,7 @@ import { ActiveOrdersList } from '@/components/orders/ActiveOrdersList';
 import { PastOrdersList } from '@/components/orders/PastOrdersList';
 import { NoActiveOrdersDisplay } from '@/components/orders/NoActiveOrdersDisplay';
 import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
+import { UserSettings } from '@/components/profile/UserSettings';
 
 const Orders = () => {
   const { id: orderIdParam } = useParams();
@@ -119,7 +119,10 @@ const Orders = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
-        <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Track Your Orders</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Track Your Orders</h1>
+          <UserSettings />
+        </div>
         
         {(!orders || orders.length === 0) && (!pastOrders || pastOrders.length === 0) ? (
           <EmptyOrdersState />

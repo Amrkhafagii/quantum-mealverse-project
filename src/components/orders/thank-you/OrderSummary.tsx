@@ -1,45 +1,40 @@
 
 import React from 'react';
-import { Order } from '@/types/order';
+import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 
-interface OrderSummaryProps {
-  order: Order | null;
-}
-
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ order }) => {
+export const OrderSummary = ({ order }: { order: any }) => {
   if (!order) return null;
-
+  
+  const items = order.order_items || [];
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-800">
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Delivery Details</h3>
-        <div className="space-y-2 text-gray-300">
-          <p>{order.delivery_address}</p>
-          <p>{order.city}</p>
-          <p>{order.customer_phone}</p>
-        </div>
-        
-        <div className="pt-4">
-          <h3 className="text-xl font-semibold mb-2">Delivery Method</h3>
-          <p className="text-gray-300">{order.delivery_method}</p>
-        </div>
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+      
+      <div className="space-y-3">
+        {items.map((item: any) => (
+          <div key={item.id} className="flex justify-between items-center">
+            <div>
+              <span className="font-medium">{item.name}</span>
+              <p className="text-sm text-muted-foreground">x{item.quantity}</p>
+            </div>
+            <CurrencyDisplay amount={item.price * item.quantity} className="font-medium" />
+          </div>
+        ))}
       </div>
-
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Order Summary</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-gray-300">
-            <span>Subtotal:</span>
-            <span>{order.subtotal.toFixed(2)} EGP</span>
-          </div>
-          <div className="flex justify-between text-gray-300">
-            <span>Delivery:</span>
-            <span>{order.delivery_fee.toFixed(2)} EGP</span>
-          </div>
-          <div className="flex justify-between text-xl font-semibold text-quantum-cyan pt-2">
-            <span>Total:</span>
-            <span>{order.total.toFixed(2)} EGP</span>
-          </div>
+      
+      <div className="border-t pt-4 mt-4">
+        <div className="flex justify-between mb-2">
+          <span>Subtotal</span>
+          <CurrencyDisplay amount={order.subtotal} />
+        </div>
+        <div className="flex justify-between mb-2">
+          <span>Delivery Fee</span>
+          <CurrencyDisplay amount={order.delivery_fee} />
+        </div>
+        <div className="flex justify-between font-bold mt-2 text-lg">
+          <span>Total</span>
+          <CurrencyDisplay amount={order.total} className="text-quantum-cyan" />
         </div>
       </div>
     </div>

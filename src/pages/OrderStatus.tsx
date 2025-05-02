@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { NotificationBadge } from '@/components/notifications/NotificationBadge';
+import { UserSettings } from '@/components/profile/UserSettings';
 
 const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ const OrderStatus = () => {
         </div>
         <div className="flex items-center gap-4">
           <NotificationBadge variant="small" />
+          <UserSettings />
         </div>
       </div>
       

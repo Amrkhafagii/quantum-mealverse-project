@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { CurrencyDisplay } from '../common/CurrencyDisplay';
 
 interface OrderItemsListProps {
   items: any[];
@@ -23,24 +24,24 @@ export const OrderItemsList: React.FC<OrderItemsListProps> = ({
             <p className="text-sm text-gray-400">Quantity: {item.quantity}</p>
           </div>
           <div className="text-quantum-cyan font-medium">
-            ${(item.price * item.quantity).toFixed(2)}
+            <CurrencyDisplay amount={item.price * item.quantity} />
           </div>
         </div>
       ))}
       
       <div className="flex justify-between pt-2">
         <span>Subtotal:</span>
-        <span>${subtotal.toFixed(2)}</span>
+        <CurrencyDisplay amount={subtotal} />
       </div>
       
       <div className="flex justify-between">
         <span>Delivery Fee:</span>
-        <span>${deliveryFee.toFixed(2)}</span>
+        <CurrencyDisplay amount={deliveryFee} />
       </div>
       
       <div className="flex justify-between font-bold text-lg pt-2">
         <span>Total:</span>
-        <span className="text-quantum-cyan">${total.toFixed(2)}</span>
+        <CurrencyDisplay amount={total} className="text-quantum-cyan" />
       </div>
     </div>
   );
