@@ -1,129 +1,150 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal } from '@/types/fitness';
+import { v4 as uuidv4 } from 'uuid';
 
-// Get all fitness goals for a user
-export async function getUserFitnessGoals(userId: string) {
+/**
+ * Get all fitness goals for a user
+ */
+export const getUserFitnessGoals = async (userId: string): Promise<{
+  data: FitnessGoal[] | null;
+  error: any;
+}> => {
   try {
     const { data, error } = await supabase
       .from('fitness_goals')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .returns<FitnessGoal[]>();
       
-    return { data, error };
+    if (error) throw error;
+    
+    return { data, error: null };
   } catch (error) {
     console.error('Error fetching fitness goals:', error);
     return { data: null, error };
   }
-}
+};
 
-// Get a single fitness goal by ID
-export async function getFitnessGoalById(goalId: string) {
+/**
+ * Create a new fitness goal
+ */
+export const createFitnessGoal = async (
+  userId: string,
+  goalData: Omit<FitnessGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+): Promise<{
+  data: FitnessGoal | null;
+  error: any;
+}> => {
   try {
-    const { data, error } = await supabase
-      .from('fitness_goals')
-      .select('*')
-      .eq('id', goalId)
-      .single();
-      
-    return { data, error };
-  } catch (error) {
-    console.error('Error fetching fitness goal:', error);
-    return { data: null, error };
-  }
-}
-
-// Add a new fitness goal
-export async function addFitnessGoal(goal: FitnessGoal) {
-  try {
-    // Make sure 'description' isn't required for the insert
-    // Only include necessary fields that match the database schema
-    const goalData = {
-      id: goal.id,
-      user_id: goal.user_id,
-      name: goal.name || goal.title || '', // Use title as fallback
-      description: goal.description || '',  // Default to empty string if not provided
-      target_date: goal.target_date,
-      target_weight: goal.target_weight,
-      target_body_fat: goal.target_body_fat,
-      status: goal.status || 'active',
-      created_at: goal.created_at,
-      updated_at: goal.updated_at
-    };
-
-    const { data, error } = await supabase
-      .from('fitness_goals')
-      .insert(goalData)
-      .select()
-      .single();
-      
-    return { data, error };
-  } catch (error) {
-    console.error('Error adding fitness goal:', error);
-    return { data: null, error };
-  }
-}
-
-// Update an existing fitness goal
-export async function updateFitnessGoal(goal: FitnessGoal) {
-  try {
-    // Make sure 'description' isn't required for the update
-    // Only include fields that match the database schema
-    const goalData = {
-      name: goal.name,
-      description: goal.description || '',  // Default to empty string if not provided
-      target_date: goal.target_date,
-      target_weight: goal.target_weight,
-      target_body_fat: goal.target_body_fat,
-      status: goal.status,
+    const newGoal = {
+      id: uuidv4(),
+      user_id: userId,
+      name: goalData.name,
+      description: goalData.description,
+      title: goalData.name, // Add title for compatibility
+      target_weight: goalData.target_weight,
+      target_body_fat: goalData.target_body_fat,
+      target_date: goalData.target_date,
+      status: goalData.status,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     
     const { data, error } = await supabase
       .from('fitness_goals')
-      .update(goalData)
-      .eq('id', goal.id)
+      .insert([newGoal])
       .select()
-      .single();
+      .returns<FitnessGoal[]>();
       
-    return { data, error };
+    if (error) throw error;
+    
+    return { data: data[0], error: null };
+  } catch (error) {
+    console.error('Error creating fitness goal:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Update an existing fitness goal
+ */
+export const updateFitnessGoal = async (
+  goalId: string,
+  goalData: Partial<Omit<FitnessGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+): Promise<{
+  data: FitnessGoal | null;
+  error: any;
+}> => {
+  try {
+    const { data, error } = await supabase
+      .from('fitness_goals')
+      .update(goalData)
+      .eq('id', goalId)
+      .select()
+      .returns<FitnessGoal[]>();
+      
+    if (error) throw error;
+    
+    return { data: data[0], error: null };
   } catch (error) {
     console.error('Error updating fitness goal:', error);
     return { data: null, error };
   }
-}
+};
 
-// Delete a fitness goal
-export async function deleteFitnessGoal(goalId: string) {
+/**
+ * Delete a fitness goal
+ */
+export const deleteGoal = async (goalId: string): Promise<{
+  success: boolean;
+  error: any;
+}> => {
   try {
     const { error } = await supabase
       .from('fitness_goals')
       .delete()
       .eq('id', goalId);
       
-    return { success: !error, error };
+    if (error) throw error;
+    
+    return { success: true, error: null };
   } catch (error) {
     console.error('Error deleting fitness goal:', error);
     return { success: false, error };
   }
-}
+};
 
-// Update the status of a goal (active, completed, abandoned)
-export async function updateGoalStatus(goalId: string, status: 'active' | 'completed' | 'abandoned') {
+/**
+ * Update goal status based on progress
+ */
+export const updateGoalStatusBasedOnProgress = async (
+  userId: string,
+  goalId: string,
+  currentValue: number,
+  targetValue: number
+): Promise<{
+  success: boolean;
+  error: any;
+}> => {
   try {
+    let newStatus: FitnessGoal['status'] = 'active';
+    
+    if (currentValue >= targetValue) {
+      newStatus = 'completed';
+    }
+    
     const { error } = await supabase
       .from('fitness_goals')
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-        ...(status === 'completed' ? { completed_date: new Date().toISOString() } : {})
-      })
-      .eq('id', goalId);
+      .update({ status: newStatus })
+      .eq('id', goalId)
+      .eq('user_id', userId);
       
-    return { success: !error, error };
+    if (error) throw error;
+    
+    return { success: true, error: null };
   } catch (error) {
     console.error('Error updating goal status:', error);
     return { success: false, error };
   }
-}
+};

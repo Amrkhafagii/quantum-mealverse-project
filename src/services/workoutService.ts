@@ -1,6 +1,11 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutPlan, WorkoutLog, WorkoutHistoryItem, UserWorkoutStats, WorkoutSchedule, WorkoutDay } from '@/types/fitness';
+import {
+  WorkoutPlan,
+  WorkoutLog,
+  WorkoutHistoryItem,
+  UserWorkoutStats,
+  WorkoutSchedule
+} from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
 import { Json } from '@/types/database';
 
@@ -271,72 +276,76 @@ export const getUserWorkoutHistory = async (userId: string): Promise<{ data: Wor
 /**
  * Gets workout statistics for a user
  */
-export const getUserWorkoutStats = async (userId: string): Promise<{ data: UserWorkoutStats | null, error: any }> => {
+export const getUserWorkoutStats = async (userId: string): Promise<{
+  data: UserWorkoutStats | null;
+  error: any;
+}> => {
   try {
-    // Calculate basic stats from workout history
+    // Get the workout history
     const { data: historyData, error: historyError } = await supabase
       .from('workout_history')
       .select('*')
       .eq('user_id', userId);
-    
+
     if (historyError) throw historyError;
-    
-    if (!historyData || historyData.length === 0) {
-      // Return default stats if no history
-      return { 
-        data: {
-          total_workouts: 0,
-          totalWorkouts: 0,
-          total_duration: 0,
-          total_time: 0,
-          total_calories: 0,
-          streak: 0,
-          most_active_day: '',
-          favorite_exercise: '',
-          weight_lifted: 0,
-          completion_rate: 0,
-          currentStreak: 0,
-          longestStreak: 0
-        }, 
-        error: null 
-      };
-    }
-    
-    // Calculate total workouts, duration, calories
-    let totalWorkouts = historyData.length;
-    let totalDuration = historyData.reduce((sum, item) => sum + (item.duration || 0), 0);
-    let totalCalories = historyData.reduce((sum, item) => sum + (item.calories_burned || 0), 0);
-    
-    // Get streak from user_streaks table
-    const { data: streakData } = await supabase
+
+    // Get streak information
+    const { data: streakData, error: streakError } = await supabase
       .from('user_streaks')
       .select('*')
       .eq('user_id', userId)
       .eq('streak_type', 'workout')
       .single();
-    
-    const currentStreak = streakData?.currentstreak || 0;
-    const longestStreak = streakData?.longeststreak || 0;
-    
-    const stats: UserWorkoutStats = {
-      total_workouts: totalWorkouts,
-      totalWorkouts: totalWorkouts,
-      total_duration: totalDuration,
-      total_time: totalDuration,
-      total_calories: totalCalories,
-      streak: currentStreak,
-      most_active_day: 'Monday', // This would require additional analysis
-      favorite_exercise: 'Unknown', // This would require additional analysis
-      weight_lifted: 0, // This would require additional analysis
-      completion_rate: 0, // This would require additional analysis
-      currentStreak: currentStreak,
-      longestStreak: longestStreak
+      
+    if (streakError && streakError.code !== 'PGRST116') {
+      throw streakError;
+    }
+
+    // Analyze the data to generate statistics
+    const workoutCount = historyData ? historyData.length : 0;
+    const currentStreak = streakData ? streakData.currentstreak : 0;
+    const longestStreak = streakData ? streakData.longeststreak : 0;
+
+    // Calculate most active day
+    let dayCount = {};
+    let mostActiveDay = '';
+    let maxCount = 0;
+
+    if (historyData) {
+      historyData.forEach(workout => {
+        const date = new Date(workout.date);
+        const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+        dayCount[day] = (dayCount[day] || 0) + 1;
+        
+        if (dayCount[day] > maxCount) {
+          maxCount = dayCount[day];
+          mostActiveDay = day;
+        }
+      });
+    }
+
+    // Generate achievements count (placeholder)
+    // In a full implementation, you would query user_achievements
+    const achievementsCount = 0; // Placeholder
+
+    // Return the stats object
+    return {
+      data: {
+        streak: currentStreak,
+        currentStreak: currentStreak, // Add this for compatibility
+        total_workouts: workoutCount,
+        most_active_day: mostActiveDay || undefined,
+        achievements_count: achievementsCount,
+        // Add more stats as needed
+      },
+      error: null
     };
-    
-    return { data: stats, error: null };
   } catch (error) {
     console.error('Error getting workout stats:', error);
-    return { data: null, error };
+    return {
+      data: null,
+      error
+    };
   }
 };
 
@@ -386,3 +395,19 @@ export const getWorkoutHistory = getUserWorkoutHistory;
 export const getWorkoutStats = getUserWorkoutStats;
 export const saveWorkoutPlan = createWorkoutPlan;
 export const getWorkoutSchedule = getUserWorkoutSchedules;
+
+/**
+ * Mock workout stats generator
+ * This is used when real stats are not available yet
+ */
+export const generateMockWorkoutStats = (userId: string): UserWorkoutStats => {
+  return {
+    streak: Math.floor(Math.random() * 10) + 1,
+    currentStreak: Math.floor(Math.random() * 10) + 1, // Add this for compatibility
+    total_workouts: Math.floor(Math.random() * 50) + 1,
+    most_active_day: ['Monday', 'Wednesday', 'Friday'][Math.floor(Math.random() * 3)],
+    achievements_count: Math.floor(Math.random() * 8),
+    points: Math.floor(Math.random() * 1000),
+    level: Math.floor(Math.random() * 10) + 1,
+  };
+};

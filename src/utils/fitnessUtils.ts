@@ -35,8 +35,8 @@ export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
     normalized.duration = exercise.duration;
   }
   
-  if ('completed' in exercise) {
-    normalized.completed = exercise.completed;
+  if ('completed' in exercise || (exercise as any).completed !== undefined) {
+    normalized.completed = (exercise as any).completed;
   }
   
   return normalized as Exercise;
@@ -49,6 +49,7 @@ export function normalizeWorkoutDay(day: WorkoutDay): WorkoutDay {
   // Extend the WorkoutDay with name property for compatibility
   const extendedDay: WorkoutDay & { name?: string } = {
     ...day,
+    name: day.name || (day as any).name || '',
     day_name: day.day_name || (day as any).name || '',
   };
   
@@ -107,13 +108,12 @@ export function convertCompletedExercises(exercises: any[]): CompletedExercise[]
     exercise_id: ex.exercise_id || ex.id,
     name: ex.name || ex.exercise_name,
     exercise_name: ex.exercise_name || ex.name,
-    reps_completed: Array.isArray(ex.sets_completed) 
-      ? ex.sets_completed.map((set: any) => set.reps) 
+    sets_completed: Array.isArray(ex.sets_completed) 
+      ? ex.sets_completed
       : [],
     weight_used: Array.isArray(ex.sets_completed) 
-      ? ex.sets_completed.map((set: any) => set.weight) 
+      ? ex.sets_completed.map((set: any) => set.weight)
       : [],
-    sets_completed: ex.sets_completed,
     notes: ex.notes
   }));
 }
@@ -165,6 +165,6 @@ export function getSetsFromCompletedExercise(exercise: CompletedExercise) {
   return Array(setCount).fill(0).map((_, i) => ({
     set_number: i + 1,
     weight: exercise.weight_used && exercise.weight_used[0] ? exercise.weight_used[0] : 0,
-    reps: exercise.reps_completed && exercise.reps_completed[0] ? exercise.reps_completed[0] : 0
+    reps: exercise.sets_completed ? 0 : 0
   }));
 }

@@ -23,7 +23,11 @@ export interface UserProfile {
   date_of_birth?: Date;
   gender?: string;
   fitness_level?: string;
-  fitness_goal?: string;
+  fitness_goals?: string[];
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface UserMeasurement {
@@ -43,6 +47,7 @@ export interface UserMeasurement {
 export interface UserWorkoutStats {
   streak: number;
   total_workouts: number;
+  currentStreak?: number;
   most_active_day?: string;
   achievements_count?: number;
   points?: number;
@@ -66,9 +71,11 @@ export interface WorkoutPlan {
 export interface WorkoutDay {
   id: string;
   name: string;
+  day_name?: string; // Added for compatibility with components
   exercises: Exercise[];
   day_number: number;
   target_muscle_groups: string[];
+  completed?: boolean; // Added for compatibility with components
 }
 
 export interface Exercise {
@@ -87,6 +94,7 @@ export interface Exercise {
   instructions?: string;
   equipment?: string;
   video_url?: string;
+  completed?: boolean; // Added for compatibility with components
 }
 
 export interface WorkoutSet {
@@ -97,6 +105,7 @@ export interface WorkoutSet {
   reps: number;
   completed: boolean;
   notes?: string;
+  exercise_name?: string; // Added for compatibility with components
 }
 
 export interface WorkoutLog {
@@ -113,12 +122,16 @@ export interface WorkoutLog {
 export interface CompletedExercise {
   exercise_id: string;
   name: string;
+  exercise_name?: string; // Added for compatibility
   sets_completed: {
     set_number: number;
     weight: number;
     reps: number;
     completed: boolean;
   }[];
+  weight_used?: number[]; // Added for compatibility
+  reps_completed?: number[]; // Added for compatibility
+  notes?: string; // Added for compatibility
 }
 
 export interface WorkoutHistoryItem {
@@ -152,6 +165,7 @@ export interface FitnessGoal {
   user_id: string;
   name: string;
   description: string;
+  title?: string; // Added for compatibility
   target_weight?: number;
   target_body_fat?: number;
   target_date?: string;
@@ -182,12 +196,19 @@ export interface StreakReward {
   reward_name: string;
   reward_description: string;
   points: number;
+  streak_length?: number; // Added for compatibility
+  days?: number; // Added for compatibility
+  title?: string; // Added for compatibility
+  reward_type?: string; // Added for compatibility
+  reward_value?: string; // Added for compatibility
+  icon?: string; // Added for compatibility
 }
 
 export interface StreakRewardsProps {
   userId?: string;
   currentStreak: number;
-  onClaimReward: (rewardId: string) => void;
+  longestStreak?: number; // Added for compatibility
+  onClaimReward?: (rewardId: string) => void;
 }
 
 export interface Team {
@@ -196,6 +217,7 @@ export interface Team {
   description?: string;
   creator_id: string;
   created_at: string;
+  created_by?: string; // Added for compatibility
   member_count: number;
   total_points: number;
   avatar_url?: string;
@@ -207,6 +229,7 @@ export interface TeamMember {
   user_id: string;
   role: 'member' | 'admin';
   joined_date: string;
+  joined_at?: string; // Added for compatibility
   points_contributed: number;
 }
 
@@ -219,6 +242,7 @@ export interface Challenge {
   start_date: string;
   end_date: string;
   target_value: number;
+  goal_value?: number; // Added for compatibility
   reward_points?: number;
   participants_count?: number;
   team_id?: string;
@@ -242,6 +266,7 @@ export interface WorkoutRecommendation {
   id: string;
   user_id?: string;
   title?: string;
+  name?: string; // Added for compatibility
   description?: string;
   type?: string;
   suggested_at?: string;
