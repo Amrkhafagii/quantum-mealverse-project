@@ -108,11 +108,15 @@ export const getLatestDeliveryLocation = async (
 export const setupRealtimeLocationUpdates = () => {
   console.log('Setting up realtime updates for delivery locations');
   
-  // This is just a helper method that adds the table to the realtime publication
-  // In a production app, this would be done via database migrations
+  // When using Supabase Realtime, we need to use the channel API instead of directly
+  // calling on() on the query builder
   return supabase
-    .from('delivery_locations')
-    .on('INSERT', (payload) => {
+    .channel('public:delivery_locations')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'delivery_locations'
+    }, (payload) => {
       console.log('New location inserted:', payload);
     })
     .subscribe();
