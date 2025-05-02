@@ -26,6 +26,13 @@ export interface MealType {
     sodium?: number;
     health_score?: number;
   };
+  dietary_tags?: string[]; // Added for dietary preferences
+  sustainability?: {
+    carbon_footprint?: number; // Percentage reduction from average
+    water_usage?: number; // Percentage reduction from average
+    locally_sourced?: boolean;
+    organic?: boolean;
+  };
 }
 
 export const INITIAL_MEAL: MealType = {

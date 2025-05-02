@@ -1,174 +1,229 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Menu, X } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
-import { useCart } from '@/contexts/CartContext';
-import { useToast } from "@/hooks/use-toast";
-import { MobileMenu } from './navigation/MobileMenu';
-import { DesktopNavigation } from './navigation/DesktopNavigation';
-import { UserActions } from './navigation/UserActions';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, ShoppingCart, User, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useCart } from '@/contexts/CartContext';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/hooks/useLanguage';
+import LanguageSelector from './LanguageSelector';
 
 const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isRestaurant, setIsRestaurant] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { itemCount } = useCart?.() || { itemCount: 0 };
-  const { toast } = useToast();
-  const { user, logout, session } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { cart } = useCart();
+  const { t } = useLanguage();
 
-  useEffect(() => {
-    // Check admin and restaurant status when user changes
-    if (user?.id) {
-      checkAdminStatus(user.id);
-      checkRestaurantStatus(user.id);
-    } else {
-      setIsAdmin(false);
-      setIsRestaurant(false);
-    }
-  }, [user]);
-
-  const checkAdminStatus = async (userId) => {
-    if (!userId) return;
-    
-    const { data } = await supabase
-      .from('admin_users')
-      .select()
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    setIsAdmin(!!data);
-  };
-
-  const checkRestaurantStatus = async (userId) => {
-    if (!userId) return;
-    
-    const { data } = await supabase
-      .from('restaurants')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    setIsRestaurant(!!data);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
-      navigate('/');
-    } catch (error) {
-      console.error("Error logging out:", error);
-      toast({
-        title: "Logout Failed",
-        description: "There was a problem logging you out. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const toggleUserView = (checked: boolean) => {
-    if (checked) {
-      navigate('/admin');
-    } else {
-      navigate('/customer');
-    }
-  };
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
-
-  // If user is a restaurant owner, redirect to restaurant dashboard instead of showing customer nav
-  const isRestaurantView = location.pathname.startsWith('/restaurant');
+  const itemCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
   
-  // Don't show customer navigation if user is a restaurant owner unless in admin view
-  const isCustomerView = !isRestaurantView && 
-    (location.pathname === '/customer' || location.pathname === '/' || 
-    !['/admin', '/restaurant'].some(path => location.pathname.startsWith(path)));
-
-  const isAuthenticated = !!session;
-
-  // Always redirect restaurant owners to restaurant dashboard from customer pages
-  useEffect(() => {
-    // Only redirect if restaurant owner is authenticated and tries to access customer pages
-    if (isRestaurant && isAuthenticated && !isRestaurantView && !location.pathname.startsWith('/admin')) {
-      // Navigate to restaurant dashboard
-      navigate('/restaurant/dashboard');
-    }
-  }, [isRestaurant, isAuthenticated, location.pathname, navigate, isRestaurantView]);
-
-  // If already on a restaurant page or if user is a restaurant owner (and not an admin viewing admin pages),
-  // don't show the customer navbar
-  if (isRestaurantView || (isRestaurant && !location.pathname.startsWith('/admin'))) {
-    return null;
-  }
-
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+  
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+  
   return (
-    <nav className="fixed w-full z-20 top-0 bg-black/50 backdrop-blur-md border-b border-quantum-cyan/20">
+    <nav className="bg-quantum-black/70 backdrop-blur-md fixed w-full z-50 py-4">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="text-2xl font-bold text-quantum-cyan neon-text">
-            HealthAndFix
-          </Link>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            <Link to="/" className="text-2xl font-bold text-quantum-cyan neon-text">
+              Quantum<span className="text-quantum-purple">Fit</span>
+            </Link>
+          </div>
           
-          <DesktopNavigation 
-            isCustomerView={isCustomerView} 
-            isAuthenticated={isAuthenticated} 
-          />
+          <div className="hidden md:flex space-x-2 items-center">
+            <Link to="/" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+              {t('nav.home')}
+            </Link>
+            <Link to="/customer" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+              {t('nav.menu')}
+            </Link>
+            <Link to="/subscription" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+              Plans
+            </Link>
+            {user ? (
+              <>
+                <Link to="/dashboard" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                  Dashboard
+                </Link>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  aria-label="Cart"
+                  onClick={() => navigate('/cart')} 
+                  className="relative mr-2"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {itemCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
+                      {itemCount}
+                    </Badge>
+                  )}
+                </Button>
+                
+                <LanguageSelector variant="minimal" />
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      aria-label="User menu"
+                      className="rounded-full"
+                    >
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="mt-2 bg-quantum-darkBlue/90 border-quantum-cyan/30 backdrop-blur-sm">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-quantum-cyan/20" />
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/profile')}
+                      className="cursor-pointer"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>{t('nav.profile')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="cursor-pointer text-red-500"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>{t('nav.logout')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <LanguageSelector variant="minimal" />
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/login')}
+                  className="text-white hover:text-quantum-cyan transition-colors"
+                >
+                  {t('nav.login')}
+                </Button>
+                <Button 
+                  onClick={() => navigate('/signup')}
+                  className="bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+                >
+                  {t('nav.signup')}
+                </Button>
+              </>
+            )}
+          </div>
           
-          <div className="flex items-center gap-4">
-            {isRestaurant && (
-              <Button
-                variant="outline"
-                className="text-quantum-cyan border-quantum-cyan hover:bg-quantum-cyan/10"
-                onClick={() => navigate('/restaurant/dashboard')}
+          <div className="md:hidden flex items-center space-x-4">
+            {user && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                aria-label="Cart"
+                onClick={() => navigate('/cart')} 
+                className="relative"
               >
-                Restaurant Dashboard
+                <ShoppingCart className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
+                    {itemCount}
+                  </Badge>
+                )}
               </Button>
             )}
             
-            <UserActions 
-              isCustomerView={isCustomerView}
-              session={session}
-              isAdmin={isAdmin}
-              isRestaurant={isRestaurant}
-              itemCount={itemCount}
-              notificationCount={unreadCount}
-              toggleUserView={toggleUserView}
-              handleLogout={handleLogout}
-            />
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="md:hidden text-quantum-cyan"
-              onClick={toggleMobileMenu}
+            <button 
+              onClick={toggleMenu} 
+              className="text-white focus:outline-none"
+              aria-label="Toggle menu"
+              aria-expanded={isOpen}
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+              {isOpen ? <X /> : <Menu />}
+            </button>
           </div>
         </div>
-        
-        {mobileMenuOpen && (
-          <MobileMenu 
-            isCustomerView={isCustomerView}
-            isAdmin={isAdmin}
-            isRestaurant={isRestaurant}
-            session={session}
-            toggleUserView={toggleUserView}
-          />
-        )}
       </div>
+      
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-quantum-black/95 backdrop-blur-md z-50 min-h-[50vh] p-4 border-t border-quantum-cyan/20 space-y-4">
+          <Link to="/" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors" onClick={toggleMenu}>
+            {t('nav.home')}
+          </Link>
+          <Link to="/customer" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors" onClick={toggleMenu}>
+            {t('nav.menu')}
+          </Link>
+          <Link to="/subscription" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors" onClick={toggleMenu}>
+            Plans
+          </Link>
+          
+          {user ? (
+            <>
+              <Link to="/dashboard" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors" onClick={toggleMenu}>
+                Dashboard
+              </Link>
+              <Link to="/profile" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors" onClick={toggleMenu}>
+                {t('nav.profile')}
+              </Link>
+              <div className="flex items-center mt-4">
+                <LanguageSelector />
+              </div>
+              <Button 
+                onClick={() => {
+                  handleLogout();
+                  toggleMenu();
+                }}
+                variant="destructive"
+                className="w-full mt-4"
+              >
+                {t('nav.logout')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center mt-4">
+                <LanguageSelector />
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    navigate('/login');
+                    toggleMenu();
+                  }}
+                  className="w-full border-quantum-cyan text-white"
+                >
+                  {t('nav.login')}
+                </Button>
+                <Button 
+                  onClick={() => {
+                    navigate('/signup');
+                    toggleMenu();
+                  }}
+                  className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+                >
+                  {t('nav.signup')}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   );
 };

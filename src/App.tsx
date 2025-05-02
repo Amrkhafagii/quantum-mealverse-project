@@ -1,70 +1,50 @@
 
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { Toaster } from '@/components/ui/toaster';
+import { LanguageProvider } from './hooks/useLanguage';
 import Home from './pages/Home';
-import About from './pages/About';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import Shop from './pages/Shop';
+import Signup from './pages/Signup';
+import Customer from './pages/Customer';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
-import Contact from './pages/Contact';
-import NotFound from './pages/NotFound';
-import Orders from './pages/Orders';
-import ThankYou from './pages/ThankYou';
+import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
-import Admin from './pages/Admin';
-import MealDetailsPage from './pages/MealDetailsPage';
+import Restaurant from './pages/Restaurant';
 import Subscription from './pages/Subscription';
-import ProtectedRoute from './components/ProtectedRoute';
-import Customer from './pages/Customer';
-import Fitness from './pages/Fitness';
-import FitnessProfile from './pages/FitnessProfile';
-import Workouts from './pages/Workouts';
-
-// Restaurant Routes
-import RestaurantDashboard from './pages/restaurant/Dashboard';
-import RestaurantMenu from './pages/restaurant/Menu';
-import { CartProvider } from './contexts/CartContext';
-
+import OrderStatus from './pages/OrderStatus';
+import MealDetail from './pages/MealDetail';
+import NotFound from './pages/NotFound';
+// This is a basic structure for the application
+// Routes will be added as needed
 function App() {
   return (
-    <CartProvider>
-      <Router>
-        <Routes>
-          {/* Customer Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/auth" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/customer" element={<Customer />} />
-          <Route path="/meal/:id" element={<MealDetailsPage />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/subscription" element={<Subscription />} />
-          <Route path="/fitness" element={<Fitness />} />
-          <Route path="/fitness-profile" element={<ProtectedRoute><FitnessProfile /></ProtectedRoute>} />
-          <Route path="/workouts" element={<Workouts />} />
-
-          {/* Protected Customer Routes */}
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-          <Route path="/thank-you" element={<ProtectedRoute><ThankYou /></ProtectedRoute>} />
-
-          {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/admin/:section" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          
-          {/* Restaurant Routes */}
-          <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
-          <Route path="/restaurant/menu" element={<RestaurantMenu />} />
-
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </CartProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <CartProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/customer" element={<Customer />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/restaurants/:id" element={<Restaurant />} />
+              <Route path="/meal/:id" element={<MealDetail />} />
+              <Route path="/subscription" element={<Subscription />} />
+              <Route path="/order/status/:id" element={<OrderStatus />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+          <Toaster />
+        </CartProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

@@ -5,11 +5,12 @@ import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Minus, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 import { supabase } from '@/integrations/supabase/client';
+import SustainabilityBadge from './sustainability/SustainabilityBadge';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -111,6 +112,43 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     }
   };
 
+  // Calculate sustainability metrics based on meal properties (mock data for now)
+  const getSustainabilityMetrics = () => {
+    // In a real app, these would be real metrics fetched from the backend
+    // For now we're generating them based on the meal ID for demonstration
+    const mealIdSum = meal.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % 100;
+    
+    const metrics = [];
+    
+    if (mealIdSum > 50) {
+      metrics.push({
+        type: 'carbon' as const,
+        value: 60 + (mealIdSum % 30), // 60-90% lower carbon footprint
+        label: 'Carbon Footprint'
+      });
+    }
+    
+    if (mealIdSum % 3 === 0) {
+      metrics.push({
+        type: 'local' as const,
+        value: 100,
+        label: 'Locally Sourced'
+      });
+    }
+    
+    if (mealIdSum % 4 === 0) {
+      metrics.push({
+        type: 'organic' as const,
+        value: 100,
+        label: 'Organic Ingredients'
+      });
+    }
+    
+    return metrics;
+  };
+
+  const sustainabilityMetrics = getSustainabilityMetrics();
+
   return (
     <Card className="relative overflow-hidden bg-quantum-black border-quantum-cyan/20 group hover:border-quantum-cyan/40 transition-all duration-300">
       <motion.div 
@@ -127,6 +165,26 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-quantum-black/80 to-transparent" />
+        
+        {/* Badges for dietary tags */}
+        {meal.dietary_tags && meal.dietary_tags.length > 0 && (
+          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+            {meal.dietary_tags.map(tag => (
+              <span key={tag} className="bg-quantum-darkBlue/80 text-white text-xs px-1.5 py-0.5 rounded backdrop-blur-sm">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        
+        {/* Sustainability badges */}
+        {sustainabilityMetrics.length > 0 && (
+          <div className="absolute top-2 right-2 flex flex-wrap gap-1">
+            {sustainabilityMetrics.map((metric, idx) => (
+              <SustainabilityBadge key={idx} metric={metric} size="sm" />
+            ))}
+          </div>
+        )}
       </motion.div>
 
       <CardContent className="p-4 space-y-3">

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
@@ -10,13 +10,31 @@ import { MealType } from '@/types/meal';
 import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader } from 'lucide-react';
+import { MapPin, Loader, Filter, SlidersHorizontal } from 'lucide-react';
 import { getMenuItems } from '@/services/restaurant/menuService';
 import { createTestMenuItems } from '@/utils/createTestMenuItems';
+import DietaryFilters, { DietaryFilterOption, DIETARY_TAGS } from '@/components/filters/DietaryFilters';
+import { Input } from '@/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+
+type SortOption = 'price-asc' | 'price-desc' | 'rating-desc' | 'calories-asc';
 
 const Customer = () => {
   const { location, getCurrentLocation } = useLocationTracker();
   const { nearbyRestaurants, loading: loadingRestaurants } = useNearestRestaurant();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('rating-desc');
+  const [dietaryFilters, setDietaryFilters] = useState<DietaryFilterOption[]>(
+    DIETARY_TAGS.map(tag => ({ id: tag.id, name: tag.name, active: false }))
+  );
+
+  const activeFiltersCount = dietaryFilters.filter(f => f.active).length;
 
   React.useEffect(() => {
     const checkForMenuItems = async () => {
@@ -60,7 +78,7 @@ const Customer = () => {
   }, [nearbyRestaurants]);
 
   const { data: menuItems, isLoading: loadingMenuItems, error } = useQuery({
-    queryKey: ['menuItems', nearbyRestaurants],
+    queryKey: ['menuItems', nearbyRestaurants, searchTerm, sortBy, dietaryFilters],
     queryFn: async () => {
       if (!nearbyRestaurants.length) return [];
       
@@ -71,8 +89,9 @@ const Customer = () => {
       
       const items = await getMenuItems(restaurantIds as unknown as string, undefined, true);
       console.log('Menu items fetched using service:', items?.length, items);
-            
-      return items?.map(item => {
+      
+      // Transform menu items to MealType
+      let transformedItems = items?.map(item => {
         let nutritionalInfo = {
           calories: 0,
           protein: 0,
@@ -95,6 +114,15 @@ const Customer = () => {
           console.error("Error parsing nutritional info:", e);
         }
 
+        // Generate mock dietary tags for demonstration (would come from database in real app)
+        const mockDietaryTags = [];
+        if (item.id.charCodeAt(0) % 2 === 0) mockDietaryTags.push('vegetarian');
+        if (item.id.charCodeAt(1) % 3 === 0) mockDietaryTags.push('gluten-free');
+        if (item.id.charCodeAt(2) % 4 === 0) mockDietaryTags.push('dairy-free');
+        if (item.id.charCodeAt(3) % 5 === 0) mockDietaryTags.push('vegan');
+        if (item.id.charCodeAt(4) % 6 === 0) mockDietaryTags.push('keto');
+        if (item.id.charCodeAt(5) % 7 === 0) mockDietaryTags.push('high-protein');
+
         return {
           id: item.id,
           name: item.name,
@@ -108,9 +136,49 @@ const Customer = () => {
           is_active: item.is_available,
           restaurant_id: item.restaurant_id,
           created_at: item.created_at,
-          updated_at: item.updated_at
+          updated_at: item.updated_at,
+          dietary_tags: mockDietaryTags
         } as MealType;
       }) || [];
+      
+      // Apply search filter
+      if (searchTerm.trim()) {
+        const search = searchTerm.toLowerCase();
+        transformedItems = transformedItems.filter(item =>
+          item.name.toLowerCase().includes(search) || 
+          (item.description && item.description.toLowerCase().includes(search))
+        );
+      }
+
+      // Apply dietary filters
+      const activeFilters = dietaryFilters.filter(f => f.active).map(f => f.id);
+      if (activeFilters.length > 0) {
+        transformedItems = transformedItems.filter(item =>
+          item.dietary_tags && 
+          activeFilters.every(filter => item.dietary_tags!.includes(filter))
+        );
+      }
+      
+      // Apply sorting
+      switch (sortBy) {
+        case 'price-asc':
+          transformedItems.sort((a, b) => a.price - b.price);
+          break;
+        case 'price-desc':
+          transformedItems.sort((a, b) => b.price - a.price);
+          break;
+        case 'calories-asc':
+          transformedItems.sort((a, b) => a.calories - b.calories);
+          break;
+        case 'rating-desc':
+        default:
+          // For proper rating we'd fetch ratings for these items
+          // For now, use a random sort to simulate
+          transformedItems.sort(() => Math.random() - 0.5);
+          break;
+      }
+
+      return transformedItems;
     },
     enabled: nearbyRestaurants.length > 0
   });
@@ -120,6 +188,10 @@ const Customer = () => {
       console.log('Nearby restaurants updated:', nearbyRestaurants);
     }
   }, [nearbyRestaurants]);
+
+  const handleFilterChange = (newFilters: DietaryFilterOption[]) => {
+    setDietaryFilters(newFilters);
+  };
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -174,6 +246,43 @@ const Customer = () => {
                   </div>
                 </div>
               )}
+
+              {/* Search, filter and sort controls */}
+              <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
+                <div className="relative flex-1">
+                  <Input 
+                    type="text"
+                    placeholder="Search meals..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="bg-quantum-darkBlue/30 border-quantum-cyan/30 focus:border-quantum-cyan/60 pr-10"
+                  />
+                </div>
+
+                <div className="flex gap-4 w-full md:w-auto">
+                  <DietaryFilters 
+                    filters={dietaryFilters} 
+                    onFilterChange={handleFilterChange} 
+                    activeCount={activeFiltersCount} 
+                  />
+
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => setSortBy(value as SortOption)}
+                  >
+                    <SelectTrigger className="bg-quantum-darkBlue/30 border-quantum-cyan/30 w-[180px]">
+                      <SlidersHorizontal className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-quantum-darkBlue border-quantum-cyan/30">
+                      <SelectItem value="rating-desc">Top Rated</SelectItem>
+                      <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                      <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                      <SelectItem value="calories-asc">Lowest Calories</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               
               {menuItems?.length === 0 ? (
                 <div className="text-center py-12">
@@ -188,14 +297,21 @@ const Customer = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {menuItems?.map((item: MealType) => (
-                    <CustomerMealCard
-                      key={item.id}
-                      meal={item}
-                    />
-                  ))}
-                </div>
+                <>
+                  {activeFiltersCount > 0 && (
+                    <p className="mb-4 text-sm text-gray-400">
+                      {`Showing ${menuItems?.length} meals matching your dietary preferences`}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {menuItems?.map((item: MealType) => (
+                      <CustomerMealCard
+                        key={item.id}
+                        meal={item}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}
