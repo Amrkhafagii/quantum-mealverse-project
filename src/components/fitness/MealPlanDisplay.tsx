@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MealPlan, Meal } from '@/types/food';
-import { Shuffle, Droplets, AlertCircle, Info, Shield } from 'lucide-react';
+import { Shuffle, Droplets, AlertCircle, Info, Shield, Utensils } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { shuffleMeal } from '@/services/mealPlanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,16 +14,33 @@ interface MealCardProps {
 }
 
 const MealCard: React.FC<MealCardProps> = ({ meal, onShuffle }) => {
+  // Function to render an appropriate meal icon based on meal name
+  const renderMealIcon = () => {
+    if (meal.name.toLowerCase().includes('breakfast')) {
+      return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>;
+    } else if (meal.name.toLowerCase().includes('lunch')) {
+      return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-400"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2"/><path d="M18 15V2"/><path d="M21 15a3 3 0 1 1-6 0"/></svg>;
+    } else if (meal.name.toLowerCase().includes('dinner')) {
+      return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="M8.21 13.89 7 23l-3-3-2-4-1-7 9.21 4.89Z"/><path d="M14 13.5V22l4 1 3-3 1-6-8-1Z"/><path d="M10.53 9.33 8.57 7.37A1.45 1.45 0 0 1 9.17 4.5a5.07 5.07 0 0 1 5.66 5.66 1.45 1.45 0 0 1-2.87.6l-1.96-1.96Z"/><path d="M14 6.5v.5"/></svg>;
+    } else {
+      return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-400"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>;
+    }
+  };
+
   return (
     <Card className="holographic-card overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-quantum-cyan">{meal.name}</CardTitle>
+          <CardTitle className="text-quantum-cyan flex items-center gap-2">
+            {renderMealIcon()}
+            {meal.name}
+          </CardTitle>
           <Button 
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-quantum-purple"
             onClick={onShuffle}
+            title="Shuffle meal options"
           >
             <Shuffle className="h-4 w-4" />
           </Button>
@@ -52,12 +69,17 @@ const MealCard: React.FC<MealCardProps> = ({ meal, onShuffle }) => {
                           <Info className="h-3.5 w-3.5 text-gray-400" />
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs mb-1">
                           {item.food.cookingState === "cooked" 
                             ? "Values based on cooked weight" 
                             : "Values based on raw/uncooked weight"}
                         </p>
+                        {item.food.mealSuitability && (
+                          <p className="text-xs">
+                            Suitable for: {item.food.mealSuitability.join(', ')}
+                          </p>
+                        )}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -70,6 +92,11 @@ const MealCard: React.FC<MealCardProps> = ({ meal, onShuffle }) => {
             </li>
           ))}
         </ul>
+
+        <div className="mt-4 text-xs text-gray-400 flex items-center gap-1">
+          <Utensils className="h-3.5 w-3.5" />
+          <span>Culturally appropriate for {meal.name.toLowerCase()}</span>
+        </div>
       </CardContent>
     </Card>
   );
@@ -116,7 +143,7 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
     
     toast({
       title: `${meal.name} Updated`,
-      description: "New meal options generated.",
+      description: "New culturally appropriate meal options generated.",
     });
   };
 
@@ -144,7 +171,7 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
           </span>
         </CardTitle>
         <CardDescription>
-          Based on your {mealPlan.goal} goal
+          Based on your {mealPlan.goal} goal with culturally familiar foods
         </CardDescription>
         
         <div className="mt-2 grid grid-cols-3 gap-1 text-sm">
@@ -205,6 +232,12 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
             <span>Protein is below 95% of your target. Consider reshuffling meals to increase protein intake.</span>
           </div>
         )}
+
+        <div className="mt-2 bg-blue-900/20 p-2 rounded">
+          <p className="text-sm text-blue-300">
+            <span className="font-medium">🍽️ Culturally Appropriate:</span> This meal plan uses foods traditionally associated with each meal time to make your plan more familiar and enjoyable.
+          </p>
+        </div>
       </CardHeader>
       
       <CardContent>

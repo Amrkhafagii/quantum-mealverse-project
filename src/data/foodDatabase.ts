@@ -15,7 +15,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 2,
     imageUrl: "https://picsum.photos/seed/chicken/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
   },
   {
     id: "p2",
@@ -29,7 +30,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/tofu/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["lunch", "dinner"]
   },
   {
     id: "p3",
@@ -43,7 +45,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/lentils/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
   },
   {
     id: "p4",
@@ -57,7 +60,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/eggs/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["breakfast", "lunch"]
   },
   {
     id: "p5",
@@ -71,7 +75,83 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 3,
     imageUrl: "https://picsum.photos/seed/salmon/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
+  },
+  {
+    id: "p6",
+    name: "Turkey Bacon (cooked)",
+    category: "protein",
+    calories: 162,
+    protein: 17,
+    carbs: 1,
+    fat: 10,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    imageUrl: "https://picsum.photos/seed/turkeybacon/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["breakfast"]
+  },
+  {
+    id: "p7",
+    name: "Greek Yogurt",
+    category: "protein",
+    calories: 59,
+    protein: 10,
+    carbs: 3.6,
+    fat: 0.4,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    imageUrl: "https://picsum.photos/seed/yogurt/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
+  },
+  {
+    id: "p8",
+    name: "Cottage Cheese",
+    category: "protein",
+    calories: 98,
+    protein: 11.1,
+    carbs: 3.4,
+    fat: 4.3,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    imageUrl: "https://picsum.photos/seed/cottagecheese/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
+  },
+  {
+    id: "p9",
+    name: "Grilled Steak (cooked)",
+    category: "protein",
+    calories: 250,
+    protein: 26,
+    carbs: 0,
+    fat: 17,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 3,
+    imageUrl: "https://picsum.photos/seed/steak/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["dinner"]
+  },
+  {
+    id: "p10",
+    name: "Deli Turkey (sliced)",
+    category: "protein",
+    calories: 104,
+    protein: 17,
+    carbs: 2,
+    fat: 2.5,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    imageUrl: "https://picsum.photos/seed/deliturkery/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["breakfast", "lunch"]
   },
   
   // Carbs
@@ -87,7 +167,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/brownrice/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
   },
   {
     id: "c2",
@@ -101,7 +182,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/oats/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["breakfast"]
   },
   {
     id: "c3",
@@ -115,7 +197,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/sweetpotato/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
   },
   {
     id: "c4",
@@ -129,7 +212,68 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 2,
     imageUrl: "https://picsum.photos/seed/quinoa/300/200",
-    cookingState: "cooked"
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
+  },
+  {
+    id: "c5",
+    name: "Whole Grain Bread",
+    category: "carbs",
+    calories: 265,
+    protein: 13.3,
+    carbs: 43.3,
+    fat: 4.2,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/bread/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch"]
+  },
+  {
+    id: "c6",
+    name: "Breakfast Potatoes (cooked)",
+    category: "carbs",
+    calories: 149,
+    protein: 3.2,
+    carbs: 33.8,
+    fat: 0.2,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/potatoes/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["breakfast"]
+  },
+  {
+    id: "c7",
+    name: "Pasta (cooked)",
+    category: "carbs",
+    calories: 158,
+    protein: 5.8,
+    carbs: 31,
+    fat: 0.9,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/pasta/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
+  },
+  {
+    id: "c8",
+    name: "Mashed Potatoes (cooked)",
+    category: "carbs",
+    calories: 83,
+    protein: 1.7,
+    carbs: 18.5,
+    fat: 0.1,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/mashedpotatoes/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["lunch", "dinner"]
   },
   
   // Fats
@@ -145,7 +289,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 2,
     imageUrl: "https://picsum.photos/seed/avocado/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
   },
   {
     id: "f2",
@@ -159,7 +304,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 2,
     imageUrl: "https://picsum.photos/seed/oliveoil/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
   },
   {
     id: "f3",
@@ -173,7 +319,53 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 2,
     imageUrl: "https://picsum.photos/seed/almonds/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["snack"]
+  },
+  {
+    id: "f4",
+    name: "Butter",
+    category: "fats",
+    calories: 717,
+    protein: 0.9,
+    carbs: 0.1,
+    fat: 81,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/butter/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
+  {
+    id: "f5",
+    name: "Peanut Butter",
+    category: "fats",
+    calories: 588,
+    protein: 25,
+    carbs: 20,
+    fat: 50,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/peanutbutter/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
+  },
+  {
+    id: "f6",
+    name: "Cheese (cheddar)",
+    category: "fats",
+    calories: 402,
+    protein: 25,
+    carbs: 1.3,
+    fat: 33,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    imageUrl: "https://picsum.photos/seed/cheese/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
   },
   
   // Vegetables
@@ -189,7 +381,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/broccoli/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["lunch", "dinner"]
   },
   {
     id: "v2",
@@ -203,7 +396,68 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/spinach/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
+  {
+    id: "v3",
+    name: "Bell Peppers (raw)",
+    category: "vegetables",
+    calories: 31,
+    protein: 1,
+    carbs: 6,
+    fat: 0.3,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/bellpeppers/300/200",
+    cookingState: "raw",
+    mealSuitability: ["lunch", "dinner"]
+  },
+  {
+    id: "v4",
+    name: "Asparagus (steamed)",
+    category: "vegetables",
+    calories: 20,
+    protein: 2.2,
+    carbs: 3.9,
+    fat: 0.1,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    imageUrl: "https://picsum.photos/seed/asparagus/300/200",
+    cookingState: "cooked",
+    mealSuitability: ["dinner"]
+  },
+  {
+    id: "v5",
+    name: "Kale (raw)",
+    category: "vegetables",
+    calories: 49,
+    protein: 4.3,
+    carbs: 8.8,
+    fat: 0.9,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/kale/300/200",
+    cookingState: "raw",
+    mealSuitability: ["lunch", "dinner"]
+  },
+  {
+    id: "v6",
+    name: "Tomatoes (raw)",
+    category: "vegetables",
+    calories: 18,
+    protein: 0.9,
+    carbs: 3.9,
+    fat: 0.2,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    imageUrl: "https://picsum.photos/seed/tomatoes/300/200",
+    cookingState: "raw",
+    mealSuitability: ["lunch", "dinner"]
   },
   
   // Fruits
@@ -219,7 +473,8 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/banana/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
   },
   {
     id: "fr2",
@@ -233,42 +488,35 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     imageUrl: "https://picsum.photos/seed/apple/300/200",
-    cookingState: "raw"
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
   },
-  
-  // Dairy
   {
-    id: "d1",
-    name: "Greek Yogurt",
-    category: "dairy",
-    calories: 59,
-    protein: 10,
-    carbs: 3.6,
-    fat: 0.4,
+    id: "fr3",
+    name: "Berries (mixed)",
+    category: "fruits",
+    calories: 57,
+    protein: 0.7,
+    carbs: 14,
+    fat: 0.3,
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/yogurt/300/200",
-    cookingState: "raw"
-  },
-  {
-    id: "d2",
-    name: "Cottage Cheese",
-    category: "dairy",
-    calories: 98,
-    protein: 11.1,
-    carbs: 3.4,
-    fat: 4.3,
-    portion: 100,
-    isGloballyAvailable: true,
-    costTier: 2,
-    imageUrl: "https://picsum.photos/seed/cottagecheese/300/200",
-    cookingState: "raw"
+    imageUrl: "https://picsum.photos/seed/berries/300/200",
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
   }
 ];
 
 export const getFoodsByCategory = (category: FoodCategory) => {
   return foodDatabase.filter(food => food.category === category);
+};
+
+export const getFoodsByCategoryAndMealType = (category: FoodCategory, mealType: string) => {
+  return foodDatabase.filter(
+    food => food.category === category && 
+    (food.mealSuitability?.includes(mealType))
+  );
 };
 
 export const getFoodById = (id: string) => {

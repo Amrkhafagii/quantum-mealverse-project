@@ -12,6 +12,7 @@ export interface Food {
   costTier: 1 | 2 | 3; // 1 = budget-friendly, 3 = expensive
   imageUrl?: string;
   cookingState: CookingState; // New field to specify if the food is raw or cooked
+  mealSuitability?: string[]; // New field to indicate which meals this food is appropriate for
 }
 
 export type CookingState = 'raw' | 'cooked';

@@ -1,6 +1,7 @@
+
 import { Food, Meal, MealFood, MealPlan, FoodCategory } from '@/types/food';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
-import { foodDatabase, getFoodById, getFoodsByCategory } from '@/data/foodDatabase';
+import { foodDatabase, getFoodById, getFoodsByCategory, getFoodsByCategoryAndMealType } from '@/data/foodDatabase';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -12,19 +13,23 @@ const createMeal = (
   targetProtein: number,
   targetCarbs: number,
   targetFat: number,
-  ensureProtein: boolean = false
+  ensureProtein: boolean = false,
+  mealType: string = "lunch" // Default to lunch if no meal type specified
 ): Meal => {
-  // Select foods from each category
-  const proteins = getFoodsByCategory('protein');
-  const carbs = getFoodsByCategory('carbs');
-  const fats = getFoodsByCategory('fats');
-  const vegetables = getFoodsByCategory('vegetables');
+  // Select foods from each category that are appropriate for this meal type
+  const getAppropriateFood = (category: FoodCategory) => {
+    const foodsForMeal = getFoodsByCategoryAndMealType(category, mealType);
+    // If no foods for this meal type, fall back to general category
+    return foodsForMeal.length > 0 
+      ? foodsForMeal[Math.floor(Math.random() * foodsForMeal.length)]
+      : getFoodsByCategory(category)[Math.floor(Math.random() * getFoodsByCategory(category).length)];
+  };
   
-  // Randomly select one from each required category
-  const protein = proteins[Math.floor(Math.random() * proteins.length)];
-  const carb = carbs[Math.floor(Math.random() * carbs.length)];
-  const fat = fats[Math.floor(Math.random() * fats.length)];
-  const vegetable = vegetables[Math.floor(Math.random() * vegetables.length)];
+  // Get appropriate foods for this meal type
+  const protein = getAppropriateFood('protein');
+  const carb = getAppropriateFood('carbs');
+  const fat = getAppropriateFood('fats');
+  const vegetable = getAppropriateFood('vegetables');
   
   // Calculate realistic portions to match macro targets while being reasonable
   // Cap portions at reasonable amounts
@@ -131,12 +136,15 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   const snackCalories = adjustedCalories * 0.15;
   const dinnerCalories = adjustedCalories * 0.3;
   
+  // Create culturally appropriate meals by specifying meal type
   const breakfast = createMeal(
     'Breakfast', 
     breakfastCalories, 
     proteinGrams * 0.25,
     carbsGrams * 0.25,
-    fatsGrams * 0.25
+    fatsGrams * 0.25,
+    true, // Ensure protein target is met
+    'breakfast' // Specify meal type
   );
   
   const lunch = createMeal(
@@ -144,7 +152,9 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     lunchCalories, 
     proteinGrams * 0.3,
     carbsGrams * 0.3,
-    fatsGrams * 0.3
+    fatsGrams * 0.3,
+    true, // Ensure protein target is met
+    'lunch'
   );
   
   const snack = createMeal(
@@ -152,7 +162,9 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     snackCalories, 
     proteinGrams * 0.15,
     carbsGrams * 0.15,
-    fatsGrams * 0.15
+    fatsGrams * 0.15,
+    true, // Ensure protein target is met
+    'snack'
   );
   
   const dinner = createMeal(
@@ -160,7 +172,9 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     dinnerCalories, 
     proteinGrams * 0.3,
     carbsGrams * 0.3,
-    fatsGrams * 0.3
+    fatsGrams * 0.3,
+    true, // Ensure protein target is met
+    'dinner'
   );
   
   const meals = [breakfast, lunch, snack, dinner];
@@ -201,6 +215,19 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
  * Create a new version of a meal with similar macros but different foods
  */
 export const shuffleMeal = (meal: Meal, targetProtein: number, targetCarbs: number, targetFat: number): Meal => {
+  // Get the meal type from the meal name
+  let mealType = "lunch"; // default
+  
+  if (meal.name.toLowerCase().includes("breakfast")) {
+    mealType = "breakfast";
+  } else if (meal.name.toLowerCase().includes("lunch")) {
+    mealType = "lunch";
+  } else if (meal.name.toLowerCase().includes("snack")) {
+    mealType = "snack";
+  } else if (meal.name.toLowerCase().includes("dinner")) {
+    mealType = "dinner";
+  }
+  
   // When shuffling, we want to maintain the same macro balance but with different foods
   // We'll ensure we hit at least 95% of protein target by passing true to createMeal
   return createMeal(
@@ -209,7 +236,8 @@ export const shuffleMeal = (meal: Meal, targetProtein: number, targetCarbs: numb
     targetProtein,
     targetCarbs,
     targetFat,
-    true // ensure we prioritize hitting protein targets
+    true, // ensure we prioritize hitting protein targets
+    mealType // pass the meal type to ensure culturally appropriate foods
   );
 };
 
