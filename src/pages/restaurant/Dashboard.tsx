@@ -1,20 +1,13 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { RestaurantDashboard } from '@/components/restaurant/RestaurantDashboard';
 import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { Navigate } from 'react-router-dom';
+import { EnhancedAnalyticsDashboard } from '@/components/restaurant/analytics/EnhancedAnalyticsDashboard';
 
 const Dashboard = () => {
   const { isRestaurantOwner, loading, user } = useRestaurantAuth();
-
-  useEffect(() => {
-    console.log("Restaurant Dashboard Page Mounted, user:", user);
-    
-    if (!user) {
-      console.log("No user found, redirecting to auth");
-    }
-  }, [user]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -27,7 +20,10 @@ const Dashboard = () => {
 
   return (
     <RestaurantLayout>
-      <RestaurantDashboard />
+      <div className="space-y-8">
+        <RestaurantDashboard />
+        <EnhancedAnalyticsDashboard />
+      </div>
     </RestaurantLayout>
   );
 };
