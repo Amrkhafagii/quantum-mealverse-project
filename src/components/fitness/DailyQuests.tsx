@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -107,7 +106,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
         user_id: userId,
         title: 'Daily Workout',
         description: 'Complete any workout session today',
+        type: 'workout',
         points: 20,
+        difficulty: 'easy',
+        icon: 'workout',
         completed: false,
         created_at: now.toISOString(),
         expires_at: tomorrow.toISOString()
@@ -117,7 +119,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
         user_id: userId,
         title: 'Hydration Goal',
         description: 'Log drinking at least 8 cups of water',
+        type: 'wellness',
         points: 10,
+        difficulty: 'easy',
+        icon: 'water',
         completed: false,
         created_at: now.toISOString(),
         expires_at: tomorrow.toISOString()
@@ -132,7 +137,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
           user_id: userId,
           title: 'Morning Stretch',
           description: 'Complete a 5-minute stretching routine',
+          type: 'workout',
           points: 10,
+          difficulty: 'easy',
+          icon: 'stretch',
           completed: false,
           created_at: now.toISOString(),
           expires_at: tomorrow.toISOString()
@@ -142,7 +150,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
           user_id: userId,
           title: 'Step Goal',
           description: 'Reach 5,000 steps today',
+          type: 'steps',
           points: 15,
+          difficulty: 'easy',
+          icon: 'steps',
           completed: false,
           created_at: now.toISOString(),
           expires_at: tomorrow.toISOString()
@@ -158,7 +169,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
           user_id: userId,
           title: 'Cardio Session',
           description: 'Complete 20 minutes of cardio exercise',
+          type: 'workout',
           points: 20,
+          difficulty: 'medium',
+          icon: 'cardio',
           completed: false,
           created_at: now.toISOString(),
           expires_at: tomorrow.toISOString()
@@ -168,7 +182,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
           user_id: userId,
           title: 'Step Goal',
           description: 'Reach 8,000 steps today',
+          type: 'steps',
           points: 20,
+          difficulty: 'medium',
+          icon: 'steps',
           completed: false,
           created_at: now.toISOString(),
           expires_at: tomorrow.toISOString()
@@ -184,7 +201,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
           user_id: userId,
           title: 'High-Intensity Workout',
           description: 'Complete a workout with at least 400 calories burned',
+          type: 'workout',
           points: 30,
+          difficulty: 'hard',
+          icon: 'hiit',
           completed: false,
           created_at: now.toISOString(),
           expires_at: tomorrow.toISOString()
@@ -194,7 +214,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
           user_id: userId,
           title: 'Step Goal',
           description: 'Reach 10,000 steps today',
+          type: 'steps',
           points: 25,
+          difficulty: 'hard',
+          icon: 'steps',
           completed: false,
           created_at: now.toISOString(),
           expires_at: tomorrow.toISOString()
@@ -209,7 +232,10 @@ const DailyQuests: React.FC<DailyQuestsProps> = ({
         user_id: userId,
         title: 'Elite Challenge',
         description: 'Complete 2 workouts in a single day',
+        type: 'workout',
         points: 50,
+        difficulty: 'hard',
+        icon: 'elite',
         completed: false,
         created_at: now.toISOString(),
         expires_at: tomorrow.toISOString()

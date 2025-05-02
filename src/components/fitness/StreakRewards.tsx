@@ -1,283 +1,143 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Gift, Flame, Trophy, Award } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Gift, Check, Star } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { UserStreak, StreakReward } from '@/types/fitness';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
 
 interface StreakRewardsProps {
   userId?: string;
-  currentStreak?: number;
-  longestStreak?: number;
+  userStreak?: UserStreak | null;
 }
 
-const StreakRewards: React.FC<StreakRewardsProps> = ({
-  userId,
-  currentStreak = 0,
-  longestStreak = 0
-}) => {
-  const { toast } = useToast();
-  const [streak, setStreak] = useState<UserStreak | null>(null);
+const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, userStreak }) => {
   const [rewards, setRewards] = useState<StreakReward[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showRewardAnimation, setShowRewardAnimation] = useState<string | null>(null);
+  const [claimedRewards, setClaimedRewards] = useState<string[]>([]);
 
   useEffect(() => {
-    if (userId) {
-      loadStreakData();
-    } else {
-      setLoading(false);
-    }
-  }, [userId, currentStreak, longestStreak]);
+    // Load rewards from a data source (e.g., database)
+    const loadedRewards = getRewards();
+    setRewards(loadedRewards);
+  }, []);
 
-  const loadStreakData = async () => {
-    setLoading(true);
-    try {
-      // If we have current and longest streak provided as props, use those
-      if (currentStreak > 0 || longestStreak > 0) {
-        setStreak({
-          id: 'mock-id',
-          user_id: userId || '',
-          currentstreak: currentStreak,
-          longeststreak: longestStreak,
-          last_activity_date: new Date().toISOString(),
-          streak_type: 'workout'
-        });
-      } else {
-        // In a real app, we would fetch from the database:
-        /*
-        const { data, error } = await supabase
-          .from('user_streaks')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('streak_type', 'workout')
-          .maybeSingle();
-          
-        if (error) throw error;
-        setStreak(data);
-        */
-        
-        // Mock data for development
-        setStreak({
-          id: 'mock-id',
-          user_id: userId || '',
-          currentstreak: 5,
-          longeststreak: 12,
-          last_activity_date: new Date().toISOString(),
-          streak_type: 'workout'
-        });
-      }
-      
-      // Generate streak rewards
-      setRewards(generateStreakRewards());
-    } catch (error) {
-      console.error('Error loading streak data:', error);
+  const handleClaimReward = (reward: StreakReward) => {
+    if (!userId) {
       toast({
-        title: 'Error',
-        description: 'Failed to load streak information',
+        title: 'Authentication Required',
+        description: 'Please sign in to claim rewards',
         variant: 'destructive'
       });
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    // Check if user has already claimed this reward
+    if (claimedRewards.includes(reward.id)) {
+      toast({
+        title: 'Already Claimed',
+        description: 'You have already claimed this reward',
+      });
+      return;
+    }
+
+    // Check if user meets the streak requirement
+    if (!userStreak || userStreak.currentstreak < reward.streak_length) {
+      toast({
+        title: 'Streak Too Short',
+        description: `You need a streak of ${reward.streak_length} days to claim this reward`,
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Claim the reward (in a real app, this would update the database)
+    setClaimedRewards([...claimedRewards, reward.id]);
+
+    // Show a success message
+    toast({
+      title: 'Reward Claimed',
+      description: `You have claimed ${reward.reward_description}`,
+    });
   };
 
-  const generateStreakRewards = (): StreakReward[] => {
+  const getRewards = (): StreakReward[] => {
+    // Basic rewards structure - in a real app, this would come from the database
     return [
-      { days: 3, points: 15, description: 'Three-day streak', claimed: true },
-      { days: 7, points: 50, description: 'One week consistency', claimed: false },
-      { days: 14, points: 100, description: 'Two week dedication', claimed: false },
-      { days: 30, points: 200, description: 'One month commitment', claimed: false },
-      { days: 60, points: 350, description: 'Two month mastery', claimed: false },
-      { days: 90, points: 500, description: 'Three month transformation', claimed: false },
+      {
+        id: '1',
+        streak_length: 3,
+        reward_description: '50 fitness points',
+        reward_type: 'points',
+        reward_value: 50,
+        icon: 'star'
+      },
+      {
+        id: '2',
+        streak_length: 7,
+        reward_description: 'Bronze Achiever Badge',
+        reward_type: 'badge',
+        reward_value: 'bronze_badge',
+        icon: 'trophy'
+      },
+      {
+        id: '3',
+        streak_length: 14,
+        reward_description: '10% off next supplement order',
+        reward_type: 'discount',
+        reward_value: '10',
+        icon: 'gift'
+      },
     ];
   };
 
-  const handleClaimReward = (reward: StreakReward) => {
-    // Trigger confetti effect
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-    
-    setShowRewardAnimation(reward.description);
-    
-    // Update the state
-    setRewards(prevRewards => {
-      return prevRewards.map(r => {
-        if (r.days === reward.days) {
-          return { ...r, claimed: true };
-        }
-        return r;
-      });
-    });
-    
-    // Show toast
-    toast({
-      title: 'Reward Claimed!',
-      description: `You earned ${reward.points} points for ${reward.description}!`,
-    });
-    
-    // Reset animation state after animation completes
-    setTimeout(() => {
-      setShowRewardAnimation(null);
-    }, 2000);
-    
-    // In a real app, we would update the database and user points
-  };
-
-  const getNextReward = () => {
-    if (!streak) return null;
-    return rewards.find(r => r.days > streak.currentstreak && !r.claimed);
-  };
-
-  const getProgressToNextReward = () => {
-    const nextReward = getNextReward();
-    if (!streak || !nextReward) return 0;
-    
-    return Math.min(100, Math.round((streak.currentstreak / nextReward.days) * 100));
-  };
-
-  const isClaimable = (reward: StreakReward) => {
-    return streak && streak.currentstreak >= reward.days && !reward.claimed;
-  };
-
-  if (loading) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <p>Loading streak information...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!userId || !streak) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <p className="text-gray-400">Sign in and start working out to build your streak!</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const nextReward = getNextReward();
-
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl flex items-center gap-2">
-          <Flame className="h-5 w-5 text-orange-400" />
-          Workout Streak
+      <CardHeader>
+        <CardTitle className="text-xl font-bold text-quantum-cyan">
+          Streak Rewards
         </CardTitle>
-        <CardDescription>
-          Stay consistent to earn bonus rewards
-        </CardDescription>
       </CardHeader>
-      
-      <CardContent>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="flex items-center">
-              <Flame className="h-6 w-6 text-orange-400 mr-2" />
-              <span className="text-2xl font-bold">{streak.currentstreak} days</span>
+      <CardContent className="space-y-4">
+        {userStreak ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-300">Current Streak:</span>
+              <span className="font-bold text-quantum-cyan">{userStreak.currentstreak} days</span>
             </div>
-            <p className="text-xs text-gray-400">Current streak</p>
-          </div>
-          
-          <div className="text-right">
-            <div className="flex items-center justify-end">
-              <Trophy className="h-5 w-5 text-yellow-400 mr-2" />
-              <span className="text-lg font-bold">{streak.longeststreak} days</span>
+            <Progress value={(userStreak.currentstreak / 30) * 100} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rewards.map((reward) => (
+                <motion.div
+                  key={reward.id}
+                  className={`p-4 rounded-md bg-quantum-black/40 border border-gray-700 hover:border-quantum-purple/50 transition-colors cursor-pointer ${claimedRewards.includes(reward.id) ? 'opacity-50 pointer-events-none' : ''}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleClaimReward(reward)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-sm">{reward.reward_description}</h4>
+                      <p className="text-xs text-gray-400">
+                        Streak: {reward.streak_length} days
+                      </p>
+                    </div>
+                    <div>
+                      {reward.icon === 'star' && <Star className="h-5 w-5 text-yellow-400" />}
+                      {reward.icon === 'trophy' && <Trophy className="h-5 w-5 text-yellow-400" />}
+                      {reward.icon === 'gift' && <Gift className="h-5 w-5 text-yellow-400" />}
+                      {claimedRewards.includes(reward.id) && <Check className="h-5 w-5 text-green-500" />}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-            <p className="text-xs text-gray-400">Longest streak</p>
-          </div>
-        </div>
-        
-        {nextReward && (
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-1 text-sm">
-              <span>Next reward in {nextReward.days - streak.currentstreak} days</span>
-              <span>{streak.currentstreak}/{nextReward.days}</span>
-            </div>
-            <Progress value={getProgressToNextReward()} className="h-2" />
-            <p className="text-xs text-gray-400 mt-1">
-              {nextReward.description} (+{nextReward.points} points)
-            </p>
+          </>
+        ) : (
+          <div className="text-center p-6 text-gray-400">
+            <p>No streak data available. Start working out to earn rewards!</p>
           </div>
         )}
-        
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium mb-2">Streak Rewards:</h4>
-          
-          <AnimatePresence>
-            {rewards.map((reward) => (
-              <motion.div
-                key={reward.days}
-                className={`p-2 rounded-md flex justify-between items-center ${
-                  isClaimable(reward) 
-                    ? 'bg-gradient-to-r from-orange-500/20 to-yellow-500/20 border border-orange-500/30' 
-                    : reward.claimed 
-                    ? 'bg-quantum-black/20 border border-quantum-cyan/20' 
-                    : 'bg-quantum-black/40 border border-gray-700'
-                }`}
-                animate={{
-                  scale: showRewardAnimation === reward.description ? [1, 1.05, 1] : 1,
-                  y: showRewardAnimation === reward.description ? [0, -5, 0] : 0
-                }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`rounded-full p-1 ${
-                    reward.claimed ? 'bg-quantum-cyan/20 text-quantum-cyan' : 'bg-gray-700 text-gray-400'
-                  }`}>
-                    {reward.claimed ? (
-                      <Award className="h-4 w-4" />
-                    ) : (
-                      <Calendar className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div>
-                    <p className={`text-sm ${reward.claimed || isClaimable(reward) ? 'text-white' : 'text-gray-400'}`}>
-                      {reward.days} day streak
-                    </p>
-                    <p className="text-xs text-gray-400">{reward.description}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge className={reward.claimed || isClaimable(reward) ? 'bg-yellow-600/80' : 'bg-gray-700'}>
-                    +{reward.points}
-                  </Badge>
-                  
-                  {isClaimable(reward) && (
-                    <Button 
-                      size="sm" 
-                      className="h-7 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600"
-                      onClick={() => handleClaimReward(reward)}
-                    >
-                      <Gift className="h-3 w-3 mr-1" /> Claim
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-        
-        <div className="mt-4 p-3 bg-cyan-950/30 border border-cyan-900/50 rounded-md">
-          <p className="text-sm text-cyan-300">
-            <span className="font-semibold">Tip:</span> Log your workouts daily to build your streak. Missing a day resets your streak to zero!
-          </p>
-        </div>
       </CardContent>
     </Card>
   );

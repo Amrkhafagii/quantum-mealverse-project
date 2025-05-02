@@ -26,6 +26,12 @@ export interface UserProfile {
   updated_at?: string;
   goal_weight?: number;  // Added goal_weight property
   fitness_goals?: string[];  // Added fitness_goals array
+  // Adding fields from fitness_profiles
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
+  display_name?: string;
+  date_of_birth?: string;
+  fitness_level?: string;
 }
 
 // Measurement Tracking
@@ -133,6 +139,7 @@ export interface WorkoutHistoryItem {
   total_exercises?: number;  // Added total_exercises property
   workout_plan_name?: string;  // Added workout_plan_name property
   workout_day_name?: string;  // Added workout_day_name property
+  user_id?: string; // For compatibility with FitnessAnalyticsDashboard
 }
 
 export interface UserWorkoutStats {
@@ -219,6 +226,7 @@ export interface StreakReward {
   reward_type: 'badge' | 'points' | 'discount' | 'feature';
   reward_value: number | string;
   icon: string;
+  days?: number; // Added to support StreakRewards component
 }
 
 // Goals System
@@ -236,6 +244,13 @@ export interface FitnessGoal {
   completed_date?: string;
   color?: string;
   units?: string;
+  // Adding missing fields used in GoalManagement
+  name?: string;
+  status?: 'active' | 'completed' | 'abandoned';
+  created_at?: string;
+  updated_at?: string;
+  target_weight?: number;
+  target_body_fat?: number;
 }
 
 // Team & Challenges

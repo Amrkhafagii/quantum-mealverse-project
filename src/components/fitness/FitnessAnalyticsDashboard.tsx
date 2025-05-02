@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, subMonths, subWeeks, startOfMonth, endOfMonth } from 'date-fns';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -9,6 +9,7 @@ import { UserMeasurement, WorkoutHistoryItem } from '@/types/fitness';
 import { getUserMeasurements } from '@/services/measurementService';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Calendar, TrendingUp } from 'lucide-react';
+import AdvancedProgressCharts from './AdvancedProgressCharts';
 
 interface FitnessAnalyticsDashboardProps {
   userId?: string;
@@ -19,6 +20,7 @@ const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F'
 const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ userId }) => {
   const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutHistoryItem[]>([]);
+  const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
   const [timeframe, setTimeframe] = useState<'1w' | '1m' | '3m' | '6m' | 'all'>('1m');
   const [activeTab, setActiveTab] = useState('weight');
   const [loading, setLoading] = useState(true);
@@ -57,18 +59,52 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
     if (!userId) return;
     
     try {
+      setLoading(true);
+      
+      const startDate = new Date();
+      const endDate = new Date();
+      
+      switch (timeframe) {
+        case '1w':
+          startDate = subWeeks(endDate, 1);
+          break;
+        case '1m':
+          startDate = subMonths(endDate, 1);
+          break;
+        case '3m':
+          startDate = subMonths(endDate, 3);
+          break;
+        case '6m':
+          startDate = subMonths(endDate, 6);
+          break;
+        default:
+          startDate = startOfMonth(endDate);
+          endDate = endOfMonth(endDate);
+      }
+      
       const { data, error } = await supabase
         .from('workout_history')
         .select('*')
         .eq('user_id', userId)
+        .gte('date', startDate.toISOString())
         .order('date', { ascending: false });
-        
+      
       if (error) throw error;
       
-      const filteredData = filterDataByTimeframe(data || []);
-      setWorkouts(filteredData);
+      if (data) {
+        // Make sure the data has all required fields for WorkoutHistoryItem
+        const typedData = data.map(item => ({
+          ...item,
+          workout_name: item.workout_plan_name || 'Workout', // Ensure workout_name exists
+          exercises_count: item.total_exercises || 0 // Ensure exercises_count exists
+        }));
+        
+        setWorkoutHistory(typedData as WorkoutHistoryItem[]);
+      }
     } catch (error) {
-      console.error('Error loading workout history:', error);
+      console.error('Error fetching workout history:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
