@@ -100,7 +100,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
           .select('*')
           .eq('order_id', assignment.order_id);
         
-        // Create a properly typed Order object
+        // Create a properly typed Order object - make sure to handle latitude and longitude correctly
         const order: Order = {
           id: orderData.id,
           user_id: orderData.user_id,
@@ -116,9 +116,9 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
           subtotal: orderData.subtotal,
           total: orderData.total,
           status: orderData.status,
-          // Either use the values from orderData or provide default null values
-          latitude: orderData.latitude || null,
-          longitude: orderData.longitude || null,
+          // Cast latitude and longitude explicitly with null fallback values
+          latitude: orderData.latitude !== undefined ? Number(orderData.latitude) : null,
+          longitude: orderData.longitude !== undefined ? Number(orderData.longitude) : null,
           formatted_order_id: orderData.formatted_order_id,
           created_at: orderData.created_at,
           updated_at: orderData.updated_at,

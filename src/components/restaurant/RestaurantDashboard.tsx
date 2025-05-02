@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RestaurantAnalytics } from './analytics/RestaurantAnalytics';
 
 export const RestaurantDashboard = () => {
   const { restaurant } = useRestaurantAuth();
@@ -258,30 +259,8 @@ export const RestaurantDashboard = () => {
           </div>
         </TabsContent>
         
-        <TabsContent value="analytics">
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>View detailed performance analytics for your restaurant</CardDescription>
-            </CardHeader>
-            <CardContent className="py-10 text-center">
-              <PieChart className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-medium mb-2">Analytics Dashboard Coming Soon</h3>
-              <p className="text-gray-400 max-w-md mx-auto">
-                We're building a comprehensive analytics dashboard to help you gain insights into your restaurant's performance.
-              </p>
-            </CardContent>
-            <CardFooter className="border-t border-quantum-cyan/10 pt-4 flex justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4" />
-                <span>Coming soon</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4" />
-                <span>Q2 2025</span>
-              </div>
-            </CardFooter>
-          </Card>
+        <TabsContent value="analytics" className="mt-6">
+          <RestaurantAnalytics />
         </TabsContent>
       </Tabs>
     </div>
