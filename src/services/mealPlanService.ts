@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
 import { MealPlan, Meal, Food, MealFood } from '@/types/food';
@@ -29,9 +28,7 @@ export const saveMealPlan = async (mealPlan: MealPlan, name: string, userId: str
       date_created: now.toISOString(),
       tdee_id: tdeeId,
       meal_plan: mealPlanJson,
-      // @ts-ignore - Adding expires_at which exists in our DB but not in the generated types
       expires_at: expiresAt.toISOString(),
-      // @ts-ignore - Adding is_active which exists in our DB but not in the generated types
       is_active: true
     }).select().returns<SavedMealPlan[]>();
 
@@ -87,9 +84,7 @@ export const renewMealPlan = async (mealPlanId: string): Promise<{
     const { error } = await supabase
       .from('saved_meal_plans')
       .update({
-        // @ts-ignore - Adding expires_at and is_active which exist in DB but not in generated types
         expires_at: newExpirationDate.toISOString(),
-        // @ts-ignore - Adding is_active which exists in DB but not in generated types
         is_active: true
       })
       .eq('id', mealPlanId);

@@ -14,7 +14,6 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     const { data, error } = await supabase
       .from('saved_meal_plans')
       .select('*')
-      // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
       .lt('expires_at', now)
       .eq('is_active', true)
       .returns<SavedMealPlan[]>();
@@ -29,10 +28,8 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     const { error: updateError } = await supabase
       .from('saved_meal_plans')
       .update({ 
-        // @ts-ignore - Using is_active which exists in DB but not in base type
         is_active: false 
       })
-      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', now)
       .eq('is_active', true);
     
@@ -62,10 +59,8 @@ export const checkExpiredMealPlans = async (): Promise<{
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
       .update({ 
-        // @ts-ignore - Using is_active which exists in DB but not in base type
         is_active: false 
       })
-      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', now)
       .eq('is_active', true)
       .select('count');
@@ -104,13 +99,10 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{
     // Find meal plans expiring in the next 3 days
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
-      .select('id, name, expires_at')
+      .select('id, name, expires_at', { count: 'exact' })
       .eq('user_id', userId)
-      // @ts-ignore - Using is_active which exists in DB but not in base type
       .eq('is_active', true)
-      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', threeDaysLater.toISOString())
-      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .gt('expires_at', now.toISOString())
       .returns<Partial<SavedMealPlan>[]>();
       
