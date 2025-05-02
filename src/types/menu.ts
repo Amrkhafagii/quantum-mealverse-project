@@ -5,7 +5,7 @@ export interface MenuItem {
   id: string;
   restaurant_id: string;
   name: string;
-  description: string;
+  description: string; // Changed to optional to match restaurant.MenuItem
   price: number;
   image_url?: string;
   is_available: boolean;

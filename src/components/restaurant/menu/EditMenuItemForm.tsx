@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -11,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Check, Loader2, X } from 'lucide-react';
 import { saveMenuItem } from '@/services/restaurant/menuService';
 import { toast } from '@/hooks/use-toast';
-import { MenuItem } from '@/types/menu';
+import { MenuItem } from '@/types/menu'; // Use MenuItem from menu.ts
 
 // Define the form schema
 const menuItemSchema = z.object({

@@ -23,7 +23,7 @@ export interface MenuItem {
   id: string;
   restaurant_id: string;
   name: string;
-  description?: string;
+  description?: string; // Keep this optional as it was before
   price: number;
   image_url?: string;
   is_available: boolean;
@@ -31,6 +31,20 @@ export interface MenuItem {
   preparation_time: number;
   created_at?: string;
   updated_at?: string;
+  // Add the missing properties to make it compatible with menu.MenuItem
+  ingredients?: string[];
+  steps?: string[];
+  nutritional_info?: {
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    allergens?: string[];
+    health_score?: number;
+  };
 }
 
 export enum OrderStatus {

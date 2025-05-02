@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem, MenuCategory, NutritionalInfo } from '@/types/menu';
 import { Database } from '@/integrations/supabase/types';
@@ -61,9 +60,10 @@ export const getMenuItems = async (
     return (data || []).map(item => {
       console.log(`Processing menu item: ${item.name}, restaurant_id: ${item.restaurant_id}`);
       
-      // Ensure we always have arrays for ingredients and steps
+      // Ensure we always have a description string to satisfy MenuItem from menu.ts
       return {
         ...item,
+        description: item.description || '', // Ensure description is never undefined
         nutritional_info: item.nutritional_info as unknown as NutritionalInfo,
         ingredients: item.ingredients || [],
         steps: item.steps || []

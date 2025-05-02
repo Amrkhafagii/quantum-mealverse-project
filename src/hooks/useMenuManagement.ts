@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { MenuItem, MenuCategory, NutritionalInfo, calculateHealthScore } from '@/types/menu';
@@ -14,7 +15,7 @@ const INITIAL_MENU_ITEM: MenuItem = {
   id: '',
   restaurant_id: '',
   name: '',
-  description: '',
+  description: '', // This is required in MenuItem from menu.ts
   price: 0,
   category: '',
   is_available: true,

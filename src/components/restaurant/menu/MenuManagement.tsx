@@ -8,7 +8,7 @@ import { PlusCircle, Search, Loader2, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { getMenuItems } from '@/services/restaurant/menuService';
-import { MenuItem } from '@/types/restaurant';
+import { MenuItem } from '@/types/menu'; // Import from menu.ts not restaurant.ts
 import MenuItemCard from './MenuItemCard';
 import AddMenuItemForm from './AddMenuItemForm';
 
@@ -34,7 +34,16 @@ export const MenuManagement = () => {
     try {
       setLoading(true);
       const items = await getMenuItems(restaurant.id);
-      setMenuItems(items);
+      // Ensure all items have a description (required by MenuItem from menu.ts)
+      const normalizedItems: MenuItem[] = items.map(item => ({
+        ...item,
+        description: item.description || '', // Ensure description is never undefined
+        ingredients: item.ingredients || [],
+        steps: item.steps || [],
+        nutritional_info: item.nutritional_info || {}
+      }));
+      
+      setMenuItems(normalizedItems);
       
       // Extract unique categories
       const uniqueCategories = Array.from(new Set(items.map(item => item.category)));

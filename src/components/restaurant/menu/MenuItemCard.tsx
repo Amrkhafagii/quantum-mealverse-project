@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Edit, Trash2, Info } from 'lucide-react';
-import { MenuItem } from '@/types/menu';
+import { MenuItem } from '@/types/menu'; // Use MenuItem from menu.ts
 import {
   Dialog,
   DialogContent,
