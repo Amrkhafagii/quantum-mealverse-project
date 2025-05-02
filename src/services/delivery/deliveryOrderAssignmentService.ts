@@ -127,13 +127,13 @@ export const pickupDelivery = async (
   assignmentId: string
 ): Promise<DeliveryAssignment> => {
   try {
-    const { data, error } = await updateDeliveryStatus(assignmentId, 'picked_up');
+    const result = await updateDeliveryStatus(assignmentId, 'picked_up');
     
-    if (error) {
-      throw error;
+    if (result.error) {
+      throw result.error;
     }
     
-    return data;
+    return result.data;
   } catch (error) {
     console.error('Error in pickupDelivery:', error);
     throw error;
@@ -145,13 +145,13 @@ export const startDeliveryToCustomer = async (
   assignmentId: string
 ): Promise<DeliveryAssignment> => {
   try {
-    const { data, error } = await updateDeliveryStatus(assignmentId, 'on_the_way');
+    const result = await updateDeliveryStatus(assignmentId, 'on_the_way');
     
-    if (error) {
-      throw error;
+    if (result.error) {
+      throw result.error;
     }
     
-    return data;
+    return result.data;
   } catch (error) {
     console.error('Error in startDeliveryToCustomer:', error);
     throw error;
@@ -179,10 +179,10 @@ export const completeDelivery = async (
     }
     
     // Mark as delivered
-    const { data: updatedAssignment, error } = await updateDeliveryStatus(assignmentId, 'delivered');
+    const result = await updateDeliveryStatus(assignmentId, 'delivered');
     
-    if (error) {
-      throw error;
+    if (result.error) {
+      throw result.error;
     }
     
     // Update order status
@@ -215,7 +215,7 @@ export const completeDelivery = async (
     // Update delivery user statistics (simulated)
     console.log('Updating delivery stats for user', deliveryUserId);
     
-    return updatedAssignment;
+    return result.data;
   } catch (error) {
     console.error('Error in completeDelivery:', error);
     toast({
@@ -245,9 +245,19 @@ const updateDeliveryStatus = async (
       .select()
       .single();
       
-    return result;
+    if (result.error) {
+      return { data: null as unknown as DeliveryAssignment, error: result.error };
+    }
+    
+    // Cast the status to the expected type
+    const typedData: DeliveryAssignment = {
+      ...result.data,
+      status: result.data.status as DeliveryAssignment['status']
+    };
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error updating delivery status:', error);
-    throw error;
+    return { data: null as unknown as DeliveryAssignment, error };
   }
 };
