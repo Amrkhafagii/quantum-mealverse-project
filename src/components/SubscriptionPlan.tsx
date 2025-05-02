@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 import HolographicCard from './HolographicCard';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PlanFeature {
   text: string;
@@ -54,48 +56,90 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
       console.error('Direct logging test error:', err);
     }
     
+    toast.success(`Selected the ${title} plan!`);
+    
     // Call the provided onSubscribe handler
     if (onSubscribe) {
       onSubscribe();
     }
   };
 
+  const getGlowColor = () => {
+    if (highlighted) {
+      return 'rgba(108, 92, 231, 0.5)'; // Purple glow for highlighted
+    } else if (title.includes('Basic')) {
+      return 'rgba(0, 245, 212, 0.5)'; // Cyan glow for Basic
+    } else {
+      return 'rgba(0, 245, 212, 0.5)'; // Cyan glow for Ultimate
+    }
+  };
+
+  const getTitleColor = () => {
+    if (highlighted) {
+      return "text-quantum-purple";
+    } else if (title.includes('Basic')) {
+      return "text-quantum-cyan";
+    } else {
+      return "text-quantum-cyan";
+    }
+  };
+
+  const getPriceColor = () => {
+    if (highlighted) {
+      return "text-quantum-purple";
+    } else if (title.includes('Basic')) {
+      return "text-quantum-cyan";
+    } else {
+      return "text-quantum-cyan";
+    }
+  };
+
+  const getButtonStyle = () => {
+    if (highlighted) {
+      return "bg-quantum-purple text-white hover:bg-quantum-darkPurple";
+    } else if (title.includes('Basic')) {
+      return "bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10";
+    } else {
+      return "bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10";
+    }
+  };
+
   return (
     <HolographicCard
       className={cn(
-        'h-full flex flex-col',
-        highlighted ? 'border-2 border-quantum-purple neon-glow' : 'border border-quantum-cyan/30',
+        'h-full flex flex-col relative overflow-hidden',
+        highlighted ? 'border-2 border-quantum-purple' : 'border border-quantum-cyan/30',
         className
       )}
-      glowColor={highlighted ? 'rgba(108, 92, 231, 0.5)' : 'rgba(0, 245, 212, 0.3)'}
+      glowColor={getGlowColor()}
     >
       {highlighted && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-quantum-purple text-quantum-black px-4 py-1 rounded-full text-sm font-bold">
-          Most Popular
+        <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold">
+          MOST Popular
         </div>
       )}
 
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full pt-8 p-6">
         <div className="mb-4">
           <h3 className={cn(
-            "text-2xl font-bold mb-2",
-            highlighted ? "text-quantum-purple" : "text-quantum-cyan"
+            "text-3xl font-bold mb-2",
+            getTitleColor()
           )}>
             {title}
           </h3>
-          <div className="flex items-end mb-2">
+          <div className="flex items-baseline mb-2">
             <span className={cn(
-              "text-4xl font-bold",
-              highlighted ? "text-quantum-purple" : "text-quantum-cyan"
+              "text-5xl font-bold",
+              getPriceColor()
             )}>
               ${price}
             </span>
-            <span className="text-sm ml-1 mb-1 text-gray-400">/{period}</span>
+            <span className="text-sm ml-1 text-gray-400">/{period}</span>
           </div>
-          <p className="text-gray-400 mb-6">{description}</p>
+          <p className="text-gray-400 mb-6 h-12">{description}</p>
         </div>
 
-        <div className="space-y-3 mb-8 flex-grow">
+        <div className="space-y-4 mb-8 flex-grow">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -106,7 +150,7 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
             >
               <Check
                 className={cn(
-                  "h-5 w-5 mr-2 flex-shrink-0",
+                  "h-5 w-5 mr-3 flex-shrink-0",
                   feature.included
                     ? highlighted
                       ? "text-quantum-purple"
@@ -124,10 +168,8 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         <button
           onClick={handleClick}
           className={cn(
-            "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta",
-            highlighted
-              ? "bg-quantum-purple text-white hover:bg-quantum-darkPurple"
-              : "cyber-button"
+            "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta mt-auto",
+            getButtonStyle()
           )}
         >
           {ctaText}

@@ -1,3 +1,4 @@
+
 /* Import Space Grotesk Font */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 /* For Technor font, we'll use a fallback monospace and apply styles to make it look cyber */
@@ -94,6 +95,14 @@
     border-radius: 10px;
     overflow: hidden;
     @apply border border-quantum-cyan/20;
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+    transition: all 0.3s ease;
+  }
+  
+  .holographic-card:hover {
+    transform: perspective(1000px) translateZ(10px);
+    box-shadow: 0 0 30px rgba(0, 245, 212, 0.15);
   }
   
   .holographic-card::before {
@@ -174,6 +183,33 @@
 
   .cyber-button:hover::before {
     @apply w-full;
+  }
+  
+  /* New animation classes */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulseSlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulseSlow {
+    0%, 100% { 
+      opacity: 0.8; 
+    }
+    50% { 
+      opacity: 0.4; 
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% { 
+      transform: translateY(0); 
+    }
+    50% { 
+      transform: translateY(-10px); 
+    }
   }
 }
 

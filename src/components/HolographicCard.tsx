@@ -16,6 +16,7 @@ const HolographicCard: React.FC<HolographicCardProps> = ({
   onClick,
 }) => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -27,29 +28,49 @@ const HolographicCard: React.FC<HolographicCardProps> = ({
   return (
     <div
       className={cn(
-        'holographic-card transition-all duration-200 cursor-pointer group',
+        'holographic-card transition-all duration-200 cursor-pointer group relative rounded-xl overflow-hidden',
         className
       )}
       onClick={onClick}
       onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         '--x': `${mousePosition.x}%`,
         '--y': `${mousePosition.y}%`,
         '--glow-color': glowColor,
       } as React.CSSProperties}
     >
-      <div className="relative z-10 p-5 backdrop-blur-sm">
-        {children}
-      </div>
+      {/* Background gradient effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-quantum-darkBlue/90 to-quantum-black opacity-80 z-0"></div>
+      
+      {/* Content with backdrop blur */}
+      <div className="relative z-10 backdrop-blur-sm">{children}</div>
+      
+      {/* Interactive glow effect on hover */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300"
+        className="absolute inset-0 opacity-0 group-hover:opacity-40 transition-opacity duration-300 z-0"
         style={{
-          background: `radial-gradient(circle at var(--x) var(--y), var(--glow-color), transparent 50%)`,
+          background: `radial-gradient(circle at var(--x) var(--y), var(--glow-color), transparent 70%)`,
         }}
       />
-      <div className="absolute inset-0 opacity-30 group-hover:opacity-0 transition-opacity duration-300">
-        <div className="h-full w-full bg-gradient-to-br from-quantum-cyan/10 to-quantum-purple/10" />
+      
+      {/* Border glow for highlighted cards */}
+      <div className={cn(
+        "absolute inset-0 opacity-0 group-hover:opacity-20 transition-all duration-500 z-0",
+        className?.includes("border-quantum-purple") ? "opacity-10" : ""
+      )}>
+        <div className="h-full w-full bg-gradient-to-br from-quantum-cyan/20 to-quantum-purple/20" />
       </div>
+      
+      {/* Grid overlay */}
+      <div 
+        className="absolute inset-0 opacity-5 pointer-events-none z-0"
+        style={{
+          backgroundImage: 'linear-gradient(to right, #00f5d420 1px, transparent 1px), linear-gradient(to bottom, #00f5d420 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      />
     </div>
   );
 };
