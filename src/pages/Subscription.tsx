@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -9,6 +8,7 @@ import { useCustomerLogger } from '@/hooks/useCustomerLogger';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { motion } from 'framer-motion';
+import { Check } from 'lucide-react'; // Added missing Check import
 
 const Subscription = () => {
   const { logEvent } = useCustomerLogger();
