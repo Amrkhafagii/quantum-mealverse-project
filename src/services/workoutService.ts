@@ -1,67 +1,21 @@
-import { fromTable } from './supabaseClient';
-import { 
-  WorkoutPlan, 
-  WorkoutLog, 
-  WorkoutHistoryItem, 
-  UserWorkoutStats, 
-  WorkoutSchedule,
-  WorkoutDay 
-} from '@/types/fitness';
-import { Json } from '@/integrations/supabase/types';
-import { toSupabaseJson, fromSupabaseJson } from '@/utils/supabaseUtils';
-import { checkAchievements } from './achievementService';
-
-/**
- * Saves a workout plan to the database
- */
-export const saveWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
-  try {
-    // Convert workout_days to a JSON compatible format
-    const planForStorage = {
-      ...plan,
-      // Properly convert the workout_days array to a JSON-serializable object
-      workout_days: toSupabaseJson(plan.workout_days)
-    };
-    
-    const { data, error } = await fromTable('workout_plans')
-      .insert(planForStorage)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // Convert the JSON data back to our WorkoutPlan type
-    const resultPlan = data ? {
-      ...data,
-      workout_days: fromSupabaseJson<WorkoutDay[]>(data.workout_days as Json)
-    } : null;
-    
-    return { data: resultPlan as WorkoutPlan, error: null };
-  } catch (error) {
-    console.error('Error saving workout plan:', error);
-    return { data: null, error };
-  }
-};
+import { supabase } from '@/integrations/supabase/client';
+import { WorkoutPlan, WorkoutLog, WorkoutHistoryItem } from '@/types/fitness';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Gets all workout plans for a user
  */
-export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPlan[] | null, error: any }> => {
+export const getUserWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPlan[] | null, error: any }> => {
   try {
-    // First try to get user's saved workout plans
-    const { data, error } = await fromTable('workout_plans')
+    const { data, error } = await supabase
+      .from('workout_plans')
       .select('*')
-      .eq('user_id', userId);
-
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
     if (error) throw error;
     
-    // If no user-created plans, return default templates
-    if (!data || data.length === 0) {
-      const defaultTemplates = generateDefaultTemplates(userId);
-      return { data: defaultTemplates, error: null };
-    }
-    
-    return { data: data as unknown as WorkoutPlan[], error: null };
+    return { data: data as WorkoutPlan[], error: null };
   } catch (error) {
     console.error('Error fetching workout plans:', error);
     return { data: null, error };
@@ -69,39 +23,111 @@ export const getWorkoutPlans = async (userId: string): Promise<{ data: WorkoutPl
 };
 
 /**
- * Logs a completed workout
+ * Gets a single workout plan by ID
  */
-export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: WorkoutLog | null, error: any }> => {
+export const getWorkoutPlanById = async (planId: string): Promise<{ data: WorkoutPlan | null, error: any }> => {
   try {
-    // Convert completed_exercises to a JSON compatible format
-    const logForStorage = {
-      ...workoutLog,
-      completed_exercises: toSupabaseJson(workoutLog.completed_exercises)
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .select('*')
+      .eq('id', planId)
+      .single();
+    
+    if (error) throw error;
+    
+    return { data: data as WorkoutPlan, error: null };
+  } catch (error) {
+    console.error('Error fetching workout plan:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Creates a new workout plan
+ */
+export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
+  try {
+    // Ensure duration_weeks is set with a default value for database requirement
+    const planWithDefaults = {
+      ...plan,
+      duration_weeks: plan.duration_weeks || 4 // Default to 4 weeks if not provided
     };
     
-    // Insert workout log
-    const { data, error } = await fromTable('workout_logs')
-      .insert(logForStorage)
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .insert(planWithDefaults)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    return { data: data as WorkoutPlan, error: null };
+  } catch (error) {
+    console.error('Error creating workout plan:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Updates an existing workout plan
+ */
+export const updateWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .update(plan)
+      .eq('id', plan.id)
       .select()
       .single();
     
     if (error) throw error;
+    
+    return { data: data as WorkoutPlan, error: null };
+  } catch (error) {
+    console.error('Error updating workout plan:', error);
+    return { data: null, error };
+  }
+};
 
-    // Update workout history
-    if (data) {
-      await updateWorkoutHistory({
-        ...data,
-        completed_exercises: fromSupabaseJson(data.completed_exercises)
-      } as WorkoutLog);
-    }
+/**
+ * Deletes a workout plan
+ */
+export const deleteWorkoutPlan = async (planId: string): Promise<{ success: boolean, error: any }> => {
+  try {
+    const { error } = await supabase
+      .from('workout_plans')
+      .delete()
+      .eq('id', planId);
     
-    // Update user streak
-    await updateUserStreak(workoutLog.user_id);
+    if (error) throw error;
     
-    // Check for achievements
-    await checkAchievements(workoutLog.user_id);
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error deleting workout plan:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Logs a workout
+ */
+export const logWorkout = async (log: WorkoutLog): Promise<{ data: WorkoutLog | null, error: any }> => {
+  try {
+    // If workout_plan_id is not provided, use a placeholder or null
+    const logWithDefaults = {
+      ...log,
+      workout_plan_id: log.workout_plan_id || null // Allow null for workout_plan_id
+    };
     
-    return { data: data as unknown as WorkoutLog, error: null };
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .insert(logWithDefaults)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    return { data: data as WorkoutLog, error: null };
   } catch (error) {
     console.error('Error logging workout:', error);
     return { data: null, error };
@@ -109,387 +135,100 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<{ data: Workou
 };
 
 /**
- * Updates the workout history table
+ * Gets all workout logs for a user
  */
-const updateWorkoutHistory = async (workoutLog: WorkoutLog): Promise<void> => {
+export const getUserWorkoutLogs = async (userId: string): Promise<{ data: WorkoutLog[] | null, error: any }> => {
   try {
-    // Get workout plan details to extract plan name and day name
-    const { data: planData, error: planError } = await fromTable('workout_plans')
-      .select('name, workout_days')
-      .eq('id', workoutLog.workout_plan_id)
-      .single();
-
-    if (planError) throw planError;
-
-    if (!planData) {
-      throw new Error('Workout plan not found');
-    }
-    
-    // Find the workout day name by counting completed exercises per day
-    const workoutDays = fromSupabaseJson<WorkoutDay[]>(planData.workout_days as Json);
-    const dayName = workoutDays[0]?.name || workoutDays[0]?.day_name || 'Unknown Day';
-    
-    const totalExercises = workoutLog.completed_exercises.length;
-    const exercisesCompleted = workoutLog.completed_exercises.filter(ex => 
-      (Array.isArray(ex.sets_completed) ? ex.sets_completed.length > 0 : ex.sets_completed > 0)
-    ).length;
-    
-    const historyItem: WorkoutHistoryItem = {
-      id: crypto.randomUUID(),
-      user_id: workoutLog.user_id,
-      date: workoutLog.date,
-      workout_log_id: workoutLog.id,
-      workout_plan_name: planData.name,
-      workout_day_name: dayName,
-      duration: workoutLog.duration,
-      exercises_completed: exercisesCompleted,
-      total_exercises: totalExercises,
-      calories_burned: workoutLog.calories_burned
-    };
-    
-    await fromTable('workout_history').insert(historyItem);
-  } catch (error) {
-    console.error('Error updating workout history:', error);
-  }
-};
-
-/**
- * Updates user's workout streak
- */
-const updateUserStreak = async (userId: string): Promise<void> => {
-  try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Get user's current streak
-    const { data, error } = await fromTable('user_streaks')
+    const { data, error } = await supabase
+      .from('workout_logs')
       .select('*')
       .eq('user_id', userId)
-      .eq('streak_type', 'workout')
-      .single();
-    
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      throw error;
-    }
-    
-    let currentStreak = 1;
-    let longestStreak = 1;
-    
-    if (data) {
-      const lastActivityDate = new Date(data.last_activity_date);
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      // If last activity was yesterday, increment streak
-      if (lastActivityDate.toISOString().split('T')[0] === yesterday.toISOString().split('T')[0]) {
-        currentStreak = data.currentstreak + 1;
-        longestStreak = Math.max(currentStreak, data.longeststreak);
-      } 
-      // If last activity was today, don't change streak
-      else if (lastActivityDate.toISOString().split('T')[0] === today) {
-        currentStreak = data.currentstreak;
-        longestStreak = data.longeststreak;
-      } 
-      // Otherwise reset streak to 1
-      else {
-        currentStreak = 1;
-        longestStreak = Math.max(1, data.longeststreak);
-      }
-    }
-    
-    // Upsert the streak record
-    await fromTable('user_streaks')
-      .upsert({
-        user_id: userId,
-        currentstreak: currentStreak,
-        longeststreak: longestStreak,
-        last_activity_date: today,
-        streak_type: 'workout'
-      });
-  } catch (error) {
-    console.error('Error updating user streak:', error);
-  }
-};
-
-/**
- * Gets workout history for a user
- */
-export const getWorkoutHistory = async (userId: string, dateFilter?: string): Promise<{ data: WorkoutHistoryItem[] | null, error: any }> => {
-  try {
-    let query = fromTable('workout_history')
-      .select('*')
-      .eq('user_id', userId);
-    
-    if (dateFilter) {
-      // Example: filter by month/year
-      // dateFilter format could be 'YYYY-MM'
-      query = query.like('date', `${dateFilter}%`);
-    }
-    
-    const { data, error } = await query.order('date', { ascending: false });
+      .order('date', { ascending: false });
     
     if (error) throw error;
     
-    return { data: data as unknown as WorkoutHistoryItem[], error: null };
+    return { data: data as WorkoutLog[], error: null };
   } catch (error) {
-    console.error('Error fetching workout history:', error);
+    console.error('Error fetching workout logs:', error);
     return { data: null, error };
   }
 };
 
 /**
- * Gets workout statistics for a user
+ * Gets a single workout log by ID
  */
-export const getWorkoutStats = async (userId: string): Promise<{ data: UserWorkoutStats | null, error: any }> => {
+export const getWorkoutLogById = async (logId: string): Promise<{ data: WorkoutLog | null, error: any }> => {
   try {
-    // Get workout history
-    const { data: historyData, error: historyError } = await fromTable('workout_history')
+    const { data, error } = await supabase
+      .from('workout_logs')
       .select('*')
-      .eq('user_id', userId);
-    
-    if (historyError) throw historyError;
-    
-    // Get user streak
-    const { data: streakData, error: streakError } = await fromTable('user_streaks')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('streak_type', 'workout')
+      .eq('id', logId)
       .single();
-    
-    if (streakError && streakError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      throw streakError;
-    }
-    
-    // Calculate stats
-    const totalWorkouts = historyData ? historyData.length : 0;
-    const total_time = historyData ? historyData.reduce((sum, h) => sum + h.duration, 0) : 0;
-    const total_calories = historyData ? historyData.reduce((sum, h) => sum + (h.calories_burned || 0), 0) : 0;
-    
-    // If no history data, return default stats
-    if (!historyData || historyData.length === 0) {
-      return {
-        data: {
-          user_id: userId,
-          totalWorkouts: 0,
-          total_time: 0,
-          total_calories: 0,
-          favorite_exercise: 'None yet',
-          strongest_exercise: {
-            exercise_id: '',
-            exercise_name: 'None yet',
-            max_weight: 0
-          },
-          most_improved_exercise: {
-            exercise_id: '',
-            exercise_name: 'None yet',
-            improvement_percentage: 0
-          },
-          currentStreak: streakData?.currentstreak || 0,
-          longestStreak: streakData?.longeststreak || 0,
-          weekly_goal_completion: 0
-        },
-        error: null
-      };
-    }
-    
-    // For more complex stats like favorite exercise, additional queries would be needed
-    // This is a simplified version
-    const stats: UserWorkoutStats = {
-      user_id: userId,
-      totalWorkouts,
-      total_time,
-      total_calories,
-      favorite_exercise: 'Bench Press', // This would need to be calculated from workout logs
-      strongest_exercise: {
-        exercise_id: 'ex1',
-        exercise_name: 'Bench Press',
-        max_weight: 225
-      },
-      most_improved_exercise: {
-        exercise_id: 'ex1',
-        exercise_name: 'Bench Press',
-        improvement_percentage: 15
-      },
-      currentStreak: streakData?.currentstreak || 0,
-      longestStreak: streakData?.longeststreak || 0,
-      weekly_goal_completion: 85 // This would need to be calculated
-    };
-    
-    return { data: stats, error: null };
-  } catch (error) {
-    console.error('Error fetching workout stats:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Gets workout schedule for a user
- */
-export const getWorkoutSchedule = async (userId: string): Promise<{ data: WorkoutSchedule[] | null, error: any }> => {
-  try {
-    const { data, error } = await fromTable('workout_schedules')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('active', true);
     
     if (error) throw error;
     
-    return { data: data as WorkoutSchedule[], error: null };
+    return { data: data as WorkoutLog, error: null };
   } catch (error) {
-    console.error('Error fetching workout schedules:', error);
+    console.error('Error fetching workout log:', error);
     return { data: null, error };
   }
 };
 
 /**
- * Creates a workout schedule
+ * Deletes a workout log
  */
-export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<{ data: WorkoutSchedule | null, error: any }> => {
+export const deleteWorkoutLog = async (logId: string): Promise<{ success: boolean, error: any }> => {
   try {
-    const { data, error } = await fromTable('workout_schedules')
-      .insert(schedule)
+    const { error } = await supabase
+      .from('workout_logs')
+      .delete()
+      .eq('id', logId);
+    
+    if (error) throw error;
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error deleting workout log:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Creates a workout history item
+ */
+export const createWorkoutHistoryItem = async (item: WorkoutHistoryItem): Promise<{ data: WorkoutHistoryItem | null, error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_history')
+      .insert(item)
       .select()
       .single();
     
     if (error) throw error;
     
-    return { data: data as WorkoutSchedule, error: null };
+    return { data: data as WorkoutHistoryItem, error: null };
   } catch (error) {
-    console.error('Error creating workout schedule:', error);
+    console.error('Error creating workout history item:', error);
     return { data: null, error };
   }
 };
 
-// Helper function to generate default workout templates
-const generateDefaultTemplates = (userId: string): WorkoutPlan[] => {
-  return [
-    {
-      id: 'template-1',
-      user_id: userId,
-      name: 'Beginner Strength Training',
-      description: 'A simple plan to build basic strength for beginners',
-      goal: 'strength',
-      frequency: 3,
-      difficulty: 'beginner',
-      duration_weeks: 4,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      workout_days: [
-        {
-          name: 'Day 1 - Full Body',
-          day_name: 'Day 1 - Full Body',
-          exercises: [
-            {
-              id: 'ex1',
-              exercise_id: 'ex1',
-              name: 'Squats',
-              exercise_name: 'Squats',
-              sets: 3,
-              reps: 10,
-              weight: 0,
-              rest: 60,
-              rest_time: 60,
-              completed: false,
-            },
-            {
-              id: 'ex2',
-              exercise_id: 'ex2',
-              name: 'Push-ups',
-              exercise_name: 'Push-ups',
-              sets: 3,
-              reps: 10,
-              completed: false,
-            },
-            {
-              id: 'ex3',
-              exercise_id: 'ex3',
-              name: 'Dumbbell Rows',
-              exercise_name: 'Dumbbell Rows',
-              sets: 3,
-              reps: 10,
-              weight: 5,
-              completed: false,
-            }
-          ],
-          order: 1,
-        },
-        {
-          name: 'Day 2 - Full Body',
-          day_name: 'Day 2 - Full Body',
-          exercises: [
-            {
-              id: 'ex4',
-              exercise_id: 'ex4',
-              name: 'Lunges',
-              exercise_name: 'Lunges',
-              sets: 3,
-              reps: 10,
-              completed: false,
-            },
-            {
-              id: 'ex5',
-              exercise_id: 'ex5',
-              name: 'Dumbbell Shoulder Press',
-              exercise_name: 'Dumbbell Shoulder Press',
-              sets: 3,
-              reps: 10,
-              weight: 5,
-              completed: false,
-            },
-            {
-              id: 'ex6',
-              exercise_id: 'ex6',
-              name: 'Plank',
-              exercise_name: 'Plank',
-              sets: 3,
-              duration: 30,
-              reps: 1,
-              completed: false,
-            }
-          ],
-          order: 2,
-        }
-      ]
-    },
-    {
-      id: 'template-2',
-      user_id: userId,
-      name: 'Hypertrophy Focus',
-      description: 'Build muscle mass with higher volume training',
-      goal: 'hypertrophy',
-      frequency: 4,
-      difficulty: 'intermediate',
-      duration_weeks: 6,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      workout_days: [
-        {
-          name: 'Day 1 - Chest & Triceps',
-          day_name: 'Day 1 - Chest & Triceps',
-          exercises: [
-            {
-              id: 'ex10',
-              exercise_id: 'ex10',
-              name: 'Bench Press',
-              exercise_name: 'Bench Press',
-              sets: 4,
-              reps: 12,
-              weight: 20,
-              completed: false,
-            },
-            {
-              id: 'ex11',
-              exercise_id: 'ex11',
-              name: 'Incline Dumbbell Press',
-              exercise_name: 'Incline Dumbbell Press',
-              sets: 3,
-              reps: 12,
-              weight: 15,
-              completed: false,
-            }
-          ],
-          order: 1,
-        }
-      ]
-    }
-  ];
+/**
+ * Gets all workout history items for a user
+ */
+export const getUserWorkoutHistory = async (userId: string): Promise<{ data: WorkoutHistoryItem[] | null, error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_history')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    
+    return { data: data as WorkoutHistoryItem[], error: null };
+  } catch (error) {
+    console.error('Error fetching workout history:', error);
+    return { data: null, error };
+  }
 };

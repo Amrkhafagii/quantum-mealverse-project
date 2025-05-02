@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, LogOut } from 'lucide-react';
@@ -17,6 +16,24 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/useLanguage';
 import LanguageSelector from './LanguageSelector';
 import LocationStatusIndicator from './location/LocationStatusIndicator';
+
+interface LocationStatusIndicatorProps {
+  showTooltip?: boolean;
+}
+
+const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({ showTooltip = true }) => {
+  const { permissionStatus, trackingEnabled } = useLocationPermission();
+  
+  return (
+    <div className="flex items-center">
+      {permissionStatus === 'granted' && trackingEnabled ? (
+        <span className="text-quantum-cyan">Tracking enabled</span>
+      ) : (
+        <span className="text-quantum-red">Tracking disabled</span>
+      )}
+    </div>
+  );
+};
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

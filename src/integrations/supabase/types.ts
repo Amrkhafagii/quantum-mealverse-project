@@ -51,6 +51,122 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          completed: boolean
+          completion_date: string | null
+          id: string
+          joined_date: string
+          progress: number
+          team_id: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed?: boolean
+          completion_date?: string | null
+          id?: string
+          joined_date?: string
+          progress?: number
+          team_id?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed?: boolean
+          completion_date?: string | null
+          id?: string
+          joined_date?: string
+          progress?: number
+          team_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenges: {
+        Row: {
+          created_by: string
+          description: string | null
+          end_date: string
+          goal_type: string | null
+          goal_value: number | null
+          id: string
+          is_active: boolean
+          participants_count: number | null
+          prize_description: string | null
+          reward_points: number | null
+          rules: string | null
+          start_date: string
+          status: string | null
+          target_value: number
+          team_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_by: string
+          description?: string | null
+          end_date: string
+          goal_type?: string | null
+          goal_value?: number | null
+          id?: string
+          is_active?: boolean
+          participants_count?: number | null
+          prize_description?: string | null
+          reward_points?: number | null
+          rules?: string | null
+          start_date: string
+          status?: string | null
+          target_value: number
+          team_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          goal_type?: string | null
+          goal_value?: number | null
+          id?: string
+          is_active?: boolean
+          participants_count?: number | null
+          prize_description?: string | null
+          reward_points?: number | null
+          rules?: string | null
+          start_date?: string
+          status?: string | null
+          target_value?: number
+          team_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenges_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_logs: {
         Row: {
           affected_rows: number | null
@@ -1808,6 +1924,86 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          contribution_points: number | null
+          id: string
+          joined_at: string | null
+          joined_date: string
+          points_contributed: number | null
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          contribution_points?: number | null
+          id?: string
+          joined_at?: string | null
+          joined_date?: string
+          points_contributed?: number | null
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          contribution_points?: number | null
+          id?: string
+          joined_at?: string | null
+          joined_date?: string
+          points_contributed?: number | null
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          created_by: string
+          creator_id: string | null
+          description: string | null
+          id: string
+          member_count: number | null
+          members_count: number | null
+          name: string
+          total_points: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by: string
+          creator_id?: string | null
+          description?: string | null
+          id?: string
+          member_count?: number | null
+          members_count?: number | null
+          name: string
+          total_points?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string
+          creator_id?: string | null
+          description?: string | null
+          id?: string
+          member_count?: number | null
+          members_count?: number | null
+          name?: string
+          total_points?: number | null
+        }
+        Relationships: []
+      }
       unit_test_customer: {
         Row: {
           actual_output: Json | null
@@ -1955,6 +2151,7 @@ export type Database = {
           dietary_restrictions: string[] | null
           fat_target: number | null
           id: string
+          location_tracking_enabled: boolean | null
           protein_target: number | null
           updated_at: string | null
           user_id: string
@@ -1968,6 +2165,7 @@ export type Database = {
           dietary_restrictions?: string[] | null
           fat_target?: number | null
           id?: string
+          location_tracking_enabled?: boolean | null
           protein_target?: number | null
           updated_at?: string | null
           user_id: string
@@ -1981,6 +2179,7 @@ export type Database = {
           dietary_restrictions?: string[] | null
           fat_target?: number | null
           id?: string
+          location_tracking_enabled?: boolean | null
           protein_target?: number | null
           updated_at?: string | null
           user_id?: string
@@ -2215,6 +2414,48 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           workout_days?: Json
+        }
+        Relationships: []
+      }
+      workout_recommendations: {
+        Row: {
+          applied: boolean | null
+          applied_at: string | null
+          confidence_score: number | null
+          description: string | null
+          dismissed: boolean | null
+          id: string
+          reason: string | null
+          suggested_at: string | null
+          title: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          applied?: boolean | null
+          applied_at?: string | null
+          confidence_score?: number | null
+          description?: string | null
+          dismissed?: boolean | null
+          id?: string
+          reason?: string | null
+          suggested_at?: string | null
+          title?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          applied?: boolean | null
+          applied_at?: string | null
+          confidence_score?: number | null
+          description?: string | null
+          dismissed?: boolean | null
+          id?: string
+          reason?: string | null
+          suggested_at?: string | null
+          title?: string | null
+          type?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

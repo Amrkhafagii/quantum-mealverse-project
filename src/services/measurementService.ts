@@ -26,8 +26,14 @@ export const getUserMeasurements = async (userId: string): Promise<{ data: UserM
  */
 export const addMeasurement = async (measurement: UserMeasurement): Promise<{ data: UserMeasurement | null, error: any }> => {
   try {
+    // Ensure the measurement object matches the database schema and handle optional weight
+    const measurementData = {
+      ...measurement,
+      weight: measurement.weight || null // Convert undefined to null for database
+    };
+    
     const { data, error } = await fromTable('user_measurements')
-      .insert(measurement)
+      .insert(measurementData)
       .select()
       .single();
     

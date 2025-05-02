@@ -1,4 +1,3 @@
-
 import { MealPlan } from './food';
 import { Json } from '@/integrations/supabase/types';
 
@@ -201,6 +200,7 @@ export interface WorkoutRecommendation {
   title?: string;
   confidence_score?: number;
   reason?: string;
+  user_id?: string;
 }
 
 // Achievement System Types

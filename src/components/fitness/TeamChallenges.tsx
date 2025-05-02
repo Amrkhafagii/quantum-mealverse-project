@@ -299,143 +299,137 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
             </Button>
           </div>
         </div>
-        <CardDescription>
-          {activeTab === 'teams' 
-            ? 'Join teams and compete together to earn points' 
-            : 'Participate in challenges and win rewards'}
-        </CardDescription>
       </CardHeader>
-      
       <CardContent>
-        {activeTab === 'teams' ? (
+        {/* Teams tab content */}
+        {activeTab === 'teams' && (
           <div className="space-y-4">
-            {teams.map((team) => (
-              <motion.div
-                key={team.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-4 rounded-lg border ${getTeamColor(team.id)}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border-2 border-quantum-cyan">
-                      <AvatarFallback className={getTeamColor(team.id)}>
-                        {team.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                      {team.avatar_url && <AvatarImage src={team.avatar_url} alt={team.name} />}
-                    </Avatar>
-                    <div>
-                      <h3 className="font-bold">{team.name}</h3>
-                      <p className="text-xs text-gray-400">{team.description}</p>
+            {teams.length > 0 ? (
+              teams.map((team) => (
+                <motion.div
+                  key={team.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="rounded-lg border bg-black/20 border-quantum-purple/20 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Avatar>
+                        <AvatarImage src={team.avatar_url} />
+                        <AvatarFallback className={getTeamColor(team.id)}>{team.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold text-quantum-purple">{team.name}</h3>
+                        <p className="text-sm text-gray-400">{team.description}</p>
+                      </div>
                     </div>
-                  </div>
-                  <Badge className="bg-quantum-black/40">
-                    {team.total_points} pts
-                  </Badge>
-                </div>
-                
-                <div className="mt-3 flex items-center text-sm text-gray-400">
-                  <Users className="h-4 w-4 mr-1" /> {team.members_count || team.member_count} members
-                </div>
-                
-                <div className="mt-3">
-                  {isUserInTeam(team.id) ? (
-                    <Badge variant="outline" className="border-quantum-cyan text-quantum-cyan">
-                      Member
+                    <Badge className={getChallengeStatusColor('active')}>
+                      {team.member_count} members
                     </Badge>
-                  ) : (
-                    <Button
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleJoinTeam(team.id)}
-                      className="text-xs"
-                    >
-                      Join Team
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {challenges.map((challenge) => (
-              <motion.div
-                key={challenge.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-lg bg-quantum-black/40 border border-quantum-cyan/20"
-              >
-                <div className="flex justify-between">
-                  <div>
-                    <h3 className="font-bold flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-yellow-400" />
-                      {challenge.title}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-1">{challenge.description}</p>
                   </div>
-                  <Badge className={getChallengeStatusColor(challenge.status || '')}>
-                    {challenge.status ? (challenge.status.charAt(0).toUpperCase() + challenge.status.slice(1)) : 'Active'}
-                  </Badge>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div className="flex items-center text-xs text-gray-400">
-                    <Calendar className="h-3 w-3 mr-1" /> 
-                    {new Date(challenge.start_date).toLocaleDateString()} - {new Date(challenge.end_date).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center text-xs text-gray-400">
-                    <Target className="h-3 w-3 mr-1" /> 
-                    Goal: {challenge.goal_value || challenge.target_value} {challenge.goal_type || challenge.type}
-                  </div>
-                </div>
-                
-                <div className="mt-3 flex justify-between items-center">
-                  <Badge variant="outline" className="text-xs">
-                    {challenge.type} Challenge
-                  </Badge>
                   
-                  <div className="flex items-center gap-3">
-                    <span className="text-quantum-cyan font-bold text-sm">+{challenge.reward_points || 100} pts</span>
+                  <div className="mt-4 flex justify-between items-center">
+                    <div className="text-sm">
+                      <span className="text-gray-400">Points: </span>
+                      <span className="font-semibold text-quantum-purple">{team.total_points}</span>
+                    </div>
                     
-                    {challenge.status !== 'completed' && (
-                      <Button
+                    {isUserInTeam(team.id) ? (
+                      <Badge variant="secondary">Already a Member</Badge>
+                    ) : (
+                      <Button 
                         size="sm"
-                        onClick={() => handleJoinChallenge(challenge.id)}
-                        className="text-xs h-7"
+                        onClick={() => handleJoinTeam(team.id)}
+                        className="bg-quantum-purple hover:bg-quantum-purple/80"
                       >
-                        Join
+                        Join Team
                       </Button>
                     )}
                   </div>
-                </div>
-                
-                {challenge.status === 'active' && (
-                  <div className="mt-2">
-                    <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
-                      <span>Progress</span>
-                      <span>0%</span>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-center text-gray-400 py-6">No teams available at the moment.</p>
+            )}
+          </div>
+        )}
+        
+        {/* Challenges tab content */}
+        {activeTab === 'challenges' && (
+          <div className="space-y-4">
+            {challenges.length > 0 ? (
+              challenges.map((challenge) => (
+                <motion.div
+                  key={challenge.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="rounded-lg border bg-black/20 border-quantum-cyan/20 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-2 rounded-full ${getChallengeStatusColor(challenge.status || 'active')}`}>
+                        <Trophy className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-quantum-cyan">{challenge.title}</h3>
+                        <p className="text-sm text-gray-400">{challenge.description}</p>
+                      </div>
                     </div>
-                    <Progress value={0} className="h-1" />
+                    <Badge className={getTeamColor(challenge.id)}>
+                      {challenge.type}
+                    </Badge>
                   </div>
-                )}
-              </motion.div>
-            ))}
+                  
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                      <span>Progress</span>
+                      <span>0 / {challenge.target_value} {challenge.goal_type}</span>
+                    </div>
+                    <Progress value={0} className="h-2" />
+                  </div>
+                  
+                  <div className="mt-4 flex justify-between items-center">
+                    <div className="flex items-center text-xs text-gray-400">
+                      <Calendar className="h-3.5 w-3.5 mr-1" />
+                      <span>
+                        {new Date(challenge.start_date).toLocaleDateString()} - {new Date(challenge.end_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    {isUserInTeam(challenge.team_id || '') ? (
+                      <Button 
+                        size="sm"
+                        onClick={() => handleJoinChallenge(challenge.id)}
+                        className="bg-quantum-cyan hover:bg-quantum-cyan/80"
+                      >
+                        Join Challenge
+                      </Button>
+                    ) : (
+                      challenge.team_id ? (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-500">
+                          Team Required
+                        </Badge>
+                      ) : (
+                        <Button 
+                          size="sm"
+                          onClick={() => handleJoinChallenge(challenge.id)}
+                          className="bg-quantum-cyan hover:bg-quantum-cyan/80"
+                        >
+                          Join Challenge
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-center text-gray-400 py-6">No challenges available at the moment.</p>
+            )}
           </div>
         )}
       </CardContent>
-      <CardFooter className="border-t border-gray-800 pt-4 flex justify-center">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => toast({
-            title: 'Coming Soon',
-            description: activeTab === 'teams' ? 'Create your own team in the next update!' : 'Create custom challenges in the next update!'
-          })}
-        >
-          {activeTab === 'teams' ? 'Create Team' : 'Create Challenge'}
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

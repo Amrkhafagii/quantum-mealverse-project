@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -29,65 +28,60 @@ export async function getUserStreak(userId: string, streakType: 'workout' | 'nut
 // Placeholder functions for challenge-related operations
 // In a real implementation, these would interact with actual tables
 
-// Get all available challenges - mock implementation
+// Get all available challenges
 export async function getChallenges() {
   try {
-    // This is a mock implementation since 'challenges' table may not exist yet
-    const mockData = [
-      {
-        id: '1',
-        title: '30-Day Step Challenge',
-        description: 'Reach 10,000 steps daily for 30 days straight',
-        type: 'steps',
-        target_value: 300000,
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        created_by: 'system',
-        is_active: true,
-      }
-    ];
+    // Use the real implementation now that we have the table
+    const { data, error } = await supabase
+      .from('challenges')
+      .select('*');
     
-    return { data: mockData, error: null };
+    if (error) throw error;
+    return { data, error: null };
   } catch (error) {
     console.error('Error fetching challenges:', error);
     return { data: null, error };
   }
 }
 
-// Get challenges the user is participating in - mock implementation
+// Get challenges the user is participating in
 export async function getUserChallenges(userId: string) {
   try {
-    // This is a mock implementation
-    const mockData = [
-      {
-        id: '1',
-        user_id: userId,
-        challenge_id: '1',
-        joined_date: new Date().toISOString(),
-        progress: 25,
-        completed: false,
-        challenge: {
-          id: '1',
-          title: '30-Day Step Challenge',
-          type: 'steps',
-          target_value: 300000
-        }
-      }
-    ];
+    // Use the real implementation
+    const { data, error } = await supabase
+      .from('challenge_participants')
+      .select(`
+        *,
+        challenge:challenge_id(*)
+      `)
+      .eq('user_id', userId);
     
-    return { data: mockData, error: null };
+    if (error) throw error;
+    return { data, error: null };
   } catch (error) {
     console.error('Error fetching user challenges:', error);
     return { data: null, error };
   }
 }
 
-// Join a challenge - mock implementation
+// Join a challenge
 export async function joinChallenge(userId: string, challengeId: string, teamId?: string) {
   try {
-    console.log(`Mock: User ${userId} joining challenge ${challengeId}`);
+    const participant = {
+      id: uuidv4(),
+      user_id: userId,
+      challenge_id: challengeId,
+      team_id: teamId || null,
+      joined_date: new Date().toISOString(),
+      progress: 0,
+      completed: false
+    };
     
-    // In a real implementation, this would insert into a challenges_participants table
+    const { data, error } = await supabase
+      .from('challenge_participants')
+      .insert(participant);
+    
+    if (error) throw error;
     return { success: true, error: null };
   } catch (error) {
     console.error('Error joining challenge:', error);
@@ -95,7 +89,7 @@ export async function joinChallenge(userId: string, challengeId: string, teamId?
   }
 }
 
-// Update challenge progress - mock implementation
+// Update challenge progress
 export async function updateChallengeProgress(participantId: string, progress: number, completed: boolean) {
   try {
     console.log(`Mock: Updating challenge progress for participant ${participantId} to ${progress}%`);

@@ -1,5 +1,43 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { SavedMealPlan } from '@/types/fitness';
+
+/**
+ * Marks expired meal plans as inactive
+ */
+export const processExpiredMealPlans = async (): Promise<{success: boolean, count: number, error?: string}> => {
+  try {
+    const now = new Date().toISOString();
+    
+    // Get all expired meal plans that are still active
+    const { data, error } = await supabase
+      .from('saved_meal_plans')
+      .select('*')
+      .lt('expires_at', now)
+      .eq('is_active', true);
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      return { success: true, count: 0 };
+    }
+    
+    // Update all expired meal plans to inactive
+    const { error: updateError } = await supabase
+      .from('saved_meal_plans')
+      .update({ 
+        is_active: false 
+      })
+      .lt('expires_at', now)
+      .eq('is_active', true);
+    
+    if (updateError) throw updateError;
+    
+    return { success: true, count: data.length };
+  } catch (error: any) {
+    console.error('Error processing expired meal plans:', error);
+    return { success: false, count: 0, error: error.message };
+  }
+};
 
 /**
  * Function to check and update expired meal plans
