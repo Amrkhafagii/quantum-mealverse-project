@@ -129,6 +129,38 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_assignment_rejections: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          order_id: string
+          reason: string | null
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          reason?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_assignment_rejections_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_assignments: {
         Row: {
           created_at: string
@@ -364,6 +396,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      delivery_locations: {
+        Row: {
+          assignment_id: string
+          id: string
+          latitude: number
+          longitude: number
+          timestamp: string
+        }
+        Insert: {
+          assignment_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          timestamp?: string
+        }
+        Update: {
+          assignment_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_locations_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       delivery_metrics: {
         Row: {
@@ -2482,6 +2546,34 @@ export type Database = {
       equals: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
+      }
+      find_nearby_delivery_assignments: {
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_max_distance_km?: number
+        }
+        Returns: {
+          id: string
+          order_id: string
+          restaurant_id: string
+          delivery_user_id: string
+          status: string
+          created_at: string
+          updated_at: string
+          pickup_time: string
+          delivery_time: string
+          estimated_delivery_time: string
+          distance_km: number
+          restaurant_name: string
+          restaurant_address: string
+          restaurant_latitude: number
+          restaurant_longitude: number
+          customer_name: string
+          customer_address: string
+          customer_latitude: number
+          customer_longitude: number
+        }[]
       }
       find_nearest_restaurant: {
         Args: { order_lat: number; order_lng: number; max_distance_km?: number }

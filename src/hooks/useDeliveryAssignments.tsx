@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { getActiveDeliveryAssignments, getPastDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
 import { pickupDelivery, startDeliveryToCustomer, completeDelivery } from '@/services/delivery/deliveryOrderAssignmentService';
+import { updateDeliveryLocation } from '@/services/delivery/deliveryLocationService';
 import { toast } from '@/hooks/use-toast';
 
 export const useDeliveryAssignments = (deliveryUserId?: string) => {
@@ -115,6 +116,17 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
     }
   }, [deliveryUserId, fetchActiveAssignments, loadPage]);
   
+  const updateLocation = useCallback(async (assignmentId: string, latitude: number, longitude: number) => {
+    if (!deliveryUserId) return;
+    
+    try {
+      await updateDeliveryLocation(assignmentId, latitude, longitude);
+    } catch (err) {
+      console.error("Error updating location:", err);
+      // Silent fail for location updates to avoid too many toasts
+    }
+  }, [deliveryUserId]);
+  
   const refreshData = useCallback(() => {
     fetchActiveAssignments();
     loadPage(currentPage);
@@ -130,6 +142,7 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
     markAsPickedUp,
     markAsOnTheWay,
     markAsDelivered,
+    updateLocation,
     refreshData,
     loadPage
   };

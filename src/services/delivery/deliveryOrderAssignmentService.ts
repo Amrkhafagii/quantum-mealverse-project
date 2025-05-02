@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { toast } from '@/hooks/use-toast';
+import { rejectDeliveryAssignment } from './deliveryLocationService';
 
 // Find nearby delivery assignments for a user based on their location
 export const findNearbyAssignments = async (
@@ -98,9 +99,8 @@ export const rejectDeliveryAssignment = async (
       throw error;
     }
     
-    // Store rejection data in a virtual table for now
-    // In a real app, we would store this in a dedicated table
-    console.log('Rejected assignment', assignmentId, 'reason:', reason || 'No reason provided');
+    // Store rejection data in the delivery_assignment_rejections table
+    await rejectDeliveryAssignment(assignmentId, data.order_id, reason);
     
     // If this becomes a real feature, we'd implement:
     // await supabase.from('delivery_assignment_rejections').insert({

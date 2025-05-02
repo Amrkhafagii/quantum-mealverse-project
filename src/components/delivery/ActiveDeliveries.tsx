@@ -1,15 +1,25 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Loader2, AlertCircle, Package, Navigation, Check, 
-  Building, User, MapPin, Clock 
-} from 'lucide-react';
-import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
-import { useDeliveryUser } from '@/hooks/useDeliveryUser';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useDeliveryUser } from '@/hooks/useDeliveryUser';
+import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
+import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  MapPin,
+  Clock,
+  AlertCircle,
+  ChevronRight,
+  Package,
+  CheckCircle,
+  Loader2
+} from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useInterval } from '@/hooks/use-interval';
+import { formatDistanceToNow } from 'date-fns';
 
 export const ActiveDeliveries: React.FC = () => {
   const { user } = useAuth();
@@ -21,97 +31,88 @@ export const ActiveDeliveries: React.FC = () => {
     markAsPickedUp,
     markAsOnTheWay,
     markAsDelivered,
-    refreshData
+    updateLocation,
+    refreshData 
   } = useDeliveryAssignments(deliveryUser?.id);
   
-  const handleUpdateStatus = async (assignment: DeliveryAssignment, newStatus: string) => {
-    try {
-      switch (newStatus) {
-        case 'picked_up':
-          await markAsPickedUp(assignment.id);
-          break;
-        case 'on_the_way':
-          await markAsOnTheWay(assignment.id);
-          break;
-        case 'delivered':
-          await markAsDelivered(assignment.id);
-          break;
+  const [selectedAssignment, setSelectedAssignment] = useState<DeliveryAssignment | null>(null);
+  
+  // Setup location tracking
+  const { position, startTracking, stopTracking, isTracking } = useLocationTracker({
+    watchPosition: true,
+    trackingInterval: 10000,
+    onLocationUpdate: (pos) => {
+      // If we have an active delivery, update its location
+      if (selectedAssignment && ['picked_up', 'on_the_way'].includes(selectedAssignment.status)) {
+        updateLocation(
+          selectedAssignment.id, 
+          pos.coords.latitude, 
+          pos.coords.longitude
+        );
       }
-      refreshData();
-    } catch (err) {
-      console.error('Error updating status:', err);
+    },
+    onError: (err) => {
+      console.error('Location error:', err);
+      toast({
+        title: "Location Error",
+        description: "Unable to track your location. Please enable location services.",
+        variant: "destructive",
+      });
     }
-  };
-
-  const getNextStatusButton = (assignment: DeliveryAssignment) => {
-    switch (assignment.status) {
-      case 'assigned':
-        return (
-          <Button 
-            className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-            onClick={() => handleUpdateStatus(assignment, 'picked_up')}
-          >
-            <Package className="mr-2 h-4 w-4" />
-            Mark as Picked Up
-          </Button>
-        );
-      case 'picked_up':
-        return (
-          <Button 
-            className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-            onClick={() => handleUpdateStatus(assignment, 'on_the_way')}
-          >
-            <Navigation className="mr-2 h-4 w-4" />
-            Start Delivery
-          </Button>
-        );
-      case 'on_the_way':
-        return (
-          <Button 
-            className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-            onClick={() => handleUpdateStatus(assignment, 'delivered')}
-          >
-            <Check className="mr-2 h-4 w-4" />
-            Complete Delivery
-          </Button>
-        );
-      default:
-        return null;
+  });
+  
+  // Start tracking when there's an active delivery
+  useEffect(() => {
+    if (activeAssignments.length > 0 && !isTracking) {
+      startTracking();
+    } else if (activeAssignments.length === 0 && isTracking) {
+      stopTracking();
     }
-  };
-
-  const renderDirectionsButton = (assignment: DeliveryAssignment) => {
-    // Get destination based on current delivery stage
-    let destination;
-    if (assignment.status === 'assigned') {
-      // Navigate to restaurant
-      destination = assignment.restaurant && `${assignment.restaurant.latitude},${assignment.restaurant.longitude}`;
-    } else {
-      // Navigate to customer
-      destination = assignment.customer && `${assignment.customer.latitude},${assignment.customer.longitude}`;
+    
+    // Set the first active assignment as selected if none is selected
+    if (activeAssignments.length > 0 && !selectedAssignment) {
+      setSelectedAssignment(activeAssignments[0]);
     }
-
-    if (!destination) return null;
-
-    return (
-      <Button 
-        variant="outline" 
-        className="w-full mt-2"
-        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}`, '_blank')}
-      >
-        <Navigation className="mr-2 h-4 w-4" />
-        Get Directions
-      </Button>
+    
+    // If the selected assignment is no longer in the active list, reset selection
+    if (selectedAssignment && !activeAssignments.some(a => a.id === selectedAssignment.id)) {
+      setSelectedAssignment(activeAssignments.length > 0 ? activeAssignments[0] : null);
+    }
+  }, [activeAssignments, isTracking, selectedAssignment, startTracking, stopTracking]);
+  
+  // Refresh data every minute
+  useInterval(() => {
+    refreshData();
+  }, 60000);
+  
+  const handlePickup = async (assignment: DeliveryAssignment) => {
+    await markAsPickedUp(assignment.id);
+    setSelectedAssignment(prev => 
+      prev?.id === assignment.id 
+        ? { ...prev, status: 'picked_up' } 
+        : prev
     );
   };
   
-  if (loading) {
+  const handleStartDelivery = async (assignment: DeliveryAssignment) => {
+    await markAsOnTheWay(assignment.id);
+    setSelectedAssignment(prev => 
+      prev?.id === assignment.id 
+        ? { ...prev, status: 'on_the_way' } 
+        : prev
+    );
+  };
+  
+  const handleCompleteDelivery = async (assignment: DeliveryAssignment) => {
+    await markAsDelivered(assignment.id);
+    // We'll let the refresh handle removing this from active assignments
+  };
+  
+  if (loading && activeAssignments.length === 0) {
     return (
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6">
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+        <CardContent className="p-8 flex justify-center items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
         </CardContent>
       </Card>
     );
@@ -120,102 +121,172 @@ export const ActiveDeliveries: React.FC = () => {
   if (error) {
     return (
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center py-8 text-red-400">
-            <AlertCircle className="h-8 w-8 mb-2" />
-            <p>Failed to load active deliveries</p>
-            <Button 
-              variant="outline" 
-              className="mt-4" 
-              onClick={refreshData}
-            >
-              Try Again
-            </Button>
-          </div>
+        <CardContent className="p-8 flex flex-col items-center justify-center">
+          <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+          <h3 className="text-xl font-medium text-red-400 mb-2">Error</h3>
+          <p className="text-center">{error}</p>
         </CardContent>
       </Card>
     );
   }
   
+  if (!deliveryUser || deliveryUser.status !== 'active') {
+    return (
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="p-8 flex flex-col items-center justify-center">
+          <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-300 mb-2">Not Available</h3>
+          <p className="text-gray-400 text-center max-w-md">
+            You need to be active to see your deliveries.
+            Please set your status to active first.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (activeAssignments.length === 0) {
+    return (
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="p-8 flex flex-col items-center justify-center">
+          <Package className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-300 mb-2">No Active Deliveries</h3>
+          <p className="text-gray-400 text-center max-w-md">
+            You don't have any active deliveries right now. 
+            Check the available orders section to find new delivery opportunities.
+          </p>
+          <Button 
+            onClick={refreshData} 
+            className="mt-4"
+            variant="outline"
+          >
+            Refresh
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'assigned':
+        return <Badge className="bg-blue-500">Assigned</Badge>;
+      case 'picked_up':
+        return <Badge className="bg-purple-500">Picked Up</Badge>;
+      case 'on_the_way':
+        return <Badge className="bg-yellow-500">On The Way</Badge>;
+      default:
+        return <Badge className="bg-gray-500">{status}</Badge>;
+    }
+  };
+  
+  const getTimeAgo = (dateString: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch (e) {
+      return 'Unknown time';
+    }
+  };
+  
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="pb-2">
+      <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>Active Deliveries</span>
-          <Button variant="ghost" size="sm" onClick={refreshData}>Refresh</Button>
+          <Button variant="ghost" size="sm" onClick={refreshData}>
+            Refresh
+          </Button>
         </CardTitle>
       </CardHeader>
       
       <CardContent>
-        {activeAssignments && activeAssignments.length > 0 ? (
-          <div className="space-y-4">
-            {activeAssignments.map((assignment) => (
-              <Card key={assignment.id} className="bg-quantum-darkBlue/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Order #{assignment.order_id.substring(0, 8)}</CardTitle>
-                  <div className="text-sm text-gray-400">
-                    {assignment.status === 'assigned' && 'Ready for pickup'}
-                    {assignment.status === 'picked_up' && 'Order picked up'}
-                    {assignment.status === 'on_the_way' && 'On the way to customer'}
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  {/* Restaurant Info */}
-                  <div className="flex items-start space-x-2">
-                    <Building className="h-5 w-5 text-quantum-cyan mt-1" />
+        <div className="space-y-6">
+          {activeAssignments.map((assignment) => (
+            <Card 
+              key={assignment.id} 
+              className={`bg-quantum-darkBlue/50 ${selectedAssignment?.id === assignment.id ? 'border-quantum-cyan' : ''}`}
+              onClick={() => setSelectedAssignment(assignment)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Order #{assignment.order_id.slice(-6)}</h3>
+                  {getStatusBadge(assignment.status)}
+                </div>
+                <p className="text-sm text-gray-400">{getTimeAgo(assignment.created_at)}</p>
+              </CardHeader>
+              
+              <CardContent className="pb-2">
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <MapPin className="h-4 w-4 mr-2 text-quantum-cyan shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium">Restaurant</p>
-                      <p className="text-sm text-gray-400">
-                        {assignment.restaurant?.address || '123 Restaurant St.'}
-                      </p>
+                      <p className="font-medium">{assignment.restaurant?.name || 'Restaurant'}</p>
+                      <p className="text-sm text-gray-400">{assignment.restaurant?.address || 'Loading address...'}</p>
                     </div>
                   </div>
                   
-                  {/* Customer Info - Only show if picked up or delivering */}
-                  {(assignment.status === 'picked_up' || assignment.status === 'on_the_way') && (
-                    <div className="flex items-start space-x-2">
-                      <User className="h-5 w-5 text-quantum-cyan mt-1" />
-                      <div>
-                        <p className="font-medium">Customer</p>
-                        <p className="text-sm text-gray-400">
-                          {assignment.customer?.address || '456 Customer Ave.'}
-                        </p>
-                      </div>
+                  <div className="flex items-start">
+                    <MapPin className="h-4 w-4 mr-2 text-quantum-cyan shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Customer</p>
+                      <p className="text-sm text-gray-400">{assignment.customer?.address || 'Loading address...'}</p>
+                    </div>
+                  </div>
+                  
+                  {assignment.distance_km && (
+                    <div className="flex items-center text-sm">
+                      <Clock className="h-4 w-4 mr-2 text-quantum-cyan" />
+                      <span>Est. {Math.round(assignment.distance_km * 3)} min • {assignment.distance_km.toFixed(1)} km</span>
                     </div>
                   )}
-                  
-                  {/* Distance and Time Estimate */}
-                  <div className="flex justify-between text-sm">
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1 text-quantum-cyan" />
-                      <span>{assignment.distance_km?.toFixed(1) || "2.5"} km</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1 text-quantum-cyan" />
-                      <span>~{assignment.estimate_minutes || "15"} min</span>
-                    </div>
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="pt-2">
-                    {getNextStatusButton(assignment)}
-                    {renderDirectionsButton(assignment)}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-400">
-            <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p className="text-lg">No active deliveries</p>
-            <p className="text-sm mt-2">Check available orders to accept a delivery</p>
-          </div>
-        )}
+                </div>
+              </CardContent>
+              
+              <CardFooter>
+                {assignment.status === 'assigned' && (
+                  <Button 
+                    onClick={() => handlePickup(assignment)}
+                    className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Mark as Picked Up
+                  </Button>
+                )}
+                
+                {assignment.status === 'picked_up' && (
+                  <Button 
+                    onClick={() => handleStartDelivery(assignment)}
+                    className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+                  >
+                    <ChevronRight className="h-4 w-4 mr-2" />
+                    Start Delivery
+                  </Button>
+                )}
+                
+                {assignment.status === 'on_the_way' && (
+                  <Button 
+                    onClick={() => handleCompleteDelivery(assignment)}
+                    className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Complete Delivery
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+          
+          {position && isTracking && (
+            <div className="rounded border border-quantum-cyan/30 p-3 bg-quantum-darkBlue/20">
+              <p className="text-sm text-gray-400 mb-1">Location Tracking Active</p>
+              <p className="text-xs">
+                Lat: {position.coords.latitude.toFixed(6)}, 
+                Lng: {position.coords.longitude.toFixed(6)}
+              </p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 };
-
-export default ActiveDeliveries;
