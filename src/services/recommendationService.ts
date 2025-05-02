@@ -1,63 +1,114 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutRecommendation } from '@/types/fitness';
+import { Json } from '@/types/database';
 
 /**
- * Get workout recommendations for a user
+ * Gets personalized workout recommendations for a user
  */
-export const getUserRecommendations = async (userId: string) => {
+export const getWorkoutRecommendations = async (userId: string): Promise<{
+  data: WorkoutRecommendation[] | null;
+  error: any;
+}> => {
   try {
     const { data, error } = await supabase
       .from('workout_recommendations')
       .select('*')
       .eq('user_id', userId)
-      .order('confidence_score', { ascending: false })
-      .returns<WorkoutRecommendation[]>();
+      .eq('dismissed', false)
+      .order('suggested_at', { ascending: false });
       
     if (error) throw error;
     
-    return { data, error: null };
+    // Transform the data to match our types
+    // Adding a name field that references title since our components expect it
+    const transformedData = data?.map(item => ({
+      ...item,
+      name: item.title || 'Workout Recommendation'
+    }));
+    
+    return { data: transformedData as WorkoutRecommendation[], error: null };
   } catch (error) {
-    console.error('Error getting workout recommendations:', error);
+    console.error('Error fetching workout recommendations:', error);
     return { data: null, error };
   }
 };
 
 /**
- * Dismiss a workout recommendation
+ * Gets trending workout recommendations
  */
-export const dismissRecommendation = async (recommendationId: string, userId: string) => {
+export const getTrendingWorkoutRecommendations = async (): Promise<{
+  data: WorkoutRecommendation[] | null;
+  error: any;
+}> => {
+  try {
+    // In a real app, this would be based on popularity metrics
+    const { data, error } = await supabase
+      .from('workout_recommendations')
+      .select('*')
+      .eq('dismissed', false)
+      .order('confidence_score', { ascending: false })
+      .limit(10);
+      
+    if (error) throw error;
+    
+    // Transform the data to match our types
+    const transformedData = data?.map(item => ({
+      ...item,
+      name: item.title || 'Trending Workout'
+    }));
+    
+    return { data: transformedData as WorkoutRecommendation[], error: null };
+  } catch (error) {
+    console.error('Error fetching trending workout recommendations:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Dismisses a workout recommendation
+ */
+export const dismissWorkoutRecommendation = async (
+  recommendationId: string,
+  userId: string
+): Promise<{
+  success: boolean;
+  error: any;
+}> => {
   try {
     const { error } = await supabase
       .from('workout_recommendations')
-      .update({
-        dismissed: true
-      })
+      .update({ dismissed: true })
       .eq('id', recommendationId)
       .eq('user_id', userId);
       
     if (error) throw error;
     
     return { success: true, error: null };
-  } catch (error: any) {
-    console.error('Error dismissing recommendation:', error);
-    return { success: false, error: error.message };
+  } catch (error) {
+    console.error('Error dismissing workout recommendation:', error);
+    return { success: false, error };
   }
 };
 
 /**
- * Apply a workout recommendation
+ * Applies a workout recommendation
  */
-export const applyRecommendation = async (recommendationId: string, userId: string) => {
+export const applyWorkoutRecommendation = async (
+  recommendationId: string,
+  userId: string
+): Promise<{
+  success: boolean;
+  error: any;
+}> => {
   try {
-    const now = new Date();
+    const now = new Date().toISOString();
     
-    // Mark the recommendation as applied
     const { error } = await supabase
       .from('workout_recommendations')
       .update({
         applied: true,
-        applied_at: now.toISOString()
+        applied_at: now
       })
       .eq('id', recommendationId)
       .eq('user_id', userId);
@@ -65,128 +116,54 @@ export const applyRecommendation = async (recommendationId: string, userId: stri
     if (error) throw error;
     
     return { success: true, error: null };
-  } catch (error: any) {
-    console.error('Error applying recommendation:', error);
-    return { success: false, error: error.message };
+  } catch (error) {
+    console.error('Error applying workout recommendation:', error);
+    return { success: false, error };
   }
 };
 
 /**
- * Generate workout recommendations based on user activity
+ * Create a workout recommendation
  */
-export const generateWorkoutRecommendations = async (userId: string) => {
+export const createWorkoutRecommendation = async (
+  userId: string,
+  recommendation: Partial<WorkoutRecommendation>
+): Promise<{
+  data: WorkoutRecommendation | null;
+  error: any;
+}> => {
   try {
-    // Get user profile and measurements
-    const { data: profileData, error: profileError } = await supabase
-      .from('fitness_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-      
-    if (profileError && profileError.code !== 'PGRST116') throw profileError;
+    const now = new Date().toISOString();
     
-    // Get workout history
-    const { data: historyData, error: historyError } = await supabase
-      .from('workout_history')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(10);
-      
-    if (historyError) throw historyError;
+    const newRecommendation = {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      title: recommendation.title || 'Workout Recommendation',
+      description: recommendation.description || '',
+      type: recommendation.type || 'general',
+      suggested_at: now,
+      reason: recommendation.reason || 'Based on your fitness profile',
+      confidence_score: recommendation.confidence_score || 0.75,
+      applied: false,
+      dismissed: false,
+    };
     
-    // Generate recommendations based on profile and history
-    const recommendations: Partial<WorkoutRecommendation>[] = [];
-    
-    if (profileData) {
-      // If user has a fitness goal, recommend workouts aligned with that goal
-      if (profileData.fitness_goals && profileData.fitness_goals.includes('strength')) {
-        recommendations.push({
-          title: 'Strength Building Program',
-          name: 'Strength Building Program', // Added for compatibility
-          description: 'A 4-week program focused on building strength and muscle mass.',
-          type: 'program',
-          reason: 'Based on your fitness goals',
-          confidence_score: 0.85
-        });
-      }
-      
-      if (profileData.fitness_goals && profileData.fitness_goals.includes('endurance')) {
-        recommendations.push({
-          title: 'Endurance Training Plan',
-          name: 'Endurance Training Plan', // Added for compatibility
-          description: 'Build your cardiovascular endurance with this progressive plan.',
-          type: 'program',
-          reason: 'Based on your fitness goals',
-          confidence_score: 0.8
-        });
-      }
-    }
-    
-    // If user has workout history, recommend based on patterns
-    if (historyData && historyData.length > 0) {
-      // Recommend trying a different workout type
-      const workoutTypes = new Set(historyData.map(h => h.workout_plan_name));
-      
-      if (!workoutTypes.has('Full Body')) {
-        recommendations.push({
-          title: 'Full Body Workout',
-          name: 'Full Body Workout', // Added for compatibility
-          description: 'Try this full body workout to target all major muscle groups.',
-          type: 'workout',
-          reason: 'Add variety to your routine',
-          confidence_score: 0.75
-        });
-      }
-    }
-    
-    // Check if user already has these recommendations
-    const { data: existingRecs, error: recsError } = await supabase
+    const { data, error } = await supabase
       .from('workout_recommendations')
-      .select('title, name')
-      .eq('user_id', userId)
-      .in('title', recommendations.map(r => r.title));
+      .insert([newRecommendation])
+      .select();
       
-    if (recsError) throw recsError;
+    if (error) throw error;
     
-    // Filter out recommendations that already exist
-    const existingTitles = new Set(existingRecs?.map(r => r.title || r.name) || []);
-    const newRecommendations = recommendations.filter(r => !existingTitles.has(r.title || ''));
-    
-    // Insert new recommendations
-    if (newRecommendations.length > 0) {
-      const recsToInsert = newRecommendations.map(rec => ({
-        id: crypto.randomUUID(),
-        user_id: userId,
-        title: rec.title,
-        name: rec.title, // Add name for compatibility
-        description: rec.description,
-        type: rec.type,
-        reason: rec.reason,
-        confidence_score: rec.confidence_score,
-        suggested_at: new Date().toISOString(),
-        applied: false,
-        dismissed: false
-      }));
-      
-      const { error: insertError } = await supabase
-        .from('workout_recommendations')
-        .insert(recsToInsert);
-        
-      if (insertError) throw insertError;
-    }
-    
-    return { 
-      success: true, 
-      count: newRecommendations.length,
-      error: null
+    // Add name for UI compatibility
+    const result = {
+      ...data[0],
+      name: data[0].title || 'Workout Recommendation'
     };
-  } catch (error: any) {
-    console.error('Error generating recommendations:', error);
-    return { 
-      success: false, 
-      count: 0,
-      error: error.message
-    };
+    
+    return { data: result as WorkoutRecommendation, error: null };
+  } catch (error) {
+    console.error('Error creating workout recommendation:', error);
+    return { data: null, error };
   }
 };

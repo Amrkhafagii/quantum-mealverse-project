@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Dumbbell, Calendar, Check, Edit, Trash } from 'lucide-react';
-import { getWorkoutPlans } from '@/services/workoutService';
+import { getWorkoutPlans as getWorkoutPlans } from '@/services/workoutService';
 import { useToast } from '@/hooks/use-toast';
 
 interface WorkoutPlannerProps {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -53,7 +52,13 @@ const FitnessProfilePage = () => {
         throw error;
       }
 
-      setUserProfile(data as UserProfile);
+      // Add default weight if missing
+      const profileWithDefaults = data ? {
+        ...data,
+        weight: data.weight || 0, // Ensure weight field exists
+      } : null;
+      
+      setUserProfile(profileWithDefaults as UserProfile);
       
       // Check goals when profile is loaded
       if (data) {
