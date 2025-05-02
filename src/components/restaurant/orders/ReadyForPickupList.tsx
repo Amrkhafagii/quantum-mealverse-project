@@ -42,8 +42,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
         .select(`
-          *,
-          orders:order_id(*)
+          *
         `)
         .eq('restaurant_id', restaurantId)
         .eq('status', 'ready_for_pickup')
@@ -56,7 +55,17 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
       // Process the orders
       const enhancedOrders: OrderData[] = [];
       for (const assignment of assignments || []) {
-        if (!assignment.orders) continue;
+        // Fetch the order separately
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', assignment.order_id)
+          .single();
+        
+        if (orderError || !orderData) {
+          console.error('Error fetching order:', orderError);
+          continue;
+        }
         
         // Get order ID for further queries
         const orderId = assignment.order_id;
@@ -85,28 +94,28 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           .select('*')
           .eq('order_id', orderId);
         
-        // Create a properly typed Order object from assignment.orders
-        const orderData: Order = {
-          id: assignment.orders.id,
-          user_id: assignment.orders.user_id,
-          customer_name: assignment.orders.customer_name,
-          customer_email: assignment.orders.customer_email,
-          customer_phone: assignment.orders.customer_phone,
-          delivery_address: assignment.orders.delivery_address,
-          city: assignment.orders.city,
-          notes: assignment.orders.notes,
-          delivery_method: assignment.orders.delivery_method,
-          payment_method: assignment.orders.payment_method,
-          delivery_fee: assignment.orders.delivery_fee,
-          subtotal: assignment.orders.subtotal,
-          total: assignment.orders.total,
-          status: assignment.orders.status,
-          latitude: assignment.orders.latitude,
-          longitude: assignment.orders.longitude,
-          formatted_order_id: assignment.orders.formatted_order_id,
-          created_at: assignment.orders.created_at,
-          updated_at: assignment.orders.updated_at,
-          restaurant_id: assignment.orders.restaurant_id,
+        // Create a properly typed Order object
+        const order: Order = {
+          id: orderData.id,
+          user_id: orderData.user_id,
+          customer_name: orderData.customer_name,
+          customer_email: orderData.customer_email,
+          customer_phone: orderData.customer_phone,
+          delivery_address: orderData.delivery_address,
+          city: orderData.city,
+          notes: orderData.notes,
+          delivery_method: orderData.delivery_method,
+          payment_method: orderData.payment_method,
+          delivery_fee: orderData.delivery_fee,
+          subtotal: orderData.subtotal,
+          total: orderData.total,
+          status: orderData.status,
+          latitude: orderData.latitude,
+          longitude: orderData.longitude,
+          formatted_order_id: orderData.formatted_order_id,
+          created_at: orderData.created_at,
+          updated_at: orderData.updated_at,
+          restaurant_id: orderData.restaurant_id,
           order_items: orderItems as OrderItem[] || []
         };
         
@@ -119,7 +128,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           updated_at: assignment.updated_at,
           notes: assignment.notes,
           expires_at: assignment.expires_at,
-          order: orderData,
+          order: order,
           driver
         });
       }
