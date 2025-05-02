@@ -21,10 +21,13 @@ import MealDetail from './pages/MealDetail';
 import NotFound from './pages/NotFound';
 import Nutrition from './pages/Nutrition';
 import Fitness from './pages/Fitness';
+import Workouts from './pages/Workouts';
+import FitnessProfile from './pages/FitnessProfile';
 
 // Restaurant admin routes
 import RestaurantDashboard from './pages/restaurant/Dashboard';
 import RestaurantMenu from './pages/restaurant/Menu';
+import RestaurantOrders from './pages/restaurant/Orders';
 
 function App() {
   return (
@@ -49,10 +52,13 @@ function App() {
                 <Route path="/order/status/:id" element={<OrderStatus />} />
                 <Route path="/nutrition" element={<Nutrition />} />
                 <Route path="/fitness" element={<Fitness />} />
+                <Route path="/workouts" element={<Workouts />} />
+                <Route path="/fitness-profile" element={<FitnessProfile />} />
                 
                 {/* Restaurant Admin Routes */}
                 <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
                 <Route path="/restaurant/menu" element={<RestaurantMenu />} />
+                <Route path="/restaurant/orders" element={<RestaurantOrders />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />

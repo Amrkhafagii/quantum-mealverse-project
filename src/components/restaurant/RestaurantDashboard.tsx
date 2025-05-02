@@ -1,501 +1,289 @@
 
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from 'react';
+import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { ClipboardList, PieChart, Clock, Calendar, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
-import { RefreshCcw } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
-import { getRestaurantOrders, updateOrderStatus } from '@/services/restaurant/orderService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const RestaurantDashboard = () => {
-  const { restaurant, loading } = useRestaurantAuth();
-  const [pendingOrders, setPendingOrders] = useState<RestaurantOrder[]>([]);
-  const [activeOrders, setActiveOrders] = useState<RestaurantOrder[]>([]);
-  const [completedOrders, setCompletedOrders] = useState<RestaurantOrder[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [activeTab, setActiveTab] = useState('pending');
-  const { toast } = useToast();
-
-  const fetchOrders = async () => {
-    if (!restaurant) return;
-    
-    setLoadingOrders(true);
-    try {
-      console.log('Fetching orders for restaurant:', restaurant.id);
-      
-      // Get all pending assignments first to debug
-      const { data: pendingAssignments, error: assignmentError } = await supabase
-        .from('restaurant_assignments')
-        .select('*')
-        .eq('restaurant_id', restaurant.id);
-        
-      if (assignmentError) {
-        console.error('Error fetching assignments:', assignmentError);
-      } else {
-        console.log('All restaurant assignments:', pendingAssignments);
-      }
-      
-      // Use the orderService to fetch pending orders
-      const pendingOrdersData = await getRestaurantOrders(
-        restaurant.id,
-        [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.PENDING]
-      );
-      console.log('Pending orders:', pendingOrdersData);
-      setPendingOrders(pendingOrdersData);
-      
-      // Fetch active orders
-      const activeOrdersData = await getRestaurantOrders(
-        restaurant.id,
-        [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP, OrderStatus.ON_THE_WAY]
-      );
-      console.log('Active orders:', activeOrdersData);
-      setActiveOrders(activeOrdersData);
-      
-      // Fetch completed orders
-      const completedOrdersData = await getRestaurantOrders(
-        restaurant.id,
-        [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REFUNDED]
-      );
-      console.log('Completed orders:', completedOrdersData);
-      setCompletedOrders(completedOrdersData);
-      
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load restaurant orders",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingOrders(false);
-    }
-  };
+  const { restaurant } = useRestaurantAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [recentOrders, setRecentOrders] = useState<RestaurantOrder[]>([]);
+  const [stats, setStats] = useState({
+    todayOrders: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+    totalRevenue: 0
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (restaurant) {
-      fetchOrders();
+      loadDashboardData();
     }
   }, [restaurant]);
 
-  useEffect(() => {
+  const loadDashboardData = async () => {
     if (!restaurant) return;
     
-    const interval = setInterval(() => {
-      fetchOrders();
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [restaurant]);
-
-  useEffect(() => {
-    if (!restaurant) return;
-    
-    const channel = supabase
-      .channel('restaurant-orders')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'orders',
-        filter: `restaurant_id=eq.${restaurant.id}`,
-      }, (payload) => {
-        console.log('Order updated:', payload);
-        fetchOrders();
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'orders',
-        filter: `restaurant_id=eq.${restaurant.id}`,
-      }, (payload) => {
-        console.log('New order:', payload);
-        fetchOrders();
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [restaurant]);
-
-  if (loading || !restaurant) {
-    return <div className="p-4 text-center">Loading restaurant data...</div>;
-  }
-
-  return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{restaurant.name} Dashboard</h1>
-        <Button variant="outline" onClick={fetchOrders} disabled={loadingOrders}>
-          <RefreshCcw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Pending Requests</CardTitle>
-            <CardDescription>Orders awaiting your response</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{pendingOrders.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Active Orders</CardTitle>
-            <CardDescription>Orders you are currently preparing</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{activeOrders.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Completed Today</CardTitle>
-            <CardDescription>Orders delivered today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {completedOrders.filter(order => 
-                order.status === OrderStatus.DELIVERED &&
-                new Date(order.updated_at).toDateString() === new Date().toDateString()
-              ).length}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs 
-        defaultValue={activeTab} 
-        onValueChange={setActiveTab} 
-        className="w-full"
-      >
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="pending">
-            Pending Requests ({pendingOrders.length})
-          </TabsTrigger>
-          <TabsTrigger value="active">
-            Active Orders ({activeOrders.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Completed ({completedOrders.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pending" className="space-y-4">
-          {loadingOrders ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                Loading pending orders...
-              </CardContent>
-            </Card>
-          ) : pendingOrders.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                No pending orders at this time.
-              </CardContent>
-            </Card>
-          ) : (
-            pendingOrders.map(order => (
-              <OrderCard 
-                key={order.id} 
-                order={order} 
-                type="pending"
-                onRefresh={fetchOrders}
-                restaurantId={restaurant.id}
-              />
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="active" className="space-y-4">
-          {loadingOrders ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                Loading active orders...
-              </CardContent>
-            </Card>
-          ) : activeOrders.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                No active orders at this time.
-              </CardContent>
-            </Card>
-          ) : (
-            activeOrders.map(order => (
-              <OrderCard 
-                key={order.id} 
-                order={order} 
-                type="active"
-                onRefresh={fetchOrders}
-                restaurantId={restaurant.id}
-              />
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="completed" className="space-y-4">
-          {loadingOrders ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                Loading completed orders...
-              </CardContent>
-            </Card>
-          ) : completedOrders.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                No completed orders to show.
-              </CardContent>
-            </Card>
-          ) : (
-            completedOrders.map(order => (
-              <OrderCard 
-                key={order.id} 
-                order={order} 
-                type="completed"
-                onRefresh={fetchOrders}
-                restaurantId={restaurant.id}
-              />
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
-interface OrderCardProps {
-  order: RestaurantOrder;
-  type: 'pending' | 'active' | 'completed';
-  onRefresh: () => void;
-  restaurantId: string;
-}
-
-const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh, restaurantId }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { toast } = useToast();
-
-  const handleOrderAction = async (action: string) => {
-    if (!restaurantId) {
-      toast({
-        title: "Error",
-        description: "Restaurant information is missing",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
     try {
-      let status: OrderStatus;
+      setLoading(true);
       
-      switch (action) {
-        case 'accept':
-          status = OrderStatus.RESTAURANT_ACCEPTED;
-          break;
-        case 'reject':
-          status = OrderStatus.RESTAURANT_REJECTED;
-          break;
-        case 'prepare':
-          status = OrderStatus.PREPARING;
-          break;
-        case 'ready':
-          status = OrderStatus.READY_FOR_PICKUP;
-          break;
-        case 'deliver':
-          status = OrderStatus.ON_THE_WAY;
-          break;
-        case 'complete':
-          status = OrderStatus.DELIVERED;
-          break;
-        default:
-          throw new Error('Invalid action');
-      }
-      
-      // Get the assignment ID if this is an accept/reject action
-      let assignmentId = null;
-      if (action === 'accept' || action === 'reject') {
-        // Find the assignment for this order
-        const { data: assignments, error: assignmentError } = await supabase
-          .from('restaurant_assignments')
-          .select('id')
-          .eq('order_id', order.id)
-          .eq('restaurant_id', restaurantId)
-          .eq('status', 'pending')
-          .maybeSingle();
-          
-        if (assignmentError) {
-          console.error('Error finding assignment:', assignmentError);
-          throw new Error('Error fetching restaurant assignment');
-        }
+      // Fetch recent orders
+      const { data: orders, error: orderError } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('restaurant_id', restaurant.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
         
-        if (!assignments) {
-          // If no assignment found with pending status, check if this restaurant has any assignment
-          const { data: anyAssignment, error: anyAssignmentError } = await supabase
-            .from('restaurant_assignments')
-            .select('id, status')
-            .eq('order_id', order.id)
-            .eq('restaurant_id', restaurantId)
-            .maybeSingle();
-            
-          if (anyAssignment) {
-            console.log(`Found non-pending assignment with status: ${anyAssignment.status}`);
-            if (anyAssignment.status === 'expired') {
-              throw new Error('This assignment has expired. The order may have been assigned to another restaurant.');
-            } else if (anyAssignment.status === 'rejected') {
-              throw new Error('You have already rejected this order.');
-            }
-          }
-          
-          console.error('No pending assignment found for this restaurant and order');
-          throw new Error('No pending assignment found for this restaurant. The assignment may have expired or been cancelled.');
-        }
+      if (orderError) throw orderError;
+      
+      // Transform orders data
+      const transformedOrders = orders.map(order => ({
+        ...order,
+        order_items: order.order_items || []
+      })) as RestaurantOrder[];
+      
+      setRecentOrders(transformedOrders);
+      
+      // Get order stats for today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data: todayOrdersData, error: todayError } = await supabase
+        .from('orders')
+        .select('id, total, status')
+        .eq('restaurant_id', restaurant.id)
+        .gte('created_at', today.toISOString());
         
-        assignmentId = assignments.id;
-      }
+      if (todayError) throw todayError;
       
-      console.log(`Updating order ${order.id} to status ${status} with restaurant ${restaurantId} and assignmentId ${assignmentId || 'none'}`);
+      // Calculate stats
+      const pendingOrders = todayOrdersData ? todayOrdersData.filter(order => 
+        [OrderStatus.PENDING, OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.RESTAURANT_ACCEPTED].includes(order.status as OrderStatus)
+      ).length : 0;
       
-      // Use the orderService to update the status
-      const success = await updateOrderStatus(
-        order.id,
-        status,
-        restaurantId,
-        { assignment_id: assignmentId }
-      );
+      const completedOrders = todayOrdersData ? todayOrdersData.filter(order => 
+        order.status === OrderStatus.DELIVERED
+      ).length : 0;
       
-      if (!success) {
-        throw new Error('Failed to update order status');
-      }
+      const totalRevenue = todayOrdersData ? todayOrdersData.reduce((sum, order) => sum + (order.total || 0), 0) : 0;
       
-      toast({
-        title: "Success",
-        description: `Order ${action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'updated'} successfully.`
+      setStats({
+        todayOrders: todayOrdersData ? todayOrdersData.length : 0,
+        pendingOrders,
+        completedOrders,
+        totalRevenue
       });
       
-      // Immediately refresh the data to show the updated status
-      onRefresh();
-    } catch (error: any) {
-      console.error('Error updating order:', error);
-      toast({
-        title: "Error",
-        description: error.message || 'An error occurred while updating the order',
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
+  const getOrderStatusColor = (status: OrderStatus) => {
+    switch (status) {
+      case OrderStatus.RESTAURANT_ACCEPTED:
+        return "bg-green-500/20 text-green-500";
+      case OrderStatus.PREPARING:
+        return "bg-blue-500/20 text-blue-500";
+      case OrderStatus.READY_FOR_PICKUP:
+        return "bg-purple-500/20 text-purple-500";
+      case OrderStatus.ON_THE_WAY:
+        return "bg-yellow-500/20 text-yellow-500";
+      case OrderStatus.DELIVERED:
+        return "bg-green-700/20 text-green-700";
+      case OrderStatus.CANCELLED:
+        return "bg-red-500/20 text-red-500";
+      default:
+        return "bg-gray-500/20 text-gray-500";
+    }
+  };
+
+  if (!restaurant) {
+    return <div>No restaurant found</div>;
+  }
+
   return (
-    <Card key={order.id}>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between">
-          <div>
-            <CardTitle>Order #{order.id.substring(0, 8)}</CardTitle>
-            <CardDescription>
-              {new Date(order.created_at).toLocaleString()}
-            </CardDescription>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-quantum-cyan">Dashboard</h1>
+        <div className="text-sm text-gray-400">{new Date().toLocaleDateString()}</div>
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Today's Orders Card */}
+            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Today's Orders</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-10 w-20 bg-quantum-cyan/10" />
+                ) : (
+                  <div className="flex items-end gap-2">
+                    <div className="text-3xl font-bold">{stats.todayOrders}</div>
+                    <div className="text-sm text-gray-400">orders</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Pending Orders Card */}
+            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Pending Orders</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-10 w-20 bg-quantum-cyan/10" />
+                ) : (
+                  <div className="flex items-end gap-2">
+                    <div className="text-3xl font-bold">{stats.pendingOrders}</div>
+                    <div className="text-sm text-gray-400">orders</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Completed Orders Card */}
+            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Completed Today</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-10 w-20 bg-quantum-cyan/10" />
+                ) : (
+                  <div className="flex items-end gap-2">
+                    <div className="text-3xl font-bold">{stats.completedOrders}</div>
+                    <div className="text-sm text-gray-400">orders</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Today's Revenue Card */}
+            <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-400">Today's Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-10 w-32 bg-quantum-cyan/10" />
+                ) : (
+                  <div className="flex items-end gap-2">
+                    <div className="text-3xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          <div className="text-right">
-            <span className="font-bold">${order.total.toFixed(2)}</span>
-            <CardDescription>
-              Status: {order.status.replace('_', ' ').toUpperCase()}
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h3 className="font-medium mb-1">Customer Details</h3>
-            <p>{order.customer_name}</p>
-            <p>{order.customer_phone}</p>
-            <p className="text-sm text-gray-500">{order.delivery_address}</p>
-          </div>
-          <div>
-            <h3 className="font-medium mb-1">Order Items</h3>
-            <ul className="space-y-1">
-              {order.order_items && order.order_items.length > 0 ? (
-                order.order_items.map(item => (
-                  <li key={item.id} className="flex justify-between">
-                    <span>{item.quantity}x {item.name}</span>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
-                  </li>
-                ))
+          
+          {/* Recent Orders */}
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>The latest orders for your restaurant</CardDescription>
+              </div>
+              <Button variant="ghost" onClick={() => navigate('/restaurant/orders')}>
+                View All <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full bg-quantum-cyan/10" />
+                  ))}
+                </div>
+              ) : recentOrders.length > 0 ? (
+                <div className="space-y-3">
+                  {recentOrders.map((order) => (
+                    <div key={order.id} className="flex items-center justify-between p-3 bg-quantum-darkBlue/50 rounded-md border border-quantum-cyan/10">
+                      <div className="flex flex-col">
+                        <div className="font-medium">{order.formatted_order_id || `Order #${order.id.slice(0, 6)}`}</div>
+                        <div className="text-sm text-gray-400">
+                          {new Date(order.created_at).toLocaleString(undefined, { 
+                            hour: 'numeric', 
+                            minute: 'numeric',
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-lg font-bold">${order.total.toFixed(2)}</div>
+                        <div className={`px-2 py-1 rounded text-xs font-medium ${getOrderStatusColor(order.status as OrderStatus)}`}>
+                          {order.status.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <li>No items</li>
+                <div className="text-center py-8 text-gray-400">
+                  <ClipboardList className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                  <p>No orders found</p>
+                </div>
               )}
-            </ul>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        {type === 'pending' && (
-          <div className="flex space-x-2 mt-4">
-            <LoadingButton 
-              className="w-1/2" 
-              onClick={() => handleOrderAction('accept')}
-              loading={isProcessing}
-            >
-              Accept Order
-            </LoadingButton>
-            <LoadingButton 
-              className="w-1/2" 
-              variant="destructive" 
-              onClick={() => handleOrderAction('reject')}
-              loading={isProcessing}
-            >
-              Reject Order
-            </LoadingButton>
+        <TabsContent value="orders">
+          <div className="py-8 text-center">
+            <Button onClick={() => navigate('/restaurant/orders')} className="bg-quantum-cyan hover:bg-quantum-cyan/80">
+              Go to Orders Management
+            </Button>
           </div>
-        )}
+        </TabsContent>
         
-        {type === 'active' && (
-          <div className="flex space-x-2 mt-4">
-            {order.status === OrderStatus.RESTAURANT_ACCEPTED && (
-              <LoadingButton 
-                className="w-full" 
-                onClick={() => handleOrderAction('prepare')}
-                loading={isProcessing}
-              >
-                Start Preparing
-              </LoadingButton>
-            )}
-            {order.status === OrderStatus.PREPARING && (
-              <LoadingButton 
-                className="w-full" 
-                onClick={() => handleOrderAction('ready')}
-                loading={isProcessing}
-              >
-                Mark as Ready
-              </LoadingButton>
-            )}
-            {order.status === OrderStatus.READY_FOR_PICKUP && (
-              <LoadingButton 
-                className="w-full" 
-                onClick={() => handleOrderAction('deliver')}
-                loading={isProcessing}
-              >
-                Start Delivery
-              </LoadingButton>
-            )}
-            {order.status === OrderStatus.ON_THE_WAY && (
-              <LoadingButton 
-                className="w-full" 
-                onClick={() => handleOrderAction('complete')}
-                loading={isProcessing}
-              >
-                Mark as Delivered
-              </LoadingButton>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <TabsContent value="analytics">
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle>Analytics</CardTitle>
+              <CardDescription>View detailed performance analytics for your restaurant</CardDescription>
+            </CardHeader>
+            <CardContent className="py-10 text-center">
+              <PieChart className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-xl font-medium mb-2">Analytics Dashboard Coming Soon</h3>
+              <p className="text-gray-400 max-w-md mx-auto">
+                We're building a comprehensive analytics dashboard to help you gain insights into your restaurant's performance.
+              </p>
+            </CardContent>
+            <CardFooter className="border-t border-quantum-cyan/10 pt-4 flex justify-between">
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4" />
+                <span>Coming soon</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4" />
+                <span>Q2 2025</span>
+              </div>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };

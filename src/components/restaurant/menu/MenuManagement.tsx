@@ -1,343 +1,194 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+import React, { useState, useEffect } from 'react';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { MenuItemForm } from './MenuItemForm';
-import { CategoryForm } from './CategoryForm';
-import { MenuItemReviews } from './MenuItemReviews';
-import { MenuItemsTable } from './MenuItemsTable';
-import { CategoriesTable } from './CategoriesTable';
-import { useMenuItems } from '@/hooks/menu/useMenuItems';
-import { useCategories } from '@/hooks/menu/useCategories';
-import { PlusCircle, RefreshCcw } from 'lucide-react';
-import { MenuItem, MenuCategory } from '@/types/menu';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PlusCircle, Search, Loader2, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { getMenuItems } from '@/services/restaurant/menuService';
+import { MenuItem } from '@/types/restaurant';
+import MenuItemCard from './MenuItemCard';
+import AddMenuItemForm from './AddMenuItemForm';
 
-const INITIAL_MENU_ITEM: MenuItem = {
-  id: '',
-  restaurant_id: '',
-  name: '',
-  description: '',
-  price: 0,
-  category: '',
-  is_available: true,
-  preparation_time: 15,
-  nutritional_info: {
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0
-  },
-  ingredients: [],
-  steps: []
-};
-
-const INITIAL_CATEGORY: MenuCategory = {
-  id: '',
-  name: '',
-  restaurant_id: '',
-};
-
-export const MenuManagement: React.FC = () => {
+export const MenuManagement = () => {
   const { restaurant } = useRestaurantAuth();
-  const [activeTab, setActiveTab] = useState('items');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | undefined>();
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [selectedItemForReview, setSelectedItemForReview] = useState<string | null>(null);
-  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
-  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
-
-  const {
-    menuItems,
-    selectedItem,
-    isLoading: isLoadingItems,
-    fetchMenuItems,
-    handleSaveMenuItem,
-    handleDeleteMenuItem,
-    editMenuItem,
-    setSelectedItem
-  } = useMenuItems(restaurant?.id || '');
-
-  const {
-    categories,
-    selectedCategory,
-    isLoading: isLoadingCategories,
-    fetchCategories,
-    handleSaveCategory,
-    handleDeleteCategory,
-    setSelectedCategory
-  } = useCategories(restaurant?.id || '');
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
-    if (restaurant?.id) {
-      fetchMenuItems(selectedCategoryFilter);
-      fetchCategories();
+    if (restaurant) {
+      loadMenuItems();
     }
-  }, [restaurant?.id]);
+  }, [restaurant]);
 
-  const filteredMenuItems = menuItems.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (selectedCategoryFilter ? item.category === selectedCategoryFilter : true)
-  );
-
-  const filteredCategories = categories.filter(category => 
-    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (category.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleCategoryFilterChange = (category?: string) => {
-    setSelectedCategoryFilter(category);
-    fetchMenuItems(category);
+  const loadMenuItems = async () => {
+    if (!restaurant) return;
+    
+    try {
+      setLoading(true);
+      const items = await getMenuItems(restaurant.id);
+      setMenuItems(items);
+      
+      // Extract unique categories
+      const uniqueCategories = Array.from(new Set(items.map(item => item.category)));
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error('Error loading menu items:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddItemClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSelectedItem(INITIAL_MENU_ITEM);
-    setIsAddItemDialogOpen(true);
+  const handleAddItem = () => {
+    setIsAddingItem(true);
   };
 
-  const handleAddCategoryClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setSelectedCategory(INITIAL_CATEGORY);
-    setIsAddCategoryDialogOpen(true);
+  const handleAddItemCancel = () => {
+    setIsAddingItem(false);
   };
 
-  const handleEditItemClick = (item: MenuItem) => {
-    editMenuItem(item);
-    setIsAddItemDialogOpen(true);
+  const handleItemAdded = () => {
+    setIsAddingItem(false);
+    loadMenuItems();
+  };
+  
+  const handleItemUpdated = () => {
+    loadMenuItems();
   };
 
-  const handleEditCategoryClick = (category: MenuCategory) => {
-    setSelectedCategory(category);
-    setIsAddCategoryDialogOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setIsAddItemDialogOpen(false);
-    setIsAddCategoryDialogOpen(false);
-    setSelectedItem(null);
-    setSelectedCategory(null);
-  };
-
-  if (!restaurant) {
-    return (
-      <div className="p-4 text-center">
-        Please log in as a restaurant to manage your menu.
-      </div>
-    );
-  }
+  // Filter menu items based on search term and selected category
+  const filteredItems = menuItems.filter(item => {
+    const matchesSearch = searchTerm === '' || 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (item.description?.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+    const matchesCategory = selectedCategory === null || item.category === selectedCategory;
+    
+    // For availability tab
+    const matchesAvailability = 
+      activeTab === 'all' || 
+      (activeTab === 'available' && item.is_available) || 
+      (activeTab === 'unavailable' && !item.is_available);
+      
+    return matchesSearch && matchesCategory && matchesAvailability;
+  });
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Menu Management</h1>
-        <Button 
-          variant="outline" 
-          onClick={() => {
-            fetchMenuItems(selectedCategoryFilter);
-            fetchCategories();
-          }} 
-          disabled={isLoadingItems || isLoadingCategories}
-          className="relative z-10"
-        >
-          <RefreshCcw className="h-4 w-4 mr-2" />
-          Refresh
+        <div>
+          <h1 className="text-3xl font-bold text-quantum-cyan">Menu Management</h1>
+          <p className="text-gray-400">Manage your restaurant's menu items</p>
+        </div>
+        <Button onClick={handleAddItem} className="bg-quantum-cyan hover:bg-quantum-cyan/80">
+          <PlusCircle className="mr-2 h-5 w-5" />
+          Add Item
         </Button>
       </div>
+      
+      <Separator className="my-6" />
 
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="max-w-sm w-full">
-          <Input
-            placeholder="Search menu items or categories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddItemClick} className="relative z-10">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Item
+      {isAddingItem ? (
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardHeader>
+            <CardTitle>Add New Menu Item</CardTitle>
+            <CardDescription>Enter the details for your new menu item</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AddMenuItemForm 
+              restaurantId={restaurant?.id || ''} 
+              onCancel={handleAddItemCancel} 
+              onSuccess={handleItemAdded}
+              categories={categories}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Search menu items..." 
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="text-xs">
+                <Filter className="mr-1 h-3 w-3" />
+                Filter
               </Button>
-            </DialogTrigger>
-            {selectedItem && isAddItemDialogOpen && (
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{selectedItem.id ? 'Edit' : 'Add'} Menu Item</DialogTitle>
-                </DialogHeader>
-                <MenuItemForm
-                  item={selectedItem}
-                  categories={categories}
-                  onSave={handleSaveMenuItem}
-                  onCancel={handleDialogClose}
-                  isLoading={isLoadingItems}
-                />
-              </DialogContent>
-            )}
-          </Dialog>
-
-          <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" onClick={handleAddCategoryClick} className="relative z-10">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </DialogTrigger>
-            {selectedCategory && isAddCategoryDialogOpen && (
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{selectedCategory.id ? 'Edit' : 'Add'} Category</DialogTitle>
-                </DialogHeader>
-                <CategoryForm
-                  category={selectedCategory}
-                  onSave={handleSaveCategory}
-                  onCancel={handleDialogClose}
-                  isLoading={isLoadingCategories}
-                />
-              </DialogContent>
-            )}
-          </Dialog>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 mb-4">
-          <TabsTrigger value="items">Menu Items</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="items" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Menu Items</CardTitle>
-              <CardDescription>Manage your restaurant's menu items</CardDescription>
-
-              {categories.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Button
-                    size="sm"
-                    variant={!selectedCategoryFilter ? "secondary" : "outline"}
-                    className="text-xs"
-                    onClick={() => handleCategoryFilterChange(undefined)}
-                  >
-                    All
-                  </Button>
-                  {categories.map(category => (
-                    <Button
-                      key={category.id}
-                      size="sm"
-                      variant={selectedCategoryFilter === category.name ? "secondary" : "outline"}
-                      className="text-xs"
-                      onClick={() => handleCategoryFilterChange(category.name)}
-                    >
-                      {category.name}
-                    </Button>
+            </div>
+          </div>
+          
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="all">All Items</TabsTrigger>
+              <TabsTrigger value="available">Available</TabsTrigger>
+              <TabsTrigger value="unavailable">Unavailable</TabsTrigger>
+              
+              {categories.length > 0 && categories.map(category => (
+                <TabsTrigger 
+                  key={category} 
+                  value={category}
+                  onClick={() => {
+                    setSelectedCategory(prev => prev === category ? null : category);
+                  }}
+                >
+                  {category}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <TabsContent value={activeTab} className="mt-6">
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : filteredItems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredItems.map(item => (
+                    <MenuItemCard 
+                      key={item.id} 
+                      item={item} 
+                      onUpdate={handleItemUpdated}
+                    />
                   ))}
                 </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoadingItems ? (
-                <div className="text-center py-8">Loading menu items...</div>
               ) : (
-                <MenuItemsTable
-                  items={filteredMenuItems}
-                  onEdit={handleEditItemClick}
-                  onDelete={setItemToDelete}
-                  onReviewsClick={setSelectedItemForReview}
-                />
+                <div className="text-center py-12 text-gray-400">
+                  <p className="text-lg">No menu items found</p>
+                  <p className="text-sm mt-2">
+                    {searchTerm || selectedCategory ? 
+                      "Try adjusting your search or filters" : 
+                      "Add your first menu item to get started"}
+                  </p>
+                  <Button 
+                    onClick={handleAddItem}
+                    variant="outline" 
+                    className="mt-4"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Your First Item
+                  </Button>
+                </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="categories" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Menu Categories</CardTitle>
-              <CardDescription>Manage your menu categories</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingCategories ? (
-                <div className="text-center py-8">Loading categories...</div>
-              ) : (
-                <CategoriesTable
-                  categories={filteredCategories}
-                  onEdit={handleEditCategoryClick}
-                  onDelete={setCategoryToDelete}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the menu item.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (itemToDelete) {
-                handleDeleteMenuItem(itemToDelete);
-                setItemToDelete(null);
-              }
-            }} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the category. Any menu items associated with this category will need to be reassigned.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (categoryToDelete) {
-                handleDeleteCategory(categoryToDelete);
-                setCategoryToDelete(null);
-              }
-            }} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {selectedItemForReview && (
-        <Dialog open={!!selectedItemForReview} onOpenChange={(open) => !open && setSelectedItemForReview(null)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Customer Reviews</DialogTitle>
-            </DialogHeader>
-            <MenuItemReviews 
-              mealId={selectedItemForReview} 
-              restaurantId={restaurant.id}
-            />
-          </DialogContent>
-        </Dialog>
+            </TabsContent>
+          </Tabs>
+        </>
       )}
     </div>
   );
 };
+
+export default MenuManagement;
