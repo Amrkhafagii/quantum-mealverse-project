@@ -50,13 +50,14 @@ export const UserActions = ({
             <NotificationPanel className="text-quantum-cyan hover:text-white" />
           )}
           
-          <Link to="/checkout" className="relative">
+          <Link to="/checkout" className="relative hidden md:block">
             <Button variant="ghost" className="text-quantum-cyan hover:text-white">
               <CreditCard className="h-5 w-5" />
               <span className="ml-2 hidden md:inline">Checkout</span>
             </Button>
           </Link>
           
+          {/* Single Cart button that displays on all screen sizes */}
           <Link to="/cart" className="relative">
             <Button variant="ghost" className="text-quantum-cyan hover:text-white">
               <ShoppingCart className="h-5 w-5" />

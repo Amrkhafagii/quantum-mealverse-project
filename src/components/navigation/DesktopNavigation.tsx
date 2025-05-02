@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Utensils, ActivitySquare, Dumbbell, UserCog } from 'lucide-react';
+import { Utensils, ActivitySquare, Dumbbell, UserCog } from 'lucide-react';
 
 interface DesktopNavigationProps {
   isCustomerView: boolean;
@@ -48,12 +48,7 @@ export const DesktopNavigation = ({ isCustomerView, isAuthenticated }: DesktopNa
             </>
           )}
           
-          <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/cart" className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              <span>Cart</span>
-            </Link>
-          </Button>
+          {/* Removed Cart button from here as it's already in UserActions */}
         </>
       ) : (
         // Admin navigation options
