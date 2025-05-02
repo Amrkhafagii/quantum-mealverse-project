@@ -35,14 +35,14 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
             
             <OrderStatusMessage 
               status={order.status} 
-              restaurantName={order.restaurant?.name} 
+              restaurant={order.restaurant?.name} 
               assignmentStatus={assignmentStatus}
             />
             
             {['restaurant_assigned', 'accepted', 'preparing'].includes(order.status) && (
               <OrderTimer 
-                status={order.status} 
-                updatedAt={order.updated_at || order.created_at || ''} 
+                orderStatus={order.status} 
+                orderUpdatedAt={order.updated_at || order.created_at || ''} 
               />
             )}
           </div>
@@ -50,7 +50,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           {showCancelButton && canBeCancelled && (
             <CancelOrderButton 
               orderId={order.id!} 
-              onCancelled={onOrderUpdate}
+              onCancel={onOrderUpdate}
             />
           )}
         </div>

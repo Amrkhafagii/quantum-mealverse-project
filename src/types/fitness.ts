@@ -129,9 +129,13 @@ export interface CompletedExercise {
     reps: number;
     completed: boolean;
   }[];
-  weight_used: number[]; // Added for compatibility
-  reps_completed?: number[]; // Added for compatibility
-  notes?: string; // Added for compatibility
+  weight_used?: number[]; // For compatibility
+  reps_completed?: number[]; // For compatibility
+  notes?: string; // For compatibility
+  // Added for backward compatibility with WorkoutExerciseLog
+  sets?: number;
+  reps?: number;
+  weight?: number;
 }
 
 export interface WorkoutHistoryItem {

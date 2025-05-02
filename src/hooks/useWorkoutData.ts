@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import {
@@ -11,15 +12,17 @@ import {
   getUserWorkoutSchedules,
   createWorkoutSchedule
 } from '@/services/workoutService';
-import { WorkoutPlan, UserWorkoutStats } from '@/types/fitness';
+import { WorkoutPlan, UserWorkoutStats, WorkoutHistoryItem } from '@/types/fitness';
 
 export const useWorkoutData = () => {
   const { user } = useAuth();
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [workoutStats, setWorkoutStats] = useState<UserWorkoutStats | null>(null);
+  const [history, setHistory] = useState<WorkoutHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState({
     plans: false,
     stats: false,
+    history: false
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +46,6 @@ export const useWorkoutData = () => {
     }
   };
 
-  // Update the fetchWorkoutStats function to use correct signature
   const fetchWorkoutStats = async () => {
     if (!user?.id) return;
     setIsLoading(prev => ({ ...prev, stats: true }));
@@ -60,6 +62,19 @@ export const useWorkoutData = () => {
     }
   };
 
+  const loadWorkoutHistory = async () => {
+    if (!user?.id) return;
+    setIsLoading(prev => ({ ...prev, history: true }));
+    try {
+      const historyData = await getUserWorkoutHistory(user.id);
+      setHistory(historyData);
+    } catch (error: any) {
+      setError(error.message || 'Failed to load workout history');
+    } finally {
+      setIsLoading(prev => ({ ...prev, history: false }));
+    }
+  };
+
   const addWorkoutPlan = async (planData: any) => {
     if (!user?.id) return;
     try {
@@ -67,8 +82,10 @@ export const useWorkoutData = () => {
       if (newPlan) {
         setWorkoutPlans(prevPlans => [...prevPlans, newPlan]);
       }
+      return newPlan;
     } catch (error: any) {
       setError(error.message || 'Failed to add workout plan');
+      throw error;
     }
   };
 
@@ -80,8 +97,10 @@ export const useWorkoutData = () => {
           prevPlans.map(plan => (plan.id === planId ? updatedPlan : plan))
         );
       }
+      return updatedPlan;
     } catch (error: any) {
       setError(error.message || 'Failed to update workout plan');
+      throw error;
     }
   };
 
@@ -91,17 +110,40 @@ export const useWorkoutData = () => {
       setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan.id !== planId));
     } catch (error: any) {
       setError(error.message || 'Failed to delete workout plan');
+      throw error;
+    }
+  };
+  
+  const logWorkoutSession = async (workoutData: any) => {
+    if (!user?.id) return;
+    try {
+      const result = await logWorkout({
+        ...workoutData,
+        user_id: user.id
+      });
+      
+      // Refresh stats and history after logging workout
+      fetchWorkoutStats();
+      loadWorkoutHistory();
+      
+      return result;
+    } catch (error: any) {
+      setError(error.message || 'Failed to log workout');
+      throw error;
     }
   };
 
   return {
     workoutPlans,
     workoutStats,
+    history,
     isLoading,
     error,
     fetchWorkoutPlans,
+    loadWorkoutHistory,
     addWorkoutPlan,
     updatePlan,
     deletePlan,
+    logWorkout: logWorkoutSession,
   };
 };
