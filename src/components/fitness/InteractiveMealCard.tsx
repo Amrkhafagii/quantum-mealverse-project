@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Meal, MealFood } from '@/types/food';
 import { cn } from '@/lib/utils';
 import { Badge } from "@/components/ui/badge";
+import RestaurantMealMatcher from './RestaurantMealMatcher';
 
 interface InteractiveMealCardProps {
   meal: Meal;
@@ -142,6 +143,15 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
             <Shuffle className="h-3.5 w-3.5 mr-2" />
             Shuffle Meal Options
           </Button>
+          
+          <RestaurantMealMatcher
+            mealFoods={meal.foods}
+            mealName={meal.name}
+            mealCalories={meal.totalCalories}
+            mealProtein={meal.totalProtein}
+            mealCarbs={meal.totalCarbs}
+            mealFat={meal.totalFat}
+          />
         </CardContent>
       </Card>
     </div>
