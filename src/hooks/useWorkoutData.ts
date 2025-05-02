@@ -10,12 +10,12 @@ import {
   WorkoutSchedule
 } from '@/types/fitness';
 import {
-  getWorkoutPlans,
-  getWorkoutHistory,
-  getWorkoutStats,
-  saveWorkoutPlan,
+  getUserWorkoutPlans,
+  getUserWorkoutHistory,
+  getUserWorkoutStats,
+  createWorkoutPlan,
   logWorkout,
-  getWorkoutSchedule,
+  getUserWorkoutSchedules,
   createWorkoutSchedule
 } from '@/services/workoutService';
 
@@ -57,7 +57,7 @@ export const useWorkoutData = () => {
     setError(prev => ({ ...prev, plans: null }));
 
     try {
-      const { data, error } = await getWorkoutPlans(user.id);
+      const { data, error } = await getUserWorkoutPlans(user.id);
 
       if (error) {
         throw error;
@@ -85,7 +85,7 @@ export const useWorkoutData = () => {
     setError(prev => ({ ...prev, history: null }));
 
     try {
-      const { data, error } = await getWorkoutHistory(user.id, dateFilter);
+      const { data, error } = await getUserWorkoutHistory(user.id);
 
       if (error) {
         throw error;
@@ -113,7 +113,7 @@ export const useWorkoutData = () => {
     setError(prev => ({ ...prev, stats: null }));
 
     try {
-      const { data, error } = await getWorkoutStats(user.id);
+      const { data, error } = await getUserWorkoutStats(user.id);
 
       if (error) {
         throw error;
@@ -141,7 +141,7 @@ export const useWorkoutData = () => {
     setError(prev => ({ ...prev, schedules: null }));
 
     try {
-      const { data, error } = await getWorkoutSchedule(user.id);
+      const { data, error } = await getUserWorkoutSchedules(user.id);
 
       if (error) {
         throw error;
@@ -176,7 +176,7 @@ export const useWorkoutData = () => {
       // Ensure the user ID is set
       plan.user_id = user.id;
       
-      const { data, error } = await saveWorkoutPlan(plan);
+      const { data, error } = await createWorkoutPlan(plan);
 
       if (error) {
         throw error;

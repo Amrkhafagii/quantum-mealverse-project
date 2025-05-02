@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -40,8 +41,8 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
       // Add default properties needed to avoid TypeScript errors
       const enhancedData = (data || []).map(rec => ({
         ...rec,
-        dismissed: false,
-        applied: false,
+        dismissed: rec.dismissed || false,
+        applied: rec.applied || false,
         type: rec.type || 'exercise',
         title: rec.title || rec.name,
         confidence_score: rec.confidence_score || 80,
@@ -63,11 +64,9 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
 
   const handleApply = async (recommendation: WorkoutRecommendation) => {
     try {
-      const { success, error } = await applyRecommendation(recommendation.id);
+      const result = await applyRecommendation(recommendation.id, userId);
       
-      if (error) throw error;
-      
-      if (success) {
+      if (result.success) {
         // Update local state
         setRecommendations(prevRecs => 
           prevRecs.map(rec => 
@@ -81,6 +80,8 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
           title: 'Recommendation Applied',
           description: 'The recommendation has been applied to your workout plan.',
         });
+      } else if (result.error) {
+        throw result.error;
       }
     } catch (error) {
       console.error('Error applying recommendation:', error);
@@ -94,11 +95,9 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
 
   const handleDismiss = async (recommendation: WorkoutRecommendation) => {
     try {
-      const { success, error } = await dismissRecommendation(recommendation.id);
+      const result = await dismissRecommendation(recommendation.id, userId);
       
-      if (error) throw error;
-      
-      if (success) {
+      if (result.success) {
         // Update local state
         setRecommendations(prevRecs => 
           prevRecs.map(rec => 
@@ -117,6 +116,8 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
         if (currentIndex < recommendations.length - 1) {
           setCurrentIndex(currentIndex + 1);
         }
+      } else if (result.error) {
+        throw result.error;
       }
     } catch (error) {
       console.error('Error dismissing recommendation:', error);

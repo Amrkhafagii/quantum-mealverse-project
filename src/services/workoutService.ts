@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutPlan, WorkoutLog, WorkoutHistoryItem } from '@/types/fitness';
+import { WorkoutPlan, WorkoutLog, WorkoutHistoryItem, UserWorkoutStats, WorkoutSchedule } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -15,7 +16,25 @@ export const getUserWorkoutPlans = async (userId: string): Promise<{ data: Worko
     
     if (error) throw error;
     
-    return { data: data as WorkoutPlan[], error: null };
+    if (data) {
+      // Convert to proper WorkoutPlan type
+      const typedData: WorkoutPlan[] = data.map(plan => ({
+        id: plan.id,
+        user_id: plan.user_id,
+        name: plan.name,
+        description: plan.description || '',
+        frequency: plan.frequency,
+        goal: plan.goal,
+        difficulty: plan.difficulty as 'beginner' | 'intermediate' | 'advanced',
+        workout_days: Array.isArray(plan.workout_days) ? plan.workout_days : [],
+        created_at: plan.created_at,
+        updated_at: plan.updated_at,
+        duration_weeks: plan.duration_weeks
+      }));
+      return { data: typedData, error: null };
+    }
+    
+    return { data: null, error: null };
   } catch (error) {
     console.error('Error fetching workout plans:', error);
     return { data: null, error };
@@ -35,7 +54,22 @@ export const getWorkoutPlanById = async (planId: string): Promise<{ data: Workou
     
     if (error) throw error;
     
-    return { data: data as WorkoutPlan, error: null };
+    // Convert to proper WorkoutPlan type
+    const typedData: WorkoutPlan = {
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      description: data.description || '',
+      frequency: data.frequency,
+      goal: data.goal,
+      difficulty: data.difficulty as 'beginner' | 'intermediate' | 'advanced',
+      workout_days: Array.isArray(data.workout_days) ? data.workout_days : [],
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      duration_weeks: data.duration_weeks
+    };
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error fetching workout plan:', error);
     return { data: null, error };
@@ -61,7 +95,22 @@ export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Work
       
     if (error) throw error;
     
-    return { data: data as WorkoutPlan, error: null };
+    // Convert to proper WorkoutPlan type
+    const typedData: WorkoutPlan = {
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      description: data.description || '',
+      frequency: data.frequency,
+      goal: data.goal,
+      difficulty: data.difficulty as 'beginner' | 'intermediate' | 'advanced',
+      workout_days: Array.isArray(data.workout_days) ? data.workout_days : [],
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      duration_weeks: data.duration_weeks
+    };
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error creating workout plan:', error);
     return { data: null, error };
@@ -82,7 +131,22 @@ export const updateWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Work
     
     if (error) throw error;
     
-    return { data: data as WorkoutPlan, error: null };
+    // Convert to proper WorkoutPlan type
+    const typedData: WorkoutPlan = {
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      description: data.description || '',
+      frequency: data.frequency,
+      goal: data.goal,
+      difficulty: data.difficulty as 'beginner' | 'intermediate' | 'advanced',
+      workout_days: Array.isArray(data.workout_days) ? data.workout_days : [],
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      duration_weeks: data.duration_weeks
+    };
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error updating workout plan:', error);
     return { data: null, error };
@@ -155,65 +219,6 @@ export const getUserWorkoutLogs = async (userId: string): Promise<{ data: Workou
 };
 
 /**
- * Gets a single workout log by ID
- */
-export const getWorkoutLogById = async (logId: string): Promise<{ data: WorkoutLog | null, error: any }> => {
-  try {
-    const { data, error } = await supabase
-      .from('workout_logs')
-      .select('*')
-      .eq('id', logId)
-      .single();
-    
-    if (error) throw error;
-    
-    return { data: data as WorkoutLog, error: null };
-  } catch (error) {
-    console.error('Error fetching workout log:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Deletes a workout log
- */
-export const deleteWorkoutLog = async (logId: string): Promise<{ success: boolean, error: any }> => {
-  try {
-    const { error } = await supabase
-      .from('workout_logs')
-      .delete()
-      .eq('id', logId);
-    
-    if (error) throw error;
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('Error deleting workout log:', error);
-    return { success: false, error };
-  }
-};
-
-/**
- * Creates a workout history item
- */
-export const createWorkoutHistoryItem = async (item: WorkoutHistoryItem): Promise<{ data: WorkoutHistoryItem | null, error: any }> => {
-  try {
-    const { data, error } = await supabase
-      .from('workout_history')
-      .insert(item)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return { data: data as WorkoutHistoryItem, error: null };
-  } catch (error) {
-    console.error('Error creating workout history item:', error);
-    return { data: null, error };
-  }
-};
-
-/**
  * Gets all workout history items for a user
  */
 export const getUserWorkoutHistory = async (userId: string): Promise<{ data: WorkoutHistoryItem[] | null, error: any }> => {
@@ -232,3 +237,122 @@ export const getUserWorkoutHistory = async (userId: string): Promise<{ data: Wor
     return { data: null, error };
   }
 };
+
+/**
+ * Gets workout statistics for a user
+ */
+export const getUserWorkoutStats = async (userId: string): Promise<{ data: UserWorkoutStats | null, error: any }> => {
+  try {
+    // Calculate basic stats from workout history
+    const { data: historyData, error: historyError } = await supabase
+      .from('workout_history')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (historyError) throw historyError;
+    
+    if (!historyData || historyData.length === 0) {
+      // Return default stats if no history
+      return { 
+        data: {
+          total_workouts: 0,
+          totalWorkouts: 0,
+          total_duration: 0,
+          total_time: 0,
+          total_calories: 0,
+          streak: 0,
+          most_active_day: '',
+          favorite_exercise: '',
+          weight_lifted: 0,
+          completion_rate: 0,
+          currentStreak: 0,
+          longestStreak: 0
+        }, 
+        error: null 
+      };
+    }
+    
+    // Calculate total workouts, duration, calories
+    let totalWorkouts = historyData.length;
+    let totalDuration = historyData.reduce((sum, item) => sum + (item.duration || 0), 0);
+    let totalCalories = historyData.reduce((sum, item) => sum + (item.calories_burned || 0), 0);
+    
+    // Get streak from user_streaks table
+    const { data: streakData } = await supabase
+      .from('user_streaks')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('streak_type', 'workout')
+      .single();
+    
+    const currentStreak = streakData?.currentstreak || 0;
+    const longestStreak = streakData?.longeststreak || 0;
+    
+    const stats: UserWorkoutStats = {
+      total_workouts: totalWorkouts,
+      totalWorkouts: totalWorkouts,
+      total_duration: totalDuration,
+      total_time: totalDuration,
+      total_calories: totalCalories,
+      streak: currentStreak,
+      most_active_day: 'Monday', // This would require additional analysis
+      favorite_exercise: 'Unknown', // This would require additional analysis
+      weight_lifted: 0, // This would require additional analysis
+      completion_rate: 0, // This would require additional analysis
+      currentStreak: currentStreak,
+      longestStreak: longestStreak
+    };
+    
+    return { data: stats, error: null };
+  } catch (error) {
+    console.error('Error getting workout stats:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Gets workout schedules for a user
+ */
+export const getUserWorkoutSchedules = async (userId: string): Promise<{ data: WorkoutSchedule[] | null, error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_schedules')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('active', true);
+    
+    if (error) throw error;
+    
+    return { data: data as WorkoutSchedule[], error: null };
+  } catch (error) {
+    console.error('Error fetching workout schedules:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Creates a workout schedule
+ */
+export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<{ data: WorkoutSchedule | null, error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_schedules')
+      .insert(schedule)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return { data: data as WorkoutSchedule, error: null };
+  } catch (error) {
+    console.error('Error creating workout schedule:', error);
+    return { data: null, error };
+  }
+};
+
+// For backward compatibility
+export const getWorkoutPlans = getUserWorkoutPlans;
+export const getWorkoutHistory = getUserWorkoutHistory;
+export const getWorkoutStats = getUserWorkoutStats;
+export const saveWorkoutPlan = createWorkoutPlan;
+export const getWorkoutSchedule = getUserWorkoutSchedules;
