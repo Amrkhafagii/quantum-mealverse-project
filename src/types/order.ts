@@ -14,8 +14,8 @@ export interface Order {
   subtotal: number;
   total: number;
   status: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;  // Added explicit type for latitude
+  longitude?: number | null;  // Added explicit type for longitude
   formatted_order_id?: string;
   created_at?: string;
   updated_at?: string;
