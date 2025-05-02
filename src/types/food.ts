@@ -11,7 +11,10 @@ export interface Food {
   isGloballyAvailable: boolean;
   costTier: 1 | 2 | 3; // 1 = budget-friendly, 3 = expensive
   imageUrl?: string;
+  cookingState: CookingState; // New field to specify if the food is raw or cooked
 }
+
+export type CookingState = 'raw' | 'cooked';
 
 export type FoodCategory = 
   | 'protein' 

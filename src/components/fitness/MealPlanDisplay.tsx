@@ -3,9 +3,10 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MealPlan, Meal } from '@/types/food';
-import { Shuffle, Droplets, AlertCircle } from 'lucide-react';
+import { Shuffle, Droplets, AlertCircle, Info } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { shuffleMeal } from '@/services/mealPlanService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MealCardProps {
   meal: Meal;
@@ -42,7 +43,25 @@ const MealCard: React.FC<MealCardProps> = ({ meal, onShuffle }) => {
           {meal.foods.map((item) => (
             <li key={item.food.id} className="flex justify-between py-1 border-b border-quantum-cyan/10 last:border-0">
               <div>
-                <div className="text-sm font-medium">{item.food.name}</div>
+                <div className="text-sm font-medium flex items-center">
+                  {item.food.name}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-1 inline-flex">
+                          <Info className="h-3.5 w-3.5 text-gray-400" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          {item.food.cookingState === "cooked" 
+                            ? "Values based on cooked weight" 
+                            : "Values based on raw/uncooked weight"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="text-xs text-gray-400">
                   {Math.round((item.food.calories * item.portionSize) / 100)} kcal
                 </div>

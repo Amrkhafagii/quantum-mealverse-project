@@ -5,7 +5,7 @@ export const foodDatabase: Food[] = [
   // Proteins
   {
     id: "p1",
-    name: "Chicken Breast",
+    name: "Chicken Breast (cooked)",
     category: "protein",
     calories: 165,
     protein: 31,
@@ -14,11 +14,12 @@ export const foodDatabase: Food[] = [
     portion: 100, // 100g
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/chicken/300/200"
+    imageUrl: "https://picsum.photos/seed/chicken/300/200",
+    cookingState: "cooked"
   },
   {
     id: "p2",
-    name: "Tofu",
+    name: "Tofu (firm)",
     category: "protein",
     calories: 76,
     protein: 8,
@@ -27,11 +28,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/tofu/300/200"
+    imageUrl: "https://picsum.photos/seed/tofu/300/200",
+    cookingState: "raw"
   },
   {
     id: "p3",
-    name: "Lentils",
+    name: "Lentils (cooked)",
     category: "protein",
     calories: 116,
     protein: 9,
@@ -40,11 +42,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/lentils/300/200"
+    imageUrl: "https://picsum.photos/seed/lentils/300/200",
+    cookingState: "cooked"
   },
   {
     id: "p4",
-    name: "Eggs",
+    name: "Eggs (cooked)",
     category: "protein",
     calories: 143,
     protein: 13,
@@ -53,11 +56,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/eggs/300/200"
+    imageUrl: "https://picsum.photos/seed/eggs/300/200",
+    cookingState: "cooked"
   },
   {
     id: "p5",
-    name: "Salmon",
+    name: "Salmon (cooked)",
     category: "protein",
     calories: 208,
     protein: 20,
@@ -66,13 +70,14 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/salmon/300/200"
+    imageUrl: "https://picsum.photos/seed/salmon/300/200",
+    cookingState: "cooked"
   },
   
   // Carbs
   {
     id: "c1",
-    name: "Brown Rice",
+    name: "Brown Rice (cooked)",
     category: "carbs",
     calories: 111,
     protein: 2.6,
@@ -81,11 +86,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/brownrice/300/200"
+    imageUrl: "https://picsum.photos/seed/brownrice/300/200",
+    cookingState: "cooked"
   },
   {
     id: "c2",
-    name: "Oats",
+    name: "Oats (dry)",
     category: "carbs",
     calories: 389,
     protein: 16.9,
@@ -94,11 +100,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/oats/300/200"
+    imageUrl: "https://picsum.photos/seed/oats/300/200",
+    cookingState: "raw"
   },
   {
     id: "c3",
-    name: "Sweet Potato",
+    name: "Sweet Potato (cooked)",
     category: "carbs",
     calories: 86,
     protein: 1.6,
@@ -107,11 +114,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/sweetpotato/300/200"
+    imageUrl: "https://picsum.photos/seed/sweetpotato/300/200",
+    cookingState: "cooked"
   },
   {
     id: "c4",
-    name: "Quinoa",
+    name: "Quinoa (cooked)",
     category: "carbs",
     calories: 120,
     protein: 4.4,
@@ -120,7 +128,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/quinoa/300/200"
+    imageUrl: "https://picsum.photos/seed/quinoa/300/200",
+    cookingState: "cooked"
   },
   
   // Fats
@@ -135,7 +144,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/avocado/300/200"
+    imageUrl: "https://picsum.photos/seed/avocado/300/200",
+    cookingState: "raw"
   },
   {
     id: "f2",
@@ -148,7 +158,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/oliveoil/300/200"
+    imageUrl: "https://picsum.photos/seed/oliveoil/300/200",
+    cookingState: "raw"
   },
   {
     id: "f3",
@@ -161,13 +172,14 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/almonds/300/200"
+    imageUrl: "https://picsum.photos/seed/almonds/300/200",
+    cookingState: "raw"
   },
   
   // Vegetables
   {
     id: "v1",
-    name: "Broccoli",
+    name: "Broccoli (raw)",
     category: "vegetables",
     calories: 34,
     protein: 2.8,
@@ -176,11 +188,12 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/broccoli/300/200"
+    imageUrl: "https://picsum.photos/seed/broccoli/300/200",
+    cookingState: "raw"
   },
   {
     id: "v2",
-    name: "Spinach",
+    name: "Spinach (raw)",
     category: "vegetables",
     calories: 23,
     protein: 2.9,
@@ -189,7 +202,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/spinach/300/200"
+    imageUrl: "https://picsum.photos/seed/spinach/300/200",
+    cookingState: "raw"
   },
   
   // Fruits
@@ -204,7 +218,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/banana/300/200"
+    imageUrl: "https://picsum.photos/seed/banana/300/200",
+    cookingState: "raw"
   },
   {
     id: "fr2",
@@ -217,7 +232,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/apple/300/200"
+    imageUrl: "https://picsum.photos/seed/apple/300/200",
+    cookingState: "raw"
   },
   
   // Dairy
@@ -232,7 +248,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/yogurt/300/200"
+    imageUrl: "https://picsum.photos/seed/yogurt/300/200",
+    cookingState: "raw"
   },
   {
     id: "d2",
@@ -245,7 +262,8 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/cottagecheese/300/200"
+    imageUrl: "https://picsum.photos/seed/cottagecheese/300/200",
+    cookingState: "raw"
   }
 ];
 
