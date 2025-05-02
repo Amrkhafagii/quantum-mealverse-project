@@ -22,7 +22,15 @@ import { toast } from '@/hooks/use-toast';
 import { useInterval } from '@/hooks/use-interval';
 import { formatDistanceToNow } from 'date-fns';
 
-export const ActiveDeliveries: React.FC = () => {
+interface ActiveDeliveriesProps {
+  selectedAssignmentId?: string;
+  onAssignmentSelect?: (assignment: DeliveryAssignment) => void;
+}
+
+export const ActiveDeliveries: React.FC<ActiveDeliveriesProps> = ({ 
+  selectedAssignmentId,
+  onAssignmentSelect
+}) => {
   const { user } = useAuth();
   const { deliveryUser } = useDeliveryUser(user?.id);
   const { 
@@ -36,7 +44,6 @@ export const ActiveDeliveries: React.FC = () => {
     refreshData 
   } = useDeliveryAssignments(deliveryUser?.id);
   
-  const [selectedAssignment, setSelectedAssignment] = useState<DeliveryAssignment | null>(null);
   const [locationUpdateTime, setLocationUpdateTime] = useState<Date | null>(null);
   
   // Setup enhanced location tracking
@@ -54,9 +61,11 @@ export const ActiveDeliveries: React.FC = () => {
     trackingInterval: 10000,
     onLocationUpdate: (pos) => {
       // If we have an active delivery, update its location
-      if (selectedAssignment && ['picked_up', 'on_the_way'].includes(selectedAssignment.status)) {
+      if (selectedAssignmentId && ['picked_up', 'on_the_way'].includes(
+        activeAssignments.find(a => a.id === selectedAssignmentId)?.status || ''
+      )) {
         updateLocation(
-          selectedAssignment.id, 
+          selectedAssignmentId, 
           pos.coords.latitude, 
           pos.coords.longitude
         );
@@ -77,9 +86,9 @@ export const ActiveDeliveries: React.FC = () => {
   const handleForceLocationUpdate = async () => {
     try {
       const location = await getCurrentLocation();
-      if (location && selectedAssignment) {
+      if (location && selectedAssignmentId) {
         updateLocation(
-          selectedAssignment.id,
+          selectedAssignmentId,
           location.latitude,
           location.longitude
         );
@@ -106,17 +115,7 @@ export const ActiveDeliveries: React.FC = () => {
     } else if (activeAssignments.length === 0 && isTracking) {
       stopTracking();
     }
-    
-    // Set the first active assignment as selected if none is selected
-    if (activeAssignments.length > 0 && !selectedAssignment) {
-      setSelectedAssignment(activeAssignments[0]);
-    }
-    
-    // If the selected assignment is no longer in the active list, reset selection
-    if (selectedAssignment && !activeAssignments.some(a => a.id === selectedAssignment.id)) {
-      setSelectedAssignment(activeAssignments.length > 0 ? activeAssignments[0] : null);
-    }
-  }, [activeAssignments, isTracking, selectedAssignment, startTracking, stopTracking]);
+  }, [activeAssignments, isTracking, startTracking, stopTracking]);
   
   // Refresh data every minute
   useInterval(() => {
@@ -124,239 +123,197 @@ export const ActiveDeliveries: React.FC = () => {
   }, 60000);
   
   const handlePickup = async (assignment: DeliveryAssignment) => {
-    await markAsPickedUp(assignment.id);
-    setSelectedAssignment(prev => 
-      prev?.id === assignment.id 
-        ? { ...prev, status: 'picked_up' } 
-        : prev
-    );
-  };
-  
-  const handleStartDelivery = async (assignment: DeliveryAssignment) => {
-    await markAsOnTheWay(assignment.id);
-    setSelectedAssignment(prev => 
-      prev?.id === assignment.id 
-        ? { ...prev, status: 'on_the_way' } 
-        : prev
-    );
-  };
-  
-  const handleCompleteDelivery = async (assignment: DeliveryAssignment) => {
-    await markAsDelivered(assignment.id);
-    // We'll let the refresh handle removing this from active assignments
-  };
-  
-  if (loading && activeAssignments.length === 0) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="p-8 flex justify-center items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (error) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="p-8 flex flex-col items-center justify-center">
-          <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
-          <h3 className="text-xl font-medium text-red-400 mb-2">Error</h3>
-          <p className="text-center">{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (!deliveryUser || deliveryUser.status !== 'active') {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="p-8 flex flex-col items-center justify-center">
-          <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-xl font-medium text-gray-300 mb-2">Not Available</h3>
-          <p className="text-gray-400 text-center max-w-md">
-            You need to be active to see your deliveries.
-            Please set your status to active first.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  if (activeAssignments.length === 0) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="p-8 flex flex-col items-center justify-center">
-          <Package className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-xl font-medium text-gray-300 mb-2">No Active Deliveries</h3>
-          <p className="text-gray-400 text-center max-w-md">
-            You don't have any active deliveries right now. 
-            Check the available orders section to find new delivery opportunities.
-          </p>
-          <Button 
-            onClick={refreshData} 
-            className="mt-4"
-            variant="outline"
-          >
-            Refresh
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'assigned':
-        return <Badge className="bg-blue-500">Assigned</Badge>;
-      case 'picked_up':
-        return <Badge className="bg-purple-500">Picked Up</Badge>;
-      case 'on_the_way':
-        return <Badge className="bg-yellow-500">On The Way</Badge>;
-      default:
-        return <Badge className="bg-gray-500">{status}</Badge>;
+    try {
+      await markAsPickedUp(assignment.id);
+    } catch (error) {
+      console.error('Error marking as picked up:', error);
     }
   };
   
-  const getTimeAgo = (dateString: string) => {
+  const handleStartDelivery = async (assignment: DeliveryAssignment) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch (e) {
-      return 'Unknown time';
+      await markAsOnTheWay(assignment.id);
+    } catch (error) {
+      console.error('Error marking as on the way:', error);
+    }
+  };
+  
+  const handleDelivered = async (assignment: DeliveryAssignment) => {
+    try {
+      await markAsDelivered(assignment.id);
+    } catch (error) {
+      console.error('Error marking as delivered:', error);
+    }
+  };
+
+  const handleSelectAssignment = (assignment: DeliveryAssignment) => {
+    if (onAssignmentSelect) {
+      onAssignmentSelect(assignment);
     }
   };
   
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>Active Deliveries</span>
-          <Button variant="ghost" size="sm" onClick={refreshData}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle>Active Deliveries</CardTitle>
+          <Button variant="ghost" size="sm" onClick={refreshData} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </Button>
-        </CardTitle>
+        </div>
       </CardHeader>
       
       <CardContent>
-        <div className="space-y-6">
-          {activeAssignments.map((assignment) => (
-            <Card 
-              key={assignment.id} 
-              className={`bg-quantum-darkBlue/50 ${selectedAssignment?.id === assignment.id ? 'border-quantum-cyan' : ''}`}
-              onClick={() => setSelectedAssignment(assignment)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Order #{assignment.order_id.slice(-6)}</h3>
-                  {getStatusBadge(assignment.status)}
-                </div>
-                <p className="text-sm text-gray-400">{getTimeAgo(assignment.created_at)}</p>
-              </CardHeader>
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-400">
+            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+            <p>{error}</p>
+          </div>
+        ) : activeAssignments.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Package className="h-8 w-8 mx-auto mb-2" />
+            <p className="mb-2">No active deliveries</p>
+            <p className="text-sm">Check the available orders tab for new assignments</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {activeAssignments.map((assignment) => {
+              const isSelected = assignment.id === selectedAssignmentId;
               
-              <CardContent className="pb-2">
-                <div className="space-y-3">
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-2 text-quantum-cyan shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">{assignment.restaurant?.name || 'Restaurant'}</p>
-                      <p className="text-sm text-gray-400">{assignment.restaurant?.address || 'Loading address...'}</p>
+              return (
+                <Card 
+                  key={assignment.id} 
+                  className={`bg-quantum-darkBlue/50 border ${
+                    isSelected ? 'border-quantum-cyan' : 'border-gray-700'
+                  } cursor-pointer transition-colors`}
+                  onClick={() => handleSelectAssignment(assignment)}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="flex items-center">
+                          {assignment.restaurant?.name || 'Restaurant'}
+                          <ChevronRight className="h-5 w-5 ml-2" />
+                          {isSelected && (
+                            <span className="text-xs bg-quantum-cyan text-black px-2 py-0.5 rounded ml-2">
+                              Selected
+                            </span>
+                          )}
+                        </CardTitle>
+                        <p className="text-xs text-gray-400">
+                          Order #{assignment.order_id.substring(0, 8)}
+                        </p>
+                      </div>
+                      
+                      <Badge
+                        className={`
+                          ${assignment.status === 'assigned' ? 'bg-yellow-500' : ''}
+                          ${assignment.status === 'picked_up' ? 'bg-blue-500' : ''}
+                          ${assignment.status === 'on_the_way' ? 'bg-purple-500' : ''}
+                        `}
+                      >
+                        {assignment.status === 'assigned' ? 'New' : ''}
+                        {assignment.status === 'picked_up' ? 'Picked Up' : ''}
+                        {assignment.status === 'on_the_way' ? 'On The Way' : ''}
+                      </Badge>
                     </div>
-                  </div>
+                  </CardHeader>
                   
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-2 text-quantum-cyan shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Customer</p>
-                      <p className="text-sm text-gray-400">{assignment.customer?.address || 'Loading address...'}</p>
+                  <CardContent className="pb-2">
+                    <div className="space-y-2">
+                      {assignment.restaurant && (
+                        <div className="flex items-center text-sm">
+                          <MapPin className="h-4 w-4 mr-2 text-orange-500" />
+                          <span className="truncate">{assignment.restaurant.address || 'Restaurant address'}</span>
+                        </div>
+                      )}
+                      
+                      {assignment.customer && (
+                        <div className="flex items-center text-sm">
+                          <MapPin className="h-4 w-4 mr-2 text-red-500" />
+                          <span className="truncate">{assignment.customer.address || 'Customer address'}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center text-sm">
+                        <Clock className="h-4 w-4 mr-2 text-quantum-cyan" />
+                        <span>{formatDistanceToNow(new Date(assignment.created_at), { addSuffix: true })}</span>
+                      </div>
+                      
+                      {locationUpdateTime && assignment.id === selectedAssignmentId && (
+                        <div className="text-xs text-green-400 flex items-center">
+                          <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1.5"></span>
+                          Location updated {formatDistanceToNow(locationUpdateTime, { addSuffix: true })}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </CardContent>
                   
-                  {assignment.distance_km && (
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-2 text-quantum-cyan" />
-                      <span>Est. {Math.round(assignment.distance_km * 3)} min • {assignment.distance_km.toFixed(1)} km</span>
+                  <CardFooter className="pt-1">
+                    <div className="flex justify-between w-full">
+                      {assignment.status === 'assigned' && (
+                        <Button 
+                          className="w-full bg-orange-500 hover:bg-orange-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePickup(assignment);
+                          }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Mark as Picked Up
+                        </Button>
+                      )}
+                      
+                      {assignment.status === 'picked_up' && (
+                        <Button 
+                          className="w-full bg-blue-500 hover:bg-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartDelivery(assignment);
+                          }}
+                        >
+                          <MapPin className="h-4 w-4 mr-2" />
+                          Start Delivery
+                        </Button>
+                      )}
+                      
+                      {assignment.status === 'on_the_way' && (
+                        <Button 
+                          className="w-full bg-green-500 hover:bg-green-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelivered(assignment);
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Mark as Delivered
+                        </Button>
+                      )}
+
+                      {(assignment.status === 'picked_up' || assignment.status === 'on_the_way') && (
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          className="ml-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleForceLocationUpdate();
+                          }}
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-              
-              <CardFooter className="flex flex-col gap-3">
-                {assignment.status === 'assigned' && (
-                  <Button 
-                    onClick={() => handlePickup(assignment)}
-                    className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Mark as Picked Up
-                  </Button>
-                )}
-                
-                {assignment.status === 'picked_up' && (
-                  <Button 
-                    onClick={() => handleStartDelivery(assignment)}
-                    className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-                  >
-                    <ChevronRight className="h-4 w-4 mr-2" />
-                    Start Delivery
-                  </Button>
-                )}
-                
-                {assignment.status === 'on_the_way' && (
-                  <Button 
-                    onClick={() => handleCompleteDelivery(assignment)}
-                    className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Complete Delivery
-                  </Button>
-                )}
-                
-                {['picked_up', 'on_the_way'].includes(assignment.status) && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-2"
-                    onClick={handleForceLocationUpdate}
-                  >
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Update Location
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
-          
-          {position && isTracking && (
-            <div className="rounded border border-quantum-cyan/30 p-3 bg-quantum-darkBlue/20">
-              <p className="text-sm text-gray-400 mb-1 flex items-center justify-between">
-                <span>Location Tracking Active</span>
-                {isLocationStale() && (
-                  <span className="text-yellow-400 text-xs">Outdated</span>
-                )}
-              </p>
-              <p className="text-xs">
-                Lat: {position.coords.latitude.toFixed(6)}, 
-                Lng: {position.coords.longitude.toFixed(6)}
-              </p>
-              {permissionStatus && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Permission: {permissionStatus}
-                </p>
-              )}
-              {lastUpdated && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Last updated: {new Date(lastUpdated).toLocaleTimeString()}
-                </p>
-              )}
-              {locationUpdateTime && (
-                <p className="text-xs text-green-500 mt-1">
-                  Last sent to server: {locationUpdateTime.toLocaleTimeString()}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

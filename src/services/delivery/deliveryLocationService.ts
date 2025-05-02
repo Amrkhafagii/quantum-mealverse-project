@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryLocation, DeliveryAssignmentRejection } from '@/types/delivery-assignment';
 
@@ -68,6 +69,53 @@ export const getDeliveryLocationHistory = async (
     console.error('Error in getDeliveryLocationHistory:', error);
     return [];
   }
+};
+
+/**
+ * Get the latest location for a delivery assignment
+ */
+export const getLatestDeliveryLocation = async (
+  assignmentId: string
+): Promise<DeliveryLocation | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('delivery_locations')
+      .select('*')
+      .eq('assignment_id', assignmentId)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned
+        return null;
+      }
+      console.error('Error fetching latest location:', error);
+      throw error;
+    }
+    
+    return data || null;
+  } catch (error) {
+    console.error('Error in getLatestDeliveryLocation:', error);
+    return null;
+  }
+};
+
+/**
+ * Enable realtime updates for delivery locations table
+ */
+export const setupRealtimeLocationUpdates = () => {
+  console.log('Setting up realtime updates for delivery locations');
+  
+  // This is just a helper method that adds the table to the realtime publication
+  // In a production app, this would be done via database migrations
+  return supabase
+    .from('delivery_locations')
+    .on('INSERT', (payload) => {
+      console.log('New location inserted:', payload);
+    })
+    .subscribe();
 };
 
 /**

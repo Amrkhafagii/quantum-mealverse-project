@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import { useGoogleMaps } from './GoogleMapsContext';
 
 interface MapLocation {
@@ -21,6 +21,12 @@ interface DeliveryMapContextType {
   addLocation: (location: MapLocation) => void;
   removeLocation: (index: number) => void;
   clearLocations: () => void;
+  showDriverRoute: boolean;
+  setShowDriverRoute: (show: boolean) => void;
+  selectedDeliveryId: string | null;
+  setSelectedDeliveryId: (id: string | null) => void;
+  locationUpdateTimestamp: Date | null;
+  updateLocationTimestamp: () => void;
 }
 
 const DeliveryMapContext = createContext<DeliveryMapContextType | undefined>(undefined);
@@ -31,8 +37,11 @@ export const DeliveryMapProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [restaurantLocation, setRestaurantLocation] = useState<MapLocation | null>(null);
   const [customerLocation, setCustomerLocation] = useState<MapLocation | null>(null);
   const [additionalLocations, setAdditionalLocations] = useState<MapLocation[]>([]);
+  const [showDriverRoute, setShowDriverRoute] = useState<boolean>(true);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
+  const [locationUpdateTimestamp, setLocationUpdateTimestamp] = useState<Date | null>(null);
 
-  const updateDriverLocation = (location: MapLocation) => {
+  const updateDriverLocation = useCallback((location: MapLocation) => {
     setDriverLocation({
       ...location,
       type: 'driver',
@@ -41,19 +50,26 @@ export const DeliveryMapProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     // Also update the global driver location
     updateGlobalDriverLocation(location);
-  };
+    
+    // Update timestamp
+    setLocationUpdateTimestamp(new Date());
+  }, [updateGlobalDriverLocation]);
 
-  const addLocation = (location: MapLocation) => {
-    setAdditionalLocations([...additionalLocations, location]);
-  };
+  const updateLocationTimestamp = useCallback(() => {
+    setLocationUpdateTimestamp(new Date());
+  }, []);
 
-  const removeLocation = (index: number) => {
-    setAdditionalLocations(additionalLocations.filter((_, i) => i !== index));
-  };
+  const addLocation = useCallback((location: MapLocation) => {
+    setAdditionalLocations(prev => [...prev, location]);
+  }, []);
 
-  const clearLocations = () => {
+  const removeLocation = useCallback((index: number) => {
+    setAdditionalLocations(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const clearLocations = useCallback(() => {
     setAdditionalLocations([]);
-  };
+  }, []);
 
   return (
     <DeliveryMapContext.Provider
@@ -68,6 +84,12 @@ export const DeliveryMapProvider: React.FC<{ children: React.ReactNode }> = ({ c
         addLocation,
         removeLocation,
         clearLocations,
+        showDriverRoute,
+        setShowDriverRoute,
+        selectedDeliveryId,
+        setSelectedDeliveryId,
+        locationUpdateTimestamp,
+        updateLocationTimestamp,
       }}
     >
       {children}

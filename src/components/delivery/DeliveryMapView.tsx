@@ -7,6 +7,8 @@ import { MapPin, Navigation2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
+import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
+import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 import { toast } from '@/hooks/use-toast';
 
 interface DeliveryMapViewProps {
@@ -15,11 +17,14 @@ interface DeliveryMapViewProps {
 }
 
 const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, className = '' }) => {
-  const { googleMapsApiKey, updateDriverLocation } = useGoogleMaps();
+  const { googleMapsApiKey } = useGoogleMaps();
+  const { updateDriverLocation, setSelectedDeliveryId } = useDeliveryMap();
   const [mapReady, setMapReady] = useState(false);
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
+  const [isLiveTracking, setIsLiveTracking] = useState(false);
   
+  // Location tracking for the driver
   const { getCurrentLocation } = useLocationTracker({
     watchPosition: true,
     trackingInterval: 5000,
@@ -35,6 +40,26 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     }
   });
   
+  // Real-time location updates for active delivery
+  const { isSubscribed, latestLocation } = useRealtimeLocation({
+    assignmentId: activeAssignment?.id,
+    onLocationUpdate: (location) => {
+      // This will be called whenever a new location update is received
+      console.log('Realtime location update received:', location);
+      
+      // Update the map with the latest position
+      if (location && mapReady) {
+        updateDriverLocation({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          title: 'Driver location',
+          type: 'driver'
+        });
+        setIsLiveTracking(true);
+      }
+    }
+  });
+  
   // Initialize map when API key is available
   useEffect(() => {
     if (googleMapsApiKey) {
@@ -45,6 +70,8 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
   // Update restaurant and customer locations when assignment changes
   useEffect(() => {
     if (activeAssignment) {
+      setSelectedDeliveryId(activeAssignment.id);
+      
       if (activeAssignment.restaurant) {
         setRestaurantLocation({
           latitude: activeAssignment.restaurant.latitude,
@@ -64,8 +91,14 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
           type: 'customer'
         });
       }
+    } else {
+      setSelectedDeliveryId(null);
     }
-  }, [activeAssignment]);
+    
+    return () => {
+      setSelectedDeliveryId(null);
+    };
+  }, [activeAssignment, setSelectedDeliveryId]);
   
   // Handle manual location update
   const handleUpdateLocation = async () => {
@@ -98,7 +131,15 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     <Card className={className}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle>Delivery Map</CardTitle>
+          <CardTitle className="flex items-center">
+            Delivery Map
+            {isLiveTracking && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                <span className="mr-1 h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                Live
+              </span>
+            )}
+          </CardTitle>
           <Button variant="outline" size="sm" onClick={handleUpdateLocation}>
             <MapPin className="h-4 w-4 mr-2" />
             Update Location
@@ -136,6 +177,13 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
               <p className="flex items-center">
                 <Navigation2 className="h-4 w-4 mr-2 text-quantum-cyan" />
                 Distance: {activeAssignment.distance_km.toFixed(1)} km
+              </p>
+            )}
+            
+            {isSubscribed && (
+              <p className="text-xs text-green-500 flex items-center mt-2">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1.5"></span>
+                Real-time tracking enabled
               </p>
             )}
           </div>
