@@ -88,25 +88,30 @@ const Navbar = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Don't show customer navigation in restaurant paths
+  // If user is a restaurant owner, redirect to restaurant dashboard instead of showing customer nav
   const isRestaurantView = location.pathname.startsWith('/restaurant');
-  const isCustomerView = !isRestaurantView && (location.pathname === '/customer' || location.pathname === '/' || 
+  
+  // Don't show customer navigation if user is a restaurant owner unless in admin view
+  const isCustomerView = !isRestaurantView && 
+    (location.pathname === '/customer' || location.pathname === '/' || 
     !['/admin', '/restaurant'].some(path => location.pathname.startsWith(path)));
 
   const isAuthenticated = !!session;
 
-  // Redirect to restaurant dashboard if already on customer view and is restaurant owner
+  // Always redirect restaurant owners to restaurant dashboard from customer pages
   useEffect(() => {
-    if (isRestaurant && isCustomerView && isAuthenticated && !location.pathname.startsWith('/restaurant')) {
-      // Only show this once when initially loading the page
-      if (location.pathname === '/') {
-        navigate('/restaurant/dashboard');
-      }
+    // Only redirect if restaurant owner is authenticated and tries to access customer pages
+    if (isRestaurant && isAuthenticated && !isRestaurantView && !location.pathname.startsWith('/admin')) {
+      // Navigate to restaurant dashboard
+      navigate('/restaurant/dashboard');
     }
-  }, [isRestaurant, isCustomerView, isAuthenticated, location.pathname]);
+  }, [isRestaurant, isAuthenticated, location.pathname, navigate, isRestaurantView]);
 
-  // If already on a restaurant page, don't show the customer navbar
-  if (isRestaurantView) return null;
+  // If already on a restaurant page or if user is a restaurant owner (and not an admin viewing admin pages),
+  // don't show the customer navbar
+  if (isRestaurantView || (isRestaurant && !location.pathname.startsWith('/admin'))) {
+    return null;
+  }
 
   return (
     <nav className="fixed w-full z-20 top-0 bg-black/50 backdrop-blur-md border-b border-quantum-cyan/20">
@@ -136,6 +141,7 @@ const Navbar = () => {
               isCustomerView={isCustomerView}
               session={session}
               isAdmin={isAdmin}
+              isRestaurant={isRestaurant}
               itemCount={itemCount}
               notificationCount={unreadCount}
               toggleUserView={toggleUserView}

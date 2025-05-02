@@ -11,6 +11,7 @@ interface UserActionsProps {
   isCustomerView: boolean;
   session: any;
   isAdmin: boolean;
+  isRestaurant: boolean;
   itemCount: number;
   notificationCount: number;
   toggleUserView: (checked: boolean) => void;
@@ -21,16 +22,20 @@ export const UserActions = ({
   isCustomerView,
   session,
   isAdmin,
+  isRestaurant,
   itemCount,
   toggleUserView,
   handleLogout
 }: UserActionsProps) => {
   const { isRestaurantOwner } = useRestaurantAuth();
 
+  // Don't show customer-specific actions for restaurant owners
+  const showCustomerActions = !isRestaurant || (isAdmin && isCustomerView);
+
   return (
     <div className="flex items-center gap-4">
-      {/* Always show customer features in customer view */}
-      {isCustomerView && (
+      {/* Only show customer features in customer view if not a restaurant or if admin */}
+      {isCustomerView && showCustomerActions && (
         <>
           {session && (
             <Link to="/orders" className="relative">
@@ -65,7 +70,7 @@ export const UserActions = ({
         </>
       )}
 
-      {/* Show notification panel in restaurant view too */}
+      {/* Show notification panel in restaurant view */}
       {isRestaurantOwner && !isCustomerView && session && (
         <NotificationPanel className="text-[#1EAEDB] hover:text-white" />
       )}
@@ -80,7 +85,7 @@ export const UserActions = ({
             </div>
           )}
           
-          {!isRestaurantOwner && isCustomerView && (
+          {!isRestaurantOwner && isCustomerView && showCustomerActions && (
             <Link to="/profile" className="hidden md:flex items-center gap-2">
               <UserRound className="h-4 w-4 text-quantum-cyan" />
               <span className="text-quantum-cyan">{session.user.email}</span>

@@ -25,10 +25,13 @@ export const MobileMenu = ({
   const isAuthenticated = !!session;
   const navigate = useNavigate();
   
+  // Don't show customer options for restaurant users unless they're an admin in customer view
+  const showCustomerOptions = !isRestaurant || (isAdmin && isCustomerView);
+  
   return (
     <div className="p-4 border-t border-quantum-cyan/20 md:hidden">
       <div className="space-y-4">
-        {isCustomerView ? (
+        {isCustomerView && showCustomerOptions ? (
           <>
             <Link 
               to="/customer" 
