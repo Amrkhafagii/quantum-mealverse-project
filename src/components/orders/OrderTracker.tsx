@@ -19,6 +19,14 @@ interface OrderTrackerProps {
   orderId: string;
 }
 
+// Define a more complete restaurant type
+interface RestaurantWithLocation {
+  id: string;
+  name: string;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const [assignmentStatus, setAssignmentStatus] = React.useState<any>(null);
   const { data: order, isLoading, error, refetch } = useOrderData(orderId);
@@ -90,11 +98,20 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     };
   }
 
-  if (order.restaurant?.latitude && order.restaurant?.longitude) {
+  // Type guard to check if restaurant has location data
+  const hasRestaurantLocation = 
+    order.restaurant && 
+    'latitude' in order.restaurant && 
+    'longitude' in order.restaurant &&
+    order.restaurant.latitude !== null &&
+    order.restaurant.longitude !== null;
+
+  if (hasRestaurantLocation) {
+    const typedRestaurant = order.restaurant as RestaurantWithLocation;
     restaurantLocation = {
-      latitude: order.restaurant.latitude,
-      longitude: order.restaurant.longitude,
-      title: order.restaurant.name,
+      latitude: typedRestaurant.latitude!,
+      longitude: typedRestaurant.longitude!,
+      title: typedRestaurant.name,
       type: "restaurant"
     };
   }

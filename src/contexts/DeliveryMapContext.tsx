@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { useGoogleMaps } from './GoogleMapsContext';
 
@@ -32,7 +31,7 @@ interface DeliveryMapContextType {
 const DeliveryMapContext = createContext<DeliveryMapContextType | undefined>(undefined);
 
 export const DeliveryMapProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { updateDriverLocation: updateGlobalDriverLocation } = useGoogleMaps();
+  const googleMaps = useGoogleMaps();
   const [driverLocation, setDriverLocation] = useState<MapLocation | null>(null);
   const [restaurantLocation, setRestaurantLocation] = useState<MapLocation | null>(null);
   const [customerLocation, setCustomerLocation] = useState<MapLocation | null>(null);
@@ -48,12 +47,14 @@ export const DeliveryMapProvider: React.FC<{ children: React.ReactNode }> = ({ c
       title: location.title || 'Driver Location'
     });
     
-    // Also update the global driver location
-    updateGlobalDriverLocation(location);
+    // Also update the global driver location if the function exists
+    if (googleMaps.updateDriverLocation) {
+      googleMaps.updateDriverLocation(location);
+    }
     
     // Update timestamp
     setLocationUpdateTimestamp(new Date());
-  }, [updateGlobalDriverLocation]);
+  }, [googleMaps]);
 
   const updateLocationTimestamp = useCallback(() => {
     setLocationUpdateTimestamp(new Date());

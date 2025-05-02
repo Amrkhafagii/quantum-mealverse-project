@@ -124,8 +124,10 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
   // Check if restaurant has location data before rendering its marker
   const hasRestaurantLocation = 
     order.restaurant && 
-    (order.restaurant as RestaurantWithLocation).latitude !== undefined && 
-    (order.restaurant as RestaurantWithLocation).longitude !== undefined;
+    'latitude' in order.restaurant && 
+    order.restaurant.latitude !== null && 
+    'longitude' in order.restaurant &&
+    order.restaurant.longitude !== null;
 
   return (
     <Card>

@@ -23,6 +23,8 @@ export interface Order {
   restaurant?: {
     id: string;
     name: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   order_items?: Array<OrderItem>;
   return_status?: string;

@@ -1,16 +1,26 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+interface MapLocation {
+  latitude: number;
+  longitude: number;
+  title?: string;
+  description?: string;
+  type?: string;
+}
+
 type GoogleMapsContextType = {
   googleMapsApiKey: string;
   setGoogleMapsApiKey: (key: string) => void;
   isLoaded: boolean;
+  updateDriverLocation?: (location: MapLocation) => void;
 };
 
 const GoogleMapsContext = createContext<GoogleMapsContextType>({
   googleMapsApiKey: '',
   setGoogleMapsApiKey: () => {},
   isLoaded: false,
+  updateDriverLocation: undefined,
 });
 
 interface GoogleMapsProviderProps {
@@ -24,6 +34,13 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
   );
   
   const [isLoaded, setIsLoaded] = useState<boolean>(!!googleMapsApiKey);
+
+  // This function will be available globally to update the driver's location
+  const updateDriverLocation = (location: MapLocation) => {
+    // In the future, this could be expanded to store the driver location in a global state
+    console.log('Driver location updated:', location);
+    // Implementation logic would go here if needed
+  };
 
   useEffect(() => {
     if (googleMapsApiKey) {
@@ -40,6 +57,7 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
         googleMapsApiKey,
         setGoogleMapsApiKey,
         isLoaded,
+        updateDriverLocation,
       }}
     >
       {children}
