@@ -8,6 +8,11 @@ interface LocationTrackerOptions {
   onError?: (error: GeolocationPositionError) => void;
 }
 
+interface Location {
+  latitude: number;
+  longitude: number;
+}
+
 export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const {
     watchPosition = true,
@@ -17,6 +22,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   } = options;
 
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
+  const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<GeolocationPositionError | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [watchId, setWatchId] = useState<number | null>(null);
@@ -38,6 +44,11 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const handleSuccess = useCallback((pos: GeolocationPosition) => {
     setPosition(pos);
+    // Also set the simplified location object
+    setLocation({
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude
+    });
     setError(null);
     if (onLocationUpdate) {
       onLocationUpdate(pos);
@@ -73,6 +84,45 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
       }
     );
   }, [handleSuccess, handleError]);
+
+  // Add a new method that returns a promise with the location
+  const getCurrentLocation = useCallback((): Promise<Location | null> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        const err = {
+          code: 0,
+          message: 'Geolocation not supported',
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3
+        };
+        setError(err);
+        reject(err);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
+          };
+          setLocation(loc);
+          setPosition(pos);
+          resolve(loc);
+        },
+        (err) => {
+          setError(err);
+          reject(err);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    });
+  }, []);
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) {
@@ -119,6 +169,13 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
     setIsTracking(false);
   }, [clearWatchPosition, clearTrackingInterval]);
 
+  // Helper to validate if we have valid location data
+  const locationIsValid = useCallback(() => {
+    return location !== null && 
+      typeof location.latitude === 'number' && 
+      typeof location.longitude === 'number';
+  }, [location]);
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -131,8 +188,11 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
     position,
     error,
     isTracking,
+    location,
     startTracking,
     stopTracking,
-    getCurrentPosition
+    getCurrentPosition,
+    getCurrentLocation,
+    locationIsValid
   };
 };

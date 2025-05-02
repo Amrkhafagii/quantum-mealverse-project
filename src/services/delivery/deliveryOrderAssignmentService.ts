@@ -1,8 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { toast } from '@/hooks/use-toast';
-import { rejectDeliveryAssignment } from './deliveryLocationService';
+// Remove the conflicting import
+// import { rejectDeliveryAssignment } from './deliveryLocationService';
 
 // Find nearby delivery assignments for a user based on their location
 export const findNearbyAssignments = async (
@@ -83,8 +83,8 @@ export const acceptDeliveryAssignment = async (
   }
 };
 
-// Reject a delivery assignment
-export const rejectDeliveryAssignment = async (
+// Reject a delivery assignment - renamed to avoid conflicts
+export const rejectAssignment = async (
   assignmentId: string,
   reason?: string
 ): Promise<void> => {
@@ -100,17 +100,13 @@ export const rejectDeliveryAssignment = async (
     }
     
     // Store rejection data in the delivery_assignment_rejections table
-    await rejectDeliveryAssignment(assignmentId, data.order_id, reason);
-    
-    // If this becomes a real feature, we'd implement:
-    // await supabase.from('delivery_assignment_rejections').insert({
-    //   assignment_id: assignmentId,
-    //   order_id: data.order_id,
-    //   reason: reason || 'No reason provided',
-    //   delivery_user_id: data.delivery_user_id,
-    // });
+    await supabase.from('delivery_assignment_rejections').insert({
+      assignment_id: assignmentId,
+      order_id: data.order_id,
+      reason: reason || 'No reason provided'
+    });
   } catch (error) {
-    console.error('Error in rejectDeliveryAssignment:', error);
+    console.error('Error in rejectAssignment:', error);
     throw error;
   }
 };
@@ -136,13 +132,12 @@ export const updateDeliveryLocation = async (
     // Here we'll just log it
     console.log(`Location updated for delivery ${assignmentId}: ${latitude}, ${longitude}`);
     
-    // If this becomes a real feature with location history tracking, we'd implement:
-    // await supabase.from('delivery_locations').insert({
-    //   assignment_id: assignmentId,
-    //   latitude,
-    //   longitude,
-    //   timestamp: new Date().toISOString()
-    // });
+    // Store location in the dedicated delivery_locations table
+    await supabase.from('delivery_locations').insert({
+      assignment_id: assignmentId,
+      latitude,
+      longitude
+    });
   } catch (error) {
     console.error('Error in updateDeliveryLocation:', error);
     throw error;

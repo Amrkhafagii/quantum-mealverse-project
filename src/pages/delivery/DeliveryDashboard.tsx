@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import ActiveDeliveries from '@/components/delivery/ActiveDeliveries';
+import { ActiveDeliveries } from '@/components/delivery/ActiveDeliveries';
 import DeliveryHistory from '@/components/delivery/DeliveryHistory';
 import EarningsSummary from '@/components/delivery/EarningsSummary';
 import { AvailableOrders } from '@/components/delivery/AvailableOrders';
