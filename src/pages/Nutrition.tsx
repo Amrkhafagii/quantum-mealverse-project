@@ -1,411 +1,270 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { Check, Info, ArrowRight, CalendarCheck } from 'lucide-react';
-import { toast } from 'sonner';
 
 const Nutrition = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useAuth();
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.2 }
-    }
-  };
-  
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { type: "spring", stiffness: 100, damping: 12 }
-    }
-  };
+  const handleSubscribe = async (planName: string, price: number, mealsPerWeek: number, withTrial = false) => {
+    try {
+      // If user is not logged in, redirect to login page
+      if (!user) {
+        toast.info('Please log in to subscribe to a meal plan');
+        navigate('/login', { state: { from: '/nutrition' } });
+        return;
+      }
 
-  const handleSubscriptionRedirect = () => {
-    toast.info("Redirecting to subscription plans");
-    navigate('/subscription');
+      // Check if user already has an active subscription
+      const { data: existingSubscription, error: fetchError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingSubscription) {
+        // User already has an active subscription
+        toast.info('You already have an active subscription. Please manage it from your profile.');
+        navigate('/profile');
+        return;
+      }
+
+      const now = new Date();
+      let subscriptionData = {
+        user_id: user.id,
+        plan_name: planName,
+        price: withTrial ? 0 : price,
+        status: 'active',
+        meals_per_week: mealsPerWeek,
+        start_date: now.toISOString(),
+        is_trial: withTrial,
+        trial_ends_at: withTrial ? new Date(now.setMonth(now.getMonth() + 3)).toISOString() : null
+      };
+
+      // Create new subscription
+      const { error: insertError } = await supabase
+        .from('subscriptions')
+        .insert(subscriptionData);
+
+      if (insertError) throw insertError;
+
+      if (withTrial) {
+        toast.success(`You've successfully started a 3-month free trial of the ${planName} plan!`);
+      } else {
+        toast.success(`You've successfully subscribed to the ${planName} plan!`);
+      }
+      
+      // Redirect to profile page to see subscription
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error handling subscription:', error);
+      toast.error('There was an error processing your subscription. Please try again.');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative overflow-hidden">
+    <div className="min-h-screen bg-quantum-black text-white">
       <ParticleBackground />
       <Navbar />
       
-      {/* Decorative elements */}
-      <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-quantum-purple/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-quantum-cyan/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
-      
-      <main className="container mx-auto px-4 py-24 relative z-10">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text">
-            Zenith Nutrition
-          </h1>
-          <p className="text-xl max-w-3xl mx-auto text-gray-300">
-            Discover personalized nutrition plans designed to optimize your health and performance
-          </p>
-        </motion.div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-16">
-          <TabsList className="w-full max-w-2xl mx-auto mb-8">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="meal-plans">Meal Plans</TabsTrigger>
-            <TabsTrigger value="nutrition-science">Science</TabsTrigger>
-            {user && <TabsTrigger value="my-nutrition">My Nutrition</TabsTrigger>}
-          </TabsList>
-          
-          <TabsContent value="overview">
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
-            >
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
-                  <CardHeader>
-                    <CardTitle className="text-quantum-cyan text-2xl">Personalized Nutrition</CardTitle>
-                    <CardDescription className="text-gray-300">Tailored meal plans based on your goals</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      <li className="flex items-center gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5" />
-                        <span>Customized macronutrient ratios</span>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5" />
-                        <span>Options for various dietary preferences</span>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5" />
-                        <span>Regular adjustment based on your progress</span>
-                      </li>
-                    </ul>
-                    <Button 
-                      onClick={() => setActiveTab('meal-plans')} 
-                      className="mt-6 bg-quantum-purple hover:bg-quantum-purple/80 text-white"
-                    >
-                      Explore Meal Plans <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
-                  <CardHeader>
-                    <CardTitle className="text-quantum-cyan text-2xl">Nutritional Guidance</CardTitle>
-                    <CardDescription className="text-gray-300">Expert advice to optimize your diet</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      <li className="flex items-center gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5" />
-                        <span>Evidence-based nutrition recommendations</span>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5" />
-                        <span>Food timing strategies for performance</span>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5" />
-                        <span>Supplement guidance when appropriate</span>
-                      </li>
-                    </ul>
-                    <Button 
-                      onClick={() => setActiveTab('nutrition-science')} 
-                      className="mt-6 bg-quantum-purple hover:bg-quantum-purple/80 text-white"
-                    >
-                      Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
+      <main className="relative z-10 container mx-auto px-4 py-16 pt-28">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text">Nutrition Plans</h1>
+          <p className="text-xl max-w-3xl mx-auto">Choose the perfect meal plan to fuel your wellness journey</p>
+          <div className="mt-4">
+            <Badge className="bg-quantum-purple text-white">Now with 3-Month Free Trial!</Badge>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Basic Zenith Plan */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="bg-quantum-darkBlue/30 backdrop-blur-sm border border-quantum-cyan/30 rounded-lg overflow-hidden p-6 flex flex-col h-full"
+          >
+            <h2 className="text-3xl font-bold text-quantum-cyan mb-2">Basic Zenith</h2>
+            <div className="text-2xl mb-6">Starting at <span className="text-quantum-cyan font-bold">$99/month</span></div>
             
-            <motion.div 
-              variants={itemVariants} 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-12 text-center"
-            >
+            <ul className="mb-8 space-y-4 flex-grow">
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>5 meals per week delivered to your door</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>Basic meal tracking with our mobile app</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>Email support for nutrition questions</span>
+              </li>
+            </ul>
+            
+            <div className="mt-auto space-y-2">
               <Button 
-                onClick={handleSubscriptionRedirect} 
-                size="lg" 
-                className="bg-quantum-purple hover:bg-quantum-purple/80 text-white"
+                variant="outline"
+                onClick={() => handleSubscribe('Basic Zenith', 0, 5, true)}
+                className="w-full border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
               >
-                <CalendarCheck className="mr-2 h-5 w-5" />
-                View Subscription Plans
+                Start 3-Month Free Trial
               </Button>
-            </motion.div>
-          </TabsContent>
-          
-          <TabsContent value="meal-plans">
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto"
-            >
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
-                  <CardHeader>
-                    <CardTitle className="text-quantum-cyan text-2xl">Basic Zenith</CardTitle>
-                    <CardDescription className="text-gray-300">Starting at $99/month</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>5 meals per week delivered to your door</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>Basic meal tracking with our mobile app</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>Email support for nutrition questions</span>
-                      </li>
-                    </ul>
-                    <Button 
-                      onClick={handleSubscriptionRedirect} 
-                      className="w-full bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
-                    >
-                      View Plan
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-purple relative overflow-hidden h-full">
-                  <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold">
-                    MOST POPULAR
-                  </div>
-                  <CardHeader className="pt-8">
-                    <CardTitle className="text-quantum-purple text-2xl">Pro Zenith</CardTitle>
-                    <CardDescription className="text-gray-300">$179/month</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
-                        <span>10 meals per week delivered to your door</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
-                        <span>Advanced meal and macronutrient tracking</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
-                        <span>Personalized meal plan based on your goals</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
-                        <span>Priority email & chat support</span>
-                      </li>
-                    </ul>
-                    <Button 
-                      onClick={handleSubscriptionRedirect} 
-                      className="w-full bg-quantum-purple hover:bg-quantum-darkPurple text-white"
-                    >
-                      View Plan
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
-                  <CardHeader>
-                    <CardTitle className="text-quantum-cyan text-2xl">Ultimate Zenith</CardTitle>
-                    <CardDescription className="text-gray-300">$279/month</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>15 meals per week delivered to your door</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>Complete meal and biometric tracking</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>1-on-1 consultation with a nutritionist</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
-                        <span>24/7 priority support</span>
-                      </li>
-                    </ul>
-                    <Button 
-                      onClick={handleSubscriptionRedirect} 
-                      className="w-full bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
-                    >
-                      View Plan
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
-          </TabsContent>
-          
-          <TabsContent value="nutrition-science">
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="max-w-4xl mx-auto"
-            >
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm mb-8">
-                  <CardHeader>
-                    <CardTitle className="text-quantum-cyan text-2xl">The Science of Nutrition</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-4 text-lg">
-                      At Zenith, we base our nutritional recommendations on the latest scientific research. 
-                      Our approach combines principles from sports nutrition, metabolic science, and performance 
-                      optimization to create truly personalized nutrition plans.
-                    </p>
-                    <p className="mb-6 text-lg">
-                      We use evidence-based formulas like the Mifflin-St Jeor equation, modified by activity 
-                      levels to calculate your specific caloric needs, and then optimize macronutrient ratios 
-                      based on your personal goals and body composition.
-                    </p>
-                    <div className="bg-quantum-darkBlue/50 p-6 rounded-lg border border-quantum-cyan/30 mb-6">
-                      <h3 className="text-xl font-bold text-quantum-cyan mb-3">Key Nutritional Principles</h3>
-                      <ul className="space-y-4">
-                        <li className="flex items-start gap-3">
-                          <div className="bg-quantum-cyan/20 p-2 rounded-full mt-1">
-                            <Check className="text-quantum-cyan h-5 w-5" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold">Protein Timing</h4>
-                            <p className="text-gray-300">Strategically timed protein consumption enhances muscle protein synthesis and recovery</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <div className="bg-quantum-cyan/20 p-2 rounded-full mt-1">
-                            <Check className="text-quantum-cyan h-5 w-5" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold">Carbohydrate Periodization</h4>
-                            <p className="text-gray-300">Varying carbohydrate intake based on training intensity and goals optimizes performance and body composition</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <div className="bg-quantum-cyan/20 p-2 rounded-full mt-1">
-                            <Check className="text-quantum-cyan h-5 w-5" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold">Essential Fatty Acids</h4>
-                            <p className="text-gray-300">Strategic integration of omega-3 and omega-6 fatty acids supports cellular health and reduces inflammation</p>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    <div className="flex items-center p-4 bg-quantum-purple/20 rounded-lg border border-quantum-purple/30">
-                      <Info className="text-quantum-purple h-6 w-6 mr-3 flex-shrink-0" />
-                      <p>Our nutrition plans are constantly updated based on the latest peer-reviewed research to ensure you're getting science-backed recommendations.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              
-              <motion.div variants={itemVariants}>
-                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-quantum-cyan text-2xl">Personalized Nutrition Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-6 text-lg">
-                      Discover how our advanced nutritional algorithms can help optimize your diet for your specific goals:
-                    </p>
-                    <Button 
-                      onClick={() => navigate('/fitness')} 
-                      className="w-full bg-quantum-purple hover:bg-quantum-purple/80 text-white"
-                    >
-                      Access Nutrition Calculator
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
-          </TabsContent>
-          
-          {user && (
-            <TabsContent value="my-nutrition">
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="max-w-4xl mx-auto"
+              <Button 
+                variant="outline"
+                onClick={() => handleSubscribe('Basic Zenith', 99, 5, false)}
+                className="w-full border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
               >
-                <motion.div variants={itemVariants}>
-                  <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm mb-8">
-                    <CardHeader>
-                      <CardTitle className="text-quantum-cyan text-2xl">Your Nutrition Profile</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="mb-6">
-                        Access your nutrition profile to view your personalized meal recommendations and track your progress.
-                      </p>
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <Button 
-                          onClick={() => navigate('/profile')}
-                          variant="outline" 
-                          className="border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
-                        >
-                          View Subscription Status
-                        </Button>
-                        <Button 
-                          onClick={() => navigate('/fitness')}
-                          className="bg-quantum-purple hover:bg-quantum-purple/80 text-white"
-                        >
-                          Access Meal Calculator
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                
-                <motion.div variants={itemVariants}>
-                  <Button 
-                    onClick={handleSubscriptionRedirect} 
-                    className="w-full bg-quantum-purple hover:bg-quantum-purple/80 text-white"
-                  >
-                    <CalendarCheck className="mr-2 h-5 w-5" />
-                    Manage Meal Plan Subscription
-                  </Button>
-                </motion.div>
-              </motion.div>
-            </TabsContent>
-          )}
-        </Tabs>
+                Subscribe Now
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Pro Zenith Plan */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="bg-quantum-darkBlue/30 backdrop-blur-sm border-2 border-quantum-purple rounded-lg overflow-hidden p-6 flex flex-col h-full relative"
+          >
+            <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold">
+              MOST POPULAR
+            </div>
+            
+            <h2 className="text-3xl font-bold text-quantum-purple mb-2 mt-4">Pro Zenith</h2>
+            <div className="text-2xl mb-6"><span className="text-quantum-purple font-bold">$179/month</span></div>
+            
+            <ul className="mb-8 space-y-4 flex-grow">
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-purple" />
+                <span>10 meals per week delivered to your door</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-purple" />
+                <span>Advanced meal and macronutrient tracking</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-purple" />
+                <span>Personalized meal plan based on your goals</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-purple" />
+                <span>Priority email & chat support</span>
+              </li>
+            </ul>
+            
+            <div className="mt-auto space-y-2">
+              <Button 
+                onClick={() => handleSubscribe('Pro Zenith', 0, 10, true)}
+                className="w-full bg-quantum-purple/20 border border-quantum-purple text-quantum-purple hover:bg-quantum-purple/30"
+              >
+                Start 3-Month Free Trial
+              </Button>
+              <Button 
+                onClick={() => handleSubscribe('Pro Zenith', 179, 10, false)}
+                className="w-full bg-quantum-purple hover:bg-quantum-purple/90"
+              >
+                Subscribe Now
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Ultimate Zenith Plan */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="bg-quantum-darkBlue/30 backdrop-blur-sm border border-quantum-cyan/30 rounded-lg overflow-hidden p-6 flex flex-col h-full"
+          >
+            <h2 className="text-3xl font-bold text-quantum-cyan mb-2">Ultimate Zenith</h2>
+            <div className="text-2xl mb-6"><span className="text-quantum-cyan font-bold">$279/month</span></div>
+            
+            <ul className="mb-8 space-y-4 flex-grow">
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>15 meals per week delivered to your door</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>Complete meal and biometric tracking</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>1-on-1 consultation with a nutritionist</span>
+              </li>
+              <li className="flex items-start">
+                <Check className="h-5 w-5 mr-3 text-quantum-cyan" />
+                <span>24/7 priority support</span>
+              </li>
+            </ul>
+            
+            <div className="mt-auto space-y-2">
+              <Button 
+                variant="outline"
+                onClick={() => handleSubscribe('Ultimate Zenith', 0, 15, true)}
+                className="w-full border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
+              >
+                Start 3-Month Free Trial
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => handleSubscribe('Ultimate Zenith', 279, 15, false)}
+                className="w-full border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
+              >
+                Subscribe Now
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Trial Information Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="mt-16 max-w-4xl mx-auto"
+        >
+          <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <h3 className="text-2xl font-bold text-quantum-purple mb-4">Free 3-Month Trial</h3>
+              <p className="mb-4">Try any Zenith meal plan completely free for 3 months with no commitment. Experience the full benefits of our service with no risk.</p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <Check className="text-quantum-purple h-5 w-5" />
+                  <span>No credit card required to start</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="text-quantum-purple h-5 w-5" />
+                  <span>Cancel anytime during trial period</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="text-quantum-purple h-5 w-5" />
+                  <span>Full access to all plan features</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="text-quantum-purple h-5 w-5" />
+                  <span>Receive reminders before trial ends</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </motion.div>
       </main>
       
       <Footer />
