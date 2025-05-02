@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, LogOut } from 'lucide-react';
@@ -21,10 +20,10 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { cart } = useCart();
+  const { items } = useCart(); // Changed from cart to items
   const { t } = useLanguage();
 
-  const itemCount = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+  const itemCount = items.reduce((total, item) => total + (item.quantity || 1), 0);
   
   const toggleMenu = () => {
     setIsOpen(!isOpen);
