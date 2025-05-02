@@ -72,7 +72,7 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
           .select('*')
           .eq('order_id', assignment.order_id);
         
-        // Create a properly typed Order object - handling latitude/longitude correctly
+        // Create a properly typed Order object - handling latitude and longitude correctly
         const order: Order = {
           id: orderData.id,
           user_id: orderData.user_id,
@@ -88,9 +88,9 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
           subtotal: orderData.subtotal,
           total: orderData.total,
           status: orderData.status,
-          // Cast latitude and longitude explicitly as nullable numbers
-          latitude: typeof orderData.latitude !== 'undefined' ? Number(orderData.latitude) : null,
-          longitude: typeof orderData.longitude !== 'undefined' ? Number(orderData.longitude) : null,
+          // Cast latitude and longitude explicitly as nullable numbers, handling them as potentially missing fields
+          latitude: 'latitude' in orderData ? Number(orderData.latitude) : null,
+          longitude: 'longitude' in orderData ? Number(orderData.longitude) : null,
           formatted_order_id: orderData.formatted_order_id,
           created_at: orderData.created_at,
           updated_at: orderData.updated_at,

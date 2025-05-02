@@ -116,9 +116,9 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
           subtotal: orderData.subtotal,
           total: orderData.total,
           status: orderData.status,
-          // Cast latitude and longitude explicitly as nullable numbers
-          latitude: typeof orderData.latitude !== 'undefined' ? Number(orderData.latitude) : null,
-          longitude: typeof orderData.longitude !== 'undefined' ? Number(orderData.longitude) : null,
+          // Cast latitude and longitude explicitly as nullable numbers, handling them as potentially missing fields
+          latitude: 'latitude' in orderData ? Number(orderData.latitude) : null,
+          longitude: 'longitude' in orderData ? Number(orderData.longitude) : null,
           formatted_order_id: orderData.formatted_order_id,
           created_at: orderData.created_at,
           updated_at: orderData.updated_at,

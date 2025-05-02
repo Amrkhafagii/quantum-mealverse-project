@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,7 +92,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           progress = Math.min(Math.round((elapsed / prepTimeMs) * 100), 95);
         }
         
-        // Create a properly typed Order object - handling latitude/longitude correctly
+        // Create a properly typed Order object - handling latitude and longitude correctly
         const order: Order = {
           id: orderData.id,
           user_id: orderData.user_id,
@@ -109,9 +108,9 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           subtotal: orderData.subtotal,
           total: orderData.total,
           status: orderData.status,
-          // Cast latitude and longitude explicitly as nullable numbers
-          latitude: typeof orderData.latitude !== 'undefined' ? Number(orderData.latitude) : null,
-          longitude: typeof orderData.longitude !== 'undefined' ? Number(orderData.longitude) : null,
+          // Cast latitude and longitude explicitly as nullable numbers, handling them as potentially missing fields
+          latitude: 'latitude' in orderData ? Number(orderData.latitude) : null,
+          longitude: 'longitude' in orderData ? Number(orderData.longitude) : null,
           formatted_order_id: orderData.formatted_order_id,
           created_at: orderData.created_at,
           updated_at: orderData.updated_at,
