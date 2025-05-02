@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Button } from "@/components/ui/button";
-import { MapPin } from 'lucide-react';
+import { MapPin, Navigation2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
@@ -133,7 +134,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
             
             {activeAssignment.distance_km && (
               <p className="flex items-center">
-                <Navigation className="h-4 w-4 mr-2 text-quantum-cyan" />
+                <Navigation2 className="h-4 w-4 mr-2 text-quantum-cyan" />
                 Distance: {activeAssignment.distance_km.toFixed(1)} km
               </p>
             )}
