@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Home, Utensils, ActivitySquare, Dumbbell } from 'lucide-react';
+import { ShoppingCart, Utensils, ActivitySquare, Dumbbell } from 'lucide-react';
 
 interface DesktopNavigationProps {
   isCustomerView: boolean;
@@ -15,13 +14,6 @@ export const DesktopNavigation = ({ isCustomerView }: DesktopNavigationProps) =>
     <div className="hidden md:flex items-center space-x-4">
       {isCustomerView ? (
         <>
-          <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              <span>Home</span>
-            </Link>
-          </Button>
-          
           <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
             <Link to="/customer" className="flex items-center gap-2">
               <Utensils className="h-4 w-4" />
