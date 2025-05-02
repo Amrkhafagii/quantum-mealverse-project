@@ -6,6 +6,7 @@ export const useLocationPermission = () => {
   const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
   const [trackingEnabled, setTrackingEnabled] = useState<boolean>(false);
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
+  const [location, setLocation] = useState<GeolocationPosition | null>(null);
 
   useEffect(() => {
     // Check if location tracking is enabled in preferences
@@ -45,9 +46,24 @@ export const useLocationPermission = () => {
       }
     };
 
+    // If we have permission and tracking enabled, get current position
+    const getCurrentPosition = () => {
+      if (permissionStatus === 'granted' && trackingEnabled) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setLocation(position);
+          },
+          (error) => {
+            console.error('Error getting current position:', error);
+          }
+        );
+      }
+    };
+
     fetchPreferences();
     checkPermission();
-  }, []);
+    getCurrentPosition();
+  }, [permissionStatus, trackingEnabled]);
 
   // Add missing requestPermission function
   const requestPermission = async (): Promise<boolean> => {
@@ -60,6 +76,7 @@ export const useLocationPermission = () => {
             async (position) => {
               // Permission granted
               setPermissionStatus('granted');
+              setLocation(position);
               
               // Update user preferences
               await toggleTracking(true);
@@ -122,6 +139,7 @@ export const useLocationPermission = () => {
     requestPermission,
     isRequesting,
     toggleTracking,
-    isTracking
+    isTracking,
+    location
   };
 };

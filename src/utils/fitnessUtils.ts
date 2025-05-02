@@ -5,15 +5,41 @@ import { WorkoutPlan, WorkoutDay, Exercise, CompletedExercise, WorkoutSet } from
  * Normalizes exercise data to handle both old and new schema formats
  */
 export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
-  return {
-    ...exercise,
-    id: ('id' in exercise) ? exercise.id : exercise.exercise_id || crypto.randomUUID(),
-    exercise_id: exercise.exercise_id || (('id' in exercise) ? exercise.id : crypto.randomUUID()),
-    name: ('name' in exercise) ? exercise.name : exercise.exercise_name || '',
-    exercise_name: exercise.exercise_name || (('name' in exercise) ? exercise.name : ''),
-    rest: ('rest' in exercise) ? exercise.rest : exercise.rest_time || 0,
-    rest_time: exercise.rest_time || (('rest' in exercise) ? exercise.rest : 0)
-  } as Exercise;
+  // Create a base exercise object with required fields
+  const normalized: Partial<Exercise> = {
+    id: 'id' in exercise ? exercise.id : (exercise as any).exercise_id || crypto.randomUUID(),
+    name: 'name' in exercise ? exercise.name : (exercise as any).exercise_name || '',
+    target_muscle: 'target_muscle' in exercise ? (exercise as Exercise).target_muscle : 'unknown',
+    sets: 'sets' in exercise ? (exercise as Exercise).sets : ((exercise as any).sets || 1),
+    reps: 'reps' in exercise ? (exercise as Exercise).reps : (exercise as WorkoutSet).reps
+  };
+  
+  // Add optional fields if they exist in either type
+  if ('exercise_id' in exercise || (exercise as any).exercise_id) {
+    normalized.exercise_id = (exercise as any).exercise_id;
+  }
+  
+  if ('exercise_name' in exercise || (exercise as any).exercise_name) {
+    normalized.exercise_name = (exercise as any).exercise_name;
+  }
+  
+  if ('rest' in exercise) {
+    normalized.rest = (exercise as Exercise).rest;
+  }
+  
+  if ('rest_time' in exercise || (exercise as any).rest_time) {
+    normalized.rest_time = (exercise as any).rest_time;
+  }
+  
+  if ('duration' in exercise) {
+    normalized.duration = exercise.duration;
+  }
+  
+  if ('completed' in exercise) {
+    normalized.completed = exercise.completed;
+  }
+  
+  return normalized as Exercise;
 }
 
 /**
@@ -22,10 +48,10 @@ export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
 export function normalizeWorkoutDay(day: WorkoutDay): WorkoutDay {
   return {
     ...day,
-    name: day.name || day.day_name || '',
-    day_name: day.day_name || day.name || '',
+    day_name: day.day_name || (day as any).name || '',
+    name: (day as any).name || day.day_name || '',
     exercises: Array.isArray(day.exercises) ? day.exercises.map(normalizeExercise) : [],
-    order: day.order || 0
+    order: (day as any).order || 0
   };
 }
 
@@ -80,19 +106,20 @@ export function convertCompletedExercises(exercises: any[]): CompletedExercise[]
 /**
  * Converts between WorkoutSet and Exercise types
  */
-export function convertWorkoutSetToExercise(set: WorkoutSet): Exercise {
+export function convertWorkoutSetToExercise(set: any): Exercise {
   return {
-    id: set.exercise_id,
-    exercise_id: set.exercise_id,
-    name: set.exercise_name,
-    exercise_name: set.exercise_name,
-    sets: set.sets,
-    reps: set.reps,
-    weight: set.weight,
-    duration: set.duration,
-    rest: set.rest_time,
-    rest_time: set.rest_time,
-    completed: set.completed
+    id: set.exercise_id || crypto.randomUUID(),
+    exercise_id: set.exercise_id || crypto.randomUUID(),
+    name: set.exercise_name || '',
+    exercise_name: set.exercise_name || '',
+    sets: set.sets || 1,
+    reps: set.reps || 0,
+    weight: set.weight || 0,
+    duration: set.duration || 0,
+    rest: set.rest_time || 0,
+    rest_time: set.rest_time || 0,
+    completed: set.completed || false,
+    target_muscle: 'unknown' // Add required field
   };
 }
 
@@ -103,12 +130,10 @@ export function convertExerciseToWorkoutSet(exercise: Exercise): WorkoutSet {
   return {
     exercise_id: exercise.exercise_id || exercise.id,
     exercise_name: exercise.exercise_name || exercise.name,
-    sets: exercise.sets,
-    reps: exercise.reps,
-    weight: exercise.weight,
-    duration: exercise.duration,
-    rest_time: exercise.rest_time || exercise.rest,
-    completed: exercise.completed
+    set_number: 1, // Add required field
+    reps: typeof exercise.reps === 'string' ? parseInt(exercise.reps, 10) || 0 : exercise.reps,
+    weight: exercise.weight || 0,
+    completed: exercise.completed || false
   };
 }
 

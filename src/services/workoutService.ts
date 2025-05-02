@@ -209,7 +209,13 @@ export const logWorkout = async (log: WorkoutLog): Promise<{ data: WorkoutLog | 
       
     if (error) throw error;
     
-    return { data: data as WorkoutLog, error: null };
+    // Convert back from Json to proper type
+    const typedData: WorkoutLog = {
+      ...data,
+      completed_exercises: data.completed_exercises as unknown as any[]
+    } as WorkoutLog;
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error logging workout:', error);
     return { data: null, error };
@@ -229,7 +235,13 @@ export const getUserWorkoutLogs = async (userId: string): Promise<{ data: Workou
     
     if (error) throw error;
     
-    return { data: data as WorkoutLog[], error: null };
+    // Convert the JSON data to the proper WorkoutLog type
+    const typedData: WorkoutLog[] = data?.map(item => ({
+      ...item,
+      completed_exercises: item.completed_exercises as unknown as any[]
+    })) as WorkoutLog[];
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error fetching workout logs:', error);
     return { data: null, error };

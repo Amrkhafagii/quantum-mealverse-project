@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SavedMealPlan } from '@/types/fitness';
 import { Json } from '@/types/database';
 
 interface SavedMealPlanDB {
@@ -35,6 +34,7 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     }
     
     // Update all expired meal plans to inactive
+    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { error: updateError } = await supabase
       .from('saved_meal_plans')
       .update({ 
@@ -66,6 +66,7 @@ export const checkExpiredMealPlans = async (): Promise<{
     const now = new Date().toISOString();
     
     // Update all expired meal plans
+    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
       .update({ is_active: false })

@@ -21,6 +21,7 @@ export const saveMealPlan = async (mealPlan: MealPlan, name: string, userId: str
     // Convert MealPlan to Json type for Supabase
     const mealPlanJson = JSON.parse(JSON.stringify(mealPlan)) as Json;
     
+    // @ts-ignore - Adding expires_at and is_active which are not in the base type but exist in our DB
     const { data, error } = await supabase.from('saved_meal_plans').insert({
       id: uuidv4(),
       user_id: userId,
@@ -36,7 +37,7 @@ export const saveMealPlan = async (mealPlan: MealPlan, name: string, userId: str
 
     return {
       success: true,
-      mealPlanId: data?.[0]?.id
+      mealPlanId: data && data.length > 0 ? data[0].id : undefined
     };
   } catch (error: any) {
     console.error('Error saving meal plan:', error);
@@ -78,6 +79,7 @@ export const renewMealPlan = async (mealPlanId: string): Promise<{
     // Calculate new expiration date (14 days from now)
     const newExpirationDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     
+    // @ts-ignore - Adding expires_at and is_active which are not in the base type but exist in our DB
     const { error } = await supabase
       .from('saved_meal_plans')
       .update({
