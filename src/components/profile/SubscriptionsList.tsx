@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 
 interface SubscriptionsListProps {
   userId: string;
@@ -76,6 +77,7 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
             <TableHead>Meals/Week</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Price</TableHead>
+            <TableHead>Type</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -88,9 +90,11 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
                 {format(new Date(subscription.start_date), 'MMM dd, yyyy')}
               </TableCell>
               <TableCell>
-                {subscription.end_date 
-                  ? format(new Date(subscription.end_date), 'MMM dd, yyyy')
-                  : 'Auto-renewal'}
+                {subscription.is_trial && subscription.trial_ends_at 
+                  ? format(new Date(subscription.trial_ends_at), 'MMM dd, yyyy') + ' (Trial End)'
+                  : subscription.end_date 
+                    ? format(new Date(subscription.end_date), 'MMM dd, yyyy')
+                    : 'Auto-renewal'}
               </TableCell>
               <TableCell>{subscription.meals_per_week}</TableCell>
               <TableCell>
@@ -98,7 +102,19 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
                   {subscription.status}
                 </Badge>
               </TableCell>
-              <TableCell>${subscription.price}/month</TableCell>
+              <TableCell>
+                <CurrencyDisplay 
+                  amount={subscription.price} 
+                  isTrial={subscription.is_trial}
+                />
+              </TableCell>
+              <TableCell>
+                {subscription.is_trial ? (
+                  <Badge className="bg-quantum-purple">Trial</Badge>
+                ) : (
+                  <Badge className="bg-gray-500">Paid</Badge>
+                )}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

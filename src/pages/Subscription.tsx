@@ -81,6 +81,11 @@ const Subscription = () => {
             <p className="text-xl max-w-3xl mx-auto text-gray-300">
               Choose the perfect nutrition plan to fuel your wellness journey and transform your lifestyle
             </p>
+            <div className="mt-4">
+              <span className="inline-block bg-quantum-purple/20 text-quantum-purple px-4 py-1 rounded-full text-sm font-semibold">
+                Now with 3-Month Free Trial!
+              </span>
+            </div>
           </motion.div>
           
           <motion.div 
@@ -108,6 +113,7 @@ const Subscription = () => {
                 onSubscribe={() => handleSubscribe('Basic Zenith')}
                 priceDisplay={formatPrice(99)}
                 mealsPerWeek={5}
+                trialAvailable={true}
               />
             </motion.div>
             
@@ -129,6 +135,7 @@ const Subscription = () => {
                 onSubscribe={() => handleSubscribe('Pro Zenith')}
                 priceDisplay={formatPrice(179)}
                 mealsPerWeek={10}
+                trialAvailable={true}
               />
             </motion.div>
             
@@ -150,13 +157,47 @@ const Subscription = () => {
                 onSubscribe={() => handleSubscribe('Ultimate Zenith')}
                 priceDisplay={formatPrice(279)}
                 mealsPerWeek={15}
+                trialAvailable={true}
               />
             </motion.div>
           </motion.div>
           
+          {/* Trial Information Section */}
+          <motion.div 
+            className="mt-16 max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+          >
+            <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <h3 className="text-2xl font-bold text-quantum-purple mb-4">Free 3-Month Trial</h3>
+                <p className="mb-4">Try any Zenith meal plan completely free for 3 months with no commitment. Experience the full benefits of our service with no risk.</p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2">
+                    <Check className="text-quantum-purple h-5 w-5" aria-hidden="true" />
+                    <span>No credit card required to start</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="text-quantum-purple h-5 w-5" aria-hidden="true" />
+                    <span>Cancel anytime during trial period</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="text-quantum-purple h-5 w-5" aria-hidden="true" />
+                    <span>Full access to all plan features</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="text-quantum-purple h-5 w-5" aria-hidden="true" />
+                    <span>Receive reminders before trial ends</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </motion.div>
+          
           {/* Additional Info Section */}
           <motion.div 
-            className="mt-20 grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
+            className="mt-16 grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.6 }}

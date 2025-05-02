@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -18,13 +17,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Pause, Play, X } from 'lucide-react';
+import { AlertTriangle, Calendar, Gift, Pause, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { SubscriptionsList } from './SubscriptionsList';
 import { useCurrency } from '@/hooks/useCurrency';
+import { Badge } from "@/components/ui/badge";
+import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 
 interface ManageSubscriptionProps {
   userId: string;
@@ -40,6 +41,8 @@ interface Subscription {
   end_date: string | null;
   meals_per_week: number;
   created_at: string;
+  is_trial: boolean;
+  trial_ends_at: string | null;
 }
 
 export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }) => {
@@ -130,6 +133,12 @@ export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }
       toast.error('Failed to cancel your subscription. Please try again.');
     }
   };
+
+  // Calculate days remaining in trial
+  const getTrialDaysRemaining = (trialEndsAt: string | null) => {
+    if (!trialEndsAt) return 0;
+    return Math.max(0, differenceInDays(new Date(trialEndsAt), new Date()));
+  };
   
   if (isLoading) {
     return <div className="text-center py-4">Loading subscription details...</div>;
@@ -161,15 +170,41 @@ export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }
     );
   }
   
+  // Get next billing date
+  const getNextBillingDate = () => {
+    // If trial, show trial end date
+    if (activeSubscription.is_trial && activeSubscription.trial_ends_at) {
+      return format(new Date(activeSubscription.trial_ends_at), 'MMMM dd, yyyy');
+    }
+    
+    // Otherwise show regular billing date
+    if (activeSubscription.end_date) {
+      return format(new Date(activeSubscription.end_date), 'MMMM dd, yyyy');
+    }
+    
+    // Calculate next billing date as 1 month from start date
+    const startDate = new Date(activeSubscription.start_date);
+    const nextBilling = new Date(startDate);
+    nextBilling.setMonth(nextBilling.getMonth() + 1);
+    return format(nextBilling, 'MMMM dd, yyyy');
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Current Subscription</h2>
       <Card>
         <CardHeader>
-          <CardTitle>{activeSubscription.plan_name}</CardTitle>
-          <CardDescription>
-            Started on {format(new Date(activeSubscription.start_date), 'MMMM dd, yyyy')}
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>{activeSubscription.plan_name}</CardTitle>
+              <CardDescription>
+                Started on {format(new Date(activeSubscription.start_date), 'MMMM dd, yyyy')}
+              </CardDescription>
+            </div>
+            {activeSubscription.is_trial && (
+              <Badge className="bg-quantum-purple text-white">Free Trial</Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -179,18 +214,42 @@ export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Price</span>
-              <span className="font-medium">{formatPrice(activeSubscription.price)}/month</span>
+              <CurrencyDisplay 
+                amount={activeSubscription.price} 
+                isTrial={activeSubscription.is_trial} 
+              />
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Meals per week</span>
               <span className="font-medium">{activeSubscription.meals_per_week} meals</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Next billing date</span>
-              <span className="font-medium">
-                {activeSubscription.end_date 
-                  ? format(new Date(activeSubscription.end_date), 'MMMM dd, yyyy')
-                  : format(new Date(new Date(activeSubscription.start_date).setMonth(new Date(activeSubscription.start_date).getMonth() + 1)), 'MMMM dd, yyyy')}
+            
+            {activeSubscription.is_trial && activeSubscription.trial_ends_at && (
+              <div className="mt-4 p-3 bg-quantum-darkBlue/20 rounded-lg border border-quantum-purple/30">
+                <div className="flex items-center gap-2 text-quantum-purple mb-2">
+                  <Gift className="h-4 w-4" />
+                  <span className="font-semibold">Free Trial Period</span>
+                </div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Trial ends on:</span>
+                  <span className="font-medium">{format(new Date(activeSubscription.trial_ends_at), 'MMMM dd, yyyy')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Days remaining:</span>
+                  <span className="font-medium">
+                    {getTrialDaysRemaining(activeSubscription.trial_ends_at)} days
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-between mt-2">
+              <span className="text-gray-500">
+                {activeSubscription.is_trial ? 'Trial end date' : 'Next billing date'}
+              </span>
+              <span className="font-medium flex items-center gap-1">
+                <Calendar className="h-4 w-4 inline" />
+                {getNextBillingDate()}
               </span>
             </div>
           </div>
@@ -231,23 +290,28 @@ export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                  Cancel Subscription
+                  Cancel {activeSubscription.is_trial ? 'Trial' : 'Subscription'}
                 </DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to cancel your {activeSubscription.plan_name} subscription? 
-                  You will lose access to your meal plan at the end of the current billing period.
+                  {activeSubscription.is_trial 
+                    ? `Are you sure you want to cancel your free trial of the ${activeSubscription.plan_name}?`
+                    : `Are you sure you want to cancel your ${activeSubscription.plan_name} subscription? You will lose access to your meal plan at the end of the current billing period.`
+                  }
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
-                  Keep Subscription
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCancelDialog(false)}
+                >
+                  Keep {activeSubscription.is_trial ? 'Trial' : 'Subscription'}
                 </Button>
                 <Button 
                   variant="destructive" 
                   onClick={handleCancelSubscription}
                   disabled={updateSubscription.isPending}
                 >
-                  {updateSubscription.isPending ? 'Cancelling...' : 'Yes, Cancel Subscription'}
+                  {updateSubscription.isPending ? 'Cancelling...' : `Yes, Cancel ${activeSubscription.is_trial ? 'Trial' : 'Subscription'}`}
                 </Button>
               </DialogFooter>
             </DialogContent>

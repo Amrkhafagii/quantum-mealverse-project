@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { CurrencyDisplay } from './common/CurrencyDisplay';
 
 interface PlanFeature {
   text: string;
@@ -25,6 +26,7 @@ interface SubscriptionPlanProps {
   onSubscribe?: () => void;
   priceDisplay?: string; // Optional formatted price string
   mealsPerWeek?: number;
+  trialAvailable?: boolean;
 }
 
 const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
@@ -39,11 +41,12 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   onSubscribe,
   priceDisplay,
   mealsPerWeek = 5, // Default to 5 meals per week if not specified
+  trialAvailable = true,
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleClick = async () => {
+  const handleClick = async (withTrial = false) => {
     // Direct logging test
     console.log('Testing direct log from SubscriptionPlan component');
     try {
@@ -92,21 +95,30 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         return;
       }
 
+      const now = new Date();
+      let subscriptionData = {
+        user_id: user.id,
+        plan_name: title,
+        price: withTrial ? 0 : price,
+        status: 'active',
+        meals_per_week: mealsPerWeek,
+        start_date: now.toISOString(),
+        is_trial: withTrial,
+        trial_ends_at: withTrial ? new Date(now.setMonth(now.getMonth() + 3)).toISOString() : null
+      };
+
       // Create new subscription
       const { error: insertError } = await supabase
         .from('subscriptions')
-        .insert({
-          user_id: user.id,
-          plan_name: title,
-          price: price,
-          status: 'active',
-          meals_per_week: mealsPerWeek,
-          start_date: new Date().toISOString() // Add this missing required field
-        });
+        .insert(subscriptionData);
 
       if (insertError) throw insertError;
 
-      toast.success(`You've successfully subscribed to the ${title} plan!`);
+      if (withTrial) {
+        toast.success(`You've successfully started a 3-month free trial of the ${title} plan!`);
+      } else {
+        toast.success(`You've successfully subscribed to the ${title} plan!`);
+      }
       
       // Redirect to profile page to see subscription
       navigate('/profile');
@@ -227,16 +239,28 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
           </ul>
         </div>
 
-        <button
-          onClick={handleClick}
-          className={cn(
-            "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta mt-auto",
-            getButtonStyle()
+        <div className="mt-auto space-y-2">
+          {trialAvailable && (
+            <button
+              onClick={() => handleClick(true)}
+              className="w-full py-3 px-6 rounded-md transition-all duration-300 text-center bg-quantum-darkBlue/30 border border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
+              aria-label={`Start 3-month free trial for ${title} plan`}
+            >
+              Start 3-Month Free Trial
+            </button>
           )}
-          aria-label={`${ctaText} for ${title} plan at ${priceDisplay || `$${price}`} per ${period}`}
-        >
-          {ctaText}
-        </button>
+          
+          <button
+            onClick={() => handleClick(false)}
+            className={cn(
+              "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta",
+              getButtonStyle()
+            )}
+            aria-label={`${ctaText} for ${title} plan at ${priceDisplay || `$${price}`} per ${period}`}
+          >
+            {ctaText}
+          </button>
+        </div>
       </div>
     </HolographicCard>
   );
