@@ -43,7 +43,7 @@ export const RestaurantNavbar: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="text-lg font-semibold text-white">
-            {restaurant.name}
+            {restaurant.name} <span className="text-sm text-[#1EAEDB]">(Restaurant Dashboard)</span>
           </div>
           
           <div className="flex items-center gap-2">

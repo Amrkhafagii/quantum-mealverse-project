@@ -16,7 +16,7 @@ export const RestaurantLayout: React.FC<RestaurantLayoutProps> = ({ children }) 
     return (
       <div className="min-h-screen bg-[#1A1F2C] text-white flex items-center justify-center">
         <Loader className="h-8 w-8 text-[#1EAEDB] animate-spin" />
-        <span className="ml-2 text-[#1EAEDB]">Loading...</span>
+        <span className="ml-2 text-[#1EAEDB]">Loading restaurant dashboard...</span>
       </div>
     );
   }

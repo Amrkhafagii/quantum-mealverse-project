@@ -66,7 +66,6 @@ export const useRestaurantAuth = () => {
         description: "You have been logged out of your restaurant account",
       });
       
-      // The useAuth hook will update the user and session state
       return true;
     } catch (error) {
       console.error("Error logging out restaurant:", error);
