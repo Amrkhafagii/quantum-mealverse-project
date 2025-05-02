@@ -32,7 +32,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
     try {
       // Fetch weight measurements
       const { data: measurements } = await supabase
-        .from('body_measurements')
+        .from('user_measurements')
         .select('date, weight, body_fat, chest, waist, arms, legs')
         .eq('user_id', id)
         .order('date', { ascending: true });

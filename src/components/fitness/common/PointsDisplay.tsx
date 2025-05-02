@@ -1,47 +1,37 @@
 
 import React from 'react';
-import { Award, Trophy } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Trophy, Award } from 'lucide-react';
 
 interface PointsDisplayProps {
   points: number;
+  level?: number;
   className?: string;
-  size?: 'small' | 'medium' | 'large';
-  showIcon?: boolean;
 }
 
 const PointsDisplay: React.FC<PointsDisplayProps> = ({ 
-  points, 
-  className = '',
-  size = 'medium',
-  showIcon = true
+  points = 0, 
+  level = 1, 
+  className = '' 
 }) => {
-  // Define styles based on size
-  const sizeClasses = {
-    small: 'text-sm py-1 px-2',
-    medium: 'text-base py-1.5 px-3',
-    large: 'text-lg py-2 px-4'
-  };
-  
-  const iconSizeClasses = {
-    small: 'h-3.5 w-3.5',
-    medium: 'h-4 w-4',
-    large: 'h-5 w-5'
-  };
+  // Calculate level if not provided based on points
+  const calculatedLevel = level || Math.floor(Math.sqrt(points / 100)) + 1;
   
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`bg-gradient-to-r from-quantum-cyan/20 to-quantum-purple/20 
-                  rounded-full backdrop-blur-sm border border-quantum-cyan/30 
-                  inline-flex items-center ${sizeClasses[size]} ${className}`}
-    >
-      {showIcon && (
-        <Trophy className={`${iconSizeClasses[size]} text-yellow-400 mr-1.5`} />
-      )}
-      <span className="font-semibold">{points} pts</span>
-    </motion.div>
+    <div className={`flex items-center ${className}`}>
+      <div className="bg-gradient-to-r from-yellow-600 to-yellow-400 p-1 rounded-full mr-3">
+        <Trophy className="h-6 w-6 text-white" />
+      </div>
+      <div>
+        <div className="flex items-center">
+          <span className="font-bold text-lg">{points}</span>
+          <span className="text-gray-400 text-xs ml-1">pts</span>
+        </div>
+        <div className="flex items-center text-xs text-gray-400">
+          <Award className="h-3 w-3 mr-1 text-purple-400" />
+          Level {calculatedLevel}
+        </div>
+      </div>
+    </div>
   );
 };
 

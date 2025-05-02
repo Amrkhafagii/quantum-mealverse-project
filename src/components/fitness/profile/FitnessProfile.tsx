@@ -19,26 +19,11 @@ interface FitnessProfileProps {
   onUpdateProfile?: (profile: UserProfile) => void;
 }
 
-interface ProfileFormState {
-  display_name?: string;
-  height?: number;
-  weight: number;
-  goal_weight?: number;
-  date_of_birth?: Date | string | null;
-  gender?: string;
-  fitness_level?: string;
-  fitness_goals?: string[];
-  dietary_preferences?: string[];
-  dietary_restrictions?: string[];
-}
-
 const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile }) => {
-  const [profile, setProfile] = useState<ProfileFormState>({
-    weight: 0, // Initialize with default required value
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = React.useState<Date | undefined>();
   const { toast } = useToast();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [date, setDate] = React.useState<Date>();
 
   useEffect(() => {
     loadProfile();
@@ -47,8 +32,6 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      if (!userId) return;
-      
       const { data, error } = await supabase
         .from('fitness_profiles')
         .select('*')
@@ -57,83 +40,64 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
         
       if (error) throw error;
       
-      if (data) {
-        // Convert to our internal state format with guaranteed weight property
-        const profileData: ProfileFormState = {
-          display_name: data.display_name,
-          height: data.height,
-          weight: data.weight || 0, // Ensure weight has a default value
-          goal_weight: data.goal_weight,
-          date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : null,
-          gender: data.gender,
-          fitness_level: data.fitness_level,
-          fitness_goals: data.fitness_goals,
-          dietary_preferences: data.dietary_preferences,
-          dietary_restrictions: data.dietary_restrictions,
-        };
-        
-        setProfile(profileData);
-        
-        // Set date if available
-        if (data.date_of_birth) {
-          setDate(new Date(data.date_of_birth));
-        }
-      }
+      // Ensure we have the required weight field
+      const profileWithDefaults = {
+        ...data,
+        weight: data.weight || 0 // Add default weight if missing
+      };
+      
+      setUserProfile(profileWithDefaults as UserProfile);
     } catch (error) {
       console.error('Error loading profile:', error);
       toast({
-        description: "Failed to load fitness profile.",
-        variant: "destructive"
+        description: "Failed to load fitness profile."
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateProfile = async () => {
-    try {
-      setIsLoading(true);
-      if (!userId) return;
+  const handleUpdateProfile = async (formData: Omit<UserProfile, 'id'>) => {
+  try {
+    setIsLoading(true);
+    
+    // Ensure the weight is set with a default if not provided
+    const profileData = {
+      ...formData,
+      weight: formData.weight || 0, // Add default weight value
+      user_id: userId
+    };
+    
+    const { data, error } = await supabase
+      .from('fitness_profiles')
+      .upsert(profileData as any)
+      .select()
+      .single();
       
-      // Ensure the weight is set with a default if not provided
-      const profileData = {
-        ...profile,
-        user_id: userId,
-        date_of_birth: date?.toISOString() || null
-      };
-      
-      const { data, error } = await supabase
-        .from('fitness_profiles')
-        .upsert(profileData as any)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      // Convert the data to UserProfile type with proper casting
-      const updatedProfile = data as unknown as UserProfile;
-      
-      if (onUpdateProfile) {
-        onUpdateProfile(updatedProfile);
-      }
-      
-      toast({
-        description: "Your fitness profile has been saved successfully.",
-      });
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        description: "Failed to update fitness profile.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof ProfileFormState, value: any) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-  };
+    if (error) throw error;
+    
+    // Convert the data to UserProfile type with proper casting
+    const updatedProfile = {
+      ...data,
+      weight: data.weight || 0, // Ensure weight is included
+    } as unknown as UserProfile;
+    
+    setUserProfile(updatedProfile);
+    onUpdateProfile?.(updatedProfile);
+    
+    toast({
+      description: "Your fitness profile has been saved successfully."
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    toast({
+      description: "Failed to update fitness profile.",
+      variant: "destructive"
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -150,8 +114,8 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
             <Input
               type="text"
               id="display_name"
-              value={profile.display_name || ""}
-              onChange={(e) => handleInputChange('display_name', e.target.value)}
+              defaultValue={userProfile?.display_name || ""}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, display_name: e.target.value })}
             />
           </div>
           <div>
@@ -159,8 +123,8 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
             <Input
               type="number"
               id="height"
-              value={profile.height || ""}
-              onChange={(e) => handleInputChange('height', parseFloat(e.target.value))}
+              defaultValue={userProfile?.height || ""}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, height: parseFloat(e.target.value) })}
             />
           </div>
         </div>
@@ -170,8 +134,8 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
             <Input
               type="number"
               id="weight"
-              value={profile.weight || ""}
-              onChange={(e) => handleInputChange('weight', parseFloat(e.target.value))}
+              defaultValue={userProfile?.weight || ""}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, weight: parseFloat(e.target.value) })}
               required
             />
           </div>
@@ -180,8 +144,8 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
             <Input
               type="number"
               id="goal_weight"
-              value={profile.goal_weight || ""}
-              onChange={(e) => handleInputChange('goal_weight', parseFloat(e.target.value))}
+              defaultValue={userProfile?.goal_weight || ""}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, goal_weight: parseFloat(e.target.value) })}
             />
           </div>
         </div>
@@ -217,8 +181,8 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
           <div>
             <Label htmlFor="gender">Gender</Label>
             <Select 
-              value={profile.gender || ""} 
-              onValueChange={(value) => handleInputChange('gender', value)}
+              defaultValue={userProfile?.gender || ""}
+              onValueChange={(value) => userProfile && setUserProfile({ ...userProfile, gender: value })}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select gender" />
@@ -233,8 +197,8 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
           <div>
             <Label htmlFor="fitness_level">Fitness Level</Label>
             <Select 
-              value={profile.fitness_level || ""} 
-              onValueChange={(value) => handleInputChange('fitness_level', value)}
+              defaultValue={userProfile?.fitness_level || ""}
+              onValueChange={(value) => userProfile && setUserProfile({ ...userProfile, fitness_level: value })}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select level" />
@@ -248,7 +212,10 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
           </div>
         </div>
         <Button 
-          onClick={handleUpdateProfile}
+          onClick={() => userProfile && handleUpdateProfile({
+            ...userProfile,
+            date_of_birth: date?.toISOString() || null
+          })}
           className="bg-quantum-purple hover:bg-quantum-purple/90"
           disabled={isLoading}
         >

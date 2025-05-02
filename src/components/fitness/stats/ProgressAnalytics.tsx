@@ -47,7 +47,7 @@ const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId }) => {
       // Fetch workouts for this week
       const { data: workouts, error } = await supabase
         .from('workout_logs')
-        .select('calories_burned, duration, points_earned')
+        .select('calories_burned, duration')
         .eq('user_id', activeUserId)
         .gte('date', start.toISOString())
         .lte('date', end.toISOString());
@@ -57,13 +57,12 @@ const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId }) => {
       if (workouts) {
         const totalCalories = workouts.reduce((sum, workout) => sum + (workout.calories_burned || 0), 0);
         const totalDuration = workouts.reduce((sum, workout) => sum + (workout.duration || 0), 0);
-        const totalPoints = workouts.reduce((sum, workout) => sum + (workout.points_earned || 0), 0);
         
         setWeeklyProgress({
           workouts: workouts.length,
           calories: totalCalories,
           duration: totalDuration,
-          points: totalPoints
+          points: 0 // Default to 0 since points_earned may not exist
         });
       }
     } catch (error) {

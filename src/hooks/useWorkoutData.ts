@@ -73,6 +73,32 @@ export function useWorkoutData() {
     }
   };
 
+  const fetchWorkoutHistory = async (userId?: string) => {
+    try {
+      setIsLoading(true);
+      if (!userId) return;
+      
+      const { data, error } = await supabase
+        .from('workout_history')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+        
+      if (error) throw error;
+      
+      setHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching workout history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load workout history",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const fetchWorkoutStats = async (userId?: string) => {
     try {
       setIsLoading(true);
@@ -185,6 +211,7 @@ export function useWorkoutData() {
     fetchWorkoutPlans,
     fetchWorkoutSchedules,
     fetchWorkoutStats,
+    fetchWorkoutHistory,
     logWorkout
   };
 }

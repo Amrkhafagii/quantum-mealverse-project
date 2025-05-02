@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness';
 import { CalendarDays, Dumbbell, Trophy, Activity, Target } from 'lucide-react';
+import PointsDisplay from '../common/PointsDisplay';
 
 interface EnhancedFitnessProfileProps {
   userId?: string;
