@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocationPermission } from '@/hooks/useLocationPermission';
+import LocationPermissionsPrompt from './location/LocationPermissionsPrompt';
 
 interface AuthFormProps {
   isRegister?: boolean;
@@ -19,6 +21,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   
   // Restaurant specific fields
   const [restaurantName, setRestaurantName] = useState('');
@@ -30,6 +33,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const { requestPermission } = useLocationPermission();
   
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,12 +93,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           });
           navigate('/restaurant/dashboard', { replace: true });
         } else {
-          // Regular customer flow
+          // Regular customer flow - prompt for location
           toast({
             title: "Welcome back",
             description: "You have been logged in successfully",
           });
-          navigate('/');
+          
+          // Show location prompt after successful login (only for customers)
+          setShowLocationPrompt(true);
         }
       }
     } catch (error: any) {
@@ -107,6 +113,40 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
       setLoading(false);
     }
   };
+
+  // Handle location permission result
+  const handlePermissionGranted = () => {
+    toast({
+      title: "Location Enabled",
+      description: "You can now see restaurants near you",
+    });
+    navigate('/', { replace: true });
+  };
+  
+  const handlePermissionDenied = () => {
+    toast({
+      title: "Location Access Limited",
+      description: "Some features will be limited without location access",
+      variant: "warning",
+    });
+    navigate('/', { replace: true });
+  };
+  
+  const handleDismiss = () => {
+    setShowLocationPrompt(false);
+    navigate('/', { replace: true });
+  };
+
+  // Render the location prompt or the auth form
+  if (showLocationPrompt) {
+    return (
+      <LocationPermissionsPrompt
+        onPermissionGranted={handlePermissionGranted}
+        onPermissionDenied={handlePermissionDenied}
+        onDismiss={handleDismiss}
+      />
+    );
+  }
 
   return (
     <form onSubmit={handleAuth} className="space-y-6">

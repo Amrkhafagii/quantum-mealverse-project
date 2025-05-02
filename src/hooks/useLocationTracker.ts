@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface LocationTrackerOptions {
   watchPosition?: boolean;
@@ -25,7 +25,7 @@ interface CustomPositionError {
 export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const {
     watchPosition = true,
-    trackingInterval = 10000, // Default to 10 seconds
+    trackingInterval = 15 * 60 * 1000, // Default to 15 minutes
     onLocationUpdate,
     onError
   } = options;
@@ -34,24 +34,24 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<GeolocationPositionError | CustomPositionError | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const [watchId, setWatchId] = useState<number | null>(null);
-  const [intervalId, setIntervalId] = useState<number | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const intervalIdRef = useRef<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null);
 
   const clearWatchPosition = useCallback(() => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      setWatchId(null);
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
     }
-  }, [watchId]);
+  }, []);
 
   const clearTrackingInterval = useCallback(() => {
-    if (intervalId !== null) {
-      clearInterval(intervalId);
-      setIntervalId(null);
+    if (intervalIdRef.current !== null) {
+      clearInterval(intervalIdRef.current);
+      intervalIdRef.current = null;
     }
-  }, [intervalId]);
+  }, []);
 
   const handleSuccess = useCallback((pos: GeolocationPosition) => {
     setPosition(pos);
@@ -105,7 +105,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   }, [handleSuccess, handleError, onError]);
 
   // Check if permission is already granted
-  const checkPermissionStatus = useCallback(async () => {
+  const checkPermissionStatus = useCallback(async (): Promise<PermissionState | null> => {
     if (navigator.permissions && navigator.permissions.query) {
       try {
         const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
@@ -198,7 +198,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
     if (watchPosition) {
       // Start watching position
-      const id = navigator.geolocation.watchPosition(
+      watchIdRef.current = navigator.geolocation.watchPosition(
         handleSuccess,
         handleError,
         {
@@ -207,13 +207,11 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
           maximumAge: 0
         }
       );
-      setWatchId(id);
     } else {
       // Use interval-based tracking instead
-      const id = window.setInterval(() => {
+      intervalIdRef.current = window.setInterval(() => {
         getCurrentPosition();
       }, trackingInterval);
-      setIntervalId(id);
     }
   }, [getCurrentPosition, handleSuccess, handleError, watchPosition, trackingInterval, onError]);
 

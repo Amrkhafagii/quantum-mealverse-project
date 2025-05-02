@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, LogOut } from 'lucide-react';
@@ -15,12 +16,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/useLanguage';
 import LanguageSelector from './LanguageSelector';
+import LocationStatusIndicator from './location/LocationStatusIndicator';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { items } = useCart(); // Changed from cart to items
+  const { items } = useCart();
   const { t } = useLanguage();
 
   const itemCount = items.reduce((total, item) => total + (item.quantity || 1), 0);
@@ -59,6 +61,9 @@ const Navbar = () => {
                 <Link to="/dashboard" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
                   Dashboard
                 </Link>
+                
+                {/* Location status indicator */}
+                <LocationStatusIndicator />
                 
                 <Button 
                   variant="ghost" 
@@ -130,20 +135,25 @@ const Navbar = () => {
           
           <div className="md:hidden flex items-center space-x-4">
             {user && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                aria-label="Cart"
-                onClick={() => navigate('/cart')} 
-                className="relative"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {itemCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
-                    {itemCount}
-                  </Badge>
-                )}
-              </Button>
+              <>
+                {/* Mobile location indicator */}
+                <LocationStatusIndicator size="sm" showTooltip={false} />
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  aria-label="Cart"
+                  onClick={() => navigate('/cart')} 
+                  className="relative"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {itemCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
+                      {itemCount}
+                    </Badge>
+                  )}
+                </Button>
+              </>
             )}
             
             <button 

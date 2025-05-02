@@ -8,7 +8,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { MealType } from '@/types/meal';
 import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
-import { useLocationTracker } from '@/hooks/useLocationTracker';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader, Filter, SlidersHorizontal } from 'lucide-react';
 import { getMenuItems } from '@/services/restaurant/menuService';
@@ -22,11 +22,13 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import LocationPermissionsPrompt from '@/components/location/LocationPermissionsPrompt';
+import LocationPromptBanner from '@/components/location/LocationPromptBanner';
 
 type SortOption = 'price-asc' | 'price-desc' | 'rating-desc' | 'calories-asc';
 
 const Customer = () => {
-  const { location, getCurrentLocation } = useLocationTracker();
+  const { location, permissionStatus, requestPermission } = useLocationPermission();
   const { nearbyRestaurants, loading: loadingRestaurants } = useNearestRestaurant();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('rating-desc');
@@ -192,6 +194,11 @@ const Customer = () => {
   const handleFilterChange = (newFilters: DietaryFilterOption[]) => {
     setDietaryFilters(newFilters);
   };
+  
+  const handlePermissionGranted = () => {
+    // Refresh restaurants when location permission is granted
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -202,13 +209,18 @@ const Customer = () => {
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Quantum Meals</h1>
           
+          {/* Show prompt banner if location is needed */}
+          {(!location || permissionStatus !== 'granted') && (
+            <LocationPromptBanner onPermissionGranted={handlePermissionGranted} />
+          )}
+          
           {!location && (
             <div className="text-center py-12">
               <MapPin className="h-12 w-12 mx-auto mb-4 text-quantum-cyan" />
               <h2 className="text-2xl font-bold mb-4">Location Required</h2>
               <p className="mb-6">Please enable location services to see meals from restaurants near you</p>
               <Button 
-                onClick={() => getCurrentLocation()}
+                onClick={() => requestPermission()}
                 className="bg-quantum-cyan hover:bg-quantum-cyan/90"
               >
                 Share Location
