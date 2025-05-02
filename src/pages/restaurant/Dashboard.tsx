@@ -1,43 +1,29 @@
 
 import React, { useEffect } from 'react';
-import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import { RestaurantDashboard } from '@/components/restaurant/RestaurantDashboard';
+import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
-const RestaurantDashboardPage = () => {
-  const { user } = useRestaurantAuth();
-  const navigate = useNavigate();
-  
+const Dashboard = () => {
+  const { isRestaurantOwner, loading, user } = useRestaurantAuth();
+
   useEffect(() => {
-    console.log('Restaurant Dashboard Page Mounted, user:', user?.email);
+    console.log("Restaurant Dashboard Page Mounted, user:", user);
     
-    // Redirect to auth if no user is found
     if (!user) {
       console.log("No user found, redirecting to auth");
-      navigate('/auth');
-      return;
     }
-    
-    // Log any console errors that might happen
-    const originalError = console.error;
-    console.error = (...args) => {
-      console.log('ERROR CAPTURED:', ...args);
-      originalError(...args);
-    };
-    
-    // Also capture warning logs
-    const originalWarn = console.warn;
-    console.warn = (...args) => {
-      console.log('WARNING CAPTURED:', ...args);
-      originalWarn(...args);
-    };
-    
-    return () => {
-      console.error = originalError;
-      console.warn = originalWarn;
-    };
-  }, [user, navigate]);
+  }, [user]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // If not a restaurant owner, redirect to auth page
+  if (!isRestaurantOwner) {
+    return <Navigate to="/auth" replace />;
+  }
 
   return (
     <RestaurantLayout>
@@ -46,4 +32,4 @@ const RestaurantDashboardPage = () => {
   );
 };
 
-export default RestaurantDashboardPage;
+export default Dashboard;

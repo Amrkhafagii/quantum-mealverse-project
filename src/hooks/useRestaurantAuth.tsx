@@ -69,7 +69,7 @@ export const useRestaurantAuth = () => {
       });
       
       // Navigate to auth page
-      navigate('/auth');
+      navigate('/auth', { replace: true });
       
       return true;
     } catch (error) {

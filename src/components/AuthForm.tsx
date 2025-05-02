@@ -87,7 +87,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
             title: "Welcome to Restaurant Dashboard",
             description: "You have been logged in as a restaurant owner",
           });
-          navigate('/restaurant/dashboard');
+          navigate('/restaurant/dashboard', { replace: true });
         } else {
           // Regular customer flow
           toast({

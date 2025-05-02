@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { RestaurantNavbar } from './RestaurantNavbar';
@@ -10,7 +10,14 @@ interface RestaurantLayoutProps {
 }
 
 export const RestaurantLayout: React.FC<RestaurantLayoutProps> = ({ children }) => {
-  const { restaurant, loading, isRestaurantOwner } = useRestaurantAuth();
+  const { restaurant, loading, isRestaurantOwner, user } = useRestaurantAuth();
+
+  useEffect(() => {
+    // Ensure user is authenticated as a restaurant owner
+    if (!loading && !isRestaurantOwner && user) {
+      console.log("Not a restaurant owner but authenticated, redirecting");
+    }
+  }, [loading, isRestaurantOwner, user]);
 
   if (loading) {
     return (
