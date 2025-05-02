@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -8,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import TDEECalculator from '@/components/fitness/TDEECalculator';
@@ -20,67 +20,6 @@ const Nutrition = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'plans' | 'calculator'>('plans');
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
-
-  const handleSubscribe = async (planName: string, price: number, mealsPerWeek: number, withTrial = false) => {
-    try {
-      // If user is not logged in, redirect to login page
-      if (!user) {
-        toast.info('Please log in to subscribe to a meal plan');
-        navigate('/login', { state: { from: '/nutrition' } });
-        return;
-      }
-
-      // Check if user already has an active subscription
-      const { data: existingSubscription, error: fetchError } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single();
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
-      }
-
-      if (existingSubscription) {
-        // User already has an active subscription
-        toast.info('You already have an active subscription. Please manage it from your profile.');
-        navigate('/profile');
-        return;
-      }
-
-      const now = new Date();
-      let subscriptionData = {
-        user_id: user.id,
-        plan_name: planName,
-        price: withTrial ? 0 : price,
-        status: 'active',
-        meals_per_week: mealsPerWeek,
-        start_date: now.toISOString(),
-        is_trial: withTrial,
-        trial_ends_at: withTrial ? new Date(now.setMonth(now.getMonth() + 3)).toISOString() : null
-      };
-
-      // Create new subscription
-      const { error: insertError } = await supabase
-        .from('subscriptions')
-        .insert(subscriptionData);
-
-      if (insertError) throw insertError;
-
-      if (withTrial) {
-        toast.success(`You've successfully started a 3-month free trial of the ${planName} plan!`);
-      } else {
-        toast.success(`You've successfully subscribed to the ${planName} plan!`);
-      }
-      
-      // Redirect to profile page to see subscription
-      navigate('/profile');
-    } catch (error) {
-      console.error('Error handling subscription:', error);
-      toast.error('There was an error processing your subscription. Please try again.');
-    }
-  };
 
   const handleCalculationComplete = (result: TDEEResult) => {
     setCalculationResult(result);
@@ -97,9 +36,6 @@ const Nutrition = () => {
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text">Nutrition Plans</h1>
           <p className="text-xl max-w-3xl mx-auto">Choose the perfect meal plan to fuel your wellness journey</p>
-          <div className="mt-4">
-            <Badge className="bg-quantum-purple text-white">Now with 3-Month Free Trial!</Badge>
-          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'plans' | 'calculator')} className="mb-8">
@@ -182,17 +118,10 @@ const Nutrition = () => {
                 <div className="mt-auto space-y-2">
                   <Button 
                     variant="outline"
-                    onClick={() => handleSubscribe('Basic Zenith', 0, 5, true)}
-                    className="w-full border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
-                  >
-                    Start 3-Month Free Trial
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleSubscribe('Basic Zenith', 99, 5, false)}
+                    onClick={() => navigate('/contact')}
                     className="w-full border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
                   >
-                    Subscribe Now
+                    Contact Us
                   </Button>
                 </div>
               </motion.div>
@@ -232,16 +161,10 @@ const Nutrition = () => {
                 
                 <div className="mt-auto space-y-2">
                   <Button 
-                    onClick={() => handleSubscribe('Pro Zenith', 0, 10, true)}
-                    className="w-full bg-quantum-purple/20 border border-quantum-purple text-quantum-purple hover:bg-quantum-purple/30"
-                  >
-                    Start 3-Month Free Trial
-                  </Button>
-                  <Button 
-                    onClick={() => handleSubscribe('Pro Zenith', 179, 10, false)}
+                    onClick={() => navigate('/contact')}
                     className="w-full bg-quantum-purple hover:bg-quantum-purple/90"
                   >
-                    Subscribe Now
+                    Contact Us
                   </Button>
                 </div>
               </motion.div>
@@ -278,23 +201,16 @@ const Nutrition = () => {
                 <div className="mt-auto space-y-2">
                   <Button 
                     variant="outline"
-                    onClick={() => handleSubscribe('Ultimate Zenith', 0, 15, true)}
-                    className="w-full border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
-                  >
-                    Start 3-Month Free Trial
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleSubscribe('Ultimate Zenith', 279, 15, false)}
+                    onClick={() => navigate('/contact')}
                     className="w-full border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
                   >
-                    Subscribe Now
+                    Contact Us
                   </Button>
                 </div>
               </motion.div>
             </div>
 
-            {/* Trial Information Card */}
+            {/* Information Card */}
             <motion.div 
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -303,24 +219,24 @@ const Nutrition = () => {
             >
               <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-2xl font-bold text-quantum-purple mb-4">Free 3-Month Trial</h3>
-                  <p className="mb-4">Try any Zenith meal plan completely free for 3 months with no commitment. Experience the full benefits of our service with no risk.</p>
+                  <h3 className="text-2xl font-bold text-quantum-purple mb-4">Meal Plan Information</h3>
+                  <p className="mb-4">Contact us to learn more about our meal plans and how they can be customized to meet your specific dietary needs.</p>
                   <ul className="space-y-2">
                     <li className="flex items-center gap-2">
                       <Check className="text-quantum-purple h-5 w-5" />
-                      <span>No credit card required to start</span>
+                      <span>Chef-prepared meals delivered fresh</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="text-quantum-purple h-5 w-5" />
-                      <span>Cancel anytime during trial period</span>
+                      <span>Customizable based on dietary preferences</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="text-quantum-purple h-5 w-5" />
-                      <span>Full access to all plan features</span>
+                      <span>All nutritional information provided</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="text-quantum-purple h-5 w-5" />
-                      <span>Receive reminders before trial ends</span>
+                      <span>Sustainable packaging used</span>
                     </li>
                   </ul>
                 </CardContent>
