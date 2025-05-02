@@ -100,7 +100,8 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
           plan_name: title,
           price: price,
           status: 'active',
-          meals_per_week: mealsPerWeek
+          meals_per_week: mealsPerWeek,
+          start_date: new Date().toISOString() // Add this missing required field
         });
 
       if (insertError) throw insertError;
