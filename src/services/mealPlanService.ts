@@ -38,7 +38,7 @@ export const saveMealPlan = async (mealPlan: MealPlan, name: string, userId: str
     if (error) throw error;
 
     // Handle the data safely
-    const mealPlanId = data && data.length > 0 ? (data[0] as any).id : undefined;
+    const mealPlanId = data && Array.isArray(data) && data.length > 0 ? data[0].id : undefined;
 
     return {
       success: true,

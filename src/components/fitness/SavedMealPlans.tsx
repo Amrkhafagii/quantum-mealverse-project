@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -40,7 +41,9 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         const typedData = data.map(item => ({
           ...item,
           meal_plan: item.meal_plan as unknown as MealPlan,
-          expires_at: item.expires_at || undefined,
+          // @ts-ignore - Using properties that exist in DB but not in base type
+          expires_at: item.expires_at || null,
+          // @ts-ignore - Using properties that exist in DB but not in base type
           is_active: item.is_active !== false // Default to true if not present
         })) as SavedMealPlan[];
         

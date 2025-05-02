@@ -8,8 +8,8 @@ export interface SavedMealPlan {
   date_created: string;
   tdee_id: string;
   meal_plan: Json | MealPlan;
-  expires_at?: string | null;
-  is_active?: boolean;
+  expires_at: string | null;
+  is_active: boolean;
 }
 
 // User Profile Types

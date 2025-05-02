@@ -11,10 +11,10 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     const now = new Date().toISOString();
     
     // Get all expired meal plans that are still active
-    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error } = await supabase
       .from('saved_meal_plans')
       .select('*')
+      // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
       .lt('expires_at', now)
       .eq('is_active', true);
     
@@ -25,13 +25,13 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     }
     
     // Update all expired meal plans to inactive
-    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { error: updateError } = await supabase
       .from('saved_meal_plans')
       .update({ 
         // @ts-ignore - Using is_active which exists in DB but not in base type
         is_active: false 
       })
+      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', now)
       .eq('is_active', true);
     
@@ -58,13 +58,13 @@ export const checkExpiredMealPlans = async (): Promise<{
     const now = new Date().toISOString();
     
     // Update all expired meal plans
-    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
       .update({ 
         // @ts-ignore - Using is_active which exists in DB but not in base type
         is_active: false 
       })
+      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', now)
       .eq('is_active', true)
       .select('count');
@@ -101,13 +101,15 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{
     const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     
     // Find meal plans expiring in the next 3 days
-    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
       .select('id, name, expires_at')
       .eq('user_id', userId)
+      // @ts-ignore - Using is_active which exists in DB but not in base type
       .eq('is_active', true)
+      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', threeDaysLater.toISOString())
+      // @ts-ignore - Using expires_at which exists in DB but not in base type
       .gt('expires_at', now.toISOString());
       
     if (error) throw error;
