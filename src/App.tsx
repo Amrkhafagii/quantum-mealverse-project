@@ -5,6 +5,7 @@ import { CartProvider } from './contexts/CartContext';
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from './hooks/useLanguage';
 import { CurrencyProvider } from './hooks/useCurrency';
+import { KeyboardNavigation } from './components/a11y/KeyboardNavigation';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -26,6 +27,7 @@ function App() {
         <AuthProvider>
           <CurrencyProvider>
             <CartProvider>
+              <KeyboardNavigation />
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />

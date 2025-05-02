@@ -5,6 +5,8 @@ import { Check } from 'lucide-react';
 import HolographicCard from './HolographicCard';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 interface PlanFeature {
   text: string;
@@ -22,6 +24,7 @@ interface SubscriptionPlanProps {
   ctaText?: string;
   onSubscribe?: () => void;
   priceDisplay?: string; // Optional formatted price string
+  mealsPerWeek?: number;
 }
 
 const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
@@ -35,7 +38,11 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   ctaText = 'Subscribe Now',
   onSubscribe,
   priceDisplay,
+  mealsPerWeek = 5, // Default to 5 meals per week if not specified
 }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const handleClick = async () => {
     // Direct logging test
     console.log('Testing direct log from SubscriptionPlan component');
@@ -58,7 +65,54 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
       console.error('Direct logging test error:', err);
     }
     
-    toast.success(`Selected the ${title} plan!`);
+    // If user is not logged in, redirect to login page
+    if (!user) {
+      toast.info('Please log in to subscribe to a meal plan');
+      navigate('/login', { state: { from: '/subscription' } });
+      return;
+    }
+
+    try {
+      // Check if user already has an active subscription
+      const { data: existingSubscription, error: fetchError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingSubscription) {
+        // User already has an active subscription
+        toast.info('You already have an active subscription. Please manage it from your profile.');
+        navigate('/profile');
+        return;
+      }
+
+      // Create new subscription
+      const { error: insertError } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: user.id,
+          plan_name: title,
+          price: price,
+          status: 'active',
+          meals_per_week: mealsPerWeek
+        });
+
+      if (insertError) throw insertError;
+
+      toast.success(`You've successfully subscribed to the ${title} plan!`);
+      
+      // Redirect to profile page to see subscription
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error handling subscription:', error);
+      toast.error('There was an error processing your subscription. Please try again.');
+    }
     
     // Call the provided onSubscribe handler
     if (onSubscribe) {

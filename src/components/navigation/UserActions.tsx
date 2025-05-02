@@ -86,7 +86,13 @@ export const UserActions = ({
             </div>
           )}
           
-          {/* Removed Profile link from here as requested */}
+          {/* Add Profile link */}
+          <Link to="/profile">
+            <Button variant="ghost" className="text-quantum-cyan hover:text-white">
+              <User className="h-4 w-4 mr-2" />
+              <span className="hidden md:inline">Profile</span>
+            </Button>
+          </Link>
           
           <Button 
             variant="ghost" 

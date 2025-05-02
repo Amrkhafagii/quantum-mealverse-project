@@ -62,7 +62,6 @@ const Subscription = () => {
     <div className="min-h-screen bg-quantum-black text-white relative overflow-hidden">
       <ParticleBackground />
       <Navbar />
-      <KeyboardNavigation />
       
       {/* Decorative elements */}
       <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-quantum-purple/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
@@ -95,7 +94,7 @@ const Subscription = () => {
             <motion.div variants={itemVariants} role="listitem">
               <SubscriptionPlan
                 title="Basic Zenith"
-                price={parseInt(formatPrice(99).replace(/[^0-9.]/g, ''))}
+                price={99}
                 period="month"
                 description="Perfect for individuals starting their wellness journey"
                 features={[
@@ -108,13 +107,14 @@ const Subscription = () => {
                 ctaText="Subscribe Now"
                 onSubscribe={() => handleSubscribe('Basic Zenith')}
                 priceDisplay={formatPrice(99)}
+                mealsPerWeek={5}
               />
             </motion.div>
             
             <motion.div variants={itemVariants} role="listitem">
               <SubscriptionPlan
                 title="Pro Zenith"
-                price={parseInt(formatPrice(179).replace(/[^0-9.]/g, ''))}
+                price={179}
                 period="month"
                 description="Our most popular plan for health enthusiasts"
                 features={[
@@ -128,13 +128,14 @@ const Subscription = () => {
                 ctaText="Subscribe Now"
                 onSubscribe={() => handleSubscribe('Pro Zenith')}
                 priceDisplay={formatPrice(179)}
+                mealsPerWeek={10}
               />
             </motion.div>
             
             <motion.div variants={itemVariants} role="listitem">
               <SubscriptionPlan
                 title="Ultimate Zenith"
-                price={parseInt(formatPrice(279).replace(/[^0-9.]/g, ''))}
+                price={279}
                 period="month"
                 description="The ultimate nutrition solution for maximum results"
                 features={[
@@ -148,6 +149,7 @@ const Subscription = () => {
                 ctaText="Subscribe Now"
                 onSubscribe={() => handleSubscribe('Ultimate Zenith')}
                 priceDisplay={formatPrice(279)}
+                mealsPerWeek={15}
               />
             </motion.div>
           </motion.div>
