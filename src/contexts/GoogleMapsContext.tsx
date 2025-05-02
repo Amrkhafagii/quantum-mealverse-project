@@ -27,7 +27,8 @@ interface GoogleMapsContextType {
 const GoogleMapsContext = createContext<GoogleMapsContextType | undefined>(undefined);
 
 export const GoogleMapsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [googleMapsApiKey, setGoogleMapsApiKeyState] = useState<string | null>(null);
+  // Initialize with the provided API key
+  const [googleMapsApiKey, setGoogleMapsApiKeyState] = useState<string | null>('AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs');
   const [driverLocation, setDriverLocation] = useState<MapLocation | null>(null);
   const [restaurantLocation, setRestaurantLocation] = useState<MapLocation | null>(null);
   const [customerLocation, setCustomerLocation] = useState<MapLocation | null>(null);
@@ -40,6 +41,9 @@ export const GoogleMapsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setGoogleMapsApiKeyState(storedApiKey);
     } else if (import.meta.env.VITE_GOOGLE_MAPS_API_KEY) {
       setGoogleMapsApiKeyState(import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
+    } else {
+      // Store the provided API key if none is found
+      localStorage.setItem('google_maps_api_key', 'AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs');
     }
   }, []);
 

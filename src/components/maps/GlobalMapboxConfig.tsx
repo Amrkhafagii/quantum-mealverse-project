@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -35,7 +34,7 @@ const GlobalMapboxConfig: React.FC = () => {
       toast({
         title: "Warning",
         description: "Token should start with 'pk.' (Mapbox public token)",
-        variant: "warning",
+        variant: "default",
       });
       return;
     }
