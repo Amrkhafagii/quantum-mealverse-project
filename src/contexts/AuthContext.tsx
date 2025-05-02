@@ -18,7 +18,7 @@ const defaultContext: AuthContextType = {
   logout: async () => false,
 };
 
-const AuthContext = createContext<AuthContextType>(defaultContext);
+export const AuthContext = createContext<AuthContextType>(defaultContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -78,4 +78,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+// This is not needed anymore as we're exporting the context directly
+// export const useAuth = () => useContext(AuthContext);
