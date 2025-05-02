@@ -1492,6 +1492,7 @@ export type Database = {
           calorie_target: number | null
           carbs_target: number | null
           created_at: string | null
+          currency: string
           dietary_restrictions: string[] | null
           fat_target: number | null
           id: string
@@ -1504,6 +1505,7 @@ export type Database = {
           calorie_target?: number | null
           carbs_target?: number | null
           created_at?: string | null
+          currency?: string
           dietary_restrictions?: string[] | null
           fat_target?: number | null
           id?: string
@@ -1516,6 +1518,7 @@ export type Database = {
           calorie_target?: number | null
           carbs_target?: number | null
           created_at?: string | null
+          currency?: string
           dietary_restrictions?: string[] | null
           fat_target?: number | null
           id?: string
