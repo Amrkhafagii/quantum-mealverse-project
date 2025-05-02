@@ -1,3 +1,4 @@
+
 // Define types for fitness data that can be used throughout the application
 export interface WorkoutPlan {
   id: string;
@@ -217,4 +218,73 @@ export interface UserPoints {
   level: string;
   progress_to_next_level: number;
   last_updated: string;
+}
+
+// New interfaces for advanced gamification
+export interface Team {
+  id: string;
+  name: string;
+  description: string;
+  creator_id: string;
+  created_at: string;
+  avatar_url?: string;
+  members_count: number;
+  total_points: number;
+}
+
+export interface TeamMember {
+  team_id: string;
+  user_id: string;
+  joined_at: string;
+  role: 'member' | 'admin' | 'creator';
+  contribution_points: number;
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  type: 'individual' | 'team';
+  status: 'upcoming' | 'active' | 'completed';
+  goal_type: 'distance' | 'workouts' | 'steps' | 'weight' | 'custom';
+  goal_value: number;
+  reward_points: number;
+  participants_count?: number;
+}
+
+export interface ChallengeParticipant {
+  challenge_id: string;
+  user_id: string;
+  team_id?: string;
+  joined_at: string;
+  current_progress: number;
+  completed: boolean;
+  completed_at?: string;
+}
+
+// Enhanced streak rewards
+export interface StreakReward {
+  days: number;
+  points: number;
+  description: string;
+  claimed: boolean;
+}
+
+// AI-Powered Recommendations
+export interface WorkoutRecommendation {
+  id: string;
+  user_id: string;
+  workout_plan_id?: string;
+  type: 'plan' | 'exercise' | 'rest' | 'adjustment' | 'equipment';
+  title: string;
+  description: string;
+  reason: string;
+  confidence_score: number; // 0-100
+  suggested_at: string;
+  applied: boolean;
+  applied_at?: string;
+  dismissed: boolean;
+  metadata?: any;
 }

@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dumbbell, LineChart, History, PlayCircle, Calendar, Award, Goal, TrendingUp, Trophy } from 'lucide-react';
+import { Dumbbell, LineChart, History, PlayCircle, Calendar, Award, Goal, TrendingUp, Trophy, Users, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
@@ -18,7 +18,7 @@ import AdvancedProgressCharts from '@/components/fitness/AdvancedProgressCharts'
 import GoalManagement from '@/components/fitness/GoalManagement';
 import StartWorkout from '@/components/fitness/StartWorkout';
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutPlan, UserMeasurement } from '@/types/fitness';
+import { WorkoutPlan, UserMeasurement, Team, Challenge } from '@/types/fitness';
 import { getUserMeasurements } from '@/services/measurementService';
 import { motion } from 'framer-motion';
 import AchievementNotification from '@/components/fitness/AchievementNotification';
@@ -27,6 +27,9 @@ import ProgressInsights from '@/components/fitness/ProgressInsights';
 import UserProgressJourney from '@/components/fitness/UserProgressJourney';
 import DailyQuests from '@/components/fitness/DailyQuests';
 import PointsDisplay from '@/components/fitness/PointsDisplay';
+import TeamChallenges from '@/components/fitness/TeamChallenges';
+import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
+import StreakRewards from '@/components/fitness/StreakRewards';
 
 const Workouts = () => {
   const navigate = useNavigate();
@@ -45,12 +48,15 @@ const Workouts = () => {
   const [userPoints, setUserPoints] = useState(0);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [userAchievements, setUserAchievements] = useState<any[]>([]);
+  const [userStreak, setUserStreak] = useState({ current: 0, longest: 0 });
+  const [userLevel, setUserLevel] = useState(1);
   
   useEffect(() => {
     if (user) {
       loadMeasurements();
       loadAchievements();
       loadUserPoints();
+      loadUserStreak();
       
       // Simulate achievement for demo purposes
       const hasSeenAchievement = localStorage.getItem('hasSeenWorkoutAchievement');
@@ -140,9 +146,30 @@ const Workouts = () => {
         totalPoints = pointsData?.reduce((sum, a) => sum + a.points, 0) || 0;
       }
       
+      // Mock some additional points for daily quests
+      totalPoints += 85; // Pretend user earned these from daily quests
+      
       setUserPoints(totalPoints);
+      
+      // Calculate user level (1 level per 50 points, minimum level 1)
+      setUserLevel(Math.max(1, Math.floor(totalPoints / 50) + 1));
     } catch (error) {
       console.error('Error loading user points:', error);
+    }
+  };
+  
+  const loadUserStreak = async () => {
+    if (!user) return;
+    
+    try {
+      // In a real app, we would fetch this from the database
+      // For now, let's simulate some streak data
+      setUserStreak({
+        current: 5,
+        longest: 12
+      });
+    } catch (error) {
+      console.error('Error loading user streak:', error);
     }
   };
   
@@ -211,6 +238,20 @@ const Workouts = () => {
         
       case 'goals':
         return <GoalManagement userId={user?.id} />;
+
+      case 'teams':
+        return (
+          <div className="space-y-6">
+            <TeamChallenges userId={user?.id} />
+          </div>
+        );
+      
+      case 'recommendations':
+        return (
+          <div className="space-y-6">
+            <WorkoutRecommendations userId={user?.id} fitnessLevel="intermediate" />
+          </div>
+        );
         
       default:
         return null;
@@ -239,12 +280,15 @@ const Workouts = () => {
           </div>
           
           {user && (
-            <PointsDisplay points={userPoints} size="large" />
+            <div className="flex flex-col items-end gap-2">
+              <PointsDisplay points={userPoints} size="large" />
+              <div className="text-sm text-gray-400">Level {userLevel}</div>
+            </div>
           )}
         </motion.div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 p-1">
+          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-10 gap-2 p-1">
             <TabsTrigger value="workout" className="flex items-center gap-1">
               <PlayCircle className="h-4 w-4" /> Workout
             </TabsTrigger>
@@ -269,6 +313,12 @@ const Workouts = () => {
             <TabsTrigger value="achievements" className="flex items-center gap-1">
               <Award className="h-4 w-4" /> Achievements
             </TabsTrigger>
+            <TabsTrigger value="teams" className="flex items-center gap-1">
+              <Users className="h-4 w-4" /> Teams
+            </TabsTrigger>
+            <TabsTrigger value="recommendations" className="flex items-center gap-1">
+              <Brain className="h-4 w-4" /> AI Coach
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value={activeTab} className="mt-8">
@@ -285,7 +335,8 @@ const Workouts = () => {
         </Tabs>
         
         {user && activeTab === 'workout' && (
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* First row */}
             <ProgressInsights userId={user.id} />
             <UserProgressJourney 
               userId={user.id} 
@@ -293,7 +344,16 @@ const Workouts = () => {
               userAchievements={userAchievements} 
               points={userPoints}
             />
-            <DailyQuests userId={user.id} />
+            <DailyQuests userId={user.id} userLevel={userLevel} />
+            
+            {/* Second row */}
+            <WorkoutRecommendations userId={user.id} fitnessLevel="intermediate" />
+            <TeamChallenges userId={user.id} />
+            <StreakRewards 
+              userId={user.id} 
+              currentStreak={userStreak.current} 
+              longestStreak={userStreak.longest} 
+            />
           </div>
         )}
         
