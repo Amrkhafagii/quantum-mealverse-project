@@ -21,6 +21,13 @@ interface InteractiveMealCardProps {
   showNutrients?: boolean;
 }
 
+// Extended Food type to match the actual properties used
+interface ExtendedFood extends Food {
+  serving_size?: string;
+  unit?: string;
+  allergies?: string[];
+}
+
 const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
   food,
   defaultServings = 1,
@@ -30,6 +37,9 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
 }) => {
   const [servings, setServings] = useState(defaultServings);
   const [isAdded, setIsAdded] = useState(false);
+  
+  // Cast to extended food type
+  const extendedFood = food as ExtendedFood;
 
   const handleServingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(event.target.value);
@@ -71,10 +81,10 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
               {food.name}
             </h4>
             <p className="text-sm text-gray-400">
-              {food.serving_size} {food.unit} per serving
+              {extendedFood.serving_size || '1'} {extendedFood.unit || 'serving'}
             </p>
           </div>
-          {food.allergies && food.allergies.length > 0 && (
+          {extendedFood.allergies && extendedFood.allergies.length > 0 && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -83,7 +93,7 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Contains: {food.allergies.join(', ')}</p>
+                  <p className="text-xs">Contains: {extendedFood.allergies.join(', ')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

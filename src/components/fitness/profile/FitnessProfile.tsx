@@ -58,7 +58,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
       if (error) throw error;
       
       if (data) {
-        // Convert to our internal state format
+        // Convert to our internal state format with guaranteed weight property
         const profileData: ProfileFormState = {
           display_name: data.display_name,
           height: data.height,

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -77,7 +77,7 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({
       };
 
       const { error } = await supabase
-        .from('body_measurements')
+        .from('user_measurements')
         .insert(measurementData);
 
       if (error) throw error;

@@ -1,220 +1,97 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { PointsDisplay } from '../common/PointsDisplay';
-import { UserProfile, UserWorkoutStats } from '@/types/fitness';
-import { supabase } from '@/integrations/supabase/client';
-import { Award, Dumbbell, Flame, Medal, Scale, Target, Trophy, UserCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness';
+import { CalendarDays, Dumbbell, Trophy, Activity, Target } from 'lucide-react';
 
 interface EnhancedFitnessProfileProps {
   userId?: string;
   userProfile?: UserProfile;
+  latestMeasurement?: UserMeasurement;
+  workoutStats?: UserWorkoutStats;
 }
 
-const EnhancedFitnessProfile: React.FC<EnhancedFitnessProfileProps> = ({ userId, userProfile }) => {
-  const [workoutStats, setWorkoutStats] = useState<UserWorkoutStats | null>(null);
-  const [achievements, setAchievements] = useState<{ total: number, recent: any[] }>({ total: 0, recent: [] });
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    if (userId) {
-      fetchWorkoutStats();
-      fetchAchievements();
-    }
-  }, [userId]);
-  
-  const fetchWorkoutStats = async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_user_workout_stats', {
-        user_id_param: userId
-      });
-      
-      if (error) throw error;
-      setWorkoutStats(data as UserWorkoutStats);
-    } catch (error) {
-      console.error('Error fetching workout stats:', error);
-    }
-  };
-  
-  const fetchAchievements = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Get user achievements count
-      const { count, error: countError } = await supabase
-        .from('user_achievements')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-      
-      if (countError) throw countError;
-      
-      // Get recent achievements
-      const { data: recentAchievements, error: recentError } = await supabase
-        .from('user_achievements')
-        .select(`
-          id, date_achieved,
-          achievement:achievement_id (
-            id, name, description, icon, points
-          )
-        `)
-        .eq('user_id', userId)
-        .order('date_achieved', { ascending: false })
-        .limit(3);
-      
-      if (recentError) throw recentError;
-      
-      setAchievements({
-        total: count || 0,
-        recent: recentAchievements || []
-      });
-    } catch (error) {
-      console.error('Error fetching achievements:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const getAchievementIcon = (icon: string) => {
-    switch (icon) {
-      case 'award': return <Award className="h-4 w-4" />;
-      case 'medal': return <Medal className="h-4 w-4" />;
-      case 'trophy': return <Trophy className="h-4 w-4" />;
-      case 'target': return <Target className="h-4 w-4" />;
-      default: return <Award className="h-4 w-4" />;
-    }
-  };
-  
+const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workoutStats }: EnhancedFitnessProfileProps) => {
+  const hasProfile = !!userProfile;
+  const hasMeasurement = !!latestMeasurement;
+  const hasWorkoutStats = !!workoutStats;
+
+  const weightProgress = hasMeasurement && userProfile?.goal_weight
+    ? Math.min(100, Math.max(0, 100 - ((latestMeasurement.weight || 0) - (userProfile.goal_weight || 0)) / (userProfile.weight - (userProfile.goal_weight || 0)) * 100))
+    : 0;
+
+  // Get the primary fitness goal from array if available
+  const primaryFitnessGoal = userProfile?.fitness_goals && userProfile.fitness_goals.length > 0
+    ? userProfile.fitness_goals[0]
+    : "Weight Loss";
+
   return (
-    <Card className="bg-gradient-to-br from-quantum-darkBlue/50 to-quantum-black/70 border-quantum-cyan/20">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-          <CardTitle className="flex items-center text-quantum-cyan">
-            <UserCircle className="mr-2 h-5 w-5" />
-            Fitness Profile Overview
-          </CardTitle>
-          {workoutStats?.points !== undefined && (
-            <PointsDisplay points={workoutStats.points} size="medium" showIcon={true} />
-          )}
+    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <CardContent className="p-6">
+        <div className="profile-header flex items-center gap-4 mb-6">
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={`https://avatar.vercel.sh/${userId}.png`} alt={userProfile?.display_name || "User Avatar"} />
+            <AvatarFallback>{userProfile?.display_name?.substring(0, 2).toUpperCase() || "UN"}</AvatarFallback>
+          </Avatar>
+          <div className="profile-info">
+            <h2 className="text-2xl font-semibold">{userProfile?.display_name || "User"}</h2>
+            <p className="text-gray-400">
+              {userProfile?.fitness_level || "Beginner"} | {primaryFitnessGoal}
+            </p>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Left Column - User Info */}
-          <div className="flex flex-col space-y-4">
-            <div className="bg-quantum-darkBlue/30 p-4 rounded-lg border border-quantum-cyan/10">
-              <h3 className="font-medium mb-2 flex items-center">
-                <UserCircle className="h-4 w-4 mr-2 text-quantum-cyan" />
-                Profile
-              </h3>
-              <div className="space-y-2">
-                <p className="text-sm">
-                  <span className="text-gray-400">Name:</span>{' '}
-                  {userProfile?.display_name || 'Not set'}
-                </p>
-                <p className="text-sm">
-                  <span className="text-gray-400">Height:</span>{' '}
-                  {userProfile?.height ? `${userProfile.height} cm` : 'Not set'}
-                </p>
-                <p className="text-sm">
-                  <span className="text-gray-400">Weight:</span>{' '}
-                  {userProfile?.weight ? `${userProfile.weight} kg` : 'Not set'}
-                </p>
-                <div className="pt-1">
-                  <Badge variant="outline" className="bg-quantum-darkBlue/50">
-                    {userProfile?.fitness_level || 'Level not set'}
-                  </Badge>
-                </div>
-              </div>
+        
+        <div className="progress-section mb-6">
+          <div className="progress-header flex justify-between items-center mb-2">
+            <h4 className="text-lg font-medium">Weight Goal</h4>
+            <span className="text-sm text-gray-400">
+              {latestMeasurement?.weight || userProfile?.weight || 0} kg / {userProfile?.goal_weight || 0} kg
+            </span>
+          </div>
+          <Progress value={weightProgress} />
+        </div>
+        
+        <div className="stats-grid grid grid-cols-3 gap-4 mb-6">
+          <div className="stat-card bg-quantum-black/30 p-4 rounded-lg">
+            <div className="stat-icon mb-2">
+              <CalendarDays className="h-5 w-5 text-blue-400" />
+            </div>
+            <div className="stat-content">
+              <div className="stat-title text-xs text-gray-400">Streak</div>
+              <div className="stat-value text-lg font-bold">{workoutStats?.streak || 0} days</div>
             </div>
           </div>
-
-          {/* Middle Column - Workout Stats */}
-          <div className="flex flex-col space-y-4">
-            <div className="bg-quantum-darkBlue/30 p-4 rounded-lg border border-quantum-cyan/10 h-full">
-              <h3 className="font-medium mb-2 flex items-center">
-                <Dumbbell className="h-4 w-4 mr-2 text-quantum-cyan" />
-                Workout Stats
-              </h3>
-              
-              {isLoading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-quantum-cyan"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-quantum-black/30 p-3 rounded-md">
-                    <div className="text-gray-400 text-xs mb-1">Total Workouts</div>
-                    <div className="text-lg font-bold">
-                      {workoutStats?.total_workouts || 0}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-quantum-black/30 p-3 rounded-md">
-                    <div className="text-gray-400 text-xs mb-1">Streak</div>
-                    <div className="text-lg font-bold flex items-center">
-                      {workoutStats?.currentStreak || 0}
-                      <Flame className="h-4 w-4 ml-1 text-orange-400" />
-                    </div>
-                  </div>
-                  
-                  <div className="bg-quantum-black/30 p-3 rounded-md">
-                    <div className="text-gray-400 text-xs mb-1">Achievements</div>
-                    <div className="text-lg font-bold">
-                      {achievements.total}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-quantum-black/30 p-3 rounded-md">
-                    <div className="text-gray-400 text-xs mb-1">Level</div>
-                    <div className="text-lg font-bold">
-                      {workoutStats?.level || 1}
-                    </div>
-                  </div>
-                </div>
-              )}
+          <div className="stat-card bg-quantum-black/30 p-4 rounded-lg">
+            <div className="stat-icon mb-2">
+              <Dumbbell className="h-5 w-5 text-green-400" />
+            </div>
+            <div className="stat-content">
+              <div className="stat-title text-xs text-gray-400">Workouts</div>
+              <div className="stat-value text-lg font-bold">{workoutStats?.total_workouts || 0}</div>
             </div>
           </div>
-
-          {/* Right Column - Recent Achievements */}
-          <div className="flex flex-col space-y-4">
-            <div className="bg-quantum-darkBlue/30 p-4 rounded-lg border border-quantum-cyan/10 h-full">
-              <h3 className="font-medium mb-2 flex items-center">
-                <Trophy className="h-4 w-4 mr-2 text-yellow-400" />
-                Recent Achievements
-              </h3>
-              
-              {isLoading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-quantum-cyan"></div>
-                </div>
-              ) : achievements.recent.length > 0 ? (
-                <div className="space-y-2">
-                  {achievements.recent.map((achievement, index) => (
-                    <motion.div
-                      key={achievement.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-quantum-black/30 p-2 rounded-md flex items-center"
-                    >
-                      <div className="bg-yellow-500/20 p-1 rounded-full mr-2">
-                        {getAchievementIcon(achievement.achievement.icon)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{achievement.achievement.name}</div>
-                        <div className="text-xs text-gray-400">{achievement.achievement.points} pts</div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-4 text-center text-sm text-gray-400">
-                  Complete workouts to earn achievements!
-                </div>
-              )}
+          <div className="stat-card bg-quantum-black/30 p-4 rounded-lg">
+            <div className="stat-icon mb-2">
+              <Trophy className="h-5 w-5 text-yellow-400" />
             </div>
+            <div className="stat-content">
+              <div className="stat-title text-xs text-gray-400">Achievements</div>
+              <div className="stat-value text-lg font-bold">42</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="insights-section">
+          <h4 className="text-lg font-medium mb-2">Key Insights</h4>
+          <div className="insight-item flex items-center mb-2 text-sm">
+            <Activity className="h-4 w-4 text-purple-400 mr-2" />
+            <span>Most Active: {workoutStats?.most_active_day || "N/A"}</span>
+          </div>
+          <div className="insight-item flex items-center text-sm">
+            <Target className="h-4 w-4 text-orange-400 mr-2" />
+            <span>Goal: {primaryFitnessGoal}</span>
           </div>
         </div>
       </CardContent>
