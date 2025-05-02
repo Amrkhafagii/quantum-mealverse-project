@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
-import { Json } from '@/types/database';
+import { toSupabaseJson } from '@/utils/supabaseUtils';
 
 /**
  * Process expired meal plans and deactivate them
@@ -26,7 +26,9 @@ export const processExpiredMealPlans = async (): Promise<{ success: boolean; cou
     // Update expired plans to inactive
     const { error: updateError } = await supabase
       .from('saved_meal_plans')
-      .update({ is_active: false } as any)
+      .update({ 
+        is_active: false 
+      })
       .lt('expires_at', now)
       .eq('is_active', true);
       
@@ -46,15 +48,18 @@ export const checkExpiredMealPlans = async (): Promise<{ success: boolean; updat
   try {
     const now = new Date().toISOString();
     
-    const { count, error } = await supabase
+    // Use .eq() and .lt() methods directly without any conversion issues
+    const { data, error } = await supabase
       .from('saved_meal_plans')
-      .update({ is_active: false } as any)
+      .update({ 
+        is_active: false 
+      })
       .lt('expires_at', now)
       .eq('is_active', true);
       
     if (error) throw error;
     
-    return { success: true, updated: count || 0 };
+    return { success: true, updated: data ? data.length : 0 };
   } catch (error: any) {
     return { success: false, updated: 0, error: error.message };
   }

@@ -1,105 +1,45 @@
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  WorkoutPlan, 
-  WorkoutDay, 
-  Exercise, 
-  WorkoutSchedule,
-  WorkoutHistoryItem,
-  UserWorkoutStats
-} from '@/types/fitness';
-import { Json } from '@/types/database';
+import { WorkoutPlan, UserWorkoutStats } from '@/types/fitness';
+import { toSupabaseJson } from '@/utils/supabaseUtils';
 
 /**
- * Get user's workout plans
+ * Get all workout plans for a user
  */
-export const getUserWorkoutPlans = async (userId: string): Promise<{
-  data: WorkoutPlan[] | null;
-  error: any;
-}> => {
+export const getUserWorkoutPlans = async (userId: string): Promise<WorkoutPlan[]> => {
   try {
-    // Fetch workout plans
     const { data, error } = await supabase
       .from('workout_plans')
       .select('*')
-      .eq('user_id', userId);
-
-    if (error) throw error;
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
     
-    // Type casting required data
-    const workoutPlans = data as any[] || [];
-    
-    // Fetch workout days for each plan
-    const plansWithDays = await Promise.all(
-      workoutPlans.map(async (plan) => {
-        // Get workout days - needs to be handled differently as it's a JSON field
-        // or separate table based on your schema
-        const workoutDays = plan.workout_days || [];
-        
-        // For each day, get exercises
-        const daysWithExercises = workoutDays.map((day: any) => {
-          return {
-            ...day,
-            exercises: day.exercises || []
-          };
-        });
-        
-        return {
-          ...plan,
-          workout_days: daysWithExercises
-        };
-      })
-    );
-
-    return { data: plansWithDays as WorkoutPlan[], error: null };
+    return data || [];
   } catch (error) {
     console.error('Error fetching workout plans:', error);
-    return { data: null, error };
+    return [];
   }
 };
 
 /**
  * Create a new workout plan
  */
-export const createWorkoutPlan = async (
-  userId: string,
-  plan: Omit<WorkoutPlan, 'id' | 'user_id' | 'created_at' | 'updated_at'>
-): Promise<{
-  data: WorkoutPlan | null;
-  error: any;
-}> => {
+export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null; error: any }> => {
   try {
-    const now = new Date().toISOString();
-    
-    // Create the new workout plan
-    const newPlan = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      name: plan.name,
-      description: plan.description || '',
-      goal: plan.goal,
-      frequency: plan.frequency,
-      difficulty: plan.difficulty,
-      duration_weeks: plan.duration_weeks,
-      created_at: now,
-      updated_at: now,
-      workout_days: JSON.stringify(plan.workout_days || [])
-    };
-    
     const { data, error } = await supabase
       .from('workout_plans')
-      .insert(newPlan)
+      .insert([plan])
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     
-    // Transform back to expected format
-    const createdPlan = {
-      ...data,
-      workout_days: JSON.parse(data.workout_days as string || '[]')
-    };
-    
-    return { data: createdPlan as unknown as WorkoutPlan, error: null };
+    return { data, error: null };
   } catch (error) {
     console.error('Error creating workout plan:', error);
     return { data: null, error };
@@ -109,46 +49,20 @@ export const createWorkoutPlan = async (
 /**
  * Update an existing workout plan
  */
-export const updateWorkoutPlan = async (
-  planId: string,
-  userId: string,
-  updates: Partial<WorkoutPlan>
-): Promise<{
-  data: WorkoutPlan | null;
-  error: any;
-}> => {
+export const updateWorkoutPlan = async (planId: string, updates: Partial<WorkoutPlan>): Promise<{ data: WorkoutPlan | null; error: any }> => {
   try {
-    // Prepare updates object
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    };
-    
-    // Add other fields if they exist in updates
-    if (updates.name) updateData.name = updates.name;
-    if (updates.description !== undefined) updateData.description = updates.description;
-    if (updates.goal) updateData.goal = updates.goal;
-    if (updates.frequency) updateData.frequency = updates.frequency;
-    if (updates.difficulty) updateData.difficulty = updates.difficulty;
-    if (updates.duration_weeks) updateData.duration_weeks = updates.duration_weeks;
-    if (updates.workout_days) updateData.workout_days = JSON.stringify(updates.workout_days);
-    
     const { data, error } = await supabase
       .from('workout_plans')
-      .update(updateData)
+      .update(updates)
       .eq('id', planId)
-      .eq('user_id', userId)
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     
-    // Transform back to expected format
-    const updatedPlan = {
-      ...data,
-      workout_days: JSON.parse(data.workout_days as string || '[]')
-    };
-    
-    return { data: updatedPlan as unknown as WorkoutPlan, error: null };
+    return { data, error: null };
   } catch (error) {
     console.error('Error updating workout plan:', error);
     return { data: null, error };
@@ -158,18 +72,16 @@ export const updateWorkoutPlan = async (
 /**
  * Delete a workout plan
  */
-export const deleteWorkoutPlan = async (planId: string, userId: string): Promise<{
-  success: boolean;
-  error: any;
-}> => {
+export const deleteWorkoutPlan = async (planId: string): Promise<{ success: boolean; error: any }> => {
   try {
     const { error } = await supabase
       .from('workout_plans')
       .delete()
-      .eq('id', planId)
-      .eq('user_id', userId);
+      .eq('id', planId);
       
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     
     return { success: true, error: null };
   } catch (error) {
@@ -179,87 +91,129 @@ export const deleteWorkoutPlan = async (planId: string, userId: string): Promise
 };
 
 /**
- * Get user's workout stats
+ * Get workout history for a user
  */
-export const getUserWorkoutStats = async (userId: string): Promise<{
-  data: UserWorkoutStats | null;
-  error: any;
-}> => {
+export const getUserWorkoutHistory = async (userId: string) => {
   try {
-    // Get user's streak and stats from the database
     const { data, error } = await supabase
-      .from('user_workout_stats')
+      .from('workout_logs')
       .select('*')
       .eq('user_id', userId)
-      .single();
-      
-    if (error && error.code !== 'PGRST116') throw error;
-    
-    // If no stats exist yet, return default values
-    if (!data) {
-      const defaultStats: UserWorkoutStats = {
-        streak: 0,
-        total_workouts: 0,
-        currentStreak: 0,
-        most_active_day: 'N/A',
-        achievements_count: 0,
-        points: 0,
-        level: 1
-      };
-      
-      return { data: defaultStats, error: null };
+      .order('completed_at', { ascending: false });
+
+    if (error) {
+      throw error;
     }
-    
-    // Convert stats from database format to our type
-    const stats: UserWorkoutStats = {
-      streak: data.streak || 0,
-      total_workouts: data.total_workouts || 0,
-      currentStreak: data.current_streak || 0,
-      most_active_day: data.most_active_day || 'N/A',
-      achievements_count: data.achievements_count || 0,
-      points: data.points || 0,
-      level: data.level || 1
-    };
-    
-    return { data: stats, error: null };
+
+    return data || [];
   } catch (error) {
-    console.error('Error fetching user workout stats:', error);
-    return { data: null, error };
+    console.error('Error fetching workout history:', error);
+    return [];
   }
 };
 
 /**
- * Update user workout stats
+ * Log a completed workout
  */
-export const updateUserWorkoutStats = async (
-  userId: string,
-  stats: Partial<UserWorkoutStats>
-): Promise<{
-  success: boolean;
-  error: any;
-}> => {
+export const logWorkout = async (workoutLog: any) => {
   try {
-    const updateData = {
-      user_id: userId,
-      streak: stats.streak,
-      total_workouts: stats.total_workouts,
-      current_streak: stats.currentStreak,
-      most_active_day: stats.most_active_day,
-      achievements_count: stats.achievements_count,
-      points: stats.points,
-      level: stats.level
+    const formattedLog = {
+      ...workoutLog,
+      completed_exercises: toSupabaseJson(workoutLog.completed_exercises)
     };
     
-    const { error } = await supabase
-      .from('user_workout_stats')
-      .upsert(updateData)
-      .eq('user_id', userId);
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .insert(formattedLog);
       
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     
-    return { success: true, error: null };
+    return { success: true, data };
   } catch (error) {
-    console.error('Error updating workout stats:', error);
+    console.error('Error logging workout:', error);
     return { success: false, error };
   }
 };
+
+/**
+ * Get workout schedules for a user
+ */
+export const getUserWorkoutSchedules = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_schedules')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching workout schedules:', error);
+    return [];
+  }
+};
+
+/**
+ * Create a workout schedule for a user
+ */
+export const createWorkoutSchedule = async (scheduleData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_schedules')
+      .insert(scheduleData);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error creating workout schedule:', error);
+    return { success: false, error };
+  }
+};
+
+// Fix the getUserWorkoutStats function to properly handle the user_workout_stats table
+export const getUserWorkoutStats = async (userId: string): Promise<UserWorkoutStats | null> => {
+  try {
+    // Use the from method directly with a string for tables not in the TypeScript schema
+    const { data, error } = await supabase
+      .rpc('get_user_workout_stats', { user_id_param: userId });
+    
+    if (error) {
+      console.error('Error fetching workout stats:', error);
+      return null;
+    }
+    
+    // If no data, return default stats
+    if (!data) {
+      return {
+        streak: 0,
+        total_workouts: 0,
+        current_streak: 0,
+        most_active_day: 'N/A',
+        achievements_count: 0
+      };
+    }
+    
+    return {
+      streak: data.streak || 0,
+      total_workouts: data.total_workouts || 0,
+      current_streak: data.current_streak || 0,
+      most_active_day: data.most_active_day || 'N/A',
+      achievements_count: data.achievements_count || 0
+    };
+  } catch (error) {
+    console.error('Error in getUserWorkoutStats:', error);
+    return null;
+  }
+};
+
+// Alias for getWorkoutPlans for backward compatibility
+export const getWorkoutPlans = getUserWorkoutPlans;

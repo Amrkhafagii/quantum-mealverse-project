@@ -1,13 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dumbbell, Check, X, ArrowRight, Trophy } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import { getUserRecommendations, dismissRecommendation, applyRecommendation } from '@/services/recommendationService';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, Info, X, Check } from 'lucide-react';
 import { WorkoutRecommendation } from '@/types/fitness';
+import { getUserRecommendations, dismissWorkoutRecommendation, applyRecommendation } from '@/services/recommendationService';
 
 const WorkoutRecommendations: React.FC = () => {
   const { user } = useAuth();
@@ -41,7 +39,7 @@ const WorkoutRecommendations: React.FC = () => {
     if (!user) return;
     
     try {
-      const { success, error } = await dismissRecommendation(recommendationId, user.id);
+      const { success, error } = await dismissWorkoutRecommendation(recommendationId, user.id);
       
       if (error) throw new Error(error);
       
@@ -92,7 +90,7 @@ const WorkoutRecommendations: React.FC = () => {
       <Card className="min-h-[200px]">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+            <Sparkles className="mr-2 h-5 w-5 text-yellow-500" />
             You're All Set!
           </CardTitle>
           <CardDescription>
@@ -118,7 +116,7 @@ const WorkoutRecommendations: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle className="flex items-center">
-                  <Dumbbell className="mr-2 h-5 w-5 text-quantum-cyan" />
+                  <Info className="mr-2 h-5 w-5 text-quantum-cyan" />
                   {recommendation.title || recommendation.name}
                 </CardTitle>
                 <CardDescription>

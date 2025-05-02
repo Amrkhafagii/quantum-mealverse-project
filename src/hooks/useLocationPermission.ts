@@ -65,7 +65,7 @@ export const useLocationPermission = () => {
     getCurrentPosition();
   }, [permissionStatus, trackingEnabled]);
 
-  // Add missing requestPermission function
+  // Fixed requestPermission function
   const requestPermission = async (): Promise<boolean> => {
     setIsRequesting(true);
     
@@ -104,25 +104,58 @@ export const useLocationPermission = () => {
     }
   };
   
-  // Add toggleTracking function
+  // Fixed toggleTracking function to properly handle the constraint issue
   const toggleTracking = async (enabled: boolean): Promise<boolean> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) return false;
       
-      const { error } = await supabase
+      // First check if a preference entry already exists
+      const { data: existingPref } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: session.user.id,
-          location_tracking_enabled: enabled
-        }, { 
-          onConflict: 'user_id' 
-        });
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single();
       
-      if (error) throw error;
+      let result;
       
+      if (existingPref) {
+        // If entry exists, use update instead of upsert
+        result = await supabase
+          .from('user_preferences')
+          .update({
+            location_tracking_enabled: enabled,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', session.user.id);
+      } else {
+        // If no entry exists, insert a new one
+        result = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: session.user.id,
+            location_tracking_enabled: enabled,
+            currency: 'USD' // Default currency
+          });
+      }
+      
+      if (result.error) {
+        console.error('Error updating location tracking preferences:', result.error);
+        return false;
+      }
+      
+      // Since the update was successful, update the local state
       setTrackingEnabled(enabled);
+      
+      // If tracking was enabled, try to get the current position
+      if (enabled && permissionStatus === 'granted') {
+        navigator.geolocation.getCurrentPosition(
+          (position) => setLocation(position),
+          (error) => console.error('Error getting position:', error)
+        );
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating location tracking preferences:', error);

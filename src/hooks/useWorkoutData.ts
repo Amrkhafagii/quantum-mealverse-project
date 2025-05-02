@@ -1,319 +1,107 @@
-
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import {
-  WorkoutPlan,
-  WorkoutLog,
-  WorkoutHistoryItem,
-  UserWorkoutStats,
-  WorkoutSchedule
-} from '@/types/fitness';
+import { useAuth } from './useAuth';
 import {
   getUserWorkoutPlans,
   getUserWorkoutHistory,
   getUserWorkoutStats,
   createWorkoutPlan,
+  updateWorkoutPlan,
+  deleteWorkoutPlan,
   logWorkout,
   getUserWorkoutSchedules,
   createWorkoutSchedule
 } from '@/services/workoutService';
+import { WorkoutPlan, UserWorkoutStats } from '@/types/fitness';
 
 export const useWorkoutData = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [plans, setPlans] = useState<WorkoutPlan[]>([]);
-  const [history, setHistory] = useState<WorkoutHistoryItem[]>([]);
-  const [stats, setStats] = useState<UserWorkoutStats | null>(null);
-  const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
-  const [loading, setLoading] = useState<{
-    plans: boolean;
-    history: boolean;
-    stats: boolean;
-    schedules: boolean;
-  }>({
+  const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
+  const [workoutStats, setWorkoutStats] = useState<UserWorkoutStats | null>(null);
+  const [isLoading, setIsLoading] = useState({
     plans: false,
-    history: false,
     stats: false,
-    schedules: false
   });
-  const [error, setError] = useState<{
-    plans: string | null;
-    history: string | null;
-    stats: string | null;
-    schedules: string | null;
-  }>({
-    plans: null,
-    history: null,
-    stats: null,
-    schedules: null
-  });
+  const [error, setError] = useState<string | null>(null);
 
-  // Load all workout plans for the user
-  const loadWorkoutPlans = async () => {
-    if (!user) return;
-
-    setLoading(prev => ({ ...prev, plans: true }));
-    setError(prev => ({ ...prev, plans: null }));
-
-    try {
-      const { data, error } = await getUserWorkoutPlans(user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      setPlans(data || []);
-    } catch (err: any) {
-      console.error('Error loading workout plans:', err);
-      setError(prev => ({ ...prev, plans: err.message || 'Failed to load workout plans' }));
-      toast({
-        title: 'Error',
-        description: 'Failed to load workout plans',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, plans: false }));
-    }
-  };
-
-  // Load workout history
-  const loadWorkoutHistory = async (dateFilter?: string) => {
-    if (!user) return;
-
-    setLoading(prev => ({ ...prev, history: true }));
-    setError(prev => ({ ...prev, history: null }));
-
-    try {
-      const { data, error } = await getUserWorkoutHistory(user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      setHistory(data || []);
-    } catch (err: any) {
-      console.error('Error loading workout history:', err);
-      setError(prev => ({ ...prev, history: err.message || 'Failed to load workout history' }));
-      toast({
-        title: 'Error',
-        description: 'Failed to load workout history',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, history: false }));
-    }
-  };
-
-  // Load workout stats
-  const loadWorkoutStats = async () => {
-    if (!user) return;
-
-    setLoading(prev => ({ ...prev, stats: true }));
-    setError(prev => ({ ...prev, stats: null }));
-
-    try {
-      const { data, error } = await getUserWorkoutStats(user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      setStats(data);
-    } catch (err: any) {
-      console.error('Error loading workout stats:', err);
-      setError(prev => ({ ...prev, stats: err.message || 'Failed to load workout statistics' }));
-      toast({
-        title: 'Error',
-        description: 'Failed to load workout statistics',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, stats: false }));
-    }
-  };
-
-  // Load workout schedules
-  const loadWorkoutSchedules = async () => {
-    if (!user) return;
-
-    setLoading(prev => ({ ...prev, schedules: true }));
-    setError(prev => ({ ...prev, schedules: null }));
-
-    try {
-      const { data, error } = await getUserWorkoutSchedules(user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      setSchedules(data || []);
-    } catch (err: any) {
-      console.error('Error loading workout schedules:', err);
-      setError(prev => ({ ...prev, schedules: err.message || 'Failed to load workout schedules' }));
-      toast({
-        title: 'Error',
-        description: 'Failed to load workout schedules',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(prev => ({ ...prev, schedules: false }));
-    }
-  };
-
-  // Save a workout plan
-  const handleSaveWorkoutPlan = async (plan: WorkoutPlan) => {
-    if (!user) {
-      toast({
-        title: 'Authentication required',
-        description: 'Please log in to save workout plans',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    try {
-      // Ensure the user ID is set
-      plan.user_id = user.id;
-      
-      const { data, error } = await createWorkoutPlan(plan);
-
-      if (error) {
-        throw error;
-      }
-
-      // Refresh the plans list
-      loadWorkoutPlans();
-      
-      toast({
-        title: 'Success',
-        description: 'Workout plan saved successfully',
-      });
-
-      return data;
-    } catch (err: any) {
-      console.error('Error saving workout plan:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to save workout plan',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
-
-  // Log a completed workout
-  const handleLogWorkout = async (log: WorkoutLog) => {
-    if (!user) {
-      toast({
-        title: 'Authentication required',
-        description: 'Please log in to save workout data',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    try {
-      // Ensure the user ID is set
-      log.user_id = user.id;
-      
-      // Convert completed_exercises to JSON before sending to Supabase
-      const logForStorage = {
-        ...log,
-        completed_exercises: JSON.parse(JSON.stringify(log.completed_exercises))
-      };
-      
-      const { data, error } = await logWorkout(logForStorage);
-
-      if (error) {
-        throw error;
-      }
-
-      // Refresh the history and stats
-      loadWorkoutHistory();
-      loadWorkoutStats();
-      
-      toast({
-        title: 'Success',
-        description: 'Workout logged successfully',
-      });
-
-      return data;
-    } catch (err: any) {
-      console.error('Error logging workout:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to log workout',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
-
-  // Create a workout schedule
-  const handleCreateSchedule = async (schedule: WorkoutSchedule) => {
-    if (!user) {
-      toast({
-        title: 'Authentication required',
-        description: 'Please log in to create workout schedules',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    try {
-      // Ensure the user ID is set
-      schedule.user_id = user.id;
-      
-      const { data, error } = await createWorkoutSchedule(schedule);
-
-      if (error) {
-        throw error;
-      }
-
-      // Refresh the schedules
-      loadWorkoutSchedules();
-      
-      toast({
-        title: 'Success',
-        description: 'Workout schedule created successfully',
-      });
-
-      return data;
-    } catch (err: any) {
-      console.error('Error creating workout schedule:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to create workout schedule',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
-
-  // Load data initially when user is authenticated
   useEffect(() => {
-    if (user) {
-      loadWorkoutPlans();
-      loadWorkoutHistory();
-      loadWorkoutStats();
-      loadWorkoutSchedules();
+    if (user?.id) {
+      fetchWorkoutPlans();
+      fetchWorkoutStats();
     }
   }, [user]);
 
+  const fetchWorkoutPlans = async () => {
+    if (!user?.id) return;
+    setIsLoading(prev => ({ ...prev, plans: true }));
+    try {
+      const plans = await getUserWorkoutPlans(user.id);
+      setWorkoutPlans(plans);
+    } catch (error: any) {
+      setError(error.message || 'Failed to load workout plans');
+    } finally {
+      setIsLoading(prev => ({ ...prev, plans: false }));
+    }
+  };
+
+  // Update the fetchWorkoutStats function to use correct signature
+  const fetchWorkoutStats = async () => {
+    if (!user?.id) return;
+    setIsLoading(prev => ({ ...prev, stats: true }));
+    
+    try {
+      const stats = await getUserWorkoutStats(user.id);
+      if (stats) {
+        setWorkoutStats(stats);
+      }
+    } catch (error) {
+      console.error('Error fetching workout stats:', error);
+    } finally {
+      setIsLoading(prev => ({ ...prev, stats: false }));
+    }
+  };
+
+  const addWorkoutPlan = async (planData: any) => {
+    if (!user?.id) return;
+    try {
+      const newPlan = await createWorkoutPlan({ ...planData, user_id: user.id });
+      if (newPlan) {
+        setWorkoutPlans(prevPlans => [...prevPlans, newPlan]);
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to add workout plan');
+    }
+  };
+
+  const updatePlan = async (planId: string, planData: any) => {
+    try {
+      const updatedPlan = await updateWorkoutPlan(planId, planData);
+      if (updatedPlan) {
+        setWorkoutPlans(prevPlans =>
+          prevPlans.map(plan => (plan.id === planId ? updatedPlan : plan))
+        );
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to update workout plan');
+    }
+  };
+
+  const deletePlan = async (planId: string) => {
+    try {
+      await deleteWorkoutPlan(planId);
+      setWorkoutPlans(prevPlans => prevPlans.filter(plan => plan.id !== planId));
+    } catch (error: any) {
+      setError(error.message || 'Failed to delete workout plan');
+    }
+  };
+
   return {
-    plans,
-    history,
-    stats,
-    schedules,
-    loading,
+    workoutPlans,
+    workoutStats,
+    isLoading,
     error,
-    loadWorkoutPlans,
-    loadWorkoutHistory,
-    loadWorkoutStats,
-    loadWorkoutSchedules,
-    saveWorkoutPlan: handleSaveWorkoutPlan,
-    logWorkout: handleLogWorkout,
-    createSchedule: handleCreateSchedule
+    fetchWorkoutPlans,
+    addWorkoutPlan,
+    updatePlan,
+    deletePlan,
   };
 };

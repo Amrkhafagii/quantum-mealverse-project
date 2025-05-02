@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutRecommendation } from '@/types/fitness';
 import { Json } from '@/types/database';
@@ -167,3 +166,65 @@ export const createWorkoutRecommendation = async (
     return { data: null, error };
   }
 };
+
+/**
+ * Get workout recommendations for a user
+ */
+export const getUserRecommendations = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_recommendations')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('dismissed', false)
+      .order('suggested_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.map(item => ({
+      ...item,
+      name: item.title || 'Workout Recommendation' // Ensure name is set from title
+    })) || [];
+  } catch (error) {
+    console.error('Error fetching workout recommendations:', error);
+    return [];
+  }
+};
+
+/**
+ * Apply a workout recommendation
+ */
+export const applyRecommendation = async (recommendationId: string, userId: string) => {
+  try {
+    // First, get the recommendation details
+    const { data: recommendation, error: fetchError } = await supabase
+      .from('workout_recommendations')
+      .select('*')
+      .eq('id', recommendationId)
+      .single();
+
+    if (fetchError || !recommendation) {
+      throw fetchError || new Error('Recommendation not found');
+    }
+
+    // Mark as applied
+    const { error: updateError } = await supabase
+      .from('workout_recommendations')
+      .update({ applied: true, applied_at: new Date().toISOString() })
+      .eq('id', recommendationId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return { success: true, recommendation };
+  } catch (error) {
+    console.error('Error applying recommendation:', error);
+    return { success: false, error };
+  }
+};
+
+// Alias for backward compatibility
+export const dismissRecommendation = dismissWorkoutRecommendation;
