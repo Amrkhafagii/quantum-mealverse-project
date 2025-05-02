@@ -1768,11 +1768,13 @@ export type Database = {
           created_at: string | null
           end_date: string | null
           id: string
+          is_trial: boolean
           meals_per_week: number
           plan_name: string
           price: number
           start_date: string
           status: string
+          trial_ends_at: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1780,11 +1782,13 @@ export type Database = {
           created_at?: string | null
           end_date?: string | null
           id?: string
+          is_trial?: boolean
           meals_per_week: number
           plan_name: string
           price: number
           start_date: string
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -1792,11 +1796,13 @@ export type Database = {
           created_at?: string | null
           end_date?: string | null
           id?: string
+          is_trial?: boolean
           meals_per_week?: number
           plan_name?: string
           price?: number
           start_date?: string
           status?: string
+          trial_ends_at?: string | null
           updated_at?: string | null
           user_id?: string
         }
