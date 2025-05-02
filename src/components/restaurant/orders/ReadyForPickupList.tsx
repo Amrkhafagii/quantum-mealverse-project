@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Clock, AlertCircle, Package, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { Order } from '@/types/order';
+import { Order, OrderItem } from '@/types/order';
 
 interface ReadyForPickupListProps {
   restaurantId: string;
@@ -83,7 +83,14 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           .eq('order_id', orderId);
         
         enhancedOrders.push({
-          ...assignment,
+          id: assignment.id,
+          restaurant_id: assignment.restaurant_id,
+          order_id: assignment.order_id,
+          status: assignment.status,
+          created_at: assignment.created_at,
+          updated_at: assignment.updated_at,
+          notes: assignment.notes,
+          expires_at: assignment.expires_at,
           order: {
             ...assignment.orders,
             order_items: orderItems || []

@@ -24,16 +24,20 @@ export interface Order {
     id: string;
     name: string;
   };
-  order_items?: Array<{
-    id: string;
-    meal_id: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
+  order_items?: Array<OrderItem>;
   return_status?: string;
   return_reason?: string;
   return_images?: string[];
   refund_status?: string;
   refund_amount?: number;
+}
+
+export interface OrderItem {
+  id: string;
+  meal_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  created_at?: string;
+  preparation_time?: number;  // Added this field to fix the error
 }

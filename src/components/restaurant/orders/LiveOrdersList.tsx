@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Clock, AlertCircle, MapPin, User, Phone, Check, X, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { OrderStatus } from '@/types/restaurant';
-import { Order } from '@/types/order';
+import { Order, OrderItem } from '@/types/order';
 
 interface LiveOrdersListProps {
   restaurantId: string;
@@ -89,7 +88,14 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
           .eq('order_id', assignment.order_id);
         
         enhancedOrders.push({
-          ...assignment,
+          id: assignment.id,
+          restaurant_id: assignment.restaurant_id,
+          order_id: assignment.order_id,
+          status: assignment.status,
+          created_at: assignment.created_at,
+          updated_at: assignment.updated_at,
+          notes: assignment.notes,
+          expires_at: assignment.expires_at,
           order: {
             ...assignment.orders,
             order_items: orderItems || []

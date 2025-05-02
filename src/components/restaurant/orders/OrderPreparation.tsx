@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Clock, AlertCircle, User, Check, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
-import { Order } from '@/types/order';
+import { Order, OrderItem } from '@/types/order';
 
 interface OrderPreparationProps {
   restaurantId: string;
@@ -71,7 +71,8 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
         // If a preparation_time field exists on order items, use the max preparation time
         if (orderItems && orderItems.length > 0) {
           const maxPrepTime = orderItems.reduce((max, item) => {
-            const itemPrepTime = item.preparation_time || 15;
+            // Safely access preparation_time with a default of 15
+            const itemPrepTime = (item as any).preparation_time || 15;
             return Math.max(max, itemPrepTime);
           }, 15);
           const prepTimeMs = maxPrepTime * 60 * 1000;
@@ -79,7 +80,14 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
         }
         
         enhancedOrders.push({
-          ...assignment,
+          id: assignment.id,
+          restaurant_id: assignment.restaurant_id,
+          order_id: assignment.order_id,
+          status: assignment.status,
+          created_at: assignment.created_at,
+          updated_at: assignment.updated_at,
+          notes: assignment.notes,
+          expires_at: assignment.expires_at,
           order: {
             ...assignment.orders,
             order_items: orderItems || []

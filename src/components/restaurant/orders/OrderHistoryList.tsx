@@ -8,7 +8,7 @@ import { AlertCircle, Clock, Calendar, Search, Loader2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { OrderStatus } from '@/types/restaurant';
-import { Order } from '@/types/order';
+import { Order, OrderItem } from '@/types/order';
 
 interface OrderHistoryListProps {
   restaurantId: string;
@@ -61,7 +61,14 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
           .eq('order_id', assignment.order_id);
         
         enhancedOrders.push({
-          ...assignment,
+          id: assignment.id,
+          restaurant_id: assignment.restaurant_id,
+          order_id: assignment.order_id,
+          status: assignment.status,
+          created_at: assignment.created_at,
+          updated_at: assignment.updated_at,
+          notes: assignment.notes,
+          expires_at: assignment.expires_at,
           order: {
             ...assignment.orders,
             order_items: orderItems || []
