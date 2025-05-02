@@ -13,12 +13,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { OrdersHistoryList } from '@/components/profile/OrdersHistoryList';
 import { SubscriptionsList } from '@/components/profile/SubscriptionsList';
+import { useAuth } from '@/hooks/useAuth';
+import CurrencySelector from '@/components/settings/CurrencySelector';
+import KeyboardNavigation from '@/components/a11y/KeyboardNavigation';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, session, loading } = useAuth();
   const [username, setUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -26,36 +28,40 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setLoading(false);
-      
-      if (!session) {
-        navigate('/auth');
-        return;
-      }
-      
-      // Try to get username from delivery_info table
-      const { data: deliveryInfo } = await supabase
-        .from('delivery_info')
-        .select('full_name')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-        
-      if (deliveryInfo && deliveryInfo.full_name) {
-        setUsername(deliveryInfo.full_name);
-      } else {
-        // If no delivery info, we can use the user's email as default username
-        setUsername(session.user.email.split('@')[0]);
+    if (loading) return;
+    
+    if (!session) {
+      navigate('/login');
+      return;
+    }
+    
+    const fetchUserData = async () => {
+      try {
+        // Try to get username from delivery_info table
+        const { data: deliveryInfo } = await supabase
+          .from('delivery_info')
+          .select('full_name')
+          .eq('user_id', user?.id)
+          .maybeSingle();
+          
+        if (deliveryInfo && deliveryInfo.full_name) {
+          setUsername(deliveryInfo.full_name);
+        } else if (user?.email) {
+          // If no delivery info, we can use the user's email as default username
+          setUsername(user.email.split('@')[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
       }
     };
     
-    getSession();
-  }, [navigate]);
+    if (user) {
+      fetchUserData();
+    }
+  }, [navigate, user, session, loading]);
   
   const updateProfile = async () => {
-    if (!session) return;
+    if (!user) return;
     
     setSaving(true);
     
@@ -64,7 +70,7 @@ const Profile = () => {
       const { data: existingInfo } = await supabase
         .from('delivery_info')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
       
       if (existingInfo) {
@@ -72,7 +78,7 @@ const Profile = () => {
         const { error } = await supabase
           .from('delivery_info')
           .update({ full_name: username })
-          .eq('user_id', session.user.id);
+          .eq('user_id', user.id);
           
         if (error) throw error;
       } else {
@@ -80,7 +86,7 @@ const Profile = () => {
         const { error } = await supabase
           .from('delivery_info')
           .insert({ 
-            user_id: session.user.id, 
+            user_id: user.id, 
             full_name: username,
             address: 'Not provided', // These are required fields in the schema
             phone: 'Not provided',
@@ -106,7 +112,7 @@ const Profile = () => {
   };
   
   const updatePassword = async () => {
-    if (!session) return;
+    if (!user) return;
     
     if (newPassword !== confirmPassword) {
       toast({
@@ -157,13 +163,15 @@ const Profile = () => {
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
       <Navbar />
+      <KeyboardNavigation />
       
-      <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
-        <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Profile</h1>
+      <main className="container mx-auto px-4 pt-24 pb-12 relative z-10" aria-labelledby="profile-heading">
+        <h1 id="profile-heading" className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Profile</h1>
         
         <Tabs defaultValue="account">
           <TabsList className="mb-6">
             <TabsTrigger value="account">Account Settings</TabsTrigger>
+            <TabsTrigger value="preferences">Preferences</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
             <TabsTrigger value="orders">Order History</TabsTrigger>
           </TabsList>
@@ -184,9 +192,10 @@ const Profile = () => {
                       <Input
                         id="email"
                         type="email"
-                        value={session?.user?.email || ''}
+                        value={user?.email || ''}
                         disabled
                         className="bg-gray-800"
+                        aria-readonly="true"
                       />
                       <p className="text-sm text-gray-400">Your email cannot be changed</p>
                     </div>
@@ -198,13 +207,18 @@ const Profile = () => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Choose a unique username"
+                        aria-describedby="username-description"
                       />
+                      <p id="username-description" className="text-sm text-gray-400">
+                        This name will appear on your orders and reviews
+                      </p>
                     </div>
                     
                     <Button 
                       onClick={updateProfile}
                       disabled={saving}
                       className="w-full"
+                      aria-busy={saving}
                     >
                       {saving ? 'Saving...' : 'Save Profile'}
                     </Button>
@@ -228,7 +242,12 @@ const Profile = () => {
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
+                        aria-describedby="password-requirements"
+                        autoComplete="new-password"
                       />
+                      <p id="password-requirements" className="text-sm text-gray-400">
+                        Password must be at least 6 characters long
+                      </p>
                     </div>
                     
                     <div className="space-y-2">
@@ -238,6 +257,7 @@ const Profile = () => {
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
                       />
                     </div>
                     
@@ -245,12 +265,21 @@ const Profile = () => {
                       onClick={updatePassword}
                       disabled={saving || !newPassword || newPassword !== confirmPassword}
                       className="w-full"
+                      aria-busy={saving}
                     >
                       {saving ? 'Updating...' : 'Update Password'}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="preferences">
+            <div className="grid gap-6 md:grid-cols-2">
+              <CurrencySelector />
+              
+              {/* Additional preference components can go here */}
             </div>
           </TabsContent>
           
@@ -263,7 +292,7 @@ const Profile = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SubscriptionsList userId={session?.user?.id} />
+                <SubscriptionsList userId={user?.id} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -277,7 +306,7 @@ const Profile = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <OrdersHistoryList userId={session?.user?.id} />
+                <OrdersHistoryList userId={user?.id} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -6,13 +7,16 @@ import SubscriptionPlan from '@/components/SubscriptionPlan';
 import { toast } from 'sonner';
 import { useCustomerLogger } from '@/hooks/useCustomerLogger';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Card, CardContent } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react'; // Added missing Check import
+import { Check } from 'lucide-react';
+import KeyboardNavigation from '@/components/a11y/KeyboardNavigation';
 
 const Subscription = () => {
   const { logEvent } = useCustomerLogger();
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
   
   const handleSubscribe = (plan: string) => {
     // Log subscription selection
@@ -58,6 +62,7 @@ const Subscription = () => {
     <div className="min-h-screen bg-quantum-black text-white relative overflow-hidden">
       <ParticleBackground />
       <Navbar />
+      <KeyboardNavigation />
       
       {/* Decorative elements */}
       <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-quantum-purple/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
@@ -71,7 +76,9 @@ const Subscription = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text">Zenith Meal Plans</h1>
+            <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text" id="subscription-heading" tabIndex={-1}>
+              Zenith Meal Plans
+            </h1>
             <p className="text-xl max-w-3xl mx-auto text-gray-300">
               Choose the perfect nutrition plan to fuel your wellness journey and transform your lifestyle
             </p>
@@ -82,11 +89,13 @@ const Subscription = () => {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
+            role="list"
+            aria-labelledby="subscription-heading"
           >
-            <motion.div variants={itemVariants}>
+            <motion.div variants={itemVariants} role="listitem">
               <SubscriptionPlan
                 title="Basic Zenith"
-                price={99}
+                price={parseInt(formatPrice(99).replace(/[^0-9.]/g, ''))}
                 period="month"
                 description="Perfect for individuals starting their wellness journey"
                 features={[
@@ -98,13 +107,14 @@ const Subscription = () => {
                 ]}
                 ctaText="Subscribe Now"
                 onSubscribe={() => handleSubscribe('Basic Zenith')}
+                priceDisplay={formatPrice(99)}
               />
             </motion.div>
             
-            <motion.div variants={itemVariants}>
+            <motion.div variants={itemVariants} role="listitem">
               <SubscriptionPlan
                 title="Pro Zenith"
-                price={179}
+                price={parseInt(formatPrice(179).replace(/[^0-9.]/g, ''))}
                 period="month"
                 description="Our most popular plan for health enthusiasts"
                 features={[
@@ -117,13 +127,14 @@ const Subscription = () => {
                 highlighted={true}
                 ctaText="Subscribe Now"
                 onSubscribe={() => handleSubscribe('Pro Zenith')}
+                priceDisplay={formatPrice(179)}
               />
             </motion.div>
             
-            <motion.div variants={itemVariants}>
+            <motion.div variants={itemVariants} role="listitem">
               <SubscriptionPlan
                 title="Ultimate Zenith"
-                price={279}
+                price={parseInt(formatPrice(279).replace(/[^0-9.]/g, ''))}
                 period="month"
                 description="The ultimate nutrition solution for maximum results"
                 features={[
@@ -136,6 +147,7 @@ const Subscription = () => {
                 ]}
                 ctaText="Subscribe Now"
                 onSubscribe={() => handleSubscribe('Ultimate Zenith')}
+                priceDisplay={formatPrice(279)}
               />
             </motion.div>
           </motion.div>
@@ -150,17 +162,17 @@ const Subscription = () => {
             <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm">
               <CardContent className="p-6">
                 <h3 className="text-2xl font-bold text-quantum-cyan mb-4">Why Choose Zenith?</h3>
-                <ul className="space-y-3">
+                <ul className="space-y-3" aria-label="Benefits of choosing Zenith">
                   <li className="flex items-center gap-2">
-                    <Check className="text-quantum-cyan h-5 w-5" />
+                    <Check className="text-quantum-cyan h-5 w-5" aria-hidden="true" />
                     <span>Chef-crafted meals with premium ingredients</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="text-quantum-cyan h-5 w-5" />
+                    <Check className="text-quantum-cyan h-5 w-5" aria-hidden="true" />
                     <span>Nutrition optimized for your wellness goals</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="text-quantum-cyan h-5 w-5" />
+                    <Check className="text-quantum-cyan h-5 w-5" aria-hidden="true" />
                     <span>Flexible scheduling with no long-term commitment</span>
                   </li>
                 </ul>
@@ -170,17 +182,17 @@ const Subscription = () => {
             <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm">
               <CardContent className="p-6">
                 <h3 className="text-2xl font-bold text-quantum-cyan mb-4">How It Works</h3>
-                <ol className="space-y-3">
+                <ol className="space-y-3" aria-label="Steps to get started">
                   <li className="flex gap-2">
-                    <span className="bg-quantum-cyan text-quantum-black rounded-full h-6 w-6 flex items-center justify-center font-bold shrink-0">1</span>
+                    <span className="bg-quantum-cyan text-quantum-black rounded-full h-6 w-6 flex items-center justify-center font-bold shrink-0" aria-hidden="true">1</span>
                     <span>Select your preferred meal plan</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="bg-quantum-cyan text-quantum-black rounded-full h-6 w-6 flex items-center justify-center font-bold shrink-0">2</span>
+                    <span className="bg-quantum-cyan text-quantum-black rounded-full h-6 w-6 flex items-center justify-center font-bold shrink-0" aria-hidden="true">2</span>
                     <span>Customize your meals based on preferences</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="bg-quantum-cyan text-quantum-black rounded-full h-6 w-6 flex items-center justify-center font-bold shrink-0">3</span>
+                    <span className="bg-quantum-cyan text-quantum-black rounded-full h-6 w-6 flex items-center justify-center font-bold shrink-0" aria-hidden="true">3</span>
                     <span>Enjoy fresh deliveries on your schedule</span>
                   </li>
                 </ol>

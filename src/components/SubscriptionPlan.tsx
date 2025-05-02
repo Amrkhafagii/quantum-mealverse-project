@@ -21,6 +21,7 @@ interface SubscriptionPlanProps {
   className?: string;
   ctaText?: string;
   onSubscribe?: () => void;
+  priceDisplay?: string; // Optional formatted price string
 }
 
 const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
@@ -33,6 +34,7 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
   className,
   ctaText = 'Subscribe Now',
   onSubscribe,
+  priceDisplay,
 }) => {
   const handleClick = async () => {
     // Direct logging test
@@ -114,13 +116,13 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
       glowColor={getGlowColor()}
     >
       {highlighted && (
-        <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold">
+        <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold" aria-label="Most Popular Plan">
           MOST Popular
         </div>
       )}
 
       <div className="flex flex-col h-full pt-8 p-6">
-        <div className="mb-4">
+        <div className="mb-4" role="heading" aria-level={3}>
           <h3 className={cn(
             "text-3xl font-bold mb-2",
             getTitleColor()
@@ -131,8 +133,10 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
             <span className={cn(
               "text-5xl font-bold",
               getPriceColor()
-            )}>
-              ${price}
+            )}
+              aria-label={`${priceDisplay || `$${price}`} per ${period}`}
+            >
+              {priceDisplay || `$${price}`}
             </span>
             <span className="text-sm ml-1 text-gray-400">/{period}</span>
           </div>
@@ -140,29 +144,32 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
         </div>
 
         <div className="space-y-4 mb-8 flex-grow">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex items-start",
-                !feature.included && "opacity-50"
-              )}
-            >
-              <Check
+          <ul aria-label={`Features of ${title} plan`}>
+            {features.map((feature, index) => (
+              <li
+                key={index}
                 className={cn(
-                  "h-5 w-5 mr-3 flex-shrink-0",
-                  feature.included
-                    ? highlighted
-                      ? "text-quantum-purple"
-                      : "text-quantum-cyan"
-                    : "text-gray-500"
+                  "flex items-start mb-4",
+                  !feature.included && "opacity-50"
                 )}
-              />
-              <span className={feature.included ? "" : "line-through"}>
-                {feature.text}
-              </span>
-            </div>
-          ))}
+              >
+                <Check
+                  className={cn(
+                    "h-5 w-5 mr-3 flex-shrink-0",
+                    feature.included
+                      ? highlighted
+                        ? "text-quantum-purple"
+                        : "text-quantum-cyan"
+                      : "text-gray-500"
+                  )}
+                  aria-hidden="true"
+                />
+                <span className={feature.included ? "" : "line-through"}>
+                  {feature.text} {!feature.included && <span className="sr-only">(not included)</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <button
@@ -171,6 +178,7 @@ const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
             "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta mt-auto",
             getButtonStyle()
           )}
+          aria-label={`${ctaText} for ${title} plan at ${priceDisplay || `$${price}`} per ${period}`}
         >
           {ctaText}
         </button>
