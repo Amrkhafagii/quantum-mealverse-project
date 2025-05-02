@@ -1,8 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import DeliveryMap from '../maps/DeliveryMap';
-import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
-import MapboxTokenForm from '../maps/MapboxTokenForm';
+import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
+import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +15,7 @@ interface DeliveryMapViewProps {
 }
 
 const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, className = '' }) => {
-  const { mapboxToken, setMapboxToken, updateDriverLocation } = useDeliveryMap();
+  const { googleMapsApiKey, setGoogleMapsApiKey, updateDriverLocation } = useGoogleMaps();
   const [mapReady, setMapReady] = useState(false);
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
@@ -36,11 +35,11 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     }
   });
   
-  // Initialize map with saved token
+  // Initialize map with saved API key
   useEffect(() => {
-    const savedToken = localStorage.getItem('mapbox_token');
-    if (savedToken) {
-      setMapboxToken(savedToken);
+    const savedApiKey = localStorage.getItem('google_maps_api_key');
+    if (savedApiKey) {
+      setGoogleMapsApiKey(savedApiKey);
       setMapReady(true);
     }
   }, []);
@@ -70,16 +69,6 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     }
   }, [activeAssignment]);
   
-  // Handle token form submission
-  const handleTokenSubmit = (token: string) => {
-    setMapboxToken(token);
-    setMapReady(true);
-    toast({
-      title: "Mapbox configured",
-      description: "Map functionality is now available",
-    });
-  };
-  
   // Handle manual location update
   const handleUpdateLocation = async () => {
     try {
@@ -107,19 +96,6 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     }
   };
   
-  if (!mapReady || !mapboxToken) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle>Delivery Map</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MapboxTokenForm onTokenSubmit={handleTokenSubmit} />
-        </CardContent>
-      </Card>
-    );
-  }
-  
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
@@ -132,7 +108,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
         </div>
       </CardHeader>
       <CardContent className="p-2">
-        <DeliveryMap
+        <DeliveryGoogleMap
           driverLocation={null} // This will be updated by the location tracker
           restaurantLocation={restaurantLocation}
           customerLocation={customerLocation}

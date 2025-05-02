@@ -1,8 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import DeliveryMap from '../maps/DeliveryMap';
-import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
-import MapboxTokenForm from '../maps/MapboxTokenForm';
+import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
+import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Order } from '@/types/order';
 import { getDeliveryLocationHistory } from '@/services/delivery/deliveryLocationService';
@@ -13,17 +12,17 @@ interface OrderLocationMapProps {
 }
 
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, className = '' }) => {
-  const { mapboxToken, setMapboxToken } = useDeliveryMap();
+  const { googleMapsApiKey, setGoogleMapsApiKey } = useGoogleMaps();
   const [mapReady, setMapReady] = useState(false);
   const [driverLocation, setDriverLocation] = useState<any>(null);
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
   
-  // Initialize map with saved token
+  // Initialize map with saved API key
   useEffect(() => {
-    const savedToken = localStorage.getItem('mapbox_token');
-    if (savedToken) {
-      setMapboxToken(savedToken);
+    const savedApiKey = localStorage.getItem('google_maps_api_key');
+    if (savedApiKey) {
+      setGoogleMapsApiKey(savedApiKey);
       setMapReady(true);
     }
   }, []);
@@ -77,25 +76,6 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, className = 
     return () => clearInterval(interval);
   }, [order, restaurantLocation, customerLocation]);
   
-  // Handle token form submission
-  const handleTokenSubmit = (token: string) => {
-    setMapboxToken(token);
-    setMapReady(true);
-  };
-  
-  if (!mapReady || !mapboxToken) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle>Order Location</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MapboxTokenForm onTokenSubmit={handleTokenSubmit} />
-        </CardContent>
-      </Card>
-    );
-  }
-  
   // If order isn't being delivered, just show the customer and restaurant locations
   const showDeliveryDriver = ['on_the_way', 'picked_up'].includes(order?.status || '');
   
@@ -105,7 +85,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, className = 
         <CardTitle>Order Location</CardTitle>
       </CardHeader>
       <CardContent className="p-2">
-        <DeliveryMap
+        <DeliveryGoogleMap
           driverLocation={showDeliveryDriver ? driverLocation : undefined}
           restaurantLocation={restaurantLocation}
           customerLocation={customerLocation}
