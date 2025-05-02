@@ -7,8 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { RefreshCcw } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { getRestaurantOrders } from '@/services/restaurant/orderService';
-import { updateOrderStatus } from '@/services/restaurant/orderService';
+import { getRestaurantOrders, updateOrderStatus } from '@/services/restaurant/orderService';
 
 export const RestaurantDashboard = () => {
   const { restaurant, loading } = useRestaurantAuth();
@@ -206,6 +205,7 @@ export const RestaurantDashboard = () => {
                 order={order} 
                 type="pending"
                 onRefresh={fetchOrders}
+                restaurantId={restaurant.id}
               />
             ))
           )}
@@ -231,6 +231,7 @@ export const RestaurantDashboard = () => {
                 order={order} 
                 type="active"
                 onRefresh={fetchOrders}
+                restaurantId={restaurant.id}
               />
             ))
           )}
@@ -256,6 +257,7 @@ export const RestaurantDashboard = () => {
                 order={order} 
                 type="completed"
                 onRefresh={fetchOrders}
+                restaurantId={restaurant.id}
               />
             ))
           )}
@@ -269,15 +271,15 @@ interface OrderCardProps {
   order: RestaurantOrder;
   type: 'pending' | 'active' | 'completed';
   onRefresh: () => void;
+  restaurantId: string;
 }
 
-const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
+const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh, restaurantId }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { restaurant } = useRestaurantAuth();
 
   const handleOrderAction = async (action: string) => {
-    if (!restaurant || !restaurant.id) {
+    if (!restaurantId) {
       toast({
         title: "Error",
         description: "Restaurant information is missing",
@@ -321,7 +323,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
           .from('restaurant_assignments')
           .select('id')
           .eq('order_id', order.id)
-          .eq('restaurant_id', restaurant.id)
+          .eq('restaurant_id', restaurantId)
           .eq('status', 'pending')
           .maybeSingle();
           
@@ -336,7 +338,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
             .from('restaurant_assignments')
             .select('id, status')
             .eq('order_id', order.id)
-            .eq('restaurant_id', restaurant.id)
+            .eq('restaurant_id', restaurantId)
             .maybeSingle();
             
           if (anyAssignment) {
@@ -355,13 +357,13 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
         assignmentId = assignments.id;
       }
       
-      console.log(`Updating order ${order.id} to status ${status} with restaurant ${restaurant.id} and assignmentId ${assignmentId || 'none'}`);
+      console.log(`Updating order ${order.id} to status ${status} with restaurant ${restaurantId} and assignmentId ${assignmentId || 'none'}`);
       
       // Use the orderService to update the status
       const success = await updateOrderStatus(
         order.id,
         status,
-        restaurant.id,
+        restaurantId,
         { assignment_id: assignmentId }
       );
       
@@ -438,7 +440,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
               onClick={() => handleOrderAction('accept')}
               disabled={isProcessing}
             >
-              Accept Order
+              {isProcessing ? 'Processing...' : 'Accept Order'}
             </Button>
             <Button 
               className="w-1/2" 
@@ -446,7 +448,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
               onClick={() => handleOrderAction('reject')}
               disabled={isProcessing}
             >
-              Reject Order
+              {isProcessing ? 'Processing...' : 'Reject Order'}
             </Button>
           </div>
         )}
@@ -459,7 +461,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
                 onClick={() => handleOrderAction('prepare')}
                 disabled={isProcessing}
               >
-                Start Preparing
+                {isProcessing ? 'Processing...' : 'Start Preparing'}
               </Button>
             )}
             {order.status === OrderStatus.PREPARING && (
@@ -468,7 +470,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
                 onClick={() => handleOrderAction('ready')}
                 disabled={isProcessing}
               >
-                Mark as Ready
+                {isProcessing ? 'Processing...' : 'Mark as Ready'}
               </Button>
             )}
             {order.status === OrderStatus.READY_FOR_PICKUP && (
@@ -477,7 +479,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
                 onClick={() => handleOrderAction('deliver')}
                 disabled={isProcessing}
               >
-                Start Delivery
+                {isProcessing ? 'Processing...' : 'Start Delivery'}
               </Button>
             )}
             {order.status === OrderStatus.ON_THE_WAY && (
@@ -486,7 +488,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh }) => {
                 onClick={() => handleOrderAction('complete')}
                 disabled={isProcessing}
               >
-                Mark as Delivered
+                {isProcessing ? 'Processing...' : 'Mark as Delivered'}
               </Button>
             )}
           </div>

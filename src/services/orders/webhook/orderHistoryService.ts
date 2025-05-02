@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { OrderStatus } from '@/types/restaurant';
@@ -130,13 +129,16 @@ export const recordOrderHistory = async (
       
     if (error) {
       console.error('Error recording order history:', error);
-      return;
+      // Don't throw here, but log the error to prevent the restaurant operation from failing
+    } else {
+      console.log(`Successfully recorded order history for order ${orderId}`);
     }
 
     // Log to console for debugging
     console.log(`Order ${orderId} status updated to ${status} by restaurant ${restaurantId || 'unknown'}`);
   } catch (error) {
     console.error('Error recording order history:', error);
+    // Don't throw here, but log the error to prevent the restaurant operation from failing
   }
 };
 

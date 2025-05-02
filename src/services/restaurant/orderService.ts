@@ -93,6 +93,25 @@ export const updateOrderStatus = async (
           if (assignmentError) {
             console.error('Failed to update assignment status:', assignmentError);
             // Continue anyway, as the order status has been updated
+          } else {
+            console.log(`Successfully updated assignment ${assignmentId} to accepted`);
+          }
+          
+          // Also update other pending assignments for this order to 'cancelled'
+          const { error: cancelError } = await supabase
+            .from('restaurant_assignments')
+            .update({ 
+              status: 'cancelled',
+              updated_at: new Date().toISOString()
+            })
+            .eq('order_id', orderId)
+            .eq('status', 'pending')
+            .neq('id', assignmentId);
+            
+          if (cancelError) {
+            console.error('Failed to cancel other assignments:', cancelError);
+          } else {
+            console.log(`Successfully cancelled other pending assignments for order ${orderId}`);
           }
         }
       } else {
@@ -128,6 +147,36 @@ export const updateOrderStatus = async (
           if (assignmentError) {
             console.error('Failed to update assignment status:', assignmentError);
             // Continue anyway, as the order status has been updated
+          } else {
+            console.log(`Successfully updated assignment ${assignmentId} to rejected`);
+          }
+          
+          // Check if there are still pending assignments for this order
+          const { data: pendingAssignments, error: pendingError } = await supabase
+            .from('restaurant_assignments')
+            .select('id')
+            .eq('order_id', orderId)
+            .eq('status', 'pending');
+            
+          if (pendingError) {
+            console.error('Failed to check pending assignments:', pendingError);
+          } else if (!pendingAssignments || pendingAssignments.length === 0) {
+            console.log(`No more pending assignments for order ${orderId}, updating to no_restaurant_accepted`);
+            
+            // If no pending assignments remain, update to no_restaurant_accepted
+            const { error: noAcceptError } = await supabase
+              .from('orders')
+              .update({
+                status: OrderStatus.NO_RESTAURANT_ACCEPTED,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', orderId);
+              
+            if (noAcceptError) {
+              console.error('Failed to update order to no_restaurant_accepted:', noAcceptError);
+            } else {
+              console.log(`Successfully updated order ${orderId} to no_restaurant_accepted`);
+            }
           }
         }
       }
