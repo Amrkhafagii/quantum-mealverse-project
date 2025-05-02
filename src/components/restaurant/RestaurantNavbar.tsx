@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
@@ -9,7 +9,6 @@ import { LoadingButton } from "@/components/ui/loading-button";
 export const RestaurantNavbar: React.FC = () => {
   const { restaurant, logout } = useRestaurantAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isActive = (path: string) => {
@@ -26,10 +25,8 @@ export const RestaurantNavbar: React.FC = () => {
       setIsLoggingOut(true);
       
       // Call the logout function from the auth hook
+      // The hook now handles navigation to /auth
       await logout();
-      
-      // Navigate to auth page after successful logout
-      navigate('/auth');
     } catch (error) {
       console.error("Error logging out:", error);
       setIsLoggingOut(false);

@@ -12,6 +12,7 @@ export const useRestaurantAuth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchRestaurantData = async () => {
@@ -61,10 +62,14 @@ export const useRestaurantAuth = () => {
       // Clear local restaurant state
       setRestaurant(null);
       
+      // Show success toast
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your restaurant account",
       });
+      
+      // Navigate to auth page
+      navigate('/auth');
       
       return true;
     } catch (error) {
