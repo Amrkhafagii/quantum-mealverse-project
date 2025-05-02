@@ -21,7 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 const Nutrition = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'plans' | 'calculator'>('plans');
+  const [activeTab, setActiveTab] = useState<'calculator' | 'plans'>('calculator');
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [openMeals, setOpenMeals] = useState<string[]>([]);
@@ -64,10 +64,10 @@ const Nutrition = () => {
           <p className="text-xl max-w-3xl mx-auto">Customize your meal plan to fuel your wellness journey</p>
         </div>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'plans' | 'calculator')} className="mb-8">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'calculator' | 'plans')} className="mb-8">
           <TabsList className="w-full max-w-md mx-auto">
-            <TabsTrigger value="plans">Meal Plans</TabsTrigger>
             <TabsTrigger value="calculator">Calorie Calculator</TabsTrigger>
+            <TabsTrigger value="plans">Meal Plans</TabsTrigger>
           </TabsList>
           
           <TabsContent value="calculator" className="max-w-3xl mx-auto mt-6">
@@ -220,7 +220,7 @@ const Nutrition = () => {
               </motion.div>
             )}
             
-            {/* Information Card - This replaces the subscription plans */}
+            {/* Information Card */}
             <motion.div 
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
