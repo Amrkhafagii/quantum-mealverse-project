@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Package, CreditCard, ShoppingCart, UserRound, LogOut, User } from 'lucide-react';
+import { Package, CreditCard, ShoppingCart, LogOut, User } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
@@ -86,12 +86,7 @@ export const UserActions = ({
             </div>
           )}
           
-          {!isRestaurantOwner && isCustomerView && showCustomerActions && (
-            <Link to="/profile" className="hidden md:flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-quantum-cyan" />
-              <span className="text-quantum-cyan">{session.user.email}</span>
-            </Link>
-          )}
+          {/* Removed Profile link from here as requested */}
           
           <Button 
             variant="ghost" 

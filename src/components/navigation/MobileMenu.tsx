@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Package, UserCog, ChefHat } from 'lucide-react';
+import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Package, ChefHat } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -49,23 +50,13 @@ export const MobileMenu = ({
             </Link>
             
             {isAuthenticated && (
-              <>
-                <Link 
-                  to="/profile" 
-                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-                >
-                  <UserCog className="h-5 w-5 text-quantum-cyan" />
-                  <span>Profile</span>
-                </Link>
-                
-                <Link 
-                  to="/orders" 
-                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-                >
-                  <Package className="h-5 w-5 text-quantum-cyan" />
-                  <span>Track Orders</span>
-                </Link>
-              </>
+              <Link 
+                to="/orders" 
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+              >
+                <Package className="h-5 w-5 text-quantum-cyan" />
+                <span>Track Orders</span>
+              </Link>
             )}
             
             <Link 
@@ -78,11 +69,11 @@ export const MobileMenu = ({
             
             {session ? (
               <Link 
-                to="/profile" 
+                to="/auth" 
                 className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
               >
                 <User className="h-5 w-5 text-quantum-cyan" />
-                <span>Profile</span>
+                <span>Account</span>
               </Link>
             ) : (
               <Link 
