@@ -33,12 +33,12 @@ export const saveMealPlan = async (mealPlan: MealPlan, name: string, userId: str
       expires_at: expiresAt.toISOString(),
       // @ts-ignore - Adding is_active which exists in our DB but not in the generated types
       is_active: true
-    });
+    }).select().returns<SavedMealPlan[]>();
 
     if (error) throw error;
 
-    // Handle the data safely
-    const mealPlanId = data && Array.isArray(data) && data.length > 0 ? data[0].id : undefined;
+    // Handle the data safely with optional chaining
+    const mealPlanId = data?.[0]?.id;
 
     return {
       success: true,

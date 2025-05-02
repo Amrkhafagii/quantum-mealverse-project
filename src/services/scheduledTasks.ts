@@ -16,7 +16,8 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
       .select('*')
       // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
       .lt('expires_at', now)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .returns<SavedMealPlan[]>();
     
     if (error) throw error;
     
@@ -110,7 +111,8 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{
       // @ts-ignore - Using expires_at which exists in DB but not in base type
       .lt('expires_at', threeDaysLater.toISOString())
       // @ts-ignore - Using expires_at which exists in DB but not in base type
-      .gt('expires_at', now.toISOString());
+      .gt('expires_at', now.toISOString())
+      .returns<Partial<SavedMealPlan>[]>();
       
     if (error) throw error;
     

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -32,7 +31,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         .from('saved_meal_plans')
         .select('*')
         .eq('user_id', userId)
-        .order('date_created', { ascending: false });
+        .order('date_created', { ascending: false })
+        .returns<SavedMealPlan[]>();
         
       if (error) throw error;
       
@@ -40,12 +40,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         // Convert database JSON to our type with proper type handling
         const typedData = data.map(item => ({
           ...item,
-          meal_plan: item.meal_plan as unknown as MealPlan,
-          // @ts-ignore - Using properties that exist in DB but not in base type
-          expires_at: item.expires_at || null,
-          // @ts-ignore - Using properties that exist in DB but not in base type
-          is_active: item.is_active !== false // Default to true if not present
-        })) as SavedMealPlan[];
+          meal_plan: item.meal_plan as unknown as MealPlan
+        }));
         
         setSavedPlans(typedData);
       } else {
