@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Utensils, ActivitySquare, CalendarCheck } from 'lucide-react';
+import { Utensils, ActivitySquare, CalendarCheck, Salad } from 'lucide-react';
 
 interface DesktopNavigationProps {
   isCustomerView: boolean;
@@ -27,6 +27,13 @@ export const DesktopNavigation = ({ isCustomerView, isAuthenticated }: DesktopNa
             <Link to="/fitness" className="flex items-center gap-2">
               <ActivitySquare className="h-4 w-4" />
               <span>Fitness</span>
+            </Link>
+          </Button>
+
+          <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
+            <Link to="/nutrition" className="flex items-center gap-2">
+              <Salad className="h-4 w-4" />
+              <span>Nutrition</span>
             </Link>
           </Button>
 

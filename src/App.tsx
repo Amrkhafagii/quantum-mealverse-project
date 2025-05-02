@@ -19,6 +19,7 @@ import Subscription from './pages/Subscription';
 import OrderStatus from './pages/OrderStatus';
 import MealDetail from './pages/MealDetail';
 import NotFound from './pages/NotFound';
+import Nutrition from './pages/Nutrition';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/meal/:id" element={<MealDetail />} />
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/order/status/:id" element={<OrderStatus />} />
+                <Route path="/nutrition" element={<Nutrition />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />
