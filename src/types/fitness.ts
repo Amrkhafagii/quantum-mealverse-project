@@ -24,6 +24,8 @@ export interface UserProfile {
   fitness_goal: 'weight_loss' | 'maintenance' | 'muscle_gain';
   created_at: string;
   updated_at?: string;
+  goal_weight?: number;  // Added goal_weight property
+  fitness_goals?: string[];  // Added fitness_goals array
 }
 
 // Measurement Tracking
@@ -33,11 +35,13 @@ export interface UserMeasurement {
   date: string;
   weight?: number;
   body_fat_percentage?: number;
+  body_fat?: number;  // Added body_fat property
   chest?: number;
   waist?: number;
   hips?: number;
   arms?: number;
   thighs?: number;
+  legs?: number;  // Added legs property
   notes?: string;
 }
 
@@ -53,6 +57,7 @@ export interface WorkoutPlan {
   workout_days: WorkoutDay[];
   created_at: string;
   updated_at?: string;
+  duration_weeks?: number;  // Added duration_weeks property
 }
 
 export interface WorkoutDay {
@@ -75,6 +80,11 @@ export interface Exercise {
   notes?: string;
   video_url?: string;
   image_url?: string;
+  exercise_id?: string;  // Added exercise_id property
+  exercise_name?: string;  // Added exercise_name property
+  rest_time?: number;  // Added rest_time property
+  rest?: number;  // Added rest property
+  duration?: string | number;  // Added duration property
 }
 
 export interface WorkoutSet {
@@ -90,6 +100,13 @@ export interface CompletedExercise {
   exercise_name: string;
   sets_completed: WorkoutSet[] | number;
   notes?: string;
+}
+
+export interface CompletedExerciseData {
+  exercise_id: string;
+  name: string;
+  exercise_name: string;
+  sets_completed: WorkoutSet[];
 }
 
 export interface WorkoutLog {
@@ -112,6 +129,10 @@ export interface WorkoutHistoryItem {
   calories_burned?: number;
   exercises_count: number;
   workout_log_id: string;
+  exercises_completed?: number;  // Added exercises_completed property
+  total_exercises?: number;  // Added total_exercises property
+  workout_plan_name?: string;  // Added workout_plan_name property
+  workout_day_name?: string;  // Added workout_day_name property
 }
 
 export interface UserWorkoutStats {
@@ -123,6 +144,18 @@ export interface UserWorkoutStats {
   favorite_exercise: string;
   weight_lifted: number;
   completion_rate: number;
+  currentStreak?: number;  // Added currentStreak property
+  longestStreak?: number;  // Added longestStreak property
+  total_time?: number;  // Added total_time property
+  strongest_exercise?: {  // Added strongest_exercise property
+    exercise_name: string;
+    max_weight: number;
+  };
+  most_improved_exercise?: {  // Added most_improved_exercise property
+    exercise_name: string;
+    improvement_percentage: number;
+  };
+  weekly_goal_completion?: number;  // Added weekly_goal_completion property
 }
 
 export interface WorkoutSchedule {
@@ -133,6 +166,9 @@ export interface WorkoutSchedule {
   days_of_week: number[];
   reminder_time?: string;
   created_at: string;
+  active?: boolean;  // Added active property
+  preferred_time?: string;  // Added preferred_time property
+  end_date?: string;  // Added end_date property
 }
 
 export interface WorkoutRecommendation {
@@ -243,9 +279,12 @@ export interface DailyQuest {
   title: string;
   description: string;
   type: 'workout' | 'nutrition' | 'wellness' | 'steps';
-  target_value: number;
-  points_reward: number;
+  points: number;
   icon: string;
-  expiry_hours: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  user_id?: string;  // Added user_id property
+  completed?: boolean;  // Added completed property
+  created_at?: string;  // Added created_at property
+  expires_at?: string;  // Added expires_at property
+  expiry_hours?: number;  // Added expiry_hours property
 }

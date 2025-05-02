@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -192,11 +193,11 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
     }
     
     if (daysRemaining <= 3) {
-      // Use a custom style instead of "warning" variant since it's not in the default variants
+      // Use a custom style instead of variant="warning" since it's not in the default variants
       return <Badge variant="outline" className="flex gap-1 items-center bg-amber-500 border-amber-500 text-white"><Clock className="h-3.5 w-3.5" /> Expires soon</Badge>;
     }
     
-    // Use a custom style instead of "success" variant since it's not in the default variants
+    // Use a custom style instead of variant="success" since it's not in the default variants
     return <Badge variant="outline" className="flex gap-1 items-center bg-green-600 border-green-600 text-white"><Clock className="h-3.5 w-3.5" /> Active</Badge>;
   };
 
