@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { shuffleMeal } from '@/services/mealPlanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
+import { TDEEResult } from '@/components/fitness/TDEECalculator';
 
 interface MealCardProps {
   meal: Meal;
@@ -188,6 +189,9 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
     try {
       // Save to session storage as well
       sessionStorage.setItem('currentMealPlan', JSON.stringify(mealPlan));
+      
+      // Import the saveMealPlan function from the service
+      const { saveMealPlan } = await import('@/services/mealPlanService');
       
       // Save to database with expiration (14 days from now)
       const result = await saveMealPlan(user.id, mealPlan, tdeeResult);
