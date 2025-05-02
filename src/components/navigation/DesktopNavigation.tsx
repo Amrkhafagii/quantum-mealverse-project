@@ -6,9 +6,10 @@ import { ShoppingCart, Utensils, ActivitySquare, Dumbbell, UserCog } from 'lucid
 
 interface DesktopNavigationProps {
   isCustomerView: boolean;
+  isAuthenticated: boolean;
 }
 
-export const DesktopNavigation = ({ isCustomerView }: DesktopNavigationProps) => {
+export const DesktopNavigation = ({ isCustomerView, isAuthenticated }: DesktopNavigationProps) => {
   const location = useLocation();
   
   return (
@@ -29,19 +30,23 @@ export const DesktopNavigation = ({ isCustomerView }: DesktopNavigationProps) =>
             </Link>
           </Button>
           
-          <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/workouts" className="flex items-center gap-2">
-              <Dumbbell className="h-4 w-4" />
-              <span>Workouts</span>
-            </Link>
-          </Button>
-          
-          <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/profile" className="flex items-center gap-2">
-              <UserCog className="h-4 w-4" />
-              <span>Profile</span>
-            </Link>
-          </Button>
+          {isAuthenticated && (
+            <>
+              <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
+                <Link to="/workouts" className="flex items-center gap-2">
+                  <Dumbbell className="h-4 w-4" />
+                  <span>Workouts</span>
+                </Link>
+              </Button>
+              
+              <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
+                <Link to="/profile" className="flex items-center gap-2">
+                  <UserCog className="h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </Button>
+            </>
+          )}
           
           <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
             <Link to="/cart" className="flex items-center gap-2">

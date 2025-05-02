@@ -19,6 +19,8 @@ export const MobileMenu = ({
   session,
   toggleUserView
 }: MobileMenuProps) => {
+  const isAuthenticated = !!session;
+  
   return (
     <div className="p-4 border-t border-quantum-cyan/20 md:hidden">
       <div className="space-y-4">
@@ -40,29 +42,33 @@ export const MobileMenu = ({
               <span>Fitness</span>
             </Link>
             
-            <Link 
-              to="/workouts" 
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-            >
-              <Dumbbell className="h-5 w-5 text-quantum-cyan" />
-              <span>Workouts</span>
-            </Link>
-            
-            <Link 
-              to="/orders" 
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-            >
-              <Package className="h-5 w-5 text-quantum-cyan" />
-              <span>Track Orders</span>
-            </Link>
-            
-            <Link 
-              to="/profile" 
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-            >
-              <UserCog className="h-5 w-5 text-quantum-cyan" />
-              <span>Profile</span>
-            </Link>
+            {isAuthenticated && (
+              <>
+                <Link 
+                  to="/workouts" 
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+                >
+                  <Dumbbell className="h-5 w-5 text-quantum-cyan" />
+                  <span>Workouts</span>
+                </Link>
+                
+                <Link 
+                  to="/profile" 
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+                >
+                  <UserCog className="h-5 w-5 text-quantum-cyan" />
+                  <span>Profile</span>
+                </Link>
+                
+                <Link 
+                  to="/orders" 
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+                >
+                  <Package className="h-5 w-5 text-quantum-cyan" />
+                  <span>Track Orders</span>
+                </Link>
+              </>
+            )}
             
             <Link 
               to="/cart" 

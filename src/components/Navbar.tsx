@@ -76,6 +76,8 @@ const Navbar = () => {
   const isCustomerView = location.pathname === '/customer' || location.pathname === '/' || 
     !['/admin', '/restaurant'].some(path => location.pathname.startsWith(path));
 
+  const isAuthenticated = !!session;
+
   return (
     <nav className="fixed w-full z-20 top-0 bg-black/50 backdrop-blur-md border-b border-quantum-cyan/20">
       <div className="container mx-auto px-4">
@@ -84,7 +86,10 @@ const Navbar = () => {
             HealthAndFix
           </Link>
           
-          <DesktopNavigation isCustomerView={isCustomerView} />
+          <DesktopNavigation 
+            isCustomerView={isCustomerView} 
+            isAuthenticated={isAuthenticated} 
+          />
           
           <div className="flex items-center gap-4">
             <UserActions 
