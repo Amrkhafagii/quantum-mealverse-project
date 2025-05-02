@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Dumbbell, Package } from 'lucide-react';
+import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Dumbbell, Package, UserCog } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,14 @@ export const MobileMenu = ({
             >
               <Package className="h-5 w-5 text-quantum-cyan" />
               <span>Track Orders</span>
+            </Link>
+            
+            <Link 
+              to="/profile" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <UserCog className="h-5 w-5 text-quantum-cyan" />
+              <span>Profile</span>
             </Link>
             
             <Link 
