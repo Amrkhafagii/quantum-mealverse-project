@@ -301,7 +301,7 @@ const Customer = () => {
                   <p className="text-xl mb-4">No menu items available from nearby restaurants</p>
                   <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
                   <Button
-                    onClick={() => getCurrentLocation()}
+                    onClick={() => requestPermission()}
                     className="bg-quantum-cyan hover:bg-quantum-cyan/90"
                   >
                     <MapPin className="h-4 w-4 mr-2" />

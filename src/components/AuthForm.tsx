@@ -127,7 +127,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     toast({
       title: "Location Access Limited",
       description: "Some features will be limited without location access",
-      variant: "warning",
+      variant: "destructive", // Changed from "warning" to "destructive"
     });
     navigate('/', { replace: true });
   };

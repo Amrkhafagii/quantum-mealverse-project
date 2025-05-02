@@ -1,3 +1,4 @@
+
 // Import the base Database type
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 import { Json } from "@/integrations/supabase/types";
@@ -214,6 +215,50 @@ export interface DatabaseExtensions {
           arms?: number;
           legs?: number;
           notes?: string;
+        };
+      };
+      user_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          dietary_restrictions: string[] | null;
+          created_at: string | null;
+          updated_at: string | null;
+          calorie_target: number | null;
+          protein_target: number | null;
+          carbs_target: number | null;
+          fat_target: number | null;
+          allergies: string[] | null;
+          currency: string;
+          location_tracking_enabled: boolean | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          dietary_restrictions?: string[] | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+          calorie_target?: number | null;
+          protein_target?: number | null;
+          carbs_target?: number | null;
+          fat_target?: number | null;
+          allergies?: string[] | null;
+          currency?: string;
+          location_tracking_enabled?: boolean | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          dietary_restrictions?: string[] | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+          calorie_target?: number | null;
+          protein_target?: number | null;
+          carbs_target?: number | null;
+          fat_target?: number | null;
+          allergies?: string[] | null;
+          currency?: string;
+          location_tracking_enabled?: boolean | null;
         };
       };
     };
