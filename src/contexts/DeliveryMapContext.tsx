@@ -33,11 +33,13 @@ export const DeliveryMapProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [customerLocation, setCustomerLocation] = useState<MapLocation | null>(null);
   const [additionalLocations, setAdditionalLocations] = useState<MapLocation[]>([]);
 
-  // Load token from localStorage on first render
+  // Load token from localStorage or environment variable on first render
   useEffect(() => {
-    const storedToken = localStorage.getItem('mapbox_token') || import.meta.env.VITE_MAPBOX_TOKEN;
+    const storedToken = localStorage.getItem('mapbox_token');
     if (storedToken) {
       setMapboxTokenState(storedToken);
+    } else if (import.meta.env.VITE_MAPBOX_TOKEN) {
+      setMapboxTokenState(import.meta.env.VITE_MAPBOX_TOKEN);
     }
   }, []);
 

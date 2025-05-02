@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import GlobalMapboxConfig from '@/components/maps/GlobalMapboxConfig';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ const Home = () => {
       </main>
       
       <Footer />
+      <GlobalMapboxConfig />
     </div>
   );
 };

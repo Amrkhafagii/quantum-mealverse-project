@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MapPin, Navigation } from 'lucide-react';
+import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 
 // Define types for our component props
 interface MapLocation {
@@ -24,9 +25,8 @@ interface DeliveryMapProps {
   autoCenter?: boolean;
   onMapClick?: (location: { longitude: number, latitude: number }) => void;
   isInteractive?: boolean;
+  mapboxToken?: string;
 }
-
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
 const DeliveryMap: React.FC<DeliveryMapProps> = ({
   driverLocation,
@@ -38,21 +38,28 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
   zoom = 13,
   autoCenter = true,
   onMapClick,
-  isInteractive = true
+  isInteractive = true,
+  mapboxToken: propMapboxToken
 }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const routeSource = useRef<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const { mapboxToken: contextMapboxToken } = useDeliveryMap();
+  
+  // Use token from props or context
+  const mapboxToken = propMapboxToken || contextMapboxToken;
 
   // Setup Mapbox token
   useEffect(() => {
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    if (!mapboxgl.accessToken) {
-      console.error('Mapbox token is required. Please set VITE_MAPBOX_TOKEN in your environment.');
+    if (mapboxToken) {
+      mapboxgl.accessToken = mapboxToken;
     }
-  }, []);
+    if (!mapboxgl.accessToken) {
+      console.error('Mapbox token is required. Please set VITE_MAPBOX_TOKEN in your environment or provide a token.');
+    }
+  }, [mapboxToken]);
 
   // Initialize map
   useEffect(() => {
@@ -121,7 +128,7 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
         map.current = null;
       }
     };
-  }, [mapboxgl.accessToken]);
+  }, [mapboxToken]);
 
   // Helper to create and update markers
   const createOrUpdateMarker = (location: MapLocation, id: string) => {
@@ -267,12 +274,12 @@ const DeliveryMap: React.FC<DeliveryMapProps> = ({
     fetchRoute();
   }, [driverLocation, restaurantLocation, customerLocation, showRoute, mapLoaded]);
 
-  if (!MAPBOX_TOKEN) {
+  if (!mapboxToken) {
     return (
       <div className={`${className} flex items-center justify-center bg-gray-100 rounded-md border`}>
         <div className="text-center p-4">
           <p className="text-red-500 font-medium mb-2">Mapbox API token not found!</p>
-          <p className="text-sm text-gray-600">Please set VITE_MAPBOX_TOKEN in your environment.</p>
+          <p className="text-sm text-gray-600">Please set VITE_MAPBOX_TOKEN in your environment or provide a token through the form.</p>
         </div>
       </div>
     );
