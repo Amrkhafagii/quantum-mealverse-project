@@ -46,6 +46,9 @@ export interface MealPlan {
   targetProtein: number;
   targetCarbs: number;
   targetFat: number;
+  actualProtein?: number;
+  actualCarbs?: number;
+  actualFat?: number;
   meals: Meal[];
   hydrationTarget: number; // in ml
 }

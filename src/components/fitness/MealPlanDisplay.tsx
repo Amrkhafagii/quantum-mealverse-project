@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MealPlan, Meal } from '@/types/food';
-import { Shuffle, Droplets } from 'lucide-react';
+import { Shuffle, Droplets, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { shuffleMeal } from '@/services/mealPlanService';
 
@@ -78,10 +78,19 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
     const updatedMeals = [...mealPlan.meals];
     updatedMeals[index] = newMeal;
     
+    // Recalculate actual totals
+    const totalCalories = updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+    const actualProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+    const actualCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+    const actualFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
+    
     const updatedMealPlan = {
       ...mealPlan,
       meals: updatedMeals,
-      totalCalories: updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0)
+      totalCalories,
+      actualProtein,
+      actualCarbs,
+      actualFat
     };
     
     onUpdateMealPlan(updatedMealPlan);
@@ -91,6 +100,17 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
       description: "New meal options generated.",
     });
   };
+
+  // Calculate the percentage of actual vs target for macros
+  const proteinPercent = Math.round((mealPlan.actualProtein || 0) / mealPlan.targetProtein * 100);
+  const carbsPercent = Math.round((mealPlan.actualCarbs || 0) / mealPlan.targetCarbs * 100);
+  const fatPercent = Math.round((mealPlan.actualFat || 0) / mealPlan.targetFat * 100);
+
+  // Check if there's a significant variance in any macro
+  const hasSignificantVariance = 
+    Math.abs(proteinPercent - 100) > 15 || 
+    Math.abs(carbsPercent - 100) > 15 || 
+    Math.abs(fatPercent - 100) > 15;
 
   return (
     <Card className="border-quantum-cyan/30 bg-quantum-darkBlue/20 backdrop-blur-sm">
@@ -102,10 +122,44 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
           </span>
         </CardTitle>
         <CardDescription>
-          Based on your {mealPlan.goal} goal - {mealPlan.targetProtein}g protein,{' '}
-          {mealPlan.targetCarbs}g carbs, {mealPlan.targetFat}g fat
+          Based on your {mealPlan.goal} goal
         </CardDescription>
+        
+        <div className="mt-2 grid grid-cols-3 gap-1 text-sm">
+          <div className="bg-blue-900/30 rounded-md p-2 text-center">
+            <div className="text-blue-400 font-medium">Protein</div>
+            <div>
+              <span className="text-lg font-bold">{mealPlan.actualProtein || 0}g</span>
+              <span className="text-gray-400 text-xs"> / {mealPlan.targetProtein}g</span>
+            </div>
+            <div className="text-xs text-gray-400">{proteinPercent}% of target</div>
+          </div>
+          <div className="bg-green-900/30 rounded-md p-2 text-center">
+            <div className="text-green-400 font-medium">Carbs</div>
+            <div>
+              <span className="text-lg font-bold">{mealPlan.actualCarbs || 0}g</span>
+              <span className="text-gray-400 text-xs"> / {mealPlan.targetCarbs}g</span>
+            </div>
+            <div className="text-xs text-gray-400">{carbsPercent}% of target</div>
+          </div>
+          <div className="bg-yellow-900/30 rounded-md p-2 text-center">
+            <div className="text-yellow-400 font-medium">Fats</div>
+            <div>
+              <span className="text-lg font-bold">{mealPlan.actualFat || 0}g</span>
+              <span className="text-gray-400 text-xs"> / {mealPlan.targetFat}g</span>
+            </div>
+            <div className="text-xs text-gray-400">{fatPercent}% of target</div>
+          </div>
+        </div>
+        
+        {hasSignificantVariance && (
+          <div className="mt-2 text-amber-400 text-xs flex items-center gap-1 bg-amber-900/20 p-2 rounded">
+            <AlertCircle className="h-4 w-4" />
+            <span>The actual macros may vary from targets due to real food portion constraints.</span>
+          </div>
+        )}
       </CardHeader>
+      
       <CardContent>
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           {mealPlan.meals.map((meal, index) => (

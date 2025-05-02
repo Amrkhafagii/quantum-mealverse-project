@@ -4,6 +4,9 @@ import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { foodDatabase, getFoodById, getFoodsByCategory } from '@/data/foodDatabase';
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * Creates a meal with balanced macros based on targets
+ */
 const createMeal = (
   name: string,
   targetCalories: number,
@@ -23,13 +26,55 @@ const createMeal = (
   const fat = fats[Math.floor(Math.random() * fats.length)];
   const vegetable = vegetables[Math.floor(Math.random() * vegetables.length)];
   
-  // Calculate portions to match macro targets
-  // This is a simplified approach - in real-world, would need more complex algorithm
-  const proteinPortion = Math.max(5, Math.round((targetProtein / protein.protein) * 100));
-  const carbPortion = Math.max(5, Math.round((targetCarbs / carb.carbs) * 100));
-  const fatPortion = Math.max(5, Math.round((targetFat / (fat.fat || 1)) * 100));
-  // Vegetables are bonus, fixed portion
-  const vegetablePortion = 100;
+  // Calculate realistic portions to match macro targets while being reasonable
+  // Cap portions at reasonable amounts
+  const MAX_PROTEIN_PORTION = 250; // max 250g of protein source
+  const MAX_CARB_PORTION = 300; // max 300g of carb source
+  const MAX_FAT_PORTION = 50; // max 50g of fat source (oils, nuts, etc)
+  const MIN_PORTION = 10; // minimum 10g portion
+  
+  // Calculate initial portion sizes
+  const proteinCalPerGram = protein.protein * 4 / 100;
+  const carbCalPerGram = carb.carbs * 4 / 100;
+  const fatCalPerGram = fat.fat * 9 / 100;
+  
+  // Calculate initial portion based on protein target
+  let proteinPortion = Math.min(
+    MAX_PROTEIN_PORTION,
+    Math.max(MIN_PORTION, Math.round((targetProtein / (protein.protein / 100))))
+  );
+  
+  // Calculate initial portion based on carbs target
+  let carbPortion = Math.min(
+    MAX_CARB_PORTION,
+    Math.max(MIN_PORTION, Math.round((targetCarbs / (carb.carbs / 100))))
+  );
+  
+  // Calculate initial portion based on fat target
+  let fatPortion = Math.min(
+    MAX_FAT_PORTION,
+    Math.max(MIN_PORTION, Math.round((targetFat / (fat.fat / 100))))
+  );
+  
+  // Calculate vegetable portion - variable based on meal size
+  // More veg for bigger meals, but at least 100g
+  const mealSize = proteinPortion + carbPortion + fatPortion;
+  const vegetablePortion = Math.max(100, Math.round(mealSize * 0.25));
+  
+  // Adjust portion sizes if the total calories exceed target by >10%
+  let totalCalories = 
+    (protein.calories * proteinPortion / 100) + 
+    (carb.calories * carbPortion / 100) + 
+    (fat.calories * fatPortion / 100) + 
+    (vegetable.calories * vegetablePortion / 100);
+  
+  // If we're significantly over calories, proportionally reduce portions
+  if (totalCalories > targetCalories * 1.1) {
+    const reductionFactor = targetCalories / totalCalories;
+    proteinPortion = Math.max(MIN_PORTION, Math.round(proteinPortion * reductionFactor));
+    carbPortion = Math.max(MIN_PORTION, Math.round(carbPortion * reductionFactor));
+    fatPortion = Math.max(MIN_PORTION, Math.round(fatPortion * reductionFactor));
+  }
   
   const mealFoods: MealFood[] = [
     { food: protein, portionSize: proteinPortion },
@@ -39,26 +84,29 @@ const createMeal = (
   ];
   
   // Calculate meal totals
-  const totalCalories = mealFoods.reduce((sum, item) => 
+  const actualTotalCalories = mealFoods.reduce((sum, item) => 
     sum + (item.food.calories * (item.portionSize / 100)), 0);
-  const totalProtein = mealFoods.reduce((sum, item) => 
+  const actualTotalProtein = mealFoods.reduce((sum, item) => 
     sum + (item.food.protein * (item.portionSize / 100)), 0);
-  const totalCarbs = mealFoods.reduce((sum, item) => 
+  const actualTotalCarbs = mealFoods.reduce((sum, item) => 
     sum + (item.food.carbs * (item.portionSize / 100)), 0);
-  const totalFat = mealFoods.reduce((sum, item) => 
+  const actualTotalFat = mealFoods.reduce((sum, item) => 
     sum + (item.food.fat * (item.portionSize / 100)), 0);
     
   return {
     id: uuidv4(),
     name,
     foods: mealFoods,
-    totalCalories: Math.round(totalCalories),
-    totalProtein: Math.round(totalProtein),
-    totalCarbs: Math.round(totalCarbs),
-    totalFat: Math.round(totalFat)
+    totalCalories: Math.round(actualTotalCalories),
+    totalProtein: Math.round(actualTotalProtein),
+    totalCarbs: Math.round(actualTotalCarbs),
+    totalFat: Math.round(actualTotalFat)
   };
 };
 
+/**
+ * Generate a meal plan based on TDEE result with proper macro distribution
+ */
 export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   const { adjustedCalories, proteinGrams, carbsGrams, fatsGrams, goal } = tdeeResult;
   
@@ -103,14 +151,22 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   
   const meals = [breakfast, lunch, snack, dinner];
   
-  // Calculate totals
+  // Calculate accurate totals from the generated meals
   const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+  const totalProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+  const totalCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+  const totalFat = meals.reduce((sum, meal) => sum + meal.totalFat, 0);
   
-  // Calculate hydration (35ml per kg of body weight)
-  // Note: This would typically use the actual weight, but as an approximation:
-  // Roughly estimate weight from TDEE: TDEE/15 for an average person
-  const estimatedWeight = Math.round(tdeeResult.tdee / 15);
-  const hydrationTarget = estimatedWeight * 35;
+  // Calculate hydration with a better formula
+  // Base formula: 30-35ml per kg of body weight
+  // We'll estimate weight more accurately using the BMR (Mifflin-St Jeor)
+  // For men: BMR = (10 × weight in kg) + (6.25 × height in cm) - (5 × age) + 5
+  // For women: BMR = (10 × weight in kg) + (6.25 × height in cm) - (5 × age) - 161
+  
+  // This is still an estimation but better than TDEE/15
+  // Assume average height and age if not provided
+  const estimatedWeight = Math.round(tdeeResult.bmr / 24 / 0.85); // BMR/(24 hours * activity factor)
+  const hydrationTarget = Math.round(estimatedWeight * 35); // 35ml per kg
   
   return {
     id: uuidv4(),
@@ -119,12 +175,19 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     targetProtein: proteinGrams,
     targetCarbs: carbsGrams,
     targetFat: fatsGrams,
+    actualProtein: totalProtein,
+    actualCarbs: totalCarbs,
+    actualFat: totalFat,
     meals,
     hydrationTarget
   };
 };
 
+/**
+ * Create a new version of a meal with similar macros but different foods
+ */
 export const shuffleMeal = (meal: Meal, targetProtein: number, targetCarbs: number, targetFat: number): Meal => {
+  // When shuffling, we want to maintain the same macro balance but with different foods
   return createMeal(
     meal.name,
     meal.totalCalories,
@@ -134,6 +197,9 @@ export const shuffleMeal = (meal: Meal, targetProtein: number, targetCarbs: numb
   );
 };
 
+/**
+ * Replace a specific food in a meal and recalculate nutrition
+ */
 export const replaceFoodInMeal = (meal: Meal, oldFoodId: string, newFoodId: string): Meal => {
   const newFood = getFoodById(newFoodId);
   if (!newFood) return meal;
@@ -142,20 +208,38 @@ export const replaceFoodInMeal = (meal: Meal, oldFoodId: string, newFoodId: stri
     if (mealFood.food.id === oldFoodId) {
       // Calculate new portion size to maintain similar macros
       const oldFood = mealFood.food;
-      const oldNutrients = {
-        calories: oldFood.calories * (mealFood.portionSize / 100),
-        protein: oldFood.protein * (mealFood.portionSize / 100),
-        carbs: oldFood.carbs * (mealFood.portionSize / 100),
-        fat: oldFood.fat * (mealFood.portionSize / 100)
-      };
       
-      // Adjust portion size to match nutrients (prioritize protein)
-      let newPortionSize = 100;
-      if (newFood.protein > 0) {
-        newPortionSize = (oldNutrients.protein / newFood.protein) * 100;
+      // Find which macro is dominant in this food
+      const oldProteinCals = oldFood.protein * 4;
+      const oldCarbsCals = oldFood.carbs * 4;
+      const oldFatCals = oldFood.fat * 9;
+      
+      // Determine which macro to prioritize for portion calculation
+      let newPortionSize;
+      
+      if (oldProteinCals >= oldCarbsCals && oldProteinCals >= oldFatCals && newFood.protein > 0) {
+        // Protein is the main macro
+        newPortionSize = (oldFood.protein * mealFood.portionSize / 100) / (newFood.protein / 100);
+      } else if (oldCarbsCals >= oldProteinCals && oldCarbsCals >= oldFatCals && newFood.carbs > 0) {
+        // Carbs are the main macro
+        newPortionSize = (oldFood.carbs * mealFood.portionSize / 100) / (newFood.carbs / 100);
+      } else if (newFood.fat > 0) {
+        // Fat is the main macro
+        newPortionSize = (oldFood.fat * mealFood.portionSize / 100) / (newFood.fat / 100);
+      } else {
+        // Fallback to calorie-based portion
+        newPortionSize = (oldFood.calories * mealFood.portionSize / 100) / (newFood.calories / 100);
       }
       
-      return { food: newFood, portionSize: Math.max(10, Math.round(newPortionSize)) };
+      // Apply min/max constraints based on food category
+      const MAX_PORTION = newFood.category === 'protein' ? 250 : 
+                         newFood.category === 'carbs' ? 300 : 
+                         newFood.category === 'fats' ? 50 : 150;
+                         
+      return { 
+        food: newFood, 
+        portionSize: Math.min(MAX_PORTION, Math.max(10, Math.round(newPortionSize))) 
+      };
     }
     return mealFood;
   });
@@ -180,6 +264,9 @@ export const replaceFoodInMeal = (meal: Meal, oldFoodId: string, newFoodId: stri
   };
 };
 
+/**
+ * Get statistics for a meal
+ */
 export const getMealStats = (meal: Meal) => {
   return {
     calories: meal.totalCalories,
