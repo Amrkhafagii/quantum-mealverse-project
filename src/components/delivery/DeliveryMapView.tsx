@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation, RefreshCw } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
@@ -15,7 +14,7 @@ interface DeliveryMapViewProps {
 }
 
 const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, className = '' }) => {
-  const { googleMapsApiKey, setGoogleMapsApiKey, updateDriverLocation } = useGoogleMaps();
+  const { googleMapsApiKey, updateDriverLocation } = useGoogleMaps();
   const [mapReady, setMapReady] = useState(false);
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
@@ -35,14 +34,12 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     }
   });
   
-  // Initialize map with saved API key
+  // Initialize map when API key is available
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('google_maps_api_key');
-    if (savedApiKey) {
-      setGoogleMapsApiKey(savedApiKey);
+    if (googleMapsApiKey) {
       setMapReady(true);
     }
-  }, []);
+  }, [googleMapsApiKey]);
   
   // Update restaurant and customer locations when assignment changes
   useEffect(() => {

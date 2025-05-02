@@ -4,7 +4,6 @@ import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Order } from '@/types/order';
-import { getDeliveryLocationHistory } from '@/services/delivery/deliveryLocationService';
 
 interface OrderLocationMapProps {
   order: Order;
@@ -12,20 +11,18 @@ interface OrderLocationMapProps {
 }
 
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, className = '' }) => {
-  const { googleMapsApiKey, setGoogleMapsApiKey } = useGoogleMaps();
+  const { googleMapsApiKey } = useGoogleMaps();
   const [mapReady, setMapReady] = useState(false);
   const [driverLocation, setDriverLocation] = useState<any>(null);
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
   
-  // Initialize map with saved API key
+  // Initialize map when API key is available
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('google_maps_api_key');
-    if (savedApiKey) {
-      setGoogleMapsApiKey(savedApiKey);
+    if (googleMapsApiKey) {
       setMapReady(true);
     }
-  }, []);
+  }, [googleMapsApiKey]);
   
   // Set customer location based on order
   useEffect(() => {

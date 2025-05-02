@@ -1,7 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ActiveDeliveries } from './ActiveDeliveries';
 import DeliveryMapView from './DeliveryMapView';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
@@ -14,7 +12,6 @@ const ActiveDeliveriesWithMap: React.FC = () => {
   const { deliveryUser } = useDeliveryUser(user?.id);
   const { activeAssignments } = useDeliveryAssignments(deliveryUser?.id);
   const [selectedAssignment, setSelectedAssignment] = useState<DeliveryAssignment | null>(null);
-  const [showMap, setShowMap] = useState(true);
 
   // Select the first active assignment by default
   useEffect(() => {

@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
@@ -33,10 +34,7 @@ import RestaurantOrders from './pages/restaurant/Orders';
 import OnboardingPage from './pages/delivery/OnboardingPage';
 import DeliveryDashboard from './pages/delivery/DeliveryDashboard';
 
-// Import the DeliveryMapProvider at the top of the file, wherever your other imports are
-import { DeliveryMapProvider } from './contexts/DeliveryMapContext';
-
-// Import the GoogleMapsProvider at the top of the file, wherever your other imports are
+// Import the GoogleMapsProvider
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 
 function App() {
@@ -48,40 +46,38 @@ function App() {
             <CurrencyProvider>
               <CartProvider>
                 <KeyboardNavigation />
-                <DeliveryMapProvider>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/customer" element={<Customer />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/restaurants/:id" element={<Restaurant />} />
-                    <Route path="/meal/:id" element={<MealDetail />} />
-                    <Route path="/subscription" element={<Subscription />} />
-                    <Route path="/order/status/:id" element={<OrderStatus />} />
-                    <Route path="/orders" element={<Orders />} />
-                    <Route path="/orders/:id" element={<Orders />} />
-                    <Route path="/nutrition" element={<Nutrition />} />
-                    <Route path="/fitness" element={<Fitness />} />
-                    <Route path="/workouts" element={<Workouts />} />
-                    <Route path="/fitness-profile" element={<FitnessProfile />} />
-                    
-                    {/* Restaurant Admin Routes */}
-                    <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
-                    <Route path="/restaurant/menu" element={<RestaurantMenu />} />
-                    <Route path="/restaurant/orders" element={<RestaurantOrders />} />
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/customer" element={<Customer />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/restaurants/:id" element={<Restaurant />} />
+                  <Route path="/meal/:id" element={<MealDetail />} />
+                  <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/order/status/:id" element={<OrderStatus />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/orders/:id" element={<Orders />} />
+                  <Route path="/nutrition" element={<Nutrition />} />
+                  <Route path="/fitness" element={<Fitness />} />
+                  <Route path="/workouts" element={<Workouts />} />
+                  <Route path="/fitness-profile" element={<FitnessProfile />} />
+                  
+                  {/* Restaurant Admin Routes */}
+                  <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+                  <Route path="/restaurant/menu" element={<RestaurantMenu />} />
+                  <Route path="/restaurant/orders" element={<RestaurantOrders />} />
 
-                    {/* Delivery Routes */}
-                    <Route path="/delivery/onboarding" element={<OnboardingPage />} />
-                    <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  <Toaster />
-                </DeliveryMapProvider>
+                  {/* Delivery Routes */}
+                  <Route path="/delivery/onboarding" element={<OnboardingPage />} />
+                  <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Toaster />
               </CartProvider>
             </CurrencyProvider>
           </AuthProvider>
