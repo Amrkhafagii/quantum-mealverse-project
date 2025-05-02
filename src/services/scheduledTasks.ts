@@ -1,17 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/types/database';
-
-interface SavedMealPlanDB {
-  id: string;
-  user_id: string;
-  name: string;
-  date_created: string;
-  tdee_id: string;
-  meal_plan: Json;
-  expires_at: string;
-  is_active: boolean;
-}
+import { SavedMealPlan } from '@/types/fitness';
 
 /**
  * Marks expired meal plans as inactive
@@ -21,6 +11,7 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     const now = new Date().toISOString();
     
     // Get all expired meal plans that are still active
+    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error } = await supabase
       .from('saved_meal_plans')
       .select('*')
@@ -38,6 +29,7 @@ export const processExpiredMealPlans = async (): Promise<{success: boolean, coun
     const { error: updateError } = await supabase
       .from('saved_meal_plans')
       .update({ 
+        // @ts-ignore - Using is_active which exists in DB but not in base type
         is_active: false 
       })
       .lt('expires_at', now)
@@ -69,7 +61,10 @@ export const checkExpiredMealPlans = async (): Promise<{
     // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
-      .update({ is_active: false })
+      .update({ 
+        // @ts-ignore - Using is_active which exists in DB but not in base type
+        is_active: false 
+      })
       .lt('expires_at', now)
       .eq('is_active', true)
       .select('count');
@@ -106,6 +101,7 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{
     const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     
     // Find meal plans expiring in the next 3 days
+    // @ts-ignore - Using expires_at and is_active which exist in DB but not in base type
     const { data, error, count } = await supabase
       .from('saved_meal_plans')
       .select('id, name, expires_at')

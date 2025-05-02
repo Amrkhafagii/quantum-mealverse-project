@@ -7,8 +7,8 @@ import { WorkoutPlan, WorkoutDay, Exercise, CompletedExercise, WorkoutSet } from
 export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
   // Create a base exercise object with required fields
   const normalized: Partial<Exercise> = {
-    id: 'id' in exercise ? exercise.id : (exercise as any).exercise_id || crypto.randomUUID(),
-    name: 'name' in exercise ? exercise.name : (exercise as any).exercise_name || '',
+    id: 'id' in exercise ? exercise.id : ((exercise as any).exercise_id || crypto.randomUUID()),
+    name: 'name' in exercise ? exercise.name : ((exercise as any).exercise_name || ''),
     target_muscle: 'target_muscle' in exercise ? (exercise as Exercise).target_muscle : 'unknown',
     sets: 'sets' in exercise ? (exercise as Exercise).sets : ((exercise as any).sets || 1),
     reps: 'reps' in exercise ? (exercise as Exercise).reps : (exercise as WorkoutSet).reps
@@ -46,13 +46,28 @@ export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
  * Normalizes workout day data to handle both old and new schema formats
  */
 export function normalizeWorkoutDay(day: WorkoutDay): WorkoutDay {
-  return {
+  // Extend the WorkoutDay with name property for compatibility
+  const extendedDay: WorkoutDay & { name?: string } = {
     ...day,
     day_name: day.day_name || (day as any).name || '',
-    name: (day as any).name || day.day_name || '',
-    exercises: Array.isArray(day.exercises) ? day.exercises.map(normalizeExercise) : [],
-    order: (day as any).order || 0
   };
+  
+  // Handle the name property if it exists
+  if ((day as any).name) {
+    extendedDay.name = (day as any).name;
+  }
+  
+  // Add order if it exists
+  if ((day as any).order !== undefined) {
+    (extendedDay as any).order = (day as any).order || 0;
+  }
+  
+  // Normalize exercises
+  extendedDay.exercises = Array.isArray(day.exercises) 
+    ? day.exercises.map(normalizeExercise) 
+    : [];
+    
+  return extendedDay;
 }
 
 /**
@@ -126,7 +141,7 @@ export function convertWorkoutSetToExercise(set: any): Exercise {
 /**
  * Converts between Exercise and WorkoutSet types
  */
-export function convertExerciseToWorkoutSet(exercise: Exercise): WorkoutSet {
+export function convertExerciseToWorkoutSet(exercise: Exercise): WorkoutSet & { exercise_id?: string, exercise_name?: string } {
   return {
     exercise_id: exercise.exercise_id || exercise.id,
     exercise_name: exercise.exercise_name || exercise.name,

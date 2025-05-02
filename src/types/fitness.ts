@@ -8,8 +8,8 @@ export interface SavedMealPlan {
   date_created: string;
   tdee_id: string;
   meal_plan: Json | MealPlan;
-  expires_at: string | null;
-  is_active: boolean;
+  expires_at?: string | null;
+  is_active?: boolean;
 }
 
 // User Profile Types
@@ -71,6 +71,8 @@ export interface WorkoutDay {
   focus: string;
   exercises: Exercise[];
   completed?: boolean;
+  name?: string; // Add this for backward compatibility
+  order?: number; // Add this for backward compatibility
 }
 
 export interface Exercise {
@@ -99,6 +101,11 @@ export interface WorkoutSet {
   reps: number;
   completed?: boolean;
   is_warmup?: boolean;
+  id?: string; // Add this for compatibility
+  exercise_id?: string; // Add this for compatibility
+  exercise_name?: string; // Add this for compatibility
+  duration?: number | string; // Add this for compatibility
+  rest_time?: number; // Add this for compatibility
 }
 
 export interface CompletedExercise {
