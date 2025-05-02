@@ -52,8 +52,8 @@ export default function RestaurantMealMatcher({
         return;
       }
       
-      // Get all menu items from nearby restaurants
-      const menuItems = await getMenuItems(restaurantIds);
+      // Get all menu items from nearby restaurants - FIX: Pass a comma-separated string instead of an array
+      const menuItems = await getMenuItems(restaurantIds.join(','));
       
       // Only consider items with nutritional info
       const itemsWithNutrition = menuItems.filter(item => 
