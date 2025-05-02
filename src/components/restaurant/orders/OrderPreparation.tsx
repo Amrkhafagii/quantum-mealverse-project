@@ -59,6 +59,8 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           .select('*')
           .eq('order_id', assignment.order_id);
         
+        const typedOrderItems = (orderItems || []) as OrderItem[];
+        
         // Calculate preparation progress (simulated based on time)
         const startTime = new Date(assignment.updated_at).getTime();
         const now = new Date().getTime();
@@ -69,15 +71,40 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
         let progress = Math.min(Math.round((elapsed / prepTime) * 100), 95);
         
         // If a preparation_time field exists on order items, use the max preparation time
-        if (orderItems && orderItems.length > 0) {
-          const maxPrepTime = orderItems.reduce((max, item) => {
+        if (typedOrderItems && typedOrderItems.length > 0) {
+          const maxPrepTime = typedOrderItems.reduce((max, item) => {
             // Safely access preparation_time with a default of 15
-            const itemPrepTime = (item as any).preparation_time || 15;
+            const itemPrepTime = item.preparation_time || 15;
             return Math.max(max, itemPrepTime);
           }, 15);
           const prepTimeMs = maxPrepTime * 60 * 1000;
           progress = Math.min(Math.round((elapsed / prepTimeMs) * 100), 95);
         }
+        
+        // Create a properly typed Order object from assignment.orders
+        const orderData: Order = {
+          id: assignment.orders.id,
+          user_id: assignment.orders.user_id,
+          customer_name: assignment.orders.customer_name,
+          customer_email: assignment.orders.customer_email,
+          customer_phone: assignment.orders.customer_phone,
+          delivery_address: assignment.orders.delivery_address,
+          city: assignment.orders.city,
+          notes: assignment.orders.notes,
+          delivery_method: assignment.orders.delivery_method,
+          payment_method: assignment.orders.payment_method,
+          delivery_fee: assignment.orders.delivery_fee,
+          subtotal: assignment.orders.subtotal,
+          total: assignment.orders.total,
+          status: assignment.orders.status,
+          latitude: assignment.orders.latitude,
+          longitude: assignment.orders.longitude,
+          formatted_order_id: assignment.orders.formatted_order_id,
+          created_at: assignment.orders.created_at,
+          updated_at: assignment.orders.updated_at,
+          restaurant_id: assignment.orders.restaurant_id,
+          order_items: typedOrderItems
+        };
         
         enhancedOrders.push({
           id: assignment.id,
@@ -88,10 +115,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           updated_at: assignment.updated_at,
           notes: assignment.notes,
           expires_at: assignment.expires_at,
-          order: {
-            ...assignment.orders,
-            order_items: orderItems || []
-          } as Order,
+          order: orderData,
           progress,
           elapsed
         });

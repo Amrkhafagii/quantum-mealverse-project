@@ -60,6 +60,31 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
           .select('*')
           .eq('order_id', assignment.order_id);
         
+        // Create a properly typed Order object from assignment.orders
+        const orderData: Order = {
+          id: assignment.orders.id,
+          user_id: assignment.orders.user_id,
+          customer_name: assignment.orders.customer_name,
+          customer_email: assignment.orders.customer_email,
+          customer_phone: assignment.orders.customer_phone,
+          delivery_address: assignment.orders.delivery_address,
+          city: assignment.orders.city,
+          notes: assignment.orders.notes,
+          delivery_method: assignment.orders.delivery_method,
+          payment_method: assignment.orders.payment_method,
+          delivery_fee: assignment.orders.delivery_fee,
+          subtotal: assignment.orders.subtotal,
+          total: assignment.orders.total,
+          status: assignment.orders.status,
+          latitude: assignment.orders.latitude,
+          longitude: assignment.orders.longitude,
+          formatted_order_id: assignment.orders.formatted_order_id,
+          created_at: assignment.orders.created_at,
+          updated_at: assignment.orders.updated_at,
+          restaurant_id: assignment.orders.restaurant_id,
+          order_items: orderItems as OrderItem[] || []
+        };
+        
         enhancedOrders.push({
           id: assignment.id,
           restaurant_id: assignment.restaurant_id,
@@ -69,10 +94,7 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
           updated_at: assignment.updated_at,
           notes: assignment.notes,
           expires_at: assignment.expires_at,
-          order: {
-            ...assignment.orders,
-            order_items: orderItems || []
-          } as Order
+          order: orderData
         });
       }
       
