@@ -1,185 +1,113 @@
 
-import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
-import ParticleBackground from '@/components/ParticleBackground';
-import Footer from '@/components/Footer';
-import { Card } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import React from 'react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { Bell, Check, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Bell, Calendar, Package, Info, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  created_at: string;
-  is_read: boolean;
-  type: string;
-  link?: string;
-}
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNotifications } from '@/hooks/useNotifications';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Notifications = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [notificationsExist, setNotificationsExist] = useState(true);
+  const { 
+    notifications, 
+    isLoading, 
+    markAsRead, 
+    markAllAsRead,
+    unreadCount
+  } = useNotifications();
 
-  const { data: notifications, isLoading, refetch } = useQuery({
-    queryKey: ['notifications', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      
-      // Check if any notifications exist
-      if (data.length === 0) {
-        setNotificationsExist(false);
-      }
-      
-      return data as Notification[];
-    },
-    enabled: !!user,
-  });
-
-  const markAsRead = async (notificationId: string) => {
-    if (!user) return;
-    
-    await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId);
-      
-    refetch();
-  };
-
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
-    
-    if (notification.link) {
-      navigate(notification.link);
+  const handleNotificationClick = async (notificationId: string, link?: string) => {
+    await markAsRead(notificationId);
+    if (link) {
+      navigate(link);
     }
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'order_status':
-        return <Package className="h-5 w-5" />;
+        return <div className="w-2 h-2 rounded-full bg-blue-500" />;
+      case 'system':
+        return <div className="w-2 h-2 rounded-full bg-yellow-500" />;
       case 'promotion':
-        return <Calendar className="h-5 w-5" />;
+        return <div className="w-2 h-2 rounded-full bg-green-500" />;
       default:
-        return <Info className="h-5 w-5" />;
+        return <div className="w-2 h-2 rounded-full bg-gray-500" />;
     }
   };
 
-  const handleMarkAllAsRead = async () => {
-    if (!user || !notifications?.length) return;
-    
-    await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id);
-      
-    refetch();
-  };
-
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative">
-      <ParticleBackground />
-      <Navbar />
-      
-      <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Notifications</h1>
-          
-          {notifications?.length > 0 && (
-            <Button 
-              variant="outline" 
-              onClick={handleMarkAllAsRead}
-              className="text-quantum-cyan border-quantum-cyan hover:bg-quantum-cyan/20"
-            >
-              Mark all as read
-            </Button>
-          )}
+    <div className="container mx-auto p-4 pt-20">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-quantum-cyan">Notifications</h1>
         </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="text-xl text-quantum-cyan">Loading notifications...</div>
-          </div>
-        ) : !notificationsExist ? (
-          <Card className="p-12 bg-quantum-black border-quantum-cyan/30 text-center">
-            <Bell className="h-16 w-16 mx-auto mb-4 text-quantum-cyan opacity-50" />
-            <h2 className="text-2xl font-semibold mb-2">No notifications yet</h2>
-            <p className="text-gray-400 mb-6">
-              When you receive notifications about your orders or promotions, they'll appear here.
+
+        {notifications.length > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => markAllAsRead()}
+          >
+            <Check className="mr-2 h-4 w-4" />
+            Mark all as read
+          </Button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+        </div>
+      ) : notifications.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 flex flex-col items-center justify-center text-center">
+            <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">No notifications</h2>
+            <p className="text-muted-foreground max-w-md">
+              You don't have any notifications yet. When you receive new notifications, they will appear here.
             </p>
-            <Button onClick={() => navigate('/customer')}>
-              Browse Meals
-            </Button>
-          </Card>
-        ) : (
+          </CardContent>
+        </Card>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-160px)]">
           <div className="space-y-4">
-            {notifications?.map((notification) => (
+            {notifications.map((notification) => (
               <Card 
                 key={notification.id}
-                className={`p-4 hover:bg-quantum-black/80 transition-colors border-l-4 ${
-                  notification.is_read 
-                    ? 'border-l-gray-500 bg-quantum-black/50' 
-                    : 'border-l-quantum-cyan bg-quantum-black/70'
-                } cursor-pointer`}
-                onClick={() => handleNotificationClick(notification)}
+                className={`cursor-pointer hover:border-quantum-cyan transition-colors ${
+                  !notification.is_read ? 'bg-quantum-darkBlue/30 border-quantum-cyan/30' : ''
+                }`}
+                onClick={() => handleNotificationClick(notification.id, notification.link)}
               >
-                <div className="flex items-start gap-4">
-                  <div className={`p-2 rounded-full ${notification.is_read ? 'bg-gray-800' : 'bg-quantum-cyan/20'}`}>
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <h3 className={`font-semibold ${notification.is_read ? 'text-gray-300' : 'text-white'}`}>
-                        {notification.title}
-                      </h3>
-                      <span className="text-xs text-gray-400">
-                        {new Date(notification.created_at).toLocaleDateString()}
-                      </span>
+                <CardContent className="p-4">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {getNotificationIcon(notification.type)}
                     </div>
-                    <p className={`mt-1 ${notification.is_read ? 'text-gray-400' : 'text-gray-300'}`}>
-                      {notification.message}
-                    </p>
-                    
-                    {notification.link && (
-                      <div className="flex justify-end mt-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-quantum-cyan hover:bg-quantum-cyan/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleNotificationClick(notification);
-                          }}
-                        >
-                          View Details
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
+                    <div className="flex-1">
+                      <div className="flex justify-between mb-1">
+                        <h3 className="font-medium">{notification.title}</h3>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                        </span>
                       </div>
-                    )}
+                      <p className="text-sm text-muted-foreground">{notification.message}</p>
+                    </div>
                   </div>
-                </div>
+                </CardContent>
               </Card>
             ))}
           </div>
-        )}
-      </main>
-      
-      <Footer />
+        </ScrollArea>
+      )}
     </div>
   );
 };

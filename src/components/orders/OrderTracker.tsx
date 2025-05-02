@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, AlertCircle } from 'lucide-react';
@@ -12,6 +13,7 @@ import { useOrderData } from '@/hooks/useOrderData';
 import { checkAssignmentStatus } from '@/services/orders/webhookService';
 import { useInterval } from '@/hooks/use-interval';
 import OrderLocationMap from './OrderLocationMap';
+import MapContainer from '../maps/MapContainer';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -76,6 +78,29 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     );
   }
 
+  // Prepare locations for the map if order is being delivered
+  let driverLocation, restaurantLocation, customerLocation;
+  
+  if (order.latitude && order.longitude) {
+    customerLocation = {
+      latitude: order.latitude,
+      longitude: order.longitude,
+      title: "Delivery Address",
+      type: "customer"
+    };
+  }
+
+  if (order.restaurant?.latitude && order.restaurant?.longitude) {
+    restaurantLocation = {
+      latitude: order.restaurant.latitude,
+      longitude: order.restaurant.longitude,
+      title: order.restaurant.name,
+      type: "restaurant"
+    };
+  }
+
+  const showMap = ['preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -103,9 +128,17 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
             />
             
             {/* Add map for orders that are being prepared, picked up or on the way */}
-            {['preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status) && (
+            {showMap && (
               <div className="mt-4">
-                <OrderLocationMap order={order} />
+                {order.latitude && order.longitude ? (
+                  <OrderLocationMap order={order} />
+                ) : (
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-muted-foreground">Location tracking unavailable</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </div>
