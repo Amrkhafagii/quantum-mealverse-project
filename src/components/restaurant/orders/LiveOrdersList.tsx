@@ -15,8 +15,20 @@ interface LiveOrdersListProps {
   onOrderAccepted?: () => void;
 }
 
+interface OrderData {
+  id: string;
+  restaurant_id: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  expires_at: string;
+  order: Order;
+}
+
 export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, onOrderAccepted }) => {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending'>('pending');
   const { toast } = useToast();
@@ -66,8 +78,8 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
       }
       
       // Enhance each order with additional details
-      const enhancedOrders = [];
-      for (const assignment of assignments) {
+      const enhancedOrders: OrderData[] = [];
+      for (const assignment of assignments || []) {
         if (!assignment.orders) continue;
         
         // Fetch order items
@@ -80,8 +92,8 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
           ...assignment,
           order: {
             ...assignment.orders,
-            items: orderItems || []
-          }
+            order_items: orderItems || []
+          } as Order
         });
       }
       
@@ -191,7 +203,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
       ) : (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {orders.map((orderData) => {
-            const order = orderData.order as Order;
+            const order = orderData.order;
             return (
               <Card key={orderData.id} className="overflow-hidden">
                 <CardHeader className="pb-2">
@@ -231,7 +243,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
                     <div className="mt-4">
                       <h4 className="font-medium mb-1">Items</h4>
                       <ul className="space-y-1">
-                        {order.items && order.items.map((item) => (
+                        {order.order_items && order.order_items.map((item) => (
                           <li key={item.id} className="text-sm">
                             <span className="font-medium">{item.quantity}x</span> {item.name}
                           </li>

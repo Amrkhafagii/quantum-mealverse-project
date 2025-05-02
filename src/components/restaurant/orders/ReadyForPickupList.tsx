@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, AlertCircle, Package, Check, Loader2 } from 'lucide-react';
+import { Clock, AlertCircle, Package, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Order } from '@/types/order';
 
@@ -12,8 +12,25 @@ interface ReadyForPickupListProps {
   restaurantId: string;
 }
 
+interface OrderData {
+  id: string;
+  restaurant_id: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  expires_at: string;
+  order: Order;
+  driver?: {
+    id: string;
+    name: string;
+    phone: string;
+  } | null;
+}
+
 export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaurantId }) => {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -24,7 +41,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
       // Fetch assignments for restaurant that are ready for pickup
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
-        .select('*, orders(*, delivery_assignments(*))')
+        .select('*, orders(*)')
         .eq('restaurant_id', restaurantId)
         .eq('status', 'ready_for_pickup')
         .order('created_at', { ascending: false });
@@ -34,18 +51,26 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
       }
       
       // Process the orders
-      const enhancedOrders = [];
-      for (const assignment of assignments) {
+      const enhancedOrders: OrderData[] = [];
+      for (const assignment of assignments || []) {
         if (!assignment.orders) continue;
+        
+        // Get order ID for further queries
+        const orderId = assignment.order_id;
         
         // Check if there is an assigned delivery driver
         let driver = null;
-        if (assignment.orders.delivery_assignments && assignment.orders.delivery_assignments.length > 0) {
+        const { data: deliveryAssignments } = await supabase
+          .from('delivery_assignments')
+          .select('*')
+          .eq('order_id', orderId);
+          
+        if (deliveryAssignments && deliveryAssignments.length > 0) {
           // Find the driver assigned to this order
           const { data: driverData } = await supabase
             .from('delivery_users')
             .select('*')
-            .eq('id', assignment.orders.delivery_assignments[0].delivery_user_id)
+            .eq('id', deliveryAssignments[0].delivery_user_id)
             .single();
             
           driver = driverData;
@@ -55,14 +80,14 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
         const { data: orderItems } = await supabase
           .from('order_items')
           .select('*')
-          .eq('order_id', assignment.order_id);
+          .eq('order_id', orderId);
         
         enhancedOrders.push({
           ...assignment,
           order: {
             ...assignment.orders,
-            items: orderItems || []
-          },
+            order_items: orderItems || []
+          } as Order,
           driver
         });
       }
@@ -134,7 +159,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
       ) : (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {orders.map((orderData) => {
-            const order = orderData.order as Order;
+            const order = orderData.order;
             return (
               <Card key={orderData.id}>
                 <CardHeader className="pb-2">
@@ -159,7 +184,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Package className="h-4 w-4 mr-2" />
-                        <span className="font-medium">{order.items?.length || 0} items</span>
+                        <span className="font-medium">{order.order_items?.length || 0} items</span>
                       </div>
                       
                       {orderData.driver ? (
@@ -186,7 +211,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
                     <div>
                       <h4 className="font-medium mb-1">Order Summary</h4>
                       <ul className="space-y-1">
-                        {order.items && order.items.map((item) => (
+                        {order.order_items && order.order_items.map((item) => (
                           <li key={item.id} className="text-sm">
                             <span className="font-medium">{item.quantity}x</span> {item.name}
                           </li>

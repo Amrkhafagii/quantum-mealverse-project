@@ -13,8 +13,22 @@ interface OrderPreparationProps {
   restaurantId: string;
 }
 
+interface OrderData {
+  id: string;
+  restaurant_id: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  expires_at: string;
+  order: Order;
+  progress: number;
+  elapsed: number;
+}
+
 export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId }) => {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -35,8 +49,8 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
       }
       
       // Enhance each order with additional details
-      const enhancedOrders = [];
-      for (const assignment of assignments) {
+      const enhancedOrders: OrderData[] = [];
+      for (const assignment of assignments || []) {
         if (!assignment.orders) continue;
         
         // Fetch order items
@@ -54,9 +68,13 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
         const prepTime = 900000;
         let progress = Math.min(Math.round((elapsed / prepTime) * 100), 95);
         
-        // If a preparation_time field exists on the order, use that instead
-        if (assignment.preparation_time) {
-          const prepTimeMs = assignment.preparation_time * 60 * 1000;
+        // If a preparation_time field exists on order items, use the max preparation time
+        if (orderItems && orderItems.length > 0) {
+          const maxPrepTime = orderItems.reduce((max, item) => {
+            const itemPrepTime = item.preparation_time || 15;
+            return Math.max(max, itemPrepTime);
+          }, 15);
+          const prepTimeMs = maxPrepTime * 60 * 1000;
           progress = Math.min(Math.round((elapsed / prepTimeMs) * 100), 95);
         }
         
@@ -64,8 +82,8 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           ...assignment,
           order: {
             ...assignment.orders,
-            items: orderItems || []
-          },
+            order_items: orderItems || []
+          } as Order,
           progress,
           elapsed
         });
@@ -176,7 +194,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
       ) : (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {orders.map((orderData) => {
-            const order = orderData.order as Order;
+            const order = orderData.order;
             return (
               <Card key={orderData.id}>
                 <CardHeader className="pb-2">
@@ -214,7 +232,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
                     <div>
                       <h4 className="font-medium mb-1">Items</h4>
                       <ul className="space-y-1">
-                        {order.items && order.items.map((item) => (
+                        {order.order_items && order.order_items.map((item) => (
                           <li key={item.id} className="text-sm">
                             <span className="font-medium">{item.quantity}x</span> {item.name}
                           </li>

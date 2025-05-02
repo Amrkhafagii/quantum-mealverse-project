@@ -9,14 +9,25 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { OrderStatus } from '@/types/restaurant';
 import { Order } from '@/types/order';
-import { Badge } from '@/components/ui/badge';
 
 interface OrderHistoryListProps {
   restaurantId: string;
 }
 
+interface OrderData {
+  id: string;
+  restaurant_id: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  notes?: string;
+  expires_at: string;
+  order: Order;
+}
+
 export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId }) => {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -39,8 +50,8 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
       }
       
       // Enhance each order with additional details
-      const enhancedOrders = [];
-      for (const assignment of assignments) {
+      const enhancedOrders: OrderData[] = [];
+      for (const assignment of assignments || []) {
         if (!assignment.orders) continue;
         
         // Fetch order items
@@ -53,8 +64,8 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
           ...assignment,
           order: {
             ...assignment.orders,
-            items: orderItems || []
-          }
+            order_items: orderItems || []
+          } as Order
         });
       }
       
@@ -80,11 +91,11 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
   
   // Filter orders based on search term
   const filteredOrders = orders.filter(orderData => {
-    const order = orderData.order as Order;
+    const order = orderData.order;
     const searchLower = searchTerm.toLowerCase();
     
     return (
-      order.formatted_order_id?.toLowerCase().includes(searchLower) ||
+      (order.formatted_order_id && order.formatted_order_id.toLowerCase().includes(searchLower)) ||
       order.customer_name.toLowerCase().includes(searchLower) ||
       order.delivery_address.toLowerCase().includes(searchLower) ||
       order.id.toLowerCase().includes(searchLower)
@@ -170,7 +181,7 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredOrders.map((orderData) => {
-                  const order = orderData.order as Order;
+                  const order = orderData.order;
                   const orderDate = new Date(orderData.created_at);
                   
                   return (
