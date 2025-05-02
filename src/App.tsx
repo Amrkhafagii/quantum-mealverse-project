@@ -17,14 +17,13 @@ import Subscription from './pages/Subscription';
 import OrderStatus from './pages/OrderStatus';
 import MealDetail from './pages/MealDetail';
 import NotFound from './pages/NotFound';
-// This is a basic structure for the application
-// Routes will be added as needed
+
 function App() {
   return (
     <LanguageProvider>
-      <AuthProvider>
-        <CartProvider>
-          <Router>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -40,10 +39,10 @@ function App() {
               <Route path="/order/status/:id" element={<OrderStatus />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Router>
-          <Toaster />
-        </CartProvider>
-      </AuthProvider>
+            <Toaster />
+          </CartProvider>
+        </AuthProvider>
+      </Router>
     </LanguageProvider>
   );
 }
