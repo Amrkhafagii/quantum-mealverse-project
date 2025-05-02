@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import { findNearbyAssignments, acceptDeliveryAssignment, rejectAssignment } from '@/services/delivery/deliveryOrderAssignmentService';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, DollarSign, Clock, AlertCircle } from 'lucide-react';
+import { Loader2, MapPin, DollarSign, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useLocationTracker } from '@/hooks/useLocationTracker';
 
 export const AvailableOrders: React.FC = () => {
   const { user } = useAuth();
@@ -13,45 +15,67 @@ export const AvailableOrders: React.FC = () => {
   const [availableOrders, setAvailableOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [refreshingLocation, setRefreshingLocation] = useState(false);
   
+  // Use enhanced location tracker
+  const { 
+    location, 
+    getCurrentLocation,
+    locationIsValid, 
+    isLocationStale,
+    lastUpdated
+  } = useLocationTracker();
+  
+  // Get user's current location on component mount
   useEffect(() => {
-    // Get user's current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserPosition({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (err) => {
-          console.error("Error getting location:", err);
-          toast({
-            title: "Location Error",
-            description: "Please enable location services to see nearby orders",
-            variant: "destructive",
-          });
-        }
-      );
-    } else {
-      toast({
-        title: "Location Not Supported",
-        description: "Your browser doesn't support geolocation",
-        variant: "destructive",
-      });
+    if (!locationIsValid()) {
+      handleRefreshLocation();
     }
   }, []);
   
+  const handleRefreshLocation = async () => {
+    try {
+      setRefreshingLocation(true);
+      await getCurrentLocation();
+    } catch (err) {
+      console.error("Error getting location:", err);
+      toast({
+        title: "Location Error",
+        description: "Please enable location services to see nearby orders",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshingLocation(false);
+    }
+  };
+  
   const fetchAvailableOrders = async () => {
-    if (!userPosition || !deliveryUser) return;
+    if (!locationIsValid() || !deliveryUser) {
+      if (!locationIsValid()) {
+        toast({
+          title: "Location Required",
+          description: "Please update your location to see available orders",
+          variant: "destructive",
+        });
+        return;
+      }
+      return;
+    }
+    
+    // Check if location is stale and prompt for refresh
+    if (isLocationStale()) {
+      toast({
+        title: "Location is outdated",
+        description: "Your location data is over 2 minutes old. Consider refreshing.",
+      });
+    }
     
     try {
       setLoading(true);
       setError(null);
       const assignments = await findNearbyAssignments(
-        userPosition.lat,
-        userPosition.lng,
+        location.latitude,
+        location.longitude,
         10 // 10km radius
       );
       setAvailableOrders(assignments);
@@ -64,7 +88,7 @@ export const AvailableOrders: React.FC = () => {
   };
   
   useEffect(() => {
-    if (userPosition && deliveryUser) {
+    if (locationIsValid() && deliveryUser) {
       fetchAvailableOrders();
       
       // Set up polling for new orders every 30 seconds
@@ -72,7 +96,7 @@ export const AvailableOrders: React.FC = () => {
       
       return () => clearInterval(interval);
     }
-  }, [userPosition, deliveryUser]);
+  }, [location, deliveryUser]);
   
   const handleAccept = async (assignmentId: string) => {
     if (!deliveryUser) return;
@@ -137,14 +161,57 @@ export const AvailableOrders: React.FC = () => {
       <CardHeader className="pb-2">
         <CardTitle className="flex justify-between items-center">
           <span>Available Orders</span>
-          <Button variant="ghost" size="sm" onClick={refreshOrders} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshLocation}
+              disabled={refreshingLocation}
+            >
+              {refreshingLocation ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <MapPin className="h-4 w-4 mr-1" />
+              )}
+              {refreshingLocation ? "Updating..." : "Update Location"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={refreshOrders} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </Button>
+          </div>
         </CardTitle>
+        {locationIsValid() && lastUpdated && (
+          <p className="text-xs text-gray-400 mt-1">
+            Location updated: {new Date(lastUpdated).toLocaleTimeString()}
+            {isLocationStale() && (
+              <span className="text-yellow-400 ml-2">(outdated)</span>
+            )}
+          </p>
+        )}
       </CardHeader>
       
       <CardContent>
-        {loading ? (
+        {!locationIsValid() ? (
+          <div className="text-center py-8 text-yellow-400">
+            <MapPin className="h-8 w-8 mx-auto mb-2" />
+            <p className="mb-2">Location services required</p>
+            <p className="text-sm text-gray-400 mb-4">We need your location to find nearby orders</p>
+            <Button 
+              onClick={handleRefreshLocation}
+              className="bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
+              disabled={refreshingLocation}
+            >
+              {refreshingLocation ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Getting Location...
+                </>
+              ) : (
+                <>Share Location</>
+              )}
+            </Button>
+          </div>
+        ) : loading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>

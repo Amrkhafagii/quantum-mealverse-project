@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Package,
   CheckCircle,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useInterval } from '@/hooks/use-interval';
@@ -36,9 +37,18 @@ export const ActiveDeliveries: React.FC = () => {
   } = useDeliveryAssignments(deliveryUser?.id);
   
   const [selectedAssignment, setSelectedAssignment] = useState<DeliveryAssignment | null>(null);
+  const [locationUpdateTime, setLocationUpdateTime] = useState<Date | null>(null);
   
-  // Setup location tracking
-  const { position, startTracking, stopTracking, isTracking } = useLocationTracker({
+  // Setup enhanced location tracking
+  const { 
+    position, 
+    isTracking, 
+    startTracking, 
+    stopTracking, 
+    isLocationStale,
+    lastUpdated,
+    getCurrentLocation
+  } = useLocationTracker({
     watchPosition: true,
     trackingInterval: 10000,
     onLocationUpdate: (pos) => {
@@ -49,6 +59,7 @@ export const ActiveDeliveries: React.FC = () => {
           pos.coords.latitude, 
           pos.coords.longitude
         );
+        setLocationUpdateTime(new Date());
       }
     },
     onError: (err) => {
@@ -60,6 +71,32 @@ export const ActiveDeliveries: React.FC = () => {
       });
     }
   });
+  
+  // Force a location update on demand
+  const handleForceLocationUpdate = async () => {
+    try {
+      const location = await getCurrentLocation();
+      if (location && selectedAssignment) {
+        updateLocation(
+          selectedAssignment.id,
+          location.latitude,
+          location.longitude
+        );
+        setLocationUpdateTime(new Date());
+        toast({
+          title: "Location Updated",
+          description: "Your current location has been updated.",
+        });
+      }
+    } catch (err) {
+      console.error('Error updating location:', err);
+      toast({
+        title: "Location Error",
+        description: "Unable to update your location. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   
   // Start tracking when there's an active delivery
   useEffect(() => {
@@ -194,6 +231,7 @@ export const ActiveDeliveries: React.FC = () => {
         <CardTitle className="flex justify-between items-center">
           <span>Active Deliveries</span>
           <Button variant="ghost" size="sm" onClick={refreshData}>
+            <RefreshCw className="h-4 w-4 mr-1" />
             Refresh
           </Button>
         </CardTitle>
@@ -242,7 +280,7 @@ export const ActiveDeliveries: React.FC = () => {
                 </div>
               </CardContent>
               
-              <CardFooter>
+              <CardFooter className="flex flex-col gap-3">
                 {assignment.status === 'assigned' && (
                   <Button 
                     onClick={() => handlePickup(assignment)}
@@ -272,17 +310,44 @@ export const ActiveDeliveries: React.FC = () => {
                     Complete Delivery
                   </Button>
                 )}
+                
+                {['picked_up', 'on_the_way'].includes(assignment.status) && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={handleForceLocationUpdate}
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Update Location
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
           
           {position && isTracking && (
             <div className="rounded border border-quantum-cyan/30 p-3 bg-quantum-darkBlue/20">
-              <p className="text-sm text-gray-400 mb-1">Location Tracking Active</p>
+              <p className="text-sm text-gray-400 mb-1 flex items-center justify-between">
+                <span>Location Tracking Active</span>
+                {isLocationStale() && (
+                  <span className="text-yellow-400 text-xs">Outdated</span>
+                )}
+              </p>
               <p className="text-xs">
                 Lat: {position.coords.latitude.toFixed(6)}, 
                 Lng: {position.coords.longitude.toFixed(6)}
               </p>
+              {lastUpdated && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+                </p>
+              )}
+              {locationUpdateTime && (
+                <p className="text-xs text-green-500 mt-1">
+                  Last sent to server: {locationUpdateTime.toLocaleTimeString()}
+                </p>
+              )}
             </div>
           )}
         </div>

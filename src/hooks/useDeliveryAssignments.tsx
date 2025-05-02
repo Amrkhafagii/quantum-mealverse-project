@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { getActiveDeliveryAssignments, getPastDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
-import { pickupDelivery, startDeliveryToCustomer, completeDelivery } from '@/services/delivery/deliveryOrderAssignmentService';
+import { pickupDelivery, startDeliveryToCustomer, completeDelivery, rejectAssignment } from '@/services/delivery/deliveryOrderAssignmentService';
 import { updateDeliveryLocation } from '@/services/delivery/deliveryLocationService';
 import { toast } from '@/hooks/use-toast';
 

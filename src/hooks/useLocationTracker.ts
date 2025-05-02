@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 
 interface LocationTrackerOptions {
@@ -26,6 +27,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const [isTracking, setIsTracking] = useState(false);
   const [watchId, setWatchId] = useState<number | null>(null);
   const [intervalId, setIntervalId] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const clearWatchPosition = useCallback(() => {
     if (watchId !== null) {
@@ -48,6 +50,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
       latitude: pos.coords.latitude,
       longitude: pos.coords.longitude
     });
+    setLastUpdated(new Date());
     setError(null);
     if (onLocationUpdate) {
       onLocationUpdate(pos);
@@ -105,6 +108,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
           };
           setLocation(loc);
           setPosition(pos);
+          setLastUpdated(new Date());
           resolve(loc);
         },
         (err) => {
@@ -171,6 +175,18 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
       typeof location.longitude === 'number';
   }, [location]);
 
+  // Calculate how fresh the location data is
+  const getLocationAge = useCallback(() => {
+    if (!lastUpdated) return null;
+    return Date.now() - lastUpdated.getTime();
+  }, [lastUpdated]);
+
+  // Check if location is stale (older than 2 minutes)
+  const isLocationStale = useCallback(() => {
+    const age = getLocationAge();
+    return age !== null && age > 120000; // 2 minutes
+  }, [getLocationAge]);
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -184,6 +200,9 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
     error,
     isTracking,
     location,
+    lastUpdated,
+    getLocationAge,
+    isLocationStale,
     startTracking,
     stopTracking,
     getCurrentPosition,
