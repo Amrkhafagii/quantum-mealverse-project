@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { DeliveryAssignment } from '@/types/delivery';
+import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { 
   getActiveDeliveryAssignments, 
   getPastDeliveryAssignments 

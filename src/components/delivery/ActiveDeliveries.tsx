@@ -9,7 +9,7 @@ import {
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import { useAuth } from '@/hooks/useAuth';
-import { DeliveryAssignment } from '@/types/delivery';
+import { DeliveryAssignment } from '@/types/delivery-assignment';
 
 export const ActiveDeliveries: React.FC = () => {
   const { user } = useAuth();
@@ -81,17 +81,23 @@ export const ActiveDeliveries: React.FC = () => {
   };
 
   const renderDirectionsButton = (assignment: DeliveryAssignment) => {
-    // This would open navigation in Google Maps or similar
-    const getNavigationUrl = () => {
-      // In a real app, you would use the actual restaurant/customer addresses
-      return `https://www.google.com/maps/dir/?api=1&destination=${assignment.latitude},${assignment.longitude}`;
-    };
+    // Get destination based on current delivery stage
+    let destination;
+    if (assignment.status === 'assigned') {
+      // Navigate to restaurant
+      destination = assignment.restaurant && `${assignment.restaurant.latitude},${assignment.restaurant.longitude}`;
+    } else {
+      // Navigate to customer
+      destination = assignment.customer && `${assignment.customer.latitude},${assignment.customer.longitude}`;
+    }
+
+    if (!destination) return null;
 
     return (
       <Button 
         variant="outline" 
         className="w-full mt-2"
-        onClick={() => window.open(getNavigationUrl(), '_blank')}
+        onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}`, '_blank')}
       >
         <Navigation className="mr-2 h-4 w-4" />
         Get Directions
@@ -160,7 +166,9 @@ export const ActiveDeliveries: React.FC = () => {
                     <Building className="h-5 w-5 text-quantum-cyan mt-1" />
                     <div>
                       <p className="font-medium">Restaurant</p>
-                      <p className="text-sm text-gray-400">123 Restaurant St.</p>
+                      <p className="text-sm text-gray-400">
+                        {assignment.restaurant?.address || '123 Restaurant St.'}
+                      </p>
                     </div>
                   </div>
                   
@@ -170,7 +178,9 @@ export const ActiveDeliveries: React.FC = () => {
                       <User className="h-5 w-5 text-quantum-cyan mt-1" />
                       <div>
                         <p className="font-medium">Customer</p>
-                        <p className="text-sm text-gray-400">456 Customer Ave.</p>
+                        <p className="text-sm text-gray-400">
+                          {assignment.customer?.address || '456 Customer Ave.'}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -179,11 +189,11 @@ export const ActiveDeliveries: React.FC = () => {
                   <div className="flex justify-between text-sm">
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-1 text-quantum-cyan" />
-                      <span>2.5 km</span>
+                      <span>{assignment.distance_km?.toFixed(1) || "2.5"} km</span>
                     </div>
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-1 text-quantum-cyan" />
-                      <span>~15 min</span>
+                      <span>~{assignment.estimate_minutes || "15"} min</span>
                     </div>
                   </div>
                   
@@ -207,3 +217,5 @@ export const ActiveDeliveries: React.FC = () => {
     </Card>
   );
 };
+
+export default ActiveDeliveries;

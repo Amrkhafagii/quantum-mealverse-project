@@ -10,9 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import { ActiveDeliveries } from '@/components/delivery/ActiveDeliveries';
-import { DeliveryHistory } from '@/components/delivery/DeliveryHistory';
-import { EarningsSummary } from '@/components/delivery/EarningsSummary';
+import ActiveDeliveries from '@/components/delivery/ActiveDeliveries';
+import DeliveryHistory from '@/components/delivery/DeliveryHistory';
+import EarningsSummary from '@/components/delivery/EarningsSummary';
 import { AvailableOrders } from '@/components/delivery/AvailableOrders';
 
 const DeliveryDashboard = () => {
@@ -42,7 +42,7 @@ const DeliveryDashboard = () => {
     
     try {
       setUpdatingStatus(true);
-      await updateDeliveryUserStatus(user.id, newStatus ? 'active' : 'inactive');
+      await updateDeliveryUserStatus(user!.id, newStatus ? 'active' : 'inactive');
       setToggleStatus(newStatus);
       refreshDeliveryUser();
       
@@ -176,7 +176,7 @@ const DeliveryDashboard = () => {
             </Card>
             
             {/* Earnings Summary */}
-            <EarningsSummary />
+            <EarningsSummary deliveryUserId={deliveryUser?.id} />
           </div>
           
           {/* Right Column */}
@@ -202,7 +202,7 @@ const DeliveryDashboard = () => {
               </TabsContent>
               
               <TabsContent value="history">
-                <DeliveryHistory />
+                <DeliveryHistory deliveryUserId={deliveryUser?.id || ''} />
               </TabsContent>
             </Tabs>
           </div>
