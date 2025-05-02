@@ -1,4 +1,3 @@
-
 import { Food, Meal, MealFood, MealPlan, FoodCategory } from '@/types/food';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { foodDatabase, getFoodById, getFoodsByCategory } from '@/data/foodDatabase';
@@ -12,7 +11,8 @@ const createMeal = (
   targetCalories: number,
   targetProtein: number,
   targetCarbs: number,
-  targetFat: number
+  targetFat: number,
+  ensureProtein: boolean = false
 ): Meal => {
   // Select foods from each category
   const proteins = getFoodsByCategory('protein');
@@ -39,9 +39,12 @@ const createMeal = (
   const fatCalPerGram = fat.fat * 9 / 100;
   
   // Calculate initial portion based on protein target
+  // If ensureProtein is true, we'll target at least 95% of the target protein
+  const proteinTarget = ensureProtein ? Math.max(targetProtein, targetProtein * 0.95) : targetProtein;
+  
   let proteinPortion = Math.min(
     MAX_PROTEIN_PORTION,
-    Math.max(MIN_PORTION, Math.round((targetProtein / (protein.protein / 100))))
+    Math.max(MIN_PORTION, Math.round((proteinTarget / (protein.protein / 100))))
   );
   
   // Calculate initial portion based on carbs target
@@ -69,11 +72,22 @@ const createMeal = (
     (vegetable.calories * vegetablePortion / 100);
   
   // If we're significantly over calories, proportionally reduce portions
+  // but protect protein if ensureProtein is true
   if (totalCalories > targetCalories * 1.1) {
     const reductionFactor = targetCalories / totalCalories;
-    proteinPortion = Math.max(MIN_PORTION, Math.round(proteinPortion * reductionFactor));
-    carbPortion = Math.max(MIN_PORTION, Math.round(carbPortion * reductionFactor));
-    fatPortion = Math.max(MIN_PORTION, Math.round(fatPortion * reductionFactor));
+    
+    if (ensureProtein) {
+      // Reduce carbs and fats more to preserve protein
+      carbPortion = Math.max(MIN_PORTION, Math.round(carbPortion * reductionFactor * 0.9));
+      fatPortion = Math.max(MIN_PORTION, Math.round(fatPortion * reductionFactor * 0.9));
+      // Reduce protein less
+      proteinPortion = Math.max(MIN_PORTION, Math.round(proteinPortion * reductionFactor * 1.1));
+    } else {
+      // Standard reduction
+      proteinPortion = Math.max(MIN_PORTION, Math.round(proteinPortion * reductionFactor));
+      carbPortion = Math.max(MIN_PORTION, Math.round(carbPortion * reductionFactor));
+      fatPortion = Math.max(MIN_PORTION, Math.round(fatPortion * reductionFactor));
+    }
   }
   
   const mealFoods: MealFood[] = [
@@ -188,12 +202,14 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
  */
 export const shuffleMeal = (meal: Meal, targetProtein: number, targetCarbs: number, targetFat: number): Meal => {
   // When shuffling, we want to maintain the same macro balance but with different foods
+  // We'll ensure we hit at least 95% of protein target by passing true to createMeal
   return createMeal(
     meal.name,
     meal.totalCalories,
     targetProtein,
     targetCarbs,
-    targetFat
+    targetFat,
+    true // ensure we prioritize hitting protein targets
   );
 };
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MealPlan, Meal } from '@/types/food';
-import { Shuffle, Droplets, AlertCircle, Info } from 'lucide-react';
+import { Shuffle, Droplets, AlertCircle, Info, Shield } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { shuffleMeal } from '@/services/mealPlanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -131,6 +131,9 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
     Math.abs(carbsPercent - 100) > 15 || 
     Math.abs(fatPercent - 100) > 15;
 
+  // Check specifically for protein being below 95%
+  const lowProtein = proteinPercent < 95;
+
   return (
     <Card className="border-quantum-cyan/30 bg-quantum-darkBlue/20 backdrop-blur-sm">
       <CardHeader>
@@ -145,13 +148,31 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
         </CardDescription>
         
         <div className="mt-2 grid grid-cols-3 gap-1 text-sm">
-          <div className="bg-blue-900/30 rounded-md p-2 text-center">
-            <div className="text-blue-400 font-medium">Protein</div>
+          <div className={`${lowProtein ? 'bg-red-900/30' : 'bg-blue-900/30'} rounded-md p-2 text-center`}>
+            <div className="text-blue-400 font-medium flex items-center justify-center gap-1">
+              Protein
+              {proteinPercent >= 95 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Shield className="h-3.5 w-3.5 text-green-400" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Meeting at least 95% of target protein</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div>
               <span className="text-lg font-bold">{mealPlan.actualProtein || 0}g</span>
               <span className="text-gray-400 text-xs"> / {mealPlan.targetProtein}g</span>
             </div>
-            <div className="text-xs text-gray-400">{proteinPercent}% of target</div>
+            <div className={`text-xs ${lowProtein ? 'text-red-400' : 'text-gray-400'}`}>
+              {proteinPercent}% of target
+            </div>
           </div>
           <div className="bg-green-900/30 rounded-md p-2 text-center">
             <div className="text-green-400 font-medium">Carbs</div>
@@ -175,6 +196,13 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
           <div className="mt-2 text-amber-400 text-xs flex items-center gap-1 bg-amber-900/20 p-2 rounded">
             <AlertCircle className="h-4 w-4" />
             <span>The actual macros may vary from targets due to real food portion constraints.</span>
+          </div>
+        )}
+        
+        {lowProtein && (
+          <div className="mt-2 text-red-400 text-xs flex items-center gap-1 bg-red-900/20 p-2 rounded">
+            <AlertCircle className="h-4 w-4" />
+            <span>Protein is below 95% of your target. Consider reshuffling meals to increase protein intake.</span>
           </div>
         )}
       </CardHeader>
