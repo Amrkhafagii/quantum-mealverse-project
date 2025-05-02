@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
+import { Subscription } from '@/types/subscription';
 
 interface SubscriptionsListProps {
   userId: string;
@@ -35,7 +36,7 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
         .order('created_at', { ascending: false });
         
       if (error) throw error;
-      return data || [];
+      return data as Subscription[] || [];
     },
     enabled: !!userId,
   });

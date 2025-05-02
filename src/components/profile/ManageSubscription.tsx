@@ -26,23 +26,10 @@ import { SubscriptionsList } from './SubscriptionsList';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Badge } from "@/components/ui/badge";
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
+import { Subscription } from '@/types/subscription';
 
 interface ManageSubscriptionProps {
   userId: string;
-}
-
-interface Subscription {
-  id: string;
-  user_id: string;
-  plan_name: string;
-  price: number;
-  status: 'active' | 'paused' | 'cancelled';
-  start_date: string;
-  end_date: string | null;
-  meals_per_week: number;
-  created_at: string;
-  is_trial: boolean;
-  trial_ends_at: string | null;
 }
 
 export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }) => {
@@ -68,7 +55,7 @@ export const ManageSubscription: React.FC<ManageSubscriptionProps> = ({ userId }
         throw error;
       }
       
-      return data as Subscription || null;
+      return data as Subscription | null;
     },
     enabled: !!userId,
   });
