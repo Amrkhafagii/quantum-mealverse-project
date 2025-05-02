@@ -72,7 +72,10 @@ export const acceptDeliveryAssignment = async (
       }
     });
     
-    return assignment;
+    return {
+      ...assignment,
+      status: assignment.status as DeliveryAssignment['status']
+    };
   } catch (error) {
     console.error('Error in acceptDeliveryAssignment:', error);
     throw error;
@@ -87,7 +90,7 @@ export const rejectDeliveryAssignment = async (
   try {
     const { data, error } = await supabase
       .from('delivery_assignments')
-      .select('order_id')
+      .select('order_id, delivery_user_id')
       .eq('id', assignmentId)
       .single();
       
@@ -95,10 +98,17 @@ export const rejectDeliveryAssignment = async (
       throw error;
     }
     
-    // In a real app, we would store rejection reasons
-    // Since we don't have the table yet, we'll just log it
+    // Store rejection data in a virtual table for now
+    // In a real app, we would store this in a dedicated table
     console.log('Rejected assignment', assignmentId, 'reason:', reason || 'No reason provided');
     
+    // If this becomes a real feature, we'd implement:
+    // await supabase.from('delivery_assignment_rejections').insert({
+    //   assignment_id: assignmentId,
+    //   order_id: data.order_id,
+    //   reason: reason || 'No reason provided',
+    //   delivery_user_id: data.delivery_user_id,
+    // });
   } catch (error) {
     console.error('Error in rejectDeliveryAssignment:', error);
     throw error;
@@ -112,10 +122,27 @@ export const updateDeliveryLocation = async (
   longitude: number
 ): Promise<void> => {
   try {
-    // In a real app, we would store location updates
-    // Since we don't have the table yet, we'll just log it
-    console.log('Updated delivery location', assignmentId, latitude, longitude);
-      
+    // Update the delivery assignment with current location
+    await supabase
+      .from('delivery_assignments')
+      .update({ 
+        latitude,
+        longitude,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', assignmentId);
+    
+    // In a production app, we would also store location history for tracking
+    // Here we'll just log it
+    console.log(`Location updated for delivery ${assignmentId}: ${latitude}, ${longitude}`);
+    
+    // If this becomes a real feature with location history tracking, we'd implement:
+    // await supabase.from('delivery_locations').insert({
+    //   assignment_id: assignmentId,
+    //   latitude,
+    //   longitude,
+    //   timestamp: new Date().toISOString()
+    // });
   } catch (error) {
     console.error('Error in updateDeliveryLocation:', error);
     throw error;
@@ -204,13 +231,17 @@ export const completeDelivery = async (
     });
     
     // In a real app, we would record earnings for the delivery
-    console.log('Recording earnings', {
+    // Since we don't have a dedicated earnings table yet, we'll simulate it
+    const earningData = {
       delivery_user_id: deliveryUserId,
       order_id: assignment.order_id,
       base_amount: baseAmount,
       tip_amount: tipAmount,
-      total_amount: baseAmount + tipAmount
-    });
+      total_amount: baseAmount + tipAmount,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Recording earnings', earningData);
     
     // Update delivery user statistics (simulated)
     console.log('Updating delivery stats for user', deliveryUserId);
@@ -228,7 +259,7 @@ export const completeDelivery = async (
 };
 
 // Utility function to update delivery status
-const updateDeliveryStatus = async (
+export const updateDeliveryStatus = async (
   assignmentId: string,
   status: DeliveryAssignment['status']
 ): Promise<{ data: DeliveryAssignment, error: any }> => {
