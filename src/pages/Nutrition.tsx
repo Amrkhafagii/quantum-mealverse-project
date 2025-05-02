@@ -6,8 +6,6 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
 import { Button } from '@/components/ui/button';
-import { Utensils, ChevronDown, ChevronUp } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { motion } from 'framer-motion';
@@ -15,8 +13,8 @@ import TDEECalculator from '@/components/fitness/TDEECalculator';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateMealPlan } from '@/services/mealPlanService';
-import { MealPlan, Meal, MealFood } from '@/types/food';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { MealPlan } from '@/types/food';
+import NutritionDashboard from '@/components/fitness/NutritionDashboard';
 
 const Nutrition = () => {
   const navigate = useNavigate();
@@ -24,7 +22,6 @@ const Nutrition = () => {
   const [activeTab, setActiveTab] = useState<'calculator' | 'plans'>('calculator');
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
-  const [openMeals, setOpenMeals] = useState<string[]>([]);
 
   const handleCalculationComplete = (result: TDEEResult) => {
     setCalculationResult(result);
@@ -35,22 +32,8 @@ const Nutrition = () => {
     toast.success("Calorie calculation completed! We've generated a meal plan that fits your needs.");
   };
 
-  const toggleMealOpen = (mealId: string) => {
-    setOpenMeals(prev => 
-      prev.includes(mealId) 
-        ? prev.filter(id => id !== mealId) 
-        : [...prev, mealId]
-    );
-  };
-
-  const getMealCategoryColor = (category: string) => {
-    switch (category) {
-      case 'protein': return 'bg-blue-500/30 border-blue-500/50 text-blue-300';
-      case 'carbs': return 'bg-green-500/30 border-green-500/50 text-green-300';
-      case 'fats': return 'bg-yellow-500/30 border-yellow-500/50 text-yellow-300';
-      case 'vegetables': return 'bg-purple-500/30 border-purple-500/50 text-purple-300';
-      default: return 'bg-gray-500/30 border-gray-500/50 text-gray-300';
-    }
+  const handleUpdateMealPlan = (updatedPlan: MealPlan) => {
+    setMealPlan(updatedPlan);
   };
 
   return (
@@ -81,142 +64,27 @@ const Nutrition = () => {
           </TabsContent>
           
           <TabsContent value="plans">
-            {calculationResult && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-8"
-              >
-                <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-quantum-purple mb-3">Your Nutritional Needs</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-gray-400">Daily Calories</div>
-                        <div className="text-xl font-bold text-quantum-cyan">{calculationResult.adjustedCalories} kcal</div>
-                      </div>
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-gray-400">Protein</div>
-                        <div className="text-xl font-bold text-quantum-cyan">{calculationResult.proteinGrams}g</div>
-                      </div>
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-gray-400">Carbs</div>
-                        <div className="text-xl font-bold text-quantum-cyan">{calculationResult.carbsGrams}g</div>
-                      </div>
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-gray-400">Fats</div>
-                        <div className="text-xl font-bold text-quantum-cyan">{calculationResult.fatsGrams}g</div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-300">Our meal plans can be customized to meet your specific macronutrient requirements.</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {mealPlan && (
+            {calculationResult && mealPlan ? (
+              <NutritionDashboard 
+                calculationResult={calculationResult}
+                mealPlan={mealPlan}
+                onUpdateMealPlan={handleUpdateMealPlan}
+              />
+            ) : (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="mb-12"
+                transition={{ duration: 0.5 }}
+                className="max-w-3xl mx-auto text-center p-12"
               >
-                <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm mb-8">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-2xl font-bold text-quantum-cyan">Your Custom Meal Plan</h3>
-                      <Badge className="bg-quantum-purple">{mealPlan.goal === 'maintain' ? 'Maintenance' : mealPlan.goal === 'cut' ? 'Weight Loss' : 'Muscle Gain'}</Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-gray-400">Total Calories</div>
-                        <div className="text-xl font-bold text-quantum-cyan">{mealPlan.totalCalories} kcal</div>
-                      </div>
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-blue-400">Protein</div>
-                        <div className="text-xl font-bold text-blue-300">{mealPlan.actualProtein}g</div>
-                        <div className="text-xs text-gray-400">Target: {mealPlan.targetProtein}g</div>
-                      </div>
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-green-400">Carbs</div>
-                        <div className="text-xl font-bold text-green-300">{mealPlan.actualCarbs}g</div>
-                        <div className="text-xs text-gray-400">Target: {mealPlan.targetCarbs}g</div>
-                      </div>
-                      <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center">
-                        <div className="text-sm text-yellow-400">Fats</div>
-                        <div className="text-xl font-bold text-yellow-300">{mealPlan.actualFat}g</div>
-                        <div className="text-xs text-gray-400">Target: {mealPlan.targetFat}g</div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-quantum-darkBlue/50 p-3 rounded-lg text-center mb-6">
-                      <div className="text-sm text-blue-400">Daily Water Intake</div>
-                      <div className="text-xl font-bold text-white">{mealPlan.hydrationTarget} ml</div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {mealPlan.meals.map((meal, index) => (
-                        <Collapsible 
-                          key={meal.id} 
-                          open={openMeals.includes(meal.id)}
-                          className="border border-quantum-purple/30 rounded-lg overflow-hidden"
-                        >
-                          <CollapsibleTrigger 
-                            className="flex items-center justify-between w-full p-4 text-left hover:bg-quantum-darkBlue/50 transition-colors"
-                            onClick={() => toggleMealOpen(meal.id)}
-                          >
-                            <div className="flex items-center">
-                              <Utensils className="h-5 w-5 mr-3 text-quantum-cyan" />
-                              <span className="text-lg font-medium">{meal.name}</span>
-                              <Badge className="ml-3 bg-quantum-cyan/20 text-quantum-cyan">{meal.totalCalories} kcal</Badge>
-                            </div>
-                            <div className="flex items-center space-x-6">
-                              <span className="text-sm hidden md:inline-block">
-                                <span className="text-blue-300">{meal.totalProtein}g P</span> · 
-                                <span className="text-green-300 ml-2">{meal.totalCarbs}g C</span> · 
-                                <span className="text-yellow-300 ml-2">{meal.totalFat}g F</span>
-                              </span>
-                              {openMeals.includes(meal.id) ? (
-                                <ChevronUp className="h-5 w-5" />
-                              ) : (
-                                <ChevronDown className="h-5 w-5" />
-                              )}
-                            </div>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="p-4 bg-quantum-black/30">
-                              <div className="grid gap-3">
-                                {meal.foods.map((mealFood) => (
-                                  <div 
-                                    key={`${meal.id}-${mealFood.food.id}`} 
-                                    className={`flex justify-between items-center p-3 border rounded-md ${getMealCategoryColor(mealFood.food.category)}`}
-                                  >
-                                    <div>
-                                      <div className="font-medium">{mealFood.food.name}</div>
-                                      <div className="text-sm text-gray-300">{mealFood.portionSize}g</div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm">
-                                        {Math.round(mealFood.food.calories * mealFood.portionSize / 100)} kcal
-                                      </div>
-                                      <div className="text-xs text-gray-400">
-                                        P: {Math.round(mealFood.food.protein * mealFood.portionSize / 100)}g · 
-                                        C: {Math.round(mealFood.food.carbs * mealFood.portionSize / 100)}g · 
-                                        F: {Math.round(mealFood.food.fat * mealFood.portionSize / 100)}g
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <h3 className="text-2xl font-semibold text-quantum-cyan mb-4">Calculate Your Nutrition Needs</h3>
+                <p className="mb-8">Start by calculating your daily calorie and macro needs to generate a personalized meal plan.</p>
+                <Button 
+                  onClick={() => setActiveTab('calculator')}
+                  className="bg-quantum-purple hover:bg-quantum-purple/90"
+                >
+                  Go to Calculator
+                </Button>
               </motion.div>
             )}
             
