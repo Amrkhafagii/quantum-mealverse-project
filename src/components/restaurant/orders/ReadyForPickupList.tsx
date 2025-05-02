@@ -41,7 +41,10 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
       // Fetch assignments for restaurant that are ready for pickup
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
-        .select('*, orders(*)')
+        .select(`
+          *,
+          orders:order_id(*)
+        `)
         .eq('restaurant_id', restaurantId)
         .eq('status', 'ready_for_pickup')
         .order('created_at', { ascending: false });

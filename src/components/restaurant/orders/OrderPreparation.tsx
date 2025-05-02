@@ -39,7 +39,10 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
       // Fetch assignments for restaurant that have been accepted and are being prepared
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
-        .select('*, orders(*)')
+        .select(`
+          *,
+          orders:order_id(*)
+        `)
         .eq('restaurant_id', restaurantId)
         .eq('status', 'accepted')
         .order('created_at', { ascending: false });

@@ -39,7 +39,10 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
       // Fetch completed assignments for the restaurant
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
-        .select('*, orders(*)')
+        .select(`
+          *,
+          orders:order_id(*)
+        `)
         .eq('restaurant_id', restaurantId)
         .in('status', ['delivered', 'cancelled', 'picked_up', 'on_the_way'])
         .order('created_at', { ascending: false })

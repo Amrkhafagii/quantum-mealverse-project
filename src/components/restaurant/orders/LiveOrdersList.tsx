@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +68,10 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
       // Fetch assignments for restaurant
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
-        .select('*, orders(*)')
+        .select(`
+          *,
+          orders:order_id(*)
+        `)
         .eq('restaurant_id', restaurantId)
         .in('status', filter === 'all' ? ['pending', 'accepted'] : ['pending'])
         .order('created_at', { ascending: false });
@@ -87,7 +91,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
           .select('*')
           .eq('order_id', assignment.order_id);
         
-        // Create a properly typed Order object from assignment.orders
+        // Create a properly typed Order object
         const orderData: Order = {
           id: assignment.orders.id,
           user_id: assignment.orders.user_id,
