@@ -30,10 +30,10 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
   const handleSetComplete = (updatedExercises: any[]) => {
     // Convert the updated exercises to our CompletedExercise format
     const formattedExercises: CompletedExercise[] = updatedExercises.map(ex => ({
-      exercise_id: ex.exercise_id,
-      name: ex.name,
-      exercise_name: ex.exercise_name,
-      sets_completed: ex.sets_completed,
+      exercise_id: ex.exercise_id || ex.id || '',
+      name: ex.name || '',
+      exercise_name: ex.exercise_name || ex.name || '',
+      sets_completed: ex.sets_completed || [],
     }));
     
     setCompletedExercises(formattedExercises);

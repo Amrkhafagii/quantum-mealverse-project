@@ -82,7 +82,6 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
     } catch (error) {
       console.error('Error loading profile:', error);
       toast({
-        title: "Error",
         description: "Failed to load fitness profile.",
         variant: "destructive"
       });
@@ -119,13 +118,11 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
       }
       
       toast({
-        title: "Profile Updated",
         description: "Your fitness profile has been saved successfully.",
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
-        title: "Error",
         description: "Failed to update fitness profile.",
         variant: "destructive"
       });
