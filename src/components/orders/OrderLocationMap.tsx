@@ -1,181 +1,184 @@
 
-import React, { useEffect, useState } from 'react';
-import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
-import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Order } from '@/types/order';
+import { MapPin, Navigation, Loader2 } from 'lucide-react';
 import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
-import { getLatestDeliveryLocation } from '@/services/delivery/deliveryLocationService';
-import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { GoogleMap, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
 
 interface OrderLocationMapProps {
   order: Order;
-  className?: string;
 }
 
-const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, className = '' }) => {
-  const { googleMapsApiKey } = useGoogleMaps();
-  const [mapReady, setMapReady] = useState(false);
-  const [driverLocation, setDriverLocation] = useState<any>(null);
-  const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
-  const [customerLocation, setCustomerLocation] = useState<any>(null);
-  const [assignmentId, setAssignmentId] = useState<string | null>(null);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
-  
-  // Fetch the assignment ID for this order (simulated)
-  useEffect(() => {
-    // In a real app, we would fetch this from the API
-    // For now, we'll simulate it based on the order ID
-    if (order?.id) {
-      // Create a deterministic assignment ID based on the order ID
-      setAssignmentId(`sim-assignment-${order.id.substring(0, 8)}`);
-    }
-  }, [order?.id]);
-  
-  // Subscribe to real-time location updates for this delivery
-  const { isSubscribed, latestLocation } = useRealtimeLocation({
-    assignmentId: assignmentId || undefined,
-    onLocationUpdate: (location) => {
-      console.log('Real-time driver location update received:', location);
-      setDriverLocation({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        title: 'Delivery Driver',
-        type: 'driver'
-      });
-      setLastUpdateTime(new Date(location.timestamp));
-    }
+const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [deliveryAssignment, setDeliveryAssignment] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [center, setCenter] = useState<{lat: number, lng: number}>({
+    lat: 30.0444, // Default to Egypt's coordinates
+    lng: 31.2357
   });
   
-  // Initialize map when API key is available
-  useEffect(() => {
-    if (googleMapsApiKey) {
-      setMapReady(true);
-    }
-  }, [googleMapsApiKey]);
-  
-  // Set customer location based on order
-  useEffect(() => {
-    if (order && order.latitude && order.longitude) {
-      setCustomerLocation({
-        latitude: order.latitude,
-        longitude: order.longitude,
-        title: 'Delivery Address',
-        description: order.delivery_address,
-        type: 'customer'
-      });
-    }
-  }, [order]);
-  
-  // Set restaurant location if available
-  useEffect(() => {
-    if (order && order.restaurant_id) {
-      // For now, use a simulated restaurant location
-      // In a real app, you'd fetch this from your database
-      setRestaurantLocation({
-        latitude: (order.latitude || 0) + 0.01, // Offset for demonstration
-        longitude: (order.longitude || 0) + 0.01,
-        title: order.restaurant?.name || 'Restaurant',
-        type: 'restaurant'
-      });
-    }
-  }, [order]);
-  
-  // Fetch initial driver location when assignment ID is available
-  useEffect(() => {
-    if (assignmentId) {
-      const fetchInitialLocation = async () => {
-        try {
-          const latestLocation = await getLatestDeliveryLocation(assignmentId);
-          if (latestLocation) {
-            setDriverLocation({
-              latitude: latestLocation.latitude,
-              longitude: latestLocation.longitude,
-              title: 'Delivery Driver',
-              type: 'driver'
-            });
-            setLastUpdateTime(new Date(latestLocation.timestamp));
-          }
-        } catch (error) {
-          console.error('Error fetching initial location:', error);
-        }
-      };
-      
-      fetchInitialLocation();
-    }
-  }, [assignmentId]);
-  
-  // If order isn't being delivered, just show the customer and restaurant locations
-  const showDeliveryDriver = ['on_the_way', 'picked_up'].includes(order?.status || '');
-  
-  // For demo purposes, if we don't have a real driver location yet, create a simulated one
-  useEffect(() => {
-    if (showDeliveryDriver && !driverLocation && restaurantLocation && customerLocation) {
-      // Create a simulated driver location between restaurant and customer
-      const factor = Math.random() * 0.7; // Random position between restaurant and customer
-      setDriverLocation({
-        latitude: restaurantLocation.latitude - ((restaurantLocation.latitude - customerLocation.latitude) * factor),
-        longitude: restaurantLocation.longitude - ((restaurantLocation.longitude - customerLocation.longitude) * factor),
-        title: 'Delivery Driver',
-        type: 'driver'
-      });
-      setLastUpdateTime(new Date());
-    }
-  }, [showDeliveryDriver, driverLocation, restaurantLocation, customerLocation]);
-  
-  return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle>Order Location</CardTitle>
-          {isSubscribed && (
-            <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-              <span className="mr-1 h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
-              Live Tracking
-            </span>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="p-2">
-        <DeliveryGoogleMap
-          driverLocation={showDeliveryDriver ? driverLocation : undefined}
-          restaurantLocation={restaurantLocation}
-          customerLocation={customerLocation}
-          showRoute={showDeliveryDriver}
-          className="h-[300px] w-full"
-          zoom={14}
-          autoCenter={true}
-          isInteractive={true}
-        />
-        
-        <div className="mt-2 text-sm space-y-1">
-          <p className="flex items-center">
-            <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-            Delivery Address
-          </p>
-          
-          {restaurantLocation && (
-            <p className="flex items-center">
-              <span className="inline-block w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
-              Restaurant
-            </p>
-          )}
-          
-          {showDeliveryDriver && driverLocation && (
-            <p className="flex items-center">
-              <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-              Delivery Driver
-            </p>
-          )}
+  const { latestLocation, isSubscribed } = useRealtimeLocation({
+    assignmentId: deliveryAssignment?.id
+  });
 
-          {lastUpdateTime && showDeliveryDriver && driverLocation && (
-            <p className="text-xs text-gray-400 mt-1">
-              Location updated {formatDistanceToNow(lastUpdateTime, { addSuffix: true })}
-              {isSubscribed && (
-                <span className="text-green-400 ml-1">• live updates enabled</span>
-              )}
-            </p>
+  // Fetch delivery assignment for this order
+  useEffect(() => {
+    const fetchDeliveryAssignment = async () => {
+      if (!order?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('delivery_assignments')
+          .select('*')
+          .eq('order_id', order.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+          
+        if (!error && data) {
+          setDeliveryAssignment(data);
+        }
+      } catch (error) {
+        console.error('Error fetching delivery assignment:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchDeliveryAssignment();
+  }, [order?.id]);
+  
+  // Calculate directions when we have the delivery location
+  useEffect(() => {
+    if (!map || !latestLocation || !order) return;
+    
+    const directionsService = new google.maps.DirectionsService();
+    
+    if (order.latitude && order.longitude) {
+      const origin = new google.maps.LatLng(latestLocation.latitude, latestLocation.longitude);
+      const destination = new google.maps.LatLng(order.latitude, order.longitude);
+      
+      directionsService.route({
+        origin,
+        destination,
+        travelMode: google.maps.TravelMode.DRIVING,
+      }, (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK) {
+          setDirections(result);
+        } else {
+          console.error(`Error fetching directions: ${status}`);
+        }
+      });
+    }
+  }, [map, latestLocation, order]);
+  
+  // Update center based on the latest available location
+  useEffect(() => {
+    if (latestLocation) {
+      setCenter({
+        lat: latestLocation.latitude,
+        lng: latestLocation.longitude
+      });
+    } else if (order?.latitude && order?.longitude) {
+      setCenter({
+        lat: order.latitude,
+        lng: order.longitude
+      });
+    }
+  }, [latestLocation, order]);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2">Loading map...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!order.latitude || !order.longitude) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <MapPin className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No location information available for this order.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-2 h-[300px]">
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          center={center}
+          zoom={14}
+          onLoad={(map) => setMap(map)}
+        >
+          {/* Restaurant marker */}
+          {order.restaurant?.id && order.restaurant?.latitude && order.restaurant?.longitude && (
+            <MarkerF
+              position={{ lat: order.restaurant.latitude, lng: order.restaurant.longitude }}
+              icon={{
+                url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                scaledSize: new google.maps.Size(40, 40)
+              }}
+              title={order.restaurant.name}
+            />
           )}
+          
+          {/* Delivery address marker */}
+          <MarkerF
+            position={{ lat: order.latitude, lng: order.longitude }}
+            icon={{
+              url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+              scaledSize: new google.maps.Size(40, 40)
+            }}
+            title="Delivery Address"
+          />
+          
+          {/* Delivery driver marker */}
+          {latestLocation && (
+            <MarkerF
+              position={{ lat: latestLocation.latitude, lng: latestLocation.longitude }}
+              icon={{
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                scale: 6,
+                fillColor: "#3f88c5",
+                fillOpacity: 1,
+                strokeWeight: 2,
+                rotation: 0
+              }}
+              title="Delivery Driver"
+            />
+          )}
+          
+          {/* Show directions if available */}
+          {directions && (
+            <DirectionsRenderer
+              directions={directions}
+              options={{
+                suppressMarkers: true,
+                polylineOptions: {
+                  strokeColor: "#3f88c5",
+                  strokeWeight: 5
+                }
+              }}
+            />
+          )}
+        </GoogleMap>
+        
+        {/* Connection status indicator */}
+        <div className="absolute bottom-2 right-2 bg-black/70 rounded-full px-2 py-1 text-xs flex items-center">
+          <span className={`w-2 h-2 rounded-full mr-1 ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          <span>{isSubscribed ? 'Live tracking' : 'Tracking offline'}</span>
         </div>
       </CardContent>
     </Card>

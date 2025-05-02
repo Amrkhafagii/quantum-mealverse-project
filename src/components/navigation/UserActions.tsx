@@ -1,116 +1,67 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Package, CreditCard, ShoppingCart, LogOut, User } from 'lucide-react';
-import { Switch } from "@/components/ui/switch";
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { NotificationPanel } from '@/components/notifications/NotificationPanel';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 
-interface UserActionsProps {
-  isCustomerView: boolean;
-  session: any;
-  isAdmin: boolean;
-  isRestaurant: boolean;
-  itemCount: number;
-  notificationCount: number;
-  toggleUserView: (checked: boolean) => void;
-  handleLogout: () => void;
-}
-
-export const UserActions = ({
-  isCustomerView,
-  session,
-  isAdmin,
-  isRestaurant,
-  itemCount,
-  toggleUserView,
-  handleLogout
-}: UserActionsProps) => {
-  const { isRestaurantOwner } = useRestaurantAuth();
-
-  // Don't show customer-specific actions for restaurant owners
-  const showCustomerActions = !isRestaurant || (isAdmin && isCustomerView);
-
-  return (
-    <div className="flex items-center gap-4">
-      {/* Only show customer features in customer view if not a restaurant or if admin */}
-      {isCustomerView && showCustomerActions && (
-        <>
-          {session && (
-            <Link to="/orders" className="relative">
-              <Button variant="ghost" className="text-quantum-cyan hover:text-white">
-                <Package className="h-5 w-5" />
-                <span className="ml-2 hidden md:inline">Track Orders</span>
-              </Button>
-            </Link>
-          )}
-          
-          {session && (
-            <NotificationPanel className="text-quantum-cyan hover:text-white" />
-          )}
-          
-          <Link to="/checkout" className="relative hidden md:block">
-            <Button variant="ghost" className="text-quantum-cyan hover:text-white">
-              <CreditCard className="h-5 w-5" />
-              <span className="ml-2 hidden md:inline">Checkout</span>
-            </Button>
-          </Link>
-          
-          {/* Single Cart button that displays on all screen sizes */}
-          <Link to="/cart" className="relative">
-            <Button variant="ghost" className="text-quantum-cyan hover:text-white">
-              <ShoppingCart className="h-5 w-5" />
-              {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-quantum-cyan text-quantum-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {itemCount}
-                </span>
-              )}
-            </Button>
-          </Link>
-        </>
-      )}
-
-      {/* Show notification panel in restaurant view */}
-      {isRestaurantOwner && !isCustomerView && session && (
-        <NotificationPanel className="text-[#1EAEDB] hover:text-white" />
-      )}
-      
-      {session ? (
-        <>
-          {isAdmin && (
-            <div className="hidden md:flex items-center gap-2 text-quantum-cyan">
-              <span className="text-sm">Customer</span>
-              <Switch onCheckedChange={toggleUserView} checked={!isCustomerView} />
-              <span className="text-sm">Admin</span>
-            </div>
-          )}
-          
-          {/* Add Profile link */}
-          <Link to="/profile">
-            <Button variant="ghost" className="text-quantum-cyan hover:text-white">
-              <User className="h-4 w-4 mr-2" />
-              <span className="hidden md:inline">Profile</span>
-            </Button>
-          </Link>
-          
-          <Button 
-            variant="ghost" 
-            className="text-quantum-cyan hover:text-white"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            <span className="hidden md:inline">Logout</span>
-          </Button>
-        </>
-      ) : (
+export const UserActions = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+  
+  if (!user) {
+    return (
+      <div className="flex items-center space-x-4">
         <Link to="/auth">
-          <Button variant="ghost" className="text-quantum-cyan hover:text-white">
-            <User className="h-4 w-4 mr-2" />
-            <span className="hidden md:inline">Login</span>
-          </Button>
+          <Button variant="outline">Sign In</Button>
         </Link>
-      )}
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex items-center space-x-4">
+      <NotificationDropdown />
+      
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-quantum-cyan text-black">
+              {user.email?.charAt(0).toUpperCase() || "U"}
+            </div>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end">
+          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => navigate('/orders')}>
+            My Orders
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate('/profile')}>
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate('/fitness')}>
+            Fitness
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout}>
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
