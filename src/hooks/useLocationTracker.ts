@@ -13,6 +13,15 @@ interface Location {
   longitude: number;
 }
 
+// Custom error that mimics GeolocationPositionError but can be created manually
+interface CustomPositionError {
+  code: number;
+  message: string;
+  PERMISSION_DENIED?: number;
+  POSITION_UNAVAILABLE?: number;
+  TIMEOUT?: number;
+}
+
 export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const {
     watchPosition = true,
@@ -23,7 +32,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
-  const [error, setError] = useState<GeolocationPositionError | null>(null);
+  const [error, setError] = useState<GeolocationPositionError | CustomPositionError | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [watchId, setWatchId] = useState<number | null>(null);
   const [intervalId, setIntervalId] = useState<number | null>(null);
@@ -67,12 +76,20 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const getCurrentPosition = useCallback(() => {
     if (!navigator.geolocation) {
-      const errorObject = new GeolocationPositionError();
-      errorObject.code = 2; // POSITION_UNAVAILABLE
-      errorObject.message = 'Geolocation not supported';
+      // Create a custom error object instead of modifying a GeolocationPositionError
+      const customError: CustomPositionError = {
+        code: 2, // POSITION_UNAVAILABLE
+        message: 'Geolocation not supported',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3
+      };
       
-      setError(errorObject);
-      if (onError) onError(errorObject);
+      setError(customError);
+      if (onError) {
+        // Cast is needed since our custom error isn't exactly a GeolocationPositionError
+        onError(customError as unknown as GeolocationPositionError);
+      }
       return;
     }
 
@@ -116,12 +133,17 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const getCurrentLocation = useCallback((): Promise<Location | null> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        const errorObject = new GeolocationPositionError();
-        errorObject.code = 2; // POSITION_UNAVAILABLE
-        errorObject.message = 'Geolocation not supported';
+        // Create a custom error object instead of modifying a GeolocationPositionError
+        const customError: CustomPositionError = {
+          code: 2, // POSITION_UNAVAILABLE
+          message: 'Geolocation not supported',
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3
+        };
         
-        setError(errorObject);
-        reject(errorObject);
+        setError(customError);
+        reject(customError);
         return;
       }
 
@@ -151,13 +173,21 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) {
-      const errorObject = new GeolocationPositionError();
-      errorObject.code = 2; // POSITION_UNAVAILABLE
-      errorObject.message = 'Geolocation not supported';
+      // Create a custom error object instead of modifying a GeolocationPositionError
+      const customError: CustomPositionError = {
+        code: 2, // POSITION_UNAVAILABLE
+        message: 'Geolocation not supported',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3
+      };
       
-      setError(errorObject);
+      setError(customError);
       setIsTracking(false);
-      if (onError) onError(errorObject);
+      if (onError) {
+        // Cast is needed since our custom error isn't exactly a GeolocationPositionError
+        onError(customError as unknown as GeolocationPositionError);
+      }
       return;
     }
 
