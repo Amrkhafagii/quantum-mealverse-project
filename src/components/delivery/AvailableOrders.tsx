@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
-import { findNearbyAssignments, acceptDeliveryAssignment, rejectDeliveryAssignment } from '@/services/delivery/deliveryOrderAssignmentService';
+import { findNearbyAssignments, acceptDeliveryAssignment, rejectAssignment } from '@/services/delivery/deliveryOrderAssignmentService';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, MapPin, DollarSign, Clock, AlertCircle } from 'lucide-react';
@@ -97,7 +96,7 @@ export const AvailableOrders: React.FC = () => {
   
   const handleReject = async (assignmentId: string) => {
     try {
-      await rejectDeliveryAssignment(assignmentId);
+      await rejectAssignment(assignmentId);
       setAvailableOrders(availableOrders.filter(order => order.id !== assignmentId));
     } catch (err) {
       console.error('Error rejecting order:', err);

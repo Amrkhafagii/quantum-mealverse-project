@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 
 interface LocationTrackerOptions {
@@ -64,13 +63,12 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const getCurrentPosition = useCallback(() => {
     if (!navigator.geolocation) {
-      setError({
+      const errorObject = {
         code: 0,
         message: 'Geolocation not supported',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-      });
+      } as GeolocationPositionError;
+      
+      setError(errorObject);
       return;
     }
 
@@ -89,15 +87,13 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const getCurrentLocation = useCallback((): Promise<Location | null> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        const err = {
+        const errorObject = {
           code: 0,
           message: 'Geolocation not supported',
-          PERMISSION_DENIED: 1,
-          POSITION_UNAVAILABLE: 2,
-          TIMEOUT: 3
-        };
-        setError(err);
-        reject(err);
+        } as GeolocationPositionError;
+        
+        setError(errorObject);
+        reject(errorObject);
         return;
       }
 
@@ -126,13 +122,12 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) {
-      setError({
+      const errorObject = {
         code: 0,
         message: 'Geolocation not supported',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-      });
+      } as GeolocationPositionError;
+      
+      setError(errorObject);
       setIsTracking(false);
       return;
     }
