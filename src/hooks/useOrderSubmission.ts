@@ -104,7 +104,7 @@ export const useOrderSubmission = (
       });
       
       clearCart();
-      navigate(`/thank-you?order=${insertedOrder.id}`);
+      navigate(`/order-confirmation/${insertedOrder.id}`);
     } catch (error: any) {
       console.error("Order submission error:", error);
       setIsSubmitting(false);
