@@ -110,8 +110,9 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           subtotal: orderData.subtotal,
           total: orderData.total,
           status: orderData.status,
-          latitude: orderData.latitude,
-          longitude: orderData.longitude,
+          // Either use the values from orderData or provide default null values
+          latitude: orderData.latitude || null,
+          longitude: orderData.longitude || null, 
           formatted_order_id: orderData.formatted_order_id,
           created_at: orderData.created_at,
           updated_at: orderData.updated_at,

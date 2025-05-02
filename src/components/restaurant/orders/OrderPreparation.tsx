@@ -86,7 +86,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
         if (typedOrderItems && typedOrderItems.length > 0) {
           const maxPrepTime = typedOrderItems.reduce((max, item) => {
             // Safely access preparation_time with a default of 15
-            const itemPrepTime = (item as any).preparation_time || 15;
+            const itemPrepTime = item.preparation_time || 15;
             return Math.max(max, itemPrepTime);
           }, 15);
           const prepTimeMs = maxPrepTime * 60 * 1000;
@@ -109,8 +109,9 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           subtotal: orderData.subtotal,
           total: orderData.total,
           status: orderData.status,
-          latitude: orderData.latitude,
-          longitude: orderData.longitude,
+          // Either use the values from orderData or provide default null values
+          latitude: orderData.latitude || null,
+          longitude: orderData.longitude || null,
           formatted_order_id: orderData.formatted_order_id,
           created_at: orderData.created_at,
           updated_at: orderData.updated_at,
