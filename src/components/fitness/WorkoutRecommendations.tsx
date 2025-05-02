@@ -1,288 +1,168 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Brain, TrendingUp, Clock, Calendar, Dumbbell, Activity, ChevronRight } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Dumbbell, Check, X, ArrowRight, Trophy } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import { getUserRecommendations, dismissRecommendation, applyRecommendation } from '@/services/recommendationService';
 import { WorkoutRecommendation } from '@/types/fitness';
-import { getUserRecommendations, applyRecommendation, dismissRecommendation } from '@/services/recommendationService';
-import { motion, AnimatePresence } from 'framer-motion';
 
-interface WorkoutRecommendationsProps {
-  userId?: string;
-  fitnessLevel?: 'beginner' | 'intermediate' | 'advanced';
-}
-
-const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
-  userId,
-  fitnessLevel = 'intermediate'
-}) => {
-  const { toast } = useToast();
+const WorkoutRecommendations: React.FC = () => {
+  const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<WorkoutRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (userId) {
-      loadRecommendations();
-    } else {
-      setLoading(false);
-    }
-  }, [userId]);
+    loadRecommendations();
+  }, [user]);
 
   const loadRecommendations = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      const { data, error } = await getUserRecommendations(userId || '');
-      
+      const { data, error } = await getUserRecommendations(user.id);
       if (error) throw error;
       
-      // Add default properties needed to avoid TypeScript errors
-      const enhancedData = (data || []).map(rec => ({
-        ...rec,
-        dismissed: rec.dismissed || false,
-        applied: rec.applied || false,
-        type: rec.type || 'exercise',
-        title: rec.title || rec.name,
-        confidence_score: rec.confidence_score || 80,
-        reason: rec.reason || 'Based on your fitness level and goals'
-      }));
-      
-      setRecommendations(enhancedData);
-    } catch (error) {
-      console.error('Error loading recommendations:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load workout recommendations',
-        variant: 'destructive'
-      });
+      if (data) {
+        setRecommendations(data.filter(rec => !rec.applied && !rec.dismissed));
+      }
+    } catch (err) {
+      console.error("Error loading recommendations:", err);
+      toast.error("Failed to load workout recommendations");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApply = async (recommendation: WorkoutRecommendation) => {
+  const handleDismiss = async (recommendationId: string) => {
+    if (!user) return;
+    
     try {
-      const result = await applyRecommendation(recommendation.id, userId);
+      const { success, error } = await dismissRecommendation(recommendationId, user.id);
       
-      if (result.success) {
-        // Update local state
-        setRecommendations(prevRecs => 
-          prevRecs.map(rec => 
-            rec.id === recommendation.id 
-              ? { ...rec, applied: true, applied_at: new Date().toISOString() }
-              : rec
-          )
-        );
-        
-        toast({
-          title: 'Recommendation Applied',
-          description: 'The recommendation has been applied to your workout plan.',
-        });
-      } else if (result.error) {
-        throw result.error;
+      if (error) throw new Error(error);
+      
+      if (success) {
+        // Remove from local state
+        setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
+        toast.success("Recommendation dismissed");
       }
-    } catch (error) {
-      console.error('Error applying recommendation:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to apply recommendation',
-        variant: 'destructive'
-      });
+    } catch (err) {
+      console.error("Error dismissing recommendation:", err);
+      toast.error("Failed to dismiss recommendation");
     }
   };
 
-  const handleDismiss = async (recommendation: WorkoutRecommendation) => {
+  const handleApply = async (recommendationId: string) => {
+    if (!user) return;
+    
     try {
-      const result = await dismissRecommendation(recommendation.id, userId);
+      const { success, error } = await applyRecommendation(recommendationId, user.id);
       
-      if (result.success) {
-        // Update local state
-        setRecommendations(prevRecs => 
-          prevRecs.map(rec => 
-            rec.id === recommendation.id 
-              ? { ...rec, dismissed: true }
-              : rec
-          )
-        );
-        
-        toast({
-          title: 'Recommendation Dismissed',
-          description: 'The recommendation has been dismissed.',
-        });
-        
-        // Show next recommendation if available
-        if (currentIndex < recommendations.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        }
-      } else if (result.error) {
-        throw result.error;
+      if (error) throw new Error(error);
+      
+      if (success) {
+        // Remove from local state or mark as applied
+        setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
+        toast.success("Recommendation applied to your workout schedule!");
+        // Here you would typically add logic to actually apply the recommendation
+        // e.g., create a new workout plan based on the recommendation
       }
-    } catch (error) {
-      console.error('Error dismissing recommendation:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to dismiss recommendation',
-        variant: 'destructive'
-      });
+    } catch (err) {
+      console.error("Error applying recommendation:", err);
+      toast.error("Failed to apply recommendation");
     }
   };
-
-  const getRecommendationIcon = (type: string) => {
-    switch (type) {
-      case 'plan':
-        return <Calendar className="h-5 w-5 text-blue-400" />;
-      case 'exercise':
-        return <Dumbbell className="h-5 w-5 text-green-400" />;
-      case 'rest':
-        return <Clock className="h-5 w-5 text-purple-400" />;
-      case 'adjustment':
-        return <TrendingUp className="h-5 w-5 text-orange-400" />;
-      case 'equipment':
-        return <Activity className="h-5 w-5 text-red-400" />;
-      default:
-        return <Brain className="h-5 w-5 text-quantum-cyan" />;
-    }
-  };
-
-  const getConfidenceBadge = (score: number) => {
-    if (score >= 90) {
-      return <Badge className="bg-green-700">High Confidence</Badge>;
-    } else if (score >= 70) {
-      return <Badge className="bg-blue-700">Medium Confidence</Badge>;
-    } else {
-      return <Badge className="bg-orange-700">Suggestion</Badge>;
-    }
-  };
-
-  const getActiveRecommendations = () => {
-    return recommendations.filter(rec => !rec.dismissed && !rec.applied);
-  };
-
-  const activeRecommendations = getActiveRecommendations();
-  const currentRec = activeRecommendations[currentIndex];
 
   if (loading) {
     return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <Brain className="h-10 w-10 text-quantum-cyan mx-auto mb-2 animate-pulse" />
-          <p>Analyzing your workout data...</p>
+      <Card className="min-h-[200px] flex items-center justify-center">
+        <CardContent>
+          <p>Loading workout recommendations...</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (!userId) {
+  if (recommendations.length === 0) {
     return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <Brain className="h-16 w-16 text-quantum-cyan/50 mx-auto mb-4" />
-          <p className="text-gray-400">Sign in to get personalized workout recommendations</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (activeRecommendations.length === 0) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <Card className="min-h-[200px]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-quantum-cyan" />
-            AI Coach
+          <CardTitle className="flex items-center">
+            <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+            You're All Set!
           </CardTitle>
-          <CardDescription>Personalized workout recommendations</CardDescription>
+          <CardDescription>
+            No new workout recommendations at this time.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-2 text-center">
-          <Brain className="h-16 w-16 text-quantum-cyan/50 mx-auto mb-4" />
-          <p className="mb-2">No recommendations at the moment</p>
-          <p className="text-sm text-gray-400">Keep logging your workouts and we'll provide personalized advice soon.</p>
+        <CardContent>
+          <p className="text-sm text-gray-400">
+            Continue with your current workout plan or create a new one from the workout planner.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-quantum-cyan" />
-          AI Coach
-        </CardTitle>
-        <CardDescription>Personalized workout recommendations</CardDescription>
-      </CardHeader>
+    <div className="space-y-4">
+      <h3 className="text-xl font-bold">Recommended For You</h3>
       
-      <CardContent>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentRec.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="mb-4"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              {getRecommendationIcon(currentRec.type || 'exercise')}
-              <h3 className="text-lg font-semibold">{currentRec.title || currentRec.name}</h3>
-            </div>
-            
-            <p className="text-gray-300 mb-3">{currentRec.description}</p>
-            
-            <div className="flex justify-between items-center">
-              {getConfidenceBadge(currentRec.confidence_score || 80)}
-              
-              <div className="flex gap-2">
-                {currentIndex < activeRecommendations.length - 1 && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => setCurrentIndex(currentIndex + 1)}
-                  >
-                    Next <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                )}
+      {recommendations.map((recommendation) => (
+        <Card key={recommendation.id} className="border-l-4 border-l-quantum-cyan">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="flex items-center">
+                  <Dumbbell className="mr-2 h-5 w-5 text-quantum-cyan" />
+                  {recommendation.title || recommendation.name}
+                </CardTitle>
+                <CardDescription>
+                  {recommendation.reason && (
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {recommendation.reason}
+                    </Badge>
+                  )}
+                </CardDescription>
               </div>
+              <Badge variant="secondary" className="text-xs">
+                {Math.round((recommendation.confidence_score || 0.5) * 100)}% Match
+              </Badge>
             </div>
+          </CardHeader>
+          
+          <CardContent>
+            <p className="text-sm">{recommendation.description}</p>
+          </CardContent>
+          
+          <CardFooter className="flex justify-between">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleDismiss(recommendation.id)}
+              className="text-gray-500 hover:text-red-500"
+            >
+              <X className="mr-1 h-4 w-4" />
+              Dismiss
+            </Button>
             
-            {currentRec.reason && (
-              <div className="mt-3 p-2 bg-quantum-black/40 rounded-md">
-                <p className="text-xs text-gray-400">
-                  <span className="font-semibold">Analysis:</span> {currentRec.reason}
-                </p>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-        
-        <div className="flex mt-4 space-x-2">
-          <Button 
-            className="flex-1 bg-quantum-cyan hover:bg-quantum-cyan/80"
-            onClick={() => handleApply(currentRec)}
-          >
-            <Check className="h-4 w-4 mr-1" /> Apply
-          </Button>
-          <Button 
-            variant="outline" 
-            className="flex-1"
-            onClick={() => handleDismiss(currentRec)}
-          >
-            <X className="h-4 w-4 mr-1" /> Dismiss
-          </Button>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="pt-0 flex justify-between">
-        <p className="text-xs text-gray-400">
-          Recommendations: {currentIndex + 1}/{activeRecommendations.length}
-        </p>
-        <p className="text-xs text-gray-400">
-          Based on your {fitnessLevel} level
-        </p>
-      </CardFooter>
-    </Card>
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={() => handleApply(recommendation.id)}
+              className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
+            >
+              <Check className="mr-1 h-4 w-4" />
+              Apply
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   );
 };
 

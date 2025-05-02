@@ -1,5 +1,5 @@
 import { MealPlan } from './food';
-import { Json } from '@/integrations/supabase/types';
+import { Json } from '@/types/database';
 
 export interface SavedMealPlan {
   id: string;
@@ -8,8 +8,8 @@ export interface SavedMealPlan {
   date_created: string;
   tdee_id: string;
   meal_plan: Json | MealPlan;
-  expires_at?: string;
-  is_active?: boolean;
+  expires_at: string | null;
+  is_active: boolean;
 }
 
 // User Profile Types

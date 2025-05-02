@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useLocationPermission = () => {
   const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
   const [trackingEnabled, setTrackingEnabled] = useState<boolean>(false);
+  const [isRequesting, setIsRequesting] = useState<boolean>(false);
 
   useEffect(() => {
     // Check if location tracking is enabled in preferences
@@ -48,5 +49,79 @@ export const useLocationPermission = () => {
     checkPermission();
   }, []);
 
-  return { permissionStatus, trackingEnabled };
+  // Add missing requestPermission function
+  const requestPermission = async (): Promise<boolean> => {
+    setIsRequesting(true);
+    
+    try {
+      if ('geolocation' in navigator) {
+        return new Promise<boolean>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              // Permission granted
+              setPermissionStatus('granted');
+              
+              // Update user preferences
+              await toggleTracking(true);
+              
+              setIsRequesting(false);
+              resolve(true);
+            },
+            (error) => {
+              // Permission denied
+              console.error('Error requesting location permission:', error);
+              setPermissionStatus('denied');
+              setIsRequesting(false);
+              resolve(false);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          );
+        });
+      }
+      setIsRequesting(false);
+      return false;
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      setIsRequesting(false);
+      return false;
+    }
+  };
+  
+  // Add toggleTracking function
+  const toggleTracking = async (enabled: boolean): Promise<boolean> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) return false;
+      
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: session.user.id,
+          location_tracking_enabled: enabled
+        }, { 
+          onConflict: 'user_id' 
+        });
+      
+      if (error) throw error;
+      
+      setTrackingEnabled(enabled);
+      return true;
+    } catch (error) {
+      console.error('Error updating location tracking preferences:', error);
+      return false;
+    }
+  };
+
+  // Compute if tracking is currently active (both permission granted and enabled in preferences)
+  const isTracking = permissionStatus === 'granted' && trackingEnabled;
+
+  return { 
+    permissionStatus, 
+    trackingEnabled, 
+    requestPermission,
+    isRequesting,
+    toggleTracking,
+    isTracking
+  };
 };

@@ -1,184 +1,157 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutRecommendation, UserProfile, UserWorkoutStats, WorkoutHistoryItem } from '@/types/fitness';
-import { v4 as uuidv4 } from 'uuid';
+import { WorkoutRecommendation } from '@/types/fitness';
 
 /**
- * Get workout recommendations for a user
+ * Gets workout recommendations for a user
  */
-export async function getWorkoutRecommendations(userId: string): Promise<{ data: WorkoutRecommendation[] | null, error: any }> {
+export const getUserRecommendations = async (userId: string): Promise<{ 
+  data: WorkoutRecommendation[] | null;
+  error: any;
+}> => {
   try {
     const { data, error } = await supabase
       .from('workout_recommendations')
       .select('*')
       .eq('user_id', userId)
-      .eq('dismissed', false);
-
+      .eq('dismissed', false)
+      .order('confidence_score', { ascending: false });
+    
     if (error) throw error;
-      
+    
     if (!data) return { data: null, error: null };
     
-    // Transform data to match WorkoutRecommendation interface
-    const enhancedRecommendations: WorkoutRecommendation[] = data.map(rec => ({
+    // Convert database records to WorkoutRecommendation objects
+    const recommendations: WorkoutRecommendation[] = data.map(rec => ({
       id: rec.id,
       name: rec.title || 'Workout Recommendation',
-      description: rec.description || '',
-      difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced',
-      target_goal: rec.type || 'fitness',
-      workout_days: [],
-      duration_estimate: '30-45 minutes',
-      equipment_needed: [],
-      dismissed: rec.dismissed || false,
-      applied: rec.applied || false,
-      applied_at: rec.applied_at,
-      type: rec.type,
       title: rec.title,
-      confidence_score: rec.confidence_score,
+      description: rec.description,
+      type: rec.type || 'general',
+      difficulty: 'intermediate', // Default
+      target_goal: rec.reason || 'general fitness',
+      workout_days: [],
+      equipment_needed: [],
+      duration_estimate: '30-45 minutes',
       reason: rec.reason,
+      confidence_score: rec.confidence_score,
+      dismissed: rec.dismissed,
+      applied: rec.applied,
+      applied_at: rec.applied_at,
       user_id: rec.user_id
     }));
     
-    return { data: enhancedRecommendations, error: null };
+    return { data: recommendations, error: null };
   } catch (error) {
     console.error('Error fetching workout recommendations:', error);
     return { data: null, error };
   }
-}
-
-// Alias for backwards compatibility
-export const getUserRecommendations = getWorkoutRecommendations;
+};
 
 /**
- * Get a single workout recommendation by ID
+ * Dismisses a workout recommendation
  */
-export async function getWorkoutRecommendationById(recommendationId: string) {
+export const dismissRecommendation = async (recommendationId: string, userId: string): Promise<{ 
+  success: boolean;
+  error?: string;
+}> => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('workout_recommendations')
-      .select('*')
+      .update({ dismissed: true })
       .eq('id', recommendationId)
-      .single();
-      
-    return { data, error };
-  } catch (error) {
-    console.error('Error fetching workout recommendation:', error);
-    return { data: null, error };
-  }
-}
-
-/**
- * Create a recommendation for a user
- */
-export async function createRecommendation(recommendation: WorkoutRecommendation, userId: string) {
-  try {
-    // Add user_id to the recommendation object
-    const recWithUserId = {
-      ...recommendation,
-      user_id: userId
-    };
+      .eq('user_id', userId);
     
-    const { data, error } = await supabase
-      .from('workout_recommendations')
-      .insert(recWithUserId)
-      .select()
-      .single();
-      
     if (error) throw error;
     
-    return { data, error: null };
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error dismissing recommendation:', error);
+    return { 
+      success: false,
+      error: error.message 
+    };
+  }
+};
+
+/**
+ * Marks a recommendation as applied
+ */
+export const applyRecommendation = async (recommendationId: string, userId: string): Promise<{ 
+  success: boolean;
+  error?: string;
+}> => {
+  try {
+    const now = new Date().toISOString();
+    
+    const { error } = await supabase
+      .from('workout_recommendations')
+      .update({
+        applied: true,
+        applied_at: now
+      })
+      .eq('id', recommendationId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error applying recommendation:', error);
+    return { 
+      success: false,
+      error: error.message 
+    };
+  }
+};
+
+/**
+ * Creates a new recommendation (typically called by the backend)
+ */
+export const createRecommendation = async (recommendation: Partial<WorkoutRecommendation>): Promise<{
+  data: WorkoutRecommendation | null;
+  error: any;
+}> => {
+  try {
+    const { data, error } = await supabase
+      .from('workout_recommendations')
+      .insert({
+        user_id: recommendation.user_id,
+        title: recommendation.title || recommendation.name,
+        description: recommendation.description,
+        type: recommendation.type,
+        reason: recommendation.reason,
+        confidence_score: recommendation.confidence_score || 0.5,
+        suggested_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    // Convert to WorkoutRecommendation
+    const typedData: WorkoutRecommendation = {
+      id: data.id,
+      name: data.title || 'Workout Recommendation',
+      title: data.title,
+      description: data.description,
+      difficulty: 'intermediate', // Default
+      target_goal: data.reason || 'general fitness',
+      workout_days: [],
+      type: data.type || 'general',
+      equipment_needed: [],
+      duration_estimate: '30-45 minutes',
+      reason: data.reason,
+      confidence_score: data.confidence_score,
+      dismissed: data.dismissed,
+      applied: data.applied,
+      applied_at: data.applied_at,
+      user_id: data.user_id
+    };
+    
+    return { data: typedData, error: null };
   } catch (error) {
     console.error('Error creating recommendation:', error);
     return { data: null, error };
   }
-}
-
-/**
- * Update an existing workout recommendation
- */
-export async function updateWorkoutRecommendation(recommendation: WorkoutRecommendation, userId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('workout_recommendations')
-      .update(recommendation)
-      .eq('id', recommendation.id)
-      .eq('user_id', userId) // Ensure user_id is included
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return { data, error: null };
-  } catch (error) {
-    console.error('Error updating workout recommendation:', error);
-    return { data: null, error };
-  }
-}
-
-/**
- * Delete a workout recommendation
- */
-export async function deleteWorkoutRecommendation(recommendationId: string, userId: string) {
-  try {
-    const { error } = await supabase
-      .from('workout_recommendations')
-      .delete()
-      .eq('id', recommendationId)
-      .eq('user_id', userId); // Ensure user_id is included
-      
-    return { success: !error, error };
-  } catch (error) {
-    console.error('Error deleting workout recommendation:', error);
-    return { success: false, error };
-  }
-}
-
-/**
- * Dismiss a recommendation
- */
-export async function dismissRecommendation(recommendationId: string, userId?: string) {
-  try {
-    const updateObj: any = { dismissed: true };
-    if (userId) updateObj.user_id = userId;
-    
-    const { data, error } = await supabase
-      .from('workout_recommendations')
-      .update(updateObj)
-      .eq('id', recommendationId)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return { data, error: null, success: true };
-  } catch (error) {
-    console.error('Error dismissing recommendation:', error);
-    return { data: null, error, success: false };
-  }
-}
-
-/**
- * Apply a workout recommendation
- */
-export async function applyRecommendation(recommendationId: string, userId?: string) {
-  try {
-    const updateObj: any = { 
-      applied: true,
-      applied_at: new Date().toISOString()
-    };
-    if (userId) updateObj.user_id = userId;
-    
-    const { data, error } = await supabase
-      .from('workout_recommendations')
-      .update(updateObj)
-      .eq('id', recommendationId)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return { data, error: null, success: true };
-  } catch (error) {
-    console.error('Error applying recommendation:', error);
-    return { data: null, error, success: false };
-  }
-}
+};

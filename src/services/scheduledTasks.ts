@@ -1,6 +1,18 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
+import { Json } from '@/types/database';
+
+interface SavedMealPlanDB {
+  id: string;
+  user_id: string;
+  name: string;
+  date_created: string;
+  tdee_id: string;
+  meal_plan: Json;
+  expires_at: string;
+  is_active: boolean;
+}
 
 /**
  * Marks expired meal plans as inactive

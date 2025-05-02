@@ -1,7 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutPlan, WorkoutLog, WorkoutHistoryItem, UserWorkoutStats, WorkoutSchedule } from '@/types/fitness';
+import { WorkoutPlan, WorkoutLog, WorkoutHistoryItem, UserWorkoutStats, WorkoutSchedule, WorkoutDay } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
+import { Json } from '@/types/database';
 
 /**
  * Gets all workout plans for a user
@@ -26,7 +27,7 @@ export const getUserWorkoutPlans = async (userId: string): Promise<{ data: Worko
         frequency: plan.frequency,
         goal: plan.goal,
         difficulty: plan.difficulty as 'beginner' | 'intermediate' | 'advanced',
-        workout_days: Array.isArray(plan.workout_days) ? plan.workout_days : [],
+        workout_days: Array.isArray(plan.workout_days) ? (plan.workout_days as unknown as WorkoutDay[]) : [],
         created_at: plan.created_at,
         updated_at: plan.updated_at,
         duration_weeks: plan.duration_weeks
@@ -63,7 +64,7 @@ export const getWorkoutPlanById = async (planId: string): Promise<{ data: Workou
       frequency: data.frequency,
       goal: data.goal,
       difficulty: data.difficulty as 'beginner' | 'intermediate' | 'advanced',
-      workout_days: Array.isArray(data.workout_days) ? data.workout_days : [],
+      workout_days: Array.isArray(data.workout_days) ? (data.workout_days as unknown as WorkoutDay[]) : [],
       created_at: data.created_at,
       updated_at: data.updated_at,
       duration_weeks: data.duration_weeks
@@ -81,9 +82,13 @@ export const getWorkoutPlanById = async (planId: string): Promise<{ data: Workou
  */
 export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
   try {
+    // Convert WorkoutDay[] to Json for storage
+    const workoutDaysJson = JSON.parse(JSON.stringify(plan.workout_days)) as Json;
+    
     // Ensure duration_weeks is set with a default value for database requirement
     const planWithDefaults = {
       ...plan,
+      workout_days: workoutDaysJson,
       duration_weeks: plan.duration_weeks || 4 // Default to 4 weeks if not provided
     };
     
@@ -104,7 +109,7 @@ export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Work
       frequency: data.frequency,
       goal: data.goal,
       difficulty: data.difficulty as 'beginner' | 'intermediate' | 'advanced',
-      workout_days: Array.isArray(data.workout_days) ? data.workout_days : [],
+      workout_days: Array.isArray(data.workout_days) ? (data.workout_days as unknown as WorkoutDay[]) : [],
       created_at: data.created_at,
       updated_at: data.updated_at,
       duration_weeks: data.duration_weeks
@@ -122,9 +127,18 @@ export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Work
  */
 export const updateWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: WorkoutPlan | null, error: any }> => {
   try {
+    // Convert WorkoutDay[] to Json for storage
+    const workoutDaysJson = JSON.parse(JSON.stringify(plan.workout_days)) as Json;
+    
+    // Create a new plan object with the JSON workout_days
+    const planToUpdate = {
+      ...plan,
+      workout_days: workoutDaysJson
+    };
+    
     const { data, error } = await supabase
       .from('workout_plans')
-      .update(plan)
+      .update(planToUpdate)
       .eq('id', plan.id)
       .select()
       .single();
@@ -140,7 +154,7 @@ export const updateWorkoutPlan = async (plan: WorkoutPlan): Promise<{ data: Work
       frequency: data.frequency,
       goal: data.goal,
       difficulty: data.difficulty as 'beginner' | 'intermediate' | 'advanced',
-      workout_days: Array.isArray(data.workout_days) ? data.workout_days : [],
+      workout_days: Array.isArray(data.workout_days) ? (data.workout_days as unknown as WorkoutDay[]) : [],
       created_at: data.created_at,
       updated_at: data.updated_at,
       duration_weeks: data.duration_weeks
@@ -177,10 +191,14 @@ export const deleteWorkoutPlan = async (planId: string): Promise<{ success: bool
  */
 export const logWorkout = async (log: WorkoutLog): Promise<{ data: WorkoutLog | null, error: any }> => {
   try {
+    // Convert completed_exercises to JSON
+    const completedExercisesJson = JSON.parse(JSON.stringify(log.completed_exercises)) as Json;
+    
     // If workout_plan_id is not provided, use a placeholder or null
     const logWithDefaults = {
       ...log,
-      workout_plan_id: log.workout_plan_id || null // Allow null for workout_plan_id
+      workout_plan_id: log.workout_plan_id || null, // Allow null for workout_plan_id
+      completed_exercises: completedExercisesJson
     };
     
     const { data, error } = await supabase
