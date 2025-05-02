@@ -11,6 +11,7 @@ import { OrderItemsList } from './OrderItemsList';
 import { useOrderData } from '@/hooks/useOrderData';
 import { checkAssignmentStatus } from '@/services/orders/webhookService';
 import { useInterval } from '@/hooks/use-interval';
+import OrderLocationMap from './OrderLocationMap';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -100,6 +101,13 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
               assignmentStatus={assignmentStatus}
               onOrderUpdate={refetch}
             />
+            
+            {/* Add map for orders that are being prepared, picked up or on the way */}
+            {['preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status) && (
+              <div className="mt-4">
+                <OrderLocationMap order={order} />
+              </div>
+            )}
           </div>
 
           <OrderDetailsGrid order={order} />

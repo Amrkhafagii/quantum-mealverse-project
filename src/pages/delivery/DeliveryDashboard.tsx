@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,11 +10,12 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { AlertCircle, MapPin } from 'lucide-react';
-import { ActiveDeliveries } from '@/components/delivery/ActiveDeliveries';
 import DeliveryHistory from '@/components/delivery/DeliveryHistory';
 import EarningsSummary from '@/components/delivery/EarningsSummary';
 import { AvailableOrders } from '@/components/delivery/AvailableOrders';
 import LocationTrackingBadge from '@/components/delivery/LocationTrackingBadge';
+import ActiveDeliveriesWithMap from '@/components/delivery/ActiveDeliveriesWithMap';
+import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 
 const DeliveryDashboard = () => {
   const { user } = useAuth();
@@ -24,6 +24,7 @@ const DeliveryDashboard = () => {
   const [activeTab, setActiveTab] = useState('available');
   const [toggleStatus, setToggleStatus] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const { updateDriverLocation } = useDeliveryMap();
   
   // Setup location tracking for the dashboard
   const { 
@@ -36,7 +37,18 @@ const DeliveryDashboard = () => {
     getCurrentLocation
   } = useLocationTracker({
     watchPosition: true,
-    trackingInterval: 30000
+    trackingInterval: 30000,
+    onLocationUpdate: (position) => {
+      // Update the map when location changes
+      if (toggleStatus) {
+        updateDriverLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          title: 'Your location',
+          type: 'driver'
+        });
+      }
+    }
   });
   
   useEffect(() => {
@@ -260,7 +272,7 @@ const DeliveryDashboard = () => {
               </TabsContent>
               
               <TabsContent value="active">
-                <ActiveDeliveries />
+                <ActiveDeliveriesWithMap />
               </TabsContent>
               
               <TabsContent value="history">
