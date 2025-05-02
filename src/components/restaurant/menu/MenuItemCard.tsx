@@ -4,14 +4,13 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Edit, Trash2, Info } from 'lucide-react';
-import { MenuItem } from '@/types/restaurant';
+import { MenuItem } from '@/types/menu';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { saveMenuItem, deleteMenuItem } from '@/services/restaurant/menuService';
 import {
@@ -41,7 +40,11 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onUpdate }) => {
   const handleAvailabilityChange = async () => {
     try {
       setIsUpdating(true);
-      const updatedItem = { ...item, is_available: !item.is_available };
+      const updatedItem: MenuItem = { 
+        ...item, 
+        is_available: !item.is_available 
+      };
+      
       await saveMenuItem(updatedItem);
       
       toast({

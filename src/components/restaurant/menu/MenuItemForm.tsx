@@ -126,6 +126,7 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
         protein: data.nutritional_info.protein,
         carbs: data.nutritional_info.carbs,
         fat: data.nutritional_info.fat,
+        // Health score will be calculated in the backend
         health_score: item.nutritional_info?.health_score
       } as NutritionalInfo,
       ingredients,

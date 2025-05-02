@@ -9,7 +9,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import { MealType } from '@/types/meal';
 import { useCart } from '@/contexts/CartContext';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
-import { parseNutritionalInfo } from '@/types/menu';
+import { MenuItem, parseNutritionalInfo } from '@/types/menu';
 
 const MealDetailsPage = () => {
   const { id } = useParams<{ id: string }>();

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Check, Loader2, X } from 'lucide-react';
 import { saveMenuItem } from '@/services/restaurant/menuService';
 import { toast } from '@/hooks/use-toast';
-import { MenuItem } from '@/types/restaurant';
+import { MenuItem } from '@/types/menu';
 
 // Define the form schema
 const menuItemSchema = z.object({
@@ -96,7 +96,7 @@ const EditMenuItemForm: React.FC<EditMenuItemFormProps> = ({ item, onCancel, onS
         preparation_time: data.preparation_time,
         is_available: data.is_available,
         ingredients: ingredientsArray,
-        nutritional_info: data.nutritional_info || null,
+        nutritional_info: data.nutritional_info || {},
       };
       
       await saveMenuItem(updatedItem);
