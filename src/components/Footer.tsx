@@ -1,5 +1,6 @@
 
-import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Mail, Phone, MapPin, Info, MessageSquare, Package } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -24,11 +25,12 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold text-quantum-cyan mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <FooterLink href="#">Home</FooterLink>
-              <FooterLink href="#solutions">Solutions</FooterLink>
-              <FooterLink href="#subscription">Subscription</FooterLink>
-              <FooterLink href="#about">About Us</FooterLink>
-              <FooterLink href="#faq">FAQ</FooterLink>
+              <FooterLink href="/">Home</FooterLink>
+              <FooterLink href="/customer">Order Food</FooterLink>
+              <FooterLink href="/fitness">Fitness</FooterLink>
+              <FooterLink href="/workouts">Workouts</FooterLink>
+              <FooterLink href="/orders">Track Orders</FooterLink>
+              <FooterLink href="/cart">Cart</FooterLink>
             </ul>
           </div>
 
@@ -47,6 +49,18 @@ const Footer = () => {
               <li className="flex items-center">
                 <Mail className="w-5 h-5 text-quantum-purple mr-3" />
                 <span className="text-gray-400">contact@healthandfix.com</span>
+              </li>
+              <li className="mt-4">
+                <Link to="/contact" className="flex items-center text-gray-400 hover:text-quantum-cyan">
+                  <MessageSquare className="w-5 h-5 text-quantum-purple mr-3" />
+                  <span>Contact Page</span>
+                </Link>
+              </li>
+              <li className="mt-2">
+                <Link to="/about" className="flex items-center text-gray-400 hover:text-quantum-cyan">
+                  <Info className="w-5 h-5 text-quantum-purple mr-3" />
+                  <span>About Us</span>
+                </Link>
               </li>
             </ul>
           </div>
@@ -109,12 +123,12 @@ interface FooterLinkProps {
 const FooterLink = ({ href, children }: FooterLinkProps) => {
   return (
     <li>
-      <a
-        href={href}
+      <Link
+        to={href}
         className="text-gray-400 hover:text-quantum-cyan transition-colors duration-200"
       >
         {children}
-      </a>
+      </Link>
     </li>
   );
 };
