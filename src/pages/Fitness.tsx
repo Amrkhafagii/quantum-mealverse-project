@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -321,7 +320,7 @@ const Fitness = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           <div className="bg-quantum-darkBlue/50 p-4 rounded-lg border border-quantum-cyan/30">
                             <p className="text-sm text-gray-400">Total Workouts</p>
-                            <p className="text-2xl font-bold">{stats?.totalWorkouts || 0}</p>
+                            <p className="text-2xl font-bold">{stats?.total_workouts || 0}</p>
                           </div>
                           <div className="bg-quantum-darkBlue/50 p-4 rounded-lg border border-quantum-cyan/30">
                             <p className="text-sm text-gray-400">Current Streak</p>

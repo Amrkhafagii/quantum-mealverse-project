@@ -1,157 +1,141 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useLocationTracker } from './useLocationTracker';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useLocationPermission = () => {
-  const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
   const [isRequesting, setIsRequesting] = useState(false);
   const [trackingEnabled, setTrackingEnabled] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
+  const [location, setLocation] = useState<GeolocationPosition | null>(null);
   const { toast } = useToast();
-  const { 
-    startTracking, 
-    stopTracking, 
-    isTracking, 
-    location, 
-    getCurrentLocation, 
-    checkPermissionStatus 
-  } = useLocationTracker();
 
-  // Check stored preferences and permission status on mount
   useEffect(() => {
-    const checkStoredPreference = async () => {
-      // Check if user has stored preferences
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('user_preferences')
-          .select('location_tracking_enabled')
-          .eq('user_id', user.id)
-          .single();
+    const checkPermission = async () => {
+      if ('permissions' in navigator) {
+        try {
+          const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          setPermissionStatus(status.state);
           
-        if (data?.location_tracking_enabled) {
-          setTrackingEnabled(true);
-          // If tracking is enabled in preferences, start it automatically
-          const status = await checkPermissionStatus();
-          if (status === 'granted') {
-            startTracking();
+          // Listen for changes to permission status
+          status.onchange = () => setPermissionStatus(status.state);
+        } catch (error) {
+          console.error('Error checking geolocation permission:', error);
+        }
+      }
+
+      // Check if tracking is enabled in user preferences
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data } = await supabase
+            .from('user_preferences')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          // Check if location_tracking_enabled exists in data
+          if (data && 'location_tracking_enabled' in data) {
+            setTrackingEnabled(!!data.location_tracking_enabled);
           }
         }
+      } catch (error) {
+        console.error('Error checking user preferences:', error);
       }
     };
     
-    checkPermissionStatus().then(setPermissionStatus);
-    checkStoredPreference();
+    checkPermission();
   }, []);
 
-  // Store location when we get a new position
-  useEffect(() => {
-    const storeLocation = async () => {
-      if (location && trackingEnabled) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('user_locations').insert({
-            user_id: user.id,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      }
-    };
-    
-    storeLocation();
-  }, [location, trackingEnabled]);
+  const requestPermission = async (): Promise<boolean> => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Geolocation Not Supported",
+        description: "Your browser doesn't support location services.",
+        variant: "destructive"
+      });
+      return false;
+    }
 
-  // Request permission and get initial location
-  const requestPermission = useCallback(async () => {
     setIsRequesting(true);
     
     try {
-      const permStatus = await checkPermissionStatus();
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setPermissionStatus('granted');
+            setLocation(position);
+            resolve(true);
+          },
+          (error) => {
+            console.error('Geolocation permission denied:', error);
+            setPermissionStatus('denied');
+            toast({
+              title: "Location Access Denied",
+              description: "You've denied access to your location. You can change this in your browser settings.",
+              variant: "destructive"
+            });
+            resolve(false);
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      });
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  const toggleTracking = async (enabled: boolean): Promise<boolean> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (permStatus === 'denied') {
+      if (!user) {
         toast({
-          title: 'Location Permission Required',
-          description: 'Please enable location access in your browser settings.',
-          variant: 'destructive',
+          title: "Authentication Required",
+          description: "You need to be logged in to change tracking settings.",
+          variant: "destructive"
         });
-        setPermissionStatus('denied');
-        setIsRequesting(false);
         return false;
       }
       
-      const newLocation = await getCurrentLocation();
-      
-      if (newLocation) {
-        // Store the user's preference
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Store both the preference and the location
-          await Promise.all([
-            // Store user preference
-            supabase.from('user_preferences').upsert({
-              user_id: user.id,
-              location_tracking_enabled: true
-            }),
-            // Store location
-            supabase.from('user_locations').insert({
-              user_id: user.id,
-              latitude: newLocation.latitude,
-              longitude: newLocation.longitude,
-              timestamp: new Date().toISOString()
-            })
-          ]);
-        }
-        
-        setTrackingEnabled(true);
-        startTracking();
-        
-        toast({
-          title: 'Location Access Granted',
-          description: 'We can now show you nearby restaurants',
-        });
-        
-        setIsRequesting(false);
-        return true;
-      }
-    } catch (error) {
-      console.error('Failed to get location permission:', error);
-      toast({
-        title: 'Location Error',
-        description: 'Failed to access your location.',
-        variant: 'destructive',
-      });
-    }
-    
-    setIsRequesting(false);
-    return false;
-  }, [getCurrentLocation, toast, startTracking, checkPermissionStatus]);
-
-  // Toggle tracking on/off
-  const toggleTracking = useCallback(async (enabled: boolean) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      if (enabled) {
-        const success = await requestPermission();
-        if (!success) return false;
-      } else {
-        stopTracking();
-        // Update user preference
-        await supabase.from('user_preferences').upsert({
+      // Update user preferences
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
           user_id: user.id,
-          location_tracking_enabled: false
+          location_tracking_enabled: enabled
+        }, {
+          onConflict: 'user_id'
         });
+      
+      if (error) {
+        console.error('Error updating tracking preferences:', error);
+        toast({
+          title: "Settings Update Failed",
+          description: "Failed to update location tracking settings.",
+          variant: "destructive"
+        });
+        return false;
       }
       
       setTrackingEnabled(enabled);
+      setIsTracking(enabled && permissionStatus === 'granted');
+      
+      toast({
+        title: enabled ? "Location Tracking Enabled" : "Location Tracking Disabled",
+        description: enabled 
+          ? "You will now receive location-based recommendations." 
+          : "You have turned off location tracking."
+      });
+      
       return true;
+    } catch (error) {
+      console.error('Error toggling tracking:', error);
+      return false;
     }
-    
-    return false;
-  }, [requestPermission, stopTracking]);
+  };
 
   return {
     permissionStatus,
@@ -160,6 +144,6 @@ export const useLocationPermission = () => {
     isTracking,
     location,
     requestPermission,
-    toggleTracking,
+    toggleTracking
   };
 };

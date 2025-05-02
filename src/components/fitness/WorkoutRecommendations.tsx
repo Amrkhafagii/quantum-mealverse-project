@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -38,7 +37,18 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
       
       if (error) throw error;
       
-      setRecommendations(data || []);
+      // Add default properties needed to avoid TypeScript errors
+      const enhancedData = (data || []).map(rec => ({
+        ...rec,
+        dismissed: false,
+        applied: false,
+        type: rec.type || 'exercise',
+        title: rec.title || rec.name,
+        confidence_score: rec.confidence_score || 80,
+        reason: rec.reason || 'Based on your fitness level and goals'
+      }));
+      
+      setRecommendations(enhancedData);
     } catch (error) {
       console.error('Error loading recommendations:', error);
       toast({
@@ -214,14 +224,14 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
             className="mb-4"
           >
             <div className="flex items-center gap-2 mb-2">
-              {getRecommendationIcon(currentRec.type)}
-              <h3 className="text-lg font-semibold">{currentRec.title}</h3>
+              {getRecommendationIcon(currentRec.type || 'exercise')}
+              <h3 className="text-lg font-semibold">{currentRec.title || currentRec.name}</h3>
             </div>
             
             <p className="text-gray-300 mb-3">{currentRec.description}</p>
             
             <div className="flex justify-between items-center">
-              {getConfidenceBadge(currentRec.confidence_score)}
+              {getConfidenceBadge(currentRec.confidence_score || 80)}
               
               <div className="flex gap-2">
                 {currentIndex < activeRecommendations.length - 1 && (

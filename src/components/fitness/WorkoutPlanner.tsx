@@ -105,12 +105,13 @@ const WorkoutPlanner: React.FC<WorkoutPlannerProps> = ({ userId, onPlanSelect })
   };
   
   const addNewExercise = (dayIndex: number) => {
-    // Create a new empty exercise
+    // Create a new empty exercise with the required target_muscle property
     const newExercise: Exercise = {
       id: `ex-${Date.now()}`,
       exercise_id: `ex-${Date.now()}`,
       name: 'New Exercise',
       exercise_name: 'New Exercise',
+      target_muscle: 'general', // Added target_muscle which is required
       sets: 3,
       reps: 10,
       weight: 0
@@ -213,20 +214,20 @@ const WorkoutPlanCard: React.FC<WorkoutPlanCardProps> = ({
 }) => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   
-  // Define addNewExercise function that was missing
+  // Define addNewExercise function with corrected Exercise type
   const addNewExercise = (dayIndex: number) => {
-    // Create a new empty exercise
+    // Create a new empty exercise with the required target_muscle property
     const newExercise: Exercise = {
       id: `ex-${Date.now()}`,
       exercise_id: `ex-${Date.now()}`,
       name: 'New Exercise',
       exercise_name: 'New Exercise',
+      target_muscle: 'general', // Added the required target_muscle property
       sets: 3,
       reps: 10,
       weight: 0
     };
     
-    // Example of how to add it - in a real app, you'd update the state and database
     console.log('Adding exercise:', newExercise, 'to day:', dayIndex);
   };
   

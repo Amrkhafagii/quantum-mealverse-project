@@ -1,5 +1,6 @@
 
 import { MealPlan } from './food';
+import { Json } from '@/integrations/supabase/types';
 
 export interface SavedMealPlan {
   id: string;
@@ -7,7 +8,7 @@ export interface SavedMealPlan {
   name: string;
   date_created: string;
   tdee_id: string;
-  meal_plan: MealPlan;
+  meal_plan: Json | MealPlan;
   expires_at?: string;  // Field for expiration date
   is_active?: boolean;  // Field to track if plan is active
 }
@@ -24,9 +25,8 @@ export interface UserProfile {
   fitness_goal: 'weight_loss' | 'maintenance' | 'muscle_gain';
   created_at: string;
   updated_at?: string;
-  goal_weight?: number;  // Added goal_weight property
-  fitness_goals?: string[];  // Added fitness_goals array
-  // Adding fields from fitness_profiles
+  goal_weight?: number;
+  fitness_goals?: string[];
   dietary_preferences?: string[];
   dietary_restrictions?: string[];
   display_name?: string;
@@ -41,13 +41,13 @@ export interface UserMeasurement {
   date: string;
   weight?: number;
   body_fat_percentage?: number;
-  body_fat?: number;  // Added body_fat property
+  body_fat?: number;
   chest?: number;
   waist?: number;
   hips?: number;
   arms?: number;
   thighs?: number;
-  legs?: number;  // Added legs property
+  legs?: number;
   notes?: string;
 }
 
@@ -63,7 +63,7 @@ export interface WorkoutPlan {
   workout_days: WorkoutDay[];
   created_at: string;
   updated_at?: string;
-  duration_weeks?: number;  // Added duration_weeks property
+  duration_weeks?: number;
 }
 
 export interface WorkoutDay {
@@ -86,11 +86,12 @@ export interface Exercise {
   notes?: string;
   video_url?: string;
   image_url?: string;
-  exercise_id?: string;  // Added exercise_id property
-  exercise_name?: string;  // Added exercise_name property
-  rest_time?: number;  // Added rest_time property
-  rest?: number;  // Added rest property
-  duration?: string | number;  // Added duration property
+  exercise_id?: string;
+  exercise_name?: string;
+  rest_time?: number;
+  rest?: number;
+  duration?: string | number;
+  completed?: boolean;
 }
 
 export interface WorkoutSet {
@@ -104,8 +105,11 @@ export interface WorkoutSet {
 export interface CompletedExercise {
   exercise_id: string;
   exercise_name: string;
+  name?: string;
   sets_completed: WorkoutSet[] | number;
   notes?: string;
+  reps_completed?: any[];
+  weight_used?: any[];
 }
 
 export interface CompletedExerciseData {
@@ -135,11 +139,11 @@ export interface WorkoutHistoryItem {
   calories_burned?: number;
   exercises_count: number;
   workout_log_id: string;
-  exercises_completed?: number;  // Added exercises_completed property
-  total_exercises?: number;  // Added total_exercises property
-  workout_plan_name?: string;  // Added workout_plan_name property
-  workout_day_name?: string;  // Added workout_day_name property
-  user_id?: string; // For compatibility with FitnessAnalyticsDashboard
+  exercises_completed?: number;
+  total_exercises?: number;
+  workout_plan_name?: string;
+  workout_day_name?: string;
+  user_id?: string;
 }
 
 export interface UserWorkoutStats {
@@ -151,18 +155,19 @@ export interface UserWorkoutStats {
   favorite_exercise: string;
   weight_lifted: number;
   completion_rate: number;
-  currentStreak?: number;  // Added currentStreak property
-  longestStreak?: number;  // Added longestStreak property
-  total_time?: number;  // Added total_time property
-  strongest_exercise?: {  // Added strongest_exercise property
+  currentStreak?: number;
+  longestStreak?: number;
+  total_time?: number;
+  strongest_exercise?: {
     exercise_name: string;
     max_weight: number;
   };
-  most_improved_exercise?: {  // Added most_improved_exercise property
+  most_improved_exercise?: {
     exercise_name: string;
     improvement_percentage: number;
   };
-  weekly_goal_completion?: number;  // Added weekly_goal_completion property
+  weekly_goal_completion?: number;
+  totalWorkouts?: number; // Alias for total_workouts for backward compatibility
 }
 
 export interface WorkoutSchedule {
@@ -173,9 +178,9 @@ export interface WorkoutSchedule {
   days_of_week: number[];
   reminder_time?: string;
   created_at: string;
-  active?: boolean;  // Added active property
-  preferred_time?: string;  // Added preferred_time property
-  end_date?: string;  // Added end_date property
+  active?: boolean;
+  preferred_time?: string;
+  end_date?: string;
 }
 
 export interface WorkoutRecommendation {
@@ -189,6 +194,13 @@ export interface WorkoutRecommendation {
   rating?: number;
   duration_estimate: string;
   equipment_needed: string[];
+  dismissed?: boolean;
+  applied?: boolean;
+  applied_at?: string;
+  type?: string;
+  title?: string;
+  confidence_score?: number;
+  reason?: string;
 }
 
 // Achievement System Types
@@ -226,26 +238,32 @@ export interface StreakReward {
   reward_type: 'badge' | 'points' | 'discount' | 'feature';
   reward_value: number | string;
   icon: string;
-  days?: number; // Added to support StreakRewards component
+  days?: number;
+  title?: string; // Added title to fix StreakRewards component errors
+}
+
+export interface StreakRewardsProps {
+  userId?: string;
+  currentStreak?: number;
+  longestStreak?: number;
 }
 
 // Goals System
 export interface FitnessGoal {
   id: string;
   user_id: string;
-  title: string;
+  title?: string; // Optional to be backward compatible
+  name?: string; // Keeping this for backward compatibility
   description?: string;
-  category: 'weight' | 'nutrition' | 'workout' | 'measurement' | 'habit';
-  target_value: number;
-  current_value: number;
-  start_date: string;
-  target_date: string;
-  completed: boolean;
+  category?: 'weight' | 'nutrition' | 'workout' | 'measurement' | 'habit';
+  target_value?: number;
+  current_value?: number;
+  start_date?: string;
+  target_date?: string;
+  completed?: boolean;
   completed_date?: string;
   color?: string;
   units?: string;
-  // Adding missing fields used in GoalManagement
-  name?: string;
   status?: 'active' | 'completed' | 'abandoned';
   created_at?: string;
   updated_at?: string;
@@ -259,9 +277,12 @@ export interface Team {
   name: string;
   description?: string;
   created_by: string;
+  creator_id?: string; // Added for TeamChallenges compatibility
   created_at: string;
   member_count: number;
+  members_count?: number; // Alias for backward compatibility 
   avatar_url?: string;
+  total_points?: number; // Added for TeamChallenges compatibility
 }
 
 export interface TeamMember {
@@ -269,15 +290,17 @@ export interface TeamMember {
   team_id: string;
   user_id: string;
   joined_date: string;
+  joined_at?: string; // Alias for backward compatibility
   role: 'admin' | 'member';
   points_contributed: number;
+  contribution_points?: number;
 }
 
 export interface Challenge {
   id: string;
   title: string;
   description: string;
-  type: 'steps' | 'workouts' | 'weight' | 'nutrition' | 'distance';
+  type: 'steps' | 'workouts' | 'weight' | 'nutrition' | 'distance' | 'individual' | 'team';
   target_value: number;
   start_date: string;
   end_date: string;
@@ -287,6 +310,10 @@ export interface Challenge {
   prize_description?: string;
   rules?: string;
   is_active: boolean;
+  status?: string; // Added for TeamChallenges compatibility
+  goal_value?: number; // Added for TeamChallenges compatibility
+  goal_type?: string; // Added for TeamChallenges compatibility
+  reward_points?: number; // Added for TeamChallenges compatibility
 }
 
 export interface DailyQuest {
@@ -297,9 +324,9 @@ export interface DailyQuest {
   points: number;
   icon: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  user_id?: string;  // Added user_id property
-  completed?: boolean;  // Added completed property
-  created_at?: string;  // Added created_at property
-  expires_at?: string;  // Added expires_at property
-  expiry_hours?: number;  // Added expiry_hours property
+  user_id?: string;
+  completed?: boolean;
+  created_at?: string;
+  expires_at?: string;
+  expiry_hours?: number;
 }

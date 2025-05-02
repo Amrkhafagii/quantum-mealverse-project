@@ -1,4 +1,3 @@
-
 import { fromTable, supabase } from './supabaseClient';
 import { FitnessGoal } from '@/types/fitness';
 
@@ -51,23 +50,32 @@ export const addFitnessGoal = async (goal: FitnessGoal): Promise<{ data: Fitness
 /**
  * Updates an existing fitness goal
  */
-export const updateFitnessGoal = async (goal: FitnessGoal): Promise<{ data: FitnessGoal | null, error: any }> => {
+export const updateFitnessGoal = async (goalData: FitnessGoal) => {
   try {
-    // Update the updated_at timestamp
-    const goalWithTimestamp = {
-      ...goal,
+    // Ensure we're sending the correct data structure expected by the API
+    // Make sure properties match the FitnessGoal interface
+    
+    const apiData = {
+      id: goalData.id,
+      user_id: goalData.user_id,
+      name: goalData.name || goalData.title, // Use name or title
+      description: goalData.description,
+      status: goalData.status || 'active',
+      target_date: goalData.target_date,
+      target_weight: goalData.target_weight,
+      target_body_fat: goalData.target_body_fat,
       updated_at: new Date().toISOString()
     };
     
-    const { data, error } = await fromTable('fitness_goals')
-      .update(goalWithTimestamp)
-      .eq('id', goal.id)
-      .select()
-      .single();
-    
+    const { data, error } = await supabase
+      .from('fitness_goals')
+      .update(apiData)
+      .eq('id', goalData.id)
+      .select();
+
     if (error) throw error;
     
-    return { data: data as FitnessGoal, error: null };
+    return { data: data?.[0] || null, error: null };
   } catch (error) {
     console.error('Error updating fitness goal:', error);
     return { data: null, error };

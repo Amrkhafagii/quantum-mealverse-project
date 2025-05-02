@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth'; // Fixed import path
 import { MealPlan } from '@/types/food';
+import { Json } from '@/integrations/supabase/types';
 
 interface MealPlanDisplayProps {
   mealPlan: MealPlan;
@@ -154,7 +155,7 @@ interface TDEEResult {
   fatsGrams: number;
 }
 
-// Add the saveMealPlan function if it doesn't exist
+// Add the saveMealPlan function to handle JSON conversion properly
 const saveMealPlan = async (userId: string, planName: string, mealPlan: MealPlan, tdeeResult: TDEEResult) => {
   try {
     // Calculate expiration date (14 days from now)
@@ -180,6 +181,9 @@ const saveMealPlan = async (userId: string, planName: string, mealPlan: MealPlan
       
     if (tdeeError) throw tdeeError;
     
+    // Serialize the meal plan to JSON compatible format - crucial fix
+    const serializedMealPlan = JSON.parse(JSON.stringify(mealPlan)) as Json;
+    
     // Now save the meal plan with expiration date
     const { data, error } = await supabase
       .from('saved_meal_plans')
@@ -190,7 +194,7 @@ const saveMealPlan = async (userId: string, planName: string, mealPlan: MealPlan
         expires_at: expiresAt.toISOString(),
         is_active: true,
         tdee_id: tdeeData.id,
-        meal_plan: mealPlan,
+        meal_plan: serializedMealPlan,
       });
       
     if (error) throw error;

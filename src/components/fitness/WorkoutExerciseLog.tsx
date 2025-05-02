@@ -66,29 +66,30 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
     }
 
     // Convert the completed exercises to the format expected by the API
-    const formattedCompletedExercises: CompletedExercise[] = completedExercises
+    const formattedCompletedExercises = completedExercises
       .map(exercise => {
         // Filter out sets that weren't completed
         const completedSets = exercise.sets_completed.filter((set: any) => set.completed);
         
         if (completedSets.length === 0) return null;
         
-        // Create a base object without notes
-        const baseExercise = {
+        // Create a base object with the required properties
+        const baseExercise: CompletedExercise = {
           exercise_id: exercise.exercise_id,
-          name: exercise.name,
           exercise_name: exercise.exercise_name,
+          name: exercise.exercise_name, // Add name property to match type
           sets_completed: completedSets,
           reps_completed: completedSets.map((set: any) => set.reps),
           weight_used: completedSets.map((set: any) => set.weight),
         };
         
         // Only add notes if it exists and is not empty
-        return exercise.notes 
-          ? { ...baseExercise, notes: exercise.notes }
-          : baseExercise;
+        if (exercise.notes) {
+          baseExercise.notes = exercise.notes;
+        }
+        
+        return baseExercise;
       })
-      // Use type predicate to filter out null entries and correctly type as CompletedExercise
       .filter((ex): ex is CompletedExercise => ex !== null);
 
     try {

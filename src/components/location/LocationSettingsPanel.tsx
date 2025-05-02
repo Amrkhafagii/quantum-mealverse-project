@@ -1,28 +1,22 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { MapPin, Shield, Clock } from 'lucide-react';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { MapPin, AlertCircle, Clock, Settings } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
-const LocationSettingsPanel = () => {
+const LocationSettingsPanel: React.FC = () => {
   const { 
     permissionStatus, 
-    location,
-    trackingEnabled,
-    toggleTracking,
-    requestPermission,
-    lastUpdated,
+    trackingEnabled, 
+    isTracking,
+    toggleTracking
   } = useLocationPermission();
-  
-  const formatDate = (date: Date | null) => {
-    if (!date) return 'Never';
-    return new Intl.DateTimeFormat('en-US', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    }).format(date);
+
+  const handleToggleTracking = async () => {
+    await toggleTracking(!trackingEnabled);
   };
 
   return (
@@ -32,89 +26,72 @@ const LocationSettingsPanel = () => {
           <MapPin className="h-5 w-5 text-quantum-cyan" />
           Location Settings
         </CardTitle>
-        <CardDescription>
-          Manage how we use your location data
-        </CardDescription>
+        <CardDescription>Manage how the app uses your location</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      
+      <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="location-tracking">Location Tracking</Label>
-            <p className="text-sm text-gray-400">
-              Enable to see nearby restaurants and get delivery estimates
-            </p>
+            <div className="font-medium">Location Tracking</div>
+            <div className="text-sm text-gray-400">
+              {trackingEnabled 
+                ? "Enabled: Get restaurant recommendations near you" 
+                : "Disabled: You won't see nearby recommendations"}
+            </div>
           </div>
           <Switch
-            id="location-tracking"
             checked={trackingEnabled}
-            onCheckedChange={toggleTracking}
+            onCheckedChange={handleToggleTracking}
           />
         </div>
         
-        {permissionStatus === 'denied' && (
-          <div className="bg-red-900/20 border border-red-700/30 rounded-md p-3 text-sm">
-            <div className="flex gap-2">
-              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
-              <p>
-                Location access has been denied in your browser settings. 
-                Please enable location services to use all features.
-              </p>
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <div className="font-medium">Browser Permission</div>
+            <div className="text-sm text-gray-400">
+              {permissionStatus === 'granted' 
+                ? "Granted: Browser has access to your location" 
+                : permissionStatus === 'denied'
+                ? "Denied: Update your browser settings to enable"
+                : "Not set: Permission has not been requested"}
             </div>
           </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-          <div className="p-3 bg-quantum-black/50 rounded-md">
-            <div className="text-xs text-gray-400 mb-1">Location Status</div>
-            <div className="flex items-center">
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                permissionStatus === 'granted' ? 'bg-green-500' : 
-                permissionStatus === 'prompt' ? 'bg-yellow-500' : 'bg-red-500'
-              }`} />
-              <span>
-                {permissionStatus === 'granted' ? 'Allowed' : 
-                 permissionStatus === 'prompt' ? 'Not Set' : 'Denied'}
-              </span>
-            </div>
-          </div>
-          
-          <div className="p-3 bg-quantum-black/50 rounded-md">
-            <div className="text-xs text-gray-400 mb-1">Last Updated</div>
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1 text-gray-400" />
-              <span>{formatDate(lastUpdated)}</span>
-            </div>
-          </div>
-          
-          <div className="p-3 bg-quantum-black/50 rounded-md">
-            <div className="text-xs text-gray-400 mb-1">Update Frequency</div>
-            <div className="flex items-center">
-              <Settings className="h-4 w-4 mr-1 text-gray-400" />
-              <span>Every 15 minutes</span>
-            </div>
+          <div className="flex h-5 w-5 items-center justify-center">
+            {permissionStatus === 'granted' ? (
+              <Shield className="h-5 w-5 text-green-500" />
+            ) : permissionStatus === 'denied' ? (
+              <Shield className="h-5 w-5 text-red-500" />
+            ) : (
+              <Shield className="h-5 w-5 text-yellow-500" />
+            )}
           </div>
         </div>
         
-        {location && (
-          <div className="p-3 bg-quantum-black/50 rounded-md mt-2">
-            <div className="text-xs text-gray-400 mb-1">Current Location</div>
-            <div className="font-mono text-sm">
-              {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-            </div>
+        {permissionStatus === 'denied' && (
+          <div className="rounded-md p-4 bg-quantum-black/40">
+            <p className="text-sm text-gray-300">
+              Location access is currently denied in your browser settings. To enable:
+            </p>
+            <ol className="list-decimal list-inside mt-2 text-sm text-gray-400 space-y-1">
+              <li>Open your browser settings</li>
+              <li>Navigate to Privacy &amp; Security</li>
+              <li>Update location permissions for this site</li>
+            </ol>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-3"
+              onClick={() => window.location.reload()}
+            >
+              Refresh Page
+            </Button>
           </div>
         )}
         
-        <div className="pt-4">
-          <Button 
-            onClick={requestPermission} 
-            disabled={permissionStatus === 'granted' || permissionStatus === 'denied'}
-            variant="outline"
-            className="w-full"
-          >
-            <MapPin className="h-4 w-4 mr-2" />
-            {permissionStatus === 'denied' ? 'Location Access Denied' :
-             permissionStatus === 'granted' ? 'Location Access Granted' : 'Request Location Access'}
-          </Button>
+        <div className="border-t border-quantum-gray/20 pt-4">
+          <p className="text-xs text-gray-400">
+            Location data is only used while you use the app and is not shared with third parties.
+          </p>
         </div>
       </CardContent>
     </Card>

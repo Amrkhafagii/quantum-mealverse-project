@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -190,16 +189,20 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
       return;
     }
     
-    // Prepare the goal object
+    // Prepare the goal object with the correct properties matching FitnessGoal interface
     const goalData: FitnessGoal = {
       id: editingGoal?.id || uuidv4(),
       user_id: userId,
       name: goalName,
+      title: goalName, // Add title property for compatibility
       description: goalDescription,
-      target_date: targetDate ? targetDate.toISOString() : null,
+      target_date: targetDate ? targetDate.toISOString() : undefined,
       target_weight: targetWeight,
       target_body_fat: targetBodyFat,
       status: editingGoal?.status || 'active',
+      category: 'weight', // Default category
+      target_value: targetWeight || 0, // Use target weight as the target value
+      current_value: 0, // Default current value
       created_at: editingGoal?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
