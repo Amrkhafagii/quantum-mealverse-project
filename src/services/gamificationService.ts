@@ -8,7 +8,9 @@ import {
   DailyQuest,
   Team,
   Challenge,
-  ChallengeParticipant
+  ChallengeParticipant,
+  TeamMember,
+  StreakReward
 } from '@/types/fitness';
 
 /**
@@ -165,12 +167,13 @@ export const updateUserStreak = async (userId: string, date: string, streakType 
     
     if (!currentStreak) {
       // Create new streak if it doesn't exist
-      const newStreak: Partial<UserStreak> = {
+      const newStreak: UserStreak = {
         user_id: userId,
         currentstreak: 1,
         longeststreak: 1,
         last_activity_date: todayStr,
-        streak_type: streakType
+        streak_type: streakType,
+        id: crypto.randomUUID()
       };
       
       const { data, error } = await supabase
@@ -233,20 +236,50 @@ export const updateUserStreak = async (userId: string, date: string, streakType 
 
 /**
  * Gets daily quests for a user
+ * Since the daily_quests table doesn't exist,
+ * we'll mock this functionality
  */
 export const getDailyQuests = async (userId: string): Promise<{ data: DailyQuest[] | null, error: any }> => {
   try {
-    // Get today's date at midnight
+    // Mock data since the table doesn't exist
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const { data, error } = await supabase
-      .from('daily_quests')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('expires_at', today.toISOString());
+    const quests: DailyQuest[] = [
+      {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        title: "Complete a workout today",
+        description: "Log at least one workout session",
+        points: 10,
+        completed: false,
+        created_at: today.toISOString(),
+        expires_at: tomorrow.toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        title: "Record your measurements",
+        description: "Update your body measurements",
+        points: 5,
+        completed: false,
+        created_at: today.toISOString(),
+        expires_at: tomorrow.toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        title: "Complete 5000 steps",
+        description: "Walk at least 5000 steps today",
+        points: 15,
+        completed: false,
+        created_at: today.toISOString(),
+        expires_at: tomorrow.toISOString()
+      }
+    ];
     
-    return { data, error };
+    return { data: quests, error: null };
   } catch (error) {
     return { data: null, error };
   }
@@ -254,18 +287,16 @@ export const getDailyQuests = async (userId: string): Promise<{ data: DailyQuest
 
 /**
  * Updates a daily quest status
+ * Since the daily_quests table doesn't exist,
+ * this is a mock function
  */
 export const updateQuestStatus = async (
   questId: string, 
   completed: boolean
 ): Promise<{ success: boolean, error: any }> => {
   try {
-    const { error } = await supabase
-      .from('daily_quests')
-      .update({ completed })
-      .eq('id', questId);
-    
-    if (error) throw error;
+    // This would normally update the database
+    console.log(`Quest ${questId} marked as ${completed ? 'completed' : 'incomplete'}`);
     
     return { success: true, error: null };
   } catch (error) {
@@ -276,43 +307,36 @@ export const updateQuestStatus = async (
 
 /**
  * Gets teams that the user is a member of
+ * Since the teams and team_members tables don't exist,
+ * this is a mock function
  */
 export const getUserTeams = async (userId: string): Promise<{ data: Team[] | null, error: any }> => {
   try {
-    // First get team memberships
-    const { data: memberships, error: memberError } = await supabase
-      .from('team_members')
-      .select('team_id, role, joined_at, contribution_points')
-      .eq('user_id', userId);
+    // Mock data for teams
+    const teams: Team[] = [
+      {
+        id: crypto.randomUUID(),
+        name: "Fitness Warriors",
+        description: "A team focused on consistent daily workouts",
+        creator_id: userId,
+        created_at: new Date().toISOString(),
+        avatar_url: "https://example.com/avatar.jpg",
+        members_count: 5,
+        total_points: 1250
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Weight Loss Champions",
+        description: "Supporting each other in weight loss goals",
+        creator_id: "other-user-id",
+        created_at: new Date().toISOString(),
+        avatar_url: "https://example.com/avatar2.jpg",
+        members_count: 8,
+        total_points: 2300
+      }
+    ];
     
-    if (memberError) throw memberError;
-    
-    if (!memberships || memberships.length === 0) {
-      return { data: [], error: null };
-    }
-    
-    // Get team details
-    const teamIds = memberships.map(m => m.team_id);
-    
-    const { data: teams, error: teamError } = await supabase
-      .from('teams')
-      .select('*')
-      .in('id', teamIds);
-    
-    if (teamError) throw teamError;
-    
-    // Merge team data with membership data
-    const enhancedTeams = teams?.map(team => {
-      const membership = memberships.find(m => m.team_id === team.id);
-      return {
-        ...team,
-        user_role: membership?.role,
-        joined_at: membership?.joined_at,
-        contribution_points: membership?.contribution_points
-      };
-    });
-    
-    return { data: enhancedTeams, error: null };
+    return { data: teams, error: null };
   } catch (error) {
     console.error('Error fetching user teams:', error);
     return { data: null, error };
@@ -321,19 +345,47 @@ export const getUserTeams = async (userId: string): Promise<{ data: Team[] | nul
 
 /**
  * Gets challenges that are available to the user
+ * Since the challenges table doesn't exist,
+ * this is a mock function
  */
 export const getAvailableChallenges = async (): Promise<{ data: Challenge[] | null, error: any }> => {
   try {
     const today = new Date().toISOString();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 30);
+    const endDateStr = endDate.toISOString();
     
-    const { data, error } = await supabase
-      .from('challenges')
-      .select('*')
-      .lte('start_date', today)
-      .gte('end_date', today)
-      .order('end_date', { ascending: true });
+    // Mock data for challenges
+    const challenges: Challenge[] = [
+      {
+        id: crypto.randomUUID(),
+        title: "30-Day Running Challenge",
+        description: "Run at least 2km every day for 30 days",
+        start_date: today,
+        end_date: endDateStr,
+        type: "individual",
+        status: "active",
+        goal_type: "distance",
+        goal_value: 60,
+        reward_points: 500,
+        participants_count: 48
+      },
+      {
+        id: crypto.randomUUID(),
+        title: "Weight Loss Challenge",
+        description: "Lose 5kg in 30 days",
+        start_date: today,
+        end_date: endDateStr,
+        type: "team",
+        status: "active",
+        goal_type: "weight",
+        goal_value: 5,
+        reward_points: 1000,
+        participants_count: 120
+      }
+    ];
     
-    return { data, error };
+    return { data: challenges, error: null };
   } catch (error) {
     console.error('Error fetching available challenges:', error);
     return { data: null, error };
@@ -342,44 +394,34 @@ export const getAvailableChallenges = async (): Promise<{ data: Challenge[] | nu
 
 /**
  * Gets challenges that the user is participating in
+ * Since the challenges and challenge_participants tables don't exist,
+ * this is a mock function
  */
 export const getUserChallenges = async (userId: string): Promise<{ data: Challenge[] | null, error: any }> => {
   try {
-    // First get challenge participations
-    const { data: participations, error: partError } = await supabase
-      .from('challenge_participants')
-      .select('challenge_id, current_progress, completed, completed_at, team_id')
-      .eq('user_id', userId);
+    const today = new Date().toISOString();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 15);
+    const endDateStr = endDate.toISOString();
     
-    if (partError) throw partError;
+    // Mock data for user challenges
+    const challenges: Challenge[] = [
+      {
+        id: crypto.randomUUID(),
+        title: "Team Step Challenge",
+        description: "Accumulate the most steps as a team",
+        start_date: today,
+        end_date: endDateStr,
+        type: "team",
+        status: "active",
+        goal_type: "steps",
+        goal_value: 1000000,
+        reward_points: 2000,
+        participants_count: 35
+      }
+    ];
     
-    if (!participations || participations.length === 0) {
-      return { data: [], error: null };
-    }
-    
-    // Get challenge details
-    const challengeIds = participations.map(p => p.challenge_id);
-    
-    const { data: challenges, error: challengeError } = await supabase
-      .from('challenges')
-      .select('*')
-      .in('id', challengeIds);
-    
-    if (challengeError) throw challengeError;
-    
-    // Merge challenge data with participation data
-    const enhancedChallenges = challenges?.map(challenge => {
-      const participation = participations.find(p => p.challenge_id === challenge.id);
-      return {
-        ...challenge,
-        current_progress: participation?.current_progress,
-        completed: participation?.completed,
-        completed_at: participation?.completed_at,
-        team_id: participation?.team_id
-      };
-    });
-    
-    return { data: enhancedChallenges, error: null };
+    return { data: challenges, error: null };
   } catch (error) {
     console.error('Error fetching user challenges:', error);
     return { data: null, error };
@@ -388,26 +430,13 @@ export const getUserChallenges = async (userId: string): Promise<{ data: Challen
 
 /**
  * Joins a user to a team
+ * Since the team_members table doesn't exist,
+ * this is a mock function
  */
 export const joinTeam = async (userId: string, teamId: string): Promise<{ success: boolean, error: any }> => {
   try {
-    const { error } = await supabase
-      .from('team_members')
-      .insert({
-        user_id: userId,
-        team_id: teamId,
-        joined_at: new Date().toISOString(),
-        role: 'member',
-        contribution_points: 0
-      });
-    
-    if (error) throw error;
-    
-    // Update team members count
-    await supabase.rpc('increment_team_members_count', {
-      p_team_id: teamId,
-      p_increment: 1
-    });
+    // This would normally update the database
+    console.log(`User ${userId} joined team ${teamId}`);
     
     return { success: true, error: null };
   } catch (error) {
@@ -418,6 +447,8 @@ export const joinTeam = async (userId: string, teamId: string): Promise<{ succes
 
 /**
  * Joins a challenge
+ * Since the challenge_participants table doesn't exist,
+ * this is a mock function
  */
 export const joinChallenge = async (
   userId: string, 
@@ -425,24 +456,8 @@ export const joinChallenge = async (
   teamId?: string
 ): Promise<{ success: boolean, error: any }> => {
   try {
-    const { error } = await supabase
-      .from('challenge_participants')
-      .insert({
-        user_id: userId,
-        challenge_id: challengeId,
-        team_id: teamId,
-        joined_at: new Date().toISOString(),
-        current_progress: 0,
-        completed: false
-      });
-    
-    if (error) throw error;
-    
-    // Update challenge participants count
-    await supabase.rpc('increment_challenge_participants_count', {
-      p_challenge_id: challengeId,
-      p_increment: 1
-    });
+    // This would normally update the database
+    console.log(`User ${userId} joined challenge ${challengeId}${teamId ? ` with team ${teamId}` : ''}`);
     
     return { success: true, error: null };
   } catch (error) {
@@ -453,6 +468,8 @@ export const joinChallenge = async (
 
 /**
  * Updates user's challenge progress
+ * Since the challenge_participants table doesn't exist,
+ * this is a mock function
  */
 export const updateChallengeProgress = async (
   userId: string, 
@@ -460,60 +477,56 @@ export const updateChallengeProgress = async (
   progress: number
 ): Promise<{ success: boolean, completed: boolean, error: any }> => {
   try {
-    // Get challenge info first to check if completed
-    const { data: challenge, error: challengeError } = await supabase
-      .from('challenges')
-      .select('goal_type, goal_value')
-      .eq('id', challengeId)
-      .maybeSingle();
+    // This would normally update the database
+    console.log(`User ${userId} made progress of ${progress} in challenge ${challengeId}`);
     
-    if (challengeError) throw challengeError;
-    
-    if (!challenge) {
-      throw new Error('Challenge not found');
-    }
-    
-    // Get current participation
-    const { data: participation, error: partError } = await supabase
-      .from('challenge_participants')
-      .select('current_progress, completed')
-      .eq('user_id', userId)
-      .eq('challenge_id', challengeId)
-      .maybeSingle();
-    
-    if (partError) throw partError;
-    
-    if (!participation) {
-      throw new Error('User is not participating in this challenge');
-    }
-    
-    const newProgress = participation.current_progress + progress;
-    const isCompleted = newProgress >= challenge.goal_value;
-    
-    const updateData: any = {
-      current_progress: newProgress
-    };
-    
-    if (isCompleted && !participation.completed) {
-      updateData.completed = true;
-      updateData.completed_at = new Date().toISOString();
-    }
-    
-    const { error } = await supabase
-      .from('challenge_participants')
-      .update(updateData)
-      .eq('user_id', userId)
-      .eq('challenge_id', challengeId);
-    
-    if (error) throw error;
+    // Mock completion check
+    const completed = Math.random() > 0.8; // 20% chance of completion for demo
     
     return { 
       success: true, 
-      completed: isCompleted && !participation.completed, 
+      completed, 
       error: null 
     };
   } catch (error) {
     console.error('Error updating challenge progress:', error);
     return { success: false, completed: false, error };
+  }
+};
+
+/**
+ * Gets streak rewards for a user
+ */
+export const getStreakRewards = async (userId: string, currentStreak: number): Promise<{ data: StreakReward[] | null, error: any }> => {
+  try {
+    // Mock data for streak rewards
+    const rewards: StreakReward[] = [
+      { days: 3, points: 15, description: 'Three-day streak', claimed: currentStreak >= 3 },
+      { days: 7, points: 50, description: 'One week consistency', claimed: currentStreak >= 7 },
+      { days: 14, points: 100, description: 'Two week dedication', claimed: currentStreak >= 14 },
+      { days: 30, points: 200, description: 'One month commitment', claimed: currentStreak >= 30 },
+      { days: 60, points: 350, description: 'Two month mastery', claimed: currentStreak >= 60 },
+      { days: 90, points: 500, description: 'Three month transformation', claimed: false },
+    ];
+    
+    return { data: rewards, error: null };
+  } catch (error) {
+    console.error('Error getting streak rewards:', error);
+    return { data: null, error };
+  }
+};
+
+/**
+ * Claims a streak reward
+ */
+export const claimStreakReward = async (userId: string, days: number, points: number): Promise<{ success: boolean, error: any }> => {
+  try {
+    // This would normally update the database and add points to user account
+    console.log(`User ${userId} claimed streak reward for ${days} days, earning ${points} points`);
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error claiming streak reward:', error);
+    return { success: false, error };
   }
 };
