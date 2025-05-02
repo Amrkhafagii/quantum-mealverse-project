@@ -31,6 +31,7 @@ import RestaurantOrders from './pages/restaurant/Orders';
 
 // Delivery routes
 import OnboardingPage from './pages/delivery/OnboardingPage';
+import DeliveryDashboard from './pages/delivery/DeliveryDashboard';
 
 function App() {
   return (
@@ -65,6 +66,7 @@ function App() {
 
                 {/* Delivery Routes */}
                 <Route path="/delivery/onboarding" element={<OnboardingPage />} />
+                <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
