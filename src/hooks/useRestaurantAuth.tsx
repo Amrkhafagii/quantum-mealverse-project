@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Restaurant } from '@/types/restaurant';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export const useRestaurantAuth = () => {
   const { user, session, loading: authLoading, logout: authLogout } = useAuth();
@@ -15,6 +16,7 @@ export const useRestaurantAuth = () => {
   useEffect(() => {
     const fetchRestaurantData = async () => {
       if (!user) {
+        setRestaurant(null);
         setLoading(false);
         return;
       }
@@ -51,18 +53,29 @@ export const useRestaurantAuth = () => {
   
   const logout = async () => {
     try {
+      console.log("Restaurant logout initiated");
+      
+      // Call the auth logout function
       await authLogout();
+      
+      // Clear local restaurant state
+      setRestaurant(null);
+      
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your restaurant account",
       });
+      
+      // The useAuth hook will update the user and session state
+      return true;
     } catch (error) {
-      console.error("Error logging out:", error);
+      console.error("Error logging out restaurant:", error);
       toast({
         title: "Error logging out",
         description: "There was a problem logging you out. Please try again.",
         variant: "destructive"
       });
+      throw error;
     }
   };
 

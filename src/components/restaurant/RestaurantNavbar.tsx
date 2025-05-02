@@ -1,13 +1,16 @@
 
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
+import { LoadingButton } from "@/components/ui/loading-button";
 
 export const RestaurantNavbar: React.FC = () => {
   const { restaurant, logout } = useRestaurantAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -19,10 +22,17 @@ export const RestaurantNavbar: React.FC = () => {
     e.stopPropagation();
     
     try {
+      // Show loading state
+      setIsLoggingOut(true);
+      
       // Call the logout function from the auth hook
       await logout();
+      
+      // Navigate to auth page after successful logout
+      navigate('/auth');
     } catch (error) {
       console.error("Error logging out:", error);
+      setIsLoggingOut(false);
     }
   };
 
@@ -57,13 +67,14 @@ export const RestaurantNavbar: React.FC = () => {
             
             <NotificationPanel className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10" />
             
-            <Button 
+            <LoadingButton 
               variant="ghost" 
+              loading={isLoggingOut}
               onClick={handleLogout}
               className="text-[#1EAEDB] hover:text-white hover:bg-[#1EAEDB]/10"
             >
               Logout
-            </Button>
+            </LoadingButton>
           </div>
         </div>
       </div>

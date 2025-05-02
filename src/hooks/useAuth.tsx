@@ -12,6 +12,7 @@ export const useAuth = () => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
         setUser(session?.user ?? null);
         setSession(session);
         setLoading(false);
@@ -30,10 +31,23 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
-      // Session will be updated via the onAuthStateChange listener
+      console.log("Logging out user:", user?.email);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error during signOut:", error);
+        throw error;
+      }
+      
+      // Clear user and session state immediately for better UX
+      setUser(null);
+      setSession(null);
+      
+      console.log("Logout successful");
+      return true;
     } catch (error) {
       console.error('Error logging out:', error);
+      throw error;
     }
   };
 
