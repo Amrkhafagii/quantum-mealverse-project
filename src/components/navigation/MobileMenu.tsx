@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Dumbbell, Package, UserCog, ChefHat } from 'lucide-react';
+import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Package, UserCog, ChefHat } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -51,14 +50,6 @@ export const MobileMenu = ({
             
             {isAuthenticated && (
               <>
-                <Link 
-                  to="/workouts" 
-                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-                >
-                  <Dumbbell className="h-5 w-5 text-quantum-cyan" />
-                  <span>Workouts</span>
-                </Link>
-                
                 <Link 
                   to="/profile" 
                   className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
