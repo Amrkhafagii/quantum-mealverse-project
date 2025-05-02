@@ -29,6 +29,9 @@ import RestaurantDashboard from './pages/restaurant/Dashboard';
 import RestaurantMenu from './pages/restaurant/Menu';
 import RestaurantOrders from './pages/restaurant/Orders';
 
+// Delivery routes
+import OnboardingPage from './pages/delivery/OnboardingPage';
+
 function App() {
   return (
     <LanguageProvider>
@@ -59,6 +62,10 @@ function App() {
                 <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
                 <Route path="/restaurant/menu" element={<RestaurantMenu />} />
                 <Route path="/restaurant/orders" element={<RestaurantOrders />} />
+
+                {/* Delivery Routes */}
+                <Route path="/delivery/onboarding" element={<OnboardingPage />} />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />

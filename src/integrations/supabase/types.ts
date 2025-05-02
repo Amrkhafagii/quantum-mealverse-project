@@ -129,6 +129,209 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_assignments: {
+        Row: {
+          created_at: string
+          delivery_time: string | null
+          delivery_user_id: string | null
+          estimated_delivery_time: string | null
+          id: string
+          order_id: string
+          pickup_time: string | null
+          restaurant_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_time?: string | null
+          delivery_user_id?: string | null
+          estimated_delivery_time?: string | null
+          id?: string
+          order_id: string
+          pickup_time?: string | null
+          restaurant_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_time?: string | null
+          delivery_user_id?: string | null
+          estimated_delivery_time?: string | null
+          id?: string
+          order_id?: string
+          pickup_time?: string | null
+          restaurant_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_assignments_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_assignments_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_availability: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          delivery_user_id: string
+          end_time: string
+          id: string
+          is_recurring: boolean | null
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          delivery_user_id: string
+          end_time: string
+          id?: string
+          is_recurring?: boolean | null
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          delivery_user_id?: string
+          end_time?: string
+          id?: string
+          is_recurring?: boolean | null
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_availability_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_documents: {
+        Row: {
+          created_at: string
+          delivery_user_id: string
+          document_type: string
+          expiry_date: string | null
+          file_path: string
+          id: string
+          notes: string | null
+          updated_at: string
+          verified: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_user_id: string
+          document_type: string
+          expiry_date?: string | null
+          file_path: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          verified?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          delivery_user_id?: string
+          document_type?: string
+          expiry_date?: string | null
+          file_path?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          verified?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_documents_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_earnings: {
+        Row: {
+          base_amount: number
+          bonus_amount: number | null
+          created_at: string
+          delivery_user_id: string
+          id: string
+          order_id: string | null
+          payout_date: string | null
+          status: string
+          tip_amount: number | null
+          total_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          base_amount: number
+          bonus_amount?: number | null
+          created_at?: string
+          delivery_user_id: string
+          id?: string
+          order_id?: string | null
+          payout_date?: string | null
+          status?: string
+          tip_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          base_amount?: number
+          bonus_amount?: number | null
+          created_at?: string
+          delivery_user_id?: string
+          id?: string
+          order_id?: string | null
+          payout_date?: string | null
+          status?: string
+          tip_amount?: number | null
+          total_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_earnings_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_earnings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_info: {
         Row: {
           address: string
@@ -161,6 +364,192 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      delivery_metrics: {
+        Row: {
+          acceptance_rate: number | null
+          avg_delivery_time: number | null
+          avg_pickup_time: number | null
+          completion_rate: number | null
+          created_at: string
+          date: string
+          delivery_user_id: string
+          id: string
+          on_time_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          acceptance_rate?: number | null
+          avg_delivery_time?: number | null
+          avg_pickup_time?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          date: string
+          delivery_user_id: string
+          id?: string
+          on_time_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          acceptance_rate?: number | null
+          avg_delivery_time?: number | null
+          avg_pickup_time?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          date?: string
+          delivery_user_id?: string
+          id?: string
+          on_time_percentage?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_metrics_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_payment_details: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          created_at: string
+          delivery_user_id: string
+          has_accepted_terms: boolean | null
+          id: string
+          routing_number: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          created_at?: string
+          delivery_user_id: string
+          has_accepted_terms?: boolean | null
+          id?: string
+          routing_number: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string
+          created_at?: string
+          delivery_user_id?: string
+          has_accepted_terms?: boolean | null
+          id?: string
+          routing_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_payment_details_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_users: {
+        Row: {
+          average_rating: number | null
+          created_at: string
+          first_name: string
+          id: string
+          is_approved: boolean | null
+          last_name: string
+          phone: string
+          status: string
+          total_deliveries: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_rating?: number | null
+          created_at?: string
+          first_name: string
+          id?: string
+          is_approved?: boolean | null
+          last_name: string
+          phone: string
+          status?: string
+          total_deliveries?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_rating?: number | null
+          created_at?: string
+          first_name?: string
+          id?: string
+          is_approved?: boolean | null
+          last_name?: string
+          phone?: string
+          status?: string
+          total_deliveries?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      delivery_vehicles: {
+        Row: {
+          color: string | null
+          created_at: string
+          delivery_user_id: string
+          id: string
+          insurance_expiry: string | null
+          insurance_number: string | null
+          license_plate: string | null
+          make: string | null
+          model: string | null
+          type: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          delivery_user_id: string
+          id?: string
+          insurance_expiry?: string | null
+          insurance_number?: string | null
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          type: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          delivery_user_id?: string
+          id?: string
+          insurance_expiry?: string | null
+          insurance_number?: string | null
+          license_plate?: string | null
+          make?: string | null
+          model?: string | null
+          type?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_vehicles_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dietary_tags: {
         Row: {
