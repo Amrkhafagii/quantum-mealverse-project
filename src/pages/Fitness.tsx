@@ -1,369 +1,425 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
-import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
-import TDEECalculator, { TDEEResult } from '@/components/fitness/TDEECalculator';
-import MealPlanDisplay from '@/components/fitness/MealPlanDisplay';
-import { MealPlan } from '@/types/food';
-import { generateMealPlan } from '@/services/mealPlanService';
+import ParticleBackground from '@/components/ParticleBackground';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HeartPulse, Utensils, TrendingUp, Zap, MapPin, Award, Goal, LineChart, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import RestaurantMealFinder from '@/components/fitness/RestaurantMealFinder';
-import AdvancedProgressCharts from '@/components/fitness/AdvancedProgressCharts';
-import AchievementSystem from '@/components/fitness/AchievementSystem';
-import GoalManagement from '@/components/fitness/GoalManagement';
-import { UserMeasurement } from '@/types/fitness';
-import { getUserMeasurements } from '@/services/measurementService';
-import FitnessAnalyticsDashboard from '@/components/fitness/FitnessAnalyticsDashboard';
+import { motion } from 'framer-motion';
+import { Check, Info, ArrowRight, ActivitySquare, Heart } from 'lucide-react';
+import { toast } from 'sonner';
+import { useWorkoutData } from '@/hooks/useWorkoutData';
 
 const Fitness = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [tdeeResult, setTdeeResult] = useState<TDEEResult | null>(null);
-  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('calculator');
-  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
-  const [measurements, setMeasurements] = useState<UserMeasurement[]>([]);
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
+  const { stats, plans, loading } = useWorkoutData();
   
-  useEffect(() => {
-    // Try to load meal plan from session storage on initial render
-    const storedMealPlan = sessionStorage.getItem('currentMealPlan');
-    const storedTDEE = sessionStorage.getItem('currentTDEE');
-    
-    if (storedMealPlan && storedTDEE) {
-      try {
-        setMealPlan(JSON.parse(storedMealPlan));
-        setTdeeResult(JSON.parse(storedTDEE));
-      } catch (error) {
-        console.error('Error parsing stored meal plan:', error);
-      }
-    }
-    
-    // Get user location if they allow it
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-        }
-      );
-    }
-    
-    if (user) {
-      loadMeasurements();
-    }
-  }, [user]);
-  
-  const loadMeasurements = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await getUserMeasurements(user.id);
-      if (error) throw error;
-      
-      setMeasurements(data || []);
-    } catch (error) {
-      console.error('Error loading measurements:', error);
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.2 }
     }
   };
   
-  const handleCalculationComplete = (result: TDEEResult) => {
-    setTdeeResult(result);
-    const newMealPlan = generateMealPlan(result);
-    setMealPlan(newMealPlan);
-    
-    // Save to session storage
-    sessionStorage.setItem('currentTDEE', JSON.stringify(result));
-    sessionStorage.setItem('currentMealPlan', JSON.stringify(newMealPlan));
-  };
-  
-  const handleUpdateMealPlan = (updatedPlan: MealPlan) => {
-    setMealPlan(updatedPlan);
-    // Update session storage
-    sessionStorage.setItem('currentMealPlan', JSON.stringify(updatedPlan));
-  };
-  
-  const saveMealPlan = async () => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in to save your meal plan.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (!mealPlan || !tdeeResult) {
-      toast({
-        title: 'No Meal Plan',
-        description: 'Please generate a meal plan first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      setSaving(true);
-      
-      // First save the TDEE calculation
-      const { data: tdeeData, error: tdeeError } = await supabase
-        .from('user_tdee')
-        .insert({
-          user_id: user.id,
-          date: new Date().toISOString(),
-          tdee: tdeeResult.tdee,
-          bmr: tdeeResult.bmr,
-          goal: tdeeResult.goal as 'maintain' | 'cut' | 'bulk',
-          activity_level: 'moderate', // Default value
-          protein_target: tdeeResult.proteinGrams,
-          carbs_target: tdeeResult.carbsGrams,
-          fat_target: tdeeResult.fatsGrams,
-        })
-        .select('id')
-        .single();
-        
-      if (tdeeError) throw tdeeError;
-      
-      // Now save the meal plan
-      const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
-      
-      // Convert MealPlan to a format Supabase can handle
-      const mealPlanJson = JSON.parse(JSON.stringify(mealPlan));
-      
-      const { error } = await supabase
-        .from('saved_meal_plans')
-        .insert({
-          user_id: user.id,
-          name: planName,
-          date_created: new Date().toISOString(),
-          tdee_id: tdeeData.id,
-          meal_plan: mealPlanJson,
-        });
-        
-      if (error) throw error;
-      
-      toast({
-        title: 'Plan Saved',
-        description: 'Your meal plan has been saved successfully.',
-      });
-      
-    } catch (error) {
-      console.error('Error saving meal plan:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save meal plan.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100, damping: 12 }
     }
   };
-  
-  const goToProfile = () => {
-    navigate('/fitness-profile');
+
+  const handleNutritionRedirect = () => {
+    toast.info("Redirecting to nutrition page");
+    navigate('/nutrition');
   };
   
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative">
+    <div className="min-h-screen bg-quantum-black text-white relative overflow-hidden">
       <ParticleBackground />
       <Navbar />
       
-      <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan neon-text">
-            HealthAndFix Fitness
+      {/* Decorative elements */}
+      <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-quantum-purple/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-quantum-cyan/20 rounded-full filter blur-3xl animate-pulse-slow"></div>
+      
+      <main className="container mx-auto px-4 py-24 relative z-10">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text">
+            Zenith Fitness
           </h1>
-          {user && (
-            <Button 
-              onClick={goToProfile}
-              className="bg-quantum-purple hover:bg-quantum-purple/90"
-            >
-              My Fitness Profile
-            </Button>
-          )}
-        </div>
+          <p className="text-xl max-w-3xl mx-auto text-gray-300">
+            Elevate your fitness journey with personalized workouts and expert guidance
+          </p>
+        </motion.div>
         
-        <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12">
-          Your personalized nutrition and fitness journey starts here. 
-          Calculate your needs, generate meal plans, and achieve your goals.
-        </p>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
-          <TabsList className="w-full max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-9">
-            <TabsTrigger value="calculator" className="flex items-center gap-1">
-              <HeartPulse className="h-4 w-4" /> Calculator
-            </TabsTrigger>
-            <TabsTrigger value="meal-plan" className="flex items-center gap-1" disabled={!mealPlan}>
-              <Utensils className="h-4 w-4" /> Meal Plan
-            </TabsTrigger>
-            <TabsTrigger value="restaurants" className="flex items-center gap-1" disabled={!mealPlan}>
-              <MapPin className="h-4 w-4" /> Find Food
-            </TabsTrigger>
-            <TabsTrigger value="track" className="flex items-center gap-1">
-              <LineChart className="h-4 w-4" /> Progress
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-1">
-              <BarChart3 className="h-4 w-4" /> Analytics
-            </TabsTrigger>
-            <TabsTrigger value="goals" className="flex items-center gap-1">
-              <Goal className="h-4 w-4" /> Goals
-            </TabsTrigger>
-            <TabsTrigger value="achievements" className="flex items-center gap-1">
-              <Award className="h-4 w-4" /> Achievements
-            </TabsTrigger>
-            <TabsTrigger value="workouts" className="flex items-center gap-1" onClick={() => navigate('/workouts')}>
-              <Zap className="h-4 w-4" /> Workouts
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-1" onClick={() => navigate('/fitness-profile')}>
-              <TrendingUp className="h-4 w-4" /> Profile
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-16">
+          <TabsList className="w-full max-w-2xl mx-auto mb-8">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="workout-plans">Workout Plans</TabsTrigger>
+            <TabsTrigger value="fitness-science">Science</TabsTrigger>
+            {user && <TabsTrigger value="my-fitness">My Fitness</TabsTrigger>}
           </TabsList>
           
-          <TabsContent value="calculator" className="mt-8">
-            <div className="max-w-2xl mx-auto">
-              <TDEECalculator onCalculationComplete={handleCalculationComplete} />
-            </div>
+          <TabsContent value="overview">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
+            >
+              <motion.div variants={itemVariants}>
+                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
+                  <CardHeader>
+                    <CardTitle className="text-quantum-cyan text-2xl">Personalized Training</CardTitle>
+                    <CardDescription className="text-gray-300">Custom workout plans for your goals</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5" />
+                        <span>AI-generated workout routines</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5" />
+                        <span>Progress tracking and adjustments</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5" />
+                        <span>Video demonstrations for proper form</span>
+                      </li>
+                    </ul>
+                    <Button 
+                      onClick={() => setActiveTab('workout-plans')} 
+                      className="mt-6 bg-quantum-purple hover:bg-quantum-purple/80 text-white"
+                    >
+                      Explore Workouts <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
+                  <CardHeader>
+                    <CardTitle className="text-quantum-cyan text-2xl">Performance Tracking</CardTitle>
+                    <CardDescription className="text-gray-300">Monitor your progress with advanced metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5" />
+                        <span>Detailed workout analytics</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5" />
+                        <span>Body composition tracking</span>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5" />
+                        <span>Goal-based achievement system</span>
+                      </li>
+                    </ul>
+                    <Button 
+                      onClick={() => setActiveTab('fitness-science')} 
+                      className="mt-6 bg-quantum-purple hover:bg-quantum-purple/80 text-white"
+                    >
+                      Learn More <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
             
-            {mealPlan && (
-              <div className="mt-12" id="meal-plan-section">
-                <MealPlanDisplay 
-                  mealPlan={mealPlan}
-                  onUpdateMealPlan={handleUpdateMealPlan}
-                />
-                
-                {user && (
-                  <div className="mt-6 flex justify-center">
-                    <Button
-                      onClick={saveMealPlan}
-                      disabled={saving}
-                      className="bg-quantum-purple hover:bg-quantum-purple/90"
-                    >
-                      {saving ? 'Saving...' : 'Save This Meal Plan'}
-                    </Button>
-                  </div>
-                )}
-                
-                {!user && (
-                  <div className="mt-6 text-center">
-                    <p className="text-gray-400 mb-2">Log in to save your meal plan</p>
-                    <Button
-                      onClick={() => navigate('/auth')}
-                      variant="outline"
-                    >
-                      Log In / Register
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="meal-plan" className="mt-8">
-            {mealPlan ? (
-              <>
-                <MealPlanDisplay 
-                  mealPlan={mealPlan}
-                  onUpdateMealPlan={handleUpdateMealPlan}
-                />
-                
-                {user && (
-                  <div className="mt-6 flex justify-center">
-                    <Button
-                      onClick={saveMealPlan}
-                      disabled={saving}
-                      className="bg-quantum-purple hover:bg-quantum-purple/90"
-                    >
-                      {saving ? 'Saving...' : 'Save This Meal Plan'}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center p-12">
-                <p>Please calculate your TDEE first to generate a meal plan.</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="restaurants" className="mt-8">
-            {mealPlan ? (
-              <RestaurantMealFinder 
-                mealPlan={mealPlan} 
-                userLocation={userLocation || undefined}
-              />
-            ) : (
-              <div className="text-center p-12">
-                <p>Please calculate your TDEE first to generate a meal plan.</p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="track" className="mt-8">
-            <AdvancedProgressCharts userId={user?.id} measurements={measurements} />
-          </TabsContent>
-          
-          <TabsContent value="analytics" className="mt-8">
-            <FitnessAnalyticsDashboard userId={user?.id} />
-          </TabsContent>
-          
-          <TabsContent value="goals" className="mt-8">
-            <GoalManagement userId={user?.id} />
-          </TabsContent>
-          
-          <TabsContent value="achievements" className="mt-8">
-            <AchievementSystem userId={user?.id} />
-          </TabsContent>
-          
-          <TabsContent value="progress" className="mt-8">
-            <AdvancedProgressCharts userId={user?.id} measurements={measurements} />
-          </TabsContent>
-          
-          <TabsContent value="workouts">
-            <div className="text-center p-12">
-              <Button onClick={() => navigate('/workouts')} className="bg-quantum-purple hover:bg-quantum-purple/90">
-                Go to Workout Planner
+            <motion.div 
+              variants={itemVariants} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-12 text-center"
+            >
+              <Button 
+                onClick={handleNutritionRedirect} 
+                size="lg" 
+                className="bg-quantum-purple hover:bg-quantum-purple/80 text-white"
+              >
+                <Heart className="mr-2 h-5 w-5" />
+                Explore Nutrition Plans
               </Button>
-            </div>
+            </motion.div>
+          </TabsContent>
+          
+          {/* Add more tabs content here similar to the Nutrition page */}
+          
+          <TabsContent value="workout-plans">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto"
+            >
+              <motion.div variants={itemVariants}>
+                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
+                  <CardHeader>
+                    <CardTitle className="text-quantum-cyan text-2xl">Beginner</CardTitle>
+                    <CardDescription className="text-gray-300">Perfect for those new to fitness</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 mb-6">
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>3 workouts per week</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>Focus on form and building baseline strength</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>Gradual progression system</span>
+                      </li>
+                    </ul>
+                    {user ? (
+                      <Button 
+                        className="w-full bg-quantum-purple hover:bg-quantum-purple/80 text-white"
+                      >
+                        Start Plan
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => navigate('/login')} 
+                        className="w-full bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
+                      >
+                        Sign In to Start
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <Card className="bg-quantum-darkBlue/30 border-quantum-purple relative overflow-hidden h-full">
+                  <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold">
+                    MOST POPULAR
+                  </div>
+                  <CardHeader className="pt-8">
+                    <CardTitle className="text-quantum-purple text-2xl">Intermediate</CardTitle>
+                    <CardDescription className="text-gray-300">For those with some fitness experience</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 mb-6">
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
+                        <span>4-5 workouts per week</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
+                        <span>Progressive overload techniques</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
+                        <span>Targeted muscle group focus</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-purple h-5 w-5 mt-1" />
+                        <span>Periodization for consistent results</span>
+                      </li>
+                    </ul>
+                    {user ? (
+                      <Button 
+                        className="w-full bg-quantum-purple hover:bg-quantum-darkPurple text-white"
+                      >
+                        Start Plan
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => navigate('/login')} 
+                        className="w-full bg-transparent border border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
+                      >
+                        Sign In to Start
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm h-full">
+                  <CardHeader>
+                    <CardTitle className="text-quantum-cyan text-2xl">Advanced</CardTitle>
+                    <CardDescription className="text-gray-300">For experienced fitness enthusiasts</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 mb-6">
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>5-6 workouts per week</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>Advanced intensity techniques</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>Customized split routines</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <Check className="text-quantum-cyan h-5 w-5 mt-1" />
+                        <span>Performance optimization protocols</span>
+                      </li>
+                    </ul>
+                    {user ? (
+                      <Button 
+                        className="w-full bg-quantum-cyan hover:bg-quantum-cyan/80 text-white"
+                      >
+                        Start Plan
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => navigate('/login')} 
+                        className="w-full bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
+                      >
+                        Sign In to Start
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+          </TabsContent>
+          
+          {user && (
+            <TabsContent value="my-fitness">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="max-w-4xl mx-auto"
+              >
+                <motion.div variants={itemVariants}>
+                  <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm mb-8">
+                    <CardHeader>
+                      <CardTitle className="text-quantum-cyan text-2xl">Your Fitness Dashboard</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {loading ? (
+                        <p className="text-center py-4">Loading your fitness data...</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="bg-quantum-darkBlue/50 p-4 rounded-lg border border-quantum-cyan/30">
+                            <p className="text-sm text-gray-400">Total Workouts</p>
+                            <p className="text-2xl font-bold">{stats?.totalWorkouts || 0}</p>
+                          </div>
+                          <div className="bg-quantum-darkBlue/50 p-4 rounded-lg border border-quantum-cyan/30">
+                            <p className="text-sm text-gray-400">Current Streak</p>
+                            <p className="text-2xl font-bold">{stats?.currentStreak || 0} days</p>
+                          </div>
+                          <div className="bg-quantum-darkBlue/50 p-4 rounded-lg border border-quantum-cyan/30">
+                            <p className="text-sm text-gray-400">Active Plans</p>
+                            <p className="text-2xl font-bold">{plans?.length || 0}</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-6 grid md:grid-cols-2 gap-6">
+                        <Button 
+                          onClick={() => setActiveTab('workout-plans')}
+                          variant="outline" 
+                          className="border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10"
+                        >
+                          Explore Workout Plans
+                        </Button>
+                        <Button 
+                          onClick={handleNutritionRedirect}
+                          className="bg-quantum-purple hover:bg-quantum-purple/80 text-white"
+                        >
+                          View Nutrition Plans
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
+            </TabsContent>
+          )}
+          
+          <TabsContent value="fitness-science">
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="max-w-4xl mx-auto"
+            >
+              <motion.div variants={itemVariants}>
+                <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm mb-8">
+                  <CardHeader>
+                    <CardTitle className="text-quantum-cyan text-2xl">The Science of Fitness</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="mb-4 text-lg">
+                      At Zenith Fitness, we combine cutting-edge exercise science with practical application to 
+                      maximize your results while minimizing injury risk. Our approach is built on proven 
+                      physiological principles and constantly updated with the latest research.
+                    </p>
+                    <p className="mb-6 text-lg">
+                      From optimizing recovery through properly timed nutrition to implementing 
+                      scientifically-validated training methodologies, every aspect of our program is designed 
+                      to help you achieve your goals efficiently and safely.
+                    </p>
+                    <div className="bg-quantum-darkBlue/50 p-6 rounded-lg border border-quantum-cyan/30 mb-6">
+                      <h3 className="text-xl font-bold text-quantum-cyan mb-3">Key Training Principles</h3>
+                      <ul className="space-y-4">
+                        <li className="flex items-start gap-3">
+                          <div className="bg-quantum-cyan/20 p-2 rounded-full mt-1">
+                            <Check className="text-quantum-cyan h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold">Progressive Overload</h4>
+                            <p className="text-gray-300">Gradually increasing the weight, frequency, or number of repetitions to continuously challenge your muscles</p>
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <div className="bg-quantum-cyan/20 p-2 rounded-full mt-1">
+                            <Check className="text-quantum-cyan h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold">Periodization</h4>
+                            <p className="text-gray-300">Systematically varying training variables to prevent plateaus and optimize performance</p>
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <div className="bg-quantum-cyan/20 p-2 rounded-full mt-1">
+                            <Check className="text-quantum-cyan h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold">Recovery Optimization</h4>
+                            <p className="text-gray-300">Strategic rest periods and recovery techniques to maximize muscle growth and prevent overtraining</p>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="flex items-center p-4 bg-quantum-purple/20 rounded-lg border border-quantum-purple/30">
+                      <Info className="text-quantum-purple h-6 w-6 mr-3 flex-shrink-0" />
+                      <p>Our training programs integrate with our nutrition plans for a complete approach to body transformation and performance enhancement.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
           </TabsContent>
         </Tabs>
-        
-        <div className="mt-16 grid md:grid-cols-3 gap-8">
-          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20">
-            <h3 className="text-xl font-bold text-quantum-cyan mb-3">Martin Berkhan's LeanGains</h3>
-            <p className="text-gray-300">
-              Our calculator is based on the LeanGains formula, which provides precise caloric needs
-              based on your body's unique requirements.
-            </p>
-          </div>
-          
-          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20">
-            <h3 className="text-xl font-bold text-quantum-cyan mb-3">30/35/35 Macro Split</h3>
-            <p className="text-gray-300">
-              Our recommended macro distribution optimizes 30% protein, 35% carbs, and 35% fats
-              to support muscle growth and healthy metabolism.
-            </p>
-          </div>
-          
-          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 border border-quantum-cyan/20">
-            <h3 className="text-xl font-bold text-quantum-cyan mb-3">Restaurant Integration</h3>
-            <p className="text-gray-300">
-              Connect with nearby restaurants that can prepare meals according to your plan,
-              making it easier to stay on track even when eating out.
-            </p>
-          </div>
-        </div>
       </main>
       
       <Footer />

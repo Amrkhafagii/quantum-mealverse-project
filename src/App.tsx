@@ -20,6 +20,11 @@ import OrderStatus from './pages/OrderStatus';
 import MealDetail from './pages/MealDetail';
 import NotFound from './pages/NotFound';
 import Nutrition from './pages/Nutrition';
+import Fitness from './pages/Fitness';
+
+// Restaurant admin routes
+import RestaurantDashboard from './pages/restaurant/Dashboard';
+import RestaurantMenu from './pages/restaurant/Menu';
 
 function App() {
   return (
@@ -43,6 +48,11 @@ function App() {
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/order/status/:id" element={<OrderStatus />} />
                 <Route path="/nutrition" element={<Nutrition />} />
+                <Route path="/fitness" element={<Fitness />} />
+                
+                {/* Restaurant Admin Routes */}
+                <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+                <Route path="/restaurant/menu" element={<RestaurantMenu />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />

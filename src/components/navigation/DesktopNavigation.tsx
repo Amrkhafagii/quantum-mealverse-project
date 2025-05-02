@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Utensils, ActivitySquare, CalendarCheck, Salad } from 'lucide-react';
+import { Utensils, ActivitySquare, CalendarCheck, Salad, LayoutDashboard } from 'lucide-react';
 
 interface DesktopNavigationProps {
   isCustomerView: boolean;
@@ -45,19 +45,22 @@ export const DesktopNavigation = ({ isCustomerView, isAuthenticated }: DesktopNa
           </Button>
         </>
       ) : (
-        // Admin navigation options
+        // Restaurant Admin navigation options
         <>
           <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/admin">Dashboard</Link>
+            <Link to="/restaurant/dashboard" className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Dashboard</span>
+            </Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/admin/menu">Menu</Link>
+            <Link to="/restaurant/menu">Menu</Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/admin/orders">Orders</Link>
+            <Link to="/restaurant/orders">Orders</Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="text-gray-300 hover:text-white">
-            <Link to="/admin/settings">Settings</Link>
+            <Link to="/profile">Settings</Link>
           </Button>
         </>
       )}
