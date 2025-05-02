@@ -1,20 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SavedMealPlan } from '@/types/fitness';
-import { Droplets } from 'lucide-react';
+import { Droplets, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { MealPlan } from '@/types/food';
+import { getDaysRemaining, renewMealPlan } from '@/services/mealPlanService';
+import { Badge } from "@/components/ui/badge";
 
 interface SavedMealPlansProps {
   userId?: string;
 }
 
 const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
-  const { toast } = useToast();
   const [savedPlans, setSavedPlans] = useState<SavedMealPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +40,9 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         // Convert database JSON to our type
         const typedData = data.map(item => ({
           ...item,
-          meal_plan: item.meal_plan as unknown as MealPlan
+          meal_plan: item.meal_plan as unknown as MealPlan,
+          expires_at: item.expires_at || null,
+          is_active: item.is_active !== false // Default to true if not present
         })) as SavedMealPlan[];
         
         setSavedPlans(typedData);
@@ -48,11 +51,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       }
     } catch (error) {
       console.error('Error loading saved meal plans:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load saved meal plans.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to load saved meal plans.');
     } finally {
       setLoading(false);
     }
@@ -70,17 +69,35 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       // Remove from local state
       setSavedPlans(savedPlans.filter(plan => plan.id !== planId));
       
-      toast({
-        title: 'Plan Deleted',
-        description: 'Your meal plan has been deleted.',
-      });
+      toast.success('Your meal plan has been deleted.');
     } catch (error) {
       console.error('Error deleting meal plan:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete meal plan.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to delete meal plan.');
+    }
+  };
+
+  const handleRenewPlan = async (planId: string) => {
+    try {
+      const result = await renewMealPlan(planId);
+      
+      if (result.success) {
+        // Update the local state
+        setSavedPlans(savedPlans.map(plan => 
+          plan.id === planId 
+            ? {
+                ...plan, 
+                expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                is_active: true
+              } 
+            : plan
+        ));
+        toast.success('Meal plan renewed for another 2 weeks.');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error renewing meal plan:', error);
+      toast.error('Failed to renew the meal plan.');
     }
   };
 
@@ -92,16 +109,16 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       const storedTDEE = sessionStorage.getItem('currentTDEE');
       
       if (!storedMealPlan || !storedTDEE) {
-        toast({
-          title: 'No Meal Plan',
-          description: 'No current meal plan found to save. Generate a meal plan first.',
-          variant: 'destructive',
-        });
+        toast.error('No current meal plan found to save. Generate a meal plan first.');
         return;
       }
       
       const mealPlan = JSON.parse(storedMealPlan) as MealPlan;
       const tdeeResult = JSON.parse(storedTDEE) as TDEEResult;
+      
+      // Calculate expiration date (14 days from now)
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
       
       // Save the plan name
       const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
@@ -125,34 +142,29 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
         
       if (tdeeError) throw tdeeError;
       
-      // Now save the meal plan - using stringify to convert MealPlan to Json
-      const { error } = await supabase
+      // Now save the meal plan with expiration date
+      const { data, error } = await supabase
         .from('saved_meal_plans')
         .insert({
           user_id: userId,
           name: planName,
-          date_created: new Date().toISOString(),
+          date_created: now.toISOString(),
+          expires_at: expiresAt.toISOString(),
+          is_active: true,
           tdee_id: tdeeData.id,
           meal_plan: JSON.parse(JSON.stringify(mealPlan)), // Convert to plain object
         });
         
       if (error) throw error;
       
-      toast({
-        title: 'Plan Saved',
-        description: 'Your meal plan has been saved successfully.',
-      });
+      toast.success('Your meal plan has been saved successfully.');
       
       // Refresh the list
       await loadSavedMealPlans();
       
     } catch (error) {
       console.error('Error saving meal plan:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save meal plan.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to save meal plan.');
     }
   };
 
@@ -164,18 +176,27 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       // Redirect to the fitness page
       window.location.href = '/fitness';
       
-      toast({
-        title: 'Plan Loaded',
-        description: 'Your saved meal plan has been loaded.',
-      });
+      toast.success('Your saved meal plan has been loaded.');
     } catch (error) {
       console.error('Error loading plan:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load meal plan.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to load meal plan.');
     }
+  };
+
+  const getStatusBadge = (plan: SavedMealPlan) => {
+    if (!plan.expires_at) return null;
+    
+    const daysRemaining = getDaysRemaining(plan.expires_at);
+    
+    if (!plan.is_active || daysRemaining <= 0) {
+      return <Badge variant="destructive" className="flex gap-1 items-center"><AlertCircle className="h-3.5 w-3.5" /> Expired</Badge>;
+    }
+    
+    if (daysRemaining <= 3) {
+      return <Badge variant="warning" className="flex gap-1 items-center bg-amber-500"><Clock className="h-3.5 w-3.5" /> Expires soon</Badge>;
+    }
+    
+    return <Badge variant="success" className="flex gap-1 items-center bg-green-600"><Clock className="h-3.5 w-3.5" /> Active</Badge>;
   };
 
   if (loading) {
@@ -203,17 +224,27 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       {savedPlans.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {savedPlans.map((plan) => (
-            <Card key={plan.id} className="holographic-card overflow-hidden">
+            <Card key={plan.id} className={`holographic-card overflow-hidden ${!plan.is_active || getDaysRemaining(plan.expires_at || '') <= 0 ? 'opacity-70' : ''}`}>
               <CardHeader className="pb-4">
-                <CardTitle className="flex justify-between items-center">
-                  <span>{plan.name}</span>
-                  <span className="text-quantum-purple">
-                    {plan.meal_plan.totalCalories} kcal
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  Created {new Date(plan.date_created).toLocaleDateString()}
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex justify-between items-center">
+                    <span>{plan.name}</span>
+                  </CardTitle>
+                  {getStatusBadge(plan)}
+                </div>
+                <CardDescription className="flex flex-col gap-1">
+                  <span>Created {new Date(plan.date_created).toLocaleDateString()}</span>
+                  {plan.expires_at && (
+                    <span className="flex items-center gap-1">
+                      {getDaysRemaining(plan.expires_at) <= 0 
+                        ? "Expired" 
+                        : `Expires in ${getDaysRemaining(plan.expires_at)} days`}
+                    </span>
+                  )}
                 </CardDescription>
+                <div className="text-quantum-purple text-xl font-medium mt-1">
+                  {plan.meal_plan.totalCalories} kcal
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -238,23 +269,36 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
                       Water: {plan.meal_plan.hydrationTarget} ml
                     </div>
                   </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <Button 
-                      onClick={() => loadPlan(plan)}
-                      className="bg-quantum-cyan hover:bg-quantum-cyan/90"
-                    >
-                      Load Plan
-                    </Button>
-                    <Button 
-                      onClick={() => handleDeletePlan(plan.id)}
-                      variant="destructive"
-                    >
-                      Delete Plan
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
+              <CardFooter className="flex flex-col gap-2">
+                <Button 
+                  onClick={() => loadPlan(plan)}
+                  className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
+                  disabled={!plan.is_active && plan.expires_at && getDaysRemaining(plan.expires_at) <= 0}
+                >
+                  Load Plan
+                </Button>
+                <div className="flex gap-2 w-full">
+                  {plan.expires_at && (
+                    <Button 
+                      onClick={() => handleRenewPlan(plan.id)}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Renew
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={() => handleDeletePlan(plan.id)}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </CardFooter>
             </Card>
           ))}
         </div>

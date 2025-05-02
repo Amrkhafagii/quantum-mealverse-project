@@ -1,8 +1,9 @@
-
 import { Food, Meal, MealFood, MealPlan, FoodCategory } from '@/types/food';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { foodDatabase, getFoodById, getFoodsByCategory, getFoodsByCategoryAndMealType } from '@/data/foodDatabase';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 /**
  * Creates a meal with balanced macros based on targets
@@ -319,4 +320,110 @@ export const getMealStats = (meal: Meal) => {
     fat: meal.totalFat,
     foods: meal.foods.length
   };
+};
+
+/**
+ * Save a meal plan with expiration date
+ */
+export const saveMealPlan = async (
+  userId: string, 
+  mealPlan: MealPlan, 
+  tdeeResult: TDEEResult, 
+  planName?: string
+): Promise<{success: boolean; id?: string; error?: string}> => {
+  try {
+    // Save the plan name
+    const name = planName || `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
+    
+    // Calculate expiration date (14 days from now)
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    
+    // First create or get TDEE record
+    const { data: tdeeData, error: tdeeError } = await supabase
+      .from('user_tdee')
+      .insert({
+        user_id: userId,
+        date: now.toISOString(),
+        tdee: tdeeResult.tdee,
+        bmr: tdeeResult.bmr,
+        goal: tdeeResult.goal,
+        activity_level: 'moderate', // Default value
+        protein_target: tdeeResult.proteinGrams,
+        carbs_target: tdeeResult.carbsGrams,
+        fat_target: tdeeResult.fatsGrams,
+      })
+      .select('id')
+      .single();
+      
+    if (tdeeError) throw tdeeError;
+    
+    // Now save the meal plan with expiration date
+    const { data, error } = await supabase
+      .from('saved_meal_plans')
+      .insert({
+        user_id: userId,
+        name: name,
+        date_created: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        is_active: true,
+        tdee_id: tdeeData.id,
+        meal_plan: JSON.parse(JSON.stringify(mealPlan)), // Convert to plain object
+      })
+      .select('id')
+      .single();
+      
+    if (error) throw error;
+    
+    return {
+      success: true,
+      id: data.id
+    };
+    
+  } catch (error: any) {
+    console.error('Error saving meal plan:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to save meal plan'
+    };
+  }
+};
+
+/**
+ * Renew a meal plan for another 2 weeks
+ */
+export const renewMealPlan = async (planId: string): Promise<{success: boolean; error?: string}> => {
+  try {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    
+    const { error } = await supabase
+      .from('saved_meal_plans')
+      .update({ 
+        expires_at: expiresAt.toISOString(),
+        is_active: true 
+      })
+      .eq('id', planId);
+      
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error renewing meal plan:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to renew meal plan'
+    };
+  }
+};
+
+/**
+ * Calculate days remaining until expiration
+ */
+export const getDaysRemaining = (expiresAt: string): number => {
+  const now = new Date();
+  const expDate = new Date(expiresAt);
+  const diffTime = expDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
 };

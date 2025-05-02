@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Shuffle, Droplets, AlertCircle, Info, Shield, Utensils } from 'lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { shuffleMeal } from '@/services/mealPlanService';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/use-auth";
 
 interface MealCardProps {
   meal: Meal;
@@ -112,6 +112,7 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
   onUpdateMealPlan
 }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleShuffleMeal = (index: number) => {
     const meal = mealPlan.meals[index];
@@ -160,6 +161,54 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
 
   // Check specifically for protein being below 95%
   const lowProtein = proteinPercent < 95;
+
+  const handleSaveMealPlan = async () => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to save your meal plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Get TDEE result from session storage
+    const storedTDEE = sessionStorage.getItem('currentTDEE');
+    if (!storedTDEE) {
+      toast({
+        title: "Error",
+        description: "Missing TDEE data. Try refreshing the page and recalculating.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const tdeeResult = JSON.parse(storedTDEE) as TDEEResult;
+    
+    try {
+      // Save to session storage as well
+      sessionStorage.setItem('currentMealPlan', JSON.stringify(mealPlan));
+      
+      // Save to database with expiration (14 days from now)
+      const result = await saveMealPlan(user.id, mealPlan, tdeeResult);
+      
+      if (result.success) {
+        toast({
+          title: "Meal Plan Saved",
+          description: "Your personalized meal plan has been saved for 14 days.",
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error saving meal plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save meal plan. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Card className="border-quantum-cyan/30 bg-quantum-darkBlue/20 backdrop-blur-sm">
@@ -264,16 +313,15 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
         <div className="mt-6">
           <Button 
             className="w-full bg-quantum-purple hover:bg-quantum-purple/90"
-            onClick={() => {
-              // In a real implementation, this would save the meal plan to the user's profile
-              toast({
-                title: "Meal Plan Saved",
-                description: "Your personalized meal plan has been saved to your profile.",
-              });
-            }}
+            onClick={handleSaveMealPlan}
           >
-            Save This Meal Plan
+            Save This Meal Plan (Valid for 14 Days)
           </Button>
+          {user ? null : (
+            <p className="text-xs text-center mt-2 text-gray-400">
+              You must be logged in to save meal plans
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

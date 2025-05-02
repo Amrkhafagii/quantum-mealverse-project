@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateMealPlan } from '@/services/mealPlanService';
 import { MealPlan } from '@/types/food';
 import NutritionDashboard from '@/components/fitness/NutritionDashboard';
+import { checkExpiredMealPlans, checkSoonToExpirePlans } from '@/services/scheduledTasks';
 
 const Nutrition = () => {
   const navigate = useNavigate();
@@ -23,17 +24,40 @@ const Nutrition = () => {
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
 
+  useEffect(() => {
+    // On component mount, check for expired meal plans
+    if (user) {
+      checkExpiredMealPlans().then(() => {
+        // Check for soon-to-expire plans for the current user
+        return checkSoonToExpirePlans(user.id);
+      }).then(result => {
+        if (result.success && result.expiringSoon > 0) {
+          toast.info(`You have ${result.expiringSoon} meal plan${result.expiringSoon > 1 ? 's' : ''} expiring soon.`, {
+            description: "Visit your saved meal plans to renew them.",
+            duration: 6000
+          });
+        }
+      });
+    }
+  }, [user]);
+
   const handleCalculationComplete = (result: TDEEResult) => {
     setCalculationResult(result);
     // Generate meal plan based on TDEE results
     const generatedMealPlan = generateMealPlan(result);
     setMealPlan(generatedMealPlan);
+    
+    // Save TDEE to session storage
+    sessionStorage.setItem('currentTDEE', JSON.stringify(result));
+    
     setActiveTab('plans');
     toast.success("Calorie calculation completed! We've generated a meal plan that fits your needs.");
   };
 
   const handleUpdateMealPlan = (updatedPlan: MealPlan) => {
     setMealPlan(updatedPlan);
+    // Update in session storage
+    sessionStorage.setItem('currentMealPlan', JSON.stringify(updatedPlan));
   };
 
   return (
