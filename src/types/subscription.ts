@@ -1,7 +1,4 @@
 
-// This file is kept as a placeholder but no longer contains subscription functionality
-// It can be safely removed if not referenced elsewhere in the application
-
 export interface Subscription {
   id: string;
   user_id: string;
@@ -13,4 +10,6 @@ export interface Subscription {
   meals_per_week: number;
   created_at: string;
   updated_at: string;
+  is_trial?: boolean;
+  trial_ends_at?: string;
 }
