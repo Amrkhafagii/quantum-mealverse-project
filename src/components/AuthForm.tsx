@@ -79,12 +79,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           .from('restaurants')
           .select('id')
           .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
-          .single();
+          .maybeSingle();
           
         if (restaurantData) {
+          // Restaurant owner - redirect to restaurant dashboard
+          toast({
+            title: "Welcome to Restaurant Dashboard",
+            description: "You have been logged in as a restaurant owner",
+          });
           navigate('/restaurant/dashboard');
         } else {
           // Regular customer flow
+          toast({
+            title: "Welcome back",
+            description: "You have been logged in successfully",
+          });
           navigate('/');
         }
       }

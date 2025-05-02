@@ -16,6 +16,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isRestaurant, setIsRestaurant] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { itemCount } = useCart?.() || { itemCount: 0 };
   const { toast } = useToast();
@@ -23,11 +24,13 @@ const Navbar = () => {
   const { unreadCount } = useNotifications();
 
   useEffect(() => {
-    // Check admin status when user changes
+    // Check admin and restaurant status when user changes
     if (user?.id) {
       checkAdminStatus(user.id);
+      checkRestaurantStatus(user.id);
     } else {
       setIsAdmin(false);
+      setIsRestaurant(false);
     }
   }, [user]);
 
@@ -41,6 +44,18 @@ const Navbar = () => {
       .maybeSingle();
       
     setIsAdmin(!!data);
+  };
+
+  const checkRestaurantStatus = async (userId) => {
+    if (!userId) return;
+    
+    const { data } = await supabase
+      .from('restaurants')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    setIsRestaurant(!!data);
   };
 
   const handleLogout = async () => {
@@ -73,10 +88,25 @@ const Navbar = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  const isCustomerView = location.pathname === '/customer' || location.pathname === '/' || 
-    !['/admin', '/restaurant'].some(path => location.pathname.startsWith(path));
+  // Don't show customer navigation in restaurant paths
+  const isRestaurantView = location.pathname.startsWith('/restaurant');
+  const isCustomerView = !isRestaurantView && (location.pathname === '/customer' || location.pathname === '/' || 
+    !['/admin', '/restaurant'].some(path => location.pathname.startsWith(path)));
 
   const isAuthenticated = !!session;
+
+  // Redirect to restaurant dashboard if already on customer view and is restaurant owner
+  useEffect(() => {
+    if (isRestaurant && isCustomerView && isAuthenticated && !location.pathname.startsWith('/restaurant')) {
+      // Only show this once when initially loading the page
+      if (location.pathname === '/') {
+        navigate('/restaurant/dashboard');
+      }
+    }
+  }, [isRestaurant, isCustomerView, isAuthenticated, location.pathname]);
+
+  // If already on a restaurant page, don't show the customer navbar
+  if (isRestaurantView) return null;
 
   return (
     <nav className="fixed w-full z-20 top-0 bg-black/50 backdrop-blur-md border-b border-quantum-cyan/20">
@@ -92,6 +122,16 @@ const Navbar = () => {
           />
           
           <div className="flex items-center gap-4">
+            {isRestaurant && (
+              <Button
+                variant="outline"
+                className="text-quantum-cyan border-quantum-cyan hover:bg-quantum-cyan/10"
+                onClick={() => navigate('/restaurant/dashboard')}
+              >
+                Restaurant Dashboard
+              </Button>
+            )}
+            
             <UserActions 
               isCustomerView={isCustomerView}
               session={session}
@@ -117,6 +157,7 @@ const Navbar = () => {
           <MobileMenu 
             isCustomerView={isCustomerView}
             isAdmin={isAdmin}
+            isRestaurant={isRestaurant}
             session={session}
             toggleUserView={toggleUserView}
           />

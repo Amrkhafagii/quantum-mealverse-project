@@ -1,14 +1,16 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Dumbbell, Package, UserCog } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Dumbbell, Package, UserCog, ChefHat } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface MobileMenuProps {
   isCustomerView: boolean;
   isAdmin: boolean;
+  isRestaurant?: boolean;
   session: Session | null;
   toggleUserView: (checked: boolean) => void;
 }
@@ -16,10 +18,12 @@ interface MobileMenuProps {
 export const MobileMenu = ({ 
   isCustomerView, 
   isAdmin, 
+  isRestaurant = false,
   session,
   toggleUserView
 }: MobileMenuProps) => {
   const isAuthenticated = !!session;
+  const navigate = useNavigate();
   
   return (
     <div className="p-4 border-t border-quantum-cyan/20 md:hidden">
@@ -94,6 +98,19 @@ export const MobileMenu = ({
                 <LogIn className="h-5 w-5 text-quantum-cyan" />
                 <span>Log In</span>
               </Link>
+            )}
+
+            {isRestaurant && (
+              <div className="pt-2 border-t border-quantum-cyan/20">
+                <Button
+                  variant="outline"
+                  className="w-full text-quantum-cyan border-quantum-cyan hover:bg-quantum-cyan/10 flex items-center gap-2"
+                  onClick={() => navigate('/restaurant/dashboard')}
+                >
+                  <ChefHat className="h-5 w-5" />
+                  <span>Restaurant Dashboard</span>
+                </Button>
+              </div>
             )}
           </>
         ) : (
