@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -391,7 +392,7 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
                 
                 <div className="mt-3 flex justify-between items-center">
                   <Badge variant="outline" className="text-xs">
-                    {challenge.type === 'workouts' || challenge.type === 'steps' || challenge.type === 'nutrition' || challenge.type === 'weight' || challenge.type === 'distance' ? challenge.type : 'Individual'} Challenge
+                    {challenge.type} Challenge
                   </Badge>
                   
                   <div className="flex items-center gap-3">
@@ -437,49 +438,6 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
       </CardFooter>
     </Card>
   );
-
-  // These helper functions need to be moved inside the component
-  function getChallengeStatusColor(status: string) {
-    switch (status) {
-      case 'active': return 'bg-green-500/20 text-green-500';
-      case 'completed': return 'bg-blue-500/20 text-blue-500';
-      case 'upcoming': return 'bg-amber-500/20 text-amber-500';
-      default: return 'bg-gray-500/20 text-gray-500';
-    }
-  }
-
-  function getTeamColor(teamId: string) {
-    const colors = [
-      'bg-quantum-cyan/20 text-quantum-cyan',
-      'bg-quantum-purple/20 text-quantum-purple',
-      'bg-emerald-500/20 text-emerald-500',
-      'bg-amber-500/20 text-amber-500',
-      'bg-blue-500/20 text-blue-500'
-    ];
-    
-    const charSum = teamId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[charSum % colors.length];
-  }
-
-  function isUserInTeam(teamId: string) {
-    return userTeams.some(userTeam => userTeam.team_id === teamId);
-  }
-
-  function handleJoinChallenge(challengeId: string) {
-    if (!userId) {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in to join a challenge',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    toast({
-      title: 'Challenge Joined',
-      description: 'You have successfully joined the challenge!',
-    });
-  }
 };
 
 export default TeamChallenges;

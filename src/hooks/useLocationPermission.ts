@@ -37,8 +37,17 @@ export const useLocationPermission = () => {
             .maybeSingle();
             
           // Check if location_tracking_enabled exists in data
-          if (data && data.location_tracking_enabled !== null && data.location_tracking_enabled !== undefined) {
-            setTrackingEnabled(!!data.location_tracking_enabled);
+          // It might not exist yet in the database schema, so handle that case
+          if (data) {
+            // Create a type guard to check if location_tracking_enabled exists on the object
+            const hasLocationTracking = (obj: any): obj is { location_tracking_enabled: boolean } => {
+              return 'location_tracking_enabled' in obj && obj.location_tracking_enabled !== undefined;
+            };
+            
+            // Use the type guard to safely access location_tracking_enabled
+            if (hasLocationTracking(data)) {
+              setTrackingEnabled(!!data.location_tracking_enabled);
+            }
           }
         }
       } catch (error) {

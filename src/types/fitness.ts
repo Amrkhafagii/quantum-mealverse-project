@@ -1,3 +1,4 @@
+
 import { MealPlan } from './food';
 import { Json } from '@/integrations/supabase/types';
 
@@ -104,7 +105,7 @@ export interface WorkoutSet {
 export interface CompletedExercise {
   exercise_id: string;
   exercise_name: string;
-  name?: string;
+  name: string;
   sets_completed: WorkoutSet[] | number;
   notes?: string;
   reps_completed?: any[];
@@ -147,7 +148,9 @@ export interface WorkoutHistoryItem {
 
 export interface UserWorkoutStats {
   total_workouts: number;
+  totalWorkouts?: number; // Alias for total_workouts for backward compatibility
   total_duration: number;
+  total_time?: number; // Alias for total_duration
   total_calories: number;
   streak: number;
   most_active_day: string;
@@ -156,7 +159,6 @@ export interface UserWorkoutStats {
   completion_rate: number;
   currentStreak?: number;
   longestStreak?: number;
-  total_time?: number;
   strongest_exercise?: {
     exercise_name: string;
     max_weight: number;
@@ -166,7 +168,6 @@ export interface UserWorkoutStats {
     improvement_percentage: number;
   };
   weekly_goal_completion?: number;
-  totalWorkouts?: number; // Alias for total_workouts for backward compatibility
 }
 
 export interface WorkoutSchedule {
@@ -325,6 +326,21 @@ export interface ChallengeParticipant {
   progress: number;
   completed: boolean;
   completion_date?: string;
+}
+
+export interface UserPreferences {
+  user_id: string;
+  id?: string;
+  dietary_restrictions?: string[] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  calorie_target?: number | null;
+  protein_target?: number | null;
+  carbs_target?: number | null;
+  fat_target?: number | null;
+  allergies?: string[] | null;
+  currency?: string;
+  location_tracking_enabled?: boolean | null;
 }
 
 export interface DailyQuest {

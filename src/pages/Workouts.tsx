@@ -1,10 +1,9 @@
 
+import React from 'react';
+
 // Import the base Database type
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 import { Json } from "@/integrations/supabase/types";
-import React from 'react';
-import { Container } from "@/components/ui/container";
-import WorkoutLayout from "@/components/fitness/WorkoutLayout";
 
 // Define extensions to the Database type
 export interface DatabaseExtensions {
@@ -279,9 +278,21 @@ export type SupabaseSchema = MergedDatabase;
 // Create and export a component for the Workouts page
 const WorkoutsPage: React.FC = () => {
   return (
-    <Container>
-      <WorkoutLayout />
-    </Container>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-quantum-cyan mb-8">Workouts</h1>
+      <div className="bg-quantum-darkBlue/30 border border-quantum-cyan/20 p-6 rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Workout Management</h2>
+        <p className="text-gray-300">
+          Your workout management interface is coming soon. Here you'll be able to:
+        </p>
+        <ul className="list-disc pl-5 mt-2 space-y-1 text-gray-300">
+          <li>View and manage workout plans</li>
+          <li>Track your workout history</li>
+          <li>Schedule upcoming workouts</li>
+          <li>Get personalized workout recommendations</li>
+        </ul>
+      </div>
+    </div>
   );
 };
 

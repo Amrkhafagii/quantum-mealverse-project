@@ -137,7 +137,7 @@ const Navbar = () => {
             {user && (
               <>
                 {/* Mobile location indicator */}
-                <LocationStatusIndicator size="sm" showTooltip={false} />
+                <LocationStatusIndicator colorVariant="navbar" />
                 
                 <Button 
                   variant="ghost" 

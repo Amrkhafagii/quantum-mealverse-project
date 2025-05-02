@@ -38,10 +38,11 @@ export async function getFitnessGoalById(goalId: string) {
 export async function addFitnessGoal(goal: FitnessGoal) {
   try {
     // Make sure 'description' isn't required for the insert
+    // Only include necessary fields that match the database schema
     const goalData = {
       id: goal.id,
       user_id: goal.user_id,
-      name: goal.name,
+      name: goal.name || goal.title || '', // Use title as fallback
       description: goal.description || '',  // Default to empty string if not provided
       target_date: goal.target_date,
       target_weight: goal.target_weight,
@@ -68,6 +69,7 @@ export async function addFitnessGoal(goal: FitnessGoal) {
 export async function updateFitnessGoal(goal: FitnessGoal) {
   try {
     // Make sure 'description' isn't required for the update
+    // Only include fields that match the database schema
     const goalData = {
       name: goal.name,
       description: goal.description || '',  // Default to empty string if not provided

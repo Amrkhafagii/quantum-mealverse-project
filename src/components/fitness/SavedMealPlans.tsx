@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -215,7 +216,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-quantum-cyan">Your Saved Meal Plans</h2>
         <Button 
-          onClick={() => console.log('Save current plan')}
+          onClick={saveCurrentMealPlan}
           className="bg-quantum-purple hover:bg-quantum-purple/90"
         >
           Save Current Plan
@@ -225,7 +226,8 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
       {savedPlans.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {savedPlans.map((plan) => {
-            const mealPlan = plan.meal_plan as MealPlan;
+            // Cast meal_plan to MealPlan to ensure TypeScript recognizes it
+            const mealPlan = plan.meal_plan as unknown as MealPlan;
             return (
             <Card key={plan.id} className={`holographic-card overflow-hidden ${!plan.is_active || (plan.expires_at && getDaysRemaining(plan.expires_at) <= 0) ? 'opacity-70' : ''}`}>
               <CardHeader className="pb-4">
@@ -276,7 +278,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
               </CardContent>
               <CardFooter className="flex flex-col gap-2">
                 <Button 
-                  onClick={() => console.log('Load plan', plan.id)}
+                  onClick={() => loadPlan(plan)}
                   className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
                   disabled={!plan.is_active && plan.expires_at && getDaysRemaining(plan.expires_at) <= 0}
                 >
@@ -285,7 +287,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
                 <div className="flex gap-2 w-full">
                   {plan.expires_at && (
                     <Button 
-                      onClick={() => console.log('Renew plan', plan.id)}
+                      onClick={() => handleRenewPlan(plan.id)}
                       variant="outline"
                       className="flex-1"
                     >
@@ -294,7 +296,7 @@ const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
                     </Button>
                   )}
                   <Button 
-                    onClick={() => console.log('Delete plan', plan.id)}
+                    onClick={() => handleDeletePlan(plan.id)}
                     variant="destructive"
                     className="flex-1"
                   >
