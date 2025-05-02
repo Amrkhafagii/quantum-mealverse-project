@@ -37,7 +37,7 @@ export const useLocationPermission = () => {
             .maybeSingle();
             
           // Check if location_tracking_enabled exists in data
-          if (data && 'location_tracking_enabled' in data) {
+          if (data && data.location_tracking_enabled !== null && data.location_tracking_enabled !== undefined) {
             setTrackingEnabled(!!data.location_tracking_enabled);
           }
         }

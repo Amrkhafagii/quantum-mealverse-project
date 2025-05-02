@@ -21,7 +21,7 @@ import MealDetail from './pages/MealDetail';
 import NotFound from './pages/NotFound';
 import Nutrition from './pages/Nutrition';
 import Fitness from './pages/Fitness';
-import Workouts from './pages/Workouts';
+import WorkoutsPage from './pages/Workouts'; // Fixed import to use the default export
 import FitnessProfile from './pages/FitnessProfile';
 import Orders from './pages/Orders';
 
@@ -65,7 +65,7 @@ function App() {
                     <Route path="/orders/:id" element={<Orders />} />
                     <Route path="/nutrition" element={<Nutrition />} />
                     <Route path="/fitness" element={<Fitness />} />
-                    <Route path="/workouts" element={<Workouts />} />
+                    <Route path="/workouts" element={<WorkoutsPage />} /> {/* Fixed to use WorkoutsPage */}
                     <Route path="/fitness-profile" element={<FitnessProfile />} />
                     
                     {/* Restaurant Admin Routes */}

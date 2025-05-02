@@ -1,3 +1,4 @@
+
 // Fix the import path for useAuth
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth'; // Fixed import path
 import { MealPlan } from '@/types/food';
-import { Json } from '@/integrations/supabase/types';
 
 interface MealPlanDisplayProps {
   mealPlan: MealPlan;
@@ -181,8 +181,8 @@ const saveMealPlan = async (userId: string, planName: string, mealPlan: MealPlan
       
     if (tdeeError) throw tdeeError;
     
-    // Serialize the meal plan to JSON compatible format - crucial fix
-    const serializedMealPlan = JSON.parse(JSON.stringify(mealPlan)) as Json;
+    // Serialize the meal plan to proper JSON format
+    const serializedMealPlan = JSON.parse(JSON.stringify(mealPlan));
     
     // Now save the meal plan with expiration date
     const { data, error } = await supabase

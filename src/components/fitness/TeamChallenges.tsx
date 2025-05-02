@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -44,33 +43,7 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
         setLoading(false);
       }, 800);
       
-      // In a real implementation, we would fetch from Supabase:
-      /*
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('*')
-        .order('total_points', { ascending: false });
-        
-      if (teamError) throw teamError;
-      
-      const { data: userTeamData, error: userTeamError } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('user_id', userId);
-        
-      if (userTeamError) throw userTeamError;
-      
-      const { data: challengeData, error: challengeError } = await supabase
-        .from('challenges')
-        .select('*')
-        .order('start_date', { ascending: false });
-        
-      if (challengeError) throw challengeError;
-      
-      setTeams(teamData || []);
-      setUserTeams(userTeamData || []);
-      setChallenges(challengeData || []);
-      */
+      // In a real implementation, we would fetch from Supabase
     } catch (error) {
       console.error('Error loading team challenges data:', error);
       toast({
@@ -89,27 +62,33 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
         id: '1',
         name: 'Fitness Warriors',
         description: 'A team dedicated to consistent workout routines and maximum gains!',
-        creator_id: 'user1',
+        created_by: 'user1',
+        creator_id: 'user1', // Added for compatibility
         created_at: new Date().toISOString(),
-        members_count: 8,
+        member_count: 8,
+        members_count: 8, // Added for compatibility
         total_points: 2450
       },
       {
         id: '2',
         name: 'Weight Crushers',
         description: 'Focus on strength training and healthy nutrition.',
-        creator_id: 'user2',
+        created_by: 'user2',
+        creator_id: 'user2', // Added for compatibility
         created_at: new Date().toISOString(),
-        members_count: 5,
+        member_count: 5,
+        members_count: 5, // Added for compatibility
         total_points: 1820
       },
       {
         id: '3',
         name: 'Cardio Kings',
         description: 'Running, cycling, swimming - we do it all!',
-        creator_id: 'user3',
+        created_by: 'user3',
+        creator_id: 'user3', // Added for compatibility
         created_at: new Date().toISOString(),
-        members_count: 12,
+        member_count: 12,
+        members_count: 12, // Added for compatibility
         total_points: 3150
       }
     ];
@@ -133,12 +112,16 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
         description: 'Reach 10,000 steps daily for 30 days straight',
         start_date: today.toISOString(),
         end_date: nextMonth.toISOString(),
-        type: 'individual',
+        type: 'steps', // Modified to match Challenge type
+        target_value: 300000,
+        created_by: 'admin',
+        participants_count: 24,
+        is_active: true,
+        // Compatibility properties
         status: 'active',
         goal_type: 'steps',
         goal_value: 300000,
-        reward_points: 500,
-        participants_count: 24
+        reward_points: 500
       },
       {
         id: '2',
@@ -146,12 +129,17 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
         description: 'Work together to lose a combined 50 pounds',
         start_date: lastWeek.toISOString(),
         end_date: nextMonth.toISOString(),
-        type: 'team',
+        type: 'weight', // Modified to match Challenge type
+        target_value: 50,
+        created_by: 'admin',
+        participants_count: 15,
+        is_active: true,
+        team_id: '1',
+        // Compatibility properties
         status: 'active',
         goal_type: 'weight',
         goal_value: 50,
-        reward_points: 1000,
-        participants_count: 15
+        reward_points: 1000
       },
       {
         id: '3',
@@ -159,12 +147,16 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
         description: 'Complete at least 15 workouts in 21 days',
         start_date: nextWeek.toISOString(),
         end_date: new Date(nextWeek.getTime() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-        type: 'individual',
+        type: 'workouts', // Modified to match Challenge type
+        target_value: 15,
+        created_by: 'admin',
+        participants_count: 8,
+        is_active: true,
+        // Compatibility properties
         status: 'upcoming',
         goal_type: 'workouts',
         goal_value: 15,
-        reward_points: 300,
-        participants_count: 8
+        reward_points: 300
       }
     ];
   };
@@ -172,11 +164,14 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
   const getMockUserTeams = (userId: string): TeamMember[] => {
     return [
       {
+        id: 'member1',
         team_id: '1',
         user_id: userId,
-        joined_at: new Date().toISOString(),
+        joined_date: new Date().toISOString(),
+        joined_at: new Date().toISOString(), // Added for compatibility
         role: 'member',
-        contribution_points: 320
+        points_contributed: 320,
+        contribution_points: 320 // Added for compatibility
       }
     ];
   };
@@ -197,13 +192,18 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
     });
     
     // Optimistic update
-    setUserTeams([...userTeams, {
+    const newTeamMember: TeamMember = {
+      id: `member-${Date.now()}`,
       team_id: teamId,
       user_id: userId,
+      joined_date: new Date().toISOString(),
       joined_at: new Date().toISOString(),
       role: 'member',
+      points_contributed: 0,
       contribution_points: 0
-    }]);
+    };
+    
+    setUserTeams([...userTeams, newTeamMember]);
   };
 
   const handleJoinChallenge = (challengeId: string) => {
@@ -334,7 +334,7 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
                 </div>
                 
                 <div className="mt-3 flex items-center text-sm text-gray-400">
-                  <Users className="h-4 w-4 mr-1" /> {team.members_count} members
+                  <Users className="h-4 w-4 mr-1" /> {team.members_count || team.member_count} members
                 </div>
                 
                 <div className="mt-3">
@@ -373,8 +373,8 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
                     </h3>
                     <p className="text-xs text-gray-400 mt-1">{challenge.description}</p>
                   </div>
-                  <Badge className={getChallengeStatusColor(challenge.status)}>
-                    {challenge.status.charAt(0).toUpperCase() + challenge.status.slice(1)}
+                  <Badge className={getChallengeStatusColor(challenge.status || '')}>
+                    {challenge.status ? (challenge.status.charAt(0).toUpperCase() + challenge.status.slice(1)) : 'Active'}
                   </Badge>
                 </div>
                 
@@ -385,17 +385,17 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
                   </div>
                   <div className="flex items-center text-xs text-gray-400">
                     <Target className="h-3 w-3 mr-1" /> 
-                    Goal: {challenge.goal_value} {challenge.goal_type}
+                    Goal: {challenge.goal_value || challenge.target_value} {challenge.goal_type || challenge.type}
                   </div>
                 </div>
                 
                 <div className="mt-3 flex justify-between items-center">
                   <Badge variant="outline" className="text-xs">
-                    {challenge.type === 'individual' ? 'Individual' : 'Team'} Challenge
+                    {challenge.type === 'workouts' || challenge.type === 'steps' || challenge.type === 'nutrition' || challenge.type === 'weight' || challenge.type === 'distance' ? challenge.type : 'Individual'} Challenge
                   </Badge>
                   
                   <div className="flex items-center gap-3">
-                    <span className="text-quantum-cyan font-bold text-sm">+{challenge.reward_points} pts</span>
+                    <span className="text-quantum-cyan font-bold text-sm">+{challenge.reward_points || 100} pts</span>
                     
                     {challenge.status !== 'completed' && (
                       <Button
@@ -437,6 +437,49 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
       </CardFooter>
     </Card>
   );
+
+  // These helper functions need to be moved inside the component
+  function getChallengeStatusColor(status: string) {
+    switch (status) {
+      case 'active': return 'bg-green-500/20 text-green-500';
+      case 'completed': return 'bg-blue-500/20 text-blue-500';
+      case 'upcoming': return 'bg-amber-500/20 text-amber-500';
+      default: return 'bg-gray-500/20 text-gray-500';
+    }
+  }
+
+  function getTeamColor(teamId: string) {
+    const colors = [
+      'bg-quantum-cyan/20 text-quantum-cyan',
+      'bg-quantum-purple/20 text-quantum-purple',
+      'bg-emerald-500/20 text-emerald-500',
+      'bg-amber-500/20 text-amber-500',
+      'bg-blue-500/20 text-blue-500'
+    ];
+    
+    const charSum = teamId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[charSum % colors.length];
+  }
+
+  function isUserInTeam(teamId: string) {
+    return userTeams.some(userTeam => userTeam.team_id === teamId);
+  }
+
+  function handleJoinChallenge(challengeId: string) {
+    if (!userId) {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in to join a challenge',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    toast({
+      title: 'Challenge Joined',
+      description: 'You have successfully joined the challenge!',
+    });
+  }
 };
 
 export default TeamChallenges;

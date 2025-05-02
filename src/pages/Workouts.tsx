@@ -1,8 +1,12 @@
+
 // Import the base Database type
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 import { Json } from "@/integrations/supabase/types";
+import React from 'react';
+import { Container } from "@/components/ui/container";
+import WorkoutLayout from "@/components/fitness/WorkoutLayout";
 
-// Define our extensions to the Database type
+// Define extensions to the Database type
 export interface DatabaseExtensions {
   public: {
     Tables: {
@@ -271,3 +275,15 @@ export type MergedDatabase = {
 
 // Export a helper type to use in supabase client
 export type SupabaseSchema = MergedDatabase;
+
+// Create and export a component for the Workouts page
+const WorkoutsPage: React.FC = () => {
+  return (
+    <Container>
+      <WorkoutLayout />
+    </Container>
+  );
+};
+
+// Add default export for the component
+export default WorkoutsPage;

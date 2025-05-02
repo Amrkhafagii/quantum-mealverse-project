@@ -1,4 +1,3 @@
-
 import { MealPlan } from './food';
 import { Json } from '@/integrations/supabase/types';
 
@@ -9,8 +8,8 @@ export interface SavedMealPlan {
   date_created: string;
   tdee_id: string;
   meal_plan: Json | MealPlan;
-  expires_at?: string;  // Field for expiration date
-  is_active?: boolean;  // Field to track if plan is active
+  expires_at?: string;
+  is_active?: boolean;
 }
 
 // User Profile Types
@@ -228,7 +227,7 @@ export interface UserStreak {
   currentstreak: number;
   longeststreak: number;
   last_activity_date: string;
-  streak_type: 'workout' | 'nutrition' | 'meditation';
+  streak_type: 'workout' | 'nutrition' | 'meditation' | string;
 }
 
 export interface StreakReward {
@@ -239,7 +238,7 @@ export interface StreakReward {
   reward_value: number | string;
   icon: string;
   days?: number;
-  title?: string; // Added title to fix StreakRewards component errors
+  title?: string;
 }
 
 export interface StreakRewardsProps {
@@ -252,8 +251,8 @@ export interface StreakRewardsProps {
 export interface FitnessGoal {
   id: string;
   user_id: string;
+  name: string;
   title?: string; // Optional to be backward compatible
-  name?: string; // Keeping this for backward compatibility
   description?: string;
   category?: 'weight' | 'nutrition' | 'workout' | 'measurement' | 'habit';
   target_value?: number;
@@ -293,7 +292,7 @@ export interface TeamMember {
   joined_at?: string; // Alias for backward compatibility
   role: 'admin' | 'member';
   points_contributed: number;
-  contribution_points?: number;
+  contribution_points?: number; // Alias for backward compatibility
 }
 
 export interface Challenge {
@@ -314,6 +313,18 @@ export interface Challenge {
   goal_value?: number; // Added for TeamChallenges compatibility
   goal_type?: string; // Added for TeamChallenges compatibility
   reward_points?: number; // Added for TeamChallenges compatibility
+}
+
+// For use in gamificationService.ts
+export interface ChallengeParticipant {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  team_id?: string;
+  joined_date: string;
+  progress: number;
+  completed: boolean;
+  completion_date?: string;
 }
 
 export interface DailyQuest {
