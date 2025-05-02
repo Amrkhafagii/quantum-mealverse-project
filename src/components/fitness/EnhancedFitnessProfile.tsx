@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,6 +22,11 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
     ? Math.min(100, Math.max(0, 100 - ((latestMeasurement.weight || 0) - (userProfile.goal_weight || 0)) / (userProfile.weight - (userProfile.goal_weight || 0)) * 100))
     : 0;
 
+  // Get the primary fitness goal from array if available
+  const primaryFitnessGoal = userProfile?.fitness_goals && userProfile.fitness_goals.length > 0
+    ? userProfile.fitness_goals[0]
+    : "Weight Loss";
+
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
       <CardContent className="p-6">
@@ -32,7 +38,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
           <div className="profile-info">
             <h2 className="text-2xl font-semibold">{userProfile?.display_name || "User"}</h2>
             <p className="text-gray-400">
-              {userProfile?.fitness_level || "Beginner"} | {userProfile?.fitness_goal || "Weight Loss"}
+              {userProfile?.fitness_level || "Beginner"} | {primaryFitnessGoal}
             </p>
           </div>
         </div>
@@ -85,7 +91,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
           </div>
           <div className="insight-item">
             <Target className="h-4 w-4 text-orange-400 mr-2" />
-            <span>Goal: {userProfile?.fitness_goal || "N/A"}</span>
+            <span>Goal: {primaryFitnessGoal}</span>
           </div>
         </div>
       </CardContent>

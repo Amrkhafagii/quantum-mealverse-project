@@ -10,48 +10,60 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
   const rewards: StreakReward[] = [
     {
       id: '1',
+      streak_days: 3,
+      days: 3,
       streak_length: 3,
+      reward_name: '3 Day Streak',
+      title: '3 Day Streak',
       reward_description: 'Unlock custom workout themes',
       reward_type: 'feature',
       reward_value: 'themes',
       icon: 'palette',
-      days: 3,
-      title: '3 Day Streak', // Added title property
+      points: 10
     },
     {
       id: '2',
+      streak_days: 7,
+      days: 7,
       streak_length: 7,
+      reward_name: '7 Day Streak',
+      title: '7 Day Streak',
       reward_description: '10% off premium supplements',
       reward_type: 'discount',
       reward_value: '10',
       icon: 'tag',
-      days: 7,
-      title: '7 Day Streak', // Added title property
+      points: 25
     },
     {
       id: '3',
+      streak_days: 14,
+      days: 14,
       streak_length: 14,
+      reward_name: '14 Day Streak',
+      title: '14 Day Streak',
       reward_description: 'Silver Badge - Consistency Champion',
       reward_type: 'badge',
       reward_value: 'silver_badge',
       icon: 'award',
-      days: 14,
-      title: '14 Day Streak', // Added title property
+      points: 50
     },
     {
       id: '4',
+      streak_days: 30,
+      days: 30,
       streak_length: 30,
+      reward_name: '30 Day Streak',
+      title: '30 Day Streak',
       reward_description: 'Gold Badge + 20% off next purchase',
       reward_type: 'badge',
       reward_value: 'gold_badge',
       icon: 'trophy',
-      days: 30,
-      title: '30 Day Streak', // Added title property
+      points: 100
     }
   ];
 
   // Sort rewards by streak length
-  const sortedRewards = [...rewards].sort((a, b) => a.streak_length - b.streak_length);
+  const sortedRewards = [...rewards].sort((a, b) => a.streak_days - b.streak_days);
 
   // Current streak value (default to 0 if not provided)
   const streak = currentStreak || 0;
@@ -81,8 +93,8 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
 
         <div className="space-y-4">
           {sortedRewards.map((reward) => {
-            const isEarned = streak >= reward.streak_length;
-            const isNext = !isEarned && sortedRewards.filter(r => streak >= r.streak_length).length + 1 === sortedRewards.indexOf(reward) + 1;
+            const isEarned = streak >= reward.streak_days;
+            const isNext = !isEarned && sortedRewards.filter(r => streak >= r.streak_days).length + 1 === sortedRewards.indexOf(reward) + 1;
             
             return (
               <div 
@@ -104,7 +116,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
                     )}
                     <div>
                       <div className="font-medium">
-                        {reward.title || `${reward.streak_length} Day Streak`}
+                        {reward.reward_name}
                       </div>
                       <div className="text-xs text-gray-400">
                         {reward.reward_description}
@@ -116,7 +128,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
                     <Badge className="bg-green-600">Earned</Badge>
                   ) : (
                     <Badge variant="outline" className={isNext ? 'border-quantum-cyan text-quantum-cyan' : 'border-gray-500 text-gray-500'}>
-                      {reward.streak_length - streak} days left
+                      {reward.streak_days - streak} days left
                     </Badge>
                   )}
                 </div>

@@ -200,7 +200,6 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
       target_weight: targetWeight,
       target_body_fat: targetBodyFat,
       status: editingGoal?.status || 'active',
-      category: 'weight', // Default category
       target_value: targetWeight || 0, // Use target weight as the target value
       current_value: 0, // Default current value
       created_at: editingGoal?.created_at || new Date().toISOString(),
@@ -212,7 +211,7 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
       
       if (editingGoal) {
         // Update existing goal
-        result = await updateFitnessGoal(goalData);
+        result = await updateFitnessGoal(goalData.id, goalData);
         
         if (result.error) throw result.error;
         

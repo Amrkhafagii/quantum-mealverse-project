@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
@@ -67,6 +68,36 @@ export const createFitnessGoal = async (
 };
 
 /**
+ * Create a new fitness goal (alias for GoalManagement.tsx compatibility)
+ */
+export const addFitnessGoal = async (goalData: FitnessGoal): Promise<{
+  data: FitnessGoal | null;
+  error: any;
+}> => {
+  try {
+    // Remove any fields not needed for insert
+    const { id, created_at, updated_at, ...insertData } = goalData;
+    
+    const { data, error } = await supabase
+      .from('fitness_goals')
+      .insert([{
+        ...insertData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .returns<FitnessGoal[]>();
+      
+    if (error) throw error;
+    
+    return { data: data[0], error: null };
+  } catch (error) {
+    console.error('Error adding fitness goal:', error);
+    return { data: null, error };
+  }
+};
+
+/**
  * Update an existing fitness goal
  */
 export const updateFitnessGoal = async (
@@ -116,6 +147,16 @@ export const deleteGoal = async (goalId: string): Promise<{
 };
 
 /**
+ * Delete a fitness goal (alias for GoalManagement.tsx compatibility)
+ */
+export const deleteFitnessGoal = async (goalId: string): Promise<{
+  success: boolean;
+  error: any;
+}> => {
+  return deleteGoal(goalId);
+};
+
+/**
  * Update goal status based on progress
  */
 export const updateGoalStatusBasedOnProgress = async (
@@ -146,5 +187,29 @@ export const updateGoalStatusBasedOnProgress = async (
   } catch (error) {
     console.error('Error updating goal status:', error);
     return { success: false, error };
+  }
+};
+
+/**
+ * Update a goal's status (alias for GoalManagement.tsx compatibility)
+ */
+export const updateGoalStatus = async (
+  goalId: string,
+  status: 'active' | 'completed' | 'abandoned'
+): Promise<{
+  error: any;
+}> => {
+  try {
+    const { error } = await supabase
+      .from('fitness_goals')
+      .update({ status })
+      .eq('id', goalId);
+      
+    if (error) throw error;
+    
+    return { error: null };
+  } catch (error) {
+    console.error('Error updating goal status:', error);
+    return { error };
   }
 };

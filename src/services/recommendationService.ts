@@ -103,6 +103,7 @@ export const generateWorkoutRecommendations = async (userId: string) => {
       if (profileData.fitness_goals && profileData.fitness_goals.includes('strength')) {
         recommendations.push({
           title: 'Strength Building Program',
+          name: 'Strength Building Program', // Added for compatibility
           description: 'A 4-week program focused on building strength and muscle mass.',
           type: 'program',
           reason: 'Based on your fitness goals',
@@ -113,6 +114,7 @@ export const generateWorkoutRecommendations = async (userId: string) => {
       if (profileData.fitness_goals && profileData.fitness_goals.includes('endurance')) {
         recommendations.push({
           title: 'Endurance Training Plan',
+          name: 'Endurance Training Plan', // Added for compatibility
           description: 'Build your cardiovascular endurance with this progressive plan.',
           type: 'program',
           reason: 'Based on your fitness goals',
@@ -129,6 +131,7 @@ export const generateWorkoutRecommendations = async (userId: string) => {
       if (!workoutTypes.has('Full Body')) {
         recommendations.push({
           title: 'Full Body Workout',
+          name: 'Full Body Workout', // Added for compatibility
           description: 'Try this full body workout to target all major muscle groups.',
           type: 'workout',
           reason: 'Add variety to your routine',
@@ -140,15 +143,15 @@ export const generateWorkoutRecommendations = async (userId: string) => {
     // Check if user already has these recommendations
     const { data: existingRecs, error: recsError } = await supabase
       .from('workout_recommendations')
-      .select('title')
+      .select('title, name')
       .eq('user_id', userId)
       .in('title', recommendations.map(r => r.title));
       
     if (recsError) throw recsError;
     
     // Filter out recommendations that already exist
-    const existingTitles = new Set(existingRecs?.map(r => r.name || r.title) || []);
-    const newRecommendations = recommendations.filter(r => !existingTitles.has(r.title));
+    const existingTitles = new Set(existingRecs?.map(r => r.title || r.name) || []);
+    const newRecommendations = recommendations.filter(r => !existingTitles.has(r.title || ''));
     
     // Insert new recommendations
     if (newRecommendations.length > 0) {
@@ -156,6 +159,7 @@ export const generateWorkoutRecommendations = async (userId: string) => {
         id: crypto.randomUUID(),
         user_id: userId,
         title: rec.title,
+        name: rec.title, // Add name for compatibility
         description: rec.description,
         type: rec.type,
         reason: rec.reason,

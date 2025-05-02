@@ -71,7 +71,7 @@ export interface WorkoutPlan {
 export interface WorkoutDay {
   id: string;
   name: string;
-  day_name?: string; // Added for compatibility with components
+  day_name: string; // Added explicitly as required by components
   exercises: Exercise[];
   day_number: number;
   target_muscle_groups: string[];
@@ -122,14 +122,14 @@ export interface WorkoutLog {
 export interface CompletedExercise {
   exercise_id: string;
   name: string;
-  exercise_name?: string; // Added for compatibility
+  exercise_name: string; // Required by components
   sets_completed: {
     set_number: number;
     weight: number;
     reps: number;
     completed: boolean;
   }[];
-  weight_used?: number[]; // Added for compatibility
+  weight_used: number[]; // Added for compatibility
   reps_completed?: number[]; // Added for compatibility
   notes?: string; // Added for compatibility
 }
@@ -172,6 +172,9 @@ export interface FitnessGoal {
   status: 'active' | 'completed' | 'abandoned';
   created_at: string;
   updated_at: string;
+  target_value?: number; // Added for compatibility with GoalManagement
+  current_value?: number; // Added for compatibility with GoalManagement
+  category?: string; // Added for compatibility with GoalManagement
 }
 
 export interface Achievement {
@@ -231,6 +234,7 @@ export interface TeamMember {
   joined_date: string;
   joined_at?: string; // Added for compatibility
   points_contributed: number;
+  contribution_points?: number; // Added for compatibility
 }
 
 export interface Challenge {

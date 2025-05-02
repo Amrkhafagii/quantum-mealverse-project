@@ -1,16 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Users, Trophy, Calendar, Target } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Team, Challenge, TeamMember } from '@/types/fitness';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { UsersRound, Trophy, Target, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { motion } from 'framer-motion';
 
 interface TeamChallengesProps {
   userId?: string;
@@ -18,282 +14,176 @@ interface TeamChallengesProps {
 
 const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [userTeams, setUserTeams] = useState<Team[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [userTeams, setUserTeams] = useState<TeamMember[]>([]);
-  const [activeTab, setActiveTab] = useState<'teams' | 'challenges'>('teams');
+  const [teammates, setTeammates] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [activeTab, setActiveTab] = useState<'teams' | 'challenges'>('teams');
+  
   useEffect(() => {
-    if (userId) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
+    // In a real app, we would fetch from an API
+    fetchTeamsAndChallenges();
   }, [userId]);
-
-  const loadData = async () => {
+  
+  const fetchTeamsAndChallenges = async () => {
+    // Mock data for demonstration - in real app, fetch from backend
     setLoading(true);
-    try {
-      // For now we'll use mock data until the database tables are created
-      setTimeout(() => {
-        setTeams(getMockTeams());
-        setChallenges(getMockChallenges());
-        setUserTeams(getMockUserTeams(userId || ''));
-        setLoading(false);
-      }, 800);
+    
+    // Simulate API delay
+    setTimeout(() => {
+      // Sample teams data
+      const sampleTeams: Team[] = [
+        {
+          id: '1',
+          name: 'Team Alpha',
+          description: 'The best fitness team in the city!',
+          creator_id: 'user123',
+          created_by: 'JaneDoe', // Added for compatibility
+          created_at: new Date().toISOString(),
+          member_count: 8,
+          total_points: 2450,
+          avatar_url: 'https://avatar.vercel.sh/team-alpha.png'
+        },
+        {
+          id: '2',
+          name: 'Workout Warriors',
+          description: 'We crush every workout challenge!',
+          creator_id: 'user456',
+          created_by: 'JohnSmith', // Added for compatibility
+          created_at: new Date().toISOString(),
+          member_count: 12,
+          total_points: 3780,
+          avatar_url: 'https://avatar.vercel.sh/workout-warriors.png'
+        },
+        {
+          id: '3',
+          name: 'Fitness Fanatics',
+          description: 'Dedicated to health and fitness!',
+          creator_id: 'user789',
+          created_by: 'SamJones', // Added for compatibility
+          created_at: new Date().toISOString(),
+          member_count: 5,
+          total_points: 1560,
+          avatar_url: 'https://avatar.vercel.sh/fitness-fanatics.png'
+        }
+      ];
       
-      // In a real implementation, we would fetch from Supabase
-    } catch (error) {
-      console.error('Error loading team challenges data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load teams and challenges',
-        variant: 'destructive'
-      });
-    } finally {
+      // Sample challenges data
+      const sampleChallenges: Challenge[] = [
+        {
+          id: '1',
+          title: '10K Steps Daily',
+          description: 'Complete 10,000 steps every day for a week',
+          type: 'steps',
+          created_by: 'user123',
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          target_value: 70000,
+          goal_value: 70000, // Added for compatibility
+          reward_points: 500,
+          participants_count: 24,
+          team_id: '1',
+          is_active: true,
+          goal_type: 'steps',
+          status: 'active'
+        },
+        {
+          id: '2',
+          title: 'Weight Loss Challenge',
+          description: 'Lose 2% of your body weight in 30 days',
+          type: 'weight',
+          created_by: 'user456',
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          target_value: 2,
+          goal_value: 2, // Added for compatibility
+          reward_points: 1000,
+          participants_count: 18,
+          team_id: '2',
+          is_active: true,
+          goal_type: 'weight',
+          status: 'active'
+        },
+        {
+          id: '3',
+          title: 'Workout Streak Challenge',
+          description: 'Complete at least one workout every day for 14 days',
+          type: 'streak',
+          created_by: 'user789',
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          target_value: 14,
+          goal_value: 14, // Added for compatibility
+          reward_points: 750,
+          participants_count: 32,
+          team_id: '3',
+          is_active: true,
+          goal_type: 'streak',
+          status: 'active'
+        }
+      ];
+      
+      // Sample teammates data
+      const sampleTeammates: TeamMember[] = [
+        {
+          id: '1',
+          team_id: '1',
+          user_id: 'user123',
+          role: 'admin',
+          joined_date: new Date().toISOString(),
+          joined_at: new Date().toISOString(), // Added for compatibility
+          points_contributed: 850,
+          contribution_points: 850 // Added for compatibility
+        },
+        {
+          id: '2',
+          team_id: '1',
+          user_id: 'user456',
+          role: 'member',
+          joined_date: new Date().toISOString(),
+          joined_at: new Date().toISOString(), // Added for compatibility
+          points_contributed: 630,
+          contribution_points: 630 // Added for compatibility
+        },
+        {
+          id: '3',
+          team_id: '1',
+          user_id: 'user789',
+          role: 'member',
+          joined_date: new Date().toISOString(),
+          joined_at: new Date().toISOString(), // Added for compatibility
+          points_contributed: 410,
+          contribution_points: 410 // Added for compatibility
+        }
+      ];
+      
+      setUserTeams(sampleTeams);
+      setChallenges(sampleChallenges);
+      setTeammates(sampleTeammates);
       setLoading(false);
-    }
+    }, 800);
   };
-
-  const getMockTeams = (): Team[] => {
-    return [
-      {
-        id: '1',
-        name: 'Fitness Warriors',
-        description: 'A team dedicated to consistent workout routines and maximum gains!',
-        created_by: 'user1',
-        creator_id: 'user1', // Added for compatibility
-        created_at: new Date().toISOString(),
-        member_count: 8,
-        members_count: 8, // Added for compatibility
-        total_points: 2450
-      },
-      {
-        id: '2',
-        name: 'Weight Crushers',
-        description: 'Focus on strength training and healthy nutrition.',
-        created_by: 'user2',
-        creator_id: 'user2', // Added for compatibility
-        created_at: new Date().toISOString(),
-        member_count: 5,
-        members_count: 5, // Added for compatibility
-        total_points: 1820
-      },
-      {
-        id: '3',
-        name: 'Cardio Kings',
-        description: 'Running, cycling, swimming - we do it all!',
-        created_by: 'user3',
-        creator_id: 'user3', // Added for compatibility
-        created_at: new Date().toISOString(),
-        member_count: 12,
-        members_count: 12, // Added for compatibility
-        total_points: 3150
-      }
-    ];
-  };
-
-  const getMockChallenges = (): Challenge[] => {
-    const today = new Date();
-    const nextWeek = new Date();
-    nextWeek.setDate(today.getDate() + 7);
-    
-    const lastWeek = new Date();
-    lastWeek.setDate(today.getDate() - 7);
-    
-    const nextMonth = new Date();
-    nextMonth.setDate(today.getDate() + 30);
-
-    return [
-      {
-        id: '1',
-        title: '30-Day Step Challenge',
-        description: 'Reach 10,000 steps daily for 30 days straight',
-        start_date: today.toISOString(),
-        end_date: nextMonth.toISOString(),
-        type: 'steps', // Modified to match Challenge type
-        target_value: 300000,
-        created_by: 'admin',
-        participants_count: 24,
-        is_active: true,
-        // Compatibility properties
-        status: 'active',
-        goal_type: 'steps',
-        goal_value: 300000,
-        reward_points: 500
-      },
-      {
-        id: '2',
-        title: 'Team Weight Loss',
-        description: 'Work together to lose a combined 50 pounds',
-        start_date: lastWeek.toISOString(),
-        end_date: nextMonth.toISOString(),
-        type: 'weight', // Modified to match Challenge type
-        target_value: 50,
-        created_by: 'admin',
-        participants_count: 15,
-        is_active: true,
-        team_id: '1',
-        // Compatibility properties
-        status: 'active',
-        goal_type: 'weight',
-        goal_value: 50,
-        reward_points: 1000
-      },
-      {
-        id: '3',
-        title: 'Workout Streak',
-        description: 'Complete at least 15 workouts in 21 days',
-        start_date: nextWeek.toISOString(),
-        end_date: new Date(nextWeek.getTime() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-        type: 'workouts', // Modified to match Challenge type
-        target_value: 15,
-        created_by: 'admin',
-        participants_count: 8,
-        is_active: true,
-        // Compatibility properties
-        status: 'upcoming',
-        goal_type: 'workouts',
-        goal_value: 15,
-        reward_points: 300
-      }
-    ];
-  };
-
-  const getMockUserTeams = (userId: string): TeamMember[] => {
-    return [
-      {
-        id: 'member1',
-        team_id: '1',
-        user_id: userId,
-        joined_date: new Date().toISOString(),
-        joined_at: new Date().toISOString(), // Added for compatibility
-        role: 'member',
-        points_contributed: 320,
-        contribution_points: 320 // Added for compatibility
-      }
-    ];
-  };
-
-  const handleJoinTeam = (teamId: string) => {
-    if (!userId) {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in to join a team',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    toast({
-      title: 'Team Joined',
-      description: 'You have successfully joined the team!',
-    });
-    
-    // Optimistic update
-    const newTeamMember: TeamMember = {
-      id: `member-${Date.now()}`,
-      team_id: teamId,
-      user_id: userId,
-      joined_date: new Date().toISOString(),
-      joined_at: new Date().toISOString(),
-      role: 'member',
-      points_contributed: 0,
-      contribution_points: 0
-    };
-    
-    setUserTeams([...userTeams, newTeamMember]);
-  };
-
-  const handleJoinChallenge = (challengeId: string) => {
-    if (!userId) {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in to join a challenge',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    toast({
-      title: 'Challenge Joined',
-      description: 'You have successfully joined the challenge!',
-    });
-
-    // In a real app, we would update the database
-  };
-
-  const isUserInTeam = (teamId: string) => {
-    return userTeams.some(userTeam => userTeam.team_id === teamId);
-  };
-
-  // Get a consistent color for a team based on its ID
-  const getTeamColor = (teamId: string) => {
-    const colors = [
-      'bg-quantum-cyan/20 text-quantum-cyan',
-      'bg-quantum-purple/20 text-quantum-purple',
-      'bg-emerald-500/20 text-emerald-500',
-      'bg-amber-500/20 text-amber-500',
-      'bg-blue-500/20 text-blue-500'
-    ];
-    
-    const charSum = teamId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[charSum % colors.length];
-  };
-
-  const getChallengeStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-500/20 text-green-500';
-      case 'completed': return 'bg-blue-500/20 text-blue-500';
-      case 'upcoming': return 'bg-amber-500/20 text-amber-500';
-      default: return 'bg-gray-500/20 text-gray-500';
-    }
-  };
-
-  if (loading) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <p>Loading team challenges...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!userId) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <p className="text-gray-400">Sign in to view team challenges</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
+  
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Users className="h-5 w-5 text-quantum-cyan" />
-            Team Challenges
-          </CardTitle>
-          <div className="flex gap-2">
+          <CardTitle className="text-xl font-bold text-quantum-cyan">Team Challenges</CardTitle>
+          <div className="flex space-x-2">
             <Button 
-              variant={activeTab === 'teams' ? "default" : "outline"} 
-              size="sm"
+              size="sm" 
+              variant={activeTab === 'teams' ? 'default' : 'outline'}
               onClick={() => setActiveTab('teams')}
-              className="text-xs h-7"
+              className={activeTab === 'teams' ? 'bg-quantum-purple' : ''}
             >
               Teams
             </Button>
             <Button 
-              variant={activeTab === 'challenges' ? "default" : "outline"} 
-              size="sm"
+              size="sm" 
+              variant={activeTab === 'challenges' ? 'default' : 'outline'}
               onClick={() => setActiveTab('challenges')}
-              className="text-xs h-7"
+              className={activeTab === 'challenges' ? 'bg-quantum-purple' : ''}
             >
               Challenges
             </Button>
@@ -301,131 +191,116 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Teams tab content */}
-        {activeTab === 'teams' && (
+        {loading ? (
+          <div className="py-4 text-center">Loading...</div>
+        ) : activeTab === 'teams' ? (
           <div className="space-y-4">
-            {teams.length > 0 ? (
-              teams.map((team) => (
-                <motion.div
-                  key={team.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="rounded-lg border bg-black/20 border-quantum-purple/20 p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarImage src={team.avatar_url} />
-                        <AvatarFallback className={getTeamColor(team.id)}>{team.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold text-quantum-purple">{team.name}</h3>
-                        <p className="text-sm text-gray-400">{team.description}</p>
+            {userTeams.length === 0 ? (
+              <div className="text-center py-8">
+                <UsersRound className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Teams Yet</h3>
+                <p className="text-sm text-gray-400 mb-4">Join a team or create your own to participate in challenges</p>
+                <Button>Find Teams</Button>
+              </div>
+            ) : (
+              <>
+                {userTeams.map(team => (
+                  <div key={team.id} className="border border-quantum-cyan/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Avatar className="h-12 w-12 mr-3">
+                          <AvatarImage src={team.avatar_url} alt={team.name} />
+                          <AvatarFallback>{team.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-medium">{team.name}</h3>
+                          <div className="flex items-center text-xs text-gray-400">
+                            <UsersRound className="h-3 w-3 mr-1" />
+                            <span>{team.member_count} members</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{team.total_points} pts</div>
+                        <Badge variant="outline" className="text-xs">
+                          {team.id === '1' ? 'Admin' : 'Member'}
+                        </Badge>
                       </div>
                     </div>
-                    <Badge className={getChallengeStatusColor('active')}>
-                      {team.member_count} members
-                    </Badge>
-                  </div>
-                  
-                  <div className="mt-4 flex justify-between items-center">
-                    <div className="text-sm">
-                      <span className="text-gray-400">Points: </span>
-                      <span className="font-semibold text-quantum-purple">{team.total_points}</span>
-                    </div>
-                    
-                    {isUserInTeam(team.id) ? (
-                      <Badge variant="secondary">Already a Member</Badge>
-                    ) : (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleJoinTeam(team.id)}
-                        className="bg-quantum-purple hover:bg-quantum-purple/80"
-                      >
-                        Join Team
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm">
+                        View Team
                       </Button>
-                    )}
+                      <Button variant="outline" size="sm">
+                        Team Chat
+                      </Button>
+                    </div>
                   </div>
-                </motion.div>
-              ))
-            ) : (
-              <p className="text-center text-gray-400 py-6">No teams available at the moment.</p>
+                ))}
+              </>
             )}
           </div>
-        )}
-        
-        {/* Challenges tab content */}
-        {activeTab === 'challenges' && (
+        ) : (
           <div className="space-y-4">
-            {challenges.length > 0 ? (
-              challenges.map((challenge) => (
-                <motion.div
-                  key={challenge.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="rounded-lg border bg-black/20 border-quantum-cyan/20 p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-2 rounded-full ${getChallengeStatusColor(challenge.status || 'active')}`}>
-                        <Trophy className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-quantum-cyan">{challenge.title}</h3>
-                        <p className="text-sm text-gray-400">{challenge.description}</p>
-                      </div>
-                    </div>
-                    <Badge className={getTeamColor(challenge.id)}>
-                      {challenge.type}
-                    </Badge>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs text-gray-400 mb-1">
-                      <span>Progress</span>
-                      <span>0 / {challenge.target_value} {challenge.goal_type}</span>
-                    </div>
-                    <Progress value={0} className="h-2" />
-                  </div>
-                  
-                  <div className="mt-4 flex justify-between items-center">
-                    <div className="flex items-center text-xs text-gray-400">
-                      <Calendar className="h-3.5 w-3.5 mr-1" />
-                      <span>
-                        {new Date(challenge.start_date).toLocaleDateString()} - {new Date(challenge.end_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    {isUserInTeam(challenge.team_id || '') ? (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleJoinChallenge(challenge.id)}
-                        className="bg-quantum-cyan hover:bg-quantum-cyan/80"
-                      >
-                        Join Challenge
-                      </Button>
-                    ) : (
-                      challenge.team_id ? (
-                        <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                          Team Required
-                        </Badge>
-                      ) : (
-                        <Button 
-                          size="sm"
-                          onClick={() => handleJoinChallenge(challenge.id)}
-                          className="bg-quantum-cyan hover:bg-quantum-cyan/80"
-                        >
-                          Join Challenge
-                        </Button>
-                      )
-                    )}
-                  </div>
-                </motion.div>
-              ))
+            {challenges.length === 0 ? (
+              <div className="text-center py-8">
+                <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Active Challenges</h3>
+                <p className="text-sm text-gray-400 mb-4">Join a team to participate in challenges</p>
+                <Button>Browse Challenges</Button>
+              </div>
             ) : (
-              <p className="text-center text-gray-400 py-6">No challenges available at the moment.</p>
+              <>
+                {challenges.map(challenge => (
+                  <Card key={challenge.id} className="bg-quantum-black/30 border-quantum-purple/20">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-medium">{challenge.title}</h3>
+                          <p className="text-sm text-gray-400">{challenge.description}</p>
+                        </div>
+                        <Badge className="bg-quantum-purple">
+                          {challenge.participants_count} participants
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm mb-3">
+                        <div className="flex items-center text-gray-400">
+                          <Target className="h-4 w-4 mr-1" />
+                          <span>Goal: {challenge.target_value} {challenge.type}</span>
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                          <Clock className="h-4 w-4 mr-1" />
+                          <span>
+                            {new Date(challenge.end_date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span>Progress</span>
+                          <span>45%</span> {/* This would be dynamic in a real app */}
+                        </div>
+                        <Progress value={45} className="h-2" /> {/* This would be dynamic */}
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center text-sm">
+                          <Trophy className="h-4 w-4 text-yellow-500 mr-1" />
+                          <span>{challenge.reward_points} points</span>
+                        </div>
+                        <Button variant="link" className="text-quantum-cyan p-0 h-auto" size="sm">
+                          View Details <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
             )}
           </div>
         )}
