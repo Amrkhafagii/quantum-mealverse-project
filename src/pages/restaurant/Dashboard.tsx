@@ -12,8 +12,17 @@ const RestaurantDashboardPage = () => {
       console.log('ERROR CAPTURED:', ...args);
       originalError(...args);
     };
+    
+    // Also capture warning logs
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+      console.log('WARNING CAPTURED:', ...args);
+      originalWarn(...args);
+    };
+    
     return () => {
       console.error = originalError;
+      console.warn = originalWarn;
     };
   }, []);
 

@@ -1,7 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
@@ -435,61 +437,61 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, type, onRefresh, restauran
         
         {type === 'pending' && (
           <div className="flex space-x-2 mt-4">
-            <Button 
+            <LoadingButton 
               className="w-1/2" 
               onClick={() => handleOrderAction('accept')}
-              disabled={isProcessing}
+              loading={isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Accept Order'}
-            </Button>
-            <Button 
+              Accept Order
+            </LoadingButton>
+            <LoadingButton 
               className="w-1/2" 
               variant="destructive" 
               onClick={() => handleOrderAction('reject')}
-              disabled={isProcessing}
+              loading={isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Reject Order'}
-            </Button>
+              Reject Order
+            </LoadingButton>
           </div>
         )}
         
         {type === 'active' && (
           <div className="flex space-x-2 mt-4">
             {order.status === OrderStatus.RESTAURANT_ACCEPTED && (
-              <Button 
+              <LoadingButton 
                 className="w-full" 
                 onClick={() => handleOrderAction('prepare')}
-                disabled={isProcessing}
+                loading={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Start Preparing'}
-              </Button>
+                Start Preparing
+              </LoadingButton>
             )}
             {order.status === OrderStatus.PREPARING && (
-              <Button 
+              <LoadingButton 
                 className="w-full" 
                 onClick={() => handleOrderAction('ready')}
-                disabled={isProcessing}
+                loading={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Mark as Ready'}
-              </Button>
+                Mark as Ready
+              </LoadingButton>
             )}
             {order.status === OrderStatus.READY_FOR_PICKUP && (
-              <Button 
+              <LoadingButton 
                 className="w-full" 
                 onClick={() => handleOrderAction('deliver')}
-                disabled={isProcessing}
+                loading={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Start Delivery'}
-              </Button>
+                Start Delivery
+              </LoadingButton>
             )}
             {order.status === OrderStatus.ON_THE_WAY && (
-              <Button 
+              <LoadingButton 
                 className="w-full" 
                 onClick={() => handleOrderAction('complete')}
-                disabled={isProcessing}
+                loading={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Mark as Delivered'}
-              </Button>
+                Mark as Delivered
+              </LoadingButton>
             )}
           </div>
         )}

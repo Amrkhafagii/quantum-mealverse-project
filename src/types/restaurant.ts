@@ -37,12 +37,12 @@ export enum OrderStatus {
   PENDING = 'pending',
   AWAITING_RESTAURANT = 'awaiting_restaurant',
   RESTAURANT_ASSIGNED = 'restaurant_assigned',
-  RESTAURANT_ACCEPTED = 'accepted',
-  RESTAURANT_REJECTED = 'rejected',
+  RESTAURANT_ACCEPTED = 'restaurant_accepted', // Full name instead of 'accepted'
+  RESTAURANT_REJECTED = 'restaurant_rejected', // Full name instead of 'rejected'
   PREPARING = 'preparing',
-  READY_FOR_PICKUP = 'ready',
-  ON_THE_WAY = 'delivering',
-  DELIVERED = 'completed',
+  READY_FOR_PICKUP = 'ready_for_pickup', // Full name instead of 'ready'
+  ON_THE_WAY = 'on_the_way', // Full name instead of 'delivering'
+  DELIVERED = 'delivered', // Full name instead of 'completed'
   CANCELLED = 'cancelled',
   REFUNDED = 'refunded',
   NO_RESTAURANT_ACCEPTED = 'no_restaurant_accepted',

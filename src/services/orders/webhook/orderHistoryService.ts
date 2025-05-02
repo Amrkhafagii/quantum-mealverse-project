@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { OrderStatus } from '@/types/restaurant';
@@ -85,25 +86,25 @@ export const recordOrderHistory = async (
     const now = new Date().toISOString();
     const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
     
-    // Normalize status for order_history
+    // Normalize status for order_history based on both OrderStatus enum and string aliases
     let normalizedStatus = status;
     
     // Map any simplified status names to their canonical form for order_history
     if (status === 'accepted') {
-      normalizedStatus = 'restaurant_accepted';
-      console.log(`Mapped status 'accepted' to 'restaurant_accepted' for order_history`);
+      normalizedStatus = OrderStatus.RESTAURANT_ACCEPTED;
+      console.log(`Mapped status 'accepted' to '${OrderStatus.RESTAURANT_ACCEPTED}' for order_history`);
     } else if (status === 'rejected') {
-      normalizedStatus = 'restaurant_rejected';
-      console.log(`Mapped status 'rejected' to 'restaurant_rejected' for order_history`);
+      normalizedStatus = OrderStatus.RESTAURANT_REJECTED;
+      console.log(`Mapped status 'rejected' to '${OrderStatus.RESTAURANT_REJECTED}' for order_history`);
     } else if (status === 'ready') {
-      normalizedStatus = 'ready_for_pickup';
-      console.log(`Mapped status 'ready' to 'ready_for_pickup' for order_history`);
+      normalizedStatus = OrderStatus.READY_FOR_PICKUP;
+      console.log(`Mapped status 'ready' to '${OrderStatus.READY_FOR_PICKUP}' for order_history`);
     } else if (status === 'delivering') {
-      normalizedStatus = 'on_the_way';
-      console.log(`Mapped status 'delivering' to 'on_the_way' for order_history`);
+      normalizedStatus = OrderStatus.ON_THE_WAY;
+      console.log(`Mapped status 'delivering' to '${OrderStatus.ON_THE_WAY}' for order_history`);
     } else if (status === 'completed') {
-      normalizedStatus = 'delivered';
-      console.log(`Mapped status 'completed' to 'delivered' for order_history`);
+      normalizedStatus = OrderStatus.DELIVERED;
+      console.log(`Mapped status 'completed' to '${OrderStatus.DELIVERED}' for order_history`);
     }
     
     // Create history entry with conditional restaurant data

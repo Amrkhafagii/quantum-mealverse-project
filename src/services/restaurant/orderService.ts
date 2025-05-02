@@ -317,8 +317,8 @@ const isValidStatusTransition = (currentStatus: string, newStatus: string): bool
     [OrderStatus.PREPARING]: [OrderStatus.READY_FOR_PICKUP],
     [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.ON_THE_WAY],
     [OrderStatus.ON_THE_WAY]: [OrderStatus.DELIVERED],
-    // Pending state is used when initially creating an order
-    [OrderStatus.PENDING]: [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.RESTAURANT_ACCEPTED],
+    // Pending state is used when initially creating an order - Allow direct acceptance from pending
+    [OrderStatus.PENDING]: [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.RESTAURANT_REJECTED],
     // Terminal states
     [OrderStatus.DELIVERED]: [],
     [OrderStatus.CANCELLED]: [],
@@ -326,12 +326,21 @@ const isValidStatusTransition = (currentStatus: string, newStatus: string): bool
     [OrderStatus.RESTAURANT_REJECTED]: []
   };
   
-  // Handle "accepted" status as alias for "restaurant_accepted"
+  // Handle all status alias variations
   let normalizedCurrent = currentStatus;
   let normalizedNew = newStatus;
   
+  // Map friendly status names to their canonical forms
   if (currentStatus === 'accepted') normalizedCurrent = OrderStatus.RESTAURANT_ACCEPTED;
   if (newStatus === 'accepted') normalizedNew = OrderStatus.RESTAURANT_ACCEPTED;
+  if (currentStatus === 'rejected') normalizedCurrent = OrderStatus.RESTAURANT_REJECTED;
+  if (newStatus === 'rejected') normalizedNew = OrderStatus.RESTAURANT_REJECTED;
+  if (currentStatus === 'ready') normalizedCurrent = OrderStatus.READY_FOR_PICKUP;
+  if (newStatus === 'ready') normalizedNew = OrderStatus.READY_FOR_PICKUP;
+  if (currentStatus === 'delivering') normalizedCurrent = OrderStatus.ON_THE_WAY;
+  if (newStatus === 'delivering') normalizedNew = OrderStatus.ON_THE_WAY;
+  if (currentStatus === 'completed') normalizedCurrent = OrderStatus.DELIVERED;
+  if (newStatus === 'completed') normalizedNew = OrderStatus.DELIVERED;
   
   // Check if the transition is valid
   const allowed = validTransitions[normalizedCurrent];
