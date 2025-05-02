@@ -11,6 +11,14 @@ interface OrderLocationMapProps {
   order: Order;
 }
 
+// Define a more comprehensive restaurant type
+interface RestaurantWithLocation {
+  id: string;
+  name: string;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [deliveryAssignment, setDeliveryAssignment] = useState<any>(null);
@@ -113,6 +121,12 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
     );
   }
 
+  // Check if restaurant has location data before rendering its marker
+  const hasRestaurantLocation = 
+    order.restaurant && 
+    (order.restaurant as RestaurantWithLocation).latitude !== undefined && 
+    (order.restaurant as RestaurantWithLocation).longitude !== undefined;
+
   return (
     <Card>
       <CardContent className="p-2 h-[300px]">
@@ -122,21 +136,24 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
           zoom={14}
           onLoad={(map) => setMap(map)}
         >
-          {/* Restaurant marker */}
-          {order.restaurant?.id && order.restaurant?.latitude && order.restaurant?.longitude && (
+          {/* Restaurant marker - Only show if restaurant has location data */}
+          {hasRestaurantLocation && (
             <MarkerF
-              position={{ lat: order.restaurant.latitude, lng: order.restaurant.longitude }}
+              position={{ 
+                lat: (order.restaurant as RestaurantWithLocation).latitude!, 
+                lng: (order.restaurant as RestaurantWithLocation).longitude! 
+              }}
               icon={{
                 url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
                 scaledSize: new google.maps.Size(40, 40)
               }}
-              title={order.restaurant.name}
+              title={(order.restaurant as RestaurantWithLocation).name}
             />
           )}
           
           {/* Delivery address marker */}
           <MarkerF
-            position={{ lat: order.latitude, lng: order.longitude }}
+            position={{ lat: order.latitude!, lng: order.longitude! }}
             icon={{
               url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
               scaledSize: new google.maps.Size(40, 40)
