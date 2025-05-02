@@ -28,6 +28,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const [watchId, setWatchId] = useState<number | null>(null);
   const [intervalId, setIntervalId] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null);
 
   const clearWatchPosition = useCallback(() => {
     if (watchId !== null) {
@@ -66,12 +67,12 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const getCurrentPosition = useCallback(() => {
     if (!navigator.geolocation) {
-      const errorObject = {
-        code: 0,
-        message: 'Geolocation not supported',
-      } as GeolocationPositionError;
+      const errorObject = new GeolocationPositionError();
+      errorObject.code = 2; // POSITION_UNAVAILABLE
+      errorObject.message = 'Geolocation not supported';
       
       setError(errorObject);
+      if (onError) onError(errorObject);
       return;
     }
 
@@ -84,16 +85,40 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
         maximumAge: 0
       }
     );
-  }, [handleSuccess, handleError]);
+  }, [handleSuccess, handleError, onError]);
+
+  // Check if permission is already granted
+  const checkPermissionStatus = useCallback(async () => {
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        setPermissionStatus(result.state);
+        
+        // Listen for permission changes
+        result.addEventListener('change', () => {
+          setPermissionStatus(result.state);
+        });
+
+        return result.state;
+      } catch (err) {
+        console.error('Error checking permission:', err);
+        return null;
+      }
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    checkPermissionStatus();
+  }, [checkPermissionStatus]);
 
   // Add a new method that returns a promise with the location
   const getCurrentLocation = useCallback((): Promise<Location | null> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        const errorObject = {
-          code: 0,
-          message: 'Geolocation not supported',
-        } as GeolocationPositionError;
+        const errorObject = new GeolocationPositionError();
+        errorObject.code = 2; // POSITION_UNAVAILABLE
+        errorObject.message = 'Geolocation not supported';
         
         setError(errorObject);
         reject(errorObject);
@@ -126,13 +151,13 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) {
-      const errorObject = {
-        code: 0,
-        message: 'Geolocation not supported',
-      } as GeolocationPositionError;
+      const errorObject = new GeolocationPositionError();
+      errorObject.code = 2; // POSITION_UNAVAILABLE
+      errorObject.message = 'Geolocation not supported';
       
       setError(errorObject);
       setIsTracking(false);
+      if (onError) onError(errorObject);
       return;
     }
 
@@ -160,7 +185,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
       }, trackingInterval);
       setIntervalId(id);
     }
-  }, [getCurrentPosition, handleSuccess, handleError, watchPosition, trackingInterval]);
+  }, [getCurrentPosition, handleSuccess, handleError, watchPosition, trackingInterval, onError]);
 
   const stopTracking = useCallback(() => {
     clearWatchPosition();
@@ -201,12 +226,14 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
     isTracking,
     location,
     lastUpdated,
+    permissionStatus,
     getLocationAge,
     isLocationStale,
     startTracking,
     stopTracking,
     getCurrentPosition,
     getCurrentLocation,
-    locationIsValid
+    locationIsValid,
+    checkPermissionStatus
   };
 };

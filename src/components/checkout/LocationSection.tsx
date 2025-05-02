@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useToast } from "@/components/ui/use-toast";
-import { MapPin, AlertCircle } from 'lucide-react';
+import { MapPin, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LocationSectionProps {
@@ -12,7 +12,7 @@ interface LocationSectionProps {
 }
 
 export const LocationSection = ({ onLocationUpdate, required = true }: LocationSectionProps) => {
-  const { location, getCurrentLocation, locationIsValid } = useLocationTracker();
+  const { location, getCurrentLocation, locationIsValid, isLocationStale, permissionStatus } = useLocationTracker();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { toast } = useToast();
 
@@ -21,7 +21,7 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
     if (location && locationIsValid() && !isGettingLocation) {
       onLocationUpdate(location);
     }
-  }, [location, locationIsValid, onLocationUpdate, required, isGettingLocation]);
+  }, [location, locationIsValid, onLocationUpdate, isGettingLocation]);
 
   // Memoize handler to prevent unnecessary rerenders
   const handleGetLocation = useCallback(async () => {
@@ -70,16 +70,37 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
           size="lg"
           disabled={isGettingLocation}
         >
-          {isGettingLocation 
-            ? "Getting Location..." 
-            : (location && locationIsValid() ? "Update Location" : "Get Current Location")}
+          {isGettingLocation ? (
+            <span className="flex items-center">
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Getting Location...
+            </span>
+          ) : (
+            location && locationIsValid() ? "Update Location" : "Get Current Location"
+          )}
         </Button>
       </div>
       
+      {permissionStatus === 'denied' && (
+        <Alert variant="destructive" className="border-red-500 bg-red-500/10">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="font-medium">
+            Location access denied. Please enable location services in your browser settings.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {location && locationIsValid() ? (
-        <p className="text-sm text-green-400">
-          Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-        </p>
+        <div>
+          <p className="text-sm text-green-400">
+            Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+          </p>
+          {isLocationStale() && (
+            <p className="text-sm text-yellow-400 mt-1">
+              Warning: Your location data is outdated. Consider updating.
+            </p>
+          )}
+        </div>
       ) : (
         required ? (
           <Alert variant="destructive" className="border-red-500 bg-red-500/10">

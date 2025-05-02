@@ -23,7 +23,8 @@ export const AvailableOrders: React.FC = () => {
     getCurrentLocation,
     locationIsValid, 
     isLocationStale,
-    lastUpdated
+    lastUpdated,
+    permissionStatus
   } = useLocationTracker();
   
   // Get user's current location on component mount
@@ -186,6 +187,16 @@ export const AvailableOrders: React.FC = () => {
             {isLocationStale() && (
               <span className="text-yellow-400 ml-2">(outdated)</span>
             )}
+          </p>
+        )}
+        {permissionStatus === 'prompt' && (
+          <p className="text-xs text-yellow-400 mt-1">
+            Location permission needed
+          </p>
+        )}
+        {permissionStatus === 'denied' && (
+          <p className="text-xs text-red-400 mt-1">
+            Location access denied. Please enable in your browser settings.
           </p>
         )}
       </CardHeader>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { getActiveDeliveryAssignments, getPastDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
@@ -12,6 +13,7 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationUpdateInterval, setLocationUpdateInterval] = useState<number | null>(null);
   
   const fetchActiveAssignments = useCallback(async () => {
     if (!deliveryUserId) return;
@@ -84,6 +86,13 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
         description: "Order marked as on the way to customer",
       });
       fetchActiveAssignments();
+      
+      // Set up periodic location updates
+      if (locationUpdateInterval) {
+        clearInterval(locationUpdateInterval);
+      }
+      
+      // We'll rely on the useLocationTracker hook for this now
     } catch (err) {
       console.error("Error marking as on the way:", err);
       toast({
@@ -92,7 +101,7 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
         variant: "destructive",
       });
     }
-  }, [deliveryUserId, fetchActiveAssignments]);
+  }, [deliveryUserId, fetchActiveAssignments, locationUpdateInterval]);
   
   const markAsDelivered = useCallback(async (assignmentId: string) => {
     if (!deliveryUserId) return;
@@ -105,6 +114,12 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
       });
       fetchActiveAssignments();
       loadPage(1); // Refresh history
+      
+      // Clear any location update interval
+      if (locationUpdateInterval) {
+        clearInterval(locationUpdateInterval);
+        setLocationUpdateInterval(null);
+      }
     } catch (err) {
       console.error("Error marking as delivered:", err);
       toast({
@@ -113,13 +128,14 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
         variant: "destructive",
       });
     }
-  }, [deliveryUserId, fetchActiveAssignments, loadPage]);
+  }, [deliveryUserId, fetchActiveAssignments, loadPage, locationUpdateInterval]);
   
   const updateLocation = useCallback(async (assignmentId: string, latitude: number, longitude: number) => {
     if (!deliveryUserId) return;
     
     try {
       await updateDeliveryLocation(assignmentId, latitude, longitude);
+      // Silent success - we don't want to show toasts for every location update
     } catch (err) {
       console.error("Error updating location:", err);
       // Silent fail for location updates to avoid too many toasts
@@ -130,6 +146,15 @@ export const useDeliveryAssignments = (deliveryUserId?: string) => {
     fetchActiveAssignments();
     loadPage(currentPage);
   }, [fetchActiveAssignments, loadPage, currentPage]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (locationUpdateInterval) {
+        clearInterval(locationUpdateInterval);
+      }
+    };
+  }, [locationUpdateInterval]);
   
   return {
     activeAssignments,

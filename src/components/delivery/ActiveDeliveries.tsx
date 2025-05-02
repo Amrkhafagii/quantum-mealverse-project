@@ -47,7 +47,8 @@ export const ActiveDeliveries: React.FC = () => {
     stopTracking, 
     isLocationStale,
     lastUpdated,
-    getCurrentLocation
+    getCurrentLocation,
+    permissionStatus
   } = useLocationTracker({
     watchPosition: true,
     trackingInterval: 10000,
@@ -338,6 +339,11 @@ export const ActiveDeliveries: React.FC = () => {
                 Lat: {position.coords.latitude.toFixed(6)}, 
                 Lng: {position.coords.longitude.toFixed(6)}
               </p>
+              {permissionStatus && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Permission: {permissionStatus}
+                </p>
+              )}
               {lastUpdated && (
                 <p className="text-xs text-gray-500 mt-1">
                   Last updated: {new Date(lastUpdated).toLocaleTimeString()}
