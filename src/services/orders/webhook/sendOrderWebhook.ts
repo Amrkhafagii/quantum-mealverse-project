@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { OrderAssignmentRequest } from '@/types/webhook';
+import { useWebhook } from '@/hooks/useWebhook';
 
 /**
  * Sends an order to the webhook service to find a restaurant
@@ -26,9 +27,11 @@ export const sendOrderToWebhook = async (
     const { error: logError } = await supabase
       .from('webhook_logs')
       .insert({
-        order_id: orderId,
-        request_type: 'find_restaurant',
-        request_data: webhookRequest
+        payload: {
+          order_id: orderId,
+          request_type: 'find_restaurant',
+          request_data: webhookRequest
+        }
       });
 
     if (logError) {
@@ -36,12 +39,11 @@ export const sendOrderToWebhook = async (
     }
 
     // Now send the actual webhook request
-    const { data, error } = await supabase.functions.invoke('order-webhook', {
-      body: webhookRequest
-    });
+    const hookService = useWebhook();
+    const response = await hookService.callWebhook('order-assignment', webhookRequest);
     
-    if (error) {
-      console.error('Webhook error:', error);
+    if (!response.success) {
+      console.error('Webhook error:', response.error);
       return false;
     }
 

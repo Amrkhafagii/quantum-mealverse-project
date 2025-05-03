@@ -7,7 +7,39 @@ import { createNotification } from '@/components/ui/fitness-notification';
 /**
  * Checks for expired meal plans and marks them as expired
  */
-export const checkSoonToExpirePlans = async (userId: string): Promise<void> => {
+export const checkExpiredMealPlans = async (): Promise<{success: boolean, expired: number}> => {
+  try {
+    const now = new Date();
+    
+    // Find meal plans that are expired but still active
+    const { data, error } = await supabase
+      .from('saved_meal_plans')
+      .update({ is_active: false })
+      .eq('is_active', true)
+      .lt('expires_at', now.toISOString())
+      .select('id');
+    
+    if (error) throw error;
+    
+    const expiredCount = data?.length || 0;
+    
+    return {
+      success: true,
+      expired: expiredCount
+    };
+  } catch (error) {
+    console.error('Error checking expired meal plans:', error);
+    return {
+      success: false,
+      expired: 0
+    };
+  }
+};
+
+/**
+ * Checks for expired meal plans and marks them as expired
+ */
+export const checkSoonToExpirePlans = async (userId: string): Promise<{success: boolean, expiringSoon: number}> => {
   try {
     const now = new Date();
     const threeDaysFromNow = new Date();
@@ -26,7 +58,7 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<void> => {
     
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
-      data.forEach(async (plan: SavedMealPlanWithExpiry) => {
+      data.forEach(async (plan: any) => {
         // Calculate days until expiration
         const expiresAt = new Date(plan.expires_at || '');
         const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 3600 * 24));
@@ -41,7 +73,16 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<void> => {
         );
       });
     }
+    
+    return {
+      success: true,
+      expiringSoon: data ? data.length : 0
+    };
   } catch (error) {
     console.error('Error checking soon-to-expire meal plans:', error);
+    return {
+      success: false,
+      expiringSoon: 0
+    };
   }
 };

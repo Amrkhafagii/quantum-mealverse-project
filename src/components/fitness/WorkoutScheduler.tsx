@@ -38,18 +38,21 @@ const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({
               <p>Status: {schedule.active ? 'Active' : 'Inactive'}</p>
               <button 
                 className="bg-quantum-purple text-white px-2 py-1 rounded mt-2"
-                onClick={() => {
+                onClick={async () => {
                   const dummyLog: WorkoutLog = {
                     id: crypto.randomUUID(),
                     user_id: userId || '',
                     workout_plan_id: schedule.workout_plan_id,
                     date: new Date().toISOString(),
                     duration: 30,
+                    calories_burned: 0,
+                    notes: '',
                     completed_exercises: []
                   };
-                  logWorkout(dummyLog).then(() => {
+                  const success = await logWorkout(dummyLog);
+                  if (success) {
                     refreshHistory(userId);
-                  });
+                  }
                 }}
               >
                 Log Workout

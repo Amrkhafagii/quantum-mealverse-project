@@ -13,7 +13,7 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
     // Check if there's an accepted restaurant first
     const { data: acceptedData } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, restaurants:restaurant_id(name), expires_at')
+      .select('id, restaurant_id, restaurants(name), expires_at')
       .eq('order_id', orderId)
       .eq('status', 'accepted')
       .order('created_at', { ascending: false })
@@ -22,7 +22,7 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
 
     if (acceptedData) {
       const restaurantName = acceptedData.restaurants ? 
-        (acceptedData.restaurants as any).name : 
+        acceptedData.restaurants.name as string : 
         undefined;
         
       return {
@@ -36,7 +36,7 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
     // Look for pending assignments
     const { data: pendingData, count: pendingCount } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, restaurants:restaurant_id(name), expires_at, status', { count: 'exact' })
+      .select('id, restaurant_id, restaurants(name), expires_at, status', { count: 'exact' })
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -45,7 +45,7 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
     if (pendingData && pendingData.length > 0) {
       const assignment = pendingData[0];
       const restaurantName = assignment.restaurants ? 
-        (assignment.restaurants as any).name : 
+        assignment.restaurants.name as string : 
         undefined;
         
       return {
@@ -61,7 +61,7 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
     // Look for the most recent rejected assignment
     const { data: rejectedData } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, restaurants:restaurant_id(name), expires_at')
+      .select('id, restaurant_id, restaurants(name), expires_at')
       .eq('order_id', orderId)
       .eq('status', 'rejected')
       .order('updated_at', { ascending: false })
@@ -70,7 +70,7 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
 
     if (rejectedData) {
       const restaurantName = rejectedData.restaurants ? 
-        (rejectedData.restaurants as any).name : 
+        rejectedData.restaurants.name as string : 
         undefined;
         
       return {

@@ -28,17 +28,17 @@ export const fetchWorkoutPlans = async (userId: string): Promise<WorkoutPlan[]> 
 };
 
 // Creates a new workout plan
-export const createWorkoutPlan = async (plans: WorkoutPlan[]): Promise<WorkoutPlan | null> => {
+export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<WorkoutPlan | null> => {
   try {
-    // Convert workout plans to format that supabase expects
-    const supabaseFormattedPlans = plans.map(plan => ({
+    // Convert workout plan to format that supabase expects
+    const supabasePlan = {
       ...plan,
       workout_days: toSupabaseJson(plan.workout_days)
-    }));
+    };
 
     const { data, error } = await supabase
       .from('workout_plans')
-      .insert(supabaseFormattedPlans)
+      .insert(supabasePlan)
       .select()
       .single();
 
@@ -110,14 +110,55 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
 // Fetches workout history for a user
 export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistoryItem[]> => {
   try {
-    const { data, error } = await supabase
-      .from('workout_history_view')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
+    // First, check if the view exists
+    const { data: viewCheck } = await supabase.rpc('check_view_exists', {
+      view_name: 'workout_history_view'
+    }).single();
 
-    if (error) throw error;
-    return data || [];
+    const hasView = viewCheck && viewCheck.exists;
+    
+    if (hasView) {
+      // Use the view if it exists
+      const { data, error } = await supabase
+        .from('workout_history_view')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      return data as WorkoutHistoryItem[];
+    } else {
+      // Fallback to querying workout_logs directly
+      const { data, error } = await supabase
+        .from('workout_logs')
+        .select(`
+          id, 
+          user_id, 
+          workout_plan_id,
+          date,
+          duration,
+          calories_burned,
+          workout_plans:workout_plan_id (name)
+        `)
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      
+      // Transform the data to match WorkoutHistoryItem
+      return (data || []).map(log => ({
+        id: log.id,
+        user_id: log.user_id,
+        workout_log_id: log.id,
+        date: log.date,
+        workout_plan_name: log.workout_plans?.name || 'Unknown Plan',
+        workout_day_name: 'Unknown Day',
+        exercises_completed: 0,
+        total_exercises: 0,
+        duration: log.duration,
+        calories_burned: log.calories_burned || 0
+      }));
+    }
   } catch (error) {
     console.error('Error fetching workout history:', error);
     return [];

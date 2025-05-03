@@ -1,6 +1,6 @@
 
 import { sendOrderToWebhook } from './webhook/sendOrderWebhook';
-import { checkAssignmentStatus } from './webhook/assignmentStatus';
+import { getAssignmentStatus } from './webhook/assignmentStatus';
 import { recordOrderHistory } from './webhook/orderHistoryService';
 import { OrderStatus } from '@/types/webhook';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,5 +54,5 @@ export const updateOrderStatus = async (
 // Re-export the functions for external use
 export {
   sendOrderToWebhook,
-  checkAssignmentStatus
+  getAssignmentStatus
 };

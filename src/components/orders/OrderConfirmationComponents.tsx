@@ -1,7 +1,11 @@
 
 import React from 'react';
 
-export const OrderConfirmationHeader = ({ className }: { className?: string }) => {
+export interface OrderConfirmationProps {
+  className?: string;
+}
+
+export const OrderConfirmationHeader: React.FC<OrderConfirmationProps> = ({ className }) => {
   return (
     <div className={`text-center ${className}`}>
       <h1 className="text-3xl font-bold">Order Confirmation</h1>
@@ -10,7 +14,7 @@ export const OrderConfirmationHeader = ({ className }: { className?: string }) =
   );
 };
 
-export const OrderConfirmationDetails = ({ className }: { className?: string }) => {
+export const OrderConfirmationDetails: React.FC<OrderConfirmationProps> = ({ className }) => {
   return (
     <div className={`border p-4 rounded ${className}`}>
       <h2 className="text-lg font-bold mb-2">Order Details</h2>
@@ -19,7 +23,7 @@ export const OrderConfirmationDetails = ({ className }: { className?: string }) 
   );
 };
 
-export const OrderConfirmationFooter = ({ className }: { className?: string }) => {
+export const OrderConfirmationFooter: React.FC<OrderConfirmationProps> = ({ className }) => {
   return (
     <div className={`mt-8 ${className}`}>
       <p className="text-center text-gray-500">

@@ -41,6 +41,11 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
     }
   };
 
+  // Safely access potentially undefined properties
+  const { total_workouts = 0, streak = 0, most_active_day = 'N/A' } = workoutStats || {};
+  const achievementsCount = workoutStats?.achievements || 0;
+  const recentWorkouts = workoutStats?.recent_workouts || [];
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -62,7 +67,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-300">Total Workouts</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{workoutStats?.total_workouts || 0}</p>
+              <p className="text-2xl font-bold text-quantum-cyan">{total_workouts}</p>
             </div>
           </CardContent>
         </Card>
@@ -74,7 +79,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-300">Current Streak</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{workoutStats?.streak || 0} days</p>
+              <p className="text-2xl font-bold text-quantum-cyan">{streak} days</p>
             </div>
           </CardContent>
         </Card>
@@ -86,7 +91,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-300">Achievements</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{0}</p>
+              <p className="text-2xl font-bold text-quantum-cyan">{achievementsCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -98,9 +103,9 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           <CardTitle className="text-quantum-cyan">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          {(workoutStats?.recent_workouts && workoutStats.recent_workouts.length > 0) ? (
+          {(recentWorkouts && recentWorkouts.length > 0) ? (
             <div className="space-y-4">
-              {workoutStats.recent_workouts.map((workout, index) => (
+              {recentWorkouts.map((workout, index) => (
                 <div key={index} className="flex items-center justify-between border-b border-gray-800 pb-2">
                   <div>
                     <p className="font-medium">{workout.name}</p>
