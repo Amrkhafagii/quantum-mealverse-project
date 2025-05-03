@@ -21,9 +21,13 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
       .single();
 
     if (acceptedData) {
+      const restaurantName = acceptedData.restaurants ? 
+        (acceptedData.restaurants as any).name : 
+        undefined;
+        
       return {
         assigned_restaurant_id: acceptedData.restaurant_id,
-        restaurant_name: acceptedData.restaurants?.name,
+        restaurant_name: restaurantName,
         status: 'accepted',
         assignment_id: acceptedData.id
       };
@@ -40,9 +44,13 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
 
     if (pendingData && pendingData.length > 0) {
       const assignment = pendingData[0];
+      const restaurantName = assignment.restaurants ? 
+        (assignment.restaurants as any).name : 
+        undefined;
+        
       return {
         assigned_restaurant_id: assignment.restaurant_id,
-        restaurant_name: assignment.restaurants?.name,
+        restaurant_name: restaurantName,
         status: 'awaiting_response',
         expires_at: assignment.expires_at,
         assignment_id: assignment.id,
@@ -61,9 +69,13 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
       .single();
 
     if (rejectedData) {
+      const restaurantName = rejectedData.restaurants ? 
+        (rejectedData.restaurants as any).name : 
+        undefined;
+        
       return {
         assigned_restaurant_id: rejectedData.restaurant_id,
-        restaurant_name: rejectedData.restaurants?.name,
+        restaurant_name: restaurantName,
         status: 'rejected',
         assignment_id: rejectedData.id
       };

@@ -86,7 +86,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-300">Achievements</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{workoutStats?.achievements || 0}</p>
+              <p className="text-2xl font-bold text-quantum-cyan">{0}</p>
             </div>
           </CardContent>
         </Card>
@@ -98,7 +98,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           <CardTitle className="text-quantum-cyan">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          {workoutStats?.recent_workouts && workoutStats.recent_workouts.length > 0 ? (
+          {(workoutStats?.recent_workouts && workoutStats.recent_workouts.length > 0) ? (
             <div className="space-y-4">
               {workoutStats.recent_workouts.map((workout, index) => (
                 <div key={index} className="flex items-center justify-between border-b border-gray-800 pb-2">

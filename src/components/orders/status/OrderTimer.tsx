@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { calculateRemainingTime, formatTime, calculateProgress } from '@/utils/timer/timerCalculations';
@@ -5,6 +6,7 @@ import { calculateRemainingTime, formatTime, calculateProgress } from '@/utils/t
 export interface OrderTimerProps {
   updatedAt?: string;
   expiresAt?: string;
+  expiryTime?: string; // Added for compatibility with OrderRestaurantStatus
   orderId?: string;
   onTimerExpire?: () => void;
 }
@@ -12,6 +14,7 @@ export interface OrderTimerProps {
 export const OrderTimer: React.FC<OrderTimerProps> = ({ 
   updatedAt,
   expiresAt,
+  expiryTime,
   orderId,
   onTimerExpire
 }) => {
@@ -21,8 +24,8 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
 
   useEffect(() => {
     // If we have an explicit expiry time, use that
-    if (expiresAt) {
-      const expiresAtDate = new Date(expiresAt);
+    if (expiresAt || expiryTime) {
+      const expiresAtDate = new Date(expiresAt || expiryTime || '');
       const intervalId = setInterval(() => {
         const remainingSeconds = calculateRemainingTime(expiresAtDate, serverTimeOffset);
         setSecondsLeft(remainingSeconds);
@@ -59,7 +62,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
       
       return () => clearInterval(intervalId);
     }
-  }, [updatedAt, expiresAt, serverTimeOffset, onTimerExpire]);
+  }, [updatedAt, expiresAt, expiryTime, serverTimeOffset, onTimerExpire]);
 
   return (
     <div className="space-y-2">

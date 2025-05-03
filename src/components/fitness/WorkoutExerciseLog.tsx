@@ -1,192 +1,134 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Check, Plus, Minus, Save } from 'lucide-react';
-import { WorkoutLog, CompletedExercise } from '@/types/fitness';
-import { logWorkout } from '@/services/workoutService';
+import { CompletedExercise, Exercise, WorkoutSet } from '@/types/fitness';
+import { CheckCircle } from 'lucide-react';
+import ExerciseLogForm from './ExerciseLogForm';
 
-interface WorkoutExerciseLogProps {
-  workoutLog: WorkoutLog;
-  onSave: (log: WorkoutLog) => void;
+export interface WorkoutExerciseLogProps {
+  workoutPlanId: string;
+  workoutDay: string;
+  exercises: Exercise[];
+  onLogComplete: () => void;
 }
 
-const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onSave }) => {
-  const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>(workoutLog.completed_exercises || []);
-
-  const handleAddExercise = () => {
-    setCompletedExercises([
-      ...completedExercises,
-      {
-        exercise_id: crypto.randomUUID(),
-        name: '',
-        exercise_name: '',
-        sets_completed: [
-          {
-            set_number: 1,
-            weight: 0,
-            reps: 0,
-            completed: false
-          }
-        ]
-      }
-    ]);
+const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
+  workoutPlanId,
+  workoutDay,
+  exercises,
+  onLogComplete
+}) => {
+  const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>([]);
+  const [duration, setDuration] = useState(30); // Default 30 minutes
+  const [caloriesBurned, setCaloriesBurned] = useState(0);
+  const [notes, setNotes] = useState('');
+  
+  const handleSetComplete = (updatedExercises: CompletedExercise[]) => {
+    setCompletedExercises(updatedExercises);
   };
-
-  const handleRemoveExercise = (index: number) => {
-    const newExercises = [...completedExercises];
-    newExercises.splice(index, 1);
-    setCompletedExercises(newExercises);
-  };
-
-  const handleExerciseChange = (index: number, field: string, value: any) => {
-    const newExercises = [...completedExercises];
-    (newExercises[index] as any)[field] = value;
-    setCompletedExercises(newExercises);
-  };
-
-  const handleSave = async () => {
-    const updatedLog = {
-      ...workoutLog,
+  
+  const handleSubmit = () => {
+    // Create the workout log data
+    const workoutLog = {
+      workout_plan_id: workoutPlanId,
+      workout_day_name: workoutDay,
+      date: new Date().toISOString(),
+      duration: duration,
+      calories_burned: caloriesBurned,
+      notes: notes,
       completed_exercises: completedExercises
     };
     
-    const result = await logWorkout(updatedLog);
-    
-    if (result.success) {
-      onSave(updatedLog);
-    } else {
-      console.error("Error saving workout log:", result.error);
-    }
+    // Trigger the parent's onLogComplete function
+    onLogComplete();
   };
-
+  
+  // Calculate the total sets completed
+  const totalSets = completedExercises.reduce((total, exercise) => {
+    const completedSets = exercise.sets_completed.filter(set => set.completed).length;
+    return total + completedSets;
+  }, 0);
+  
+  // Calculate the total sets
+  const allSets = completedExercises.reduce((total, exercise) => {
+    return total + exercise.sets_completed.length;
+  }, 0);
+  
+  const completion = allSets > 0 ? Math.round((totalSets / allSets) * 100) : 0;
+  
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader>
-        <CardTitle className="text-quantum-cyan">Exercise Log</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {completedExercises.map((exercise, index) => (
-          <div key={index} className="space-y-2 p-4 rounded-md bg-quantum-black/30">
-            <div className="flex justify-between items-center">
-              <Label htmlFor={`exerciseName-${index}`} className="text-sm">
-                Exercise {index + 1}
-              </Label>
-              <Button variant="ghost" size="sm" onClick={() => handleRemoveExercise(index)}>
-                <Minus className="h-4 w-4" />
-              </Button>
-            </div>
-            <Input
-              id={`exerciseName-${index}`}
-              type="text"
-              placeholder="Exercise Name"
-              value={exercise.exercise_name}
-              onChange={(e) => handleExerciseChange(index, 'exercise_name', e.target.value)}
-              className="bg-quantum-black/50 border-quantum-cyan/20"
-            />
-            <div className="grid grid-cols-3 gap-4">
+    <div className="space-y-6">
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="text-lg text-center">{workoutDay}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ExerciseLogForm 
+            exercises={exercises} 
+            onSetComplete={handleSetComplete} 
+          />
+          
+          <div className="mt-8 space-y-4 border-t border-quantum-cyan/20 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor={`sets-${index}`} className="text-sm">
-                  Sets
-                </Label>
+                <Label htmlFor="duration">Workout Duration (minutes)</Label>
                 <Input
-                  id={`sets-${index}`}
+                  id="duration"
                   type="number"
-                  value={exercise.sets_completed.length}
-                  onChange={(e) => {
-                    // Handle sets count change
-                    const setCount = parseInt(e.target.value);
-                    const currentSets = exercise.sets_completed || [];
-                    const newSets = [];
-                    
-                    for (let i = 0; i < setCount; i++) {
-                      if (i < currentSets.length) {
-                        newSets.push(currentSets[i]);
-                      } else {
-                        newSets.push({
-                          set_number: i + 1,
-                          weight: 0,
-                          reps: 0,
-                          completed: false
-                        });
-                      }
-                    }
-                    
-                    const newExercises = [...completedExercises];
-                    newExercises[index].sets_completed = newSets;
-                    setCompletedExercises(newExercises);
-                  }}
-                  className="bg-quantum-black/50 border-quantum-cyan/20"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
                 />
               </div>
               <div>
-                <Label htmlFor={`reps-${index}`} className="text-sm">
-                  Reps
-                </Label>
+                <Label htmlFor="calories">Calories Burned</Label>
                 <Input
-                  id={`reps-${index}`}
+                  id="calories"
                   type="number"
-                  value={exercise.sets_completed[0]?.reps || 0}
-                  onChange={(e) => {
-                    const reps = parseInt(e.target.value);
-                    const newExercises = [...completedExercises];
-                    newExercises[index].sets_completed = newExercises[index].sets_completed.map(set => ({
-                      ...set,
-                      reps
-                    }));
-                    setCompletedExercises(newExercises);
-                  }}
-                  className="bg-quantum-black/50 border-quantum-cyan/20"
-                />
-              </div>
-              <div>
-                <Label htmlFor={`weight-${index}`} className="text-sm">
-                  Weight (kg)
-                </Label>
-                <Input
-                  id={`weight-${index}`}
-                  type="number"
-                  value={exercise.sets_completed[0]?.weight || 0}
-                  onChange={(e) => {
-                    const weight = parseFloat(e.target.value);
-                    const newExercises = [...completedExercises];
-                    newExercises[index].sets_completed = newExercises[index].sets_completed.map(set => ({
-                      ...set,
-                      weight
-                    }));
-                    setCompletedExercises(newExercises);
-                  }}
-                  className="bg-quantum-black/50 border-quantum-cyan/20"
+                  min="0"
+                  value={caloriesBurned}
+                  onChange={(e) => setCaloriesBurned(parseInt(e.target.value))}
                 />
               </div>
             </div>
+            
             <div>
-              <Label htmlFor={`notes-${index}`} className="text-sm">
-                Notes
-              </Label>
-              <Input
-                id={`notes-${index}`}
-                type="text"
-                placeholder="Additional notes"
-                value={exercise.notes || ''}
-                onChange={(e) => handleExerciseChange(index, 'notes', e.target.value)}
-                className="bg-quantum-black/50 border-quantum-cyan/20"
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="How was your workout? Any achievements or challenges?"
               />
             </div>
+            
+            <div className="flex flex-col md:flex-row items-center justify-between pt-4">
+              <div className="mb-4 md:mb-0">
+                <div className="text-sm text-gray-400 mb-1">Workout Completion</div>
+                <div className="text-2xl font-bold flex items-center">
+                  {completion}% 
+                  <span className="text-sm text-gray-400 ml-2">
+                    ({totalSets}/{allSets} sets)
+                  </span>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={handleSubmit}
+                className="bg-quantum-purple hover:bg-quantum-purple/90" 
+                disabled={totalSets === 0}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Complete Workout
+              </Button>
+            </div>
           </div>
-        ))}
-        <Button variant="outline" className="w-full" onClick={handleAddExercise}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Exercise
-        </Button>
-        <Button className="w-full bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90" onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Log
-        </Button>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

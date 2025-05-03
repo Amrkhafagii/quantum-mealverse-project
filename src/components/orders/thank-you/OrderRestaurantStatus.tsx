@@ -65,7 +65,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             <div className="w-full mb-6">
               <OrderTimer 
                 updatedAt={undefined}
-                expiryTime={assignmentStatus.expires_at} 
+                expiresAt={assignmentStatus.expires_at} 
                 orderId={orderId}
                 onTimerExpire={handleTimerExpire}
               />

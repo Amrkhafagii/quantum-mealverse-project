@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { WorkoutSchedule, WorkoutLog } from '@/types/fitness';
 
@@ -39,6 +40,7 @@ const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({
                 className="bg-quantum-purple text-white px-2 py-1 rounded mt-2"
                 onClick={() => {
                   const dummyLog: WorkoutLog = {
+                    id: crypto.randomUUID(),
                     user_id: userId || '',
                     workout_plan_id: schedule.workout_plan_id,
                     date: new Date().toISOString(),

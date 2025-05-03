@@ -156,6 +156,7 @@ export interface UserWorkoutStats {
   total_workouts?: number;
   streak?: number;
   achievements?: number;
+  most_active_day?: string;
   recent_workouts?: Array<{
     name: string;
     date: string;
