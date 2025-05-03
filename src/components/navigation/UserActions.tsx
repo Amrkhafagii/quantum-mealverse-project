@@ -20,6 +20,7 @@ export const UserActions = () => {
   
   const userType = user?.user_metadata?.user_type;
   const isDeliveryUser = userType === 'delivery';
+  const isRestaurantUser = userType === 'restaurant';
   
   const handleLogout = async () => {
     await logout();
@@ -62,21 +63,24 @@ export const UserActions = () => {
             <DropdownMenuItem onClick={() => navigate('/delivery/dashboard')}>
               Delivery Dashboard
             </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={() => navigate('/orders')}>
-              My Orders
+          ) : isRestaurantUser ? (
+            <DropdownMenuItem onClick={() => navigate('/restaurant/dashboard')}>
+              Restaurant Dashboard
             </DropdownMenuItem>
+          ) : (
+            <>
+              <DropdownMenuItem onClick={() => navigate('/orders')}>
+                My Orders
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/fitness')}>
+                Fitness
+              </DropdownMenuItem>
+            </>
           )}
           
           <DropdownMenuItem onClick={() => navigate('/profile')}>
             Profile
           </DropdownMenuItem>
-          
-          {!isDeliveryUser && (
-            <DropdownMenuItem onClick={() => navigate('/fitness')}>
-              Fitness
-            </DropdownMenuItem>
-          )}
           
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>

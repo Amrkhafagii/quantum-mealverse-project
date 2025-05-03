@@ -18,6 +18,20 @@ const Dashboard = () => {
   React.useEffect(() => {
     if (!user) {
       navigate('/login');
+      return;
+    }
+    
+    // Redirect delivery users to their specific dashboard
+    const userType = user.user_metadata?.user_type;
+    if (userType === 'delivery') {
+      navigate('/delivery/dashboard', { replace: true });
+      return;
+    }
+    
+    // Redirect restaurant users to their specific dashboard
+    if (userType === 'restaurant') {
+      navigate('/restaurant/dashboard', { replace: true });
+      return;
     }
   }, [user, navigate]);
   
@@ -25,6 +39,7 @@ const Dashboard = () => {
     return null; // or loading state
   }
 
+  // This component will only render for customer users
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />

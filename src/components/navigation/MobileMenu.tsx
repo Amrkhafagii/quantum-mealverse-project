@@ -35,7 +35,27 @@ export const MobileMenu = ({
   return (
     <div className="p-4 border-t border-quantum-cyan/20 md:hidden">
       <div className="space-y-4">
-        {isCustomerView && showCustomerOptions ? (
+        {isDeliveryUser ? (
+          // Delivery user navigation
+          <>
+            <Link 
+              to="/delivery/dashboard" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <Truck className="h-5 w-5 text-quantum-cyan" />
+              <span>Delivery Dashboard</span>
+            </Link>
+            
+            <Link 
+              to="/profile" 
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+            >
+              <User className="h-5 w-5 text-quantum-cyan" />
+              <span>Profile</span>
+            </Link>
+          </>
+        ) : isCustomerView && showCustomerOptions ? (
+          // Customer navigation
           <>
             <Link 
               to="/customer" 
@@ -62,16 +82,6 @@ export const MobileMenu = ({
               >
                 <Package className="h-5 w-5 text-quantum-cyan" />
                 <span>Track Orders</span>
-              </Link>
-            )}
-            
-            {isAuthenticated && isDeliveryUser && (
-              <Link 
-                to="/delivery/dashboard" 
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-              >
-                <Truck className="h-5 w-5 text-quantum-cyan" />
-                <span>Delivery Dashboard</span>
               </Link>
             )}
             
@@ -157,7 +167,7 @@ export const MobileMenu = ({
           </>
         )}
         
-        {isAdmin && (
+        {isAdmin && !isDeliveryUser && (
           <div className="flex items-center space-x-2 pt-4 border-t border-quantum-cyan/20">
             <Switch 
               id="user-view-toggle" 

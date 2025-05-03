@@ -20,7 +20,9 @@ const Register = () => {
       const userType = user.user_metadata?.user_type;
       
       if (userType === 'delivery') {
-        navigate('/delivery/onboarding', { replace: true });
+        navigate('/delivery/dashboard', { replace: true });
+      } else if (userType === 'restaurant') {
+        navigate('/restaurant/dashboard', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
