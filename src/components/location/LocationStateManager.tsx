@@ -34,31 +34,52 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     requestPermission, 
     isRequesting,
     toggleTracking,
-    isTracking 
+    isTracking,
+    hasShownInitialPrompt
   } = useLocationPermission();
   
   const navigate = useNavigate();
   const { nearbyRestaurants, findNearestRestaurants } = useNearestRestaurant();
-  const [showPermissionPrompt, setShowPermissionPrompt] = useState(true);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasContentLoaded, setHasContentLoaded] = useState(false);
   const [hasNavigated, setHasNavigated] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
-  // Check for cached location in localStorage
+  // Check for cached location in localStorage on mount
   useEffect(() => {
-    const cachedLocation = localStorage.getItem('userLocation');
-    if (cachedLocation && !location) {
+    const cachedLocationString = localStorage.getItem('userLocation');
+    const storedPermission = localStorage.getItem('locationPermission');
+    
+    // Determine if we need to show the prompt
+    const shouldShowPrompt = !storedPermission || 
+                             storedPermission !== 'granted' || 
+                             !cachedLocationString;
+    
+    setShowPermissionPrompt(shouldShowPrompt && !hasShownInitialPrompt);
+    
+    // If we have cached location, use it immediately
+    if (cachedLocationString && !location) {
       try {
-        const parsedLocation = JSON.parse(cachedLocation);
+        const parsedLocation = JSON.parse(cachedLocationString);
         if (parsedLocation?.latitude && parsedLocation?.longitude) {
           if (onLocationUpdate) {
             onLocationUpdate(parsedLocation);
+            
+            // Trigger content loading with cached data
+            setIsLoading(true);
+            setTimeout(() => {
+              setIsLoading(false);
+              setHasContentLoaded(true);
+            }, 1000);
           }
         }
       } catch (e) {
         console.error('Error parsing cached location:', e);
       }
     }
+    
+    setInitialCheckDone(true);
   }, []);
 
   // Update location cache when location changes
@@ -147,6 +168,15 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
 
   // Decide what to render based on permission state and loading
   const renderContent = () => {
+    // If we're still doing initial check, show brief loading
+    if (!initialCheckDone) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size="small" text="Loading location data..." />
+        </div>
+      );
+    }
+    
     // Initial case: Show permission prompt if needed
     if (permissionStatus !== 'granted' && showPermissionPrompt) {
       return (

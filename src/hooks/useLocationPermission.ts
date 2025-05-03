@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -15,6 +16,10 @@ export const useLocationPermission = () => {
       try {
         const storedPermission = localStorage.getItem('locationPermission');
         if (storedPermission === 'granted') {
+          setHasShownInitialPrompt(true);
+          setPermissionStatus('granted');
+        } else if (storedPermission === 'denied') {
+          setPermissionStatus('denied');
           setHasShownInitialPrompt(true);
         }
       } catch (e) {
