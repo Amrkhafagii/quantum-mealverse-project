@@ -47,14 +47,14 @@ export const useOrderData = (orderId: string) => {
               // Override the order status and restaurant_id to match the assignment
               orderData.status = 'restaurant_accepted';
               orderData.restaurant_id = acceptedAssignment.restaurant_id;
-              orderData.restaurant = restaurant;
+              // Create restaurantData object instead of directly assigning to a non-existent property
             }
           }
         }
         
         // Then, if there's a restaurant_id, fetch restaurant data separately
         let restaurantData = null;
-        if (orderData.restaurant_id && !orderData.restaurant) {
+        if (orderData.restaurant_id) {
           const { data: restaurant, error: restaurantError } = await supabase
             .from('restaurants')
             .select('id, name, latitude, longitude')
@@ -69,7 +69,7 @@ export const useOrderData = (orderId: string) => {
         // Combine the order with restaurant data
         const formattedData: Order = {
           ...orderData,
-          restaurant: orderData.restaurant || restaurantData || { id: '', name: '' }
+          restaurant: restaurantData || { id: orderData.restaurant_id || '', name: '' }
         };
         
         return formattedData;

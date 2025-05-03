@@ -14,8 +14,8 @@ export interface Order {
   subtotal: number;
   total: number;
   status: string;
-  latitude?: number | null;  // Added explicit type for latitude
-  longitude?: number | null;  // Added explicit type for longitude
+  latitude?: number | null;
+  longitude?: number | null;
   formatted_order_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -41,5 +41,5 @@ export interface OrderItem {
   price: number;
   quantity: number;
   created_at?: string;
-  preparation_time?: number;  // Added this field to fix the error
+  preparation_time?: number;
 }
