@@ -35,6 +35,18 @@ interface FooterWithClassName extends React.FC {
   (props: { className?: string }): JSX.Element;
 }
 
+const OrderProgressSteps = ({ className }: { className?: string }) => (
+  <div className={className}>
+    {/* Progress steps content */}
+  </div>
+);
+
+const PaymentStatusMessage = ({ className }: { className?: string }) => (
+  <div className={className}>
+    {/* Payment status message content */}
+  </div>
+);
+
 const OrderConfirmation = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

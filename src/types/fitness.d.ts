@@ -147,82 +147,33 @@ export interface UserAchievement {
   id: string;
   user_id: string;
   achievement_id: string;
-  date_achieved: string;
+  date_earned: string;
+  progress?: number;
 }
 
-// Stats types
+// UserWorkoutStats interface
 export interface UserWorkoutStats {
-  streak: number;
-  total_workouts: number;
-  most_active_day: string;
-  avg_duration?: number;
-  total_calories_burned?: number;
-  currentStreak?: number;
-  longestStreak?: number;
-  achievements_count?: number;
-  points?: number;
-  level?: number;
+  total_workouts?: number;
+  streak?: number;
+  achievements?: number;
+  recent_workouts?: Array<{
+    name: string;
+    date: string;
+    duration: number;
+  }>;
 }
 
-// Recommendation types
-export interface WorkoutRecommendation {
-  id: string;
+// Add the missing type for SavedMealPlanWithExpiry
+export interface SavedMealPlanWithExpiry extends SavedMealPlan {
+  is_active?: boolean;
+  expires_at?: string;
+}
+
+export interface SavedMealPlan {
+  id?: string;
   user_id?: string;
-  title?: string;
   name?: string;
-  description?: string;
-  type?: string;
-  reason?: string;
-  confidence_score?: number;
-  suggested_at?: string;
-  dismissed?: boolean;
-  applied?: boolean;
-  applied_at?: string;
-}
-
-// Nutrition types
-export interface MealPlan {
-  id?: string;
-  name?: string;
-  description?: string;
-  meals?: Meal[];
-  totalCalories?: number;
-  total_protein?: number;
-  total_carbs?: number;
-  total_fat?: number;
-  total_calories?: number;
-}
-
-export interface Meal {
-  id?: string;
-  name: string;
-  time?: string;
-  foods: MealFood[];
-}
-
-export interface MealFood {
-  id?: string;
-  name?: string;
-  quantity: number;
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  serving_size?: number;
-  unit?: string;
-}
-
-export interface Food {
-  id?: string;
-  name: string;
-  category?: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber?: number;
-  sugar?: number;
-  serving_size?: number;
-  unit?: string;
-  allergies?: string[];
+  meal_plan?: any;
+  tdee_id?: string;
+  date_created?: string;
 }

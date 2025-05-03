@@ -8,6 +8,7 @@ export interface AssignmentStatus {
   assignment_id?: string;
   latitude?: number;
   longitude?: number;
+  pending_count?: number;
 }
 
 export enum OrderStatus {
@@ -41,6 +42,7 @@ export interface OrderAssignmentRequest {
   latitude: number;
   longitude: number;
   action?: string;
+  expired_reassignment?: boolean;
 }
 
 export interface RestaurantResponseRequest {

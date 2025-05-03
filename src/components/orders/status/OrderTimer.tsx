@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { calculateRemainingTime, formatTime, calculateProgress } from '@/utils/timer/timerCalculations';
 
 export interface OrderTimerProps {
   updatedAt?: string;
@@ -9,74 +10,66 @@ export interface OrderTimerProps {
 }
 
 export const OrderTimer: React.FC<OrderTimerProps> = ({ 
-  updatedAt, 
+  updatedAt,
   expiresAt,
   orderId,
-  onTimerExpire 
+  onTimerExpire
 }) => {
-  const [timeElapsed, setTimeElapsed] = useState<number>(0);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  
-  useEffect(() => {
-    // If expiresAt is provided, calculate time remaining instead
-    if (expiresAt) {
-      const expireTime = new Date(expiresAt).getTime();
-      
-      const calculateTimeRemaining = () => {
-        const now = new Date().getTime();
-        const remaining = Math.max(0, Math.floor((expireTime - now) / 1000));
-        
-        setTimeRemaining(remaining);
-        
-        if (remaining <= 0 && onTimerExpire) {
-          onTimerExpire();
-        }
-      };
-      
-      calculateTimeRemaining();
-      const interval = setInterval(calculateTimeRemaining, 1000);
-      
-      return () => clearInterval(interval);
-    } 
-    // Otherwise use updatedAt for elapsed time
-    else if (updatedAt) {
-      const startTime = new Date(updatedAt).getTime();
-      
-      const calculateTimeElapsed = () => {
-        const now = new Date().getTime();
-        setTimeElapsed(Math.floor((now - startTime) / 1000));
-      };
-      
-      calculateTimeElapsed();
-      const interval = setInterval(calculateTimeElapsed, 1000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [updatedAt, expiresAt, onTimerExpire]);
-  
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const [secondsLeft, setSecondsLeft] = useState<number>(300); // Default to 5 min
+  const [progress, setProgress] = useState<number>(100);
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
 
-  if (timeRemaining !== null) {
-    // Show remaining time countdown
-    return (
-      <div className="flex items-center gap-1 text-sm">
-        <Clock className="w-3 h-3" />
-        <span className={timeRemaining < 30 ? "text-red-500" : "text-gray-400"}>
-          Time remaining: {formatTime(timeRemaining)}
+  useEffect(() => {
+    // If we have an explicit expiry time, use that
+    if (expiresAt) {
+      const expiresAtDate = new Date(expiresAt);
+      const intervalId = setInterval(() => {
+        const remainingSeconds = calculateRemainingTime(expiresAtDate, serverTimeOffset);
+        setSecondsLeft(remainingSeconds);
+        setProgress(calculateProgress(remainingSeconds));
+        
+        if (remainingSeconds <= 0) {
+          clearInterval(intervalId);
+          if (onTimerExpire) {
+            onTimerExpire();
+          }
+        }
+      }, 1000);
+      
+      return () => clearInterval(intervalId);
+    }
+    
+    // Otherwise use the updatedAt time + 5 minutes logic
+    if (updatedAt) {
+      const startTime = new Date(updatedAt);
+      const expiresAtDate = new Date(startTime.getTime() + (5 * 60 * 1000)); // 5 minutes
+      
+      const intervalId = setInterval(() => {
+        const remainingSeconds = calculateRemainingTime(expiresAtDate, serverTimeOffset);
+        setSecondsLeft(remainingSeconds);
+        setProgress(calculateProgress(remainingSeconds));
+        
+        if (remainingSeconds <= 0) {
+          clearInterval(intervalId);
+          if (onTimerExpire) {
+            onTimerExpire();
+          }
+        }
+      }, 1000);
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [updatedAt, expiresAt, serverTimeOffset, onTimerExpire]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
+        <span>Time remaining:</span>
+        <span className={secondsLeft < 60 ? "text-red-500 font-semibold" : ""}>
+          {formatTime(secondsLeft)}
         </span>
       </div>
-    );
-  }
-  
-  // Show elapsed time
-  return (
-    <div className="flex items-center gap-1 text-sm text-gray-400">
-      <Clock className="w-3 h-3" />
-      <span>Time elapsed: {formatTime(timeElapsed)}</span>
+      <Progress value={progress} className="h-2" />
     </div>
   );
 };
