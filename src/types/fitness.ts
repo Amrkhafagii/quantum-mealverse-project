@@ -64,7 +64,7 @@ export interface UserProfile {
   user_id: string;
   display_name?: string;
   height?: number;
-  weight?: number;  // Changed to optional to match database
+  weight?: number;  // Adding weight property to match database
   goal_weight?: number;
   date_of_birth?: string | null;
   gender?: string;

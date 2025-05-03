@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -184,9 +183,19 @@ export function useWorkoutData() {
     try {
       setIsLoading(true);
       
+      // Make sure user_id is always provided
+      if (!workoutLog.user_id) {
+        throw new Error("User ID is required for workout logs");
+      }
+      
       // Convert the completed_exercises to a JSON string for storage
       const dbWorkoutLog = {
-        ...workoutLog,
+        user_id: workoutLog.user_id,
+        workout_plan_id: workoutLog.workout_plan_id,
+        date: workoutLog.date,
+        duration: workoutLog.duration,
+        calories_burned: workoutLog.calories_burned,
+        notes: workoutLog.notes,
         completed_exercises: JSON.stringify(workoutLog.completed_exercises)
       };
       

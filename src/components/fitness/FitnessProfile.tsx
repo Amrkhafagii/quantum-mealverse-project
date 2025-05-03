@@ -53,7 +53,7 @@ const FitnessProfile = () => {
           .eq('user_id', user.id)
           .single();
 
-        if (statsError) {
+        if (statsError && statsError.code !== 'PGRST116') {
           console.error("Error fetching workout stats:", statsError);
         }
 
@@ -72,7 +72,7 @@ const FitnessProfile = () => {
 
   // When accessing profile data
   // Replace weight references with goal_weight
-  const displayWeight = profile?.goal_weight || 'Not Set';
+  const displayWeight = profile?.weight || profile?.goal_weight || 'Not Set';
 
   return (
     <Card className="bg-quantum-black/30 border-quantum-cyan/20">
@@ -96,7 +96,7 @@ const FitnessProfile = () => {
           <div className="space-y-2">
             <p><strong>Username:</strong> {profile?.username || 'Not Set'}</p>
             <p><strong>Email:</strong> {user?.email || 'Not Set'}</p>
-            <p><strong>Goal Weight:</strong> {displayWeight} kg</p>
+            <p><strong>Weight:</strong> {displayWeight} kg</p>
           </div>
         )}
 

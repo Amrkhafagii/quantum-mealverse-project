@@ -131,11 +131,11 @@ export const checkAchievementProgress = async (userId: string) => {
           break;
           
         case '9': // Weekly Warrior (7 day streak)
-          shouldGrant = (stats.streak || stats.streak_days || 0) >= 7;
+          shouldGrant = (stats.streak_days || 0) >= 7;
           break;
           
         case '6': // Month Streak (30 day streak)
-          shouldGrant = (stats.streak || stats.streak_days || 0) >= 30;
+          shouldGrant = (stats.streak_days || 0) >= 30;
           break;
           
         // Add other achievement criteria checks here

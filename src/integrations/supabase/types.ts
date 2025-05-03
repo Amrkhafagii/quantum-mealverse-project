@@ -853,6 +853,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          weight: number | null
         }
         Insert: {
           created_at?: string
@@ -868,6 +869,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          weight?: number | null
         }
         Update: {
           created_at?: string
@@ -883,6 +885,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          weight?: number | null
         }
         Relationships: []
       }
@@ -2255,27 +2258,78 @@ export type Database = {
         }
         Relationships: []
       }
+      user_workout_stats: {
+        Row: {
+          calories_burned: number | null
+          created_at: string | null
+          id: string
+          last_workout_date: string | null
+          most_active_day: string | null
+          streak_days: number | null
+          total_time: number | null
+          total_workouts: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          calories_burned?: number | null
+          created_at?: string | null
+          id?: string
+          last_workout_date?: string | null
+          most_active_day?: string | null
+          streak_days?: number | null
+          total_time?: number | null
+          total_workouts?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          calories_burned?: number | null
+          created_at?: string | null
+          id?: string
+          last_workout_date?: string | null
+          most_active_day?: string | null
+          streak_days?: number | null
+          total_time?: number | null
+          total_workouts?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       webhook_logs: {
         Row: {
           error: string | null
           id: string
           payload: Json | null
           processed_at: string | null
+          request_data: Json | null
+          response_data: Json | null
           restaurant_assigned: string | null
+          status: string | null
+          webhook_type: string | null
         }
         Insert: {
           error?: string | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
+          request_data?: Json | null
+          response_data?: Json | null
           restaurant_assigned?: string | null
+          status?: string | null
+          webhook_type?: string | null
         }
         Update: {
           error?: string | null
           id?: string
           payload?: Json | null
           processed_at?: string | null
+          request_data?: Json | null
+          response_data?: Json | null
           restaurant_assigned?: string | null
+          status?: string | null
+          webhook_type?: string | null
         }
         Relationships: [
           {
