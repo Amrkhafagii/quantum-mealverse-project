@@ -49,6 +49,11 @@ export interface WorkoutPlan {
 export interface WorkoutDay {
   day_name: string;
   exercises: Exercise[];
+  id?: string;
+  name?: string;
+  day_number?: number;
+  target_muscle_groups?: string[];
+  completed?: boolean;
 }
 
 export interface Exercise {
@@ -60,12 +65,13 @@ export interface Exercise {
   sets: number;
   reps: number | string;
   weight?: number;
-  duration?: string;
+  duration?: string | number;
   rest_time?: number;
   rest?: number;
   rest_seconds?: number;
   instructions?: string;
   notes?: string;
+  completed?: boolean;
 }
 
 export interface WorkoutSet {
@@ -74,6 +80,8 @@ export interface WorkoutSet {
   reps: number | string;
   completed: boolean;
   notes?: string;
+  exercise_id?: string; // Added for compatibility
+  exercise_name?: string; // Added for compatibility
 }
 
 export interface CompletedExercise {
@@ -81,6 +89,13 @@ export interface CompletedExercise {
   name: string;
   exercise_name: string;
   sets_completed: WorkoutSet[];
+  notes?: string;
+  // Added for backward compatibility
+  sets?: number;
+  reps?: number | string;
+  weight?: number;
+  weight_used?: number[];
+  reps_completed?: number[];
 }
 
 export interface WorkoutLog {
@@ -142,20 +157,72 @@ export interface UserWorkoutStats {
   most_active_day: string;
   avg_duration?: number;
   total_calories_burned?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  achievements_count?: number;
+  points?: number;
+  level?: number;
 }
 
 // Recommendation types
 export interface WorkoutRecommendation {
   id: string;
-  user_id: string;
+  user_id?: string;
   title?: string;
   name?: string;
-  description: string;
+  description?: string;
   type?: string;
   reason?: string;
-  confidence_score: number;
-  suggested_at: string;
-  dismissed: boolean;
-  applied: boolean;
+  confidence_score?: number;
+  suggested_at?: string;
+  dismissed?: boolean;
+  applied?: boolean;
   applied_at?: string;
+}
+
+// Nutrition types
+export interface MealPlan {
+  id?: string;
+  name?: string;
+  description?: string;
+  meals?: Meal[];
+  totalCalories?: number;
+  total_protein?: number;
+  total_carbs?: number;
+  total_fat?: number;
+  total_calories?: number;
+}
+
+export interface Meal {
+  id?: string;
+  name: string;
+  time?: string;
+  foods: MealFood[];
+}
+
+export interface MealFood {
+  id?: string;
+  name?: string;
+  quantity: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  serving_size?: number;
+  unit?: string;
+}
+
+export interface Food {
+  id?: string;
+  name: string;
+  category?: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+  sugar?: number;
+  serving_size?: number;
+  unit?: string;
+  allergies?: string[];
 }

@@ -20,7 +20,7 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({ userId, limit = 5 }) =>
     if (activeUserId) {
       fetchWorkoutHistory(activeUserId);
     }
-  }, [activeUserId]);
+  }, [activeUserId, fetchWorkoutHistory]);
   
   const limitedHistory = history.slice(0, limit);
   

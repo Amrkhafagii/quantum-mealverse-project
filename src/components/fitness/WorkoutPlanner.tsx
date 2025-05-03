@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Calendar, Dumbbell } from 'lucide-react';
 import { WorkoutPlan } from '@/types/fitness';
 import { getUserWorkoutPlans } from '@/services/workoutService';
 
 const WorkoutPlanner: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null);
@@ -25,7 +27,10 @@ const WorkoutPlanner: React.FC = () => {
         setWorkoutPlans(plans);
       } catch (error) {
         console.error('Error fetching workout plans:', error);
-        toast.error('Failed to load workout plans');
+        toast({
+          description: 'Failed to load workout plans',
+          variant: 'destructive'
+        });
       } finally {
         setLoading(false);
       }
@@ -53,15 +58,38 @@ const WorkoutPlanner: React.FC = () => {
   const handleSavePlan = async (planData: WorkoutPlan) => {
     // Implement save logic here (create or update)
     console.log('Saving plan:', planData);
-    toast.success('Workout plan saved successfully');
+    toast({
+      description: 'Workout plan saved successfully'
+    });
     handleCancel();
   };
 
   const handleDeletePlan = async (planId: string) => {
     // Implement delete logic here
     console.log('Deleting plan:', planId);
-    toast.success('Workout plan deleted successfully');
+    toast({
+      description: 'Workout plan deleted successfully'
+    });
   };
+
+  // Custom Trash icon component
+  const Trash = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
+  );
 
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -98,8 +126,8 @@ const WorkoutPlanner: React.FC = () => {
                         Edit Plan
                       </Button>
                       <Button variant="destructive" size="sm" className="mt-2 ml-2" onClick={() => handleDeletePlan(plan.id)}>
-                        <Trash className="h-4 w-4 mr-2" />
-                        Delete
+                        <Trash />
+                        <span className="ml-2">Delete</span>
                       </Button>
                     </CardContent>
                   </Card>
@@ -124,23 +152,3 @@ const WorkoutPlanner: React.FC = () => {
 };
 
 export default WorkoutPlanner;
-
-// Mock Trash icon component
-const Trash = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="lucide lucide-trash"
-  >
-    <path d="M3 6h18" />
-    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-  </svg>
-);

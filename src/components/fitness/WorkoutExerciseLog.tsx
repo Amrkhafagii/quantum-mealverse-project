@@ -1,12 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { Check, Plus, Minus, Save } from 'lucide-react';
-import { WorkoutLog } from '@/types/fitness';
+import { WorkoutLog, CompletedExercise } from '@/types/fitness';
 import { logWorkout } from '@/services/workoutService';
 
 interface WorkoutExerciseLogProps {
@@ -15,17 +14,23 @@ interface WorkoutExerciseLogProps {
 }
 
 const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onSave }) => {
-  const [completedExercises, setCompletedExercises] = useState(workoutLog.completed_exercises || []);
+  const [completedExercises, setCompletedExercises] = useState<CompletedExercise[]>(workoutLog.completed_exercises || []);
 
   const handleAddExercise = () => {
     setCompletedExercises([
       ...completedExercises,
       {
+        exercise_id: crypto.randomUUID(),
+        name: '',
         exercise_name: '',
-        sets: 3,
-        reps: 10,
-        weight: 0,
-        notes: ''
+        sets_completed: [
+          {
+            set_number: 1,
+            weight: 0,
+            reps: 0,
+            completed: false
+          }
+        ]
       }
     ]);
   };
@@ -38,7 +43,7 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onS
 
   const handleExerciseChange = (index: number, field: string, value: any) => {
     const newExercises = [...completedExercises];
-    newExercises[index][field] = value;
+    (newExercises[index] as any)[field] = value;
     setCompletedExercises(newExercises);
   };
 
@@ -89,8 +94,30 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onS
                 <Input
                   id={`sets-${index}`}
                   type="number"
-                  value={exercise.sets}
-                  onChange={(e) => handleExerciseChange(index, 'sets', parseInt(e.target.value))}
+                  value={exercise.sets_completed.length}
+                  onChange={(e) => {
+                    // Handle sets count change
+                    const setCount = parseInt(e.target.value);
+                    const currentSets = exercise.sets_completed || [];
+                    const newSets = [];
+                    
+                    for (let i = 0; i < setCount; i++) {
+                      if (i < currentSets.length) {
+                        newSets.push(currentSets[i]);
+                      } else {
+                        newSets.push({
+                          set_number: i + 1,
+                          weight: 0,
+                          reps: 0,
+                          completed: false
+                        });
+                      }
+                    }
+                    
+                    const newExercises = [...completedExercises];
+                    newExercises[index].sets_completed = newSets;
+                    setCompletedExercises(newExercises);
+                  }}
                   className="bg-quantum-black/50 border-quantum-cyan/20"
                 />
               </div>
@@ -101,8 +128,16 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onS
                 <Input
                   id={`reps-${index}`}
                   type="number"
-                  value={exercise.reps}
-                  onChange={(e) => handleExerciseChange(index, 'reps', parseInt(e.target.value))}
+                  value={exercise.sets_completed[0]?.reps || 0}
+                  onChange={(e) => {
+                    const reps = parseInt(e.target.value);
+                    const newExercises = [...completedExercises];
+                    newExercises[index].sets_completed = newExercises[index].sets_completed.map(set => ({
+                      ...set,
+                      reps
+                    }));
+                    setCompletedExercises(newExercises);
+                  }}
                   className="bg-quantum-black/50 border-quantum-cyan/20"
                 />
               </div>
@@ -113,8 +148,16 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onS
                 <Input
                   id={`weight-${index}`}
                   type="number"
-                  value={exercise.weight}
-                  onChange={(e) => handleExerciseChange(index, 'weight', parseFloat(e.target.value))}
+                  value={exercise.sets_completed[0]?.weight || 0}
+                  onChange={(e) => {
+                    const weight = parseFloat(e.target.value);
+                    const newExercises = [...completedExercises];
+                    newExercises[index].sets_completed = newExercises[index].sets_completed.map(set => ({
+                      ...set,
+                      weight
+                    }));
+                    setCompletedExercises(newExercises);
+                  }}
                   className="bg-quantum-black/50 border-quantum-cyan/20"
                 />
               </div>
@@ -127,7 +170,7 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({ workoutLog, onS
                 id={`notes-${index}`}
                 type="text"
                 placeholder="Additional notes"
-                value={exercise.notes}
+                value={exercise.notes || ''}
                 onChange={(e) => handleExerciseChange(index, 'notes', e.target.value)}
                 className="bg-quantum-black/50 border-quantum-cyan/20"
               />

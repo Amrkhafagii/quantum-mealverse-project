@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -19,9 +20,10 @@ interface FitnessProfileProps {
 }
 
 const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile }) => {
-  const [userProfile, setUserProfile] = useState<Omit<UserProfile, 'id' | 'user_id'> | null>(null);
+  const { toast } = useToast();
+  const [userProfile, setUserProfile] = useState<Partial<UserProfile> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = React.useState<Date>();
+  const [date, setDate] = useState<Date | undefined>();
 
   useEffect(() => {
     loadProfile();
@@ -38,62 +40,69 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
         
       if (error) throw error;
       
-      setUserProfile(data as Omit<UserProfile, 'id' | 'user_id'>);
+      // Ensure we have the required weight field
+      const profileWithDefaults = {
+        ...data,
+        weight: data.weight || 0 // Add default weight if missing
+      };
+      
+      setUserProfile(profileWithDefaults);
+      
+      // Set date if available
+      if (profileWithDefaults.date_of_birth) {
+        setDate(new Date(profileWithDefaults.date_of_birth));
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
       toast({
-        title: "Error",
-        description: "Failed to load fitness profile.",
-        variant: "destructive"
+        description: "Failed to load fitness profile."
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateProfile = async (formData: Omit<UserProfile, 'id'>) => {
-  try {
-    setIsLoading(true);
-    
-    // Ensure the weight is set with a default if not provided
-    const profileData = {
-      ...formData,
-      weight: formData.weight || 0, // Add default weight value
-      user_id: userId
-    };
-    
-    const { data, error } = await supabase
-      .from('fitness_profiles')
-      .upsert(profileData as any)
-      .select()
-      .single();
+  const handleUpdateProfile = async (formData: Partial<UserProfile>) => {
+    try {
+      setIsLoading(true);
       
-    if (error) throw error;
-    
-    // Convert the data to UserProfile type with proper casting
-    const updatedProfile = {
-      ...data,
-      weight: data.weight || 0, // Ensure weight is included
-    } as unknown as UserProfile;
-    
-    setUserProfile(updatedProfile);
-    onUpdateProfile?.(updatedProfile);
-    
-    toast({
-      title: "Profile Updated",
-      description: "Your fitness profile has been saved successfully.",
-    });
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    toast({
-      title: "Error",
-      description: "Failed to update fitness profile.",
-      variant: "destructive"
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Ensure the weight is set with a default if not provided
+      const profileData = {
+        ...formData,
+        weight: formData.weight || 0, // Add default weight value
+        user_id: userId
+      };
+      
+      const { data, error } = await supabase
+        .from('fitness_profiles')
+        .upsert(profileData)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Convert the data to UserProfile type with proper casting
+      const updatedProfile = {
+        ...data,
+        weight: data.weight || 0, // Ensure weight is included
+      };
+      
+      setUserProfile(updatedProfile);
+      if (onUpdateProfile) onUpdateProfile(updatedProfile as UserProfile);
+      
+      toast({
+        description: "Your fitness profile has been saved successfully."
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        description: "Failed to update fitness profile.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -111,7 +120,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
               type="text"
               id="display_name"
               defaultValue={userProfile?.display_name || ""}
-              onChange={(e) => setUserProfile({ ...userProfile, display_name: e.target.value } as any)}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, display_name: e.target.value })}
             />
           </div>
           <div>
@@ -120,7 +129,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
               type="number"
               id="height"
               defaultValue={userProfile?.height || ""}
-              onChange={(e) => setUserProfile({ ...userProfile, height: parseFloat(e.target.value) } as any)}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, height: parseFloat(e.target.value) })}
             />
           </div>
         </div>
@@ -131,7 +140,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
               type="number"
               id="weight"
               defaultValue={userProfile?.weight || ""}
-              onChange={(e) => setUserProfile({ ...userProfile, weight: parseFloat(e.target.value) } as any)}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, weight: parseFloat(e.target.value) })}
               required
             />
           </div>
@@ -141,7 +150,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
               type="number"
               id="goal_weight"
               defaultValue={userProfile?.goal_weight || ""}
-              onChange={(e) => setUserProfile({ ...userProfile, goal_weight: parseFloat(e.target.value) } as any)}
+              onChange={(e) => userProfile && setUserProfile({ ...userProfile, goal_weight: parseFloat(e.target.value) })}
             />
           </div>
         </div>
@@ -176,7 +185,10 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="gender">Gender</Label>
-            <Select defaultValue={userProfile?.gender || ""}>
+            <Select 
+              defaultValue={userProfile?.gender || ""}
+              onValueChange={(value) => userProfile && setUserProfile({ ...userProfile, gender: value })}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
@@ -189,7 +201,10 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
           </div>
           <div>
             <Label htmlFor="fitness_level">Fitness Level</Label>
-            <Select defaultValue={userProfile?.fitness_level || ""}>
+            <Select 
+              defaultValue={userProfile?.fitness_level || ""}
+              onValueChange={(value) => userProfile && setUserProfile({ ...userProfile, fitness_level: value })}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
@@ -202,10 +217,10 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
           </div>
         </div>
         <Button 
-          onClick={() => handleUpdateProfile({
+          onClick={() => userProfile && handleUpdateProfile({
             ...userProfile,
-            date_of_birth: date?.toISOString() || null
-          } as any)}
+            date_of_birth: date ? date.toISOString() : null
+          })}
           className="bg-quantum-purple hover:bg-quantum-purple/90"
           disabled={isLoading}
         >

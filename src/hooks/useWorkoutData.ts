@@ -6,9 +6,11 @@ import {
   WorkoutSchedule, 
   WorkoutLog, 
   WorkoutHistoryItem, 
-  UserWorkoutStats 
+  UserWorkoutStats,
+  WorkoutDay
 } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeWorkoutPlan } from '@/utils/fitnessUtils';
 
 export function useWorkoutData() {
   const { toast } = useToast();
@@ -34,7 +36,17 @@ export function useWorkoutData() {
         
       if (error) throw error;
       
-      setWorkoutPlans(data || []);
+      // Parse JSON workout_days and convert to proper WorkoutDay[]
+      const parsedPlans: WorkoutPlan[] = data?.map(plan => ({
+        ...plan,
+        workout_days: typeof plan.workout_days === 'string' 
+          ? JSON.parse(plan.workout_days) 
+          : Array.isArray(plan.workout_days)
+            ? plan.workout_days
+            : []
+      })) || [];
+      
+      setWorkoutPlans(parsedPlans);
     } catch (error) {
       console.error('Error fetching workout plans:', error);
       toast({
@@ -172,23 +184,31 @@ export function useWorkoutData() {
     try {
       setIsLoading(true);
       
+      // Convert the completed_exercises to a JSON string for storage
+      const dbWorkoutLog = {
+        ...workoutLog,
+        completed_exercises: JSON.stringify(workoutLog.completed_exercises)
+      };
+      
       const { data, error } = await supabase
         .from('workout_logs')
-        .insert(workoutLog)
+        .insert(dbWorkoutLog)
         .select()
         .single();
         
       if (error) throw error;
       
       // Refresh workout stats
-      fetchWorkoutStats(workoutLog.user_id);
+      if (workoutLog.user_id) {
+        fetchWorkoutStats(workoutLog.user_id);
+      }
       
       toast({
         title: "Success",
         description: "Workout logged successfully",
       });
       
-      return data;
+      return { success: true, data };
     } catch (error) {
       console.error('Error logging workout:', error);
       toast({
@@ -196,7 +216,7 @@ export function useWorkoutData() {
         description: "Failed to log workout",
         variant: "destructive"
       });
-      return null;
+      return { success: false, error };
     } finally {
       setIsLoading(false);
     }

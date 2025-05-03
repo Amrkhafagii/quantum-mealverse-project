@@ -1,14 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Info, X, Check } from 'lucide-react';
 import { WorkoutRecommendation } from '@/types/fitness';
-import { getUserRecommendations, dismissWorkoutRecommendation, applyRecommendation } from '@/services/recommendationService';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const WorkoutRecommendations: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [recommendations, setRecommendations] = useState<WorkoutRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,15 +24,22 @@ const WorkoutRecommendations: React.FC = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await getUserRecommendations(user.id);
+      const { data, error } = await supabase
+        .from('workout_recommendations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('applied', false)
+        .eq('dismissed', false);
+        
       if (error) throw error;
       
-      if (data) {
-        setRecommendations(data.filter(rec => !rec.applied && !rec.dismissed));
-      }
+      setRecommendations(data || []);
     } catch (err) {
       console.error("Error loading recommendations:", err);
-      toast.error("Failed to load workout recommendations");
+      toast({
+        description: "Failed to load workout recommendations",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -39,18 +49,25 @@ const WorkoutRecommendations: React.FC = () => {
     if (!user) return;
     
     try {
-      const { success, error } = await dismissWorkoutRecommendation(recommendationId, user.id);
+      const { error } = await supabase
+        .from('workout_recommendations')
+        .update({ dismissed: true })
+        .eq('id', recommendationId)
+        .eq('user_id', user.id);
+        
+      if (error) throw new Error(error.message);
       
-      if (error) throw new Error(error);
-      
-      if (success) {
-        // Remove from local state
-        setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
-        toast.success("Recommendation dismissed");
-      }
+      // Remove from local state
+      setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
+      toast({
+        description: "Recommendation dismissed"
+      });
     } catch (err) {
       console.error("Error dismissing recommendation:", err);
-      toast.error("Failed to dismiss recommendation");
+      toast({
+        description: "Failed to dismiss recommendation",
+        variant: "destructive"
+      });
     }
   };
 
@@ -58,20 +75,30 @@ const WorkoutRecommendations: React.FC = () => {
     if (!user) return;
     
     try {
-      const { success, error } = await applyRecommendation(recommendationId, user.id);
+      const { error } = await supabase
+        .from('workout_recommendations')
+        .update({ 
+          applied: true,
+          applied_at: new Date().toISOString()
+        })
+        .eq('id', recommendationId)
+        .eq('user_id', user.id);
+        
+      if (error) throw new Error(error.message);
       
-      if (error) throw new Error(error);
-      
-      if (success) {
-        // Remove from local state or mark as applied
-        setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
-        toast.success("Recommendation applied to your workout schedule!");
-        // Here you would typically add logic to actually apply the recommendation
-        // e.g., create a new workout plan based on the recommendation
-      }
+      // Remove from local state or mark as applied
+      setRecommendations(prev => prev.filter(rec => rec.id !== recommendationId));
+      toast({
+        description: "Recommendation applied to your workout schedule!"
+      });
+      // Here you would typically add logic to actually apply the recommendation
+      // e.g., create a new workout plan based on the recommendation
     } catch (err) {
       console.error("Error applying recommendation:", err);
-      toast.error("Failed to apply recommendation");
+      toast({
+        description: "Failed to apply recommendation",
+        variant: "destructive"
+      });
     }
   };
 

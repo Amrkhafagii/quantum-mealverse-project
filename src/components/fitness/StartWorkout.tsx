@@ -19,7 +19,7 @@ const StartWorkout: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      fetchWorkoutPlans();
+      fetchWorkoutPlans(user.id);
     }
   }, [user]);
 

@@ -2,15 +2,12 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { WorkoutPlan, WorkoutDay, Exercise } from '@/types/fitness';
+import { WorkoutPlan, WorkoutDay } from '@/types/fitness';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Play, Check, Loader2 } from 'lucide-react';
 import { format, isSameDay, startOfWeek, addDays, isAfter, isBefore, isToday } from 'date-fns';
-import WorkoutExerciseLog from './WorkoutExerciseLog';
-import { convertExerciseToWorkoutSet } from '@/utils/fitnessUtils';
 import { motion } from 'framer-motion';
-import LoadingSpinner from '@/components/ui/loading-spinner';
+import WorkoutExerciseLog from './workout/WorkoutExerciseLog';
 
 interface WorkoutSchedulerProps {
   userId?: string;
@@ -19,7 +16,7 @@ interface WorkoutSchedulerProps {
   loading?: boolean;
 }
 
-const WorkoutScheduler = ({ userId, plan, onCompleteWorkout, loading = false }: WorkoutSchedulerProps) => {
+const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({ userId, plan, onCompleteWorkout, loading = false }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()));
   const [showLog, setShowLog] = useState(false);
@@ -72,7 +69,8 @@ const WorkoutScheduler = ({ userId, plan, onCompleteWorkout, loading = false }: 
     return (
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
         <CardContent className="pt-6 flex justify-center items-center min-h-[300px]">
-          <LoadingSpinner text="Loading workout schedule..." />
+          <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+          <span className="ml-2">Loading workout schedule...</span>
         </CardContent>
       </Card>
     );
@@ -139,90 +137,24 @@ const WorkoutScheduler = ({ userId, plan, onCompleteWorkout, loading = false }: 
                     <div className="text-sm font-medium">{format(day.date, 'd')}</div>
                     {day.workoutDay && (
                       <div className="mt-1">
-                        <Badge
-                          className={`${
-                            day.isToday
-                              ? 'bg-quantum-purple'
-                              : day.isPast
-                              ? 'bg-gray-600'
-                              : 'bg-quantum-cyan'
-                          } text-xs`}
-                        >
+                        <Badge className="text-xs bg-quantum-cyan/20 text-quantum-cyan">
                           {day.workoutDay.day_name}
                         </Badge>
                       </div>
-                    )}
-                    {day.workoutDay && day.isToday && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.5, type: "spring" }}
-                      >
-                        <Button
-                          size="sm"
-                          className="mt-2 bg-quantum-purple hover:bg-quantum-purple/90 text-xs h-7 w-full"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startWorkout(day.dayIndex);
-                          }}
-                        >
-                          <Play className="h-3 w-3 mr-1" /> Start
-                        </Button>
-                      </motion.div>
-                    )}
-                    {day.workoutDay && day.isPast && day.workoutDay.completed && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="mt-2 text-green-400 flex justify-center"
-                      >
-                        <Check className="h-4 w-4" />
-                      </motion.div>
                     )}
                   </motion.div>
                 ))}
               </motion.div>
             </CardContent>
           </Card>
-
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardHeader>
-              <CardTitle>Monthly View</CardTitle>
-              <CardDescription>Plan your workouts for the month</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                className="mx-auto bg-quantum-darkBlue/30 rounded-md p-4"
-              />
-            </CardContent>
-          </Card>
         </>
       ) : (
-        selectedDayIndex !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <Button
-              variant="outline"
-              onClick={() => setShowLog(false)}
-              className="mb-4"
-            >
-              ← Back to Schedule
-            </Button>
-            <WorkoutExerciseLog
-              userId={userId}
-              workoutPlanId={plan.id}
-              workoutDay={plan.workout_days[selectedDayIndex].day_name}
-              exercises={plan.workout_days[selectedDayIndex].exercises}
-              onLogComplete={handleWorkoutComplete}
-            />
-          </motion.div>
-        )
+        <WorkoutExerciseLog
+          workoutPlanId={plan.id}
+          workoutDay={plan.workout_days[selectedDayIndex as number].day_name}
+          exercises={plan.workout_days[selectedDayIndex as number].exercises}
+          onLogComplete={handleWorkoutComplete}
+        />
       )}
     </div>
   );

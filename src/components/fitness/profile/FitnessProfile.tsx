@@ -21,9 +21,9 @@ interface FitnessProfileProps {
 
 const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile }) => {
   const { toast } = useToast();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<Partial<UserProfile> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = React.useState<Date>();
+  const [date, setDate] = useState<Date | undefined>();
 
   useEffect(() => {
     loadProfile();
@@ -46,7 +46,12 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
         weight: data.weight || 0 // Add default weight if missing
       };
       
-      setUserProfile(profileWithDefaults as UserProfile);
+      setUserProfile(profileWithDefaults);
+      
+      // Set date if available
+      if (profileWithDefaults.date_of_birth) {
+        setDate(new Date(profileWithDefaults.date_of_birth));
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
       toast({
@@ -57,47 +62,47 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
     }
   };
 
-  const handleUpdateProfile = async (formData: Omit<UserProfile, 'id'>) => {
-  try {
-    setIsLoading(true);
-    
-    // Ensure the weight is set with a default if not provided
-    const profileData = {
-      ...formData,
-      weight: formData.weight || 0, // Add default weight value
-      user_id: userId
-    };
-    
-    const { data, error } = await supabase
-      .from('fitness_profiles')
-      .upsert(profileData as any)
-      .select()
-      .single();
+  const handleUpdateProfile = async (formData: Partial<UserProfile>) => {
+    try {
+      setIsLoading(true);
       
-    if (error) throw error;
-    
-    // Convert the data to UserProfile type with proper casting
-    const updatedProfile = {
-      ...data,
-      weight: data.weight || 0, // Ensure weight is included
-    } as unknown as UserProfile;
-    
-    setUserProfile(updatedProfile);
-    onUpdateProfile?.(updatedProfile);
-    
-    toast({
-      description: "Your fitness profile has been saved successfully."
-    });
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    toast({
-      description: "Failed to update fitness profile.",
-      variant: "destructive"
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Ensure the weight is set with a default if not provided
+      const profileData = {
+        ...formData,
+        weight: formData.weight || 0, // Add default weight value
+        user_id: userId
+      };
+      
+      const { data, error } = await supabase
+        .from('fitness_profiles')
+        .upsert(profileData)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Convert the data to UserProfile type with proper casting
+      const updatedProfile = {
+        ...data,
+        weight: data.weight || 0, // Ensure weight is included
+      };
+      
+      setUserProfile(updatedProfile);
+      if (onUpdateProfile) onUpdateProfile(updatedProfile as UserProfile);
+      
+      toast({
+        description: "Your fitness profile has been saved successfully."
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        description: "Failed to update fitness profile.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -214,7 +219,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
         <Button 
           onClick={() => userProfile && handleUpdateProfile({
             ...userProfile,
-            date_of_birth: date?.toISOString() || null
+            date_of_birth: date ? date.toISOString() : null
           })}
           className="bg-quantum-purple hover:bg-quantum-purple/90"
           disabled={isLoading}
