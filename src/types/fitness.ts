@@ -86,17 +86,6 @@ export interface SavedMealPlanWithExpiry extends SavedMealPlan {
   // No additional fields needed as we've moved is_active to the base interface
 }
 
-export interface SavedMealPlan {
-  id: string;
-  user_id: string;
-  name: string;
-  meal_plan: any;
-  expires_at?: string;
-  is_active: boolean;
-  date_created?: string;
-  tdee_id?: string;
-}
-
 export interface WorkoutPlan {
   id: string;
   user_id: string;
@@ -188,10 +177,10 @@ export interface WorkoutSchedule {
   user_id: string;
   workout_plan_id: string;
   days_of_week: number[];
-  day_of_week?: string;
   start_date: string;
   end_date?: string;
   preferred_time?: string;
+  day_of_week?: string;
   time?: string;
   reminder?: boolean;
   active: boolean;

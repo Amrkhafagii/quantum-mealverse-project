@@ -80,7 +80,7 @@ export function useWorkoutData() {
         workout_plan_id: schedule.workout_plan_id,
         day_of_week: schedule.day_of_week || '',
         days_of_week: schedule.days_of_week || [],
-        time: schedule.preferred_time || schedule.time || '',
+        time: schedule.time || schedule.preferred_time || '',
         preferred_time: schedule.preferred_time,
         reminder: schedule.reminder || false,
         start_date: schedule.start_date,
