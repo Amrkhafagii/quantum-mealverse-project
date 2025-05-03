@@ -1,14 +1,27 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const useLocationPermission = () => {
   const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
   const [trackingEnabled, setTrackingEnabled] = useState<boolean>(false);
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
+  const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState<boolean>(false);
 
   useEffect(() => {
+    // Check browser's stored permission preference
+    const checkPermissionStorage = () => {
+      try {
+        const storedPermission = localStorage.getItem('locationPermission');
+        if (storedPermission === 'granted') {
+          setHasShownInitialPrompt(true);
+        }
+      } catch (e) {
+        console.error('Error reading from localStorage', e);
+      }
+    };
+    
     // Check if location tracking is enabled in preferences
     const fetchPreferences = async () => {
       try {
@@ -37,8 +50,21 @@ export const useLocationPermission = () => {
           const permissionStatus = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
           setPermissionStatus(permissionStatus.state);
           
+          // Store permission state in localStorage
+          try {
+            localStorage.setItem('locationPermission', permissionStatus.state);
+          } catch (e) {
+            console.error('Error writing to localStorage', e);
+          }
+          
           permissionStatus.onchange = () => {
             setPermissionStatus(permissionStatus.state);
+            // Update localStorage when permission changes
+            try {
+              localStorage.setItem('locationPermission', permissionStatus.state);
+            } catch (e) {
+              console.error('Error writing to localStorage', e);
+            }
           };
         } catch (error) {
           console.error('Error checking geolocation permission:', error);
@@ -52,6 +78,16 @@ export const useLocationPermission = () => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             setLocation(position);
+            // Store simplified location in localStorage
+            try {
+              localStorage.setItem('userLocation', JSON.stringify({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                timestamp: new Date().getTime()
+              }));
+            } catch (e) {
+              console.error('Error writing to localStorage', e);
+            }
           },
           (error) => {
             console.error('Error getting current position:', error);
@@ -60,14 +96,16 @@ export const useLocationPermission = () => {
       }
     };
 
+    checkPermissionStorage();
     fetchPreferences();
     checkPermission();
     getCurrentPosition();
   }, [permissionStatus, trackingEnabled]);
 
-  // Fixed requestPermission function
-  const requestPermission = async (): Promise<boolean> => {
+  // Updated requestPermission function with better UX
+  const requestPermission = useCallback(async (): Promise<boolean> => {
     setIsRequesting(true);
+    setHasShownInitialPrompt(true);
     
     try {
       if ('geolocation' in navigator) {
@@ -78,17 +116,54 @@ export const useLocationPermission = () => {
               setPermissionStatus('granted');
               setLocation(position);
               
+              // Cache location in localStorage
+              try {
+                localStorage.setItem('userLocation', JSON.stringify({
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  timestamp: new Date().getTime()
+                }));
+                localStorage.setItem('locationPermission', 'granted');
+              } catch (e) {
+                console.error('Error writing to localStorage', e);
+              }
+              
               // Update user preferences
               await toggleTracking(true);
               
               setIsRequesting(false);
+              
+              // Show success notification
+              toast.success("Location enabled", { 
+                description: "We can now find nearby restaurants for you"
+              });
+              
               resolve(true);
             },
             (error) => {
               // Permission denied
               console.error('Error requesting location permission:', error);
               setPermissionStatus('denied');
+              
+              try {
+                localStorage.setItem('locationPermission', 'denied');
+              } catch (e) {
+                console.error('Error writing to localStorage', e);
+              }
+              
               setIsRequesting(false);
+              
+              // Show error notification based on error code
+              if (error.code === 1) { // PERMISSION_DENIED
+                toast.error("Location access denied", {
+                  description: "Please enable location access in your browser settings"
+                });
+              } else {
+                toast.error("Location error", {
+                  description: "Could not access your location. Please try again."
+                });
+              }
+              
               resolve(false);
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -102,7 +177,7 @@ export const useLocationPermission = () => {
       setIsRequesting(false);
       return false;
     }
-  };
+  }, []);
   
   // Fixed toggleTracking function to properly handle the constraint issue
   const toggleTracking = async (enabled: boolean): Promise<boolean> => {
@@ -173,6 +248,7 @@ export const useLocationPermission = () => {
     isRequesting,
     toggleTracking,
     isTracking,
-    location
+    location,
+    hasShownInitialPrompt
   };
 };

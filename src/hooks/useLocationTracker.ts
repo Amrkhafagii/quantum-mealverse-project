@@ -1,11 +1,12 @@
-
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 
 interface LocationTrackerOptions {
   watchPosition?: boolean;
   trackingInterval?: number; // milliseconds
   onLocationUpdate?: (position: GeolocationPosition) => void;
   onError?: (error: GeolocationPositionError) => void;
+  showToasts?: boolean;
 }
 
 interface Location {
@@ -27,7 +28,8 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
     watchPosition = true,
     trackingInterval = 15 * 60 * 1000, // Default to 15 minutes
     onLocationUpdate,
-    onError
+    onError,
+    showToasts = true
   } = options;
 
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
@@ -38,6 +40,30 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const intervalIdRef = useRef<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null);
+  const [isLoadingPosition, setIsLoadingPosition] = useState(false);
+
+  // Check for cached location on initialization
+  useEffect(() => {
+    try {
+      const cachedLocationString = localStorage.getItem('userLocation');
+      if (cachedLocationString) {
+        const cachedLocation = JSON.parse(cachedLocationString);
+        if (cachedLocation?.latitude && cachedLocation?.longitude) {
+          // Use cached location initially
+          setLocation({
+            latitude: cachedLocation.latitude,
+            longitude: cachedLocation.longitude
+          });
+          // If timestamp is available, set lastUpdated
+          if (cachedLocation.timestamp) {
+            setLastUpdated(new Date(cachedLocation.timestamp));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error reading cached location:', error);
+    }
+  }, []);
 
   const clearWatchPosition = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -56,23 +82,62 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   const handleSuccess = useCallback((pos: GeolocationPosition) => {
     setPosition(pos);
     // Also set the simplified location object
-    setLocation({
+    const newLocation = {
       latitude: pos.coords.latitude,
       longitude: pos.coords.longitude
-    });
+    };
+    setLocation(newLocation);
     setLastUpdated(new Date());
     setError(null);
+    setIsLoadingPosition(false);
+    
+    // Cache location in localStorage
+    try {
+      localStorage.setItem('userLocation', JSON.stringify({
+        ...newLocation,
+        timestamp: new Date().getTime()
+      }));
+    } catch (error) {
+      console.error('Error caching location:', error);
+    }
+    
     if (onLocationUpdate) {
       onLocationUpdate(pos);
     }
-  }, [onLocationUpdate]);
+    
+    if (showToasts) {
+      toast.success("Location updated", {
+        description: "Your location has been refreshed successfully",
+        duration: 2000
+      });
+    }
+  }, [onLocationUpdate, showToasts]);
 
   const handleError = useCallback((err: GeolocationPositionError) => {
     setError(err);
+    setIsLoadingPosition(false);
+    
+    if (showToasts) {
+      // Show appropriate error message based on error code
+      if (err.code === 1) { // PERMISSION_DENIED
+        toast.error("Location access denied", {
+          description: "Please enable location services in your browser settings"
+        });
+      } else if (err.code === 2) { // POSITION_UNAVAILABLE
+        toast.error("Location unavailable", {
+          description: "Could not detect your current location"
+        });
+      } else if (err.code === 3) { // TIMEOUT
+        toast.error("Location request timed out", {
+          description: "Please try again when you have a better connection"
+        });
+      }
+    }
+    
     if (onError) {
       onError(err);
     }
-  }, [onError]);
+  }, [onError, showToasts]);
 
   const getCurrentPosition = useCallback(() => {
     if (!navigator.geolocation) {
@@ -132,6 +197,8 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
   // Add a new method that returns a promise with the location
   const getCurrentLocation = useCallback((): Promise<Location | null> => {
     return new Promise((resolve, reject) => {
+      setIsLoadingPosition(true);
+      
       if (!navigator.geolocation) {
         // Create a custom error object instead of modifying a GeolocationPositionError
         const customError: CustomPositionError = {
@@ -143,6 +210,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
         };
         
         setError(customError);
+        setIsLoadingPosition(false);
         reject(customError);
         return;
       }
@@ -156,10 +224,23 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
           setLocation(loc);
           setPosition(pos);
           setLastUpdated(new Date());
+          setIsLoadingPosition(false);
+          
+          // Cache location in localStorage
+          try {
+            localStorage.setItem('userLocation', JSON.stringify({
+              ...loc,
+              timestamp: new Date().getTime()
+            }));
+          } catch (error) {
+            console.error('Error caching location:', error);
+          }
+          
           resolve(loc);
         },
         (err) => {
           setError(err);
+          setIsLoadingPosition(false);
           reject(err);
         },
         {
@@ -255,6 +336,7 @@ export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
     location,
     lastUpdated,
     permissionStatus,
+    isLoadingPosition,
     getLocationAge,
     isLocationStale,
     startTracking,

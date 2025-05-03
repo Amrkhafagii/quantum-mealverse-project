@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocationTracker } from './useLocationTracker';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export interface NearbyRestaurant {
   restaurant_id: string;
@@ -15,11 +15,21 @@ export interface NearbyRestaurant {
 export const useNearestRestaurant = () => {
   const [nearbyRestaurants, setNearbyRestaurants] = useState<NearbyRestaurant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [refreshStatus, setRefreshStatus] = useState<'idle' | 'refreshing' | 'error'>('idle');
   const { location, locationIsValid } = useLocationTracker();
-  const { toast } = useToast();
 
-  const findNearestRestaurants = async () => {
-    if (!location) return null;
+  const findNearestRestaurants = useCallback(async (maxDistance = 50) => {
+    if (!locationIsValid()) {
+      setRefreshStatus('error');
+      toast.error("Location required", { 
+        description: "We need your location to find nearby restaurants" 
+      });
+      return null;
+    }
+    
+    setRefreshStatus('refreshing');
+    setLoading(true);
     
     try {
       console.log('Finding nearest restaurants with location:', location);
@@ -27,11 +37,12 @@ export const useNearestRestaurant = () => {
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: location.latitude,
         order_lng: location.longitude,
-        max_distance_km: 50
+        max_distance_km: maxDistance
       });
 
       if (error) {
         console.error('Error in find_nearest_restaurant RPC:', error);
+        setRefreshStatus('error');
         throw error;
       }
       
@@ -39,26 +50,33 @@ export const useNearestRestaurant = () => {
       
       if (data && data.length > 0) {
         setNearbyRestaurants(data);
+        setLastRefreshTime(new Date());
+        setRefreshStatus('idle');
+        
+        // Only show success toast if it's not the initial load
+        if (lastRefreshTime !== null) {
+          toast.success("Restaurants updated", {
+            description: `Found ${data.length} restaurants near your location`
+          });
+        }
       } else {
         setNearbyRestaurants([]);
-        toast({
-          title: "No restaurants found",
-          description: "No restaurants found within 50km of your location",
-          variant: "destructive"
+        setRefreshStatus('idle');
+        toast.error("No restaurants found", {
+          description: `No restaurants found within ${maxDistance}km of your location`
         });
       }
     } catch (error) {
       console.error('Error finding nearest restaurants:', error);
-      toast({
-        title: "Error",
-        description: "Could not find nearest restaurants",
-        variant: "destructive"
+      setRefreshStatus('error');
+      toast.error("Error", {
+        description: "Could not find nearest restaurants"
       });
       setNearbyRestaurants([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [location, locationIsValid, lastRefreshTime]);
 
   useEffect(() => {
     if (locationIsValid()) {
@@ -67,11 +85,18 @@ export const useNearestRestaurant = () => {
     } else {
       console.log('Location is not valid yet');
     }
-  }, [location]);
+  }, [location, locationIsValid, findNearestRestaurants]);
+
+  const refreshRestaurants = useCallback((maxDistance = 50) => {
+    findNearestRestaurants(maxDistance);
+  }, [findNearestRestaurants]);
 
   return {
     nearbyRestaurants,
     loading,
-    findNearestRestaurants
+    lastRefreshTime,
+    refreshStatus,
+    findNearestRestaurants,
+    refreshRestaurants
   };
 };
