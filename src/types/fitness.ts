@@ -1,3 +1,4 @@
+
 export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
 
 export interface FitnessGoal {

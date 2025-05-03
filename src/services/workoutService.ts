@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   WorkoutPlan, WorkoutDay, WorkoutLog, WorkoutSchedule, WorkoutHistoryItem
@@ -198,16 +199,16 @@ export const fetchWorkoutSchedules = async (userId: string): Promise<WorkoutSche
       id: schedule.id,
       user_id: schedule.user_id,
       workout_plan_id: schedule.workout_plan_id,
-      day_of_week: schedule.day_of_week || '',
       days_of_week: Array.isArray(schedule.days_of_week) ? schedule.days_of_week as number[] : [],
+      day_of_week: schedule.day_of_week || '',
       time: schedule.time || schedule.preferred_time || '',
-      preferred_time: schedule.preferred_time,
+      preferred_time: schedule.preferred_time || '',
       reminder: schedule.reminder || false,
       start_date: schedule.start_date,
       end_date: schedule.end_date,
       active: schedule.active || false,
-      created_at: schedule.created_at,
-      updated_at: schedule.updated_at
+      created_at: schedule.created_at || undefined,
+      updated_at: schedule.updated_at || undefined
     }));
     
     return schedules;
@@ -247,16 +248,16 @@ export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<
       id: data.id,
       user_id: data.user_id,
       workout_plan_id: data.workout_plan_id,
-      day_of_week: data.day_of_week || '',
       days_of_week: Array.isArray(data.days_of_week) ? data.days_of_week : [],
+      day_of_week: data.day_of_week || '',
       time: data.time || data.preferred_time || '',
-      preferred_time: data.preferred_time,
+      preferred_time: data.preferred_time || '',
       reminder: data.reminder || false,
       start_date: data.start_date,
       end_date: data.end_date,
       active: data.active,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at || undefined,
+      updated_at: data.updated_at || undefined
     };
   } catch (error) {
     console.error('Error creating workout schedule:', error);
@@ -293,16 +294,16 @@ export const updateWorkoutSchedule = async (schedule: Partial<WorkoutSchedule>):
       id: data.id,
       user_id: data.user_id,
       workout_plan_id: data.workout_plan_id,
-      day_of_week: data.day_of_week || '',
       days_of_week: Array.isArray(data.days_of_week) ? data.days_of_week : [],
+      day_of_week: data.day_of_week || '',
       time: data.time || data.preferred_time || '',
-      preferred_time: data.preferred_time,
+      preferred_time: data.preferred_time || '',
       reminder: data.reminder || false,
       start_date: data.start_date,
       end_date: data.end_date,
       active: data.active,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at || undefined,
+      updated_at: data.updated_at || undefined
     };
   } catch (error) {
     console.error('Error updating workout schedule:', error);

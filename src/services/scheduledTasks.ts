@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SavedMealPlan, SavedMealPlanWithExpiry } from '@/types/fitness';
+import { SavedMealPlan } from '@/types/fitness';
 import { toast } from 'sonner';
 import { createNotification } from '@/components/ui/fitness-notification';
 
@@ -12,6 +12,7 @@ interface MealPlanFromDB {
   expires_at?: string;
   is_active: boolean;
   date_created?: string;
+  tdee_id?: string;
 }
 
 /**
