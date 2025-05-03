@@ -1,4 +1,3 @@
-
 export interface Achievement {
   id: string;
   name: string;
@@ -65,7 +64,7 @@ export interface UserProfile {
   user_id: string;
   display_name?: string;
   height?: number;
-  weight: number;
+  weight?: number;  // Changed to optional to match database
   goal_weight?: number;
   date_of_birth?: string | null;
   gender?: string;
@@ -186,13 +185,16 @@ export interface FitnessGoal {
   id: string;
   user_id: string;
   title: string;
+  name?: string;  // Added for compatibility with database
   description?: string;
   target_value: number;
   current_value: number;
   start_date: string;
   target_date: string;
   category: string;
-  status: 'not_started' | 'in_progress' | 'completed' | 'failed';
+  target_weight?: number;     // Added for database compatibility  
+  target_body_fat?: number;   // Added for database compatibility
+  status: 'not_started' | 'in_progress' | 'completed' | 'failed' | 'active' | 'abandoned';
   created_at?: string;
   updated_at?: string;
 }
@@ -262,13 +264,22 @@ export interface StreakRewardsProps {
 
 export interface WorkoutRecommendation {
   id: string;
-  name: string;
+  name?: string;
+  title?: string;
   description: string;
-  difficulty: string;
-  duration: number;
-  calories_burned: number;
-  category: string;
+  difficulty?: string;
+  duration?: number;
+  calories_burned?: number;
+  category?: string;
   image_url?: string;
+  reason?: string;
+  type?: string;
+  confidence_score?: number;
+  user_id?: string;
+  suggested_at?: string;
+  dismissed?: boolean;
+  applied?: boolean;
+  applied_at?: string;
 }
 
 export interface DailyQuest {

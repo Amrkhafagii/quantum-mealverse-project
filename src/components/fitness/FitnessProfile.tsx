@@ -48,7 +48,7 @@ const FitnessProfile = () => {
       try {
         // Use a table that exists in the database
         const { data: statsData, error: statsError } = await supabase
-          .from('fitness_stats')
+          .from('user_workout_stats')
           .select('*')
           .eq('user_id', user.id)
           .single();
