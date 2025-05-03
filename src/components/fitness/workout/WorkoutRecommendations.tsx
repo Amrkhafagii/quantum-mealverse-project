@@ -38,7 +38,23 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
         
       if (error) throw error;
       
-      setRecommendations(data || []);
+      // Cast data to our WorkoutRecommendation type
+      const typedRecommendations: WorkoutRecommendation[] = (data || []).map(rec => ({
+        id: rec.id,
+        title: rec.title,
+        name: rec.title, // Set both for compatibility
+        description: rec.description || '',
+        type: rec.type,
+        reason: rec.reason,
+        confidence_score: rec.confidence_score,
+        user_id: rec.user_id,
+        suggested_at: rec.suggested_at,
+        dismissed: rec.dismissed,
+        applied: rec.applied,
+        applied_at: rec.applied_at
+      }));
+      
+      setRecommendations(typedRecommendations);
     } catch (error) {
       console.error('Error fetching workout recommendations:', error);
       toast({

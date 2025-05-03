@@ -46,7 +46,7 @@ const FitnessProfile = () => {
       if (!user?.id) return;
 
       try {
-        // Assuming 'user_workout_stats' is the correct table name
+        // Use a table that exists in the database
         const { data: statsData, error: statsError } = await supabase
           .from('user_workout_stats')
           .select('*')
@@ -57,7 +57,8 @@ const FitnessProfile = () => {
           console.error("Error fetching workout stats:", statsError);
         }
 
-        setStats(statsData);
+        // Safely cast the data to our expected type
+        setStats(statsData as unknown as UserWorkoutStats);
       } catch (error) {
         console.error("Error fetching workout stats:", error);
       } finally {

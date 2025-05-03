@@ -15,12 +15,30 @@ export const getUserFitnessGoals = async (userId: string): Promise<{
       .from('fitness_goals')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .returns<FitnessGoal[]>();
+      .order('created_at', { ascending: false });
       
     if (error) throw error;
     
-    return { data, error: null };
+    // Map database fields to FitnessGoal interface
+    const mappedGoals: FitnessGoal[] = (data || []).map(goal => ({
+      id: goal.id,
+      user_id: goal.user_id,
+      title: goal.name, // Map name to title for interface compatibility
+      name: goal.name,
+      description: goal.description,
+      target_value: goal.target_weight || 0,
+      current_value: 0,
+      start_date: goal.created_at,
+      target_date: goal.target_date || '',
+      category: 'weight', // Default category
+      status: goal.status as FitnessGoal['status'], // Cast to FitnessGoal status type
+      target_weight: goal.target_weight,
+      target_body_fat: goal.target_body_fat,
+      created_at: goal.created_at,
+      updated_at: goal.updated_at
+    }));
+    
+    return { data: mappedGoals, error: null };
   } catch (error) {
     console.error('Error fetching fitness goals:', error);
     return { data: null, error };
@@ -41,9 +59,9 @@ export const createFitnessGoal = async (
     const newGoal = {
       id: uuidv4(),
       user_id: userId,
-      name: goalData.name,
+      name: goalData.title || goalData.name, // Use either title or name
       description: goalData.description,
-      title: goalData.name, // Add title for compatibility
+      title: goalData.title || goalData.name, // For interface compatibility
       target_weight: goalData.target_weight,
       target_body_fat: goalData.target_body_fat,
       target_date: goalData.target_date,
@@ -55,12 +73,21 @@ export const createFitnessGoal = async (
     const { data, error } = await supabase
       .from('fitness_goals')
       .insert([newGoal])
-      .select()
-      .returns<FitnessGoal[]>();
+      .select();
       
     if (error) throw error;
     
-    return { data: data[0], error: null };
+    // Map the response to match our interface
+    const mappedGoal: FitnessGoal = {
+      ...data[0],
+      title: data[0].name,
+      target_value: data[0].target_weight || 0,
+      current_value: 0,
+      start_date: data[0].created_at,
+      category: 'weight'
+    };
+    
+    return { data: mappedGoal, error: null };
   } catch (error) {
     console.error('Error creating fitness goal:', error);
     return { data: null, error };
@@ -75,22 +102,36 @@ export const addFitnessGoal = async (goalData: FitnessGoal): Promise<{
   error: any;
 }> => {
   try {
-    // Remove any fields not needed for insert
-    const { id, created_at, updated_at, ...insertData } = goalData;
+    // Extract fields for database insert
+    const { name, description, target_weight, target_body_fat, target_date, status, user_id } = goalData;
     
+    // Insert into database
     const { data, error } = await supabase
       .from('fitness_goals')
       .insert([{
-        ...insertData,
+        user_id,
+        name: name || goalData.title, // Use either name or title
+        description,
+        target_weight,
+        target_body_fat,
+        target_date,
+        status,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }])
-      .select()
-      .returns<FitnessGoal[]>();
+      .select();
       
     if (error) throw error;
     
-    return { data: data[0], error: null };
+    // Return the data mapped to our interface
+    const mappedGoal: FitnessGoal = {
+      ...goalData,
+      id: data[0].id,
+      created_at: data[0].created_at,
+      updated_at: data[0].updated_at
+    };
+    
+    return { data: mappedGoal, error: null };
   } catch (error) {
     console.error('Error adding fitness goal:', error);
     return { data: null, error };
@@ -102,22 +143,42 @@ export const addFitnessGoal = async (goalData: FitnessGoal): Promise<{
  */
 export const updateFitnessGoal = async (
   goalId: string,
-  goalData: Partial<Omit<FitnessGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+  goalData: FitnessGoal
 ): Promise<{
   data: FitnessGoal | null;
   error: any;
 }> => {
   try {
+    // Extract fields for database update
+    const { name, description, target_weight, target_body_fat, target_date, status } = goalData;
+    
+    // Update in database
     const { data, error } = await supabase
       .from('fitness_goals')
-      .update(goalData)
+      .update({
+        name: name || goalData.title, // Use either name or title
+        description,
+        target_weight,
+        target_body_fat,
+        target_date,
+        status,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', goalId)
-      .select()
-      .returns<FitnessGoal[]>();
+      .select();
       
     if (error) throw error;
     
-    return { data: data[0], error: null };
+    // Return the data mapped to our interface
+    const mappedGoal: FitnessGoal = {
+      ...goalData,
+      id: data[0].id,
+      name: data[0].name,
+      title: data[0].name,
+      updated_at: data[0].updated_at
+    };
+    
+    return { data: mappedGoal, error: null };
   } catch (error) {
     console.error('Error updating fitness goal:', error);
     return { data: null, error };

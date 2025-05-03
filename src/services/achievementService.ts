@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Achievement, UserAchievement } from '@/types/fitness';
+import { Achievement, UserAchievement, WorkoutLog } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -148,6 +148,79 @@ export const checkAchievementProgress = async (userId: string) => {
     }
     
     return { checked: true, granted: achievementsGranted };
+  } catch (error) {
+    console.error('Error checking achievements:', error);
+    return { checked: false, error };
+  }
+};
+
+/**
+ * Check and update user workout streak
+ */
+export const updateWorkoutStreak = async (userId: string, workoutDate: string) => {
+  try {
+    // Get user's current streak data
+    const { data: streakData, error: streakError } = await supabase
+      .from('user_workout_stats')
+      .select('streak_days, last_workout_date')
+      .eq('user_id', userId)
+      .single();
+
+    if (streakError && streakError.code !== 'PGRST116') {
+      throw streakError;
+    }
+
+    // Calculate if this workout continues the streak
+    let newStreak = 1;
+    const currentDate = new Date(workoutDate);
+    
+    if (streakData) {
+      const lastWorkoutDate = streakData.last_workout_date ? new Date(streakData.last_workout_date) : null;
+      
+      if (lastWorkoutDate) {
+        // Calculate days between workouts
+        const timeDiff = currentDate.getTime() - lastWorkoutDate.getTime();
+        const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+        
+        // If worked out yesterday, increase streak
+        if (daysDiff <= 1) {
+          newStreak = (streakData.streak_days || 0) + 1;
+        }
+        // If more than a day has passed, reset streak
+      }
+    }
+    
+    // Update the streak in the database
+    const { data, error } = await supabase
+      .from('user_workout_stats')
+      .upsert({
+        user_id: userId,
+        streak_days: newStreak,
+        last_workout_date: currentDate.toISOString()
+      })
+      .select();
+      
+    if (error) throw error;
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error updating workout streak:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Check for achievements after a workout
+ */
+export const checkAchievements = async (userId: string, workoutLog: WorkoutLog) => {
+  try {
+    // First update the workout streak
+    await updateWorkoutStreak(userId, workoutLog.date);
+    
+    // Then check for achievements
+    const result = await checkAchievementProgress(userId);
+    
+    return result;
   } catch (error) {
     console.error('Error checking achievements:', error);
     return { checked: false, error };
