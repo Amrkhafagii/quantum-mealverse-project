@@ -42,7 +42,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
   };
 
   // Safely access potentially undefined properties
-  const { total_workouts = 0, streak = 0, most_active_day = 'N/A' } = workoutStats || {};
+  const { total_workouts = 0, streak_days = 0, streak = 0, most_active_day = 'N/A' } = workoutStats || {};
   const achievementsCount = workoutStats?.achievements || 0;
   const recentWorkouts = workoutStats?.recent_workouts || [];
 
@@ -79,7 +79,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-300">Current Streak</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{streak} days</p>
+              <p className="text-2xl font-bold text-quantum-cyan">{streak_days || streak || 0} days</p>
             </div>
           </CardContent>
         </Card>
@@ -108,7 +108,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
               {recentWorkouts.map((workout, index) => (
                 <div key={index} className="flex items-center justify-between border-b border-gray-800 pb-2">
                   <div>
-                    <p className="font-medium">{workout.name}</p>
+                    <p className="font-medium">{workout.name || `Workout ${index + 1}`}</p>
                     <p className="text-sm text-gray-400">{workout.date}</p>
                   </div>
                   <span className="text-quantum-purple">{workout.duration} min</span>

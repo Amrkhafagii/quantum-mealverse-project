@@ -1,240 +1,168 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
-import { useWorkoutData } from '@/hooks/useWorkoutData';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
-import { BarChart, AreaChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Badge } from '@/components/ui/badge';
 import { WorkoutHistoryItem } from '@/types/fitness';
-import { LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { CalendarIcon, ArrowUpCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AdvancedProgressChartsProps {
   userId?: string;
+  workoutHistory?: WorkoutHistoryItem[];
 }
 
-interface DayMap {
-  [key: string]: {
-    count: number;
-    calories: number;
-    duration: number;
-  };
-}
+const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({ 
+  userId,
+  workoutHistory = [] 
+}) => {
+  const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'year'>('month');
+  const [selectedMetric, setSelectedMetric] = useState<'duration' | 'calories_burned' | 'exercises_completed'>('duration');
+  const [activeTab, setActiveTab] = useState<'trends' | 'distribution'>('trends');
 
-const AdvancedProgressCharts: React.FC<AdvancedProgressChartsProps> = ({ userId }) => {
-  const { user } = useAuth();
-  const { history, isLoading, fetchWorkoutHistory } = useWorkoutData();
-  const [activeChart, setActiveChart] = useState('calories');
-  const [timeframe, setTimeframe] = useState('month');
-  const [chartData, setChartData] = useState<any[]>([]);
-  const activeUserId = userId || user?.id;
-  
-  useEffect(() => {
-    if (activeUserId) {
-      fetchWorkoutHistory(activeUserId);
-    }
-  }, [activeUserId]);
-  
-  useEffect(() => {
-    processChartData();
-  }, [history, timeframe]);
-  
-  const processChartData = () => {
-    if (!history || history.length === 0) {
-      setChartData([]);
-      return;
-    }
-    
-    // Group by day
-    const dayMap: DayMap = {};
-    
-    history.forEach(workout => {
-      const dateStr = format(new Date(workout.date), 'yyyy-MM-dd');
-      
-      if (!dayMap[dateStr]) {
-        dayMap[dateStr] = {
-          count: 0,
-          calories: 0,
-          duration: 0
-        };
-      }
-      
-      dayMap[dateStr].count += 1;
-      dayMap[dateStr].calories += workout.calories_burned || 0;
-      dayMap[dateStr].duration += workout.duration;
-    });
-    
-    // Convert to array for charts
-    const data = Object.keys(dayMap).map(date => ({
-      date,
-      formattedDate: format(new Date(date), 'MMM dd'),
-      workouts: dayMap[date].count,
-      calories: dayMap[date].calories,
-      duration: dayMap[date].duration
-    }));
-    
-    // Sort by date
-    data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    setChartData(data);
+  // Placeholder data - in a real app, you would filter and process workoutHistory here
+  const chartData = [
+    { day: 'Mon', duration: 45, calories_burned: 320, exercises_completed: 12 },
+    { day: 'Tue', duration: 0, calories_burned: 0, exercises_completed: 0 },
+    { day: 'Wed', duration: 60, calories_burned: 450, exercises_completed: 15 },
+    { day: 'Thu', duration: 30, calories_burned: 200, exercises_completed: 8 },
+    { day: 'Fri', duration: 0, calories_burned: 0, exercises_completed: 0 },
+    { day: 'Sat', duration: 90, calories_burned: 600, exercises_completed: 20 },
+    { day: 'Sun', duration: 45, calories_burned: 350, exercises_completed: 14 },
+  ];
+
+  const metricLabels = {
+    duration: 'Workout Duration (minutes)',
+    calories_burned: 'Calories Burned',
+    exercises_completed: 'Exercises Completed'
   };
-  
-  const getMaxValue = () => {
-    if (chartData.length === 0) return 100;
-    
-    switch (activeChart) {
-      case 'calories':
-        return Math.max(...chartData.map(d => d.calories)) * 1.1;
-      case 'duration':
-        return Math.max(...chartData.map(d => d.duration)) * 1.1;
-      case 'workouts':
-        return Math.max(...chartData.map(d => d.workouts)) * 1.1;
-      default:
-        return 100;
-    }
-  };
-  
-  const renderChartContent = () => {
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-quantum-cyan"></div>
-        </div>
-      );
-    }
-    
-    if (chartData.length === 0) {
-      return (
-        <div className="flex flex-col justify-center items-center h-64">
-          <CalendarIcon className="h-12 w-12 text-gray-500 mb-2" />
-          <p className="text-gray-400">No workout data available</p>
-          <p className="text-sm text-gray-500 mt-1">Complete workouts to see your progress</p>
-        </div>
-      );
-    }
-    
-    const COLORS = ['#9b87f5', '#ff7285', '#33C3F0', '#4BC0C0'];
-    
-    return (
-      <Tabs defaultValue="line" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="line">Line</TabsTrigger>
-          <TabsTrigger value="bar">Bar</TabsTrigger>
-          <TabsTrigger value="area">Area</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="line" className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-              <XAxis dataKey="formattedDate" stroke="#718096" />
-              <YAxis stroke="#718096" domain={[0, getMaxValue()]} />
-              <Tooltip 
-                contentStyle={{ background: '#171923', border: '1px solid #2d3748' }} 
-                labelStyle={{ color: '#e2e8f0' }}
-                itemStyle={{ color: '#e2e8f0' }}
-              />
-              <Legend />
-              {activeChart === 'calories' && (
-                <Line type="monotone" dataKey="calories" stroke="#9b87f5" activeDot={{ r: 8 }} strokeWidth={2} />
-              )}
-              {activeChart === 'duration' && (
-                <Line type="monotone" dataKey="duration" stroke="#33C3F0" activeDot={{ r: 8 }} strokeWidth={2} />
-              )}
-              {activeChart === 'workouts' && (
-                <Line type="monotone" dataKey="workouts" stroke="#4BC0C0" activeDot={{ r: 8 }} strokeWidth={2} />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </TabsContent>
-        
-        <TabsContent value="bar" className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-              <XAxis dataKey="formattedDate" stroke="#718096" />
-              <YAxis stroke="#718096" domain={[0, getMaxValue()]} />
-              <Tooltip 
-                contentStyle={{ background: '#171923', border: '1px solid #2d3748' }}
-                labelStyle={{ color: '#e2e8f0' }}
-                itemStyle={{ color: '#e2e8f0' }}
-              />
-              <Legend />
-              {activeChart === 'calories' && (
-                <Bar dataKey="calories" fill="#9b87f5" />
-              )}
-              {activeChart === 'duration' && (
-                <Bar dataKey="duration" fill="#33C3F0" />
-              )}
-              {activeChart === 'workouts' && (
-                <Bar dataKey="workouts" fill="#4BC0C0" />
-              )}
-            </BarChart>
-          </ResponsiveContainer>
-        </TabsContent>
-        
-        <TabsContent value="area" className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-              <XAxis dataKey="formattedDate" stroke="#718096" />
-              <YAxis stroke="#718096" domain={[0, getMaxValue()]} />
-              <Tooltip 
-                contentStyle={{ background: '#171923', border: '1px solid #2d3748' }}
-                labelStyle={{ color: '#e2e8f0' }}
-                itemStyle={{ color: '#e2e8f0' }}
-              />
-              <Legend />
-              {activeChart === 'calories' && (
-                <Area type="monotone" dataKey="calories" stroke="#9b87f5" fill="#9b87f544" />
-              )}
-              {activeChart === 'duration' && (
-                <Area type="monotone" dataKey="duration" stroke="#33C3F0" fill="#33C3F044" />
-              )}
-              {activeChart === 'workouts' && (
-                <Area type="monotone" dataKey="workouts" stroke="#4BC0C0" fill="#4BC0C044" />
-              )}
-            </AreaChart>
-          </ResponsiveContainer>
-        </TabsContent>
-      </Tabs>
-    );
-  };
-  
+
+  const pieData = [
+    { name: 'Chest', value: 25 },
+    { name: 'Back', value: 20 },
+    { name: 'Legs', value: 30 },
+    { name: 'Arms', value: 15 },
+    { name: 'Core', value: 10 }
+  ];
+
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe'];
+
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="flex flex-row justify-between items-center">
-        <CardTitle className="flex items-center">
-          <ArrowUpCircle className="mr-2 h-5 w-5 text-quantum-cyan" />
-          Progress Insights
-        </CardTitle>
-        <div className="flex space-x-2">
-          <Select value={activeChart} onValueChange={setActiveChart}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select metric" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="calories">Calories</SelectItem>
-              <SelectItem value="duration">Duration</SelectItem>
-              <SelectItem value="workouts">Workouts</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={timeframe} onValueChange={setTimeframe}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">Week</SelectItem>
-              <SelectItem value="month">Month</SelectItem>
-              <SelectItem value="year">Year</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardHeader>
+        <CardTitle className="text-quantum-cyan">Workout Progress Analytics</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">Time Range:</span>
+            <Select value={selectedTimeRange} onValueChange={(value) => setSelectedTimeRange(value as any)}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Week</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="year">Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">Metric:</span>
+            <Select value={selectedMetric} onValueChange={(value) => setSelectedMetric(value as any)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Select metric" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="duration">Duration</SelectItem>
+                <SelectItem value="calories_burned">Calories Burned</SelectItem>
+                <SelectItem value="exercises_completed">Exercises Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        {renderChartContent()}
+        <Tabs value={activeTab} onValueChange={setActiveTab as any}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="trends">Trends</TabsTrigger>
+            <TabsTrigger value="distribution">Muscle Distribution</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="trends" className="pt-2">
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={chartData}
+                  margin={{
+                    top: 5,
+                    right: 30,
+                    left: 20,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                  <XAxis dataKey="day" stroke="#999" />
+                  <YAxis stroke="#999" />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                  <Legend />
+                  <Line type="monotone" dataKey={selectedMetric} stroke="#8884d8" activeDot={{ r: 8 }} strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-400 mb-2">Stats Summary</h4>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-quantum-black/40 p-3 rounded">
+                  <div className="text-xs text-gray-400">Total Workouts</div>
+                  <div className="text-xl font-bold">{workoutHistory.length || chartData.filter(d => d.duration > 0).length}</div>
+                </div>
+                <div className="bg-quantum-black/40 p-3 rounded">
+                  <div className="text-xs text-gray-400">Avg. Duration</div>
+                  <div className="text-xl font-bold">{Math.round(chartData.reduce((acc, curr) => acc + curr.duration, 0) / chartData.filter(d => d.duration > 0).length)} min</div>
+                </div>
+                <div className="bg-quantum-black/40 p-3 rounded">
+                  <div className="text-xs text-gray-400">Max Calories</div>
+                  <div className="text-xl font-bold">{Math.max(...chartData.map(d => d.calories_burned))}</div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="distribution">
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {pieData.map((item, index) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                  <Badge variant="outline" className="bg-quantum-black/20">
+                    {item.name}: {item.value}%
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

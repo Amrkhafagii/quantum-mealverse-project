@@ -1,35 +1,42 @@
 
 import React from 'react';
-import { Trophy, Award } from 'lucide-react';
+import { Star, Award } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 interface PointsDisplayProps {
   points: number;
-  level?: number;
+  level: number;
+  nextLevelPoints: number;
   className?: string;
 }
 
-const PointsDisplay: React.FC<PointsDisplayProps> = ({ 
-  points = 0, 
-  level = 1, 
-  className = '' 
-}) => {
-  // Calculate level if not provided based on points
-  const calculatedLevel = level || Math.floor(Math.sqrt(points / 100)) + 1;
+const PointsDisplay: React.FC<PointsDisplayProps> = ({ points, level, nextLevelPoints, className = '' }) => {
+  // Calculate progress percentage to next level
+  const progressPercent = Math.min(100, (points / nextLevelPoints) * 100);
+  const pointsNeeded = nextLevelPoints - points;
   
   return (
-    <div className={`flex items-center ${className}`}>
-      <div className="bg-gradient-to-r from-yellow-600 to-yellow-400 p-1 rounded-full mr-3">
-        <Trophy className="h-6 w-6 text-white" />
-      </div>
-      <div>
+    <div className={`flex flex-col ${className}`}>
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center">
-          <span className="font-bold text-lg">{points}</span>
-          <span className="text-gray-400 text-xs ml-1">pts</span>
+          <Badge className="bg-quantum-purple mr-2">
+            <Award className="h-3 w-3 mr-1" /> Level {level}
+          </Badge>
+          <Badge className="bg-yellow-600">
+            <Star className="h-3 w-3 mr-1" fill="currentColor" /> {points} pts
+          </Badge>
         </div>
-        <div className="flex items-center text-xs text-gray-400">
-          <Award className="h-3 w-3 mr-1 text-purple-400" />
-          Level {calculatedLevel}
-        </div>
+      </div>
+      
+      <div className="mb-1 mt-2">
+        <Progress value={progressPercent} className="h-2" />
+      </div>
+      
+      <div className="text-xs text-gray-400">
+        {pointsNeeded > 0 
+          ? `${pointsNeeded} more points to reach Level ${level + 1}`
+          : "Ready to level up!"}
       </div>
     </div>
   );

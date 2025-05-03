@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +14,6 @@ interface FitnessProfileProps {
   userId?: string;
 }
 
-// Update the profile access to use the correct property name (either weight or goal_weight)
 const FitnessProfile = () => {
   const { user } = useUser();
   const [profile, setProfile] = useState<any>(null);
@@ -25,10 +25,11 @@ const FitnessProfile = () => {
       if (!user?.id) return;
 
       try {
+        // Assuming 'fitness_profiles' is the correct table name
         const { data, error } = await supabase
-          .from('profiles')
+          .from('fitness_profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('user_id', user.id)
           .single();
 
         if (error) {
@@ -45,6 +46,7 @@ const FitnessProfile = () => {
       if (!user?.id) return;
 
       try {
+        // Assuming 'user_workout_stats' is the correct table name
         const { data: statsData, error: statsError } = await supabase
           .from('user_workout_stats')
           .select('*')

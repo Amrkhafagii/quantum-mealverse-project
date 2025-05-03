@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness';
 import { CalendarDays, Dumbbell, Trophy, Activity, Target } from 'lucide-react';
-import PointsDisplay from '../common/PointsDisplay';
 
 interface EnhancedFitnessProfileProps {
   userId?: string;
@@ -61,7 +60,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
             </div>
             <div className="stat-content">
               <div className="stat-title text-xs text-gray-400">Streak</div>
-              <div className="stat-value text-lg font-bold">{workoutStats?.streak || 0} days</div>
+              <div className="stat-value text-lg font-bold">{workoutStats?.streak_days || workoutStats?.streak || 0} days</div>
             </div>
           </div>
           <div className="stat-card bg-quantum-black/30 p-4 rounded-lg">
@@ -79,7 +78,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
             </div>
             <div className="stat-content">
               <div className="stat-title text-xs text-gray-400">Achievements</div>
-              <div className="stat-value text-lg font-bold">42</div>
+              <div className="stat-value text-lg font-bold">{workoutStats?.achievements || 0}</div>
             </div>
           </div>
         </div>

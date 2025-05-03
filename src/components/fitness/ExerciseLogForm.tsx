@@ -76,7 +76,7 @@ const ExerciseLogForm: React.FC<ExerciseLogFormProps> = ({
   return (
     <div className="space-y-6">
       {exercises.map((exercise, exerciseIndex) => (
-        <Card key={exercise.exercise_id || exercise.id} className="bg-quantum-black/20 border-quantum-cyan/20">
+        <Card key={exercise.exercise_id || exercise.id || exerciseIndex} className="bg-quantum-black/20 border-quantum-cyan/20">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-4">
               <h3 className="text-lg font-medium">{exercise.exercise_name || exercise.name}</h3>
