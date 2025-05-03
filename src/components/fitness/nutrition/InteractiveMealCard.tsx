@@ -67,10 +67,10 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
         
         <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-quantum-purple/20 scrollbar-track-transparent pr-2">
           <div className="space-y-1">
-            {meal.foods.map((food, index) => (
+            {meal.foods.map((mealFood, index) => (
               <div key={index} className="bg-quantum-black/30 p-2 rounded text-sm flex justify-between items-center">
-                <span>{food.name}</span>
-                <span className="text-gray-400 text-xs">{food.calories} kcal</span>
+                <span>{mealFood.food.name}</span>
+                <span className="text-gray-400 text-xs">{mealFood.food.calories} kcal</span>
               </div>
             ))}
           </div>

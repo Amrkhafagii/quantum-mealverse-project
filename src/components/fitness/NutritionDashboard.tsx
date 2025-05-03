@@ -9,10 +9,10 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import MacroProgressBar from './MacroProgressBar';
 import WaterIntakeTracker from './WaterIntakeTracker';
-import InteractiveMealCard from './InteractiveMealCard';
+import InteractiveMealCard from './nutrition/InteractiveMealCard';
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Droplets, AlertCircle, RefreshCw, Buildings, Check } from 'lucide-react';
+import { Shield, Droplets, AlertCircle, RefreshCw, Building, Check } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import RestaurantMealMatcher from './RestaurantMealMatcher';
 
@@ -253,10 +253,10 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               
               <CardContent className="p-4">
                 <div className="max-h-[200px] overflow-y-auto pr-1 space-y-2">
-                  {meal.foods.map((food, foodIndex) => (
+                  {meal.foods.map((mealFood, foodIndex) => (
                     <div key={foodIndex} className="bg-quantum-black/30 p-2 rounded-md flex justify-between text-sm">
-                      <div>{food.name}</div>
-                      <div className="text-gray-400">{food.calories} kcal</div>
+                      <div>{mealFood.food.name}</div>
+                      <div className="text-gray-400">{mealFood.food.calories} kcal</div>
                     </div>
                   ))}
                 </div>

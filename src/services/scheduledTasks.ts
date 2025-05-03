@@ -14,7 +14,7 @@ export const checkExpiredMealPlans = async (): Promise<{success: boolean, expire
     // Find meal plans that are expired but still active
     const { data, error } = await supabase
       .from('saved_meal_plans')
-      .update({ is_active: false } as Partial<SavedMealPlan>)
+      .update({ is_active: false })
       .eq('is_active', true)
       .lt('expires_at', now.toISOString())
       .select('id');
@@ -59,20 +59,17 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
       for (const plan of data) {
-        // Cast the plan to SavedMealPlan to ensure proper typing
-        const typedPlan = plan as SavedMealPlan;
-        
         // Calculate days until expiration
-        const expiresAt = typedPlan.expires_at ? new Date(typedPlan.expires_at) : new Date();
+        const expiresAt = plan.expires_at ? new Date(plan.expires_at) : new Date();
         const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 3600 * 24));
         
         // Create notification
         await createNotification(
           userId,
           'Meal Plan Expiring Soon',
-          `Your meal plan "${typedPlan.name}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Consider renewing it.`,
+          `Your meal plan "${plan.name}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Consider renewing it.`,
           'reminder',
-          `/nutrition/plan/${typedPlan.id}`
+          `/nutrition/plan/${plan.id}`
         );
       }
     }
