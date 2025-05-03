@@ -1,23 +1,30 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from 'lucide-react';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedUserTypes?: string[];
   redirectPath?: string;
+  requiresLocation?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   allowedUserTypes,
-  redirectPath = '/auth'
+  redirectPath = '/auth',
+  requiresLocation = false
 }) => {
   const { user, loading } = useAuth();
+  const { permissionStatus, isLocationStale, hasInitialized } = useLocationPermission();
 
-  if (loading) {
+  const isDeliveryPath = window.location.pathname.includes('/delivery/');
+  const shouldCheckLocation = requiresLocation || isDeliveryPath;
+
+  if (loading || !hasInitialized) {
     return (
       <div className="h-screen flex items-center justify-center bg-quantum-black">
         <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
@@ -43,6 +50,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return <Navigate to="/dashboard" replace />;
       }
     }
+  }
+
+  // No need to check location for non-delivery users on non-location required routes
+  const userType = user.user_metadata?.user_type || 'customer';
+  if (!shouldCheckLocation || userType !== 'delivery') {
+    return <>{children}</>;
+  }
+
+  // For delivery users or routes that require location, check permission status
+  if (permissionStatus === 'denied') {
+    // If location is denied for delivery workers, redirect to a settings page
+    // where they can get instructions to enable location services
+    return <Navigate to="/delivery/settings?locationDenied=true" replace />;
   }
 
   return <>{children}</>;

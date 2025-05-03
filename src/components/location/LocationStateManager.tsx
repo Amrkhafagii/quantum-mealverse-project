@@ -18,6 +18,7 @@ interface LocationStateManagerProps {
   children: React.ReactNode;
   showLoadingState?: boolean;
   autoNavigateToMenu?: boolean;
+  forcePrompt?: boolean;
 }
 
 export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
@@ -26,7 +27,8 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
   errorContent,
   children,
   showLoadingState = true,
-  autoNavigateToMenu = false
+  autoNavigateToMenu = false,
+  forcePrompt = false
 }) => {
   const { 
     location, 
@@ -35,7 +37,9 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     isRequesting,
     toggleTracking,
     isTracking,
-    hasShownInitialPrompt
+    hasShownInitialPrompt,
+    hasInitialized,
+    isLocationStale
   } = useLocationPermission();
   
   const navigate = useNavigate();
@@ -46,13 +50,20 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
   const [hasNavigated, setHasNavigated] = useState(false);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
+  // Check user type from current path
+  const isDeliveryUser = window.location.pathname.includes('/delivery/');
+
   // Check for cached location in localStorage on mount
   useEffect(() => {
+    if (!hasInitialized) return;
+
     const cachedLocationString = localStorage.getItem('userLocation');
     const storedPermission = localStorage.getItem('locationPermission');
     
-    // Determine if we need to show the prompt
-    const shouldShowPrompt = !storedPermission || 
+    // If we're on a delivery page or forcePrompt is true, always show prompt if permission isn't granted
+    const shouldShowPrompt = forcePrompt || 
+                             isDeliveryUser || 
+                             !storedPermission || 
                              storedPermission !== 'granted' || 
                              !cachedLocationString;
     
@@ -80,7 +91,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     }
     
     setInitialCheckDone(true);
-  }, []);
+  }, [hasInitialized, location, hasShownInitialPrompt, isDeliveryUser, forcePrompt, onLocationUpdate]);
 
   // Update location cache when location changes
   useEffect(() => {
@@ -97,13 +108,17 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         onLocationUpdate(locationData);
       }
 
-      // Find the nearest restaurants
-      findNearestRestaurants();
+      // Find the nearest restaurants if not a delivery user
+      if (!isDeliveryUser) {
+        findNearestRestaurants();
+      }
       
       // Show success toast when location is first acquired
       if (!hasContentLoaded) {
         toast.success("Location acquired!", {
-          description: "Finding awesome places near you..."
+          description: isDeliveryUser ? 
+            "Your location is now being tracked for deliveries." : 
+            "Finding awesome places near you..."
         });
         
         // Simulate content loading with a brief delay
@@ -114,7 +129,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         }, 1500);
       }
     }
-  }, [location, hasContentLoaded, onLocationUpdate, findNearestRestaurants]);
+  }, [location, hasContentLoaded, onLocationUpdate, findNearestRestaurants, isDeliveryUser]);
 
   // Navigate to restaurant menu when restaurants are found
   useEffect(() => {
@@ -168,8 +183,8 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
 
   // Decide what to render based on permission state and loading
   const renderContent = () => {
-    // If we're still doing initial check, show brief loading
-    if (!initialCheckDone) {
+    // If we're still doing initial check or initialization, show brief loading
+    if (!initialCheckDone || !hasInitialized) {
       return (
         <div className="flex items-center justify-center py-8">
           <LoadingSpinner size="small" text="Loading location data..." />
@@ -206,7 +221,9 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
             <div>
               <h3 className="text-lg font-medium mb-2">Location access denied</h3>
               <p className="text-gray-400 mb-4">
-                You'll need to enable location access in your browser settings to see nearby restaurants.
+                {isDeliveryUser ? 
+                  "Location access is required for delivery services. Please enable location in your browser settings." : 
+                  "You'll need to enable location access in your browser settings to see nearby restaurants."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button 
@@ -217,13 +234,15 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
                 </Button>
-                <Button
-                  onClick={() => setShowPermissionPrompt(false)} 
-                  variant="default"
-                  className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
-                >
-                  Continue Without Location
-                </Button>
+                {!isDeliveryUser && (
+                  <Button
+                    onClick={() => setShowPermissionPrompt(false)} 
+                    variant="default"
+                    className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+                  >
+                    Continue Without Location
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -236,21 +255,62 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
       return loadingContent || (
         <div className="space-y-6">
           <div className="flex items-center justify-center py-8">
-            <LoadingSpinner size="large" text="Finding places near you..." />
+            <LoadingSpinner size="large" text={isDeliveryUser ? "Initializing delivery tracking..." : "Finding places near you..."} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-quantum-darkBlue/30 rounded-lg overflow-hidden">
-                <Skeleton className="h-48 bg-quantum-darkBlue/50" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-3/4 bg-quantum-darkBlue/70 mb-3" />
-                  <Skeleton className="h-4 w-1/2 bg-quantum-darkBlue/70 mb-2" />
-                  <Skeleton className="h-4 w-5/6 bg-quantum-darkBlue/70" />
+          {!isDeliveryUser && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-quantum-darkBlue/30 rounded-lg overflow-hidden">
+                  <Skeleton className="h-48 bg-quantum-darkBlue/50" />
+                  <div className="p-4">
+                    <Skeleton className="h-6 w-3/4 bg-quantum-darkBlue/70 mb-3" />
+                    <Skeleton className="h-4 w-1/2 bg-quantum-darkBlue/70 mb-2" />
+                    <Skeleton className="h-4 w-5/6 bg-quantum-darkBlue/70" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
+      );
+    }
+    
+    // Add a banner if location is stale and user is a delivery person
+    if (isDeliveryUser && isLocationStale() && permissionStatus === 'granted') {
+      return (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-600/20 border border-amber-500/30 rounded-md p-4 mb-6 flex items-center gap-3"
+          >
+            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <div className="flex-grow">
+              <p className="text-sm">Your location data is outdated. Please refresh your location.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500/50"
+              onClick={handlePermissionGranted}
+              disabled={isRequesting}
+            >
+              {isRequesting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2">Update</span>
+            </Button>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {children}
+          </motion.div>
+        </>
       );
     }
     

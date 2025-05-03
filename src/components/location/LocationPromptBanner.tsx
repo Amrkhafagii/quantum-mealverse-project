@@ -8,12 +8,18 @@ import { Card, CardContent } from '@/components/ui/card';
 
 interface LocationPromptBannerProps {
   onPermissionGranted?: () => void;
+  isDeliveryUser?: boolean;
 }
 
 const LocationPromptBanner: React.FC<LocationPromptBannerProps> = ({
-  onPermissionGranted
+  onPermissionGranted,
+  isDeliveryUser = false
 }) => {
   const { requestPermission, permissionStatus, isRequesting } = useLocationPermission();
+
+  // Check if we're on a delivery path
+  const isDeliveryPath = window.location.pathname.includes('/delivery/');
+  const isForDelivery = isDeliveryUser || isDeliveryPath;
 
   const handleRequestLocation = async () => {
     const result = await requestPermission();
@@ -54,9 +60,13 @@ const LocationPromptBanner: React.FC<LocationPromptBannerProps> = ({
                   </motion.div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-medium mb-2 text-quantum-cyan">Enable location services</h3>
+                  <h3 className="text-xl font-medium mb-2 text-quantum-cyan">
+                    {isForDelivery ? "Location Required for Delivery" : "Enable location services"}
+                  </h3>
                   <p className="text-gray-300 mb-4">
-                    Find restaurants near you and get personalized recommendations based on your location.
+                    {isForDelivery 
+                      ? "Location tracking is required for delivery services. We use your location to track deliveries and assign orders efficiently."
+                      : "Find restaurants near you and get personalized recommendations based on your location."}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button 
@@ -71,18 +81,20 @@ const LocationPromptBanner: React.FC<LocationPromptBannerProps> = ({
                           Requesting...
                         </>
                       ) : (
-                        <>Enable Location</>
+                        <>{isForDelivery ? "Enable Location Tracking" : "Enable Location"}</>
                       )}
                     </Button>
                     
-                    <Button 
-                      variant="outline" 
-                      className="border-quantum-cyan/30"
-                      size="lg"
-                    >
-                      <HelpCircle className="h-4 w-4 mr-2" />
-                      Why we need this
-                    </Button>
+                    {!isForDelivery && (
+                      <Button 
+                        variant="outline" 
+                        className="border-quantum-cyan/30"
+                        size="lg"
+                      >
+                        <HelpCircle className="h-4 w-4 mr-2" />
+                        Why we need this
+                      </Button>
+                    )}
                   </div>
                   
                   {permissionStatus === 'denied' && (
@@ -91,7 +103,10 @@ const LocationPromptBanner: React.FC<LocationPromptBannerProps> = ({
                       animate={{ opacity: 1, height: 'auto' }}
                       className="mt-4 text-sm bg-red-900/20 border border-red-700/30 rounded-md p-3"
                     >
-                      <p>Please enable location access in your browser settings.</p>
+                      <p>{isForDelivery 
+                        ? "Location access is required for delivery services. Please enable location in your browser settings." 
+                        : "Please enable location access in your browser settings."}
+                      </p>
                     </motion.div>
                   )}
                 </div>
@@ -100,35 +115,71 @@ const LocationPromptBanner: React.FC<LocationPromptBannerProps> = ({
             
             <div className="hidden md:block w-1/3 bg-gradient-to-r from-quantum-darkBlue to-quantum-purple/30 p-6">
               <div className="h-full flex flex-col justify-center">
-                <h4 className="text-lg text-quantum-cyan mb-3">Benefits of location sharing</h4>
+                <h4 className="text-lg text-quantum-cyan mb-3">
+                  {isForDelivery ? "Why location is required" : "Benefits of location sharing"}
+                </h4>
                 <ul className="space-y-2 text-sm">
-                  <motion.li 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex items-center"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
-                    <span>Find closest restaurants to your location</span>
-                  </motion.li>
-                  <motion.li 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="flex items-center"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
-                    <span>Get accurate delivery time estimates</span>
-                  </motion.li>
-                  <motion.li 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="flex items-center"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
-                    <span>Personalized recommendations nearby</span>
-                  </motion.li>
+                  {isForDelivery ? (
+                    <>
+                      <motion.li 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
+                        <span>Real-time delivery tracking</span>
+                      </motion.li>
+                      <motion.li 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="flex items-center"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
+                        <span>Efficient order assignments</span>
+                      </motion.li>
+                      <motion.li 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="flex items-center"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
+                        <span>Accurate delivery timing</span>
+                      </motion.li>
+                    </>
+                  ) : (
+                    <>
+                      <motion.li 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
+                        <span>Find closest restaurants to your location</span>
+                      </motion.li>
+                      <motion.li 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="flex items-center"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
+                        <span>Get accurate delivery time estimates</span>
+                      </motion.li>
+                      <motion.li 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="flex items-center"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-quantum-cyan mr-2"></span>
+                        <span>Personalized recommendations nearby</span>
+                      </motion.li>
+                    </>
+                  )}
                 </ul>
               </div>
             </div>

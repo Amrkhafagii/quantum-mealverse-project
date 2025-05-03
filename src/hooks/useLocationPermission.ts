@@ -9,12 +9,42 @@ export const useLocationPermission = () => {
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
   const [location, setLocation] = useState<GeolocationPosition | null>(null);
   const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState<boolean>(false);
+  const [hasInitialized, setHasInitialized] = useState<boolean>(false);
 
+  // Check browser's stored permission preference on initialization
   useEffect(() => {
-    // Check browser's stored permission preference
-    const checkPermissionStorage = () => {
+    const initialize = async () => {
       try {
+        // Try to get cached location data
+        const cachedLocationString = localStorage.getItem('userLocation');
         const storedPermission = localStorage.getItem('locationPermission');
+        
+        if (cachedLocationString) {
+          try {
+            const cachedLocation = JSON.parse(cachedLocationString);
+            if (cachedLocation?.latitude && cachedLocation?.longitude) {
+              // If we have cached location, create a position object from it
+              const position = {
+                coords: {
+                  latitude: cachedLocation.latitude,
+                  longitude: cachedLocation.longitude,
+                  accuracy: 0,
+                  altitude: null,
+                  altitudeAccuracy: null,
+                  heading: null,
+                  speed: null
+                },
+                timestamp: cachedLocation.timestamp || Date.now()
+              } as GeolocationPosition;
+              
+              setLocation(position);
+            }
+          } catch (e) {
+            console.error('Error parsing cached location:', e);
+          }
+        }
+        
+        // Check stored permission state
         if (storedPermission === 'granted') {
           setHasShownInitialPrompt(true);
           setPermissionStatus('granted');
@@ -22,90 +52,83 @@ export const useLocationPermission = () => {
           setPermissionStatus('denied');
           setHasShownInitialPrompt(true);
         }
-      } catch (e) {
-        console.error('Error reading from localStorage', e);
+        
+        // Check browser permission API
+        await checkPermission();
+        
+        // Also fetch user preferences from database
+        await fetchPreferences();
+        
+        setHasInitialized(true);
+      } catch (err) {
+        console.error('Error initializing location permissions:', err);
+        setHasInitialized(true);
       }
     };
     
-    // Check if location tracking is enabled in preferences
-    const fetchPreferences = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const { data, error } = await supabase
-            .from('user_preferences')
-            .select('location_tracking_enabled')
-            .eq('user_id', session.user.id)
-            .single();
-            
-          if (!error && data) {
-            setTrackingEnabled(data.location_tracking_enabled === true);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching location preferences:', error);
-      }
-    };
+    initialize();
+  }, []);
 
-    // Check browser permission status
-    const checkPermission = async () => {
-      if ('permissions' in navigator) {
-        try {
-          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-          setPermissionStatus(permissionStatus.state);
+  // Check if location tracking is enabled in preferences
+  const fetchPreferences = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .select('location_tracking_enabled')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
           
-          // Store permission state in localStorage
+        if (!error && data) {
+          setTrackingEnabled(data.location_tracking_enabled === true);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching location preferences:', error);
+    }
+  };
+
+  // Check browser permission status
+  const checkPermission = async () => {
+    if ('permissions' in navigator) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        
+        // Update our state with the current browser permission status
+        setPermissionStatus(permissionStatus.state);
+        
+        // Store permission state in localStorage for future reference
+        try {
+          localStorage.setItem('locationPermission', permissionStatus.state);
+        } catch (e) {
+          console.error('Error writing to localStorage', e);
+        }
+        
+        // Set up listener for permission changes
+        permissionStatus.onchange = () => {
+          setPermissionStatus(permissionStatus.state);
+          // Update localStorage when permission changes
           try {
             localStorage.setItem('locationPermission', permissionStatus.state);
+            
+            // If permission is revoked, clear cached location data
+            if (permissionStatus.state === 'denied') {
+              localStorage.removeItem('userLocation');
+            }
           } catch (e) {
             console.error('Error writing to localStorage', e);
           }
-          
-          permissionStatus.onchange = () => {
-            setPermissionStatus(permissionStatus.state);
-            // Update localStorage when permission changes
-            try {
-              localStorage.setItem('locationPermission', permissionStatus.state);
-            } catch (e) {
-              console.error('Error writing to localStorage', e);
-            }
-          };
-        } catch (error) {
-          console.error('Error checking geolocation permission:', error);
-        }
+        };
+        
+        return permissionStatus.state;
+      } catch (error) {
+        console.error('Error checking geolocation permission:', error);
       }
-    };
-
-    // If we have permission and tracking enabled, get current position
-    const getCurrentPosition = () => {
-      if (permissionStatus === 'granted' && trackingEnabled) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setLocation(position);
-            // Store simplified location in localStorage
-            try {
-              localStorage.setItem('userLocation', JSON.stringify({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                timestamp: new Date().getTime()
-              }));
-            } catch (e) {
-              console.error('Error writing to localStorage', e);
-            }
-          },
-          (error) => {
-            console.error('Error getting current position:', error);
-          }
-        );
-      }
-    };
-
-    checkPermissionStorage();
-    fetchPreferences();
-    checkPermission();
-    getCurrentPosition();
-  }, [permissionStatus, trackingEnabled]);
+    }
+    return null;
+  };
 
   // Updated requestPermission function with better UX
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -152,6 +175,8 @@ export const useLocationPermission = () => {
               
               try {
                 localStorage.setItem('locationPermission', 'denied');
+                // Clear any cached location data
+                localStorage.removeItem('userLocation');
               } catch (e) {
                 console.error('Error writing to localStorage', e);
               }
@@ -246,6 +271,39 @@ export const useLocationPermission = () => {
   // Compute if tracking is currently active (both permission granted and enabled in preferences)
   const isTracking = permissionStatus === 'granted' && trackingEnabled;
 
+  // Reset the location data and permission state
+  const resetLocationState = useCallback(() => {
+    try {
+      localStorage.removeItem('userLocation');
+      localStorage.removeItem('locationPermission');
+      setPermissionStatus('prompt');
+      setLocation(null);
+      setHasShownInitialPrompt(false);
+    } catch (e) {
+      console.error('Error resetting location state:', e);
+    }
+  }, []);
+
+  // Check if cached location data is too old (more than 30 minutes)
+  const isLocationStale = useCallback(() => {
+    try {
+      const cachedLocationString = localStorage.getItem('userLocation');
+      if (cachedLocationString) {
+        const cachedLocation = JSON.parse(cachedLocationString);
+        if (cachedLocation?.timestamp) {
+          const now = new Date().getTime();
+          const cacheTime = cachedLocation.timestamp;
+          const diffMinutes = (now - cacheTime) / (1000 * 60);
+          return diffMinutes > 30; // Consider stale after 30 minutes
+        }
+      }
+      return true; // No timestamp means it's stale
+    } catch (e) {
+      console.error('Error checking if location is stale:', e);
+      return true;
+    }
+  }, []);
+
   return { 
     permissionStatus, 
     trackingEnabled, 
@@ -254,6 +312,9 @@ export const useLocationPermission = () => {
     toggleTracking,
     isTracking,
     location,
-    hasShownInitialPrompt
+    hasShownInitialPrompt,
+    hasInitialized,
+    resetLocationState,
+    isLocationStale
   };
 };
