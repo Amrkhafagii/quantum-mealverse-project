@@ -1,33 +1,10 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
+import { useDeliveryLocationCache } from '@/hooks/useDeliveryLocationCache';
 import { toast } from 'sonner';
-
-// Define a more comprehensive location type that includes accuracy
-interface LocationWithAccuracy {
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-  timestamp?: number;
-}
-
-interface DeliveryLocation {
-  latitude: number;
-  longitude: number;
-  timestamp: number;
-  accuracy?: number;
-}
-
-export interface LocationServiceState {
-  permissionStatus: PermissionState;
-  location: DeliveryLocation | null;
-  isStale: boolean;
-  isTracking: boolean;
-  lastUpdated: Date | null;
-  error: Error | null;
-  freshness: 'fresh' | 'moderate' | 'stale' | 'invalid';
-}
+import { LocationWithAccuracy, DeliveryLocation, LocationServiceState } from '@/types/location';
+import { cacheDeliveryLocation } from '@/utils/locationUtils';
 
 /**
  * A specialized hook for delivery personnel location tracking
@@ -49,7 +26,7 @@ export function useDeliveryLocationService() {
     locationIsValid,
     isLocationStale,
     error: trackerError,
-    lastUpdated,
+    lastUpdated: trackerLastUpdated,
     startTracking,
     stopTracking
   } = useLocationTracker({
@@ -58,8 +35,16 @@ export function useDeliveryLocationService() {
     showToasts: false // We'll handle our own toasts
   });
   
+  const { 
+    cachedLocation, 
+    cachedLocationFreshness, 
+    isStale: cachedIsStale, 
+    lastUpdated: cachedLastUpdated 
+  } = useDeliveryLocationCache();
+  
   const [isUpdating, setIsUpdating] = useState(false);
   const [recoveryAttempted, setRecoveryAttempted] = useState(false);
+  
   const [locationState, setLocationState] = useState<LocationServiceState>({
     permissionStatus: 'prompt',
     location: null,
@@ -72,63 +57,46 @@ export function useDeliveryLocationService() {
 
   // Initialize with cached location if available
   useEffect(() => {
-    try {
-      const cachedLocationString = localStorage.getItem('deliveryLocation');
-      if (cachedLocationString) {
-        const cachedLocation = JSON.parse(cachedLocationString);
-        if (cachedLocation?.latitude && cachedLocation?.longitude) {
-          const now = Date.now();
-          const ageInMinutes = (now - (cachedLocation.timestamp || 0)) / (1000 * 60);
-          
-          // Set freshness based on age
-          let freshness: 'fresh' | 'moderate' | 'stale' | 'invalid' = 'invalid';
-          if (ageInMinutes < 2) freshness = 'fresh';
-          else if (ageInMinutes < 5) freshness = 'moderate';
-          else if (ageInMinutes < 15) freshness = 'stale';
-          
-          setLocationState(prev => ({
-            ...prev,
-            location: cachedLocation,
-            lastUpdated: cachedLocation.timestamp ? new Date(cachedLocation.timestamp) : null,
-            isStale: ageInMinutes > 2, // Stale after 2 minutes for delivery
-            freshness
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error reading cached delivery location:', error);
+    if (cachedLocation) {
+      setLocationState(prev => ({
+        ...prev,
+        location: cachedLocation,
+        lastUpdated: cachedLastUpdated,
+        isStale: cachedIsStale,
+        freshness: cachedLocationFreshness
+      }));
     }
-  }, []);
+  }, [cachedLocation, cachedLastUpdated, cachedIsStale, cachedLocationFreshness]);
 
   // Sync from location tracker when it updates
   useEffect(() => {
     if (trackerLocation && locationIsValid()) {
+      // Create delivery location object with timestamp
       const deliveryLocation: DeliveryLocation = {
         latitude: trackerLocation.latitude,
         longitude: trackerLocation.longitude,
-        timestamp: lastUpdated?.getTime() || Date.now(),
-        // Safely access accuracy - might be undefined for some browsers
-        ...(trackerLocation.accuracy !== undefined && { accuracy: trackerLocation.accuracy })
+        timestamp: trackerLastUpdated?.getTime() || Date.now(),
       };
+      
+      // Safely add accuracy if available (fixes TypeScript error)
+      if ((trackerLocation as LocationWithAccuracy).accuracy !== undefined) {
+        deliveryLocation.accuracy = (trackerLocation as LocationWithAccuracy).accuracy;
+      }
       
       // Update local state
       setLocationState(prev => ({
         ...prev,
         location: deliveryLocation,
-        lastUpdated: lastUpdated || new Date(),
+        lastUpdated: trackerLastUpdated || new Date(),
         isStale: false,
         freshness: 'fresh',
         error: null
       }));
       
       // Cache for future use
-      try {
-        localStorage.setItem('deliveryLocation', JSON.stringify(deliveryLocation));
-      } catch (error) {
-        console.error('Error caching delivery location:', error);
-      }
+      cacheDeliveryLocation(deliveryLocation);
     }
-  }, [trackerLocation, lastUpdated, locationIsValid]);
+  }, [trackerLocation, trackerLastUpdated, locationIsValid]);
 
   // Sync permission status
   useEffect(() => {
@@ -148,32 +116,6 @@ export function useDeliveryLocationService() {
       }));
     }
   }, [trackerError]);
-
-  // Calculate freshness based on age whenever checking state
-  useEffect(() => {
-    const checkFreshness = () => {
-      if (!locationState.location?.timestamp) return;
-      
-      const now = Date.now();
-      const ageInMinutes = (now - locationState.location.timestamp) / (1000 * 60);
-      
-      let freshness: 'fresh' | 'moderate' | 'stale' | 'invalid' = 'invalid';
-      if (ageInMinutes < 2) freshness = 'fresh';
-      else if (ageInMinutes < 5) freshness = 'moderate';
-      else if (ageInMinutes < 15) freshness = 'stale';
-      
-      setLocationState(prev => ({
-        ...prev,
-        isStale: ageInMinutes > 2,
-        freshness
-      }));
-    };
-    
-    // Check immediately and then every minute
-    checkFreshness();
-    const interval = setInterval(checkFreshness, 60000);
-    return () => clearInterval(interval);
-  }, [locationState.location?.timestamp]);
 
   // Attempt auto-recovery when needed
   useEffect(() => {
@@ -221,9 +163,12 @@ export function useDeliveryLocationService() {
         latitude: location.latitude,
         longitude: location.longitude,
         timestamp: Date.now(),
-        // Safely access accuracy - might be undefined for some browsers
-        ...(location.accuracy !== undefined && { accuracy: location.accuracy })
       };
+      
+      // Safely add accuracy if available (fixes TypeScript error)
+      if (location.accuracy !== undefined) {
+        deliveryLocation.accuracy = location.accuracy;
+      }
       
       // Update state
       setLocationState(prev => ({
@@ -236,11 +181,7 @@ export function useDeliveryLocationService() {
       }));
       
       // Cache location
-      try {
-        localStorage.setItem('deliveryLocation', JSON.stringify(deliveryLocation));
-      } catch (error) {
-        console.error('Error caching delivery location:', error);
-      }
+      cacheDeliveryLocation(deliveryLocation);
       
       toast.success('Location updated', {
         description: 'Your current location has been updated successfully',
