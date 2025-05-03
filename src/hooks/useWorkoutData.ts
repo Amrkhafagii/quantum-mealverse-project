@@ -1,17 +1,15 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   WorkoutPlan, 
   WorkoutSchedule, 
   WorkoutLog, 
   WorkoutHistoryItem, 
-  UserWorkoutStats,
-  WorkoutDay
+  UserWorkoutStats
 } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
-import { normalizeWorkoutPlan } from '@/utils/fitnessUtils';
 import { useAuth } from '@/hooks/useAuth';
+import * as workoutService from '@/services/workout';
 
 export function useWorkoutData() {
   const { user } = useAuth();
@@ -31,24 +29,8 @@ export function useWorkoutData() {
       setIsLoading(true);
       if (!userId) return;
       
-      const { data, error } = await supabase
-        .from('workout_plans')
-        .select('*')
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-      
-      // Parse JSON workout_days and convert to proper WorkoutDay[]
-      const parsedPlans: WorkoutPlan[] = data?.map(plan => ({
-        ...plan,
-        workout_days: typeof plan.workout_days === 'string' 
-          ? JSON.parse(plan.workout_days) 
-          : Array.isArray(plan.workout_days)
-            ? plan.workout_days
-            : []
-      })) || [];
-      
-      setWorkoutPlans(parsedPlans);
+      const data = await workoutService.fetchWorkoutPlans(userId);
+      setWorkoutPlans(data);
     } catch (error) {
       console.error('Error fetching workout plans:', error);
       toast({
@@ -66,31 +48,8 @@ export function useWorkoutData() {
       setIsLoading(true);
       if (!userId) return;
       
-      const { data, error } = await supabase
-        .from('workout_schedules')
-        .select('*')
-        .eq('user_id', userId);
-      
-      if (error) throw error;
-      
-      // Transform the data to match the WorkoutSchedule interface
-      const formattedData: WorkoutSchedule[] = (data || []).map(schedule => ({
-        id: schedule.id,
-        user_id: schedule.user_id,
-        workout_plan_id: schedule.workout_plan_id,
-        days_of_week: schedule.days_of_week || [],
-        day_of_week: schedule.day_of_week || '',
-        time: schedule.time || schedule.preferred_time || '',
-        preferred_time: schedule.preferred_time || '',
-        reminder: schedule.reminder || false,
-        start_date: schedule.start_date,
-        end_date: schedule.end_date,
-        active: schedule.active,
-        created_at: schedule.created_at || undefined,
-        updated_at: schedule.updated_at || undefined
-      }));
-      
-      setSchedules(formattedData);
+      const data = await workoutService.fetchWorkoutSchedules(userId);
+      setSchedules(data);
     } catch (error) {
       console.error('Error fetching workout schedules:', error);
     } finally {
@@ -103,14 +62,7 @@ export function useWorkoutData() {
       setIsLoading(true);
       if (!userId) return;
       
-      const { data, error } = await supabase
-        .from('workout_history')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
-        
-      if (error) throw error;
-      
+      const data = await workoutService.fetchWorkoutHistory(userId);
       setHistory(data || []);
     } catch (error) {
       console.error('Error fetching workout history:', error);
@@ -202,36 +154,23 @@ export function useWorkoutData() {
         throw new Error("User ID is required for workout logs");
       }
       
-      // Convert the completed_exercises to a JSON string for storage
-      const dbWorkoutLog = {
-        user_id: workoutLog.user_id,
-        workout_plan_id: workoutLog.workout_plan_id,
-        date: workoutLog.date,
-        duration: workoutLog.duration,
-        calories_burned: workoutLog.calories_burned,
-        notes: workoutLog.notes,
-        completed_exercises: JSON.stringify(workoutLog.completed_exercises)
-      };
+      const success = await workoutService.logWorkout(workoutLog);
       
-      const { data, error } = await supabase
-        .from('workout_logs')
-        .insert(dbWorkoutLog)
-        .select()
-        .single();
+      if (success) {
+        // Refresh workout stats
+        if (workoutLog.user_id) {
+          fetchWorkoutStats(workoutLog.user_id);
+        }
         
-      if (error) throw error;
-      
-      // Refresh workout stats
-      if (workoutLog.user_id) {
-        fetchWorkoutStats(workoutLog.user_id);
+        toast({
+          title: "Success",
+          description: "Workout logged successfully",
+        });
+        
+        return { success: true, data: workoutLog };
+      } else {
+        throw new Error("Failed to log workout");
       }
-      
-      toast({
-        title: "Success",
-        description: "Workout logged successfully",
-      });
-      
-      return { success: true, data };
     } catch (error) {
       console.error('Error logging workout:', error);
       toast({

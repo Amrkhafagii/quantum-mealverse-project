@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
 import { toast } from 'sonner';
 import { createNotification } from '@/components/ui/fitness-notification';
+import { Json } from '@/types/database';
 
 interface MealPlanFromDB {
   id: string;
@@ -70,20 +71,20 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
       for (const plan of data) {
-        // Cast the plan to include needed properties
-        const planWithExpiry = plan as unknown as MealPlanFromDB;
+        // Cast the plan with proper type
+        const typedPlan = plan as MealPlanFromDB;
         
         // Calculate days until expiration
-        const expiresAt = planWithExpiry.expires_at ? new Date(planWithExpiry.expires_at) : new Date();
+        const expiresAt = typedPlan.expires_at ? new Date(typedPlan.expires_at) : new Date();
         const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 3600 * 24));
         
         // Create notification
         await createNotification(
           userId,
           'Meal Plan Expiring Soon',
-          `Your meal plan "${planWithExpiry.name}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Consider renewing it.`,
+          `Your meal plan "${typedPlan.name}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Consider renewing it.`,
           'reminder',
-          `/nutrition/plan/${planWithExpiry.id}`
+          `/nutrition/plan/${typedPlan.id}`
         );
       }
     }
