@@ -1,3 +1,4 @@
+
 export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
 
 export interface FitnessGoal {
@@ -51,6 +52,7 @@ export interface Challenge {
   end_date: string;
   goal_type?: string;
   target_value: number;
+  goal_value?: number;
   type: string;
   status?: string;
   team_id?: string;
@@ -79,6 +81,15 @@ export interface SavedMealPlanWithExpiry {
   is_active: boolean;
 }
 
+export interface SavedMealPlan {
+  id: string;
+  user_id: string;
+  name: string;
+  meal_plan: any;
+  expires_at?: string;
+  is_active: boolean;
+}
+
 export interface WorkoutPlan {
   id: string;
   user_id: string;
@@ -96,16 +107,30 @@ export interface WorkoutPlan {
 export interface WorkoutDay {
   id: string;
   name: string;
+  day_name: string;
   exercises: Exercise[];
 }
 
 export interface Exercise {
   id: string;
   name: string;
+  exercise_id?: string;
+  exercise_name?: string;
+  target_muscle?: string;
   sets: number;
   reps: string;
   weight?: number;
+  duration?: number | string;
   rest_time: number;
+  rest?: number;
+  rest_seconds?: number;
+}
+
+export interface WorkoutSet {
+  set_number: number;
+  weight: number;
+  reps: number | string;
+  completed: boolean;
 }
 
 export interface WorkoutLog {
@@ -114,9 +139,10 @@ export interface WorkoutLog {
   workout_plan_id: string;
   date: string;
   duration: number;
-  calories_burned: number;
-  notes?: string;
+  calories_burned: number | null;
+  notes?: string | null;
   exercises_completed: ExerciseLog[];
+  completed_exercises?: CompletedExercise[];
   created_at?: string;
   updated_at?: string;
 }
@@ -128,13 +154,24 @@ export interface ExerciseLog {
   weight_used?: number;
 }
 
+export interface CompletedExercise {
+  exercise_id: string;
+  name: string;
+  exercise_name?: string;
+  sets_completed: WorkoutSet[];
+}
+
 export interface WorkoutSchedule {
   id: string;
   user_id: string;
   workout_plan_id: string;
   day_of_week: string;
+  days_of_week?: string[];
   time: string;
   reminder: boolean;
+  start_date?: string;
+  end_date?: string;
+  active?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -150,4 +187,95 @@ export interface WorkoutHistoryItem {
   total_exercises: number;
   duration: number;
   calories_burned: number;
+}
+
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  display_name: string;
+  weight: number;
+  height: number;
+  age: number;
+  gender: string;
+  goal_weight?: number;
+  fitness_level?: string;
+  fitness_goals?: string[];
+  profile_image?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserMeasurement {
+  id: string;
+  user_id: string;
+  date: string;
+  weight: number;
+  body_fat_percentage?: number;
+  chest?: number;
+  waist?: number;
+  hips?: number;
+  arms?: number;
+  thighs?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserWorkoutStats {
+  total_workouts: number;
+  streak_days?: number;
+  streak?: number;
+  most_active_day?: string;
+  recent_workouts?: any[];
+  achievements?: number;
+  calories_burned_total?: number;
+  workout_time_total?: number;
+  favorite_workout_type?: string;
+}
+
+export interface DailyQuest {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  type: string;
+  requirements: any;
+  completed: boolean;
+  deadline?: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+  members_count: number;
+  challenges_count?: number;
+  image_url?: string;
+}
+
+export interface TeamMember {
+  id: string;
+  user_id: string;
+  team_id: string;
+  role: string;
+  joined_date: string;
+  user_name?: string;
+  profile_image?: string;
+}
+
+export interface StreakReward {
+  id: string;
+  days_required: number;
+  reward_name: string;
+  reward_description: string;
+  reward_value: number;
+  reward_image?: string;
+  is_claimed?: boolean;
+}
+
+export interface StreakRewardsProps {
+  currentStreak: number;
+  rewards: StreakReward[];
+  onClaimReward?: (rewardId: string) => void;
 }
