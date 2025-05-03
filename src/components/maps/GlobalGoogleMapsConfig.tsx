@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const GlobalGoogleMapsConfig: React.FC = () => {
-  const { googleMapsApiKey, setGoogleMapsApiKey } = useGoogleMaps();
+  const { googleMapsApiKey, setGoogleMapsApiKey, isLoading } = useGoogleMaps();
   const [apiKey, setApiKey] = useState('');
   const [showConfig, setShowConfig] = useState(false);
 
@@ -98,8 +99,18 @@ const GlobalGoogleMapsConfig: React.FC = () => {
           variant={googleMapsApiKey ? "outline" : "default"}
           size="sm"
           className="shadow-lg"
+          disabled={isLoading}
         >
-          {googleMapsApiKey ? "Change Google Maps API Key" : "Set Google Maps API Key"}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </>
+          ) : googleMapsApiKey ? (
+            "Change Google Maps API Key"
+          ) : (
+            "Set Google Maps API Key"
+          )}
         </Button>
       )}
     </div>

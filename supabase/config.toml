@@ -1,12 +1,10 @@
 
-# Project ID from your Supabase project settings
+# Define the project ID
 project_id = "hozgutjvbrljeijybnyg"
 
-[functions.status-to-customer]
-verify_jwt = false
+# Function needed configs
+[functions.get-config]
+verify_jwt = true
 
-[functions.status-to-restaurant]
-verify_jwt = false
-
-[functions.check-meal-plan-expiry]
+[functions.init-app-config]
 verify_jwt = false
