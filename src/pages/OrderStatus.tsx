@@ -8,10 +8,38 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 import { UserSettings } from '@/components/profile/UserSettings';
+import { OrderStatusDebug } from '@/components/orders/OrderStatusDebug';
+import { useAuth } from '@/hooks/useAuth';
 
 const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: order, isLoading } = useOrderData(id || '');
+  const { data: order, isLoading, refetch } = useOrderData(id || '');
+  const { user } = useAuth();
+  
+  // Determine if the user is an admin for debug purposes
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) return;
+      
+      try {
+        const { data } = await fetch('/api/check-admin-role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }).then(res => res.json());
+        
+        setIsAdmin(data?.isAdmin || false);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        // For demonstration, set a debug flag based on username
+        setIsAdmin(user.email === 'admin@example.com');
+      }
+    };
+    
+    checkAdmin();
+  }, [user]);
 
   return (
     <div className="container mx-auto p-4 py-8">
@@ -42,7 +70,14 @@ const OrderStatus = () => {
           </Button>
         </div>
       ) : (
-        <OrderTracker orderId={id} />
+        <>
+          <OrderTracker orderId={id} />
+          
+          {/* Debug component - only show for admins or in development */}
+          {(isAdmin || process.env.NODE_ENV === 'development') && (
+            <OrderStatusDebug orderId={id} onStatusFixed={refetch} />
+          )}
+        </>
       )}
     </div>
   );

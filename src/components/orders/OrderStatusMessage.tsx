@@ -31,11 +31,12 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
 
   // Only show restaurant name if a restaurant has actually accepted the order
   const shouldShowRestaurantName = 
-    assignmentStatus?.restaurant_name && 
-    assignmentStatus?.assigned_restaurant_id && 
-    orderStatus !== 'pending' && 
-    orderStatus !== 'awaiting_restaurant' && 
-    assignmentStatus?.status !== 'awaiting_response';
+    (assignmentStatus?.restaurant_name && 
+     assignmentStatus?.assigned_restaurant_id && 
+     orderStatus !== 'pending' && 
+     orderStatus !== 'awaiting_restaurant' && 
+     assignmentStatus?.status !== 'awaiting_response') ||
+    (orderRestaurant?.name && orderRestaurant.name !== '');
 
   const getStatusMessage = (): StatusMessage => {
     if (!orderStatus) return { message: '' };
@@ -50,7 +51,7 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
       case OrderStatus.AWAITING_RESTAURANT:
         return {
           message: shouldShowRestaurantName ? 
-            `Waiting for confirmation from ${assignmentStatus.restaurant_name}...` :
+            `Waiting for confirmation from ${assignmentStatus?.restaurant_name || orderRestaurant?.name}...` :
             'Waiting for a restaurant to accept your order...',
           details: `Attempt ${assignmentStatus?.attempt_count || 1} of 3`
         };
@@ -58,14 +59,14 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
       case 'processing':
         return { 
           message: shouldShowRestaurantName ? 
-            `Your order is being processed by ${assignmentStatus.restaurant_name}!` : 
+            `Your order is being processed by ${assignmentStatus?.restaurant_name || orderRestaurant?.name}!` : 
             'Your order is being processed!' 
         };
       case OrderStatus.PREPARING:
       case 'preparing':
         return {
           message: shouldShowRestaurantName ? 
-            `Your order is being prepared by ${assignmentStatus.restaurant_name}!` : 
+            `Your order is being prepared by ${assignmentStatus?.restaurant_name || orderRestaurant?.name}!` : 
             'Your order is being prepared!'
         };
       case OrderStatus.NO_RESTAURANT_AVAILABLE:

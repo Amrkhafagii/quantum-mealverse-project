@@ -58,8 +58,28 @@ export const sendRestaurantResponse = async (
       { assignment_id: assignmentId }
     );
     
+    // Update the order table directly if webhook might have failed
+    if (action === 'accept') {
+      // Update the order status to accepted directly
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: `restaurant_${action}ed`,
+          restaurant_id: restaurantId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+        
+      if (error) {
+        console.error('Failed to update order status directly:', error);
+      } else {
+        console.log(`Successfully updated order ${orderId} status to restaurant_${action}ed`);
+      }
+    }
+    
     return responseData;
   } catch (error) {
+    console.error(`Error in sendRestaurantResponse:`, error);
     return { success: false, error: 'Failed to send restaurant response to webhook' };
   }
 };

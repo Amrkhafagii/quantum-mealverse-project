@@ -1,3 +1,4 @@
+
 import { sendOrderToWebhook } from './webhook/sendOrderWebhook';
 import { getAssignmentStatus } from './webhook/assignmentStatus';
 import { recordOrderHistory } from './webhook/orderHistoryService';
@@ -23,7 +24,9 @@ export const updateOrderStatus = async (
       .from('orders')
       .update({ 
         status: newStatus,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Add restaurant_id to the order when the status is accepted
+        ...(newStatus === OrderStatus.RESTAURANT_ACCEPTED ? { restaurant_id: restaurantId } : {})
       })
       .eq('id', orderId);
       
