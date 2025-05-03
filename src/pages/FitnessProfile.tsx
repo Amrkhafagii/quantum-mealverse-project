@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -8,12 +7,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import FitnessProfile from '@/components/fitness/FitnessProfile';
+import FitnessProfile from '@/components/fitness/profile/FitnessProfile';
 import MeasurementForm from '@/components/fitness/MeasurementForm';
 import MeasurementsHistory from '@/components/fitness/MeasurementsHistory';
 import SavedMealPlans from '@/components/fitness/SavedMealPlans';
 import UserGoals from '@/components/fitness/UserGoals';
-import EnhancedFitnessProfile from '@/components/fitness/EnhancedFitnessProfile';
+import EnhancedFitnessProfile from '@/components/fitness/enhanced/EnhancedFitnessProfile';
 import ProgressInsights from '@/components/fitness/ProgressInsights';
 import { UserProfile, UserMeasurement } from '@/types/fitness';
 import { getUserMeasurements } from '@/services/measurementService';

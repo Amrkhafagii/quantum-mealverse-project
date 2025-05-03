@@ -2,9 +2,9 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { OrderStatusMessage } from './orders/status/OrderStatusMessage';
-import { CancelOrderButton } from './orders/status/CancelOrderButton';
-import { OrderTimer } from './orders/status/OrderTimer';
+import { OrderStatusMessage } from './status/OrderStatusMessage';
+import { CancelOrderButton } from './status/CancelOrderButton';
+import { OrderTimer } from './status/OrderTimer';
 import { Order } from '@/types/order';
 
 interface OrderStatusDisplayProps {

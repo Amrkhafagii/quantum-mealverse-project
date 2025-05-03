@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, Share2, Download, Printer, CircleCheck } from 'lucide-react';
@@ -22,6 +21,19 @@ import { ActionButtons } from '@/components/orders/thank-you/ActionButtons';
 import { OrderDetailsGrid } from '@/components/orders/OrderDetailsGrid';
 import OrderLocationMap from '@/components/orders/OrderLocationMap';
 import { format } from 'date-fns';
+
+// Adding interfaces for components that don't have className prop support
+interface ParticleBackgroundWithClassName extends React.FC {
+  (props: { className?: string }): JSX.Element;
+}
+
+interface NavbarWithClassName extends React.FC {
+  (props: { className?: string }): JSX.Element;
+}
+
+interface FooterWithClassName extends React.FC {
+  (props: { className?: string }): JSX.Element;
+}
 
 const OrderConfirmation = () => {
   const { id } = useParams<{ id: string }>();
@@ -169,7 +181,7 @@ const OrderConfirmation = () => {
     }
     
     // This would be replaced with actual estimated times from the backend
-    const baseTimeMap = {
+    const baseTimeMap: Record<string, number> = {
       'accepted': 30,
       'processing': 25,
       'preparing': 20,
@@ -178,7 +190,7 @@ const OrderConfirmation = () => {
       'completed': 0
     };
     
-    const estimatedMinutes = baseTimeMap[order.status as keyof typeof baseTimeMap] || 0;
+    const estimatedMinutes = baseTimeMap[order.status] || 0;
     
     if (estimatedMinutes === 0) return 'Delivered';
     return `~${estimatedMinutes} minutes`;
