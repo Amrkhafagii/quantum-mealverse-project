@@ -4,7 +4,7 @@ export interface SavedMealPlan {
   user_id: string;
   name: string;
   meal_plan: any;
-  expires_at: string;
+  expires_at?: string; // Optional as not all meal plans may have an expiry
   is_active: boolean;
   date_created?: string;
   tdee_id?: string;
