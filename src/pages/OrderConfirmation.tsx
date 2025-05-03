@@ -23,19 +23,18 @@ import { OrderDetailsGrid } from '@/components/orders/OrderDetailsGrid';
 import OrderLocationMap from '@/components/orders/OrderLocationMap';
 import { format } from 'date-fns';
 
-// Create extended component interfaces to properly handle className prop
-interface ComponentWithClassName {
+// Create proper interface for components with className prop
+interface ComponentProps {
   className?: string;
-  [key: string]: any;
 }
 
-const OrderProgressSteps = ({ className }: { className?: string }) => (
+const OrderProgressSteps: React.FC<ComponentProps> = ({ className }) => (
   <div className={className}>
     {/* Progress steps content */}
   </div>
 );
 
-const PaymentStatusMessage = ({ className }: { className?: string }) => (
+const PaymentStatusMessage: React.FC<ComponentProps> = ({ className }) => (
   <div className={className}>
     {/* Payment status message content */}
   </div>
@@ -204,9 +203,8 @@ const OrderConfirmation = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-quantum-black to-quantum-darkBlue text-white relative print:bg-white print:text-black">
-      {/* Cast to ComponentWithClassName to handle className prop */}
-      <ParticleBackground className="print:hidden" as={ComponentWithClassName} />
-      <Navbar className="print:hidden" as={ComponentWithClassName} />
+      <ParticleBackground className="print:hidden" />
+      <Navbar className="print:hidden" />
       
       <main className="relative z-10 container mx-auto px-4 py-16 print:py-4">
         {/* Back navigation */}
@@ -347,7 +345,7 @@ const OrderConfirmation = () => {
         )}
       </main>
       
-      <Footer className="print:hidden" as={ComponentWithClassName} />
+      <Footer className="print:hidden" />
       
       {/* Print-specific styles */}
       <style>

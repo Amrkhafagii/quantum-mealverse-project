@@ -37,7 +37,7 @@ export const checkExpiredMealPlans = async (): Promise<{success: boolean, expire
 };
 
 /**
- * Checks for expired meal plans and marks them as expired
+ * Checks for meal plans that will expire soon and notifies users
  */
 export const checkSoonToExpirePlans = async (userId: string): Promise<{success: boolean, expiringSoon: number}> => {
   try {
@@ -58,20 +58,22 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
-      data.forEach(async (plan: SavedMealPlanWithExpiry) => {
+      for (const plan of data) {
+        const planWithExpiry = plan as unknown as SavedMealPlanWithExpiry;
+        
         // Calculate days until expiration
-        const expiresAt = plan.expires_at ? new Date(plan.expires_at) : new Date();
+        const expiresAt = planWithExpiry.expires_at ? new Date(planWithExpiry.expires_at) : new Date();
         const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 3600 * 24));
         
         // Create notification
         await createNotification(
           userId,
           'Meal Plan Expiring Soon',
-          `Your meal plan "${plan.name}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Consider renewing it.`,
+          `Your meal plan "${planWithExpiry.name}" will expire in ${daysLeft} day${daysLeft > 1 ? 's' : ''}. Consider renewing it.`,
           'reminder',
-          `/nutrition/plan/${plan.id}`
+          `/nutrition/plan/${planWithExpiry.id}`
         );
-      });
+      }
     }
     
     return {

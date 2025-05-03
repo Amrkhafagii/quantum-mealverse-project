@@ -15,7 +15,7 @@ export function useWebhook() {
   ): Promise<WebhookResponse> => {
     try {
       // Log webhook call to database
-      await supabase
+      const { data: logData } = await supabase
         .from('webhook_logs')
         .insert({
           payload: {
@@ -23,7 +23,9 @@ export function useWebhook() {
             data: payload
           },
           processed_at: new Date().toISOString()
-        });
+        })
+        .select('id')
+        .single();
         
       // Since we're in a frontend environment, we'd typically call an API endpoint
       // This is a simplified implementation
@@ -41,17 +43,16 @@ export function useWebhook() {
       
       const data = await response.json();
       
-      // Update webhook log with success
-      // Using eq() with string values rather than JsonFilter to avoid recursive types
-      await supabase
-        .from('webhook_logs')
-        .update({ 
-          response_data: data,
-          status: 'success'
-        })
-        .eq('payload->type', hookType)
-        .order('processed_at', { ascending: false })
-        .limit(1);
+      // Update webhook log with success using the log ID instead of filtering by payload
+      if (logData?.id) {
+        await supabase
+          .from('webhook_logs')
+          .update({ 
+            response_data: data,
+            status: 'success'
+          })
+          .eq('id', logData.id);
+      }
         
       return {
         success: true,
@@ -60,17 +61,24 @@ export function useWebhook() {
     } catch (error) {
       console.error('Error in webhook call:', error);
       
-      // Update webhook log with error
-      // Using eq() with string values rather than JsonFilter to avoid recursive types
-      await supabase
+      // Update webhook log with error using a direct query to last inserted item
+      const { data: lastLog } = await supabase
         .from('webhook_logs')
-        .update({ 
-          error: String(error),
-          status: 'error'
-        })
-        .eq('payload->type', hookType)
+        .select('id')
+        .eq('webhook_type', hookType)
         .order('processed_at', { ascending: false })
-        .limit(1);
+        .limit(1)
+        .single();
+      
+      if (lastLog?.id) {
+        await supabase
+          .from('webhook_logs')
+          .update({ 
+            error: String(error),
+            status: 'error'
+          })
+          .eq('id', lastLog.id);
+      }
         
       return {
         success: false,

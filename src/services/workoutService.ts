@@ -62,14 +62,23 @@ export const updateWorkoutPlan = async (plan: Partial<WorkoutPlan>): Promise<Wor
       throw new Error('Workout plan ID is required for updates');
     }
 
+    // Fetch current plan to get values for required fields if not provided
+    const { data: currentPlan, error: fetchError } = await supabase
+      .from('workout_plans')
+      .select('difficulty, frequency, duration_weeks, goal')
+      .eq('id', plan.id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
     // Ensure required fields are present for update
     const updatedPlan = {
       ...plan,
-      // If these fields are not provided in the update, keep the original values by fetching current data
-      difficulty: plan.difficulty || (await supabase.from('workout_plans').select('difficulty').eq('id', plan.id).single()).data?.difficulty,
-      frequency: plan.frequency || (await supabase.from('workout_plans').select('frequency').eq('id', plan.id).single()).data?.frequency,
-      duration_weeks: plan.duration_weeks || (await supabase.from('workout_plans').select('duration_weeks').eq('id', plan.id).single()).data?.duration_weeks,
-      goal: plan.goal || (await supabase.from('workout_plans').select('goal').eq('id', plan.id).single()).data?.goal,
+      // If these fields are not provided in the update, keep the original values
+      difficulty: plan.difficulty || currentPlan.difficulty,
+      frequency: plan.frequency || currentPlan.frequency,
+      duration_weeks: plan.duration_weeks || currentPlan.duration_weeks,
+      goal: plan.goal || currentPlan.goal,
       // Convert workout days to JSON for DB storage if present
       workout_days: plan.workout_days ? toSupabaseJson(plan.workout_days) : undefined
     };
@@ -115,7 +124,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
 // Fetches workout history for a user
 export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistoryItem[]> => {
   try {
-    // Check if view exists without using RPC, just query directly
+    // Query the workout_history table directly
     const { data: workoutHistory, error } = await supabase
       .from('workout_history')
       .select(`
@@ -134,7 +143,7 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
       .order('date', { ascending: false });
 
     if (error) {
-      // Fallback to querying workout_logs directly if there's an error with the view
+      // Fallback to querying workout_logs directly if there's an error with the history table
       console.log('Falling back to querying workout_logs directly');
       const { data, error: logsError } = await supabase
         .from('workout_logs')
