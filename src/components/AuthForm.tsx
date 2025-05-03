@@ -54,6 +54,19 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         
         if (signUpError) throw signUpError;
         
+        // Also update the user_types table to store the user type
+        if (authData?.user) {
+          const { error: userTypeError } = await supabase.from('user_types').insert({
+            user_id: authData.user.id,
+            type: userType
+          });
+          
+          if (userTypeError) {
+            console.error("Error storing user type:", userTypeError);
+            // Continue despite error to not block signup
+          }
+        }
+        
         if (userType === 'restaurant' && authData?.user) {
           // Create restaurant profile
           const { error: restaurantError } = await supabase.from('restaurants').insert({
@@ -96,9 +109,35 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         });
         if (error) throw error;
         
+        // Get user type - first check user metadata
         const userMetadata = data.user?.user_metadata as { user_type?: string } | undefined;
-        const userType = userMetadata?.user_type;
+        let userType = userMetadata?.user_type;
         
+        // If not in metadata, check our user_types table as fallback
+        if (!userType) {
+          const { data: userTypeData, error: userTypeError } = await supabase
+            .from('user_types')
+            .select('type')
+            .eq('user_id', data.user?.id || '')
+            .maybeSingle();
+            
+          if (!userTypeError && userTypeData) {
+            userType = userTypeData.type;
+          }
+        }
+        
+        // If still no user type, default to customer
+        if (!userType) {
+          userType = 'customer';
+          // Store the default user type if possible
+          if (data.user) {
+            await supabase.from('user_types').insert({
+              user_id: data.user.id,
+              type: 'customer'
+            });
+          }
+        }
+          
         // Check if user is a restaurant owner
         const { data: restaurantData } = await supabase
           .from('restaurants')

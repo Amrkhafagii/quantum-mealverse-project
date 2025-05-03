@@ -17,3 +17,9 @@ export interface AuthHandlerParams {
   setDefaultValues: (values: any) => void;
   toast: (props: ToastProps) => void;
 }
+
+export interface UserType {
+  user_id: string;
+  type: 'customer' | 'restaurant' | 'delivery';
+  created_at?: string;
+}

@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectPath = '/auth',
   requiresLocation = false
 }) => {
-  const { user, loading } = useAuth();
+  const { user, userType, loading } = useAuth();
   const { 
     permissionStatus, 
     isLocationStale, 
@@ -70,8 +70,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If allowedUserTypes is specified, check if the user type is allowed
   if (allowedUserTypes && allowedUserTypes.length > 0) {
-    const userType = user.user_metadata?.user_type || 'customer';
-    if (!allowedUserTypes.includes(userType)) {
+    if (!userType || !allowedUserTypes.includes(userType)) {
       // Redirect to appropriate dashboard based on user type
       if (userType === 'delivery') {
         return <Navigate to="/delivery/dashboard" replace />;
@@ -83,10 +82,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  // Get user type
-  const userType = user.user_metadata?.user_type || 'customer';
-  
-  // Check if we need to verify location
+  // Check if we need to verify location for delivery users
   if (shouldCheckLocation && userType === 'delivery') {
     // For delivery paths that require location access
     if (permissionStatus === 'denied') {
