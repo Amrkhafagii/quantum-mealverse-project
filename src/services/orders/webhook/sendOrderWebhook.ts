@@ -30,7 +30,7 @@ export const sendOrderToWebhook = async (
         payload: {
           order_id: orderId,
           request_type: 'find_restaurant',
-          request_data: webhookRequest
+          request_data: JSON.parse(JSON.stringify(webhookRequest)) // Convert to plain JSON
         }
       });
 

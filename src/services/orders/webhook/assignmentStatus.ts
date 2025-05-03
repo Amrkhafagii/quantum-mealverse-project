@@ -11,32 +11,37 @@ import { AssignmentStatus } from '@/types/webhook';
 export const getAssignmentStatus = async (orderId: string): Promise<AssignmentStatus> => {
   try {
     // Check if there's an accepted restaurant first
-    const { data: acceptedData } = await supabase
+    const { data: acceptedAssignment } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, restaurants(name), expires_at')
+      .select('id, restaurant_id, expires_at')
       .eq('order_id', orderId)
       .eq('status', 'accepted')
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (acceptedData) {
-      const restaurantName = acceptedData.restaurants ? 
-        acceptedData.restaurants.name as string : 
-        undefined;
+    if (acceptedAssignment) {
+      // If we found an accepted assignment, get the restaurant name
+      const { data: restaurantData } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', acceptedAssignment.restaurant_id)
+        .single();
+      
+      const restaurantName = restaurantData?.name;
         
       return {
-        assigned_restaurant_id: acceptedData.restaurant_id,
+        assigned_restaurant_id: acceptedAssignment.restaurant_id,
         restaurant_name: restaurantName,
         status: 'accepted',
-        assignment_id: acceptedData.id
+        assignment_id: acceptedAssignment.id
       };
     }
 
     // Look for pending assignments
     const { data: pendingData, count: pendingCount } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, restaurants(name), expires_at, status', { count: 'exact' })
+      .select('id, restaurant_id, expires_at, status', { count: 'exact' })
       .eq('order_id', orderId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -44,9 +49,15 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
 
     if (pendingData && pendingData.length > 0) {
       const assignment = pendingData[0];
-      const restaurantName = assignment.restaurants ? 
-        assignment.restaurants.name as string : 
-        undefined;
+      
+      // Get restaurant name in a separate query
+      const { data: restaurantData } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', assignment.restaurant_id)
+        .single();
+      
+      const restaurantName = restaurantData?.name;
         
       return {
         assigned_restaurant_id: assignment.restaurant_id,
@@ -59,25 +70,30 @@ export const getAssignmentStatus = async (orderId: string): Promise<AssignmentSt
     }
 
     // Look for the most recent rejected assignment
-    const { data: rejectedData } = await supabase
+    const { data: rejectedAssignment } = await supabase
       .from('restaurant_assignments')
-      .select('id, restaurant_id, restaurants(name), expires_at')
+      .select('id, restaurant_id, expires_at')
       .eq('order_id', orderId)
       .eq('status', 'rejected')
       .order('updated_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (rejectedData) {
-      const restaurantName = rejectedData.restaurants ? 
-        rejectedData.restaurants.name as string : 
-        undefined;
+    if (rejectedAssignment) {
+      // Get restaurant name in a separate query
+      const { data: restaurantData } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', rejectedAssignment.restaurant_id)
+        .single();
+      
+      const restaurantName = restaurantData?.name;
         
       return {
-        assigned_restaurant_id: rejectedData.restaurant_id,
+        assigned_restaurant_id: rejectedAssignment.restaurant_id,
         restaurant_name: restaurantName,
         status: 'rejected',
-        assignment_id: rejectedData.id
+        assignment_id: rejectedAssignment.id
       };
     }
 

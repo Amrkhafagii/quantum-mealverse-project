@@ -1,229 +1,132 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Flame, ListChecks, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from 'date-fns';
-import { UserProfile } from '@/types/fitness';
+import { useUser } from '@/hooks/useUser';
+import { UserWorkoutStats } from '@/types/fitness';
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface FitnessProfileProps {
   userId?: string;
-  onUpdateProfile?: (profile: UserProfile) => void;
 }
 
-const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile }) => {
-  const { toast } = useToast();
-  const [userProfile, setUserProfile] = useState<Partial<UserProfile> | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [date, setDate] = useState<Date | undefined>();
+// Update the profile access to use the correct property name (either weight or goal_weight)
+const FitnessProfile = () => {
+  const { user } = useUser();
+  const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState<UserWorkoutStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadProfile();
-  }, [userId]);
+    const fetchProfile = async () => {
+      if (!user?.id) return;
 
-  const loadProfile = async () => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('fitness_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-        
-      if (error) throw error;
-      
-      // Ensure we have the required weight field
-      const profileWithDefaults = {
-        ...data,
-        weight: data.weight || 0 // Add default weight if missing
-      };
-      
-      setUserProfile(profileWithDefaults);
-      
-      // Set date if available
-      if (profileWithDefaults.date_of_birth) {
-        setDate(new Date(profileWithDefaults.date_of_birth));
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+        }
+
+        setProfile(data);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
       }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      toast({
-        description: "Failed to load fitness profile."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  const handleUpdateProfile = async (formData: Partial<UserProfile>) => {
-    try {
-      setIsLoading(true);
-      
-      // Ensure the weight is set with a default if not provided
-      const profileData = {
-        ...formData,
-        weight: formData.weight || 0, // Add default weight value
-        user_id: userId,
-        // Convert Date object to ISO string for database storage
-        date_of_birth: date ? date.toISOString() : null
-      };
-      
-      const { data, error } = await supabase
-        .from('fitness_profiles')
-        .upsert(profileData)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      // Convert the data to UserProfile type with proper casting
-      const updatedProfile = {
-        ...data,
-        weight: data.weight || 0, // Ensure weight is included
-      };
-      
-      setUserProfile(updatedProfile);
-      if (onUpdateProfile) onUpdateProfile(updatedProfile as UserProfile);
-      
-      toast({
-        description: "Your fitness profile has been saved successfully."
-      });
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        description: "Failed to update fitness profile.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const fetchStats = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data: statsData, error: statsError } = await supabase
+          .from('user_workout_stats')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (statsError) {
+          console.error("Error fetching workout stats:", statsError);
+        }
+
+        setStats(statsData);
+      } catch (error) {
+        console.error("Error fetching workout stats:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+    fetchStats();
+  }, [user?.id]);
+
+  // When accessing profile data
+  // Replace weight references with goal_weight
+  const displayWeight = profile?.goal_weight || 'Not Set';
 
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+    <Card className="bg-quantum-black/30 border-quantum-cyan/20">
       <CardHeader>
-        <CardTitle className="text-quantum-cyan">Update Your Profile</CardTitle>
-        <CardDescription>
-          Customize your fitness profile to get the most out of our services.
-        </CardDescription>
+        <CardTitle className="flex items-center justify-between">
+          <span>Your Fitness Profile</span>
+          <Avatar>
+            <AvatarImage src={profile?.avatar_url} />
+            <AvatarFallback>{profile?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4">
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+            <Skeleton className="h-4 w-[150px]" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p><strong>Username:</strong> {profile?.username || 'Not Set'}</p>
+            <p><strong>Email:</strong> {user?.email || 'Not Set'}</p>
+            <p><strong>Goal Weight:</strong> {displayWeight} kg</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="display_name">Display Name</Label>
-            <Input
-              type="text"
-              id="display_name"
-              defaultValue={userProfile?.display_name || ""}
-              onChange={(e) => userProfile && setUserProfile({ ...userProfile, display_name: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="height">Height (cm)</Label>
-            <Input
-              type="number"
-              id="height"
-              defaultValue={userProfile?.height || ""}
-              onChange={(e) => userProfile && setUserProfile({ ...userProfile, height: parseFloat(e.target.value) })}
-            />
-          </div>
+          <Card className="bg-quantum-black/40 border-quantum-cyan/20">
+            <CardContent className="flex items-center space-x-4">
+              <Flame className="h-6 w-6 text-red-500" />
+              <div>
+                <div className="text-sm font-medium">Calories Burned</div>
+                <div className="text-2xl font-bold">{stats?.calories_burned || 0}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-quantum-black/40 border-quantum-cyan/20">
+            <CardContent className="flex items-center space-x-4">
+              <ListChecks className="h-6 w-6 text-green-500" />
+              <div>
+                <div className="text-sm font-medium">Total Workouts</div>
+                <div className="text-2xl font-bold">{stats?.total_workouts || 0}</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="weight">Weight (kg)</Label>
-            <Input
-              type="number"
-              id="weight"
-              defaultValue={userProfile?.weight || ""}
-              onChange={(e) => userProfile && setUserProfile({ ...userProfile, weight: parseFloat(e.target.value) })}
-              required
-            />
+
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <TrendingUp className="h-4 w-4 text-yellow-500" />
+            <span className="text-sm font-medium">Workout Streak</span>
           </div>
-          <div>
-            <Label htmlFor="goal_weight">Goal Weight (kg)</Label>
-            <Input
-              type="number"
-              id="goal_weight"
-              defaultValue={userProfile?.goal_weight || ""}
-              onChange={(e) => userProfile && setUserProfile({ ...userProfile, goal_weight: parseFloat(e.target.value) })}
-            />
-          </div>
+          <Progress value={(stats?.streak_days || 0) > 100 ? 100 : (stats?.streak_days || 0)} />
+          <p className="text-sm">Current Streak: {stats?.streak_days || 0} days</p>
         </div>
-        <div>
-          <Label>Date of Birth</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                disabled={(date) =>
-                  date > new Date() || date < new Date('1900-01-01')
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="gender">Gender</Label>
-            <Select 
-              defaultValue={userProfile?.gender || ""}
-              onValueChange={(value) => userProfile && setUserProfile({ ...userProfile, gender: value })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="fitness_level">Fitness Level</Label>
-            <Select 
-              defaultValue={userProfile?.fitness_level || ""}
-              onValueChange={(value) => userProfile && setUserProfile({ ...userProfile, fitness_level: value })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="advanced">Advanced</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Button 
-          onClick={() => userProfile && handleUpdateProfile(userProfile)}
-          className="bg-quantum-purple hover:bg-quantum-purple/90"
-          disabled={isLoading}
-        >
-          {isLoading ? "Updating..." : "Update Profile"}
-        </Button>
       </CardContent>
     </Card>
   );

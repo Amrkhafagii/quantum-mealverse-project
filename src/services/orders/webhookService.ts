@@ -1,4 +1,3 @@
-
 import { sendOrderToWebhook } from './webhook/sendOrderWebhook';
 import { getAssignmentStatus } from './webhook/assignmentStatus';
 import { recordOrderHistory } from './webhook/orderHistoryService';
@@ -50,6 +49,9 @@ export const updateOrderStatus = async (
     return false;
   }
 };
+
+// For backwards compatibility - export getAssignmentStatus as checkAssignmentStatus
+export const checkAssignmentStatus = getAssignmentStatus;
 
 // Re-export the functions for external use
 export {
