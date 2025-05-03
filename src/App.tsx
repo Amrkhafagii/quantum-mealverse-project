@@ -37,6 +37,7 @@ import RestaurantOrders from './pages/restaurant/Orders';
 // Delivery routes
 import OnboardingPage from './pages/delivery/OnboardingPage';
 import DeliveryDashboard from './pages/delivery/DeliveryDashboard';
+import DeliverySettings from './pages/delivery/DeliverySettings';
 
 // Import the GoogleMapsProvider and DeliveryMapProvider
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
@@ -149,8 +150,13 @@ function App() {
                       </ProtectedRoute>
                     } />
                     <Route path="/delivery/dashboard" element={
-                      <ProtectedRoute allowedUserTypes={['delivery']}>
+                      <ProtectedRoute allowedUserTypes={['delivery']} requiresLocation={true}>
                         <DeliveryDashboard />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/delivery/settings" element={
+                      <ProtectedRoute allowedUserTypes={['delivery']}>
+                        <DeliverySettings />
                       </ProtectedRoute>
                     } />
                     

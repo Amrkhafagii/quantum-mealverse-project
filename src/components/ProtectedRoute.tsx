@@ -28,7 +28,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   } = useLocationPermission();
 
   const isDeliveryPath = window.location.pathname.includes('/delivery/');
-  const shouldCheckLocation = requiresLocation || isDeliveryPath;
+  const isSettingsPath = window.location.pathname.includes('/delivery/settings');
+  const shouldCheckLocation = requiresLocation || (isDeliveryPath && !isSettingsPath);
   
   // For delivery paths, check if we need to request location permission
   useEffect(() => {
@@ -87,8 +88,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   // Check if we need to verify location
   if (shouldCheckLocation && userType === 'delivery') {
-    // For delivery paths that need settings access even when location is denied
-    if (permissionStatus === 'denied' && !window.location.pathname.includes('/delivery/settings')) {
+    // For delivery paths that require location access
+    if (permissionStatus === 'denied') {
       // Redirect to settings page with query param
       return <Navigate to="/delivery/settings?locationDenied=true" replace />;
     }

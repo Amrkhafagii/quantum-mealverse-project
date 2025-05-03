@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   DeliveryUser, 
@@ -72,6 +71,39 @@ export const updateDeliveryUserStatus = async (userId: string, status: 'active' 
     return data as DeliveryUser;
   } catch (error) {
     console.error('Error in updateDeliveryUserStatus:', error);
+    throw error;
+  }
+};
+
+// Update delivery user profile
+export const updateDeliveryUserProfile = async (
+  deliveryUserId: string, 
+  profileData: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    email?: string;
+  }
+): Promise<DeliveryUser | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('delivery_users')
+      .update({
+        ...profileData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', deliveryUserId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating delivery user profile:', error);
+      throw error;
+    }
+
+    return data as DeliveryUser;
+  } catch (error) {
+    console.error('Error in updateDeliveryUserProfile:', error);
     throw error;
   }
 };

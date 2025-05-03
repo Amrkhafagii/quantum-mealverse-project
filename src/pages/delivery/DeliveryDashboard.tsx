@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Settings } from 'lucide-react';
 import DeliveryHistory from '@/components/delivery/DeliveryHistory';
 import EarningsSummary from '@/components/delivery/EarningsSummary';
 import { AvailableOrders } from '@/components/delivery/AvailableOrders';
@@ -125,6 +125,14 @@ const DeliveryDashboard = () => {
   return (
     <div className="min-h-screen bg-quantum-black text-white">
       <div className="container mx-auto px-4 pt-24 pb-12">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-quantum-cyan">Delivery Dashboard</h1>
+          <Button onClick={() => navigate('/delivery/settings')} variant="outline" className="flex gap-2 items-center">
+            <Settings size={18} />
+            Settings
+          </Button>
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column */}
           <div className="lg:col-span-1 space-y-6">
