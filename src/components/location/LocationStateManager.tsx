@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import LocationPromptBanner from './LocationPromptBanner';
 import { Skeleton } from '@/components/ui/skeleton';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import { useNavigate } from 'react-router-dom';
+import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 
 interface LocationStateManagerProps {
   onLocationUpdate?: (location: { latitude: number; longitude: number }) => void;
@@ -15,6 +17,7 @@ interface LocationStateManagerProps {
   errorContent?: React.ReactNode;
   children: React.ReactNode;
   showLoadingState?: boolean;
+  autoNavigateToMenu?: boolean;
 }
 
 export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
@@ -22,7 +25,8 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
   loadingContent,
   errorContent,
   children,
-  showLoadingState = true
+  showLoadingState = true,
+  autoNavigateToMenu = false
 }) => {
   const { 
     location, 
@@ -33,9 +37,12 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     isTracking 
   } = useLocationPermission();
   
+  const navigate = useNavigate();
+  const { nearbyRestaurants, findNearestRestaurants } = useNearestRestaurant();
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [hasContentLoaded, setHasContentLoaded] = useState(false);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   // Check for cached location in localStorage
   useEffect(() => {
@@ -68,6 +75,9 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
       if (onLocationUpdate) {
         onLocationUpdate(locationData);
       }
+
+      // Find the nearest restaurants
+      findNearestRestaurants();
       
       // Show success toast when location is first acquired
       if (!hasContentLoaded) {
@@ -83,7 +93,31 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         }, 1500);
       }
     }
-  }, [location, hasContentLoaded, onLocationUpdate]);
+  }, [location, hasContentLoaded, onLocationUpdate, findNearestRestaurants]);
+
+  // Navigate to restaurant menu when restaurants are found
+  useEffect(() => {
+    if (
+      autoNavigateToMenu && 
+      nearbyRestaurants.length > 0 && 
+      !hasNavigated && 
+      hasContentLoaded && 
+      !isLoading
+    ) {
+      setHasNavigated(true);
+      const firstRestaurant = nearbyRestaurants[0];
+      
+      // Store selected restaurant in session storage
+      sessionStorage.setItem('selectedRestaurant', JSON.stringify(firstRestaurant));
+      
+      // Navigate to restaurant detail page with menu tab active
+      navigate(`/restaurants/${firstRestaurant.restaurant_id}?tab=menu`);
+      
+      toast.success(`Found ${nearbyRestaurants.length} restaurants near you!`, {
+        description: "Taking you to the nearest menu..."
+      });
+    }
+  }, [nearbyRestaurants, autoNavigateToMenu, hasNavigated, hasContentLoaded, isLoading, navigate]);
 
   const handlePermissionGranted = async () => {
     setIsLoading(true);

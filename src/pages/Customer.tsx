@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,8 +45,6 @@ const Customer = () => {
     DIETARY_TAGS.map(tag => ({ id: tag.id, name: tag.name, active: false }))
   );
   const [manualLocationInput, setManualLocationInput] = useState('');
-
-  // State for UX animations
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   const activeFiltersCount = dietaryFilters.filter(f => f.active).length;
@@ -58,6 +55,22 @@ const Customer = () => {
     loading: loadingRestaurants,
     findNearestRestaurants 
   } = useNearestRestaurant();
+  
+  // Check if user was redirected from restaurant menu and navigate back there if needed
+  useEffect(() => {
+    const restaurantData = sessionStorage.getItem('selectedRestaurant');
+    const shouldAutoNavigate = localStorage.getItem('autoNavigateToMenu') === 'true';
+    
+    if (restaurantData && shouldAutoNavigate) {
+      try {
+        const parsedData = JSON.parse(restaurantData);
+        // Clear the flag to prevent loops
+        localStorage.setItem('autoNavigateToMenu', 'false');
+      } catch (error) {
+        console.error('Error parsing stored restaurant data:', error);
+      }
+    }
+  }, []);
 
   React.useEffect(() => {
     const checkForMenuItems = async () => {
@@ -215,6 +228,8 @@ const Customer = () => {
     // We can use this to refresh restaurants or perform other actions
     if (loc) {
       findNearestRestaurants();
+      // Set the flag to auto-navigate to menu when location is first acquired
+      localStorage.setItem('autoNavigateToMenu', 'true');
     }
   };
   
@@ -299,6 +314,7 @@ const Customer = () => {
               onLocationUpdate={handleLocationUpdate}
               loadingContent={loadingUI}
               showLoadingState
+              autoNavigateToMenu={true}
             >
               {/* Content once location is acquired */}
               <div>
@@ -401,14 +417,9 @@ const Customer = () => {
                             <p>Loading map view...</p>
                           </div>
                         }>
-                          {/* Map View Component would be rendered here - for now a placeholder */}
-                          <div className="bg-quantum-darkBlue/30 rounded-lg p-6 text-center">
-                            <h2 className="text-xl text-quantum-cyan mb-4">Map View</h2>
-                            <p className="mb-6">The map view is coming soon. Showing a placeholder for now.</p>
-                            <Button onClick={toggleMapView}>
-                              Switch back to List View
-                            </Button>
-                          </div>
+                          <RestaurantMapView 
+                            restaurants={nearbyRestaurants}
+                          />
                         </Suspense>
                       </ErrorBoundary>
                     </motion.div>

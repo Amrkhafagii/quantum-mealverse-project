@@ -1,15 +1,22 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import ParticleBackground from '@/components/ParticleBackground';
+import RestaurantMenu from '@/components/restaurant/RestaurantMenu';
 
 const Restaurant = () => {
   const { id } = useParams<{ id: string }>();
 
   return (
-    <div className="container mx-auto p-4 pt-20">
-      <h1 className="text-2xl font-bold text-quantum-cyan">Restaurant Details</h1>
-      <p>Restaurant ID: {id}</p>
-      {/* Restaurant details would be fetched and displayed here */}
+    <div className="min-h-screen bg-quantum-black text-white relative">
+      <ParticleBackground />
+      <Navbar />
+      <main className="relative z-10 pt-20 pb-12">
+        <RestaurantMenu />
+      </main>
+      <Footer />
     </div>
   );
 };
