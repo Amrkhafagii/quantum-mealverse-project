@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -155,7 +156,7 @@ export async function updateStreak(userId: string, streakType: string, date: str
       
     // If no streak exists, create one
     if (!existingStreak) {
-      const newStreak = {
+      const newStreak: UserStreak = {
         id: uuidv4(),
         user_id: userId,
         currentstreak: 1,
@@ -183,7 +184,7 @@ export async function updateStreak(userId: string, streakType: string, date: str
     // Calculate days between activities
     const daysBetween = Math.floor((activityDate.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    let updatedStreak;
+    let updatedStreak: UserStreak;
     
     if (daysBetween <= 1) {
       // Increment streak if activity is the next day

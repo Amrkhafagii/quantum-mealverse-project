@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { 
   WorkoutPlan, WorkoutDay, WorkoutLog, WorkoutSchedule, WorkoutHistoryItem
@@ -63,15 +62,21 @@ export const updateWorkoutPlan = async (plan: Partial<WorkoutPlan>): Promise<Wor
       throw new Error('Workout plan ID is required for updates');
     }
 
-    // Convert workout days to JSON for DB storage
-    const supabasePlan = {
+    // Ensure required fields are present for update
+    const updatedPlan = {
       ...plan,
+      // If these fields are not provided in the update, keep the original values by fetching current data
+      difficulty: plan.difficulty || (await supabase.from('workout_plans').select('difficulty').eq('id', plan.id).single()).data?.difficulty,
+      frequency: plan.frequency || (await supabase.from('workout_plans').select('frequency').eq('id', plan.id).single()).data?.frequency,
+      duration_weeks: plan.duration_weeks || (await supabase.from('workout_plans').select('duration_weeks').eq('id', plan.id).single()).data?.duration_weeks,
+      goal: plan.goal || (await supabase.from('workout_plans').select('goal').eq('id', plan.id).single()).data?.goal,
+      // Convert workout days to JSON for DB storage if present
       workout_days: plan.workout_days ? toSupabaseJson(plan.workout_days) : undefined
     };
 
     const { data, error } = await supabase
       .from('workout_plans')
-      .update(supabasePlan)
+      .update(updatedPlan)
       .eq('id', plan.id)
       .select()
       .single();
@@ -110,26 +115,28 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
 // Fetches workout history for a user
 export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistoryItem[]> => {
   try {
-    // First, check if the view exists
-    const { data: viewCheck } = await supabase.rpc('check_view_exists', {
-      view_name: 'workout_history_view'
-    }).single();
+    // Check if view exists without using RPC, just query directly
+    const { data: workoutHistory, error } = await supabase
+      .from('workout_history')
+      .select(`
+        id, 
+        user_id, 
+        workout_log_id,
+        date,
+        workout_plan_name,
+        workout_day_name,
+        exercises_completed,
+        total_exercises,
+        duration,
+        calories_burned
+      `)
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
 
-    const hasView = viewCheck && viewCheck.exists;
-    
-    if (hasView) {
-      // Use the view if it exists
-      const { data, error } = await supabase
-        .from('workout_history_view')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
-
-      if (error) throw error;
-      return data as WorkoutHistoryItem[];
-    } else {
-      // Fallback to querying workout_logs directly
-      const { data, error } = await supabase
+    if (error) {
+      // Fallback to querying workout_logs directly if there's an error with the view
+      console.log('Falling back to querying workout_logs directly');
+      const { data, error: logsError } = await supabase
         .from('workout_logs')
         .select(`
           id, 
@@ -143,7 +150,7 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
         .eq('user_id', userId)
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (logsError) throw logsError;
       
       // Transform the data to match WorkoutHistoryItem
       return (data || []).map(log => ({
@@ -159,6 +166,8 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
         calories_burned: log.calories_burned || 0
       }));
     }
+
+    return workoutHistory as WorkoutHistoryItem[];
   } catch (error) {
     console.error('Error fetching workout history:', error);
     return [];

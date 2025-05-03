@@ -42,10 +42,12 @@ export function useWebhook() {
       const data = await response.json();
       
       // Update webhook log with success
+      // Using eq() with string values rather than JsonFilter to avoid recursive types
       await supabase
         .from('webhook_logs')
         .update({ 
-          response_data: data 
+          response_data: data,
+          status: 'success'
         })
         .eq('payload->type', hookType)
         .order('processed_at', { ascending: false })
@@ -59,10 +61,12 @@ export function useWebhook() {
       console.error('Error in webhook call:', error);
       
       // Update webhook log with error
+      // Using eq() with string values rather than JsonFilter to avoid recursive types
       await supabase
         .from('webhook_logs')
         .update({ 
-          error: String(error)
+          error: String(error),
+          status: 'error'
         })
         .eq('payload->type', hookType)
         .order('processed_at', { ascending: false })

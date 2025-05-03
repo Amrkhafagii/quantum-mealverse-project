@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, Share2, Download, Printer, CircleCheck } from 'lucide-react';
@@ -22,17 +23,10 @@ import { OrderDetailsGrid } from '@/components/orders/OrderDetailsGrid';
 import OrderLocationMap from '@/components/orders/OrderLocationMap';
 import { format } from 'date-fns';
 
-// Adding interfaces for components that don't have className prop support
-interface ParticleBackgroundWithClassName extends React.FC {
-  (props: { className?: string }): JSX.Element;
-}
-
-interface NavbarWithClassName extends React.FC {
-  (props: { className?: string }): JSX.Element;
-}
-
-interface FooterWithClassName extends React.FC {
-  (props: { className?: string }): JSX.Element;
+// Create extended component interfaces to properly handle className prop
+interface ComponentWithClassName {
+  className?: string;
+  [key: string]: any;
 }
 
 const OrderProgressSteps = ({ className }: { className?: string }) => (
@@ -210,8 +204,9 @@ const OrderConfirmation = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-quantum-black to-quantum-darkBlue text-white relative print:bg-white print:text-black">
-      <ParticleBackground className="print:hidden" />
-      <Navbar className="print:hidden" />
+      {/* Cast to ComponentWithClassName to handle className prop */}
+      <ParticleBackground className="print:hidden" as={ComponentWithClassName} />
+      <Navbar className="print:hidden" as={ComponentWithClassName} />
       
       <main className="relative z-10 container mx-auto px-4 py-16 print:py-4">
         {/* Back navigation */}
@@ -352,7 +347,7 @@ const OrderConfirmation = () => {
         )}
       </main>
       
-      <Footer className="print:hidden" />
+      <Footer className="print:hidden" as={ComponentWithClassName} />
       
       {/* Print-specific styles */}
       <style>

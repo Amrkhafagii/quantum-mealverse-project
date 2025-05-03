@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { FitnessGoal } from '@/types/fitness';
+import { FitnessGoal, GoalStatus } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -31,7 +31,7 @@ export const getUserFitnessGoals = async (userId: string): Promise<{
       start_date: goal.created_at,
       target_date: goal.target_date || '',
       category: 'weight', // Default category
-      status: goal.status as FitnessGoal['status'], // Cast to FitnessGoal status type
+      status: goal.status as GoalStatus, // Type-cast status to GoalStatus
       target_weight: goal.target_weight,
       target_body_fat: goal.target_body_fat,
       created_at: goal.created_at,
@@ -175,7 +175,8 @@ export const updateFitnessGoal = async (
       id: data[0].id,
       name: data[0].name,
       title: data[0].name,
-      updated_at: data[0].updated_at
+      updated_at: data[0].updated_at,
+      status: data[0].status as GoalStatus // Type-cast status to GoalStatus
     };
     
     return { data: mappedGoal, error: null };
@@ -230,7 +231,7 @@ export const updateGoalStatusBasedOnProgress = async (
   error: any;
 }> => {
   try {
-    let newStatus: FitnessGoal['status'] = 'active';
+    let newStatus: GoalStatus = 'active';
     
     if (currentValue >= targetValue) {
       newStatus = 'completed';
@@ -256,7 +257,7 @@ export const updateGoalStatusBasedOnProgress = async (
  */
 export const updateGoalStatus = async (
   goalId: string,
-  status: 'active' | 'completed' | 'abandoned'
+  status: GoalStatus
 ): Promise<{
   error: any;
 }> => {

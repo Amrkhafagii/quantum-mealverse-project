@@ -292,3 +292,46 @@ export interface DailyQuest {
   completed: boolean;
   deadline?: string;
 }
+
+// Add missing interfaces for UserStreak and ChallengeParticipant
+export interface UserStreak {
+  id: string;
+  user_id: string;
+  streak_type: string;
+  currentstreak: number;
+  longeststreak: number;
+  last_activity_date: string;
+}
+
+export interface ChallengeParticipant {
+  id: string;
+  user_id: string;
+  challenge_id: string;
+  team_id?: string;
+  joined_date: string;
+  progress: number;
+  completed: boolean;
+  completion_date?: string;
+}
+
+// Define a strict type for the status field
+export type GoalStatus = 'not_started' | 'in_progress' | 'completed' | 'failed' | 'active' | 'abandoned';
+
+// Update FitnessGoal to use the GoalStatus type
+export interface FitnessGoal {
+  id: string;
+  user_id: string;
+  title: string;
+  name?: string;  // Added for compatibility with database
+  description?: string;
+  target_value: number;
+  current_value: number;
+  start_date: string;
+  target_date: string;
+  category: string;
+  target_weight?: number;     // Added for database compatibility  
+  target_body_fat?: number;   // Added for database compatibility
+  status: GoalStatus;
+  created_at?: string;
+  updated_at?: string;
+}

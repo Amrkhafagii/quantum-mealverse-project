@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SavedMealPlanWithExpiry } from '@/types/webhook';
+import { SavedMealPlanWithExpiry } from '@/types/fitness';
 import { toast } from 'sonner';
 import { createNotification } from '@/components/ui/fitness-notification';
 
@@ -58,9 +58,9 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
-      data.forEach(async (plan: any) => {
+      data.forEach(async (plan: SavedMealPlanWithExpiry) => {
         // Calculate days until expiration
-        const expiresAt = new Date(plan.expires_at || '');
+        const expiresAt = plan.expires_at ? new Date(plan.expires_at) : new Date();
         const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 3600 * 24));
         
         // Create notification
