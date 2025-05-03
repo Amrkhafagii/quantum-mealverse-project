@@ -19,23 +19,28 @@ export const getUserFitnessGoals = async (userId: string): Promise<{
     if (error) throw error;
     
     // Map database fields to FitnessGoal interface
-    const mappedGoals: FitnessGoal[] = (data || []).map(goal => ({
-      id: goal.id,
-      user_id: goal.user_id,
-      title: goal.name, // Map name to title for interface compatibility
-      name: goal.name,
-      description: goal.description,
-      target_value: goal.target_weight || 0,
-      current_value: 0,
-      start_date: goal.created_at,
-      target_date: goal.target_date || '',
-      category: 'weight', // Default category
-      status: goal.status as GoalStatus, // Type-cast status to GoalStatus
-      target_weight: goal.target_weight,
-      target_body_fat: goal.target_body_fat,
-      created_at: goal.created_at,
-      updated_at: goal.updated_at
-    }));
+    const mappedGoals: FitnessGoal[] = (data || []).map(goal => {
+      // Cast status to GoalStatus type to ensure type safety
+      const validStatus: GoalStatus = (goal.status as GoalStatus) || 'not_started';
+      
+      return {
+        id: goal.id,
+        user_id: goal.user_id,
+        title: goal.name, // Map name to title for interface compatibility
+        name: goal.name,
+        description: goal.description,
+        target_value: goal.target_weight || 0,
+        current_value: 0,
+        start_date: goal.created_at,
+        target_date: goal.target_date || '',
+        category: 'weight', // Default category
+        status: validStatus,
+        target_weight: goal.target_weight,
+        target_body_fat: goal.target_body_fat,
+        created_at: goal.created_at,
+        updated_at: goal.updated_at
+      };
+    });
     
     return { data: mappedGoals, error: null };
   } catch (error) {
@@ -289,10 +294,28 @@ export const fetchGoals = async (userId: string): Promise<FitnessGoal[]> => {
     if (error) throw error;
     
     // Transform the data to ensure proper typing
-    const typedGoals = data?.map(goal => ({
-      ...goal,
-      status: goal.status as GoalStatus, // Cast the status to GoalStatus type
-    })) || [];
+    const typedGoals: FitnessGoal[] = data?.map(goal => {
+      // Cast status to GoalStatus type to ensure type safety
+      const validStatus: GoalStatus = (goal.status as GoalStatus) || 'not_started';
+      
+      return {
+        id: goal.id,
+        user_id: goal.user_id,
+        title: goal.name,
+        name: goal.name,
+        description: goal.description,
+        target_value: goal.target_weight || 0,
+        current_value: 0,
+        start_date: goal.created_at,
+        target_date: goal.target_date || '',
+        category: 'weight',
+        status: validStatus,
+        target_weight: goal.target_weight,
+        target_body_fat: goal.target_body_fat,
+        created_at: goal.created_at,
+        updated_at: goal.updated_at
+      };
+    }) || [];
     
     return typedGoals;
   } catch (error) {

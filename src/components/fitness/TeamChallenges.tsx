@@ -40,6 +40,7 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
           creator_id: 'user123',
           created_by: 'JaneDoe', // Added for compatibility
           created_at: new Date().toISOString(),
+          members_count: 8,
           member_count: 8,
           total_points: 2450,
           avatar_url: 'https://avatar.vercel.sh/team-alpha.png'
@@ -51,6 +52,7 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
           creator_id: 'user456',
           created_by: 'JohnSmith', // Added for compatibility
           created_at: new Date().toISOString(),
+          members_count: 12,
           member_count: 12,
           total_points: 3780,
           avatar_url: 'https://avatar.vercel.sh/workout-warriors.png'
@@ -62,6 +64,7 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
           creator_id: 'user789',
           created_by: 'SamJones', // Added for compatibility
           created_at: new Date().toISOString(),
+          members_count: 5,
           member_count: 5,
           total_points: 1560,
           avatar_url: 'https://avatar.vercel.sh/fitness-fanatics.png'
@@ -132,6 +135,8 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
           role: 'admin',
           joined_date: new Date().toISOString(),
           joined_at: new Date().toISOString(), // Added for compatibility
+          user_name: 'Jane Doe',
+          profile_image: 'https://avatar.vercel.sh/jane.png',
           points_contributed: 850,
           contribution_points: 850 // Added for compatibility
         },
@@ -142,6 +147,8 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
           role: 'member',
           joined_date: new Date().toISOString(),
           joined_at: new Date().toISOString(), // Added for compatibility
+          user_name: 'John Smith',
+          profile_image: 'https://avatar.vercel.sh/john.png',
           points_contributed: 630,
           contribution_points: 630 // Added for compatibility
         },
@@ -152,6 +159,8 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
           role: 'member',
           joined_date: new Date().toISOString(),
           joined_at: new Date().toISOString(), // Added for compatibility
+          user_name: 'Sam Jones',
+          profile_image: 'https://avatar.vercel.sh/sam.png',
           points_contributed: 410,
           contribution_points: 410 // Added for compatibility
         }
@@ -163,7 +172,6 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
       setLoading(false);
     }, 800);
   };
-  
   
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">

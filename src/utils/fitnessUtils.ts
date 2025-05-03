@@ -11,7 +11,7 @@ export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
     name: 'name' in exercise ? exercise.name : ((exercise as any).exercise_name || ''),
     target_muscle: 'target_muscle' in exercise ? (exercise as Exercise).target_muscle : 'unknown',
     sets: 'sets' in exercise ? (exercise as Exercise).sets : ((exercise as any).sets || 1),
-    reps: 'reps' in exercise ? (exercise as Exercise).reps : (exercise as WorkoutSet).reps
+    reps: 'reps' in exercise ? exercise.reps : (exercise as WorkoutSet).reps
   };
   
   // Add optional fields if they exist in either type
@@ -36,7 +36,7 @@ export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
   }
   
   if ('completed' in exercise || (exercise as any).completed !== undefined) {
-    normalized.completed = (exercise as any).completed;
+    (normalized as Exercise).completed = (exercise as any).completed;
   }
   
   return normalized as Exercise;
@@ -128,13 +128,13 @@ export function convertWorkoutSetToExercise(set: any): Exercise {
     name: set.exercise_name || '',
     exercise_name: set.exercise_name || '',
     sets: set.sets || 1,
-    reps: set.reps || 0,
+    reps: set.reps || "0",
     weight: set.weight || 0,
     duration: set.duration || 0,
     rest: set.rest_time || 0,
     rest_time: set.rest_time || 0,
-    completed: set.completed || false,
-    target_muscle: 'unknown' // Add required field
+    target_muscle: 'unknown', // Add required field
+    completed: set.completed || false
   };
 }
 
@@ -164,7 +164,8 @@ export function getSetsFromCompletedExercise(exercise: CompletedExercise) {
   const setCount = typeof exercise.sets_completed === 'number' ? exercise.sets_completed : 0;
   return Array(setCount).fill(0).map((_, i) => ({
     set_number: i + 1,
-    weight: exercise.weight_used && exercise.weight_used[0] ? exercise.weight_used[0] : 0,
-    reps: exercise.sets_completed ? 0 : 0
+    weight: exercise.weight_used && Array.isArray(exercise.weight_used) && exercise.weight_used[0] ? exercise.weight_used[0] : 0,
+    reps: 0,
+    completed: false
   }));
 }

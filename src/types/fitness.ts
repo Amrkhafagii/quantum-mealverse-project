@@ -1,5 +1,4 @@
 
-
 export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
 
 export interface FitnessGoal {
@@ -91,6 +90,7 @@ export interface SavedMealPlan {
   expires_at?: string;
   is_active: boolean;
   date_created?: string;
+  tdee_id?: string;
 }
 
 export interface WorkoutPlan {
@@ -112,6 +112,10 @@ export interface WorkoutDay {
   name: string;
   day_name: string;
   exercises: Exercise[];
+  day_number?: number;
+  target_muscle_groups?: string[];
+  completed?: boolean;
+  order?: number;
 }
 
 export interface Exercise {
@@ -121,12 +125,15 @@ export interface Exercise {
   exercise_name?: string;
   target_muscle?: string;
   sets: number;
-  reps: string;
+  reps: string | number;
   weight?: number;
   duration?: number | string;
-  rest_time: number;
+  rest_time?: number;
   rest?: number;
   rest_seconds?: number;
+  completed?: boolean;
+  instructions?: string;
+  notes?: string;
 }
 
 export interface WorkoutSet {
@@ -134,6 +141,8 @@ export interface WorkoutSet {
   weight: number;
   reps: number | string;
   completed: boolean;
+  exercise_id?: string;
+  exercise_name?: string;
 }
 
 export interface WorkoutLog {
@@ -144,8 +153,8 @@ export interface WorkoutLog {
   duration: number;
   calories_burned: number | null;
   notes?: string | null;
-  exercises_completed: ExerciseLog[];
-  completed_exercises?: CompletedExercise[];
+  exercises_completed?: ExerciseLog[];
+  completed_exercises: CompletedExercise[];
   created_at?: string;
   updated_at?: string;
 }
@@ -162,6 +171,12 @@ export interface CompletedExercise {
   name: string;
   exercise_name?: string;
   sets_completed: WorkoutSet[];
+  weight_used?: number[];
+  reps_completed?: number[];
+  notes?: string;
+  sets?: number;
+  reps?: string | number;
+  weight?: number;
 }
 
 export interface WorkoutSchedule {
@@ -169,13 +184,13 @@ export interface WorkoutSchedule {
   user_id: string;
   workout_plan_id: string;
   day_of_week: string;
-  days_of_week?: string[] | number[];
+  days_of_week: number[];
   time: string;
   preferred_time?: string;
   reminder: boolean;
-  start_date?: string;
+  start_date: string;
   end_date?: string;
-  active?: boolean;
+  active: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -295,6 +310,8 @@ export interface TeamMember {
   joined_at?: string;
   user_name?: string;
   profile_image?: string;
+  points_contributed?: number;
+  contribution_points?: number;
 }
 
 export interface StreakReward {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -10,8 +11,10 @@ import {
 } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
 import { normalizeWorkoutPlan } from '@/utils/fitnessUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 export function useWorkoutData() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
@@ -58,15 +61,15 @@ export function useWorkoutData() {
     }
   };
 
-  const fetchWorkoutSchedules = async () => {
+  const fetchWorkoutSchedules = async (userId?: string) => {
     try {
       setIsLoading(true);
-      if (!user?.id) return;
+      if (!userId) return;
       
       const { data, error } = await supabase
         .from('workout_schedules')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
       
       if (error) throw error;
       

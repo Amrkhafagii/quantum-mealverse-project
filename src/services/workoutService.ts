@@ -192,7 +192,25 @@ export const fetchWorkoutSchedules = async (userId: string): Promise<WorkoutSche
       .eq('user_id', userId);
 
     if (error) throw error;
-    return data || [];
+    
+    // Convert the raw data to WorkoutSchedule format
+    const schedules: WorkoutSchedule[] = (data || []).map(schedule => ({
+      id: schedule.id,
+      user_id: schedule.user_id,
+      workout_plan_id: schedule.workout_plan_id,
+      day_of_week: schedule.day_of_week || '',
+      days_of_week: Array.isArray(schedule.days_of_week) ? schedule.days_of_week as number[] : [],
+      time: schedule.time || schedule.preferred_time || '',
+      preferred_time: schedule.preferred_time,
+      reminder: schedule.reminder || false,
+      start_date: schedule.start_date,
+      end_date: schedule.end_date,
+      active: schedule.active || false,
+      created_at: schedule.created_at,
+      updated_at: schedule.updated_at
+    }));
+    
+    return schedules;
   } catch (error) {
     console.error('Error fetching workout schedules:', error);
     return [];
@@ -202,14 +220,44 @@ export const fetchWorkoutSchedules = async (userId: string): Promise<WorkoutSche
 // Creates a new workout schedule
 export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<WorkoutSchedule | null> => {
   try {
+    // Prepare data format that matches the database schema
+    const dbSchedule = {
+      user_id: schedule.user_id,
+      workout_plan_id: schedule.workout_plan_id,
+      day_of_week: schedule.day_of_week,
+      days_of_week: Array.isArray(schedule.days_of_week) ? schedule.days_of_week : [],
+      time: schedule.time,
+      preferred_time: schedule.preferred_time,
+      reminder: schedule.reminder,
+      start_date: schedule.start_date,
+      end_date: schedule.end_date,
+      active: schedule.active
+    };
+
     const { data, error } = await supabase
       .from('workout_schedules')
-      .insert([schedule])
+      .insert([dbSchedule])
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Convert the response to WorkoutSchedule type
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      workout_plan_id: data.workout_plan_id,
+      day_of_week: data.day_of_week || '',
+      days_of_week: Array.isArray(data.days_of_week) ? data.days_of_week : [],
+      time: data.time || data.preferred_time || '',
+      preferred_time: data.preferred_time,
+      reminder: data.reminder || false,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      active: data.active,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Error creating workout schedule:', error);
     return null;
@@ -222,16 +270,40 @@ export const updateWorkoutSchedule = async (schedule: Partial<WorkoutSchedule>):
     if (!schedule.id) {
       throw new Error('Schedule ID is required for updates');
     }
+    
+    // Prepare data for update
+    const updateData: any = { ...schedule };
+    
+    // Ensure days_of_week is an array
+    if (updateData.days_of_week && !Array.isArray(updateData.days_of_week)) {
+      updateData.days_of_week = [];
+    }
 
     const { data, error } = await supabase
       .from('workout_schedules')
-      .update(schedule)
+      .update(updateData)
       .eq('id', schedule.id)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Convert the response to WorkoutSchedule type
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      workout_plan_id: data.workout_plan_id,
+      day_of_week: data.day_of_week || '',
+      days_of_week: Array.isArray(data.days_of_week) ? data.days_of_week : [],
+      time: data.time || data.preferred_time || '',
+      preferred_time: data.preferred_time,
+      reminder: data.reminder || false,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      active: data.active,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Error updating workout schedule:', error);
     return null;

@@ -1,8 +1,18 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SavedMealPlanWithExpiry } from '@/types/fitness';
+import { SavedMealPlan, SavedMealPlanWithExpiry } from '@/types/fitness';
 import { toast } from 'sonner';
 import { createNotification } from '@/components/ui/fitness-notification';
+
+interface MealPlanFromDB {
+  id: string;
+  user_id: string;
+  name: string;
+  meal_plan: any;
+  expires_at?: string;
+  is_active: boolean;
+  date_created?: string;
+}
 
 /**
  * Checks for expired meal plans and marks them as expired
@@ -59,7 +69,7 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
       for (const plan of data) {
-        const planWithExpiry = plan as unknown as SavedMealPlanWithExpiry;
+        const planWithExpiry = plan as MealPlanFromDB;
         
         // Calculate days until expiration
         const expiresAt = planWithExpiry.expires_at ? new Date(planWithExpiry.expires_at) : new Date();

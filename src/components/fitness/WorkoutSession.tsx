@@ -67,7 +67,8 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
       duration: Math.round(duration / 60), // Convert to minutes
       calories_burned: caloriesBurned || null,
       notes: notes || null,
-      completed_exercises: filteredExercises
+      completed_exercises: filteredExercises,
+      exercises_completed: [] // Add the required property even if it's empty
     };
     
     try {
