@@ -1,21 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
-import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { updateDeliveryUserStatus } from '@/services/delivery/deliveryService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/hooks/use-toast';
-import { AlertCircle, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
 import DeliveryHistory from '@/components/delivery/DeliveryHistory';
 import EarningsSummary from '@/components/delivery/EarningsSummary';
 import { AvailableOrders } from '@/components/delivery/AvailableOrders';
-import LocationTrackingBadge from '@/components/delivery/LocationTrackingBadge';
-import ActiveDeliveriesWithMap from '@/components/delivery/ActiveDeliveriesWithMap';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
+import ActiveDeliveriesWithMap from '@/components/delivery/ActiveDeliveriesWithMap';
+import DeliveryLocationControls from '@/components/delivery/DeliveryLocationControls';
 
 const DeliveryDashboard = () => {
   const { user } = useAuth();
@@ -24,32 +24,6 @@ const DeliveryDashboard = () => {
   const [activeTab, setActiveTab] = useState('available');
   const [toggleStatus, setToggleStatus] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const { updateDriverLocation } = useDeliveryMap();
-  
-  // Setup location tracking for the dashboard
-  const { 
-    location, 
-    locationIsValid, 
-    startTracking, 
-    isLocationStale,
-    lastUpdated,
-    permissionStatus,
-    getCurrentLocation
-  } = useLocationTracker({
-    watchPosition: true,
-    trackingInterval: 30000,
-    onLocationUpdate: (position) => {
-      // Update the map when location changes
-      if (toggleStatus) {
-        updateDriverLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          title: 'Your location',
-          type: 'driver'
-        });
-      }
-    }
-  });
   
   useEffect(() => {
     // If user isn't authenticated, redirect to login
@@ -65,22 +39,6 @@ const DeliveryDashboard = () => {
     }
   }, [deliveryUser]);
   
-  // Start location tracking when user is active
-  useEffect(() => {
-    if (toggleStatus) {
-      startTracking();
-    }
-  }, [toggleStatus, startTracking]);
-  
-  // Get initial location
-  useEffect(() => {
-    if (user && !location) {
-      getCurrentLocation().catch(err => {
-        console.error('Error getting initial location:', err);
-      });
-    }
-  }, [user, location, getCurrentLocation]);
-  
   const handleStatusToggle = async (newStatus: boolean) => {
     if (!deliveryUser) return;
     
@@ -90,18 +48,15 @@ const DeliveryDashboard = () => {
       setToggleStatus(newStatus);
       refreshDeliveryUser();
       
-      toast({
-        title: newStatus ? "You're now active" : "You're now inactive",
+      toast.success(newStatus ? "You're now active" : "You're now inactive", {
         description: newStatus 
           ? "You can now receive delivery requests" 
           : "You won't receive any delivery requests",
       });
     } catch (error) {
       console.error('Error updating status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update your status",
-        variant: "destructive"
+      toast.error("Error", {
+        description: "Failed to update your status"
       });
     } finally {
       setUpdatingStatus(false);
@@ -162,6 +117,11 @@ const DeliveryDashboard = () => {
     );
   }
   
+  // Use our new location handler for delivery personnel
+  const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
+    console.log('Location updated in dashboard:', location);
+  };
+  
   return (
     <div className="min-h-screen bg-quantum-black text-white">
       <div className="container mx-auto px-4 pt-24 pb-12">
@@ -188,33 +148,13 @@ const DeliveryDashboard = () => {
                     : "You're currently offline"}
                 </p>
 
-                {/* Location information */}
-                {toggleStatus && locationIsValid() && location && (
+                {/* Use our new location controls component */}
+                {toggleStatus && (
                   <div className="mt-4">
-                    <LocationTrackingBadge
-                      latitude={location.latitude}
-                      longitude={location.longitude}
-                      isStale={isLocationStale()}
-                      lastUpdated={lastUpdated}
-                      className="mt-3"
+                    <DeliveryLocationControls 
+                      onLocationUpdate={handleLocationUpdate} 
+                      required={toggleStatus} 
                     />
-                    
-                    {permissionStatus === 'denied' && (
-                      <div className="mt-2 p-2 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-400">
-                        Location access denied. Please enable location services in your browser settings.
-                      </div>
-                    )}
-                    
-                    {!locationIsValid() && (
-                      <Button 
-                        className="w-full mt-3" 
-                        size="sm"
-                        onClick={() => getCurrentLocation()}
-                      >
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Update Location
-                      </Button>
-                    )}
                   </div>
                 )}
               </CardContent>

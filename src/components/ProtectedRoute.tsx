@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from 'lucide-react';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
+import { toast } from 'sonner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,10 +20,39 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiresLocation = false
 }) => {
   const { user, loading } = useAuth();
-  const { permissionStatus, isLocationStale, hasInitialized } = useLocationPermission();
+  const { 
+    permissionStatus, 
+    isLocationStale, 
+    hasInitialized, 
+    requestPermission 
+  } = useLocationPermission();
 
   const isDeliveryPath = window.location.pathname.includes('/delivery/');
   const shouldCheckLocation = requiresLocation || isDeliveryPath;
+  
+  // For delivery paths, check if we need to request location permission
+  useEffect(() => {
+    const checkAndRequestLocationForDelivery = async () => {
+      if (isDeliveryPath && permissionStatus === 'prompt' && hasInitialized) {
+        try {
+          // Wait a moment for page to load before requesting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          toast.info("Location required", {
+            description: "Delivery services need your location to function properly",
+            duration: 5000
+          });
+          
+          // Try to request permission
+          await requestPermission();
+        } catch (error) {
+          console.error('Error requesting location permission:', error);
+        }
+      }
+    };
+    
+    checkAndRequestLocationForDelivery();
+  }, [isDeliveryPath, permissionStatus, hasInitialized, requestPermission]);
 
   if (loading || !hasInitialized) {
     return (
@@ -52,17 +82,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  // No need to check location for non-delivery users on non-location required routes
+  // Get user type
   const userType = user.user_metadata?.user_type || 'customer';
-  if (!shouldCheckLocation || userType !== 'delivery') {
-    return <>{children}</>;
-  }
-
-  // For delivery users or routes that require location, check permission status
-  if (permissionStatus === 'denied') {
-    // If location is denied for delivery workers, redirect to a settings page
-    // where they can get instructions to enable location services
-    return <Navigate to="/delivery/settings?locationDenied=true" replace />;
+  
+  // Check if we need to verify location
+  if (shouldCheckLocation && userType === 'delivery') {
+    // For delivery paths that need settings access even when location is denied
+    if (permissionStatus === 'denied' && !window.location.pathname.includes('/delivery/settings')) {
+      // Redirect to settings page with query param
+      return <Navigate to="/delivery/settings?locationDenied=true" replace />;
+    }
   }
 
   return <>{children}</>;
