@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,10 +69,10 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
           if (b.target_date) return 1;
           
           // Finally, sort by created date
-          return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
         
-        setGoals(sortedGoals as FitnessGoal[]);
+        setGoals(sortedGoals);
       }
     } catch (error) {
       console.error('Error loading goals:', error);
@@ -99,11 +98,11 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
   
   const handleEditGoal = (goal: FitnessGoal) => {
     setEditingGoal(goal);
-    setGoalName(goal.name || goal.title);
-    setGoalDescription(goal.description || '');
+    setGoalName(goal.name);
+    setGoalDescription(goal.description);
     setTargetDate(goal.target_date ? new Date(goal.target_date) : null);
-    setTargetWeight(goal.target_weight || null);
-    setTargetBodyFat(goal.target_body_fat || null);
+    setTargetWeight(goal.target_weight);
+    setTargetBodyFat(goal.target_body_fat);
     setShowAddForm(true);
   };
   
@@ -116,10 +115,10 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
       if (error) throw error;
       
       // Update local state to reflect the change
-      setGoals((prevGoals) => 
+      setGoals(prevGoals => 
         prevGoals.map(goal => 
           goal.id === goalId 
-            ? { ...goal, status } as FitnessGoal
+            ? { ...goal, status } 
             : goal
         )
       );
@@ -194,17 +193,15 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
     const goalData: FitnessGoal = {
       id: editingGoal?.id || uuidv4(),
       user_id: userId,
-      name: goalName,  // Use name for database compatibility
-      title: goalName, // Add title property for interface compatibility
+      name: goalName,
+      title: goalName, // Add title property for compatibility
       description: goalDescription,
-      target_date: targetDate ? targetDate.toISOString() : '',
-      target_weight: targetWeight || undefined,
-      target_body_fat: targetBodyFat || undefined,
+      target_date: targetDate ? targetDate.toISOString() : undefined,
+      target_weight: targetWeight,
+      target_body_fat: targetBodyFat,
       status: editingGoal?.status || 'active',
       target_value: targetWeight || 0, // Use target weight as the target value
       current_value: 0, // Default current value
-      start_date: editingGoal?.start_date || new Date().toISOString(),
-      category: editingGoal?.category || 'weight', // Default category
       created_at: editingGoal?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -420,7 +417,7 @@ const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
                         <div className="flex items-start">
                           <div className="flex-1">
                             <h3 className="font-medium text-lg flex items-center gap-2">
-                              {goal.name || goal.title}
+                              {goal.name}
                               <span className="ml-2">{getStatusBadge(goal.status)}</span>
                             </h3>
                             <p className="text-sm text-gray-400 mb-2">

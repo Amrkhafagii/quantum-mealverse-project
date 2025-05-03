@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -42,26 +41,7 @@ const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
         
       if (error) throw error;
       
-      // Cast data to the FitnessGoal type
-      const mappedGoals: FitnessGoal[] = (data || []).map(goal => ({
-        id: goal.id,
-        user_id: goal.user_id,
-        title: goal.name, // Map name to title for interface compatibility
-        name: goal.name,
-        description: goal.description,
-        target_value: goal.target_weight || 0,
-        current_value: 0,
-        start_date: goal.created_at,
-        target_date: goal.target_date || '',
-        category: 'weight', // Default category
-        status: goal.status as any, // Cast to FitnessGoal status type
-        target_weight: goal.target_weight,
-        target_body_fat: goal.target_body_fat,
-        created_at: goal.created_at,
-        updated_at: goal.updated_at
-      }));
-      
-      setGoals(mappedGoals);
+      setGoals(data as FitnessGoal[] || []);
     } catch (error) {
       console.error('Error loading goals:', error);
       toast({
@@ -135,9 +115,9 @@ const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
         
       if (error) throw error;
       
-      // Update local state using type assertion to handle status
+      // Update local state
       setGoals(goals.map(goal => 
-        goal.id === goalId ? { ...goal, status: status as FitnessGoal['status'] } : goal
+        goal.id === goalId ? { ...goal, status } : goal
       ));
       
       toast({
@@ -279,7 +259,7 @@ const UserGoals: React.FC<UserGoalsProps> = ({ userId }) => {
                   <div className="flex justify-between">
                     <CardTitle className="flex items-center gap-2">
                       {getStatusIcon(goal.status)}
-                      <span>{goal.name || goal.title}</span>
+                      <span>{goal.name}</span>
                     </CardTitle>
                     <span className={`text-sm font-medium ${getStatusColor(goal.status)}`}>
                       {goal.status.charAt(0).toUpperCase() + goal.status.slice(1)}
