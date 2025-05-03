@@ -7,7 +7,7 @@ export interface UserProfile {
   height?: number;
   weight: number; // Required field
   goal_weight?: number;
-  date_of_birth?: string | null;
+  date_of_birth?: string | null; // Changed from Date to string | null to match database
   gender?: string;
   fitness_level?: string;
   fitness_goals?: string[];
