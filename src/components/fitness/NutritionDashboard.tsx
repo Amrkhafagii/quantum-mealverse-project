@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { TDEEResult } from '@/components/fitness/TDEECalculator'; 

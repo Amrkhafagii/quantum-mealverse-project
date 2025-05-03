@@ -10,9 +10,8 @@ const SavePlanButton: React.FC = () => {
       <Button
         className="bg-quantum-purple hover:bg-quantum-purple/90 px-8"
         onClick={() => {
-          toast({
-            title: "Meal Plan Saved",
-            description: "Your personalized meal plan has been saved to your profile.",
+          toast.success("Meal Plan Saved", {
+            description: "Your personalized meal plan has been saved to your profile."
           });
         }}
       >

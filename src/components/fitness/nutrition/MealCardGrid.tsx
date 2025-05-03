@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -33,6 +32,13 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
     toast({
       title: "Order Placed",
       description: "Your meal plan has been sent to our partnered restaurants for preparation.",
+    });
+  };
+
+  // Inside the component, change the shuffleToast line to use the correct toast format
+  const shuffleToast = () => {
+    toast.success("Shuffling Meal", {
+      description: "Regenerating meal options with similar macro targets"
     });
   };
 
