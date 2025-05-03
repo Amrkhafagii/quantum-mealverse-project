@@ -2,9 +2,9 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { OrderStatusMessage } from './status/OrderStatusMessage';
-import { CancelOrderButton } from './status/CancelOrderButton';
-import { OrderTimer } from './status/OrderTimer';
+import { OrderStatusMessage } from './orders/status/OrderStatusMessage';
+import { CancelOrderButton } from './orders/status/CancelOrderButton';
+import { OrderTimer } from './orders/status/OrderTimer';
 import { Order } from '@/types/order';
 
 interface OrderStatusDisplayProps {
@@ -34,6 +34,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
             </div>
             
             <OrderStatusMessage 
+              order={order}
               status={order.status} 
               restaurant={order.restaurant} 
               assignmentStatus={assignmentStatus}
@@ -41,7 +42,6 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
             
             {['restaurant_assigned', 'accepted', 'preparing'].includes(order.status) && (
               <OrderTimer 
-                status={order.status} 
                 updatedAt={order.updated_at || order.created_at || ''} 
               />
             )}
@@ -49,7 +49,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           
           {showCancelButton && canBeCancelled && (
             <CancelOrderButton 
-              id={order.id!} 
+              orderId={order.id!} 
               onCancelOrder={onOrderUpdate}
             />
           )}

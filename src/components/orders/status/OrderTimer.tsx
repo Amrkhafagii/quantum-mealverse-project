@@ -1,84 +1,38 @@
 
-import React from 'react';
-import { Clock, Hourglass } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { useOrderTimer } from '@/hooks/useOrderTimer';
-import { useExpiredAssignments } from '@/hooks/timer/useExpiredAssignments';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
 
 interface OrderTimerProps {
-  expiresAt?: string;
-  orderId: string;
-  onTimerExpire?: () => void;
+  updatedAt: string;
 }
 
-export const OrderTimer: React.FC<OrderTimerProps> = ({ 
-  expiresAt,
-  orderId,
-  onTimerExpire,
-}) => {
-  const { timeLeft, progress, formattedTime, isExpired } = useOrderTimer(
-    expiresAt, 
-    orderId
-  );
+export const OrderTimer: React.FC<OrderTimerProps> = ({ updatedAt }) => {
+  const [timeElapsed, setTimeElapsed] = useState<number>(0);
   
-  // Use the dedicated hook for handling expiration
-  useExpiredAssignments(orderId, expiresAt, isExpired, () => {
-    if (onTimerExpire) {
-      toast.info("Restaurant response time expired. Updating order status...");
-      onTimerExpire();
-    }
-  });
-
-  if (isExpired) {
-    return (
-      <div className="text-center py-2 text-amber-500">
-        <Clock className="h-4 w-4 inline mr-2" />
-        <span>Timer expired. Updating status...</span>
-      </div>
-    );
-  }
-
-  if (!expiresAt) {
-    return (
-      <div className="text-center py-2 text-gray-400">
-        <Clock className="h-4 w-4 inline mr-2" />
-        <span>Waiting for restaurant assignment...</span>
-      </div>
-    );
-  }
-
-  // Add clear debugging information to help diagnose time-related issues
-  const expiryDate = new Date(expiresAt);
-  const currentDate = new Date();
-  const diffMs = expiryDate.getTime() - currentDate.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
+  useEffect(() => {
+    const startTime = new Date(updatedAt).getTime();
+    
+    const calculateTimeElapsed = () => {
+      const now = new Date().getTime();
+      setTimeElapsed(Math.floor((now - startTime) / 1000));
+    };
+    
+    calculateTimeElapsed();
+    const interval = setInterval(calculateTimeElapsed, 1000);
+    
+    return () => clearInterval(interval);
+  }, [updatedAt]);
   
-  console.log(`OrderTimer render for order ${orderId}:`);
-  console.log(`- expiresAt: ${expiresAt}`);
-  console.log(`- Current time: ${currentDate.toISOString()}`);
-  console.log(`- Time difference: ${diffSecs} seconds`);
-  console.log(`- timeLeft from hook: ${timeLeft} seconds`);
-
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+  
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Clock className="h-4 w-4 text-quantum-cyan" />
-          <span>Restaurant response timer:</span>
-        </div>
-        <div className="text-lg font-mono bg-quantum-darkBlue px-3 py-1 rounded-md text-quantum-cyan">
-          <Hourglass className="h-4 w-4 inline mr-2 animate-pulse" />
-          {formattedTime}
-        </div>
-      </div>
-      <Progress 
-        value={progress} 
-        className="h-3 bg-gray-800" 
-      />
-      <p className="text-xs text-gray-500 text-right">
-        Time remaining for restaurant to respond
-      </p>
+    <div className="flex items-center gap-1 text-sm text-gray-400">
+      <Clock className="w-3 h-3" />
+      <span>Time elapsed: {formatTime(timeElapsed)}</span>
     </div>
   );
 };

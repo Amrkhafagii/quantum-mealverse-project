@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -85,7 +86,7 @@ const FitnessProfilePage = () => {
     }
   };
 
-  const handleProfileUpdate = async (updatedProfile: UserProfile) => {
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
     setUserProfile(updatedProfile);
   };
 
@@ -153,6 +154,7 @@ const FitnessProfilePage = () => {
                 ) : (
                   <FitnessProfile 
                     userId={user.id}
+                    onUpdateProfile={handleProfileUpdate}
                   />
                 )}
               </div>

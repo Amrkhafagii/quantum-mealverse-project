@@ -6,7 +6,7 @@ import { AssignmentStatus } from '@/types/webhook';
 
 interface OrderStatusMessageProps {
   order: Order;
-  assignmentStatus: AssignmentStatus | null;
+  assignmentStatus?: AssignmentStatus | null;
   status?: string;
   restaurant?: { id: string; name: string; };
   deliveryMethod?: string;
