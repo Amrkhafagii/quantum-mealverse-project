@@ -30,13 +30,13 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
 
   // Handle ordering meals
   const handleOrderMeals = () => {
-    toast({
-      description: "Your meal plan has been sent to our partnered restaurants for preparation.",
-    });
+    // Use the sonner toast API correctly
+    toast("Your meal plan has been sent to our partnered restaurants for preparation.");
   };
 
   // Inside the component, change the shuffleToast line to use the correct toast format
   const shuffleToast = () => {
+    // Use the sonner toast API correctly with the success variant
     toast.success("Shuffling Meal", {
       description: "Regenerating meal options with similar macro targets"
     });

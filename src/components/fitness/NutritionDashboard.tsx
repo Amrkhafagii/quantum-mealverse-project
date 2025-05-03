@@ -115,9 +115,8 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
         variant: "destructive"
       });
     } else {
-      toast({
-        description: `${meal.name} updated with new meal options.`
-      });
+      // Use the sonner toast API correctly
+      toast(`${meal.name} updated with new meal options.`);
     }
   };
 
