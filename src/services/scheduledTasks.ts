@@ -60,7 +60,7 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
       // Create notifications for soon-to-expire plans
       for (const plan of data) {
         // Cast the plan to SavedMealPlan to ensure proper typing
-        const typedPlan = plan as unknown as SavedMealPlan;
+        const typedPlan = plan as SavedMealPlan;
         
         // Calculate days until expiration
         const expiresAt = typedPlan.expires_at ? new Date(typedPlan.expires_at) : new Date();
