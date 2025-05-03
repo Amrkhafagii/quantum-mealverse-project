@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, AlertCircle } from 'lucide-react';
@@ -16,6 +15,7 @@ import OrderLocationMap from './OrderLocationMap';
 import MapContainer from '../maps/MapContainer';
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
+import { fixOrderStatus } from '@/utils/orderStatusFix';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -37,45 +37,18 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   // Check for restaurant assignments that might be accepted but order status is still pending
   React.useEffect(() => {
     const checkAndFixOrderStatus = async () => {
-      if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+      if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
         try {
-          // Check if this order has an accepted restaurant assignment
-          const { data: assignments, error } = await supabase
-            .from('restaurant_assignments')
-            .select('*')
-            .eq('order_id', orderId)
-            .eq('status', 'accepted')
-            .maybeSingle();
-            
-          if (error) {
-            console.error('Error checking restaurant assignments:', error);
-            return;
+          setIsFixingOrderStatus(true);
+          // Try to fix the order status using our enhanced utility
+          const fixed = await fixOrderStatus(orderId);
+          
+          if (fixed) {
+            console.log('Successfully fixed order status with utility');
+            await refetch();
           }
           
-          // If we have an accepted assignment but order is still pending, update order status
-          if (assignments && assignments.restaurant_id) {
-            console.log('Found accepted restaurant assignment but order status is still pending, fixing...');
-            setIsFixingOrderStatus(true);
-            
-            const { error: updateError } = await supabase
-              .from('orders')
-              .update({ 
-                status: OrderStatus.RESTAURANT_ACCEPTED,
-                restaurant_id: assignments.restaurant_id,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', orderId);
-              
-            if (updateError) {
-              console.error('Failed to fix order status:', updateError);
-            } else {
-              console.log('Fixed order status to restaurant_accepted');
-              // Re-fetch the order data
-              await refetch();
-            }
-            
-            setIsFixingOrderStatus(false);
-          }
+          setIsFixingOrderStatus(false);
         } catch (e) {
           console.error('Error in checkAndFixOrderStatus:', e);
           setIsFixingOrderStatus(false);
@@ -87,7 +60,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   }, [order, orderId, refetch]);
 
   React.useEffect(() => {
-    if (orderId && order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+    if (orderId && order && ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
@@ -97,7 +70,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   }, [orderId, order?.status]);
 
   useInterval(() => {
-    if (order && ['pending', 'awaiting_restaurant'].includes(order.status)) {
+    if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted', 'preparing', 'ready_for_pickup'].includes(order.status)) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);

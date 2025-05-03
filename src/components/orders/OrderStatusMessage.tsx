@@ -69,6 +69,13 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
             `Your order is being prepared by ${assignmentStatus?.restaurant_name || orderRestaurant?.name}!` : 
             'Your order is being prepared!'
         };
+      case OrderStatus.READY_FOR_PICKUP:
+      case 'ready_for_pickup':
+      case 'ready':
+        return {
+          message: 'Your order is ready for pickup!',
+          details: orderRestaurant?.name ? `at ${orderRestaurant.name}` : undefined
+        };
       case OrderStatus.NO_RESTAURANT_AVAILABLE:
         return {
           message: 'No nearby restaurants available at the moment.',
@@ -92,12 +99,6 @@ export const OrderStatusMessage: React.FC<OrderStatusMessageProps> = ({
         return {
           message: `Order accepted by ${orderRestaurant?.name || 'restaurant'}`,
           details: 'Your food is being prepared!'
-        };
-      case OrderStatus.READY_FOR_PICKUP:
-      case 'ready':
-        return {
-          message: 'Your order is ready for pickup!',
-          details: orderRestaurant?.name ? `at ${orderRestaurant.name}` : undefined
         };
       default:
         return { message: `Order Status: ${orderStatus}` };

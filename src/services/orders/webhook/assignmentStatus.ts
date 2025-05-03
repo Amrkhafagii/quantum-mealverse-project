@@ -10,6 +10,62 @@ import { AssignmentStatus } from '@/types/webhook';
  */
 export const getAssignmentStatus = async (orderId: string): Promise<AssignmentStatus> => {
   try {
+    // First check if there's a ready_for_pickup assignment
+    const { data: readyAssignment } = await supabase
+      .from('restaurant_assignments')
+      .select('id, restaurant_id, expires_at')
+      .eq('order_id', orderId)
+      .eq('status', 'ready_for_pickup')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (readyAssignment) {
+      // If we found a ready assignment, get the restaurant name
+      const { data: restaurantData } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', readyAssignment.restaurant_id)
+        .single();
+      
+      const restaurantName = restaurantData?.name;
+        
+      return {
+        assigned_restaurant_id: readyAssignment.restaurant_id,
+        restaurant_name: restaurantName,
+        status: 'ready_for_pickup',
+        assignment_id: readyAssignment.id
+      };
+    }
+    
+    // Next check for preparing assignments
+    const { data: preparingAssignment } = await supabase
+      .from('restaurant_assignments')
+      .select('id, restaurant_id, expires_at')
+      .eq('order_id', orderId)
+      .eq('status', 'preparing')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (preparingAssignment) {
+      // If we found a preparing assignment, get the restaurant name
+      const { data: restaurantData } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', preparingAssignment.restaurant_id)
+        .single();
+      
+      const restaurantName = restaurantData?.name;
+        
+      return {
+        assigned_restaurant_id: preparingAssignment.restaurant_id,
+        restaurant_name: restaurantName,
+        status: 'preparing',
+        assignment_id: preparingAssignment.id
+      };
+    }
+    
     // Check if there's an accepted restaurant first
     const { data: acceptedAssignment } = await supabase
       .from('restaurant_assignments')

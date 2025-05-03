@@ -23,14 +23,101 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
       return false;
     }
     
-    // If order is already in an accepted state, no need to fix
-    if (order.status !== 'pending' && order.status !== 'awaiting_restaurant') {
-      console.log(`Order status is ${order.status}, no fix needed`);
+    // Check for the most recent restaurant_assignment with a meaningful status
+    // We'll check in priority order: ready_for_pickup, preparing, accepted
+    
+    // First check ready_for_pickup
+    const { data: readyAssignment, error: readyError } = await supabase
+      .from('restaurant_assignments')
+      .select('restaurant_id, id')
+      .eq('order_id', orderId)
+      .eq('status', 'ready_for_pickup')
+      .maybeSingle();
+      
+    if (!readyError && readyAssignment) {
+      console.log(`Found ready_for_pickup assignment. Fixing order status to ready_for_pickup`);
+      
+      // Update order status
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: OrderStatus.READY_FOR_PICKUP,
+          restaurant_id: readyAssignment.restaurant_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+        
+      if (updateError) {
+        console.error('Error updating order status:', updateError);
+        return false;
+      }
+      
+      // Record the change in order history
+      await recordOrderHistory(
+        orderId,
+        OrderStatus.READY_FOR_PICKUP,
+        readyAssignment.restaurant_id,
+        {
+          assignment_id: readyAssignment.id,
+          manually_fixed: true,
+          previous_status: order.status
+        },
+        undefined,
+        'system',
+        'system'
+      );
+      
+      console.log(`Successfully fixed order ${orderId} status to ready_for_pickup`);
       return true;
     }
     
-    // Check if there's an accepted restaurant assignment
-    const { data: assignment, error: assignmentError } = await supabase
+    // Check for preparing status
+    const { data: preparingAssignment, error: preparingError } = await supabase
+      .from('restaurant_assignments')
+      .select('restaurant_id, id')
+      .eq('order_id', orderId)
+      .eq('status', 'preparing')
+      .maybeSingle();
+      
+    if (!preparingError && preparingAssignment) {
+      console.log(`Found preparing assignment. Fixing order status to preparing`);
+      
+      // Update order status
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: OrderStatus.PREPARING,
+          restaurant_id: preparingAssignment.restaurant_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+        
+      if (updateError) {
+        console.error('Error updating order status:', updateError);
+        return false;
+      }
+      
+      // Record the change in order history
+      await recordOrderHistory(
+        orderId,
+        OrderStatus.PREPARING,
+        preparingAssignment.restaurant_id,
+        {
+          assignment_id: preparingAssignment.id,
+          manually_fixed: true,
+          previous_status: order.status
+        },
+        undefined,
+        'system',
+        'system'
+      );
+      
+      console.log(`Successfully fixed order ${orderId} status to preparing`);
+      return true;
+    }
+    
+    // Check for accepted status if not in a further status
+    const { data: acceptedAssignment, error: assignmentError } = await supabase
       .from('restaurant_assignments')
       .select('restaurant_id, id')
       .eq('order_id', orderId)
@@ -43,45 +130,51 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
     }
     
     // If no accepted assignment, nothing to fix
-    if (!assignment) {
+    if (!acceptedAssignment) {
       console.log('No accepted restaurant assignment found');
       return false;
     }
     
-    console.log(`Found accepted restaurant assignment. Fixing order status to restaurant_accepted`);
-    
-    // Update order status
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({
-        status: OrderStatus.RESTAURANT_ACCEPTED,
-        restaurant_id: assignment.restaurant_id,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', orderId);
+    // If the order isn't already in restaurant_accepted status
+    if (order.status !== OrderStatus.RESTAURANT_ACCEPTED) {
+      console.log(`Found accepted restaurant assignment. Fixing order status to restaurant_accepted`);
       
-    if (updateError) {
-      console.error('Error updating order status:', updateError);
-      return false;
+      // Update order status
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: OrderStatus.RESTAURANT_ACCEPTED,
+          restaurant_id: acceptedAssignment.restaurant_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+        
+      if (updateError) {
+        console.error('Error updating order status:', updateError);
+        return false;
+      }
+      
+      // Record the change in order history
+      await recordOrderHistory(
+        orderId,
+        OrderStatus.RESTAURANT_ACCEPTED,
+        acceptedAssignment.restaurant_id,
+        {
+          assignment_id: acceptedAssignment.id,
+          manually_fixed: true,
+          previous_status: order.status
+        },
+        undefined,
+        'system',
+        'system'
+      );
+      
+      console.log(`Successfully fixed order ${orderId} status to restaurant_accepted`);
+      return true;
     }
     
-    // Record the change in order history
-    await recordOrderHistory(
-      orderId,
-      OrderStatus.RESTAURANT_ACCEPTED,
-      assignment.restaurant_id,
-      {
-        assignment_id: assignment.id,
-        manually_fixed: true,
-        previous_status: order.status
-      },
-      undefined,
-      'system',
-      'system'
-    );
-    
-    console.log(`Successfully fixed order ${orderId} status`);
-    return true;
+    console.log("No status fix needed or could not determine correct status.");
+    return false;
   } catch (error) {
     console.error('Error fixing order status:', error);
     return false;

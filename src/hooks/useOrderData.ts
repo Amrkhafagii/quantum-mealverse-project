@@ -24,22 +24,22 @@ export const useOrderData = (orderId: string) => {
           throw new Error('Order not found');
         }
         
-        // Check restaurant assignments if the order is in pending or awaiting status
-        if (['pending', 'awaiting_restaurant'].includes(orderData.status)) {
-          // Check if there's an accepted restaurant assignment for this order
-          const { data: acceptedAssignment, error: assignmentError } = await supabase
+        // Check restaurant assignments if the order is in pending, awaiting, or assigned status
+        if (['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(orderData.status)) {
+          // First check for accepted assignment
+          const { data: acceptedAssignment, error: acceptedError } = await supabase
             .from('restaurant_assignments')
             .select('*')
             .eq('order_id', orderId)
             .eq('status', 'accepted')
             .maybeSingle();
             
-          if (!assignmentError && acceptedAssignment) {
-            console.log('Found accepted restaurant assignment but order status is pending or awaiting');
+          if (!acceptedError && acceptedAssignment) {
+            console.log('Found accepted restaurant assignment but order status is not synced');
             // Get restaurant data for the accepted assignment
             const { data: restaurant } = await supabase
               .from('restaurants')
-              .select('id, name')
+              .select('id, name, latitude, longitude')
               .eq('id', acceptedAssignment.restaurant_id)
               .maybeSingle();
               
@@ -47,8 +47,37 @@ export const useOrderData = (orderId: string) => {
               // Override the order status and restaurant_id to match the assignment
               orderData.status = 'restaurant_accepted';
               orderData.restaurant_id = acceptedAssignment.restaurant_id;
-              // Create restaurantData object instead of directly assigning to a non-existent property
             }
+          }
+          
+          // Now check for ready_for_pickup assignment which should take precedence
+          const { data: readyAssignment, error: readyError } = await supabase
+            .from('restaurant_assignments')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('status', 'ready_for_pickup')
+            .maybeSingle();
+            
+          if (!readyError && readyAssignment) {
+            console.log('Found ready_for_pickup restaurant assignment but order status is not synced');
+            // Override to ready_for_pickup status
+            orderData.status = 'ready_for_pickup';
+            orderData.restaurant_id = readyAssignment.restaurant_id;
+          }
+          
+          // Also check for preparing status
+          const { data: preparingAssignment, error: preparingError } = await supabase
+            .from('restaurant_assignments')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('status', 'preparing')
+            .maybeSingle();
+            
+          if (!preparingError && preparingAssignment) {
+            console.log('Found preparing restaurant assignment but order status is not synced');
+            // Override to preparing status
+            orderData.status = 'preparing';
+            orderData.restaurant_id = preparingAssignment.restaurant_id;
           }
         }
         
@@ -84,7 +113,8 @@ export const useOrderData = (orderId: string) => {
       // Get the data from the query object
       const data = query.state.data as Order | undefined;
       if (!data) return false;
-      return ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(data.status) ? 5000 : false;
+      // Add 'ready_for_pickup' to the list of statuses that should trigger refetching
+      return ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'preparing', 'restaurant_accepted', 'ready_for_pickup'].includes(data.status) ? 5000 : false;
     },
   });
 };

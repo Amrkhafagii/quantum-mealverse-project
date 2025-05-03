@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,8 @@ import { Clock, AlertCircle, User, Check, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { Order, OrderItem } from '@/types/order';
+import { updateOrderStatus } from '@/services/orders/webhookService';
+import { OrderStatus } from '@/types/webhook';
 
 interface OrderPreparationProps {
   restaurantId: string;
@@ -184,15 +187,46 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
     };
   }, [restaurantId]);
   
-  const markAsReady = async (assignmentId: string) => {
+  const markAsReady = async (assignmentId: string, orderId: string) => {
     try {
-      const { error } = await supabase
+      // First update the restaurant_assignment status
+      const { error: assignmentError } = await supabase
         .from('restaurant_assignments')
-        .update({ status: 'ready_for_pickup' })
+        .update({ 
+          status: 'ready_for_pickup',
+          updated_at: new Date().toISOString()
+        })
         .eq('id', assignmentId);
       
-      if (error) {
-        throw error;
+      if (assignmentError) {
+        throw assignmentError;
+      }
+      
+      // Now update the orders table to ensure synchronization
+      const success = await updateOrderStatus(
+        orderId, 
+        OrderStatus.READY_FOR_PICKUP, 
+        restaurantId, 
+        { assignment_id: assignmentId },
+        undefined,
+        'restaurant'
+      );
+      
+      if (!success) {
+        console.warn('Order status update in orders table may have failed.');
+        
+        // Fallback direct update if the service call fails
+        const { error: orderUpdateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: OrderStatus.READY_FOR_PICKUP,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+        
+        if (orderUpdateError) {
+          console.error('Fallback order update failed:', orderUpdateError);
+        }
       }
       
       toast({
@@ -289,7 +323,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
                 <CardFooter className="pt-2">
                   <Button 
                     className="w-full bg-quantum-cyan hover:bg-quantum-cyan/80"
-                    onClick={() => markAsReady(orderData.id)}
+                    onClick={() => markAsReady(orderData.id, orderData.order_id)}
                     disabled={orderData.progress < 50} // Prevent marking as ready too soon
                   >
                     <Check className="mr-1 h-4 w-4" />
