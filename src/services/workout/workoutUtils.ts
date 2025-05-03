@@ -1,7 +1,6 @@
 
 import { WorkoutDay, WorkoutSchedule } from '@/types/fitness';
 import { Json } from '@/types/database';
-import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Converts raw database data to properly typed workout days
@@ -22,7 +21,7 @@ export const fromSupabaseJson = (jsonData: Json): any => {
  * Converts workout days to format suitable for Supabase storage
  */
 export const toSupabaseJson = (data: WorkoutDay[]): Json => {
-  return data as Json;
+  return JSON.stringify(data) as unknown as Json;
 };
 
 /**

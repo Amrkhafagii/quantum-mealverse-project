@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
 import { toast } from 'sonner';
 import { createNotification } from '@/components/ui/fitness-notification';
-import { Json } from '@/types/database';
 
 interface MealPlanFromDB {
   id: string;

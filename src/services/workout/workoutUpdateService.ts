@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutPlan, WorkoutDay, WorkoutSchedule } from '@/types/fitness';
+import { WorkoutPlan, WorkoutSchedule } from '@/types/fitness';
 import { toSupabaseJson, formatScheduleData } from './workoutUtils';
 
 /**

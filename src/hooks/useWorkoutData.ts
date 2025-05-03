@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   WorkoutPlan, 
@@ -10,6 +9,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import * as workoutService from '@/services/workout';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useWorkoutData() {
   const { user } = useAuth();
