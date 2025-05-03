@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateMealPlan } from '@/services/mealPlanService';
 import { MealPlan } from '@/types/food';
 import NutritionDashboard from '@/components/fitness/NutritionDashboard';
-import { checkExpiredMealPlans, checkSoonToExpirePlans } from '@/services/scheduledTasks';
+import { supabase } from '@/services/supabaseClient';
 import SavedMealPlans from '@/components/fitness/SavedMealPlans';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -26,19 +27,25 @@ const Nutrition = () => {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
 
   useEffect(() => {
-    // On component mount, check for expired meal plans
+    // On component mount, check for notifications about expiring meal plans
     if (user) {
-      checkExpiredMealPlans().then(() => {
-        // Check for soon-to-expire plans for the current user
-        return checkSoonToExpirePlans(user.id);
-      }).then(result => {
-        if (result.success && result.expiringSoon > 0) {
-          toast.info(`You have ${result.expiringSoon} meal plan${result.expiringSoon > 1 ? 's' : ''} expiring soon.`, {
-            description: "Visit your saved meal plans to renew them.",
-            duration: 6000
-          });
-        }
-      });
+      // Query notifications for this user related to meal plans
+      supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('type', 'reminder')
+        .ilike('title', '%Meal Plan%')
+        .eq('is_read', false)
+        .then(({ data }) => {
+          // If there are unread notifications about expiring meal plans, show a toast
+          if (data && data.length > 0) {
+            toast.info(`You have ${data.length} meal plan${data.length > 1 ? 's' : ''} expiring soon.`, {
+              description: "Visit your saved meal plans to renew them.",
+              duration: 6000
+            });
+          }
+        });
     }
   }, [user]);
 
