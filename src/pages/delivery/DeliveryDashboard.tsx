@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import ActiveDeliveriesWithMap from '@/components/delivery/ActiveDeliveriesWithMap';
-import { Loader2, MapPin, Clock, ChevronRight } from 'lucide-react';
-import GlobalGoogleMapsConfig from '@/components/maps/GlobalGoogleMapsConfig';
+import { Loader2 } from 'lucide-react';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EarningsSummary } from '@/components/delivery/dashboard/EarningsSummary';
@@ -72,11 +71,14 @@ const DeliveryDashboard: React.FC = () => {
       <div className="container mx-auto p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Google Maps API Key Required</CardTitle>
+            <CardTitle>Maps API Loading</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">A Google Maps API key is required to use the delivery dashboard.</p>
-            <GlobalGoogleMapsConfig />
+            <p>Please wait while we load the mapping service...</p>
+            <div className="mt-4 flex items-center">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              <span>Initializing maps</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -108,11 +110,6 @@ const DeliveryDashboard: React.FC = () => {
           {deliveryUser && <DeliveryHistory deliveryUserId={deliveryUser.id} />}
         </TabsContent>
       </Tabs>
-      
-      {/* Config component at the bottom for changing API key if needed */}
-      <div className="mt-8 opacity-70">
-        <GlobalGoogleMapsConfig />
-      </div>
     </div>
   );
 };
