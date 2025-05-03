@@ -58,9 +58,9 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
-      for (const plan of data) {
+      for (const plan of data as SavedMealPlan[]) {
         // Calculate days until expiration
-        const expiresAt = plan.expires_at ? new Date(plan.expires_at) : new Date();
+        const expiresAt = new Date(plan.expires_at || new Date());
         const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 3600 * 24));
         
         // Create notification

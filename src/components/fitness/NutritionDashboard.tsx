@@ -12,9 +12,8 @@ import WaterIntakeTracker from './WaterIntakeTracker';
 import InteractiveMealCard from './nutrition/InteractiveMealCard';
 import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Droplets, AlertCircle, RefreshCw, Building, Check } from 'lucide-react';
+import { Shield, Droplets, AlertCircle, RefreshCw, Building, Check, ShoppingCart } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-import RestaurantMealMatcher from './RestaurantMealMatcher';
 
 interface NutritionDashboardProps {
   calculationResult: TDEEResult;
@@ -29,6 +28,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
 }) => {
   const { toast } = useToast();
   const [isAutoOptimizeProtein, setIsAutoOptimizeProtein] = useState(true);
+  const [waterIntake, setWaterIntake] = useState(0);
   
   const isProteinSufficient = (mealPlan.actualProtein || 0) >= mealPlan.targetProtein * 0.95;
 
@@ -39,6 +39,34 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     { name: 'Snack', protein: 0.15, carbs: 0.15, fat: 0.15 },
     { name: 'Dinner', protein: 0.3, carbs: 0.3, fat: 0.3 }
   ];
+
+  // Calculate recommended daily water intake based on weight and activity level
+  const calculateRecommendedWaterIntake = () => {
+    // Base calculation: 35ml per kg of body weight
+    const weightInKg = calculationResult?.weight || 70; // Default to 70kg if not available
+    let baseIntake = weightInKg * 35;
+    
+    // Adjust for activity level
+    if (calculationResult?.activityLevel === 'sedentary') {
+      baseIntake *= 0.9;
+    } else if (calculationResult?.activityLevel === 'very-active' || calculationResult?.activityLevel === 'extremely-active') {
+      baseIntake *= 1.2;
+    }
+    
+    return Math.round(baseIntake);
+  };
+
+  useEffect(() => {
+    // Update the hydration target in the meal plan with the calculated value
+    if (mealPlan && (!mealPlan.hydrationTarget || mealPlan.hydrationTarget === 0)) {
+      const hydrationTarget = calculateRecommendedWaterIntake();
+      const updatedMealPlan = {
+        ...mealPlan,
+        hydrationTarget
+      };
+      onUpdateMealPlan(updatedMealPlan);
+    }
+  }, [calculationResult, mealPlan]);
 
   const handleShuffleMeal = (index: number) => {
     const meal = mealPlan.meals[index];
@@ -104,6 +132,14 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   const proteinPercentage = Math.round((mealPlan.actualProtein || 0) / mealPlan.targetProtein * 100);
   const carbsPercentage = Math.round((mealPlan.actualCarbs || 0) / mealPlan.targetCarbs * 100);
   const fatPercentage = Math.round((mealPlan.actualFat || 0) / mealPlan.targetFat * 100);
+
+  // Handle ordering meals
+  const handleOrderMeals = () => {
+    toast({
+      title: "Order Placed",
+      description: "Your meal plan has been sent to our partnered restaurants for preparation.",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -172,13 +208,10 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               {/* Water & Protein Protection - Compact controls */}
               <div className="col-span-3 space-y-2">
                 {/* Water Intake Mini-Display */}
-                <div className="bg-blue-900/20 p-2 rounded-lg flex items-center gap-2">
-                  <Droplets className="h-4 w-4 text-blue-400" />
-                  <div className="flex-1 h-1.5 bg-blue-900/60 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }}></div>
-                  </div>
-                  <span className="text-xs">{Math.round(mealPlan.hydrationTarget * 0.7)}/{mealPlan.hydrationTarget}ml</span>
-                </div>
+                <WaterIntakeTracker 
+                  targetIntake={mealPlan.hydrationTarget || calculateRecommendedWaterIntake()}
+                  currentIntake={waterIntake}
+                />
                 
                 {/* Protein Protection Toggle */}
                 <div className="flex items-center space-x-2 bg-quantum-darkBlue/40 p-2 rounded-lg">
@@ -255,21 +288,30 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                 <div className="max-h-[200px] overflow-y-auto pr-1 space-y-2">
                   {meal.foods.map((mealFood, foodIndex) => (
                     <div key={foodIndex} className="bg-quantum-black/30 p-2 rounded-md flex justify-between text-sm">
-                      <div>{mealFood.food.name}</div>
+                      <div className="flex gap-1 items-center">
+                        {mealFood.food.name} 
+                        <span className="text-gray-400 text-xs">({mealFood.portionSize}g)</span>
+                        {mealFood.food.cookingState && (
+                          <span className="text-gray-400 text-xs italic">
+                            {mealFood.food.cookingState === 'cooked' ? '(cooked)' : '(raw)'}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-gray-400">{mealFood.food.calories} kcal</div>
                     </div>
                   ))}
                 </div>
                 
-                {/* Restaurant meal matcher - Integrated directly in the meal card */}
-                <RestaurantMealMatcher
-                  mealFoods={meal.foods}
-                  mealName={meal.name}
-                  mealCalories={meal.totalCalories}
-                  mealProtein={meal.totalProtein}
-                  mealCarbs={meal.totalCarbs}
-                  mealFat={meal.totalFat}
-                />
+                {/* Order button (replacing restaurant meal matcher) */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-3 border-quantum-purple/30 hover:bg-quantum-purple/10 text-quantum-purple"
+                  onClick={handleOrderMeals}
+                >
+                  <ShoppingCart className="h-3.5 w-3.5 mr-2" />
+                  Order This Meal
+                </Button>
               </CardContent>
             </Card>
           ))}

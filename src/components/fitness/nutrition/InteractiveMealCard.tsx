@@ -4,7 +4,7 @@ import { Meal, Food } from '@/types/food';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Info, ArrowRight } from "lucide-react";
+import { RefreshCw, Info, ShoppingCart } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -69,7 +69,22 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
           <div className="space-y-1">
             {meal.foods.map((mealFood, index) => (
               <div key={index} className="bg-quantum-black/30 p-2 rounded text-sm flex justify-between items-center">
-                <span>{mealFood.food.name}</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex items-center gap-1">
+                        {mealFood.food.name} 
+                        <span className="text-gray-400 text-xs">({mealFood.portionSize}g)</span>
+                        {mealFood.food.cookingState && (
+                          <Info className="h-3 w-3 text-gray-500" />
+                        )}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="text-xs">{mealFood.food.cookingState === 'cooked' ? 'Cooked weight' : 'Raw weight'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <span className="text-gray-400 text-xs">{mealFood.food.calories} kcal</span>
               </div>
             ))}
@@ -84,8 +99,12 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
             variant="link"
             size="sm"
             className="p-0 h-auto text-quantum-purple flex items-center"
+            onClick={() => {
+              // Handle order functionality
+              console.log(`Ordering meal: ${meal.name}`);
+            }}
           >
-            Alternatives <ArrowRight className="ml-1 h-3 w-3" />
+            Order <ShoppingCart className="ml-1 h-3 w-3" />
           </Button>
         </div>
       </CardContent>
