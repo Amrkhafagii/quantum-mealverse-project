@@ -94,11 +94,15 @@ const DeliveryVehicleForm: React.FC<DeliveryVehicleFormProps> = ({
     try {
       setIsSubmitting(true);
       
-      // Convert year to number if provided
+      // Create vehicle data object with the proper typing
       const vehicleData = {
-        ...values,
         delivery_user_id: deliveryUserId,
+        type: values.type, // This is now explicitly required
+        make: values.make,
+        model: values.model,
         year: values.year ? parseInt(values.year) : undefined,
+        color: values.color,
+        license_plate: values.license_plate,
       };
       
       await saveVehicleInfo(vehicleData);

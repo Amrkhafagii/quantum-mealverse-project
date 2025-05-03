@@ -10,11 +10,13 @@ import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 interface DeliveryLocationControlsProps {
   onLocationUpdate?: (location: { latitude: number; longitude: number }) => void;
   required?: boolean;
+  showHelp?: boolean;
 }
 
 export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> = ({
   onLocationUpdate,
-  required = true
+  required = true,
+  showHelp = false
 }) => {
   const { 
     location,

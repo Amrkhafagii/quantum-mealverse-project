@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, AlertTriangle } from 'lucide-react';
@@ -15,10 +14,12 @@ import { useNavigate } from 'react-router-dom';
 
 interface LocationStatusIndicatorProps {
   colorVariant?: 'default' | 'navbar';
+  showTooltip?: boolean;
 }
 
 const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({ 
-  colorVariant = 'default'
+  colorVariant = 'default',
+  showTooltip = false
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
