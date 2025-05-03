@@ -56,15 +56,17 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
 
   // Update location cache when location changes
   useEffect(() => {
-    if (location?.latitude && location?.longitude) {
-      localStorage.setItem('userLocation', JSON.stringify({
-        latitude: location.latitude,
-        longitude: location.longitude,
+    if (location?.coords && location.coords.latitude && location.coords.longitude) {
+      const locationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
         timestamp: new Date().getTime()
-      }));
+      };
+      
+      localStorage.setItem('userLocation', JSON.stringify(locationData));
       
       if (onLocationUpdate) {
-        onLocationUpdate(location);
+        onLocationUpdate(locationData);
       }
       
       // Show success toast when location is first acquired
@@ -81,7 +83,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         }, 1500);
       }
     }
-  }, [location]);
+  }, [location, hasContentLoaded, onLocationUpdate]);
 
   const handlePermissionGranted = async () => {
     setIsLoading(true);
