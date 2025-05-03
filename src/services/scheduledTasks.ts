@@ -4,17 +4,6 @@ import { SavedMealPlan } from '@/types/fitness';
 import { toast } from 'sonner';
 import { createNotification } from '@/components/ui/fitness-notification';
 
-interface MealPlanFromDB {
-  id: string;
-  user_id: string;
-  name: string;
-  meal_plan: any;
-  expires_at?: string;
-  is_active: boolean;
-  date_created?: string;
-  tdee_id?: string;
-}
-
 /**
  * Checks for expired meal plans and marks them as expired
  */
@@ -70,8 +59,8 @@ export const checkSoonToExpirePlans = async (userId: string): Promise<{success: 
     if (data && data.length > 0) {
       // Create notifications for soon-to-expire plans
       for (const plan of data) {
-        // Cast the plan with proper type
-        const typedPlan = plan as MealPlanFromDB;
+        // Cast the plan to SavedMealPlan to ensure proper typing
+        const typedPlan = plan as unknown as SavedMealPlan;
         
         // Calculate days until expiration
         const expiresAt = typedPlan.expires_at ? new Date(typedPlan.expires_at) : new Date();
