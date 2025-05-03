@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader } from 'lucide-react';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { toast } from 'sonner';
+import { useUserType } from '@/hooks/useUserType'; // Add this import
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,7 +20,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectPath = '/auth',
   requiresLocation = false
 }) => {
-  const { user, userType, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { userType, loading: userTypeLoading } = useUserType(); // Use the hook instead
   const { 
     permissionStatus, 
     isLocationStale, 
@@ -54,6 +56,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     
     checkAndRequestLocationForDelivery();
   }, [isDeliveryPath, permissionStatus, hasInitialized, requestPermission]);
+
+  // Combined loading state for auth and user type
+  const loading = authLoading || userTypeLoading;
 
   if (loading || !hasInitialized) {
     return (

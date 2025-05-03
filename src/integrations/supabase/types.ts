@@ -2258,6 +2258,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_types: {
+        Row: {
+          created_at: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_workout_stats: {
         Row: {
           calories_burned: number | null
@@ -3192,6 +3213,10 @@ export type Database = {
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      migrate_existing_users: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       path: {
         Args: { "": unknown }

@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { userTypeService } from '@/services/supabaseClient';
 
 interface UserType {
   type: 'customer' | 'restaurant' | 'delivery';
@@ -47,14 +47,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // If not in metadata, check our user_types table
     try {
-      const { data, error } = await supabase
-        .from('user_types')
-        .select('type')
-        .eq('user_id', user.id)
-        .maybeSingle();
-        
-      if (!error && data) {
-        return data.type;
+      const type = await userTypeService.getUserType(user.id);
+      if (type) {
+        return type;
       }
     } catch (error) {
       console.error('Error fetching user type:', error);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -56,13 +55,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         
         // Also update the user_types table to store the user type
         if (authData?.user) {
-          const { error: userTypeError } = await supabase.from('user_types').insert({
-            user_id: authData.user.id,
-            type: userType
-          });
+          // Use the service to update user type
+          const success = await userTypeService.updateUserType(
+            authData.user.id,
+            userType as 'customer' | 'restaurant' | 'delivery'
+          );
           
-          if (userTypeError) {
-            console.error("Error storing user type:", userTypeError);
+          if (!success) {
+            console.error("Error storing user type in database");
             // Continue despite error to not block signup
           }
         }
@@ -115,15 +115,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         
         // If not in metadata, check our user_types table as fallback
         if (!userType) {
-          const { data: userTypeData, error: userTypeError } = await supabase
-            .from('user_types')
-            .select('type')
-            .eq('user_id', data.user?.id || '')
-            .maybeSingle();
-            
-          if (!userTypeError && userTypeData) {
-            userType = userTypeData.type;
-          }
+          userType = await userTypeService.getUserType(data.user?.id || '');
         }
         
         // If still no user type, default to customer
@@ -131,13 +123,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           userType = 'customer';
           // Store the default user type if possible
           if (data.user) {
-            await supabase.from('user_types').insert({
-              user_id: data.user.id,
-              type: 'customer'
-            });
+            await userTypeService.updateUserType(data.user.id, 'customer');
           }
         }
-          
+        
         // Check if user is a restaurant owner
         const { data: restaurantData } = await supabase
           .from('restaurants')

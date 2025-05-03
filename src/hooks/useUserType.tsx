@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { UserType } from '@/types/auth';
+import { userTypeService } from '@/services/supabaseClient';
 
 /**
  * Hook to get and manage user type
@@ -33,27 +34,16 @@ export function useUserType() {
         }
 
         // If not in metadata, check user_types table
-        const { data, error } = await supabase
-          .from('user_types')
-          .select('type')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setUserType(data.type);
+        const type = await userTypeService.getUserType(user.id);
+        
+        if (type) {
+          setUserType(type);
         } else {
           // Default to customer if no type found
           setUserType('customer');
           
           // Create a record in user_types table
-          await supabase.from('user_types').insert({
-            user_id: user.id,
-            type: 'customer'
-          });
+          await userTypeService.updateUserType(user.id, 'customer');
         }
       } catch (error) {
         console.error('Error getting user type:', error);
@@ -77,14 +67,8 @@ export function useUserType() {
       setLoading(true);
       
       // Update in user_types table
-      const { error: dbError } = await supabase
-        .from('user_types')
-        .upsert({
-          user_id: user.id,
-          type: newType
-        });
-      
-      if (dbError) throw dbError;
+      const success = await userTypeService.updateUserType(user.id, newType);
+      if (!success) throw new Error("Failed to update user type in database");
       
       // Update in user metadata
       const { error: metaError } = await supabase.auth.updateUser({
