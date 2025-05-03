@@ -78,7 +78,7 @@ export function useWorkoutData() {
         id: schedule.id,
         user_id: schedule.user_id,
         workout_plan_id: schedule.workout_plan_id,
-        day_of_week: schedule.day_of_week || '', // Ensure this property exists
+        day_of_week: schedule.day_of_week || '',
         days_of_week: schedule.days_of_week || [],
         time: schedule.preferred_time || schedule.time || '',
         preferred_time: schedule.preferred_time,

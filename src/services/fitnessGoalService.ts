@@ -88,7 +88,8 @@ export const createFitnessGoal = async (
       target_value: data[0].target_weight || 0,
       current_value: 0,
       start_date: data[0].created_at,
-      category: 'weight'
+      category: 'weight',
+      status: data[0].status as GoalStatus // Properly cast to GoalStatus
     };
     
     return { data: mappedGoal, error: null };

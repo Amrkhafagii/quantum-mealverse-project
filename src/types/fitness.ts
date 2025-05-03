@@ -1,4 +1,3 @@
-
 export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
 
 export interface FitnessGoal {
@@ -72,7 +71,7 @@ export interface ChallengeParticipant {
   completed: boolean;
 }
 
-export interface SavedMealPlanWithExpiry {
+export interface SavedMealPlan {
   id: string;
   user_id: string;
   name: string;
@@ -80,6 +79,11 @@ export interface SavedMealPlanWithExpiry {
   expires_at?: string;
   is_active: boolean;
   date_created?: string;
+  tdee_id?: string;
+}
+
+export interface SavedMealPlanWithExpiry extends SavedMealPlan {
+  // No additional fields needed as we've moved is_active to the base interface
 }
 
 export interface SavedMealPlan {
@@ -183,13 +187,13 @@ export interface WorkoutSchedule {
   id: string;
   user_id: string;
   workout_plan_id: string;
-  day_of_week: string;
   days_of_week: number[];
-  time: string;
-  preferred_time?: string;
-  reminder: boolean;
+  day_of_week?: string;
   start_date: string;
   end_date?: string;
+  preferred_time?: string;
+  time?: string;
+  reminder?: boolean;
   active: boolean;
   created_at?: string;
   updated_at?: string;
