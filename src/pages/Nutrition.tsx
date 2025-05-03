@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -16,11 +15,13 @@ import { generateMealPlan } from '@/services/mealPlanService';
 import { MealPlan } from '@/types/food';
 import NutritionDashboard from '@/components/fitness/NutritionDashboard';
 import { checkExpiredMealPlans, checkSoonToExpirePlans } from '@/services/scheduledTasks';
+import SavedMealPlans from '@/components/fitness/SavedMealPlans';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const Nutrition = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'calculator' | 'plans'>('calculator');
+  const [activeTab, setActiveTab] = useState<'calculator' | 'plans' | 'saved'>('calculator');
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
 
@@ -65,54 +66,108 @@ const Nutrition = () => {
       <ParticleBackground />
       <Navbar />
       
-      <main className="relative z-10 container mx-auto px-4 py-16 pt-28">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-quantum-cyan mb-4 neon-text">Nutrition Plans</h1>
-          <p className="text-xl max-w-3xl mx-auto">Customize your meal plan to fuel your wellness journey</p>
+      <main className="relative z-10 container mx-auto px-4 py-8 pt-28">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-quantum-cyan mb-2 neon-text">Nutrition Plans</h1>
+          <p className="text-lg max-w-3xl mx-auto">Customize your meal plan to fuel your wellness journey</p>
         </div>
         
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'calculator' | 'plans')} className="mb-8">
-          <TabsList className="w-full max-w-md mx-auto">
-            <TabsTrigger value="calculator">Calorie Calculator</TabsTrigger>
-            <TabsTrigger value="plans">Meal Plans</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="calculator" className="max-w-3xl mx-auto mt-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+        <div className="max-w-5xl mx-auto">
+          <ToggleGroup 
+            type="single" 
+            value={activeTab}
+            onValueChange={(value) => {
+              if (value) setActiveTab(value as 'calculator' | 'plans' | 'saved');
+            }}
+            className="justify-center bg-quantum-darkBlue/50 p-1 rounded-lg w-full max-w-md mx-auto"
+          >
+            <ToggleGroupItem 
+              value="calculator" 
+              className="data-[state=on]:bg-quantum-purple data-[state=on]:text-white flex-1 text-sm"
             >
-              <TDEECalculator onCalculationComplete={handleCalculationComplete} />
-            </motion.div>
-          </TabsContent>
+              Calorie Calculator
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="plans" 
+              className="data-[state=on]:bg-quantum-purple data-[state=on]:text-white flex-1 text-sm"
+            >
+              Meal Plans
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="saved" 
+              className="data-[state=on]:bg-quantum-purple data-[state=on]:text-white flex-1 text-sm"
+            >
+              Saved Plans
+            </ToggleGroupItem>
+          </ToggleGroup>
           
-          <TabsContent value="plans">
-            {calculationResult && mealPlan ? (
-              <NutritionDashboard 
-                calculationResult={calculationResult}
-                mealPlan={mealPlan}
-                onUpdateMealPlan={handleUpdateMealPlan}
-              />
-            ) : (
+          <div className="mt-6">
+            {activeTab === 'calculator' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="max-w-3xl mx-auto text-center p-12"
+                className="max-w-3xl mx-auto"
               >
-                <h3 className="text-2xl font-semibold text-quantum-cyan mb-4">Calculate Your Nutrition Needs</h3>
-                <p className="mb-8">Start by calculating your daily calorie and macro needs to generate a personalized meal plan.</p>
-                <Button 
-                  onClick={() => setActiveTab('calculator')}
-                  className="bg-quantum-purple hover:bg-quantum-purple/90"
-                >
-                  Go to Calculator
-                </Button>
+                <TDEECalculator onCalculationComplete={handleCalculationComplete} />
               </motion.div>
             )}
             
-            {/* Information Card */}
+            {activeTab === 'plans' && (
+              <>
+                {calculationResult && mealPlan ? (
+                  <NutritionDashboard 
+                    calculationResult={calculationResult}
+                    mealPlan={mealPlan}
+                    onUpdateMealPlan={handleUpdateMealPlan}
+                  />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="max-w-3xl mx-auto text-center p-8"
+                  >
+                    <h3 className="text-2xl font-semibold text-quantum-cyan mb-4">Calculate Your Nutrition Needs</h3>
+                    <p className="mb-6">Start by calculating your daily calorie and macro needs to generate a personalized meal plan.</p>
+                    <Button 
+                      onClick={() => setActiveTab('calculator')}
+                      className="bg-quantum-purple hover:bg-quantum-purple/90"
+                    >
+                      Go to Calculator
+                    </Button>
+                  </motion.div>
+                )}
+              </>
+            )}
+            
+            {activeTab === 'saved' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {user ? (
+                  <SavedMealPlans userId={user.id} />
+                ) : (
+                  <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+                    <CardContent className="p-6 text-center">
+                      <p className="mb-4">You need to be logged in to view your saved meal plans.</p>
+                      <Button 
+                        onClick={() => navigate('/login')}
+                        className="bg-quantum-purple hover:bg-quantum-purple/90"
+                      >
+                        Log In
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </motion.div>
+            )}
+          </div>
+          
+          {/* Information Card */}
+          {activeTab !== 'saved' && (
             <motion.div 
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -132,8 +187,8 @@ const Nutrition = () => {
                 </CardContent>
               </Card>
             </motion.div>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </main>
       
       <Footer />

@@ -14,7 +14,7 @@ export const checkExpiredMealPlans = async (): Promise<{success: boolean, expire
     // Find meal plans that are expired but still active
     const { data, error } = await supabase
       .from('saved_meal_plans')
-      .update({ is_active: false })
+      .update({ is_active: false } as Partial<SavedMealPlan>)
       .eq('is_active', true)
       .lt('expires_at', now.toISOString())
       .select('id');

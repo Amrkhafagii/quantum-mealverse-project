@@ -1,11 +1,10 @@
 
-import React, { useState } from 'react';
-import { Food } from '@/types/food';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Info, Check, Utensils, Plus, Minus } from 'lucide-react';
+import React from 'react';
+import { Meal, Food } from '@/types/food'; 
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, Info, ArrowRight } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -14,177 +13,82 @@ import {
 } from "@/components/ui/tooltip";
 
 interface InteractiveMealCardProps {
-  food: Food;
-  defaultServings?: number;
-  onAdd?: (food: Food, servings: number) => void;
-  showAddButton?: boolean;
-  showNutrients?: boolean;
-}
-
-// Extended Food type to match the actual properties used
-interface ExtendedFood extends Food {
-  serving_size?: string;
-  unit?: string;
-  allergies?: string[];
+  meal: Meal;
+  onShuffle: () => void;
+  isProteinSufficient: boolean;
 }
 
 const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
-  food,
-  defaultServings = 1,
-  onAdd,
-  showAddButton = true,
-  showNutrients = true,
+  meal,
+  onShuffle,
+  isProteinSufficient,
 }) => {
-  const [servings, setServings] = useState(defaultServings);
-  const [isAdded, setIsAdded] = useState(false);
-  
-  // Cast to extended food type
-  const extendedFood = food as ExtendedFood;
-
-  const handleServingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value) && value > 0) {
-      setServings(value);
-    }
-  };
-
-  const handleAddFood = () => {
-    if (onAdd) {
-      onAdd(food, servings);
-      setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 2000);
-    }
-  };
-
-  const increaseServings = () => {
-    setServings(prev => parseFloat((prev + 0.5).toFixed(1)));
-  };
-
-  const decreaseServings = () => {
-    if (servings > 0.5) {
-      setServings(prev => parseFloat((prev - 0.5).toFixed(1)));
-    }
-  };
-
-  const totalCalories = Math.round(food.calories * servings);
-  const totalProtein = Math.round(food.protein * servings);
-  const totalCarbs = Math.round(food.carbs * servings);
-  const totalFat = Math.round(food.fat * servings);
-
   return (
-    <Card className="overflow-hidden bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between mb-3">
+    <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 overflow-hidden h-full">
+      <CardContent className="p-3">
+        <div className="flex justify-between items-center mb-3">
           <div>
-            <h4 className="font-medium flex items-center">
-              <Utensils className="h-4 w-4 mr-1 text-quantum-purple" />
-              {food.name}
-            </h4>
-            <p className="text-sm text-gray-400">
-              {extendedFood.serving_size || '1'} {extendedFood.unit || 'serving'}
-            </p>
-          </div>
-          {extendedFood.allergies && extendedFood.allergies.length > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-orange-500">
-                    <Info className="h-4 w-4" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">Contains: {extendedFood.allergies.join(', ')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-
-        <div className="grid grid-cols-4 gap-2 my-3 text-center">
-          <div>
-            <div className="text-xs text-gray-400">Calories</div>
-            <div className="font-bold">{totalCalories}</div>
-          </div>
-          {showNutrients && (
-            <>
-              <div>
-                <div className="text-xs text-gray-400">Protein</div>
-                <div>{totalProtein}g</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Carbs</div>
-                <div>{totalCarbs}g</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Fat</div>
-                <div>{totalFat}g</div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {showAddButton && (
-          <div className="mt-2">
-            <div className="flex items-center space-x-2 mb-2">
-              <Label htmlFor="servings" className="shrink-0 text-sm">
-                Servings:
-              </Label>
-              <div className="flex items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  onClick={decreaseServings}
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <Input
-                  id="servings"
-                  type="number"
-                  min="0.5"
-                  step="0.5"
-                  value={servings}
-                  onChange={handleServingChange}
-                  className="h-8 w-16 mx-2 text-center"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  onClick={increaseServings}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
+            <h3 className="text-quantum-cyan font-medium">{meal.name}</h3>
+            <div className="flex items-center space-x-2 text-xs text-gray-400">
+              <span>{meal.totalCalories} kcal</span>
+              <span className="text-blue-400">P: {meal.totalProtein}g</span>
+              <span className="text-green-400">C: {meal.totalCarbs}g</span>
+              <span className="text-yellow-400">F: {meal.totalFat}g</span>
             </div>
           </div>
-        )}
-      </CardContent>
-
-      {showAddButton && (
-        <CardFooter className="pt-0">
-          <Button
-            onClick={handleAddFood}
-            disabled={isAdded}
-            className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-            size="sm"
-          >
-            {isAdded ? (
-              <>
-                <Check className="h-4 w-4 mr-1" />
-                Added
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-1" />
-                Add to Meal
-              </>
+          
+          <div className="flex items-center space-x-2">
+            {!isProteinSufficient && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="bg-amber-900/30 border-amber-600">
+                      <Info className="h-3 w-3 mr-1" />
+                      Low P
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">This meal is low in protein. Consider reshuffling.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
+            
+            <Button
+              onClick={onShuffle}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-full"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-quantum-purple/20 scrollbar-track-transparent pr-2">
+          <div className="space-y-1">
+            {meal.foods.map((food, index) => (
+              <div key={index} className="bg-quantum-black/30 p-2 rounded text-sm flex justify-between items-center">
+                <span>{food.name}</span>
+                <span className="text-gray-400 text-xs">{food.calories} kcal</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="mt-3 flex justify-between items-center">
+          <div className="text-xs text-gray-400">
+            {meal.foods.length} items
+          </div>
+          <Button
+            variant="link"
+            size="sm"
+            className="p-0 h-auto text-quantum-purple flex items-center"
+          >
+            Alternatives <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
-        </CardFooter>
-      )}
+        </div>
+      </CardContent>
     </Card>
   );
 };

@@ -1,58 +1,68 @@
 
-import React from 'react';
-import { Droplets } from 'lucide-react';
-import { Progress } from "@/components/ui/progress";
-import { cn } from '@/lib/utils';
+import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Droplets, Plus, Minus } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface WaterIntakeTrackerProps {
-  currentIntake?: number;
   targetIntake: number;
+  currentIntake: number;
 }
 
 const WaterIntakeTracker: React.FC<WaterIntakeTrackerProps> = ({
-  currentIntake = 0,
-  targetIntake
+  targetIntake,
+  currentIntake: initialIntake
 }) => {
+  const [currentIntake, setCurrentIntake] = useState(initialIntake);
+  
   const percentage = Math.min(100, Math.round((currentIntake / targetIntake) * 100));
   
+  const handleAddWater = (amount: number) => {
+    setCurrentIntake(prev => Math.min(targetIntake, Math.max(0, prev + amount)));
+  };
+  
   return (
-    <div className="bg-blue-900/20 p-4 rounded-lg">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-blue-400 font-medium flex items-center gap-2">
-          <Droplets className="h-5 w-5" />
-          Daily Water Intake
-        </div>
-        <span className="text-sm font-medium">
-          {currentIntake} <span className="text-gray-500 text-xs">/ {targetIntake} ml</span>
-        </span>
-      </div>
-      
-      <div className="relative h-12 bg-blue-950/50 rounded-full overflow-hidden mb-2">
-        <div 
-          className={cn(
-            "absolute bottom-0 left-0 w-full bg-gradient-to-t from-blue-600 to-blue-400 transition-all duration-700 ease-in-out",
-          )}
-          style={{ height: `${percentage}%` }}
-        >
-          {/* Water waves effect */}
-          <div className="absolute top-0 left-0 w-full h-2 bg-blue-300/20 rounded-full animate-pulse"></div>
-        </div>
-        
-        {/* Water droplet icon that moves with the level */}
-        <div 
-          className="absolute left-1/2 transform -translate-x-1/2 text-blue-200"
-          style={{ bottom: `calc(${percentage}% - 10px)` }}
-        >
-          <Droplets className="h-5 w-5" />
-        </div>
-      </div>
-      
-      <div className="text-center text-sm text-blue-300 mt-2">
-        {percentage >= 100 ? 
-          "Daily goal achieved! 🎉" : 
-          `${percentage}% of daily goal`
-        }
-      </div>
+    <div className="relative">
+      <Card className="bg-quantum-darkBlue/50 border-blue-500/20 overflow-hidden">
+        <CardContent className="p-3 space-y-2">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-1.5">
+              <Droplets className="h-4 w-4 text-blue-400" />
+              <h4 className="text-sm font-medium text-blue-400">Water Intake</h4>
+            </div>
+            <div className="text-xs text-gray-400">
+              {currentIntake} / {targetIntake} ml
+            </div>
+          </div>
+          
+          <Progress value={percentage} className="h-1.5 bg-blue-900/60" indicatorClassName="bg-blue-500" />
+          
+          <div className="flex justify-between items-center mt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAddWater(-250)}
+              className="h-7 w-7 p-0 rounded-full border-blue-500/30 text-blue-400"
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            
+            <div className="text-center">
+              <span className="text-sm font-medium">{percentage}%</span>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAddWater(250)}
+              className="h-7 w-7 p-0 rounded-full border-blue-500/30 text-blue-400"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

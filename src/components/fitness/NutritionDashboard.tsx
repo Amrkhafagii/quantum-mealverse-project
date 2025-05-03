@@ -10,8 +10,11 @@ import { toast } from 'sonner';
 import MacroProgressBar from './MacroProgressBar';
 import WaterIntakeTracker from './WaterIntakeTracker';
 import InteractiveMealCard from './InteractiveMealCard';
+import { Switch } from "@/components/ui/switch";
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Droplets, AlertCircle } from 'lucide-react';
+import { Shield, Droplets, AlertCircle, RefreshCw, Buildings, Check } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import RestaurantMealMatcher from './RestaurantMealMatcher';
 
 interface NutritionDashboardProps {
   calculationResult: TDEEResult;
@@ -103,141 +106,190 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   const fatPercentage = Math.round((mealPlan.actualFat || 0) / mealPlan.targetFat * 100);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Column: Nutritional Overview */}
-      <div className="lg:col-span-1 space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-quantum-cyan">Nutritional Overview</CardTitle>
-              <CardDescription>
-                Your personalized {mealPlan.goal} plan
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {/* Calories Card */}
-              <div className="bg-quantum-darkBlue/50 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-400">Daily Calories</div>
-                <div className="text-3xl font-bold text-quantum-cyan">
+    <div className="space-y-6">
+      {/* Nutritional Overview Header - Compact, horizontal layout */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-12 gap-4">
+              {/* Calories Display - Larger and more prominent */}
+              <div className="col-span-3 bg-quantum-darkBlue/50 rounded-lg p-3 flex flex-col items-center justify-center">
+                <div className="text-xs text-gray-400">Daily Calories</div>
+                <div className="text-2xl md:text-3xl font-bold text-quantum-cyan">
                   {mealPlan.totalCalories} kcal
                 </div>
               </div>
               
-              {/* Macros Progress */}
-              <div className="space-y-3">
-                <MacroProgressBar
-                  title="Protein"
-                  currentValue={mealPlan.actualProtein || 0}
-                  targetValue={mealPlan.targetProtein}
-                  colorClass="text-blue-400"
-                  bgColorClass="bg-blue-900/30"
-                  isCritical={true}
-                />
-                
-                <MacroProgressBar
-                  title="Carbohydrates"
-                  currentValue={mealPlan.actualCarbs || 0}
-                  targetValue={mealPlan.targetCarbs}
-                  colorClass="text-green-400" 
-                  bgColorClass="bg-green-900/30"
-                />
-                
-                <MacroProgressBar
-                  title="Fats"
-                  currentValue={mealPlan.actualFat || 0}
-                  targetValue={mealPlan.targetFat}
-                  colorClass="text-yellow-400"
-                  bgColorClass="bg-yellow-900/30"
-                />
-              </div>
-              
-              {/* Water Intake */}
-              <WaterIntakeTracker 
-                targetIntake={mealPlan.hydrationTarget} 
-                currentIntake={Math.round(mealPlan.hydrationTarget * 0.8)} // Default to 80% for visualization
-              />
-              
-              {/* Auto-optimize button */}
-              <div className="pt-2">
-                <Button
-                  variant={isAutoOptimizeProtein ? "default" : "outline"}
-                  className={
-                    isAutoOptimizeProtein 
-                      ? "w-full bg-quantum-purple hover:bg-quantum-purple/90" 
-                      : "w-full text-quantum-purple"
-                  }
-                  onClick={() => setIsAutoOptimizeProtein(!isAutoOptimizeProtein)}
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  {isAutoOptimizeProtein ? "Protein Protection: ON" : "Protein Protection: OFF"}
-                </Button>
-                
-                {isAutoOptimizeProtein && (
-                  <p className="text-xs text-gray-400 mt-2">
-                    Meal shuffling will prioritize maintaining protein levels.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-      
-      {/* Right Column: Meal Cards */}
-      <div className="lg:col-span-2 space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-quantum-cyan">Your Daily Meal Plan</CardTitle>
-              <CardDescription>
-                Interactive meal options customized to your nutritional needs
-              </CardDescription>
-              
-              {!isProteinSufficient && (
-                <div className="mt-2 text-amber-400 text-xs flex items-center gap-1 bg-amber-900/20 p-2 rounded">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>
-                    Your protein intake is below 95% of your target. Try reshuffling meals to increase protein.
-                  </span>
+              {/* Macro Progress Indicators - More compact and color-coded */}
+              <div className="col-span-6 grid grid-cols-3 gap-2">
+                <div className="bg-blue-900/30 p-3 rounded-lg">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-blue-400 text-xs font-medium">Protein</span>
+                    <span className="text-xs">{proteinPercentage}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-blue-900/60 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${Math.min(proteinPercentage, 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="mt-1 text-xs text-right">{mealPlan.actualProtein || 0}/{mealPlan.targetProtein}g</div>
                 </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {mealPlan.meals.map((meal, index) => (
-                  <InteractiveMealCard
-                    key={meal.id}
-                    meal={meal}
-                    onShuffle={() => handleShuffleMeal(index)}
-                    isProteinSufficient={isMealProteinSufficient(meal, index)}
-                  />
-                ))}
+                
+                <div className="bg-green-900/30 p-3 rounded-lg">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-green-400 text-xs font-medium">Carbs</span>
+                    <span className="text-xs">{carbsPercentage}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-green-900/60 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-green-500 rounded-full"
+                      style={{ width: `${Math.min(carbsPercentage, 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="mt-1 text-xs text-right">{mealPlan.actualCarbs || 0}/{mealPlan.targetCarbs}g</div>
+                </div>
+                
+                <div className="bg-yellow-900/30 p-3 rounded-lg">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-yellow-400 text-xs font-medium">Fats</span>
+                    <span className="text-xs">{fatPercentage}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-yellow-900/60 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-yellow-500 rounded-full"
+                      style={{ width: `${Math.min(fatPercentage, 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="mt-1 text-xs text-right">{mealPlan.actualFat || 0}/{mealPlan.targetFat}g</div>
+                </div>
               </div>
               
-              <Button
-                className="w-full mt-6 bg-quantum-purple hover:bg-quantum-purple/90"
-                onClick={() => {
-                  // In a real implementation, this would save the meal plan to the user's profile
-                  toast({
-                    title: "Meal Plan Saved",
-                    description: "Your personalized meal plan has been saved to your profile.",
-                  });
-                }}
-              >
-                <Droplets className="h-4 w-4 mr-2" />
-                Save This Meal Plan
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
+              {/* Water & Protein Protection - Compact controls */}
+              <div className="col-span-3 space-y-2">
+                {/* Water Intake Mini-Display */}
+                <div className="bg-blue-900/20 p-2 rounded-lg flex items-center gap-2">
+                  <Droplets className="h-4 w-4 text-blue-400" />
+                  <div className="flex-1 h-1.5 bg-blue-900/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }}></div>
+                  </div>
+                  <span className="text-xs">{Math.round(mealPlan.hydrationTarget * 0.7)}/{mealPlan.hydrationTarget}ml</span>
+                </div>
+                
+                {/* Protein Protection Toggle */}
+                <div className="flex items-center space-x-2 bg-quantum-darkBlue/40 p-2 rounded-lg">
+                  <Switch 
+                    checked={isAutoOptimizeProtein} 
+                    onCheckedChange={setIsAutoOptimizeProtein}
+                    className="data-[state=checked]:bg-quantum-purple" 
+                  />
+                  <label className="text-xs flex items-center">
+                    <Shield className="h-3 w-3 mr-1 text-quantum-purple" />
+                    Protein Protection
+                  </label>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+      
+      {!isProteinSufficient && (
+        <div className="bg-amber-900/20 border border-amber-800/30 text-amber-400 text-xs p-2 rounded flex items-center gap-1">
+          <AlertCircle className="h-4 w-4" />
+          <span>Your protein intake is below 95% of your target. Try reshuffling meals to increase protein.</span>
+        </div>
+      )}
+      
+      {/* Meal Cards - Grid Layout */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {mealPlan.meals.map((meal, index) => (
+            <Card key={meal.id} className="bg-quantum-darkBlue/30 border-quantum-cyan/20 overflow-hidden">
+              <CardHeader className="p-4 pb-0">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg flex items-center">
+                    {meal.name}
+                    {isMealProteinSufficient(meal, index) ? (
+                      <Badge variant="outline" className="ml-2 bg-green-900/30 border-green-600 text-xs">
+                        <Check className="h-3 w-3 mr-1" />
+                        Balanced
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-2 bg-amber-900/30 border-amber-600 text-xs">
+                        Low Protein
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 text-quantum-cyan rounded-full"
+                    onClick={() => handleShuffleMeal(index)}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Compact macro display for this meal */}
+                <div className="flex space-x-2 text-xs text-gray-400 mt-1">
+                  <div>{meal.totalCalories} kcal</div>
+                  <div>•</div>
+                  <div className="text-blue-400">P: {meal.totalProtein}g</div>
+                  <div>•</div>
+                  <div className="text-green-400">C: {meal.totalCarbs}g</div>
+                  <div>•</div>
+                  <div className="text-yellow-400">F: {meal.totalFat}g</div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-4">
+                <div className="max-h-[200px] overflow-y-auto pr-1 space-y-2">
+                  {meal.foods.map((food, foodIndex) => (
+                    <div key={foodIndex} className="bg-quantum-black/30 p-2 rounded-md flex justify-between text-sm">
+                      <div>{food.name}</div>
+                      <div className="text-gray-400">{food.calories} kcal</div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Restaurant meal matcher - Integrated directly in the meal card */}
+                <RestaurantMealMatcher
+                  mealFoods={meal.foods}
+                  mealName={meal.name}
+                  mealCalories={meal.totalCalories}
+                  mealProtein={meal.totalProtein}
+                  mealCarbs={meal.totalCarbs}
+                  mealFat={meal.totalFat}
+                />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </motion.div>
+      
+      {/* Save Meal Plan Button */}
+      <div className="flex justify-center mt-6">
+        <Button
+          className="bg-quantum-purple hover:bg-quantum-purple/90 px-8"
+          onClick={() => {
+            toast({
+              title: "Meal Plan Saved",
+              description: "Your personalized meal plan has been saved to your profile.",
+            });
+          }}
+        >
+          <Droplets className="h-4 w-4 mr-2" />
+          Save This Meal Plan
+        </Button>
       </div>
     </div>
   );

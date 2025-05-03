@@ -1,17 +1,14 @@
 
 import React from 'react';
-import { Progress } from "@/components/ui/progress";
-import { Shield, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 interface MacroProgressBarProps {
   title: string;
   currentValue: number;
   targetValue: number;
   colorClass: string;
-  bgColorClass: string;
-  icon?: React.ReactNode;
+  bgColorClass?: string;
   isCritical?: boolean;
 }
 
@@ -20,61 +17,43 @@ const MacroProgressBar: React.FC<MacroProgressBarProps> = ({
   currentValue,
   targetValue,
   colorClass,
-  bgColorClass,
-  icon,
-  isCritical = false,
+  bgColorClass = 'bg-gray-800',
+  isCritical = false
 }) => {
-  const percentage = Math.round((currentValue / targetValue) * 100);
-  const isTargetMet = percentage >= 95;
-  const isLow = percentage < 90;
-  const formattedPercentage = `${percentage}%`;
+  const percentage = Math.min(100, Math.round((currentValue / targetValue) * 100));
+  
+  // Determine status color
+  let statusColor = colorClass;
+  if (isCritical) {
+    if (percentage < 80) statusColor = 'text-red-400';
+    else if (percentage < 95) statusColor = 'text-amber-400';
+  }
   
   return (
-    <div className={cn("p-4 rounded-lg", bgColorClass)}>
-      <div className="flex items-center justify-between mb-2">
-        <div className={cn("text-sm font-medium flex items-center gap-2", colorClass)}>
-          {icon}
-          {title}
-          {isTargetMet && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Shield className="h-4 w-4 text-green-400" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">Target met! ({formattedPercentage})</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-        <span className="text-sm font-medium">
-          {currentValue}g <span className="text-gray-500 text-xs">/ {targetValue}g</span>
-        </span>
+    <div className="space-y-1">
+      <div className="flex justify-between items-center text-sm">
+        <div className={`font-medium ${statusColor}`}>{title}</div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="text-sm font-medium flex gap-1">
+                <span>{currentValue}g</span>
+                <span className="text-gray-400">/ {targetValue}g</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>You've reached {percentage}% of your daily {title.toLowerCase()} target</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
-      <Progress 
-        value={percentage} 
-        max={100} 
-        className="h-2 bg-gray-700"
-        indicatorClassName={cn(
-          "transition-all duration-500",
-          isTargetMet ? "bg-green-500" : isLow && isCritical ? "bg-red-500" : colorClass.replace("text-", "bg-")
-        )}
-      />
-      
-      {isCritical && isLow && (
-        <div className="flex items-center gap-1 mt-2 text-red-400 text-xs">
-          <AlertCircle className="h-3 w-3" />
-          <span>Critical nutrient below target</span>
-        </div>
-      )}
-      
-      {isTargetMet && (
-        <div className="flex items-center gap-1 mt-1.5 text-green-400 text-xs animate-fade-in">
-          <span>Target successfully met! 🎉</span>
-        </div>
-      )}
+      <div className={`h-1.5 w-full ${bgColorClass} rounded-full overflow-hidden`}>
+        <div 
+          className={`h-full ${colorClass.replace('text-', 'bg-')} rounded-full transition-all duration-500 ease-in-out`}
+          style={{ width: `${percentage}%` }}
+        ></div>
+      </div>
     </div>
   );
 };
