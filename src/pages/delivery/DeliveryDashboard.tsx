@@ -1,21 +1,25 @@
 
-// Check if this file exists, if not create it
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import ActiveDeliveriesWithMap from '@/components/delivery/ActiveDeliveriesWithMap';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, Clock, ChevronRight } from 'lucide-react';
 import GlobalGoogleMapsConfig from '@/components/maps/GlobalGoogleMapsConfig';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EarningsSummary } from '@/components/delivery/dashboard/EarningsSummary';
+import { DeliveryHistory } from '@/components/delivery/dashboard/DeliveryHistory';
+import { DeliveryStats } from '@/components/delivery/dashboard/DeliveryStats';
 
 const DeliveryDashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { deliveryUser, loading: userLoading } = useDeliveryUser(user?.id);
   const { isLoaded: mapsLoaded, isLoading: mapsLoading } = useGoogleMaps();
+  const [activeTab, setActiveTab] = useState<string>("active");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,8 +86,33 @@ const DeliveryDashboard: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Delivery Dashboard</h1>
-      <ActiveDeliveriesWithMap />
-      <GlobalGoogleMapsConfig />
+      
+      {deliveryUser && <DeliveryStats deliveryUser={deliveryUser} />}
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="active">Active Deliveries</TabsTrigger>
+          <TabsTrigger value="earnings">Earnings</TabsTrigger>
+          <TabsTrigger value="history">Delivery History</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="active" className="mt-2">
+          <ActiveDeliveriesWithMap />
+        </TabsContent>
+        
+        <TabsContent value="earnings" className="mt-2">
+          {deliveryUser && <EarningsSummary deliveryUserId={deliveryUser.id} />}
+        </TabsContent>
+        
+        <TabsContent value="history" className="mt-2">
+          {deliveryUser && <DeliveryHistory deliveryUserId={deliveryUser.id} />}
+        </TabsContent>
+      </Tabs>
+      
+      {/* Config component at the bottom for changing API key if needed */}
+      <div className="mt-8 opacity-70">
+        <GlobalGoogleMapsConfig />
+      </div>
     </div>
   );
 };

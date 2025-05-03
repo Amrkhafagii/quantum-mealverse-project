@@ -51,6 +51,36 @@ export type Database = {
         }
         Relationships: []
       }
+      app_config: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_secret: boolean | null
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_secret?: boolean | null
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_secret?: boolean | null
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       challenge_participants: {
         Row: {
           challenge_id: string
@@ -2836,6 +2866,10 @@ export type Database = {
       }
       check_verified_purchase: {
         Args: { user_id: string; meal_id: string }
+        Returns: boolean
+      }
+      create_app_config_table: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       disablelongtransactions: {
