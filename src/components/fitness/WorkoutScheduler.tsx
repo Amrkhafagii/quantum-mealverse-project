@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { WorkoutSchedule, WorkoutLog } from '@/types/fitness';
 
@@ -47,6 +46,7 @@ const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({
                     duration: 30,
                     calories_burned: 0,
                     notes: '',
+                    exercises_completed: [], // Add this empty array for required property
                     completed_exercises: []
                   };
                   const success = await logWorkout(dummyLog);

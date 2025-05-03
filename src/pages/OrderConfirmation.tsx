@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, Share2, Download, Printer, CircleCheck } from 'lucide-react';
@@ -202,150 +201,152 @@ const OrderConfirmation = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-quantum-black to-quantum-darkBlue text-white relative print:bg-white print:text-black">
-      <ParticleBackground className="print:hidden" />
-      <Navbar className="print:hidden" />
-      
-      <main className="relative z-10 container mx-auto px-4 py-16 print:py-4">
-        {/* Back navigation */}
-        <div className="flex items-center gap-2 mb-6 print:hidden">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/orders">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <h1 className="text-xl font-bold">Order Confirmation</h1>
-        </div>
-
-        {/* Print only header */}
-        <div className="hidden print:block mb-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Order Receipt</h1>
-            <p>{new Date().toLocaleDateString()}</p>
-          </div>
-          <p className="text-gray-500">Thank you for your order!</p>
-        </div>
+    <div className="min-h-screen bg-quantum-black text-white flex flex-col">
+      <div className="relative w-full flex-grow">
+        <ParticleBackground />
+        <Navbar />
         
-        {/* Order confirmation card */}
-        <Card className="max-w-4xl mx-auto holographic-card print:shadow-none print:border-0">
-          <CardHeader className="print:pb-2">
-            {/* Order confirmation header with success icon */}
-            <OrderHeader 
-              orderId={id}
-              formattedOrderId={order?.formatted_order_id}
-            />
-          </CardHeader>
-          
-          <CardContent className="space-y-8 print:space-y-4">
-            {/* Restaurant assignment status for pending orders */}
-            {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
-              <OrderRestaurantStatus
-                status={order.status}
-                restaurantName={assignmentStatus?.restaurant_name}
-                assignmentStatus={assignmentStatus}
-                isCancelling={isCancelling}
-                onCancel={handleCancelOrder}
-                orderId={id}
-              />
-            )}
-            
-            {/* Show location map for delivery orders in progress */}
-            {showMap && order?.latitude && order?.longitude && (
-              <div className="print:hidden">
-                <h3 className="text-lg font-semibold mb-3">Order Tracking</h3>
-                <div className="rounded-lg overflow-hidden border border-quantum-cyan/20">
-                  <OrderLocationMap order={order} />
-                </div>
-              </div>
-            )}
-            
-            {/* Order details with estimated time */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold">Order Details</h3>
-                <div className="bg-quantum-cyan/20 px-3 py-1 rounded-full text-quantum-cyan text-sm">
-                  ETA: {getEstimatedTime()}
-                </div>
-              </div>
-              
-              <OrderDetailsGrid order={order} />
+        <main className="container mx-auto px-4 py-24 relative z-10">
+          {/* Back navigation */}
+          <div className="flex items-center gap-2 mb-6 print:hidden">
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/orders">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <h1 className="text-xl font-bold">Order Confirmation</h1>
+          </div>
+
+          {/* Print only header */}
+          <div className="hidden print:block mb-6">
+            <div className="flex justify-between items-center">
+              <h1 className="text-2xl font-bold">Order Receipt</h1>
+              <p>{new Date().toLocaleDateString()}</p>
             </div>
+            <p className="text-gray-500">Thank you for your order!</p>
+          </div>
+          
+          {/* Order confirmation card */}
+          <Card className="max-w-4xl mx-auto holographic-card print:shadow-none print:border-0">
+            <CardHeader className="print:pb-2">
+              {/* Order confirmation header with success icon */}
+              <OrderHeader 
+                orderId={id}
+                formattedOrderId={order?.formatted_order_id}
+              />
+            </CardHeader>
             
-            {/* Order items and totals */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Order Summary</h3>
-              {order?.order_items && (
-                <OrderItemsList 
-                  items={order.order_items}
-                  subtotal={order.subtotal}
-                  deliveryFee={order.delivery_fee}
-                  total={order.total}
+            <CardContent className="space-y-8 print:space-y-4">
+              {/* Restaurant assignment status for pending orders */}
+              {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
+                <OrderRestaurantStatus
+                  status={order.status}
+                  restaurantName={assignmentStatus?.restaurant_name}
+                  assignmentStatus={assignmentStatus}
+                  isCancelling={isCancelling}
+                  onCancel={handleCancelOrder}
+                  orderId={id}
                 />
               )}
-            </div>
-          </CardContent>
-          
-          {/* Action buttons */}
-          <CardFooter className="pt-0 pb-6 flex-col space-y-4 print:hidden">
-            <ActionButtons 
-              orderId={id}
-              onTrackOrder={(orderId) => navigate(`/orders/${orderId}`)}
-              onContinueShopping={() => navigate('/customer')}
-            />
+              
+              {/* Show location map for delivery orders in progress */}
+              {showMap && order?.latitude && order?.longitude && (
+                <div className="print:hidden">
+                  <h3 className="text-lg font-semibold mb-3">Order Tracking</h3>
+                  <div className="rounded-lg overflow-hidden border border-quantum-cyan/20">
+                    <OrderLocationMap order={order} />
+                  </div>
+                </div>
+              )}
+              
+              {/* Order details with estimated time */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-semibold">Order Details</h3>
+                  <div className="bg-quantum-cyan/20 px-3 py-1 rounded-full text-quantum-cyan text-sm">
+                    ETA: {getEstimatedTime()}
+                  </div>
+                </div>
+                
+                <OrderDetailsGrid order={order} />
+              </div>
+              
+              {/* Order items and totals */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Order Summary</h3>
+                {order?.order_items && (
+                  <OrderItemsList 
+                    items={order.order_items}
+                    subtotal={order.subtotal}
+                    deliveryFee={order.delivery_fee}
+                    total={order.total}
+                  />
+                )}
+              </div>
+            </CardContent>
             
-            {/* Additional actions (share, download, print) */}
-            <div className="flex flex-wrap justify-center gap-3 w-full mt-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleShareOrder}
-                className="flex items-center gap-2"
-              >
-                <Share2 className="h-4 w-4" /> Share
-              </Button>
+            {/* Action buttons */}
+            <CardFooter className="pt-0 pb-6 flex-col space-y-4 print:hidden">
+              <ActionButtons 
+                orderId={id}
+                onTrackOrder={(orderId) => navigate(`/orders/${orderId}`)}
+                onContinueShopping={() => navigate('/customer')}
+              />
               
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownloadReceipt}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" /> Receipt
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handlePrint}
-                disabled={isPrinting}
-                className="flex items-center gap-2"
-              >
-                <Printer className="h-4 w-4" /> {isPrinting ? 'Printing...' : 'Print'}
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-        
-        {/* Schema data for search engines */}
-        {order && (
-          <script type="application/ld+json" dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "OrderConfirmation",
-              "orderNumber": order.formatted_order_id || id,
-              "orderDate": order.created_at,
-              "orderStatus": order.status,
-              "totalPrice": {
-                "@type": "MonetaryAmount",
-                "currency": "EGP",
-                "value": order.total
-              }
-            })
-          }} />
-        )}
-      </main>
+              {/* Additional actions (share, download, print) */}
+              <div className="flex flex-wrap justify-center gap-3 w-full mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleShareOrder}
+                  className="flex items-center gap-2"
+                >
+                  <Share2 className="h-4 w-4" /> Share
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownloadReceipt}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" /> Receipt
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handlePrint}
+                  disabled={isPrinting}
+                  className="flex items-center gap-2"
+                >
+                  <Printer className="h-4 w-4" /> {isPrinting ? 'Printing...' : 'Print'}
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+          
+          {/* Schema data for search engines */}
+          {order && (
+            <script type="application/ld+json" dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "OrderConfirmation",
+                "orderNumber": order.formatted_order_id || id,
+                "orderDate": order.created_at,
+                "orderStatus": order.status,
+                "totalPrice": {
+                  "@type": "MonetaryAmount",
+                  "currency": "EGP",
+                  "value": order.total
+                }
+              })
+            }} />
+          )}
+        </main>
+      </div>
       
-      <Footer className="print:hidden" />
+      <Footer />
       
       {/* Print-specific styles */}
       <style>

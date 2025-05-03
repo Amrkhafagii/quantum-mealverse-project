@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal, GoalStatus } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
@@ -273,5 +272,31 @@ export const updateGoalStatus = async (
   } catch (error) {
     console.error('Error updating goal status:', error);
     return { error };
+  }
+};
+
+/**
+ * Fetch goals for a user
+ */
+export const fetchGoals = async (userId: string): Promise<FitnessGoal[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('fitness_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    // Transform the data to ensure proper typing
+    const typedGoals = data?.map(goal => ({
+      ...goal,
+      status: goal.status as GoalStatus, // Cast the status to GoalStatus type
+    })) || [];
+    
+    return typedGoals;
+  } catch (error) {
+    console.error('Error fetching goals:', error);
+    return [];
   }
 };

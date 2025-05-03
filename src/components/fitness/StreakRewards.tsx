@@ -10,6 +10,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
   const rewards: StreakReward[] = [
     {
       id: '1',
+      days_required: 3,
       streak_days: 3,
       days: 3,
       streak_length: 3,
@@ -23,6 +24,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
     },
     {
       id: '2',
+      days_required: 7,
       streak_days: 7,
       days: 7,
       streak_length: 7,
@@ -36,6 +38,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
     },
     {
       id: '3',
+      days_required: 14,
       streak_days: 14,
       days: 14,
       streak_length: 14,
@@ -49,6 +52,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
     },
     {
       id: '4',
+      days_required: 30,
       streak_days: 30,
       days: 30,
       streak_length: 30,
@@ -63,7 +67,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
   ];
 
   // Sort rewards by streak length
-  const sortedRewards = [...rewards].sort((a, b) => a.streak_days - b.streak_days);
+  const sortedRewards = [...rewards].sort((a, b) => a.days_required - b.days_required);
 
   // Current streak value (default to 0 if not provided)
   const streak = currentStreak || 0;
@@ -93,8 +97,8 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
 
         <div className="space-y-4">
           {sortedRewards.map((reward) => {
-            const isEarned = streak >= reward.streak_days;
-            const isNext = !isEarned && sortedRewards.filter(r => streak >= r.streak_days).length + 1 === sortedRewards.indexOf(reward) + 1;
+            const isEarned = streak >= reward.days_required;
+            const isNext = !isEarned && sortedRewards.filter(r => streak >= r.days_required).length + 1 === sortedRewards.indexOf(reward) + 1;
             
             return (
               <div 
@@ -128,7 +132,7 @@ const StreakRewards: React.FC<StreakRewardsProps> = ({ userId, currentStreak, lo
                     <Badge className="bg-green-600">Earned</Badge>
                   ) : (
                     <Badge variant="outline" className={isNext ? 'border-quantum-cyan text-quantum-cyan' : 'border-gray-500 text-gray-500'}>
-                      {reward.streak_days - streak} days left
+                      {reward.days_required - streak} days left
                     </Badge>
                   )}
                 </div>

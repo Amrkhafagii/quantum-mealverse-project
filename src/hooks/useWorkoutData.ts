@@ -58,27 +58,38 @@ export function useWorkoutData() {
     }
   };
 
-  const fetchWorkoutSchedules = async (userId?: string) => {
+  const fetchWorkoutSchedules = async () => {
     try {
       setIsLoading(true);
-      if (!userId) return;
+      if (!user?.id) return;
       
       const { data, error } = await supabase
         .from('workout_schedules')
         .select('*')
-        .eq('user_id', userId)
-        .eq('active', true);
-        
+        .eq('user_id', user.id);
+      
       if (error) throw error;
       
-      setSchedules(data || []);
+      // Transform the data to match the WorkoutSchedule interface
+      const formattedData: WorkoutSchedule[] = (data || []).map(schedule => ({
+        id: schedule.id,
+        user_id: schedule.user_id,
+        workout_plan_id: schedule.workout_plan_id,
+        day_of_week: schedule.day_of_week || '', // Ensure this property exists
+        days_of_week: schedule.days_of_week || [],
+        time: schedule.preferred_time || schedule.time || '',
+        preferred_time: schedule.preferred_time,
+        reminder: schedule.reminder || false,
+        start_date: schedule.start_date,
+        end_date: schedule.end_date,
+        active: schedule.active,
+        created_at: schedule.created_at,
+        updated_at: schedule.updated_at
+      }));
+      
+      setSchedules(formattedData);
     } catch (error) {
       console.error('Error fetching workout schedules:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load workout schedules",
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }

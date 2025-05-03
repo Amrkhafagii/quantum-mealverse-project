@@ -1,4 +1,5 @@
 
+
 export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
 
 export interface FitnessGoal {
@@ -79,6 +80,7 @@ export interface SavedMealPlanWithExpiry {
   meal_plan: any;
   expires_at?: string;
   is_active: boolean;
+  date_created?: string;
 }
 
 export interface SavedMealPlan {
@@ -88,6 +90,7 @@ export interface SavedMealPlan {
   meal_plan: any;
   expires_at?: string;
   is_active: boolean;
+  date_created?: string;
 }
 
 export interface WorkoutPlan {
@@ -166,8 +169,9 @@ export interface WorkoutSchedule {
   user_id: string;
   workout_plan_id: string;
   day_of_week: string;
-  days_of_week?: string[];
+  days_of_week?: string[] | number[];
   time: string;
+  preferred_time?: string;
   reminder: boolean;
   start_date?: string;
   end_date?: string;
@@ -195,12 +199,17 @@ export interface UserProfile {
   display_name: string;
   weight: number;
   height: number;
-  age: number;
+  age?: number;
   gender: string;
   goal_weight?: number;
   fitness_level?: string;
   fitness_goals?: string[];
   profile_image?: string;
+  date_of_birth?: string | null;
+  dietary_preferences?: string[] | null;
+  dietary_restrictions?: string[] | null;
+  avatar_url?: string;
+  username?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -210,12 +219,15 @@ export interface UserMeasurement {
   user_id: string;
   date: string;
   weight: number;
+  body_fat?: number;
   body_fat_percentage?: number;
   chest?: number;
   waist?: number;
   hips?: number;
   arms?: number;
   thighs?: number;
+  legs?: number;
+  notes?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -227,9 +239,25 @@ export interface UserWorkoutStats {
   most_active_day?: string;
   recent_workouts?: any[];
   achievements?: number;
+  calories_burned?: number;
   calories_burned_total?: number;
   workout_time_total?: number;
   favorite_workout_type?: string;
+}
+
+export interface WorkoutRecommendation {
+  id: string;
+  title: string;
+  name: string;
+  description: string;
+  type: string;
+  reason?: string;
+  confidence_score?: number;
+  user_id: string;
+  suggested_at?: string;
+  dismissed?: boolean;
+  applied?: boolean;
+  applied_at?: string;
 }
 
 export interface DailyQuest {
@@ -248,10 +276,14 @@ export interface Team {
   name: string;
   description?: string;
   created_by: string;
+  creator_id?: string;
   created_at: string;
   members_count: number;
+  member_count?: number;
   challenges_count?: number;
   image_url?: string;
+  avatar_url?: string;
+  total_points?: number;
 }
 
 export interface TeamMember {
@@ -260,6 +292,7 @@ export interface TeamMember {
   team_id: string;
   role: string;
   joined_date: string;
+  joined_at?: string;
   user_name?: string;
   profile_image?: string;
 }
@@ -267,15 +300,24 @@ export interface TeamMember {
 export interface StreakReward {
   id: string;
   days_required: number;
+  streak_days?: number;
+  days?: number;
+  streak_length?: number;
   reward_name: string;
+  title?: string;
   reward_description: string;
-  reward_value: number;
+  reward_value: number | string;
+  reward_type?: string;
   reward_image?: string;
+  icon?: string;
+  points?: number;
   is_claimed?: boolean;
 }
 
 export interface StreakRewardsProps {
   currentStreak: number;
   rewards: StreakReward[];
+  userId?: string;
+  longestStreak?: number;
   onClaimReward?: (rewardId: string) => void;
 }

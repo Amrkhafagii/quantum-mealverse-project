@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -103,6 +102,7 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
       duration: Math.round(duration / 60), // Convert to minutes
       calories_burned: caloriesBurned || null,
       notes: notes || null,
+      exercises_completed: [], // Add empty array for required property
       completed_exercises: filteredExercises
     };
     
