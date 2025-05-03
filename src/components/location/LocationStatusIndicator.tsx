@@ -11,20 +11,46 @@ import {
 
 interface LocationStatusIndicatorProps {
   showTooltip?: boolean;
+  colorVariant?: 'default' | 'navbar';
 }
 
 const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({ 
-  showTooltip = false 
+  showTooltip = false,
+  colorVariant = 'default'
 }) => {
   const { permissionStatus, isTracking } = useLocationPermission();
   
-  const renderIcon = () => {
-    if (permissionStatus === 'granted' && isTracking) {
-      return <CheckCircle2 className="h-4 w-4 text-green-400" />;
-    } else if (permissionStatus === 'denied') {
-      return <AlertCircle className="h-4 w-4 text-red-400" />;
+  const getIconColor = () => {
+    if (colorVariant === 'navbar') {
+      // Navbar-specific colors
+      if (permissionStatus === 'granted' && isTracking) {
+        return "text-green-400";
+      } else if (permissionStatus === 'denied') {
+        return "text-red-400";
+      } else {
+        return "text-yellow-400";
+      }
     } else {
-      return <MapPin className="h-4 w-4 text-yellow-400" />;
+      // Default colors
+      if (permissionStatus === 'granted' && isTracking) {
+        return "text-green-400";
+      } else if (permissionStatus === 'denied') {
+        return "text-red-400";
+      } else {
+        return "text-yellow-400";
+      }
+    }
+  };
+  
+  const renderIcon = () => {
+    const colorClass = getIconColor();
+    
+    if (permissionStatus === 'granted' && isTracking) {
+      return <CheckCircle2 className={`h-4 w-4 ${colorClass}`} />;
+    } else if (permissionStatus === 'denied') {
+      return <AlertCircle className={`h-4 w-4 ${colorClass}`} />;
+    } else {
+      return <MapPin className={`h-4 w-4 ${colorClass}`} />;
     }
   };
   
