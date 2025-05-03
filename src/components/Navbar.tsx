@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingCart, User, LogOut } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, LogOut, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
@@ -55,6 +55,11 @@ const Navbar = () => {
             </Link>
             <Link to="/subscription" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
               Plans
+            </Link>
+            {/* Added Track Order link */}
+            <Link to="/orders" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors flex items-center gap-1">
+              <Package className="h-4 w-4" />
+              Track Orders
             </Link>
             {user ? (
               <>
@@ -179,6 +184,11 @@ const Navbar = () => {
           </Link>
           <Link to="/subscription" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors" onClick={toggleMenu}>
             Plans
+          </Link>
+          {/* Added Track Orders link to mobile menu */}
+          <Link to="/orders" className="block px-3 py-2 text-white hover:text-quantum-cyan transition-colors flex items-center gap-2" onClick={toggleMenu}>
+            <Package className="h-5 w-5" />
+            Track Orders
           </Link>
           
           {user ? (
