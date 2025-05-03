@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -30,7 +31,6 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
   // Handle ordering meals
   const handleOrderMeals = () => {
     toast({
-      title: "Order Placed",
       description: "Your meal plan has been sent to our partnered restaurants for preparation.",
     });
   };

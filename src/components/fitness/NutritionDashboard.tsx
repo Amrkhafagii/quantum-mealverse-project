@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { TDEEResult } from '@/components/fitness/TDEECalculator'; 
@@ -23,7 +24,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   mealPlan,
   onUpdateMealPlan
 }) => {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const [isAutoOptimizeProtein, setIsAutoOptimizeProtein] = useState(true);
   const [waterIntake, setWaterIntake] = useState(0);
   
@@ -40,7 +41,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   // Calculate recommended daily water intake based on weight and activity level
   const calculateRecommendedWaterIntake = () => {
     // Default values if calculationResult doesn't have the required properties
-    const weightInKg = calculationResult && 'weight' in calculationResult ? calculationResult.weight : 70;
+    const weightInKg = calculationResult && 'weight' in calculationResult ? Number(calculationResult.weight) : 70;
     let baseIntake = weightInKg * 35;
     
     // Adjust for activity level if available
@@ -108,15 +109,14 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     
     const proteinPercentage = Math.round((actualProtein / mealPlan.targetProtein) * 100);
     if (proteinPercentage < 95 && isAutoOptimizeProtein) {
-      toast({
+      uiToast({
         title: "Protein Warning",
         description: `New protein level at ${proteinPercentage}% of target. Consider reshuffling.`,
         variant: "destructive"
       });
     } else {
       toast({
-        title: `${meal.name} Updated`,
-        description: "New meal options generated successfully."
+        description: `${meal.name} updated with new meal options.`
       });
     }
   };
