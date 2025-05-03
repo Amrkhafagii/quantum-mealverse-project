@@ -4,6 +4,14 @@ import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { toast } from 'sonner';
 
+// Define a more comprehensive location type that includes accuracy
+interface LocationWithAccuracy {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  timestamp?: number;
+}
+
 interface DeliveryLocation {
   latitude: number;
   longitude: number;
@@ -99,7 +107,8 @@ export function useDeliveryLocationService() {
         latitude: trackerLocation.latitude,
         longitude: trackerLocation.longitude,
         timestamp: lastUpdated?.getTime() || Date.now(),
-        accuracy: trackerLocation.accuracy
+        // Safely access accuracy - might be undefined for some browsers
+        ...(trackerLocation.accuracy !== undefined && { accuracy: trackerLocation.accuracy })
       };
       
       // Update local state
@@ -201,7 +210,7 @@ export function useDeliveryLocationService() {
         setTimeout(() => reject(new Error('Location request timed out')), 10000);
       });
       
-      const location = await Promise.race([locationPromise, timeoutPromise]);
+      const location = await Promise.race([locationPromise, timeoutPromise]) as LocationWithAccuracy | null;
       
       if (!location) {
         throw new Error('Could not get location');
@@ -212,7 +221,8 @@ export function useDeliveryLocationService() {
         latitude: location.latitude,
         longitude: location.longitude,
         timestamp: Date.now(),
-        accuracy: location.accuracy
+        // Safely access accuracy - might be undefined for some browsers
+        ...(location.accuracy !== undefined && { accuracy: location.accuracy })
       };
       
       // Update state
