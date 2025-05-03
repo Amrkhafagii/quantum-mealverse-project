@@ -12,13 +12,20 @@ import {
 interface LocationStatusIndicatorProps {
   showTooltip?: boolean;
   colorVariant?: 'default' | 'navbar';
+  hidePending?: boolean; // Added new prop to hide pending status
 }
 
 const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({ 
   showTooltip = false,
-  colorVariant = 'default'
+  colorVariant = 'default',
+  hidePending = true // Default to hide pending status
 }) => {
   const { permissionStatus, isTracking } = useLocationPermission();
+  
+  // If hidePending is true and permission status is prompt, don't render anything
+  if (hidePending && permissionStatus === 'prompt') {
+    return null;
+  }
   
   const getIconColor = () => {
     if (colorVariant === 'navbar') {
