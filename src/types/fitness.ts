@@ -1,5 +1,5 @@
 import { MealPlan } from './food';
-import { Json } from '@/types/database';
+import { Json } from "./database";
 
 export interface SavedMealPlan {
   id: string;
@@ -13,20 +13,20 @@ export interface SavedMealPlan {
 }
 
 export interface UserProfile {
-  id?: string;
+  id: string;
   user_id: string;
-  display_name?: string;
-  height?: number;
-  weight: number;
-  goal_weight?: number;
-  date_of_birth?: string | null;
-  gender?: string;
-  fitness_level?: string;
-  fitness_goals?: string[];
-  dietary_preferences?: string[];
-  dietary_restrictions?: string[];
-  created_at?: string;
-  updated_at?: string;
+  display_name: string | null;
+  height: number | null;
+  weight: number | null;
+  goal_weight: number | null;
+  gender: string | null;
+  date_of_birth: string | null;
+  fitness_level: string | null;
+  fitness_goals: string[] | null;
+  dietary_preferences: string[] | null;
+  dietary_restrictions: string[] | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserMeasurement {

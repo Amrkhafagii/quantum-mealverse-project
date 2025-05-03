@@ -5,6 +5,9 @@ export interface AssignmentStatus {
   attempt_count?: number;
   status?: string;
   expires_at?: string;
+  assignment_id?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export enum OrderStatus {
@@ -21,6 +24,7 @@ export enum OrderStatus {
   CANCELLED = 'cancelled',
   NO_RESTAURANT_ACCEPTED = 'no_restaurant_accepted',
   NO_RESTAURANT_AVAILABLE = 'no_restaurant_available',
+  EXPIRED_ASSIGNMENT = 'expired_assignment',
   REFUNDED = 'refunded'
 }
 
@@ -36,6 +40,7 @@ export interface OrderAssignmentRequest {
   order_id: string;
   latitude: number;
   longitude: number;
+  action?: string;
 }
 
 export interface RestaurantResponseRequest {
@@ -43,4 +48,21 @@ export interface RestaurantResponseRequest {
   restaurant_id: string;
   assignment_id: string;
   action: 'accept' | 'reject';
+  latitude?: number;
+  longitude?: number;
+}
+
+// Add the expiration helpers to scheduled tasks
+export interface SavedMealPlanWithExpiry extends SavedMealPlan {
+  is_active?: boolean;
+  expires_at?: string;
+}
+
+export interface SavedMealPlan {
+  id?: string;
+  user_id?: string;
+  name?: string;
+  meal_plan?: any;
+  tdee_id?: string;
+  date_created?: string;
 }

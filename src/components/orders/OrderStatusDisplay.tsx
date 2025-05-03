@@ -33,16 +33,16 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
               <OrderStatusBadge status={order.status} />
             </div>
             
-            <OrderStatusMessage 
-              order={order}
-              status={order.status} 
-              restaurant={order.restaurant} 
+            <OrderStatusMessage
+              status={order.status}
+              restaurant={order.restaurant}
               assignmentStatus={assignmentStatus}
+              order={order}
             />
             
             {['restaurant_assigned', 'accepted', 'preparing'].includes(order.status) && (
               <OrderTimer 
-                updatedAt={order.updated_at || order.created_at || ''} 
+                updatedAt={order.updated_at || order.created_at || ''}
               />
             )}
           </div>

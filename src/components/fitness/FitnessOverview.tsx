@@ -1,78 +1,118 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import { UserWorkoutStats } from '@/types/fitness';
-import { Activity, Award, Calendar, LineChart, TrendingUp, Users } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dumbbell, Calendar, Trophy } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FitnessOverviewProps {
   userId?: string;
   workoutStats?: UserWorkoutStats;
 }
 
-export const FitnessOverview: React.FC<FitnessOverviewProps> = ({
-  userId,
-  workoutStats
-}) => {
-  const stats = workoutStats || {
-    streak: 0,
-    total_workouts: 0,
-    most_active_day: 'N/A'
+export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workoutStats = {} }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserProfile(userId);
+    }
+  }, [userId]);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('fitness_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // not found is okay
+        throw error;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching fitness profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Activity className="mr-2 h-5 w-5 text-quantum-cyan" />
-              Workout Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{stats.total_workouts}</div>
-            <p className="text-gray-400 text-sm">Total workouts completed</p>
+      {/* Welcome Section */}
+      <div className="bg-quantum-darkBlue/30 rounded-lg border border-quantum-cyan/20 p-6">
+        <h2 className="text-2xl font-bold text-quantum-cyan mb-4">
+          Welcome, {profile?.display_name || 'Fitness Enthusiast'}!
+        </h2>
+        <p className="text-gray-300">
+          Track your fitness journey, set goals, and monitor your progress all in one place.
+        </p>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20">
+          <CardContent className="p-6 flex items-center space-x-4">
+            <div className="rounded-full bg-purple-500/10 p-3">
+              <Dumbbell className="h-6 w-6 text-purple-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-300">Total Workouts</h3>
+              <p className="text-2xl font-bold text-quantum-cyan">{workoutStats?.total_workouts || 0}</p>
+            </div>
           </CardContent>
         </Card>
         
         <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Calendar className="mr-2 h-5 w-5 text-quantum-cyan" />
-              Current Streak
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{stats.streak} days</div>
-            <p className="text-gray-400 text-sm">Keep it going!</p>
+          <CardContent className="p-6 flex items-center space-x-4">
+            <div className="rounded-full bg-cyan-500/10 p-3">
+              <Calendar className="h-6 w-6 text-cyan-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-300">Current Streak</h3>
+              <p className="text-2xl font-bold text-quantum-cyan">{workoutStats?.streak || 0} days</p>
+            </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <TrendingUp className="mr-2 h-5 w-5 text-quantum-cyan" />
-              Most Active
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-2">{stats.most_active_day}</div>
-            <p className="text-gray-400 text-sm">Your best workout day</p>
+        <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20">
+          <CardContent className="p-6 flex items-center space-x-4">
+            <div className="rounded-full bg-amber-500/10 p-3">
+              <Trophy className="h-6 w-6 text-amber-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-300">Achievements</h3>
+              <p className="text-2xl font-bold text-quantum-cyan">{workoutStats?.achievements || 0}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Recent Activity */}
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
         <CardHeader>
-          <CardTitle>Workout Summary</CardTitle>
+          <CardTitle className="text-quantum-cyan">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-300">
-            Your fitness journey is progressing well. Keep up your {stats.streak}-day streak for maximum results.
-            {stats.total_workouts > 0 
-              ? ` You've completed ${stats.total_workouts} workouts so far, with your best performance on ${stats.most_active_day}s.` 
-              : ' Start your first workout today to begin tracking your progress!'}
-          </p>
+          {workoutStats?.recent_workouts && workoutStats.recent_workouts.length > 0 ? (
+            <div className="space-y-4">
+              {workoutStats.recent_workouts.map((workout, index) => (
+                <div key={index} className="flex items-center justify-between border-b border-gray-800 pb-2">
+                  <div>
+                    <p className="font-medium">{workout.name}</p>
+                    <p className="text-sm text-gray-400">{workout.date}</p>
+                  </div>
+                  <span className="text-quantum-purple">{workout.duration} min</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400">No recent workouts found. Start your fitness journey today!</p>
+          )}
         </CardContent>
       </Card>
     </div>

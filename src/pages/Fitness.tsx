@@ -7,7 +7,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FitnessOverview } from '@/components/fitness/FitnessOverview';
-// Fix the import formats
+// Fix the import formats to default imports
 import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
 import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
@@ -50,17 +50,21 @@ const FitnessPage = () => {
             </TabsContent>
             
             <TabsContent value="planner" className="mt-2">
-              <WorkoutPlanner userId={user?.id} workoutPlans={workoutData.workoutPlans} isLoading={workoutData.isLoading} 
-                onWorkoutPlanCreated={workoutData.fetchWorkoutPlans} />
+              <WorkoutPlanner 
+                userId={user?.id} 
+                workoutPlans={workoutData.workoutPlans} 
+                isLoading={workoutData.isLoading}
+                onWorkoutPlanCreated={workoutData.fetchWorkoutPlans} 
+              />
             </TabsContent>
             
             <TabsContent value="scheduler" className="mt-2">
               <WorkoutScheduler 
                 userId={user?.id} 
-                workoutPlans={workoutData.workoutPlans}
-                workoutSchedules={workoutData.schedules}
-                onScheduleCreated={workoutData.fetchSchedules}
-                refreshHistory={workoutData.fetchHistory}
+                schedules={workoutData.schedules}
+                onScheduleCreated={workoutData.fetchWorkoutPlans}
+                refreshSchedules={workoutData.fetchWorkoutPlans}
+                refreshHistory={workoutData.fetchWorkoutPlans}
                 logWorkout={workoutData.logWorkout}
               />
             </TabsContent>
@@ -68,7 +72,7 @@ const FitnessPage = () => {
             <TabsContent value="history" className="mt-2">
               <WorkoutHistory
                 userId={user?.id}
-                history={workoutData.history}
+                workoutHistory={workoutData.history}
                 isLoading={workoutData.isLoading}
               />
             </TabsContent>

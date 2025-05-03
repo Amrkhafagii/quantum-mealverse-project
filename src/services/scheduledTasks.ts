@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, isBefore } from "date-fns";
-import { SavedMealPlan } from "@/types/fitness";
+import { SavedMealPlanWithExpiry } from "@/types/webhook";
 
 export const markExpiredMealPlansInactive = async () => {
   try {
@@ -21,7 +21,7 @@ export const markExpiredMealPlansInactive = async () => {
     }
     
     // Check each meal plan and update if expired
-    for (const plan of mealPlans as any[]) {
+    for (const plan of mealPlans as SavedMealPlanWithExpiry[]) {
       // If expires_at exists and is before today
       if (plan.expires_at && isBefore(new Date(plan.expires_at), today)) {
         console.log(`Marking meal plan ${plan.id} as inactive (expired)`);
@@ -141,3 +141,40 @@ function generateDefaultMealPlan() {
     total_fat: 37.6
   };
 }
+
+// Add the missing functions that are being imported in Nutrition.tsx
+export const checkExpiredMealPlans = async () => {
+  try {
+    await markExpiredMealPlansInactive();
+    return { success: true };
+  } catch (error) {
+    console.error('Error checking expired meal plans:', error);
+    return { success: false, error };
+  }
+};
+
+export const checkSoonToExpirePlans = async (userId: string) => {
+  try {
+    const today = new Date();
+    const nextWeek = addDays(today, 7);
+    
+    // Find plans that expire in the next 7 days
+    const { data: mealPlans, error } = await supabase
+      .from('saved_meal_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .lt('expires_at', nextWeek.toISOString())
+      .gt('expires_at', today.toISOString());
+    
+    if (error) throw error;
+    
+    return { 
+      success: true, 
+      expiringSoon: mealPlans ? mealPlans.length : 0 
+    };
+  } catch (error) {
+    console.error('Error checking soon to expire plans:', error);
+    return { success: false, error, expiringSoon: 0 };
+  }
+};
