@@ -12,13 +12,25 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  
+  // Get any state passed from navigation
+  const { state } = location;
+  const mode = state?.mode || 'login';
+  const returnTo = state?.returnTo || '/';
 
-  // If user is already logged in, redirect to home
+  // If user is already logged in, redirect appropriately
   React.useEffect(() => {
     if (user) {
-      navigate('/');
+      // Check if the user is a delivery person
+      const userType = user.user_metadata?.user_type;
+      
+      if (userType === 'delivery') {
+        navigate('/delivery/onboarding', { replace: true });
+      } else {
+        navigate(returnTo || '/', { replace: true });
+      }
     }
-  }, [user, navigate]);
+  }, [user, navigate, returnTo]);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -28,7 +40,7 @@ const Auth = () => {
         <div className="w-full max-w-md px-4">
           <Card className="holographic-card p-8">
             <h1 className="text-4xl font-bold text-quantum-cyan mb-8 text-center neon-text">HealthAndFix</h1>
-            <AuthForm />
+            <AuthForm isRegister={mode === 'signup'} />
           </Card>
         </div>
       </div>

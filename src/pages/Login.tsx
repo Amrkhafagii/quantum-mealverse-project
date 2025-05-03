@@ -1,12 +1,32 @@
 
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { AuthForm } from '@/components/AuthForm';
 import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/hooks/useAuth';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  
+  // If user is already logged in, redirect appropriately
+  React.useEffect(() => {
+    if (user) {
+      // Check if the user is a delivery person
+      const userType = user.user_metadata?.user_type;
+      
+      if (userType === 'delivery') {
+        navigate('/delivery/onboarding', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, navigate]);
+
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />

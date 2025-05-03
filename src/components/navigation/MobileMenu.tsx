@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Package, ChefHat } from 'lucide-react';
+import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Package, ChefHat, Truck } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,10 @@ export const MobileMenu = ({
   const isAuthenticated = !!session;
   const navigate = useNavigate();
   
+  const user = session?.user;
+  const userType = user?.user_metadata?.user_type;
+  const isDeliveryUser = userType === 'delivery';
+  
   // Don't show customer options for restaurant users unless they're an admin in customer view
   const showCustomerOptions = !isRestaurant || (isAdmin && isCustomerView);
   
@@ -41,15 +45,17 @@ export const MobileMenu = ({
               <span>Order Food</span>
             </Link>
 
-            <Link 
-              to="/fitness" 
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-            >
-              <ActivitySquare className="h-5 w-5 text-quantum-cyan" />
-              <span>Fitness</span>
-            </Link>
+            {!isDeliveryUser && (
+              <Link 
+                to="/fitness" 
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+              >
+                <ActivitySquare className="h-5 w-5 text-quantum-cyan" />
+                <span>Fitness</span>
+              </Link>
+            )}
             
-            {isAuthenticated && (
+            {isAuthenticated && !isDeliveryUser && (
               <Link 
                 to="/orders" 
                 className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
@@ -59,13 +65,25 @@ export const MobileMenu = ({
               </Link>
             )}
             
-            <Link 
-              to="/cart" 
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-            >
-              <ShoppingCart className="h-5 w-5 text-quantum-cyan" />
-              <span>Cart</span>
-            </Link>
+            {isAuthenticated && isDeliveryUser && (
+              <Link 
+                to="/delivery/dashboard" 
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+              >
+                <Truck className="h-5 w-5 text-quantum-cyan" />
+                <span>Delivery Dashboard</span>
+              </Link>
+            )}
+            
+            {!isDeliveryUser && (
+              <Link 
+                to="/cart" 
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+              >
+                <ShoppingCart className="h-5 w-5 text-quantum-cyan" />
+                <span>Cart</span>
+              </Link>
+            )}
             
             {session ? (
               <Link 
@@ -76,13 +94,24 @@ export const MobileMenu = ({
                 <span>Account</span>
               </Link>
             ) : (
-              <Link 
-                to="/auth" 
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
-              >
-                <LogIn className="h-5 w-5 text-quantum-cyan" />
-                <span>Log In</span>
-              </Link>
+              <>
+                <Link 
+                  to="/auth" 
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50"
+                >
+                  <LogIn className="h-5 w-5 text-quantum-cyan" />
+                  <span>Log In</span>
+                </Link>
+                
+                <Link 
+                  to="/auth" 
+                  state={{ mode: 'signup' }}
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50 bg-quantum-darkBlue/30 border border-quantum-cyan/20"
+                >
+                  <Truck className="h-5 w-5 text-quantum-cyan" />
+                  <span>Become a Delivery Partner</span>
+                </Link>
+              </>
             )}
 
             {isRestaurant && (

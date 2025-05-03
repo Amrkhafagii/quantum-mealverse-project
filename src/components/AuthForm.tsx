@@ -17,7 +17,7 @@ interface AuthFormProps {
 
 export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const [mode, setMode] = useState<'login' | 'signup'>(isRegister ? 'signup' : 'login');
-  const [userType, setUserType] = useState<'customer' | 'restaurant'>('customer');
+  const [userType, setUserType] = useState<'customer' | 'restaurant' | 'delivery'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              user_type: userType
+            }
+          }
         });
         
         if (signUpError) throw signUpError;
@@ -63,26 +68,42 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           });
           
           if (restaurantError) throw restaurantError;
+
+          toast({
+            title: "Restaurant account created!",
+            description: "Please check your email to verify your account.",
+          });
+        } else if (userType === 'delivery' && authData?.user) {
+          toast({
+            title: "Delivery account created!",
+            description: "Please check your email to verify your account.",
+          });
+          
+          // After successful signup as delivery, redirect to onboarding
+          setMode('login');
+        } else {
+          toast({
+            title: "Success!",
+            description: "Please check your email to verify your account.",
+          });
+          // After successful signup, redirect to login
+          setMode('login');
         }
-        
-        toast({
-          title: "Success!",
-          description: "Please check your email to verify your account.",
-        });
-        // After successful signup, redirect to login
-        setMode('login');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
         
+        const userMetadata = data.user?.user_metadata as { user_type?: string } | undefined;
+        const userType = userMetadata?.user_type;
+        
         // Check if user is a restaurant owner
         const { data: restaurantData } = await supabase
           .from('restaurants')
           .select('id')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+          .eq('user_id', data.user?.id || '')
           .maybeSingle();
           
         if (restaurantData) {
@@ -92,6 +113,38 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
             description: "You have been logged in as a restaurant owner",
           });
           navigate('/restaurant/dashboard', { replace: true });
+        } else if (userType === 'delivery') {
+          // Check if delivery onboarding is complete
+          const { data: deliveryUserData } = await supabase
+            .from('delivery_users')
+            .select('id, is_approved')
+            .eq('user_id', data.user?.id || '')
+            .maybeSingle();
+
+          if (deliveryUserData?.id) {
+            if (deliveryUserData.is_approved) {
+              // Approved delivery user - go to delivery dashboard
+              toast({
+                title: "Welcome back",
+                description: "You have been logged in as a delivery partner",
+              });
+              navigate('/delivery/dashboard', { replace: true });
+            } else {
+              // Onboarding complete but not approved yet
+              toast({
+                title: "Welcome back",
+                description: "Your delivery account is pending approval",
+              });
+              navigate('/delivery/onboarding', { replace: true });
+            }
+          } else {
+            // Delivery user who hasn't completed onboarding
+            toast({
+              title: "Welcome",
+              description: "Please complete your delivery partner onboarding",
+            });
+            navigate('/delivery/onboarding', { replace: true });
+          }
         } else {
           // Regular customer flow - prompt for location
           toast({
@@ -127,7 +180,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     toast({
       title: "Location Access Limited",
       description: "Some features will be limited without location access",
-      variant: "destructive", // Changed from "warning" to "destructive"
+      variant: "destructive",
     });
     navigate('/', { replace: true });
   };
@@ -152,11 +205,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     <form onSubmit={handleAuth} className="space-y-6">
       <div className="space-y-4">
         {mode === 'signup' && (
-          <Tabs defaultValue={userType} onValueChange={(value) => setUserType(value as 'customer' | 'restaurant')}>
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue={userType} onValueChange={(value) => setUserType(value as 'customer' | 'restaurant' | 'delivery')}>
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="customer">Customer</TabsTrigger>
               <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
+              <TabsTrigger value="delivery">Delivery</TabsTrigger>
             </TabsList>
+            <TabsContent value="delivery" className="pt-4 pb-2">
+              <div className="text-sm text-gray-300 bg-quantum-darkBlue/30 p-3 rounded-md border border-quantum-cyan/20">
+                <p>Join our delivery team and earn money delivering orders to customers in your area.</p>
+                <p className="mt-1">You'll need to complete an onboarding process after signing up.</p>
+              </div>
+            </TabsContent>
           </Tabs>
         )}
         
