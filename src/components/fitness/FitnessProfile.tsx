@@ -72,7 +72,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
         weight: formData.weight || 0, // Add default weight value
         user_id: userId,
         // Convert Date object to ISO string for database storage
-        date_of_birth: formData.date_of_birth ? formData.date_of_birth : null
+        date_of_birth: date ? date.toISOString() : null
       };
       
       const { data, error } = await supabase
@@ -219,10 +219,7 @@ const FitnessProfile: React.FC<FitnessProfileProps> = ({ userId, onUpdateProfile
           </div>
         </div>
         <Button 
-          onClick={() => userProfile && handleUpdateProfile({
-            ...userProfile,
-            date_of_birth: date ? date.toISOString() : null
-          })}
+          onClick={() => userProfile && handleUpdateProfile(userProfile)}
           className="bg-quantum-purple hover:bg-quantum-purple/90"
           disabled={isLoading}
         >
