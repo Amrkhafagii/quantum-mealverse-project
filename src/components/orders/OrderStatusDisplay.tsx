@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { OrderStatusMessage } from './status/OrderStatusMessage';
+import { OrderStatusMessage } from './OrderStatusMessage';
 import { CancelOrderButton } from './status/CancelOrderButton';
 import { OrderTimer } from './status/OrderTimer';
 import { Order } from '@/types/order';

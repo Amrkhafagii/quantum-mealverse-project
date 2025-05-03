@@ -1,4 +1,3 @@
-
 import { MealPlan } from './food';
 import { Json } from '@/types/database';
 
@@ -14,13 +13,13 @@ export interface SavedMealPlan {
 }
 
 export interface UserProfile {
-  id: string;
+  id?: string;
   user_id: string;
   display_name?: string;
   height?: number;
   weight: number;
   goal_weight?: number;
-  date_of_birth?: Date;
+  date_of_birth?: string | null;
   gender?: string;
   fitness_level?: string;
   fitness_goals?: string[];
@@ -47,11 +46,7 @@ export interface UserMeasurement {
 export interface UserWorkoutStats {
   streak: number;
   total_workouts: number;
-  currentStreak?: number;
-  most_active_day?: string;
-  achievements_count?: number;
-  points?: number;
-  level?: number;
+  most_active_day: string;
 }
 
 export interface WorkoutPlan {

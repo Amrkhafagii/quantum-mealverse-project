@@ -7,16 +7,16 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FitnessOverview } from '@/components/fitness/FitnessOverview';
-import { WorkoutPlanner } from '@/components/fitness/WorkoutPlanner';
-import { WorkoutScheduler } from '@/components/fitness/WorkoutScheduler';
-import { WorkoutHistory } from '@/components/fitness/WorkoutHistory';
-import { WorkoutRecommendations } from '@/components/fitness/WorkoutRecommendations';
+// Fix the import formats
+import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
+import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
+import WorkoutHistory from '@/components/fitness/WorkoutHistory';
+import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
 
 const FitnessPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const workoutData = useWorkoutData();
-  const { workoutPlans, workoutStats, isLoading } = workoutData;
   
   return (
     <div className="min-h-screen bg-quantum-black text-white">
@@ -46,21 +46,21 @@ const FitnessPage = () => {
             </div>
             
             <TabsContent value="overview" className="mt-2">
-              <FitnessOverview userId={user?.id} workoutStats={workoutStats} />
+              <FitnessOverview userId={user?.id} workoutStats={workoutData.workoutStats} />
             </TabsContent>
             
             <TabsContent value="planner" className="mt-2">
-              <WorkoutPlanner userId={user?.id} workoutPlans={workoutPlans} isLoading={isLoading} 
-                onWorkoutPlanCreated={workoutData.refreshWorkoutPlans} />
+              <WorkoutPlanner userId={user?.id} workoutPlans={workoutData.workoutPlans} isLoading={workoutData.isLoading} 
+                onWorkoutPlanCreated={workoutData.fetchWorkoutPlans} />
             </TabsContent>
             
             <TabsContent value="scheduler" className="mt-2">
               <WorkoutScheduler 
                 userId={user?.id} 
-                workoutPlans={workoutPlans}
+                workoutPlans={workoutData.workoutPlans}
                 workoutSchedules={workoutData.schedules}
-                onScheduleCreated={workoutData.refreshSchedules}
-                refreshHistory={workoutData.refreshHistory}
+                onScheduleCreated={workoutData.fetchSchedules}
+                refreshHistory={workoutData.fetchHistory}
                 logWorkout={workoutData.logWorkout}
               />
             </TabsContent>
@@ -69,14 +69,14 @@ const FitnessPage = () => {
               <WorkoutHistory
                 userId={user?.id}
                 history={workoutData.history}
-                isLoading={isLoading}
+                isLoading={workoutData.isLoading}
               />
             </TabsContent>
             
             <TabsContent value="recommendations" className="mt-2">
               <WorkoutRecommendations
                 userId={user?.id}
-                onApplied={workoutData.refreshWorkoutPlans}
+                onApplied={workoutData.fetchWorkoutPlans}
               />
             </TabsContent>
           </Tabs>
