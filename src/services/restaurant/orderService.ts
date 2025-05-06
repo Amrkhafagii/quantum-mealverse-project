@@ -61,7 +61,7 @@ export const updateOrderStatus = async (
       }
       
       // For acceptance, also update restaurant_id
-      if (newStatus === OrderStatus.RESTAURANT_ACCEPTED || newStatus === OrderStatus.PREPARING) {
+      if (newStatus === OrderStatus.RESTAURANT_ACCEPTED) {
         console.log(`Accepting order ${orderId}, setting restaurant_id to ${restaurantId}`);
         
         // Update order status and restaurant_id
@@ -197,7 +197,7 @@ export const updateOrderStatus = async (
         orderId,
         newStatus,
         restaurantId,
-        { ...details as Json, restaurantName },
+        { ...(details as any), restaurantName } as Json,
         undefined,
         undefined,
         'restaurant'  // Explicitly set changed_by_type
@@ -246,7 +246,7 @@ export const updateOrderStatus = async (
       orderId,
       newStatus,
       restaurantId,
-      { ...details as Json, restaurantName },
+      { ...(details as any), restaurantName } as Json,
       undefined,
       undefined,
       'restaurant'

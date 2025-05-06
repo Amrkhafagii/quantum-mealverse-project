@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -6,9 +7,11 @@ import { getRestaurantOrders, updateOrderStatus } from '@/services/restaurant/or
 import { useAuth } from '@/hooks/useAuth';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/types/database';
 
 interface LiveOrdersListProps {
   statusFilter?: OrderStatus[];
@@ -18,10 +21,14 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [acceptingOrderId, setAcceptingOrderId] = React.useState<string | null>(null);
+  
   const { data: orders, isLoading, error, refetch: refreshOrders } = useQuery({
-    queryKey: ['restaurant-orders', user?.restaurant_id, statusFilter],
-    queryFn: () => getRestaurantOrders(user?.restaurant_id!, statusFilter),
-    enabled: !!user?.restaurant_id,
+    queryKey: ['restaurant-orders', user?.id, statusFilter],
+    queryFn: () => {
+      if (!user?.id) return Promise.resolve([]);
+      return getRestaurantOrders(user.id, statusFilter);
+    },
+    enabled: !!user?.id,
   });
 
   const handleAcceptOrder = async (order: RestaurantOrder, assignmentId?: string) => {
@@ -33,7 +40,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('name')
-        .eq('id', user?.restaurant_id)
+        .eq('id', user?.id)
         .single();
         
       const restaurantName = restaurant?.name || 'Unknown Restaurant';
@@ -60,10 +67,10 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
           order_id: order.id,
           previous_status: order.status,
           status: 'restaurant_accepted',
-          restaurant_id: user?.restaurant_id,
+          restaurant_id: user?.id,
           restaurant_name: restaurantName,
           changed_by_type: 'restaurant',
-          details: { assignment_id: assignmentId }
+          details: { assignment_id: assignmentId } as Json
         });
 
         // Update order status to reflect acceptance
@@ -71,7 +78,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
           .from('orders')
           .update({ 
             status: 'restaurant_accepted',
-            restaurant_id: user?.restaurant_id,
+            restaurant_id: user?.id,
             updated_at: new Date().toISOString()
           })
           .eq('id', order.id);
@@ -85,7 +92,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
         const success = await updateOrderStatus(
           order.id,
           OrderStatus.RESTAURANT_ACCEPTED,
-          user?.restaurant_id!,
+          user?.id || '',
           { direct_accept: true }
         );
         
@@ -130,7 +137,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('name')
-        .eq('id', user?.restaurant_id)
+        .eq('id', user?.id)
         .single();
         
       const restaurantName = restaurant?.name || 'Unknown Restaurant';
@@ -156,10 +163,10 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
           order_id: order.id,
           previous_status: order.status,
           status: 'restaurant_rejected',
-          restaurant_id: user?.restaurant_id,
+          restaurant_id: user?.id,
           restaurant_name: restaurantName,
           changed_by_type: 'restaurant',
-          details: { assignment_id: assignmentId }
+          details: { assignment_id: assignmentId } as Json
         });
       }
       
@@ -167,7 +174,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
       const success = await updateOrderStatus(
         order.id,
         OrderStatus.RESTAURANT_REJECTED,
-        user?.restaurant_id!,
+        user?.id || '',
         { assignment_id: assignmentId }
       );
       
@@ -230,12 +237,12 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
                   >
                     Reject
                   </Button>
-                  <Button
-                    isLoading={acceptingOrderId === order.id}
+                  <LoadingButton
+                    loading={acceptingOrderId === order.id}
                     onClick={() => handleAcceptOrder(order)}
                   >
                     Accept
-                  </Button>
+                  </LoadingButton>
                 </>
               )}
               {order.status === OrderStatus.RESTAURANT_ASSIGNED && (
@@ -246,12 +253,12 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
                   >
                     Reject
                   </Button>
-                  <Button
-                    isLoading={acceptingOrderId === order.id}
+                  <LoadingButton
+                    loading={acceptingOrderId === order.id}
                     onClick={() => handleAcceptOrder(order, (order as any).restaurant_assignment_id)}
                   >
                     Accept
-                  </Button>
+                  </LoadingButton>
                 </>
               )}
               {order.status === OrderStatus.PENDING && (
@@ -262,12 +269,12 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
                   >
                     Reject
                   </Button>
-                  <Button
-                    isLoading={acceptingOrderId === order.id}
+                  <LoadingButton
+                    loading={acceptingOrderId === order.id}
                     onClick={() => handleAcceptOrder(order)}
                   >
                     Accept
-                  </Button>
+                  </LoadingButton>
                 </>
               )}
             </div>
