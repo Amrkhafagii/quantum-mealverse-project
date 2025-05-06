@@ -204,15 +204,22 @@ export async function handleAssignment(
       return { success: false, error: 'Failed to update assignment' };
     }
     
+    // IMPROVED: Cancel ALL other assignments (not just pending ones)
+    // This ensures that no other restaurant can still see this order
     const { error: cancelError } = await supabase
       .from('restaurant_assignments')
-      .update({ status: 'cancelled' })
+      .update({ 
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+        details: { cancelled_reason: 'Order accepted by another restaurant' } 
+      })
       .eq('order_id', orderId)
-      .eq('status', 'pending')
       .neq('id', assignmentId);
     
     if (cancelError) {
       console.error('[HANDLE_ASSIGNMENT] Error cancelling other assignments:', cancelError);
+    } else {
+      console.log('[HANDLE_ASSIGNMENT] Successfully cancelled all other assignments');
     }
     
     await logAssignmentAttempt(supabase, orderId, restaurantId, 'accepted');
@@ -503,4 +510,85 @@ export async function checkAndHandleExpiredAssignments(supabase: SupabaseClient)
     console.error('[CHECK_EXPIRED] Error in checkAndHandleExpiredAssignments:', error);
     return { success: false, error: 'Failed to process expired assignments' };
   }
+}
+
+// Add a new utility function to clean up inconsistent order assignments
+export async function synchronizeOrderAssignments(
+  supabase: SupabaseClient,
+  orderId: string
+) {
+  try {
+    console.log(`[SYNC_ORDER] Synchronizing assignments for order ${orderId}`);
+    
+    // Get order details
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('status, restaurant_id')
+      .eq('id', orderId)
+      .single();
+      
+    if (orderError) {
+      console.error(`[SYNC_ORDER] Error fetching order ${orderId}:`, orderError);
+      return { success: false, error: 'Failed to fetch order details' };
+    }
+    
+    // If order is accepted by a restaurant
+    if (order.status === 'restaurant_accepted' || 
+        order.status === 'accepted' || 
+        order.status === 'preparing' || 
+        order.status === 'ready_for_pickup' || 
+        order.status === 'on_the_way' || 
+        order.status === 'delivered') {
+      
+      // Cancel all other restaurant assignments
+      const { error: cancelError } = await supabase
+        .from('restaurant_assignments')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+          details: { cancelled_reason: 'Synchronization - order already accepted by restaurant' }
+        })
+        .eq('order_id', orderId)
+        .not('restaurant_id', 'eq', order.restaurant_id);
+        
+      if (cancelError) {
+        console.error(`[SYNC_ORDER] Error cancelling assignments for order ${orderId}:`, cancelError);
+        return { success: false, error: 'Failed to cancel inconsistent assignments' };
+      }
+    }
+    
+    // If order is rejected or no restaurant accepted
+    if (order.status === 'restaurant_rejected' || order.status === 'no_restaurant_accepted') {
+      // Ensure all assignments are marked correctly
+      const { error: cancelError } = await supabase
+        .from('restaurant_assignments')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+          details: { cancelled_reason: 'Synchronization - order was rejected or never accepted' }
+        })
+        .eq('order_id', orderId)
+        .not('status', 'in', '("rejected", "expired")');
+        
+      if (cancelError) {
+        console.error(`[SYNC_ORDER] Error updating assignment status for order ${orderId}:`, cancelError);
+        return { success: false, error: 'Failed to update assignment statuses' };
+      }
+    }
+    
+    return { success: true, message: 'Order assignments synchronized successfully' };
+  } catch (error) {
+    console.error(`[SYNC_ORDER] Error in synchronizeOrderAssignments:`, error);
+    return { success: false, error: 'Failed to synchronize order assignments' };
+  }
+}
+
+export async function duplicateOrderWithNewRestaurant(
+  supabase: SupabaseClient, 
+  orderId: string, 
+  attemptNumber: number
+) {
+  // Placeholder function - replace with actual implementation if needed
+  console.log(`Attempting to duplicate order ${orderId} for reassignment (attempt #${attemptNumber})`);
+  return { success: false, error: 'Duplication not implemented yet' };
 }

@@ -110,21 +110,24 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter, re
         }
       }
       
-      // Cancel other pending assignments
-      if (assignmentId) {
-        const { error } = await supabase
-          .from('restaurant_assignments')
-          .update({ 
-            status: 'cancelled',
-            updated_at: new Date().toISOString() 
-          })
-          .eq('order_id', order.id)
-          .eq('status', 'pending')
-          .neq('id', assignmentId);
-          
-        if (error) {
-          console.error('Failed to cancel other assignments:', error);
-        }
+      // IMPROVED: Cancel ALL other assignments for this order regardless of status
+      // This ensures no restaurant can still see or interact with this order
+      const { error } = await supabase
+        .from('restaurant_assignments')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+          details: { cancelled_reason: 'Order accepted by another restaurant' }
+        })
+        .eq('order_id', order.id)
+        .neq('status', 'accepted'); // Only exclude those already marked as 'accepted'
+        
+      if (error) {
+        console.error('Failed to cancel other assignments:', error);
+        // Continue with the process despite this error
+        // We'll log it but not block the acceptance flow
+      } else {
+        console.log(`Successfully cancelled all other assignments for order ${order.id}`);
       }
       
       // Here's the new part - automatically transition to preparing status

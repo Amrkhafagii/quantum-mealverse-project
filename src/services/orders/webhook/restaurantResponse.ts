@@ -74,6 +74,24 @@ export const sendRestaurantResponse = async (
         console.error('Failed to update order status directly:', error);
       } else {
         console.log(`Successfully updated order ${orderId} status to restaurant_${action}ed`);
+        
+        // NEW: Cancel ALL other assignments for this order
+        // This ensures consistency and that no other restaurant can interact with this order anymore
+        const { error: cancelError } = await supabase
+          .from('restaurant_assignments')
+          .update({ 
+            status: 'cancelled',
+            updated_at: new Date().toISOString(),
+            details: { cancelled_reason: 'Order accepted by another restaurant' }
+          })
+          .eq('order_id', orderId)
+          .neq('status', 'accepted'); // Only exclude those already marked as accepted
+          
+        if (cancelError) {
+          console.error('Failed to cancel other assignments:', cancelError);
+        } else {
+          console.log(`Successfully cancelled all other assignments for order ${orderId}`);
+        }
       }
     }
     

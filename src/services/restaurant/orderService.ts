@@ -4,6 +4,7 @@ import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryServic
 import { Database } from '@/integrations/supabase/types';
 import { Json } from '@/types/database';
 import { fromSupabaseJson } from '@/utils/supabaseUtils';
+import { fixOrderStatus } from '@/utils/orderStatusFix';
 
 /**
  * Update an order's status with proper validation and history tracking
@@ -99,21 +100,37 @@ export const updateOrderStatus = async (
             console.log(`Successfully updated assignment ${assignmentId} to accepted`);
           }
           
-          // Also update other pending assignments for this order to 'cancelled'
+          // IMPROVED: Cancel ALL other assignments for this order, not just pending ones
           const { error: cancelError } = await supabase
             .from('restaurant_assignments')
             .update({ 
               status: 'cancelled',
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              details: { cancelled_reason: 'Order accepted by another restaurant' }
             })
             .eq('order_id', orderId)
-            .eq('status', 'pending')
             .neq('id', assignmentId);
             
           if (cancelError) {
             console.error('Failed to cancel other assignments:', cancelError);
           } else {
-            console.log(`Successfully cancelled other pending assignments for order ${orderId}`);
+            console.log(`Successfully cancelled all other assignments for order ${orderId}`);
+          }
+        } else {
+          // If no specific assignment_id but order is accepted, cancel all restaurant assignments
+          // for other restaurants to ensure consistency
+          const { error: cancelError } = await supabase
+            .from('restaurant_assignments')
+            .update({ 
+              status: 'cancelled',
+              updated_at: new Date().toISOString(),
+              details: { cancelled_reason: 'Order accepted directly by restaurant' }
+            })
+            .eq('order_id', orderId)
+            .neq('restaurant_id', restaurantId);
+            
+          if (cancelError) {
+            console.error('Failed to cancel assignments for other restaurants:', cancelError);
           }
         }
       } else {
@@ -182,6 +199,9 @@ export const updateOrderStatus = async (
           }
         }
       }
+      
+      // Run additional fix to ensure DB consistency
+      await fixOrderStatus(orderId);
       
       // Get restaurant name for the order history
       const { data: restaurant } = await supabase
