@@ -70,7 +70,9 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
         return false;
       }
       
-      // Add to order history
+      // Add to order history - Convert note to Json compatible type
+      const details = { note: 'Status fixed automatically due to inconsistency' } as unknown as Json;
+      
       await supabase.from('order_history').insert({
         order_id: orderId,
         previous_status: order.status,
@@ -78,7 +80,7 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
         restaurant_id: acceptedAssignment.restaurant_id,
         restaurant_name: restaurantName,
         changed_by_type: 'system',
-        details: { note: 'Status fixed automatically due to inconsistency' } as Json
+        details: details
       });
       
       return true;

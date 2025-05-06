@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { getRestaurantOrders, updateOrderStatus } from '@/services/restaurant/orderService';
@@ -8,27 +8,30 @@ import { useAuth } from '@/hooks/useAuth';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { Button } from '@/components/ui/button';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/types/database';
 
 interface LiveOrdersListProps {
   statusFilter?: OrderStatus[];
+  restaurantId?: string; // Add restaurantId as an optional prop
 }
 
-export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) => {
+export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter, restaurantId }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [acceptingOrderId, setAcceptingOrderId] = React.useState<string | null>(null);
   
+  // Use restaurantId prop if provided, otherwise fallback to user.id
+  const effectiveRestaurantId = restaurantId || user?.id;
+  
   const { data: orders, isLoading, error, refetch: refreshOrders } = useQuery({
-    queryKey: ['restaurant-orders', user?.id, statusFilter],
+    queryKey: ['restaurant-orders', effectiveRestaurantId, statusFilter],
     queryFn: () => {
-      if (!user?.id) return Promise.resolve([]);
-      return getRestaurantOrders(user.id, statusFilter);
+      if (!effectiveRestaurantId) return Promise.resolve([]);
+      return getRestaurantOrders(effectiveRestaurantId, statusFilter);
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveRestaurantId,
   });
 
   const handleAcceptOrder = async (order: RestaurantOrder, assignmentId?: string) => {
@@ -40,7 +43,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('name')
-        .eq('id', user?.id)
+        .eq('id', effectiveRestaurantId)
         .single();
         
       const restaurantName = restaurant?.name || 'Unknown Restaurant';
@@ -67,7 +70,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
           order_id: order.id,
           previous_status: order.status,
           status: 'restaurant_accepted',
-          restaurant_id: user?.id,
+          restaurant_id: effectiveRestaurantId,
           restaurant_name: restaurantName,
           changed_by_type: 'restaurant',
           details: { assignment_id: assignmentId } as Json
@@ -78,7 +81,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
           .from('orders')
           .update({ 
             status: 'restaurant_accepted',
-            restaurant_id: user?.id,
+            restaurant_id: effectiveRestaurantId,
             updated_at: new Date().toISOString()
           })
           .eq('id', order.id);
@@ -92,7 +95,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
         const success = await updateOrderStatus(
           order.id,
           OrderStatus.RESTAURANT_ACCEPTED,
-          user?.id || '',
+          effectiveRestaurantId || '',
           { direct_accept: true }
         );
         
@@ -137,7 +140,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
       const { data: restaurant } = await supabase
         .from('restaurants')
         .select('name')
-        .eq('id', user?.id)
+        .eq('id', effectiveRestaurantId)
         .single();
         
       const restaurantName = restaurant?.name || 'Unknown Restaurant';
@@ -163,7 +166,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
           order_id: order.id,
           previous_status: order.status,
           status: 'restaurant_rejected',
-          restaurant_id: user?.id,
+          restaurant_id: effectiveRestaurantId,
           restaurant_name: restaurantName,
           changed_by_type: 'restaurant',
           details: { assignment_id: assignmentId } as Json
@@ -174,7 +177,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter }) 
       const success = await updateOrderStatus(
         order.id,
         OrderStatus.RESTAURANT_REJECTED,
-        user?.id || '',
+        effectiveRestaurantId || '',
         { assignment_id: assignmentId }
       );
       

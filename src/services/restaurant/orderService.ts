@@ -193,11 +193,14 @@ export const updateOrderStatus = async (
       const restaurantName = restaurant?.name || 'Unknown Restaurant';
       
       // Record to order history with the restaurant ID that accepted/rejected
+      // Convert details to a Json compatible object
+      const jsonDetails = details ? { ...details, restaurantName } as unknown as Json : { restaurantName } as unknown as Json;
+      
       await recordOrderHistory(
         orderId,
         newStatus,
         restaurantId,
-        { ...(details as any), restaurantName } as Json,
+        jsonDetails,
         undefined,
         undefined,
         'restaurant'  // Explicitly set changed_by_type
@@ -242,11 +245,14 @@ export const updateOrderStatus = async (
     const restaurantName = restaurant?.name || 'Unknown Restaurant';
     
     // Record to order history
+    // Convert details to a Json compatible object
+    const jsonDetails = details ? { ...details, restaurantName } as unknown as Json : { restaurantName } as unknown as Json;
+    
     await recordOrderHistory(
       orderId,
       newStatus,
       restaurantId,
-      { ...(details as any), restaurantName } as Json,
+      jsonDetails,
       undefined,
       undefined,
       'restaurant'
