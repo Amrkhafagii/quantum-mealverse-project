@@ -11,29 +11,116 @@ export const findNearbyAssignments = async (
   maxDistanceKm: number = 10
 ): Promise<DeliveryAssignment[]> => {
   try {
-    // Since we can't directly call the PostgreSQL function, we'll query for assignments
-    // in a simulated way (in a real app, we'd have an RPC or API endpoint)
+    // Query for actual pending delivery assignments
     const { data, error } = await supabase
       .from('delivery_assignments')
-      .select('*, restaurant:restaurant_id(*)')
+      .select(`
+        *,
+        restaurant:restaurant_id(*),
+        orders:order_id(*)
+      `)
       .eq('status', 'pending')
-      .limit(5); // Get a few assignments for testing
+      .is('delivery_user_id', null); // Only get unassigned deliveries
     
     if (error) {
       console.error('Error finding nearby assignments:', error);
       throw error;
     }
     
-    // Add simulated distance information based on the user's location
-    return (data || []).map(assignment => ({
-      ...assignment,
-      distance_km: Math.random() * 5 + 1, // Random distance between 1-6 km
-      estimate_minutes: Math.round(Math.random() * 20 + 10), // Random time between 10-30 mins
-      status: assignment.status as DeliveryAssignment['status']
-    }));
+    // Add distance information based on the user's location
+    const assignments = (data || []).map(assignment => {
+      // Calculate approximate distance (simplified calculation)
+      const restaurantLat = assignment.restaurant?.latitude || 0;
+      const restaurantLng = assignment.restaurant?.longitude || 0;
+      
+      // Simple distance calculation (Haversine would be more accurate)
+      const latDiff = Math.abs(latitude - restaurantLat);
+      const lngDiff = Math.abs(longitude - restaurantLng);
+      const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111; // Rough km conversion
+      
+      return {
+        ...assignment,
+        distance_km: parseFloat(distance.toFixed(2)), 
+        estimate_minutes: Math.round(distance * 3) + 10, // Rough estimate: 3 min per km + 10 min base time
+        status: assignment.status as DeliveryAssignment['status']
+      };
+    });
+    
+    // Filter by distance and sort by proximity
+    return assignments
+      .filter(a => a.distance_km <= maxDistanceKm)
+      .sort((a, b) => a.distance_km - b.distance_km);
   } catch (error) {
     console.error('Error in findNearbyAssignments:', error);
     throw error;
+  }
+};
+
+// Create a delivery assignment for an order that's ready for pickup
+export const createDeliveryAssignmentForOrder = async (
+  orderId: string,
+  restaurantId: string
+): Promise<DeliveryAssignment | null> => {
+  try {
+    // Check if assignment already exists
+    const { data: existingAssignment, error: checkError } = await supabase
+      .from('delivery_assignments')
+      .select('*')
+      .eq('order_id', orderId)
+      .single();
+      
+    if (existingAssignment) {
+      console.log(`Delivery assignment already exists for order ${orderId}`);
+      return existingAssignment as DeliveryAssignment;
+    }
+    
+    // Get restaurant info for location data
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('name, latitude, longitude')
+      .eq('id', restaurantId)
+      .single();
+      
+    if (restaurantError) {
+      console.error('Error fetching restaurant data:', restaurantError);
+      throw restaurantError;
+    }
+    
+    // Create new delivery assignment
+    const { data: newAssignment, error: createError } = await supabase
+      .from('delivery_assignments')
+      .insert({
+        order_id: orderId,
+        restaurant_id: restaurantId,
+        status: 'pending',
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+      
+    if (createError) {
+      console.error('Error creating delivery assignment:', createError);
+      throw createError;
+    }
+    
+    console.log(`Created new delivery assignment for order ${orderId}`);
+    
+    // Record in order history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: 'delivery_requested',
+      restaurant_id: restaurantId,
+      restaurant_name: restaurant.name,
+      details: { assignment_id: newAssignment.id }
+    });
+    
+    return newAssignment as DeliveryAssignment;
+  } catch (error) {
+    console.error('Error in createDeliveryAssignmentForOrder:', error);
+    return null;
   }
 };
 

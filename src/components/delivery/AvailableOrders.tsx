@@ -5,7 +5,7 @@ import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import { findNearbyAssignments, acceptDeliveryAssignment, rejectAssignment } from '@/services/delivery/deliveryOrderAssignmentService';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, DollarSign, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, MapPin, DollarSign, Clock, AlertCircle, RefreshCw, Store } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 
@@ -74,11 +74,13 @@ export const AvailableOrders: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log(`Searching for orders near: ${location.latitude}, ${location.longitude}`);
       const assignments = await findNearbyAssignments(
         location.latitude,
         location.longitude,
         10 // 10km radius
       );
+      console.log(`Found ${assignments.length} available delivery assignments`);
       setAvailableOrders(assignments);
     } catch (err) {
       console.error('Error fetching available orders:', err);
@@ -242,7 +244,9 @@ export const AvailableOrders: React.FC = () => {
               <Card key={order.id} className="bg-quantum-darkBlue/50">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{order.restaurant?.name || 'Restaurant'}</CardTitle>
+                    <CardTitle className="text-lg">
+                      {order.restaurant?.name || 'Restaurant'}
+                    </CardTitle>
                     <span className="text-lg font-bold text-quantum-cyan">
                       $5.00 <span className="text-xs font-normal">base</span>
                     </span>
@@ -251,6 +255,10 @@ export const AvailableOrders: React.FC = () => {
                 
                 <CardContent className="pb-2">
                   <div className="space-y-2">
+                    <div className="flex items-center text-sm">
+                      <Store className="h-4 w-4 mr-2 text-quantum-cyan" />
+                      <span className="line-clamp-1">{order.orders?.customer_name || 'Customer'}</span>
+                    </div>
                     <div className="flex items-center text-sm">
                       <MapPin className="h-4 w-4 mr-2 text-quantum-cyan" />
                       <span>{order.distance_km.toFixed(1)} km away</span>

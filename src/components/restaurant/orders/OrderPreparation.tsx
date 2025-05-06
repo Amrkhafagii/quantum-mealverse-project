@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import { Order, OrderItem } from '@/types/order';
 import { updateOrderStatus } from '@/services/orders/webhookService';
 import { OrderStatus } from '@/types/webhook';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
+import { createDeliveryAssignmentForOrder } from '@/services/delivery/deliveryOrderAssignmentService';
 
 interface OrderPreparationProps {
   restaurantId: string;
@@ -409,6 +409,14 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           assignment_id: orderData.assignment_type === 'assignment' ? orderData.id : null 
         }
       });
+      
+      // Create a delivery assignment if one doesn't exist yet
+      const deliveryAssignment = await createDeliveryAssignmentForOrder(orderData.order_id, restaurantId);
+      if (deliveryAssignment) {
+        console.log(`Delivery assignment created/found for order ${orderData.order_id}`);
+      } else {
+        console.warn(`Failed to create delivery assignment for order ${orderData.order_id}`);
+      }
       
       toast({
         title: "Order Ready for Pickup",
