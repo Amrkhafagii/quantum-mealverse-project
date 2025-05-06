@@ -27,6 +27,7 @@ interface OrderData {
     name: string;
     phone: string;
   } | null;
+  source: 'assignment' | 'order'; // To track the source of the order
 }
 
 export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaurantId }) => {
@@ -38,7 +39,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
     setLoading(true);
     
     try {
-      // Fetch assignments for restaurant that are ready for pickup
+      // First, fetch assignments for restaurant that are ready for pickup
       const { data: assignments, error } = await supabase
         .from('restaurant_assignments')
         .select(`
@@ -52,8 +53,29 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
         throw error;
       }
       
+      console.log('Ready for pickup assignments:', assignments?.length);
+      
+      // Now, also fetch orders that are in ready_for_pickup status
+      // in case the assignment status wasn't updated correctly
+      const { data: directOrders, error: directOrdersError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .eq('status', 'ready_for_pickup')
+        .order('created_at', { ascending: false });
+        
+      if (directOrdersError) {
+        console.error('Error fetching direct orders:', directOrdersError);
+        // Continue with assignments only
+      }
+      
+      console.log('Direct ready for pickup orders:', directOrders?.length);
+      
       // Process the orders
       const enhancedOrders: OrderData[] = [];
+      const processedOrderIds = new Set<string>();
+      
+      // First process assignment-based orders
       for (const assignment of assignments || []) {
         // Fetch the order separately
         const { data: orderData, error: orderError } = await supabase
@@ -66,6 +88,9 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           console.error('Error fetching order:', orderError);
           continue;
         }
+        
+        // Add to processed set to avoid duplicates
+        processedOrderIds.add(assignment.order_id);
         
         // Get order ID for further queries
         const orderId = assignment.order_id;
@@ -130,8 +155,105 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           notes: assignment.notes,
           expires_at: assignment.expires_at,
           order: order,
-          driver
+          driver,
+          source: 'assignment'
         });
+      }
+      
+      // Now process direct orders (that might not have their assignment updated)
+      if (directOrders) {
+        for (const orderData of directOrders) {
+          // Skip orders we've already processed from assignments
+          if (processedOrderIds.has(orderData.id)) {
+            continue;
+          }
+          
+          // Find any assignment associated with this order
+          let assignmentId = '';
+          const { data: relatedAssignments } = await supabase
+            .from('restaurant_assignments')
+            .select('id')
+            .eq('order_id', orderData.id)
+            .eq('restaurant_id', restaurantId);
+            
+          if (relatedAssignments && relatedAssignments.length > 0) {
+            assignmentId = relatedAssignments[0].id;
+            
+            // Fix the assignment status to match the order status
+            await supabase
+              .from('restaurant_assignments')
+              .update({ 
+                status: 'ready_for_pickup',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', assignmentId);
+              
+            console.log(`Fixed assignment ${assignmentId} status to ready_for_pickup`);
+          }
+            
+          // Check for delivery driver
+          let driver = null;
+          const { data: deliveryAssignments } = await supabase
+            .from('delivery_assignments')
+            .select('*')
+            .eq('order_id', orderData.id);
+            
+          if (deliveryAssignments && deliveryAssignments.length > 0) {
+            // Find the driver assigned to this order
+            const { data: driverData } = await supabase
+              .from('delivery_users')
+              .select('*')
+              .eq('id', deliveryAssignments[0].delivery_user_id)
+              .single();
+              
+            driver = driverData;
+          }
+          
+          // Fetch order items
+          const { data: orderItems } = await supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', orderData.id);
+          
+          // Create a properly typed Order object
+          const order: Order = {
+            id: orderData.id,
+            user_id: orderData.user_id,
+            customer_name: orderData.customer_name,
+            customer_email: orderData.customer_email,
+            customer_phone: orderData.customer_phone,
+            delivery_address: orderData.delivery_address,
+            city: orderData.city,
+            notes: orderData.notes,
+            delivery_method: orderData.delivery_method,
+            payment_method: orderData.payment_method,
+            delivery_fee: orderData.delivery_fee,
+            subtotal: orderData.subtotal,
+            total: orderData.total,
+            status: orderData.status,
+            latitude: 'latitude' in orderData ? Number(orderData.latitude) : null,
+            longitude: 'longitude' in orderData ? Number(orderData.longitude) : null,
+            formatted_order_id: orderData.formatted_order_id,
+            created_at: orderData.created_at,
+            updated_at: orderData.updated_at,
+            restaurant_id: orderData.restaurant_id,
+            order_items: orderItems as OrderItem[] || []
+          };
+          
+          enhancedOrders.push({
+            id: assignmentId || orderData.id, // Use assignment ID if available, otherwise order ID
+            restaurant_id: orderData.restaurant_id,
+            order_id: orderData.id,
+            status: 'ready_for_pickup',
+            created_at: orderData.created_at,
+            updated_at: orderData.updated_at,
+            notes: '',
+            expires_at: '',
+            order: order,
+            driver,
+            source: 'order'
+          });
+        }
       }
       
       setOrders(enhancedOrders);
@@ -153,9 +275,9 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
     // Initial fetch of orders
     fetchOrders();
     
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('restaurant_pickup_live')
+    // Subscribe to real-time updates for restaurant_assignments
+    const assignmentsChannel = supabase
+      .channel('restaurant_pickup_assignments')
       .on('postgres_changes', 
         { 
           event: '*', 
@@ -169,9 +291,26 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
         })
       .subscribe();
       
+    // Also subscribe to changes in the orders table to catch direct status changes
+    const ordersChannel = supabase
+      .channel('restaurant_pickup_orders')
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurantId}`
+        },
+        () => {
+          // Refetch orders when there are changes
+          fetchOrders();
+        })
+      .subscribe();
+      
     // Clean up subscription
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(assignmentsChannel);
+      supabase.removeChannel(ordersChannel);
     };
   }, [restaurantId]);
   

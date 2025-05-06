@@ -312,6 +312,8 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
   
   const markAsReady = async (orderData: OrderData) => {
     try {
+      console.log("Marking order as ready with data:", orderData);
+      
       // Based on the source of the order, update accordingly
       if (orderData.assignment_type === 'assignment') {
         // First update the restaurant_assignment status
@@ -324,7 +326,35 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
           .eq('id', orderData.id);
         
         if (assignmentError) {
+          console.error('Error updating assignment status:', assignmentError);
           throw assignmentError;
+        }
+        
+        console.log(`Updated restaurant_assignment ${orderData.id} to ready_for_pickup`);
+      } else {
+        // For direct orders, we need to find if there is an assignment and update it
+        const { data: assignments } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', orderData.order_id)
+          .eq('restaurant_id', restaurantId)
+          .eq('status', 'accepted');
+          
+        if (assignments && assignments.length > 0) {
+          const { error: assignmentError } = await supabase
+            .from('restaurant_assignments')
+            .update({ 
+              status: 'ready_for_pickup',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', assignments[0].id);
+          
+          if (assignmentError) {
+            console.error('Error updating assignment status:', assignmentError);
+            // Continue anyway as we'll update the order status directly
+          } else {
+            console.log(`Updated found assignment ${assignments[0].id} to ready_for_pickup`);
+          }
         }
       }
       
@@ -352,8 +382,33 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({ restaurantId
         
         if (orderUpdateError) {
           console.error('Fallback order update failed:', orderUpdateError);
+          throw orderUpdateError;
         }
+        
+        console.log(`Direct update of order ${orderData.order_id} to ready_for_pickup`);
       }
+      
+      // Add an order history record for this status change
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', restaurantId)
+        .single();
+        
+      const restaurantName = restaurant?.name || 'Unknown Restaurant';
+      
+      await supabase.from('order_history').insert({
+        order_id: orderData.order_id,
+        previous_status: orderData.order.status,
+        status: OrderStatus.READY_FOR_PICKUP,
+        restaurant_id: restaurantId,
+        restaurant_name: restaurantName,
+        changed_by_type: 'restaurant',
+        details: { 
+          marked_ready: true, 
+          assignment_id: orderData.assignment_type === 'assignment' ? orderData.id : null 
+        }
+      });
       
       toast({
         title: "Order Ready for Pickup",

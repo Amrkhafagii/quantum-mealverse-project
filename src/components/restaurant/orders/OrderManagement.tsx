@@ -30,7 +30,7 @@ export const OrderManagement = () => {
         <TabsTrigger value="history">Order History</TabsTrigger>
       </TabsList>
       <TabsContent value="new" className="mt-6">
-        <LiveOrdersList restaurantId={restaurant.id} />
+        <LiveOrdersList restaurantId={restaurant.id} key={`new-${refreshTrigger}`} />
       </TabsContent>
       <TabsContent value="preparation" className="mt-6">
         <OrderPreparation restaurantId={restaurant.id} key={`prep-${refreshTrigger}`} />
