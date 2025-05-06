@@ -33,6 +33,7 @@ const getStepIndex = (status: string) => {
     'pending': 0,
     'awaiting_restaurant': 0, // Same as pending in the timeline
     'accepted': 1,
+    'restaurant_accepted': 1, // Map restaurant_accepted to Accepted step
     'preparing': 2,
     'ready_for_pickup': 3,
     'on_the_way': 4,

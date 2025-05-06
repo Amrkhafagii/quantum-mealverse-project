@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
@@ -59,7 +58,7 @@ export const updateOrderStatus = async (
       }
       
       // For acceptance, also update restaurant_id
-      if (newStatus === OrderStatus.RESTAURANT_ACCEPTED) {
+      if (newStatus === OrderStatus.RESTAURANT_ACCEPTED || newStatus === OrderStatus.PREPARING) {
         console.log(`Accepting order ${orderId}, setting restaurant_id to ${restaurantId}`);
         
         // Update order status and restaurant_id

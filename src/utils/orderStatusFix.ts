@@ -1,11 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { OrderStatus } from '@/types/webhook';
-import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 
 /**
- * Utility function to manually fix an order's status based on restaurant assignments
- * This is useful when the webhook failed to update the order properly
+ * Fix inconsistent order status by checking restaurant assignments
+ * and updating the order status if needed
  */
 export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
   try {
@@ -23,127 +21,35 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
       return false;
     }
     
-    // Check for the most recent restaurant_assignment with a meaningful status
-    // We'll check in priority order: ready_for_pickup, preparing, accepted
-    
-    // First check ready_for_pickup
-    const { data: readyAssignment, error: readyError } = await supabase
-      .from('restaurant_assignments')
-      .select('restaurant_id, id')
-      .eq('order_id', orderId)
-      .eq('status', 'ready_for_pickup')
-      .maybeSingle();
-      
-    if (!readyError && readyAssignment) {
-      console.log(`Found ready_for_pickup assignment. Fixing order status to ready_for_pickup`);
-      
-      // Update order status
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({
-          status: OrderStatus.READY_FOR_PICKUP,
-          restaurant_id: readyAssignment.restaurant_id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-        
-      if (updateError) {
-        console.error('Error updating order status:', updateError);
-        return false;
-      }
-      
-      // Record the change in order history
-      await recordOrderHistory(
-        orderId,
-        OrderStatus.READY_FOR_PICKUP,
-        readyAssignment.restaurant_id,
-        {
-          assignment_id: readyAssignment.id,
-          manually_fixed: true,
-          previous_status: order.status
-        },
-        undefined,
-        'system',
-        'system'
-      );
-      
-      console.log(`Successfully fixed order ${orderId} status to ready_for_pickup`);
-      return true;
+    // Only proceed if order is in a state that might need fixing
+    if (!['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
+      console.log(`Order ${orderId} has status ${order.status}, no fixing needed`);
+      return false;
     }
     
-    // Check for preparing status
-    const { data: preparingAssignment, error: preparingError } = await supabase
-      .from('restaurant_assignments')
-      .select('restaurant_id, id')
-      .eq('order_id', orderId)
-      .eq('status', 'preparing')
-      .maybeSingle();
-      
-    if (!preparingError && preparingAssignment) {
-      console.log(`Found preparing assignment. Fixing order status to preparing`);
-      
-      // Update order status
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({
-          status: OrderStatus.PREPARING,
-          restaurant_id: preparingAssignment.restaurant_id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-        
-      if (updateError) {
-        console.error('Error updating order status:', updateError);
-        return false;
-      }
-      
-      // Record the change in order history
-      await recordOrderHistory(
-        orderId,
-        OrderStatus.PREPARING,
-        preparingAssignment.restaurant_id,
-        {
-          assignment_id: preparingAssignment.id,
-          manually_fixed: true,
-          previous_status: order.status
-        },
-        undefined,
-        'system',
-        'system'
-      );
-      
-      console.log(`Successfully fixed order ${orderId} status to preparing`);
-      return true;
-    }
-    
-    // Check for accepted status if not in a further status
+    // Check if there's an accepted restaurant assignment
     const { data: acceptedAssignment, error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select('restaurant_id, id')
+      .select('restaurant_id, status')
       .eq('order_id', orderId)
       .eq('status', 'accepted')
-      .maybeSingle();
+      .single();
       
     if (assignmentError) {
-      console.error('Error checking assignment:', assignmentError);
+      // No accepted assignment found
+      console.log(`No accepted assignment found for order ${orderId}`);
       return false;
     }
     
-    // If no accepted assignment, nothing to fix
-    if (!acceptedAssignment) {
-      console.log('No accepted restaurant assignment found');
-      return false;
-    }
-    
-    // If the order isn't already in restaurant_accepted status
-    if (order.status !== OrderStatus.RESTAURANT_ACCEPTED) {
-      console.log(`Found accepted restaurant assignment. Fixing order status to restaurant_accepted`);
+    if (acceptedAssignment) {
+      // Restaurant has accepted the order, but order status doesn't reflect this
+      console.log(`Found accepted assignment for order ${orderId}, updating status to preparing`);
       
-      // Update order status
+      // Update order status to preparing
       const { error: updateError } = await supabase
         .from('orders')
-        .update({
-          status: OrderStatus.RESTAURANT_ACCEPTED,
+        .update({ 
+          status: 'preparing', 
           restaurant_id: acceptedAssignment.restaurant_id,
           updated_at: new Date().toISOString()
         })
@@ -154,37 +60,22 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
         return false;
       }
       
-      // Record the change in order history
-      await recordOrderHistory(
-        orderId,
-        OrderStatus.RESTAURANT_ACCEPTED,
-        acceptedAssignment.restaurant_id,
-        {
-          assignment_id: acceptedAssignment.id,
-          manually_fixed: true,
-          previous_status: order.status
-        },
-        undefined,
-        'system',
-        'system'
-      );
+      // Add to order history
+      await supabase.from('order_history').insert({
+        order_id: orderId,
+        previous_status: order.status,
+        status: 'preparing',
+        restaurant_id: acceptedAssignment.restaurant_id,
+        changed_by_type: 'system',
+        details: { note: 'Status fixed automatically due to inconsistency' }
+      });
       
-      console.log(`Successfully fixed order ${orderId} status to restaurant_accepted`);
       return true;
     }
     
-    console.log("No status fix needed or could not determine correct status.");
     return false;
   } catch (error) {
     console.error('Error fixing order status:', error);
     return false;
   }
-};
-
-/**
- * Fixes the specific order mentioned by the user
- */
-export const fixSpecificOrder = async (): Promise<boolean> => {
-  const specificOrderId = '79645577-7bae-4d33-8779-4eaa554fac6e';
-  return await fixOrderStatus(specificOrderId);
 };

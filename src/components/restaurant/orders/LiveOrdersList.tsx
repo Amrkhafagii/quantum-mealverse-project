@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -154,6 +153,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
   
   const handleAcceptOrder = async (assignmentId: string) => {
     try {
+      // Update the restaurant assignment status
       const { error } = await supabase
         .from('restaurant_assignments')
         .update({ status: 'accepted' })
@@ -162,6 +162,42 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
       if (error) {
         throw error;
       }
+      
+      // Get the order_id and restaurant_id for the accepted assignment
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('restaurant_assignments')
+        .select('order_id, restaurant_id')
+        .eq('id', assignmentId)
+        .single();
+        
+      if (assignmentError || !assignment) {
+        throw new Error('Could not find assignment details');
+      }
+      
+      // Also update the order status to preparing
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'preparing', 
+          restaurant_id: assignment.restaurant_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assignment.order_id);
+        
+      if (orderUpdateError) {
+        console.error('Error updating order status:', orderUpdateError);
+        throw orderUpdateError;
+      }
+      
+      // Record in order history
+      await supabase.from('order_history').insert({
+        order_id: assignment.order_id,
+        previous_status: 'awaiting_restaurant',
+        status: 'preparing',
+        restaurant_id: assignment.restaurant_id,
+        changed_by_type: 'restaurant',
+        details: { assignment_id: assignmentId }
+      });
       
       toast({
         title: "Order Accepted",
