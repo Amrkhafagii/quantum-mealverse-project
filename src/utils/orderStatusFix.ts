@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/types/database';
 
 /**
  * Fix inconsistent order status by checking restaurant assignments
@@ -77,7 +78,7 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
         restaurant_id: acceptedAssignment.restaurant_id,
         restaurant_name: restaurantName,
         changed_by_type: 'system',
-        details: { note: 'Status fixed automatically due to inconsistency' }
+        details: { note: 'Status fixed automatically due to inconsistency' } as Json
       });
       
       return true;

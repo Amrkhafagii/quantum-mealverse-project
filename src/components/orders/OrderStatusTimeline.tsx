@@ -83,7 +83,7 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ orderI
         const { Icon } = step;
         
         // Find the history item for this step
-        const historyItem = statusHistory?.find(h => h.new_status === step.key);
+        const historyItem = statusHistory?.find(h => getStepIndex(h.new_status) === index);
 
         return (
           <div key={step.key} className="flex items-start">

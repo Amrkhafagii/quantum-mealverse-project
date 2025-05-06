@@ -1,6 +1,9 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
+import { Database } from '@/integrations/supabase/types';
+import { Json } from '@/types/database';
 
 /**
  * Update an order's status with proper validation and history tracking
@@ -194,8 +197,7 @@ export const updateOrderStatus = async (
         orderId,
         newStatus,
         restaurantId,
-        restaurantName,
-        details,
+        { ...details as Json, restaurantName },
         undefined,
         undefined,
         'restaurant'  // Explicitly set changed_by_type
@@ -244,8 +246,7 @@ export const updateOrderStatus = async (
       orderId,
       newStatus,
       restaurantId,
-      restaurantName,
-      details,
+      { ...details as Json, restaurantName },
       undefined,
       undefined,
       'restaurant'
@@ -255,35 +256,6 @@ export const updateOrderStatus = async (
   } catch (error) {
     console.error('Error updating order status:', error);
     return false;
-  }
-};
-
-// Update the signature of the recordOrderHistory function to include restaurant_name
-export const recordOrderHistory = async (
-  orderId: string,
-  newStatus: OrderStatus,
-  restaurantId: string,
-  restaurantName: string,
-  details?: Record<string, unknown>,
-  expiredAt?: string,
-  changedBy?: string,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
-): Promise<void> => {
-  try {
-    // Insert the record into order_history
-    await supabase.from('order_history').insert({
-      order_id: orderId,
-      status: newStatus,
-      previous_status: null, // This will be updated by a trigger or in the service
-      restaurant_id: restaurantId,
-      restaurant_name: restaurantName,
-      details,
-      expired_at: expiredAt,
-      changed_by: changedBy,
-      changed_by_type: changedByType
-    });
-  } catch (error) {
-    console.error('Error recording order history:', error);
   }
 };
 
