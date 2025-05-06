@@ -189,12 +189,22 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ restaurantId, on
         throw orderUpdateError;
       }
       
+      // Get restaurant name for the order history
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', assignment.restaurant_id)
+        .single();
+        
+      const restaurantName = restaurant?.name || 'Unknown Restaurant';
+      
       // Record in order history
       await supabase.from('order_history').insert({
         order_id: assignment.order_id,
         previous_status: 'awaiting_restaurant',
         status: 'preparing',
         restaurant_id: assignment.restaurant_id,
+        restaurant_name: restaurantName,
         changed_by_type: 'restaurant',
         details: { assignment_id: assignmentId }
       });

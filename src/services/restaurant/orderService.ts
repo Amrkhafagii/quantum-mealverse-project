@@ -180,11 +180,21 @@ export const updateOrderStatus = async (
         }
       }
       
+      // Get restaurant name for the order history
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', restaurantId)
+        .single();
+        
+      const restaurantName = restaurant?.name || 'Unknown Restaurant';
+      
       // Record to order history with the restaurant ID that accepted/rejected
       await recordOrderHistory(
         orderId,
         newStatus,
-        restaurantId,  // Always use the provided restaurant ID
+        restaurantId,
+        restaurantName,
         details,
         undefined,
         undefined,
@@ -220,11 +230,21 @@ export const updateOrderStatus = async (
       return false;
     }
     
+    // Get restaurant name for the order history
+    const { data: restaurant } = await supabase
+      .from('restaurants')
+      .select('name')
+      .eq('id', restaurantId)
+      .single();
+      
+    const restaurantName = restaurant?.name || 'Unknown Restaurant';
+    
     // Record to order history
     await recordOrderHistory(
       orderId,
       newStatus,
       restaurantId,
+      restaurantName,
       details,
       undefined,
       undefined,
@@ -235,6 +255,35 @@ export const updateOrderStatus = async (
   } catch (error) {
     console.error('Error updating order status:', error);
     return false;
+  }
+};
+
+// Update the signature of the recordOrderHistory function to include restaurant_name
+export const recordOrderHistory = async (
+  orderId: string,
+  newStatus: OrderStatus,
+  restaurantId: string,
+  restaurantName: string,
+  details?: Record<string, unknown>,
+  expiredAt?: string,
+  changedBy?: string,
+  changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
+): Promise<void> => {
+  try {
+    // Insert the record into order_history
+    await supabase.from('order_history').insert({
+      order_id: orderId,
+      status: newStatus,
+      previous_status: null, // This will be updated by a trigger or in the service
+      restaurant_id: restaurantId,
+      restaurant_name: restaurantName,
+      details,
+      expired_at: expiredAt,
+      changed_by: changedBy,
+      changed_by_type: changedByType
+    });
+  } catch (error) {
+    console.error('Error recording order history:', error);
   }
 };
 
@@ -341,7 +390,7 @@ const isValidStatusTransition = (currentStatus: string, newStatus: string): bool
   if (currentStatus === 'completed') normalizedCurrent = OrderStatus.DELIVERED;
   if (newStatus === 'completed') normalizedNew = OrderStatus.DELIVERED;
   
-  // Check if the transition is valid
+  // Check if the transition is valid - Use string comparison instead of enum comparison
   const allowed = validTransitions[normalizedCurrent];
   return allowed ? allowed.includes(normalizedNew as OrderStatus) : false;
 };

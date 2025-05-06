@@ -45,7 +45,7 @@ export const recordOrderHistory = async (
     }
     
     // Get restaurant name if restaurantId is provided
-    let restaurantName = null;
+    let restaurantName = 'Unknown Restaurant';
     if (restaurantId) {
       const { data: restaurant } = await supabase
         .from('restaurants')
@@ -53,7 +53,7 @@ export const recordOrderHistory = async (
         .eq('id', restaurantId)
         .single();
       
-      restaurantName = restaurant?.name;
+      restaurantName = restaurant?.name || 'Unknown Restaurant';
       console.log(`Retrieved restaurant name: ${restaurantName || 'null'}`);
     }
 
@@ -113,7 +113,7 @@ export const recordOrderHistory = async (
       status: normalizedStatus,
       previous_status: previousStatus || fallbackPreviousStatus || null,
       restaurant_id: restaurantId,
-      restaurant_name: restaurantName || 'Unknown Restaurant',
+      restaurant_name: restaurantName,
       details: details as any, // Type cast since we can't guarantee the shape
       expired_at: expiredAtUTC,
       changed_by: changedBy,

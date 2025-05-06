@@ -45,6 +45,15 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
       // Restaurant has accepted the order, but order status doesn't reflect this
       console.log(`Found accepted assignment for order ${orderId}, updating status to preparing`);
       
+      // Get restaurant name for the order history
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', acceptedAssignment.restaurant_id)
+        .single();
+        
+      const restaurantName = restaurant?.name || 'Unknown Restaurant';
+      
       // Update order status to preparing
       const { error: updateError } = await supabase
         .from('orders')
@@ -66,6 +75,7 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
         previous_status: order.status,
         status: 'preparing',
         restaurant_id: acceptedAssignment.restaurant_id,
+        restaurant_name: restaurantName,
         changed_by_type: 'system',
         details: { note: 'Status fixed automatically due to inconsistency' }
       });
