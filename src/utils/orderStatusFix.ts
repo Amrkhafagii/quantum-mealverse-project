@@ -23,7 +23,7 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
     }
     
     // Only proceed if order is in a state that might need fixing
-    if (!['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
+    if (!['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted'].includes(order.status)) {
       console.log(`Order ${orderId} has status ${order.status}, no fixing needed`);
       return false;
     }
@@ -44,7 +44,17 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
     
     if (acceptedAssignment) {
       // Restaurant has accepted the order, but order status doesn't reflect this
-      console.log(`Found accepted assignment for order ${orderId}, updating status to preparing`);
+      let targetStatus = '';
+      
+      if (order.status === 'restaurant_accepted') {
+        // If order is in accepted status, move it to preparing
+        targetStatus = 'preparing';
+        console.log(`Order ${orderId} is accepted but not in preparation, updating to preparing`);
+      } else {
+        // For other states, update to restaurant_accepted first
+        targetStatus = 'restaurant_accepted';
+        console.log(`Found accepted assignment for order ${orderId}, updating status from ${order.status} to ${targetStatus}`);
+      }
       
       // Get restaurant name for the order history
       const { data: restaurant } = await supabase
@@ -55,11 +65,11 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
         
       const restaurantName = restaurant?.name || 'Unknown Restaurant';
       
-      // Update order status to preparing
+      // Update order status
       const { error: updateError } = await supabase
         .from('orders')
         .update({ 
-          status: 'preparing', 
+          status: targetStatus, 
           restaurant_id: acceptedAssignment.restaurant_id,
           updated_at: new Date().toISOString()
         })
@@ -76,7 +86,7 @@ export const fixOrderStatus = async (orderId: string): Promise<boolean> => {
       await supabase.from('order_history').insert({
         order_id: orderId,
         previous_status: order.status,
-        status: 'preparing',
+        status: targetStatus,
         restaurant_id: acceptedAssignment.restaurant_id,
         restaurant_name: restaurantName,
         changed_by_type: 'system',

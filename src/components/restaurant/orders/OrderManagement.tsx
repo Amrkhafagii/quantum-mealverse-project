@@ -1,39 +1,46 @@
 
 import React from 'react';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { OrderDashboard } from './OrderDashboard';
-import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LiveOrdersList } from './LiveOrdersList';
+import { OrderPreparation } from './OrderPreparation';
+import { ReadyForPickupList } from './ReadyForPickupList';
+import { OrderHistoryList } from './OrderHistoryList';
 
 export const OrderManagement = () => {
-  const { restaurant, loading } = useRestaurantAuth();
+  const { restaurant } = useRestaurantAuth();
+  const [activeTab, setActiveTab] = React.useState('new');
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <p>Loading restaurant information...</p>
-      </div>
-    );
-  }
+  // Re-fetch data when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    // Trigger a refresh when changing tabs
+    setRefreshTrigger(prev => prev + 1);
+  };
 
-  if (!restaurant) {
-    return (
-      <Card className="mx-auto max-w-xl">
-        <CardContent className="p-6">
-          <div className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-2">Restaurant Not Found</h2>
-            <p className="text-gray-500">
-              You either don't have access to a restaurant or your restaurant account hasn't been set up yet.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!restaurant) return <div>Loading restaurant information...</div>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-quantum-cyan">Order Management</h1>
-      <OrderDashboard />
-    </div>
+    <Tabs defaultValue="new" onValueChange={handleTabChange}>
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="new">New Orders</TabsTrigger>
+        <TabsTrigger value="preparation">In Preparation</TabsTrigger>
+        <TabsTrigger value="pickup">Ready for Pickup</TabsTrigger>
+        <TabsTrigger value="history">Order History</TabsTrigger>
+      </TabsList>
+      <TabsContent value="new" className="mt-6">
+        <LiveOrdersList restaurantId={restaurant.id} />
+      </TabsContent>
+      <TabsContent value="preparation" className="mt-6">
+        <OrderPreparation restaurantId={restaurant.id} key={`prep-${refreshTrigger}`} />
+      </TabsContent>
+      <TabsContent value="pickup" className="mt-6">
+        <ReadyForPickupList restaurantId={restaurant.id} key={`pickup-${refreshTrigger}`} />
+      </TabsContent>
+      <TabsContent value="history" className="mt-6">
+        <OrderHistoryList restaurantId={restaurant.id} key={`history-${refreshTrigger}`} />
+      </TabsContent>
+    </Tabs>
   );
 };

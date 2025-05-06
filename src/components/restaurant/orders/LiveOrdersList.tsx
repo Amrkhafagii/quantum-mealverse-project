@@ -11,16 +11,18 @@ import { LoadingButton } from '@/components/ui/loading-button';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/types/database';
+import { fixOrderStatus } from '@/utils/orderStatusFix';
 
 interface LiveOrdersListProps {
   statusFilter?: OrderStatus[];
-  restaurantId?: string; // Add restaurantId as an optional prop
+  restaurantId?: string;
 }
 
 export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter, restaurantId }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [acceptingOrderId, setAcceptingOrderId] = React.useState<string | null>(null);
+  const [processingOrderId, setProcessingOrderId] = React.useState<string | null>(null);
   
   // Use restaurantId prop if provided, otherwise fallback to user.id
   const effectiveRestaurantId = restaurantId || user?.id;
@@ -89,6 +91,8 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter, re
         if (orderError) {
           console.error('Failed to update order status:', orderError);
           toast.error('Order accepted but status update failed.');
+          setAcceptingOrderId(null);
+          return;
         }
       } else {
         // Direct acceptance without an assignment
@@ -123,14 +127,66 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter, re
         }
       }
       
-      // Refresh the orders
-      refreshOrders();
-      toast.success('Order accepted successfully!');
+      // Here's the new part - automatically transition to preparing status
+      // Wait a short time to ensure the acceptance is recorded first
+      setTimeout(async () => {
+        try {
+          await updateOrderStatus(
+            order.id,
+            OrderStatus.PREPARING,
+            effectiveRestaurantId || '',
+            { auto_transition: true }
+          );
+          
+          // Fix any inconsistencies between order status and assignments
+          await fixOrderStatus(order.id);
+          
+          console.log(`Order ${order.id} automatically transitioned to preparing status`);
+          
+          // Refresh the orders after all updates
+          refreshOrders();
+          toast.success('Order accepted and moved to preparation!');
+        } catch (e) {
+          console.error('Error transitioning order to preparing:', e);
+        } finally {
+          setAcceptingOrderId(null);
+        }
+      }, 500);
+      
     } catch (e) {
       console.error('Error accepting order:', e);
       toast.error('Failed to accept order. Please try again.');
-    } finally {
       setAcceptingOrderId(null);
+    }
+  };
+
+  const handleBeginPreparation = async (order: RestaurantOrder) => {
+    setProcessingOrderId(order.id);
+    try {
+      // Transition accepted order to preparing status
+      const success = await updateOrderStatus(
+        order.id,
+        OrderStatus.PREPARING,
+        effectiveRestaurantId || '',
+        { manual_preparation: true }
+      );
+      
+      if (!success) {
+        toast.error('Failed to begin preparation. Please try again.');
+        setProcessingOrderId(null);
+        return;
+      }
+      
+      // Fix any inconsistencies between order status and assignments
+      await fixOrderStatus(order.id);
+      
+      refreshOrders();
+      toast.success('Order moved to preparation!');
+    } catch (e) {
+      console.error('Error beginning preparation:', e);
+      toast.error('Failed to begin preparation. Please try again.');
+    } finally {
+      setProcessingOrderId(null);
     }
   };
 
@@ -279,6 +335,15 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({ statusFilter, re
                     Accept
                   </LoadingButton>
                 </>
+              )}
+              {order.status === OrderStatus.RESTAURANT_ACCEPTED && (
+                <LoadingButton
+                  loading={processingOrderId === order.id}
+                  onClick={() => handleBeginPreparation(order)}
+                  className="bg-quantum-cyan hover:bg-quantum-cyan/80"
+                >
+                  Begin Preparation
+                </LoadingButton>
               )}
             </div>
           </div>
