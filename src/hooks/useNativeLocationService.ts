@@ -1,14 +1,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Geolocation, Position } from '@capacitor/geolocation';
-import { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
-import { registerPlugin } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { toast } from '@/components/ui/use-toast';
 import { DeliveryLocation } from '@/types/location';
-
-// Register the BackgroundGeolocation plugin
-const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
+import { useLocationPermissions } from './useLocationPermissions';
+import { useCurrentLocation } from './useCurrentLocation';
+import { useBackgroundLocationTracking } from './useBackgroundLocationTracking';
+import { useForegroundLocationTracking } from './useForegroundLocationTracking';
 
 export const useNativeLocationService = (options: {
   backgroundTracking?: boolean;
@@ -22,59 +20,31 @@ export const useNativeLocationService = (options: {
   const [location, setLocation] = useState<DeliveryLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  // Check permission status on load
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const permission = await Geolocation.checkPermissions();
-        // Handle possible values from Capacitor
-        if (permission.location === 'granted') {
-          setPermissionStatus('granted');
-        } else if (permission.location === 'denied') {
-          setPermissionStatus('denied');
-        } else {
-          setPermissionStatus('prompt');
-        }
-      } catch (err) {
-        console.error('Error checking location permissions', err);
-      }
-    };
-    
-    checkPermissions();
-  }, []);
-
-  const requestPermissions = useCallback(async () => {
-    try {
-      const permission = await Geolocation.requestPermissions();
-      // Handle possible values from Capacitor
-      if (permission.location === 'granted') {
-        setPermissionStatus('granted');
-        return true;
-      } else {
-        setPermissionStatus('denied');
-        return false;
-      }
-    } catch (err) {
-      console.error('Error requesting location permissions', err);
-      return false;
+  
+  // Use the smaller hooks
+  const { permissionStatus, requestPermissions } = useLocationPermissions();
+  const { getCurrentLocation } = useCurrentLocation();
+  const { startBackgroundTracking, stopBackgroundTracking, isBackgroundTracking } = useBackgroundLocationTracking({
+    onLocationUpdate: (newLocation) => {
+      setLocation(newLocation);
+      setLastUpdated(new Date());
     }
-  }, []);
+  });
+  const { startForegroundTracking, stopForegroundTracking, isForegroundTracking } = useForegroundLocationTracking({
+    onLocationUpdate: (newLocation) => {
+      setLocation(newLocation);
+      setLastUpdated(new Date());
+    }
+  });
 
-  // Function to convert Position to our DeliveryLocation type
-  const createDeliveryLocation = (position: Position): DeliveryLocation => {
-    return {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      accuracy: position.coords.accuracy,
-      timestamp: position.timestamp,
-    };
-  };
-
-  // Get current location once
-  const getCurrentLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
+  // Update tracking state when either type of tracking changes
+  useEffect(() => {
+    setIsTracking(isBackgroundTracking || isForegroundTracking);
+  }, [isBackgroundTracking, isForegroundTracking]);
+  
+  // Get current location with permission handling
+  const getCurrentLocationWithPermission = useCallback(async (): Promise<DeliveryLocation | null> => {
     try {
       if (permissionStatus !== 'granted') {
         const granted = await requestPermissions();
@@ -84,15 +54,13 @@ export const useNativeLocationService = (options: {
         }
       }
       
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000,
-      });
+      const locationData = await getCurrentLocation();
       
-      const locationData = createDeliveryLocation(position);
-      setLocation(locationData);
-      setLastUpdated(new Date());
-      setError(null);
+      if (locationData) {
+        setLocation(locationData);
+        setLastUpdated(new Date());
+        setError(null);
+      }
       
       return locationData;
     } catch (err) {
@@ -100,7 +68,7 @@ export const useNativeLocationService = (options: {
       setError('Failed to get location');
       return null;
     }
-  }, [permissionStatus, requestPermissions]);
+  }, [permissionStatus, requestPermissions, getCurrentLocation]);
 
   // Start tracking location with appropriate method based on platform and settings
   const startTracking = useCallback(async () => {
@@ -113,101 +81,26 @@ export const useNativeLocationService = (options: {
     }
     
     try {
+      let success = false;
+      
       // If we're on a native platform and background tracking is enabled
-      if (Capacitor.isNativePlatform()) {
-        if (backgroundTracking) {
-          // Use background geolocation for more efficient background tracking
-          await BackgroundGeolocation.addWatcher(
-            {
-              backgroundMessage: "Quantum Mealverse is tracking your location for delivery",
-              backgroundTitle: "Location Tracking Active",
-              requestPermissions: true,
-              stale: false,
-              distanceFilter: 10, // minimum distance in meters
-              stopOnTerminate: false,
-              startOnBoot: true,
-            },
-            (position, err) => {
-              if (err) {
-                console.error(err);
-                return;
-              }
-              
-              if (position) {
-                const locationData: DeliveryLocation = {
-                  latitude: position.latitude,
-                  longitude: position.longitude,
-                  accuracy: position.accuracy,
-                  timestamp: Date.now(),
-                };
-                
-                setLocation(locationData);
-                setLastUpdated(new Date());
-              }
-            }
-          );
-        } else {
-          // Use regular geolocation for foreground tracking
-          const watchId = await Geolocation.watchPosition(
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 3000,
-            },
-            (position) => {
-              if (!position) return;
-              
-              const locationData = createDeliveryLocation(position);
-              setLocation(locationData);
-              setLastUpdated(new Date());
-            }
-          );
-          
-          // Save the watch ID for cleanup
-          (window as any).nativeWatchId = watchId;
-        }
+      if (Capacitor.isNativePlatform() && backgroundTracking) {
+        success = await startBackgroundTracking();
       } else {
-        // Fallback for web: use regular geolocation via the web API
-        if ('geolocation' in navigator) {
-          const watchId = navigator.geolocation.watchPosition(
-            (position) => {
-              const locationData: DeliveryLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: position.timestamp,
-              };
-              
-              setLocation(locationData);
-              setLastUpdated(new Date());
-            },
-            (err) => {
-              console.error('Error watching position', err);
-              setError(`Geolocation error: ${err.message}`);
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 3000,
-            }
-          );
-          
-          // Save the watch ID for cleanup
-          (window as any).webWatchId = watchId;
-        }
+        success = await startForegroundTracking();
       }
       
-      setIsTracking(true);
-      setError(null);
+      if (success) {
+        setError(null);
+        
+        // Get an initial location
+        await getCurrentLocationWithPermission();
+      }
       
-      // Get an initial location
-      await getCurrentLocation();
-      
-      return true;
+      return success;
     } catch (err) {
       console.error('Error starting location tracking', err);
       setError('Failed to start location tracking');
-      setIsTracking(false);
       
       toast({
         title: "Location tracking failed",
@@ -217,31 +110,32 @@ export const useNativeLocationService = (options: {
       
       return false;
     }
-  }, [permissionStatus, requestPermissions, backgroundTracking, getCurrentLocation]);
+  }, [
+    permissionStatus, 
+    requestPermissions, 
+    backgroundTracking, 
+    startBackgroundTracking, 
+    startForegroundTracking, 
+    getCurrentLocationWithPermission
+  ]);
 
   // Stop tracking
   const stopTracking = useCallback(async () => {
     try {
-      if (Capacitor.isNativePlatform()) {
-        if (backgroundTracking) {
-          await BackgroundGeolocation.removeWatcher({
-            id: (window as any).backgroundWatcherId
-          });
-        } else if ((window as any).nativeWatchId) {
-          await Geolocation.clearWatch({ id: (window as any).nativeWatchId });
-        }
-      } else if ((window as any).webWatchId) {
-        navigator.geolocation.clearWatch((window as any).webWatchId);
+      let success = true;
+      
+      if (Capacitor.isNativePlatform() && backgroundTracking) {
+        success = await stopBackgroundTracking();
+      } else {
+        success = await stopForegroundTracking();
       }
       
-      setIsTracking(false);
-      
-      return true;
+      return success;
     } catch (err) {
       console.error('Error stopping location tracking', err);
       return false;
     }
-  }, [backgroundTracking]);
+  }, [backgroundTracking, stopBackgroundTracking, stopForegroundTracking]);
 
   return {
     location,
@@ -249,7 +143,7 @@ export const useNativeLocationService = (options: {
     isTracking,
     permissionStatus,
     lastUpdated,
-    getCurrentLocation,
+    getCurrentLocation: getCurrentLocationWithPermission,
     startTracking,
     stopTracking,
     requestPermissions
