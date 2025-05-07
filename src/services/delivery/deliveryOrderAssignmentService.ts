@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { toast } from '@/hooks/use-toast';
@@ -242,6 +243,35 @@ export const pickupDelivery = async (
       throw result.error;
     }
     
+    // Update order status in the orders table
+    if (result.data && result.data.order_id) {
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'picked_up' })
+        .eq('id', result.data.order_id);
+        
+      if (orderError) {
+        console.error('Error updating order status to picked_up:', orderError);
+        // Non-fatal error, continue
+      } else {
+        // Record in order history
+        try {
+          await supabase.from('order_history').insert({
+            order_id: result.data.order_id,
+            status: 'picked_up',
+            restaurant_id: result.data.restaurant_id,
+            details: { 
+              delivery_assignment_id: assignmentId,
+              picked_up_at: new Date().toISOString()
+            }
+          });
+        } catch (historyError) {
+          console.error('Error recording pickup in order history:', historyError);
+          // Non-fatal error, continue
+        }
+      }
+    }
+    
     return result.data;
   } catch (error) {
     console.error('Error in pickupDelivery:', error);
@@ -254,10 +284,43 @@ export const startDeliveryToCustomer = async (
   assignmentId: string
 ): Promise<DeliveryAssignment> => {
   try {
+    // First, update the delivery assignment status
     const result = await updateDeliveryStatus(assignmentId, 'on_the_way');
     
     if (result.error) {
       throw result.error;
+    }
+    
+    // Now, get the order_id from the updated assignment
+    const assignmentData = result.data;
+    
+    // Update the order status to match the delivery status
+    if (assignmentData && assignmentData.order_id) {
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'on_the_way' })
+        .eq('id', assignmentData.order_id);
+        
+      if (orderError) {
+        console.error('Error updating order status:', orderError);
+        // Continue anyway as the delivery status was updated successfully
+      } else {
+        // Record in order history for tracking
+        try {
+          await supabase.from('order_history').insert({
+            order_id: assignmentData.order_id,
+            status: 'on_the_way',
+            restaurant_id: assignmentData.restaurant_id,
+            details: { 
+              delivery_assignment_id: assignmentId,
+              started_at: new Date().toISOString()
+            }
+          });
+        } catch (historyError) {
+          console.error('Error recording order history:', historyError);
+          // Non-fatal error, continue
+        }
+      }
     }
     
     return result.data;
@@ -294,23 +357,34 @@ export const completeDelivery = async (
       throw result.error;
     }
     
-    // Update order status
-    await supabase
+    // Update order status - this is now explicit and consistent
+    const { error: orderUpdateError } = await supabase
       .from('orders')
       .update({ status: 'delivered' })
       .eq('id', assignment.order_id);
       
+    if (orderUpdateError) {
+      console.error('Error updating order status:', orderUpdateError);
+      // Continue anyway as the delivery was marked as delivered
+    }
+      
     // Record order history
-    await supabase.from('order_history').insert({
-      order_id: assignment.order_id,
-      status: 'delivered',
-      restaurant_id: assignment.restaurant_id,
-      restaurant_name: 'Restaurant', // We'd get this from the restaurant in a real app
-      details: { 
-        delivered_at: new Date().toISOString(),
-        delivery_user_id: deliveryUserId
-      }
-    });
+    try {
+      await supabase.from('order_history').insert({
+        order_id: assignment.order_id,
+        status: 'delivered',
+        restaurant_id: assignment.restaurant_id,
+        restaurant_name: assignment.orders?.restaurant?.name || 'Restaurant',
+        details: { 
+          delivered_at: new Date().toISOString(),
+          delivery_user_id: deliveryUserId,
+          assignment_id: assignmentId
+        }
+      });
+    } catch (historyError) {
+      console.error('Error recording delivery in history:', historyError);
+      // Non-fatal error, continue
+    }
     
     // In a real app, we would record earnings for the delivery
     // Since we don't have a dedicated earnings table yet, we'll simulate it

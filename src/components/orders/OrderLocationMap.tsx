@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Order } from '@/types/order';
@@ -9,6 +8,7 @@ import { GoogleMap, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
 
 interface OrderLocationMapProps {
   order: Order;
+  assignmentId?: string | null;
 }
 
 // Define a more comprehensive restaurant type
@@ -19,7 +19,7 @@ interface RestaurantWithLocation {
   longitude?: number | null;
 }
 
-const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
+const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId }) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [deliveryAssignment, setDeliveryAssignment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,25 +29,31 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
     lng: 31.2357
   });
   
+  // Use the directly provided assignmentId if available, otherwise fetch it
   const { latestLocation, isSubscribed } = useRealtimeLocation({
-    assignmentId: deliveryAssignment?.id
+    assignmentId: assignmentId || deliveryAssignment?.id
   });
 
-  // Fetch delivery assignment for this order
+  // Only fetch delivery assignment if assignmentId is not provided
   useEffect(() => {
     const fetchDeliveryAssignment = async () => {
-      if (!order?.id) return;
+      if (!order?.id || assignmentId) {
+        setIsLoading(false);
+        return; // Don't fetch if we already have assignmentId or no order
+      }
       
       try {
         const { data, error } = await supabase
           .from('delivery_assignments')
           .select('*')
           .eq('order_id', order.id)
+          .in('status', ['assigned', 'picked_up', 'on_the_way'])
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
           
         if (!error && data) {
+          console.log('Found delivery assignment for map:', data.id);
           setDeliveryAssignment(data);
         }
       } catch (error) {
@@ -58,7 +64,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order }) => {
     };
     
     fetchDeliveryAssignment();
-  }, [order?.id]);
+  }, [order?.id, assignmentId]);
   
   // Calculate directions when we have the delivery location
   useEffect(() => {

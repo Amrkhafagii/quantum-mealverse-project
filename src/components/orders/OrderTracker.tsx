@@ -32,7 +32,37 @@ interface RestaurantWithLocation {
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const [assignmentStatus, setAssignmentStatus] = React.useState<any>(null);
   const [isFixingOrderStatus, setIsFixingOrderStatus] = React.useState(false);
+  const [deliveryAssignmentId, setDeliveryAssignmentId] = React.useState<string | null>(null);
   const { data: order, isLoading, error, refetch } = useOrderData(orderId);
+
+  // Find the delivery assignment ID for this order
+  React.useEffect(() => {
+    if (orderId && ['preparing', 'ready_for_pickup', 'on_the_way', 'picked_up'].includes(order?.status || '')) {
+      // Fetch the active delivery assignment for this order
+      const fetchDeliveryAssignment = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('delivery_assignments')
+            .select('id')
+            .eq('order_id', orderId)
+            .in('status', ['assigned', 'picked_up', 'on_the_way'])
+            .maybeSingle();
+            
+          if (!error && data) {
+            console.log('Found delivery assignment for tracking:', data.id);
+            setDeliveryAssignmentId(data.id);
+          } else {
+            console.log('No active delivery assignment found for order:', orderId);
+            setDeliveryAssignmentId(null);
+          }
+        } catch (err) {
+          console.error('Error fetching delivery assignment:', err);
+        }
+      };
+      
+      fetchDeliveryAssignment();
+    }
+  }, [orderId, order?.status]);
 
   // Check for restaurant assignments that might be accepted but order status is still pending
   React.useEffect(() => {
@@ -176,7 +206,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
             {showMap && (
               <div className="mt-4">
                 {order.latitude && order.longitude ? (
-                  <OrderLocationMap order={order} />
+                  <OrderLocationMap 
+                    order={order} 
+                    assignmentId={deliveryAssignmentId} 
+                  />
                 ) : (
                   <Card>
                     <CardContent className="p-4 text-center">
