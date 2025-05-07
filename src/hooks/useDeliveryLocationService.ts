@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
@@ -5,13 +6,26 @@ import { useDeliveryLocationCache } from '@/hooks/useDeliveryLocationCache';
 import { toast } from 'sonner';
 import { LocationWithAccuracy, DeliveryLocation, LocationServiceState } from '@/types/location';
 import { cacheDeliveryLocation } from '@/utils/locationUtils';
+import { Capacitor } from '@capacitor/core';
+
+interface DeliveryLocationServiceOptions {
+  batteryConscious?: boolean;
+  batteryThreshold?: number;
+  trackingInterval?: number;
+}
 
 /**
  * A specialized hook for delivery personnel location tracking
  * that combines useLocationPermission and useLocationTracker
  * to provide a unified interface for location services.
  */
-export function useDeliveryLocationService() {
+export function useDeliveryLocationService(options: DeliveryLocationServiceOptions = {}) {
+  const {
+    batteryConscious = true,
+    batteryThreshold = 15,
+    trackingInterval = 30000
+  } = options;
+
   // Use both hooks to ensure we have access to all functionality
   const {
     permissionStatus,
@@ -31,8 +45,8 @@ export function useDeliveryLocationService() {
     stopTracking
   } = useLocationTracker({
     watchPosition: true,
-    trackingInterval: 30000, // 30 seconds for delivery personnel
-    showToasts: false // We'll handle our own toasts
+    trackingInterval: trackingInterval, 
+    showToasts: false
   });
   
   const { 
@@ -44,6 +58,9 @@ export function useDeliveryLocationService() {
   
   const [isUpdating, setIsUpdating] = useState(false);
   const [recoveryAttempted, setRecoveryAttempted] = useState(false);
+  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
+  const [isLowBattery, setIsLowBattery] = useState(false);
+  const [reducedFrequency, setReducedFrequency] = useState(false);
   
   const [locationState, setLocationState] = useState<LocationServiceState>({
     permissionStatus: 'prompt',
@@ -54,6 +71,68 @@ export function useDeliveryLocationService() {
     error: null,
     freshness: 'invalid'
   });
+
+  // Check battery level on native devices
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !batteryConscious) return;
+
+    const checkBattery = async () => {
+      try {
+        // Use Capacitor to get battery info if available
+        if ('BatteryStatus' in window) {
+          // @ts-ignore - Using Capacitor plugin that might not be typed
+          const batteryInfo = await window.BatteryStatus.getBatteryStatus();
+          if (batteryInfo && typeof batteryInfo.batteryLevel === 'number') {
+            const level = Math.round(batteryInfo.batteryLevel * 100);
+            setBatteryLevel(level);
+            
+            // Check if battery is below threshold
+            const newLowBatteryState = level <= batteryThreshold;
+            if (newLowBatteryState !== isLowBattery) {
+              setIsLowBattery(newLowBatteryState);
+              
+              // Adjust tracking frequency based on battery level
+              if (newLowBatteryState && !reducedFrequency) {
+                setReducedFrequency(true);
+                // Double the tracking interval to reduce battery consumption
+                stopTracking();
+                setTimeout(() => {
+                  startTracking({ 
+                    trackingInterval: trackingInterval * 2 
+                  });
+                }, 1000);
+                
+                console.log('Reduced location tracking frequency to save battery');
+              } else if (!newLowBatteryState && reducedFrequency) {
+                setReducedFrequency(false);
+                // Restore normal tracking interval
+                stopTracking();
+                setTimeout(() => {
+                  startTracking({ 
+                    trackingInterval: trackingInterval 
+                  });
+                }, 1000);
+                
+                console.log('Restored normal location tracking frequency');
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error getting battery status:', error);
+      }
+    };
+    
+    // Initial check
+    checkBattery();
+    
+    // Set up periodic checks
+    const batteryInterval = setInterval(checkBattery, 60000); // Check every minute
+    
+    return () => {
+      clearInterval(batteryInterval);
+    };
+  }, [batteryConscious, batteryThreshold, isLowBattery, reducedFrequency, trackingInterval, stopTracking, startTracking]);
 
   // Initialize with cached location if available
   useEffect(() => {
@@ -248,6 +327,9 @@ export function useDeliveryLocationService() {
     resetAndRequestLocation,
     isUpdating,
     startTracking,
-    stopTracking
+    stopTracking,
+    batteryLevel,
+    isLowBattery,
+    reducedFrequency,
   };
 }

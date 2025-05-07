@@ -2,155 +2,102 @@
 import { useState, useEffect } from 'react';
 import { useConnectionStatus } from './useConnectionStatus';
 
-type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'unknown';
+interface NetworkQualityResult {
+  quality: 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'unknown';
+  isLowQuality: boolean;
+  latency?: number;
+  bandwidth?: number;
+  isLowBandwidth: boolean;
+}
 
-export const useNetworkQuality = () => {
+export function useNetworkQuality(): NetworkQualityResult {
   const { isOnline, connectionType } = useConnectionStatus();
-  const [quality, setQuality] = useState<NetworkQuality>('unknown');
-  const [latency, setLatency] = useState<number | null>(null);
-  const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
-  const [isLowQuality, setIsLowQuality] = useState(false);
-
-  // Function to measure connection latency
-  const measureLatency = async () => {
+  const [quality, setQuality] = useState<NetworkQualityResult['quality']>('unknown');
+  const [latency, setLatency] = useState<number | undefined>(undefined);
+  const [bandwidth, setBandwidth] = useState<number | undefined>(undefined);
+  const [isLowBandwidth, setIsLowBandwidth] = useState(false);
+  
+  useEffect(() => {
+    // Initial assessment based on connection type
     if (!isOnline) {
-      setLatency(null);
       setQuality('very-poor');
-      setIsLowQuality(true);
       return;
     }
-
-    // Don't run the test if the tab is not visible to save resources
-    if (document.hidden) return;
-
-    const start = Date.now();
+    
+    // Use connection type as initial quality assessment
+    if (connectionType) {
+      if (connectionType.includes('wifi') || connectionType.includes('ethernet')) {
+        setQuality('good');
+        setIsLowBandwidth(false);
+      } else if (connectionType.includes('4g')) {
+        setQuality('fair');
+        setIsLowBandwidth(false);
+      } else if (connectionType.includes('3g')) {
+        setQuality('poor');
+        setIsLowBandwidth(true);
+      } else if (connectionType.includes('2g') || connectionType.includes('slow')) {
+        setQuality('very-poor');
+        setIsLowBandwidth(true);
+      }
+    }
+    
+    // Perform network quality test
+    measureNetworkQuality();
+    
+    // Set up periodic quality checks
+    const intervalId = setInterval(() => {
+      if (isOnline) {
+        measureNetworkQuality();
+      }
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(intervalId);
+  }, [isOnline, connectionType]);
+  
+  // Measure network quality with a simple ping test
+  const measureNetworkQuality = async () => {
     try {
-      // Use a small request to measure latency
-      const res = await fetch('/api/ping', { 
+      const startTime = Date.now();
+      
+      // Simple ping test to measure latency
+      await fetch('/ping', { 
         method: 'HEAD',
-        cache: 'no-store',
-        // Set a timeout to detect very slow connections
-        signal: AbortSignal.timeout(5000)
+        cache: 'no-cache',
+        headers: { 'Cache-Control': 'no-cache' }
       });
       
-      if (res.ok) {
-        const end = Date.now();
-        const newLatency = end - start;
-        
-        // Add to history for a rolling average
-        setLatencyHistory(prev => {
-          const updated = [...prev, newLatency].slice(-5); // Keep last 5 measurements
-          return updated;
-        });
-        
-        setLatency(newLatency);
+      const endTime = Date.now();
+      const pingLatency = endTime - startTime;
+      setLatency(pingLatency);
+      
+      // Update quality based on latency
+      if (pingLatency < 100) {
+        setQuality('excellent');
+      } else if (pingLatency < 300) {
+        setQuality('good');
+      } else if (pingLatency < 600) {
+        setQuality('fair');
+      } else if (pingLatency < 1000) {
+        setQuality('poor');
+        setIsLowBandwidth(true);
+      } else {
+        setQuality('very-poor');
+        setIsLowBandwidth(true);
       }
     } catch (error) {
-      console.warn('Error measuring latency:', error);
-      // If we can't even complete the request, connection is poor
-      setLatency(5000); // Use max latency as fallback
-      setLatencyHistory(prev => [...prev, 5000].slice(-5));
+      console.error('Error measuring network quality:', error);
+      // If measurement fails, use connection type as fallback
     }
   };
   
-  // Calculate rolling average of latency
-  const getAverageLatency = () => {
-    if (latencyHistory.length === 0) return null;
-    return latencyHistory.reduce((sum, lat) => sum + lat, 0) / latencyHistory.length;
-  };
-
-  // Update quality based on latency and connection type
-  useEffect(() => {
-    const avgLatency = getAverageLatency();
-    
-    if (!isOnline) {
-      setQuality('very-poor');
-      setIsLowQuality(true);
-      return;
-    }
-    
-    if (avgLatency === null) {
-      setQuality('unknown');
-      setIsLowQuality(false);
-      return;
-    }
-    
-    // Adjust thresholds based on connection type
-    if (connectionType === 'wifi' || connectionType === 'ethernet') {
-      if (avgLatency < 100) {
-        setQuality('excellent');
-        setIsLowQuality(false);
-      } else if (avgLatency < 300) {
-        setQuality('good');
-        setIsLowQuality(false);
-      } else if (avgLatency < 800) {
-        setQuality('fair');
-        setIsLowQuality(false);
-      } else if (avgLatency < 2000) {
-        setQuality('poor');
-        setIsLowQuality(true);
-      } else {
-        setQuality('very-poor');
-        setIsLowQuality(true);
-      }
-    } else {
-      // Mobile or other connections - more lenient thresholds
-      if (avgLatency < 150) {
-        setQuality('excellent');
-        setIsLowQuality(false);
-      } else if (avgLatency < 500) {
-        setQuality('good');
-        setIsLowQuality(false);
-      } else if (avgLatency < 1200) {
-        setQuality('fair');
-        setIsLowQuality(false);
-      } else if (avgLatency < 3000) {
-        setQuality('poor');
-        setIsLowQuality(true);
-      } else {
-        setQuality('very-poor');
-        setIsLowQuality(true);
-      }
-    }
-  }, [latencyHistory, isOnline, connectionType]);
-
-  // Periodically measure latency when online
-  useEffect(() => {
-    if (!isOnline) return;
-    
-    measureLatency();
-    const interval = setInterval(measureLatency, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [isOnline]);
-
-  // Also measure latency when online status changes
-  useEffect(() => {
-    if (isOnline) {
-      measureLatency();
-    }
-  }, [isOnline]);
-
-  // When switching back to tab, measure again
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isOnline) {
-        measureLatency();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isOnline]);
-
+  // Determine if quality is considered "low" overall
+  const isLowQuality = quality === 'poor' || quality === 'very-poor' || !isOnline;
+  
   return {
     quality,
-    latency,
     isLowQuality,
-    connectionType,
+    latency,
+    bandwidth,
+    isLowBandwidth
   };
-};
-
-export default useNetworkQuality;
+}

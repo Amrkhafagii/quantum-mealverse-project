@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from '@/utils/platform';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 
 // Default map position (San Francisco)
 export const defaultPosition = {
@@ -35,7 +36,8 @@ export const useMapView = () => useContext(MapViewContext);
 export const MapViewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [savedPositions, setSavedPositions] = useState<Record<string, MapPosition>>({});
   const [lowPerformanceMode, setLowPerformanceMode] = useState(false);
-  const { isLowQuality } = useConnectionStatus();
+  const { isOnline } = useConnectionStatus();
+  const { isLowQuality } = useNetworkQuality(); // Now correctly using the hook with isLowQuality property
   const isNative = Platform.isNative();
   
   // Initialize with saved positions from localStorage if available

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Navigation2 } from 'lucide-react';
@@ -15,6 +14,7 @@ import NativeMap from '../maps/NativeMap';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import TouchEnabledMap from '../maps/TouchEnabledMap';
 import BackgroundTrackingPermissions from '../maps/BackgroundTrackingPermissions';
+import BatteryEfficientTracker from './BatteryEfficientTracker';
 
 interface DeliveryMapViewProps {
   activeAssignment?: DeliveryAssignment;
@@ -52,10 +52,6 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
   const { isSubscribed, latestLocation } = useRealtimeLocation({
     assignmentId: activeAssignment?.id,
     onLocationUpdate: (location) => {
-      // This will be called whenever a new location update is received
-      console.log('Realtime location update received:', location);
-      
-      // Update the map with the latest position
       if (location && mapReady) {
         updateDriverLocation({
           latitude: location.latitude,
@@ -80,11 +76,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     if (activeAssignment) {
       setSelectedDeliveryId(activeAssignment.id);
       
-      console.log('Active assignment restaurant data:', activeAssignment.restaurant);
-      console.log('Active assignment customer data:', activeAssignment.customer);
-      
       if (activeAssignment.restaurant) {
-        // Make sure we have valid coordinates
         if (activeAssignment.restaurant.latitude && activeAssignment.restaurant.longitude) {
           setRestaurantLocation({
             latitude: activeAssignment.restaurant.latitude,
@@ -93,9 +85,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
             description: activeAssignment.restaurant.address || '',
             type: 'restaurant'
           });
-          console.log('Set restaurant location:', activeAssignment.restaurant);
         } else {
-          console.warn('Missing restaurant coordinates in assignment:', activeAssignment.id);
           setRestaurantLocation(null);
         }
       } else {
@@ -103,7 +93,6 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
       }
       
       if (activeAssignment.customer) {
-        // Make sure we have valid coordinates
         if (activeAssignment.customer.latitude && activeAssignment.customer.longitude) {
           setCustomerLocation({
             latitude: activeAssignment.customer.latitude,
@@ -112,9 +101,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
             description: activeAssignment.customer.address || '',
             type: 'customer'
           });
-          console.log('Set customer location:', activeAssignment.customer);
         } else {
-          console.warn('Missing customer coordinates in assignment:', activeAssignment.id);
           setCustomerLocation(null);
         }
       } else {
@@ -165,6 +152,19 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     setShowBackgroundControls(prev => !prev);
   };
   
+  // Create an order object that can be passed to the BatteryEfficientTracker
+  const orderForTracker = activeAssignment ? {
+    id: activeAssignment.order_id,
+    status: activeAssignment.status,
+    latitude: customerLocation?.latitude,
+    longitude: customerLocation?.longitude,
+    restaurant: restaurantLocation ? {
+      latitude: restaurantLocation.latitude,
+      longitude: restaurantLocation.longitude,
+      name: restaurantLocation.title
+    } : undefined
+  } : undefined;
+  
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
@@ -209,6 +209,25 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
             <BackgroundTrackingPermissions 
               onTrackingStarted={() => setIsLiveTracking(true)}
               onTrackingStopped={() => setIsLiveTracking(false)}
+            />
+          </div>
+        )}
+
+        {/* Battery Efficient Tracker for native devices */}
+        {isNative && orderForTracker && (
+          <div className="mb-4">
+            <BatteryEfficientTracker
+              order={orderForTracker}
+              onLocationUpdate={(loc) => {
+                if (loc && mapReady) {
+                  updateDriverLocation({
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                    title: 'Your location',
+                    type: 'driver'
+                  });
+                }
+              }}
             />
           </div>
         )}

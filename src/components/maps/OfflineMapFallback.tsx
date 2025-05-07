@@ -1,133 +1,107 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Map, WifiOff, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { MapOff, RefreshCw, Loader2, Map, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+interface LocationData {
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+}
 
 interface OfflineMapFallbackProps {
-  retry: () => void;
+  title: string;
+  description: string;
+  retry?: () => void;
   isRetrying?: boolean;
-  isLowBandwidth?: boolean;
-  mapType?: 'delivery' | 'restaurant' | 'general';
-  className?: string;
-  title?: string;
-  description?: string;
-  onRetry?: () => void;
-  isLoading?: boolean;
   showLocationData?: boolean;
-  locationData?: {
-    latitude?: number;
-    longitude?: number;
-    address?: string;
-    lastUpdated?: string;
-  };
+  locationData?: LocationData;
+  className?: string;
 }
 
 export const OfflineMapFallback: React.FC<OfflineMapFallbackProps> = ({
-  retry,
-  isRetrying = false,
-  isLowBandwidth = false,
-  mapType = 'general',
-  className,
   title,
   description,
-  onRetry,
-  isLoading = false,
+  retry,
+  isRetrying = false,
   showLocationData = false,
-  locationData
+  locationData,
+  className = ''
 }) => {
-  const titles = {
-    delivery: 'Delivery Map Unavailable',
-    restaurant: 'Restaurant Map Unavailable',
-    general: 'Map Unavailable'
-  };
-  
-  const messages = {
-    delivery: isLowBandwidth 
-      ? 'Poor connection detected. Using simplified map view.' 
-      : 'Cannot load delivery map in offline mode.',
-    restaurant: isLowBandwidth 
-      ? 'Poor connection detected. Using simplified map view.' 
-      : 'Cannot load restaurant location in offline mode.',
-    general: isLowBandwidth 
-      ? 'Poor connection detected. Using simplified map view.' 
-      : 'Map cannot be displayed while offline.'
-  };
-
-  // Use custom title/description if provided, otherwise use defaults
-  const displayTitle = title || (isLoading ? 'Loading Map' : titles[mapType]);
-  const displayDescription = description || messages[mapType];
-
-  const handleRetry = () => {
-    if (onRetry) {
-      onRetry();
-    } else {
-      retry();
-    }
-  };
-
   return (
-    <Card className={cn("w-full border border-muted", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center text-lg">
-          {isLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin text-muted-foreground" />
-              <span>Loading Map</span>
-            </>
-          ) : isLowBandwidth ? (
-            <>
-              <WifiOff className="w-5 h-5 mr-2 text-amber-500" />
-              <span>Limited Connectivity</span>
-            </>
-          ) : (
-            <>  
-              <Map className="w-5 h-5 mr-2 text-muted-foreground" />
-              <span>{displayTitle}</span>
-            </>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground text-sm mb-4">
-          {displayDescription}
-        </p>
-
-        {showLocationData && locationData && (
-          <div className="mb-4 p-3 bg-muted/20 rounded-md text-sm space-y-1">
-            {locationData.address && (
-              <p><span className="font-medium">Address:</span> {locationData.address}</p>
-            )}
-            {locationData.latitude && locationData.longitude && (
-              <p><span className="font-medium">Coordinates:</span> {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}</p>
-            )}
-            {locationData.lastUpdated && (
-              <p><span className="font-medium">Last updated:</span> {locationData.lastUpdated}</p>
-            )}
+    <Card className={`overflow-hidden ${className}`}>
+      <CardContent className="p-0">
+        <div className="bg-slate-800 h-[300px] flex flex-col items-center justify-center p-6 text-center">
+          <div className="mb-4 relative">
+            <motion.div
+              initial={{ opacity: 0.7, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ 
+                duration: 0.6, 
+                repeat: Infinity, 
+                repeatType: "reverse" 
+              }}
+            >
+              <MapOff className="h-16 w-16 text-slate-500" />
+            </motion.div>
+            <div className="absolute -right-2 -bottom-2">
+              <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs">!</span>
+              </div>
+            </div>
           </div>
-        )}
-
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRetry}
-          disabled={isRetrying || isLoading}
-          className="w-full text-sm"
-        >
-          {isRetrying || isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {isLoading ? 'Loading...' : 'Trying to connect...'}
-            </>
-          ) : (
-            'Retry Connection'
+          
+          <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+          <p className="text-slate-300 mb-6">{description}</p>
+          
+          {retry && (
+            <Button 
+              variant="outline" 
+              onClick={retry} 
+              disabled={isRetrying}
+              className="border-slate-500 text-slate-200"
+            >
+              {isRetrying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </>
+              )}
+            </Button>
           )}
-        </Button>
+          
+          {showLocationData && locationData && (
+            <div className="mt-6 p-3 bg-slate-700/50 rounded-lg w-full max-w-sm">
+              <div className="flex items-center mb-2">
+                <Map className="h-4 w-4 mr-2 text-slate-400" />
+                <h4 className="text-sm font-medium text-slate-300">Location Details</h4>
+              </div>
+              
+              {locationData.address && (
+                <div className="flex items-start mb-2">
+                  <MapPin className="h-4 w-4 mr-2 text-slate-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-slate-400 break-words">{locationData.address}</p>
+                </div>
+              )}
+              
+              {locationData.latitude && locationData.longitude && (
+                <div className="text-xs text-slate-500 mt-2">
+                  Coordinates: {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 };
 
-// Export as default as well to fix the import issue
 export default OfflineMapFallback;
