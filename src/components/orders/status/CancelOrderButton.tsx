@@ -1,9 +1,21 @@
 
 import React, { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { cancelOrderWithOfflineSupport } from '@/services/sync/syncService';
 
 interface CancelOrderButtonProps {
   orderId: string;
@@ -11,52 +23,83 @@ interface CancelOrderButtonProps {
 }
 
 export const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ orderId, onCancelOrder }) => {
-  const [isCancelling, setIsCancelling] = useState(false);
-  const { toast } = useToast();
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { isOnline } = useConnectionStatus();
+
   const handleCancel = async () => {
-    if (confirm('Are you sure you want to cancel this order?')) {
-      setIsCancelling(true);
+    setIsLoading(true);
+    
+    try {
+      const result = await cancelOrderWithOfflineSupport(orderId);
       
-      try {
-        const { error } = await supabase
-          .from('orders')
-          .update({ status: 'cancelled' })
-          .eq('id', orderId);
-        
-        if (error) throw error;
-        
+      if (result) {
         toast({
-          title: 'Order cancelled',
-          description: 'Your order has been cancelled successfully.',
+          title: isOnline ? 'Order cancelled' : 'Order will be cancelled when online',
+          description: isOnline 
+            ? 'Your order has been cancelled successfully.' 
+            : 'Your request has been queued and will be processed when you are back online.',
+          variant: 'default',
         });
         
         if (onCancelOrder) {
           onCancelOrder();
         }
-      } catch (error) {
-        console.error('Error cancelling order:', error);
+      } else {
         toast({
-          title: 'Error',
-          description: 'There was a problem cancelling your order.',
+          title: 'Cancellation failed',
+          description: 'There was an error cancelling your order. Please try again.',
           variant: 'destructive',
         });
-      } finally {
-        setIsCancelling(false);
       }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast({
+        title: 'Cancellation failed',
+        description: 'There was an error cancelling your order. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+      setDialogOpen(false);
     }
   };
-  
+
   return (
-    <Button 
-      variant="ghost" 
-      className="text-red-500 hover:text-red-700 hover:bg-red-100/10"
-      onClick={handleCancel}
-      disabled={isCancelling}
-      size="sm"
-    >
-      <X className="w-4 h-4 mr-1" />
-      {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-    </Button>
+    <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive" size="sm">
+          Cancel Order
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="bg-quantum-darkBlue border-quantum-cyan/20">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel Order</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to cancel this order? {!isOnline && 'You are currently offline. This action will be processed when you are back online.'}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              handleCancel();
+            }}
+            disabled={isLoading}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cancelling...
+              </>
+            ) : (
+              'Yes, Cancel Order'
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };

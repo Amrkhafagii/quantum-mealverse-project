@@ -1,291 +1,180 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Order } from '@/types/order';
-import { MapPin, Navigation, Loader2 } from 'lucide-react';
-import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
-import { supabase } from '@/integrations/supabase/client';
-import { GoogleMap, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
-import { Platform } from '@/utils/platform';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { Capacitor } from '@capacitor/core';
-import NativeMap from '../maps/NativeMap';
+import { Order } from '@/types/order';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import MapContainer from '../maps/MapContainer';
+import OfflineMapFallback from '../maps/OfflineMapFallback';
+import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 
 interface OrderLocationMapProps {
   order: Order;
   assignmentId?: string | null;
 }
 
-// Define a more comprehensive restaurant type
-interface RestaurantWithLocation {
-  id: string;
-  name: string;
-  latitude?: number | null;
-  longitude?: number | null;
-}
-
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId }) => {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [deliveryAssignment, setDeliveryAssignment] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [center, setCenter] = useState<{lat: number, lng: number}>({
-    lat: 30.0444, // Default to Egypt's coordinates
-    lng: 31.2357
-  });
   const { isOnline } = useConnectionStatus();
-  const isMobile = Platform.isNative();
-  const isNativePlatform = Capacitor.isNativePlatform();
+  const { quality, isLowQuality } = useNetworkQuality();
+  const [isMapEnabled, setIsMapEnabled] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   
-  // Use the directly provided assignmentId if available, otherwise fetch it
-  const { latestLocation, isSubscribed } = useRealtimeLocation({
-    assignmentId: assignmentId || deliveryAssignment?.id
+  const { data: deliveryLocation, isLoading } = useQuery({
+    queryKey: ['delivery-location', assignmentId, retryCount],
+    queryFn: async () => {
+      if (!isOnline || !assignmentId) {
+        throw new Error('Offline or no assignment ID');
+      }
+      
+      if (isLowQuality) {
+        console.warn('Network quality is low, using simplified map data');
+      }
+      
+      const { data, error } = await supabase
+        .from('delivery_locations')
+        .select('*')
+        .eq('assignment_id', assignmentId)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!assignmentId && isOnline && isMapEnabled,
+    refetchInterval: (isOnline && !isLowQuality) ? 10000 : false,
+    retry: isLowQuality ? 1 : 3, // Limit retries on low-quality connections
+    staleTime: isLowQuality ? 30000 : 10000, // Cache longer on poor connections
+    onError: (error) => {
+      console.error('Error fetching delivery location:', error);
+      if (retryCount > 3) {
+        setIsMapEnabled(false);
+        toast({
+          title: "Map Disabled",
+          description: "Map has been disabled due to connection issues",
+          variant: "destructive",
+        });
+      }
+    }
   });
 
-  // Only fetch delivery assignment if assignmentId is not provided
+  // Disable map on very poor connections
   useEffect(() => {
-    const fetchDeliveryAssignment = async () => {
-      if (!order?.id || assignmentId || !isOnline) {
-        setIsLoading(false);
-        return; // Don't fetch if we already have assignmentId or no order
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('delivery_assignments')
-          .select('*')
-          .eq('order_id', order.id)
-          .in('status', ['assigned', 'picked_up', 'on_the_way'])
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-          
-        if (!error && data) {
-          console.log('Found delivery assignment for map:', data.id);
-          setDeliveryAssignment(data);
-        }
-      } catch (error) {
-        console.error('Error fetching delivery assignment:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchDeliveryAssignment();
-  }, [order?.id, assignmentId, isOnline]);
-  
-  // Calculate directions when we have the delivery location
-  useEffect(() => {
-    if (!map || !latestLocation || !order || !isOnline || isNativePlatform) return;
-    
-    const directionsService = new google.maps.DirectionsService();
-    
-    if (order.latitude && order.longitude) {
-      const origin = new google.maps.LatLng(latestLocation.latitude, latestLocation.longitude);
-      const destination = new google.maps.LatLng(order.latitude, order.longitude);
-      
-      directionsService.route({
-        origin,
-        destination,
-        travelMode: google.maps.TravelMode.DRIVING,
-      }, (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK) {
-          setDirections(result);
-        } else {
-          console.error(`Error fetching directions: ${status}`);
-        }
+    if (quality === 'very-poor' && isMapEnabled) {
+      setIsMapEnabled(false);
+      toast({
+        title: "Map Disabled",
+        description: "Map features have been disabled due to poor connection",
+        variant: "destructive",
       });
     }
-  }, [map, latestLocation, order, isOnline, isNativePlatform]);
-  
-  // Update center based on the latest available location
-  useEffect(() => {
-    if (latestLocation) {
-      setCenter({
-        lat: latestLocation.latitude,
-        lng: latestLocation.longitude
+  }, [quality, isMapEnabled]);
+
+  const handleRetry = () => {
+    if (!isOnline) {
+      toast({
+        title: "Still Offline",
+        description: "Please check your connection and try again",
+        variant: "destructive",
       });
-    } else if (order?.latitude && order?.longitude) {
-      setCenter({
-        lat: order.latitude,
-        lng: order.longitude
-      });
+      return;
     }
-  }, [latestLocation, order]);
+    
+    setIsRetrying(true);
+    setIsMapEnabled(true);
+    setRetryCount(prev => prev + 1);
+    
+    setTimeout(() => {
+      setIsRetrying(false);
+    }, 2000);
+  };
 
-  if (isLoading) {
-    return (
-      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
-        <CardContent className="p-6 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2">Loading map...</span>
-        </CardContent>
-      </Card>
-    );
+  // Prepare locations for the map
+  const locations = [];
+  
+  // Add restaurant location
+  if (order.restaurant && order.restaurant.latitude && order.restaurant.longitude) {
+    locations.push({
+      latitude: order.restaurant.latitude,
+      longitude: order.restaurant.longitude,
+      title: order.restaurant.name || "Restaurant",
+      type: "restaurant"
+    });
   }
-
-  if (!isOnline) {
-    return (
-      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
-        <CardContent className="p-6 text-center">
-          <MapPin className="h-6 w-6 mx-auto mb-2 text-amber-500" />
-          <p className="text-sm text-amber-500">Map unavailable while offline.</p>
-        </CardContent>
-      </Card>
-    );
+  
+  // Add customer location
+  if (order.latitude && order.longitude) {
+    locations.push({
+      latitude: order.latitude,
+      longitude: order.longitude,
+      title: "Delivery Location",
+      type: "customer"
+    });
   }
-
-  if (!order.latitude || !order.longitude) {
-    return (
-      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
-        <CardContent className="p-6 text-center">
-          <MapPin className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No location information available for this order.</p>
-        </CardContent>
-      </Card>
-    );
+  
+  // Add delivery driver location
+  if (deliveryLocation?.latitude && deliveryLocation?.longitude) {
+    locations.push({
+      latitude: deliveryLocation.latitude,
+      longitude: deliveryLocation.longitude,
+      title: "Driver Location",
+      type: "driver",
+      timestamp: deliveryLocation.timestamp
+    });
   }
-
-  // Check if restaurant has location data before rendering its marker
-  const hasRestaurantLocation = 
-    order.restaurant && 
-    'latitude' in order.restaurant && 
-    order.restaurant.latitude !== null && 
-    'longitude' in order.restaurant &&
-    order.restaurant.longitude !== null;
-
-  // Prepare data for the native map component
-  const driverLocation = latestLocation ? {
-    latitude: latestLocation.latitude,
-    longitude: latestLocation.longitude,
-    title: 'Driver Location',
-    type: 'driver' as const
-  } : null;
-
-  const customerLocation = order.latitude && order.longitude ? {
-    latitude: order.latitude,
-    longitude: order.longitude,
-    title: 'Delivery Address',
-    type: 'customer' as const
-  } : null;
-
-  const restaurantLocation = hasRestaurantLocation ? {
-    latitude: (order.restaurant as RestaurantWithLocation).latitude!,
-    longitude: (order.restaurant as RestaurantWithLocation).longitude!,
-    title: (order.restaurant as RestaurantWithLocation).name || 'Restaurant',
-    type: 'restaurant' as const
-  } : null;
-
-  // Use native map if on a native platform
-  if (isNativePlatform) {
+  
+  // Handle different situations for map display
+  if (!isOnline || !isMapEnabled) {
+    // Show fallback for offline or disabled map
     return (
-      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
-        <CardContent className="p-2 h-[300px]">
-          <NativeMap
-            driverLocation={driverLocation}
-            customerLocation={customerLocation}
-            restaurantLocation={restaurantLocation}
-            showRoute={true}
-            className="h-full w-full"
-            autoCenter={true}
-          />
-          
-          {/* Connection status indicator */}
-          <div className="absolute bottom-2 right-2 bg-black/70 rounded-full px-2 py-1 text-xs flex items-center text-white z-10">
-            <span className={`w-2 h-2 rounded-full mr-1 ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            <span>{isSubscribed ? 'Live tracking' : 'Tracking offline'}</span>
-          </div>
-        </CardContent>
-      </Card>
+      <OfflineMapFallback 
+        title={!isOnline ? "Offline Mode" : "Map Disabled"}
+        description={!isOnline 
+          ? "Map is unavailable while offline" 
+          : "Map has been disabled due to poor connection quality"
+        }
+        onRetry={handleRetry}
+        isRetrying={isRetrying}
+        showLocationData={true}
+        locationData={{
+          latitude: order.latitude,
+          longitude: order.longitude,
+          address: order.delivery_address,
+          lastUpdated: deliveryLocation?.timestamp 
+            ? format(new Date(deliveryLocation.timestamp), 'HH:mm:ss')
+            : undefined
+        }}
+      />
     );
   }
   
-  // Use web map for non-native platforms
+  if (isLoading && assignmentId) {
+    return <OfflineMapFallback isLoading={true} title="Loading Map" />;
+  }
+  
+  if (isLowQuality) {
+    // Show simplified map for low-quality connections
+    return (
+      <MapContainer
+        locations={locations}
+        zoomLevel={12}
+        enableAnimation={false}
+        lowPerformanceMode={true}
+        enableControls={false}
+      />
+    );
+  }
+  
+  // Show full-featured map for good connections
   return (
-    <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
-      <CardContent className="p-2 h-[300px]">
-        <GoogleMap
-          mapContainerStyle={{ width: '100%', height: '100%' }}
-          center={center}
-          zoom={14}
-          onLoad={(map) => setMap(map)}
-          options={{
-            fullscreenControl: false,
-            zoomControl: !isMobile,
-            mapTypeControl: false,
-            streetViewControl: false,
-            gestureHandling: isMobile ? 'cooperative' : 'auto'
-          }}
-        >
-          {/* Restaurant marker - Only show if restaurant has location data */}
-          {hasRestaurantLocation && (
-            <MarkerF
-              position={{ 
-                lat: (order.restaurant as RestaurantWithLocation).latitude!, 
-                lng: (order.restaurant as RestaurantWithLocation).longitude! 
-              }}
-              icon={{
-                url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                scaledSize: new google.maps.Size(40, 40)
-              }}
-              title={(order.restaurant as RestaurantWithLocation).name}
-            />
-          )}
-          
-          {/* Delivery address marker */}
-          <MarkerF
-            position={{ lat: order.latitude!, lng: order.longitude! }}
-            icon={{
-              url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-              scaledSize: new google.maps.Size(40, 40)
-            }}
-            title="Delivery Address"
-          />
-          
-          {/* Delivery driver marker */}
-          {latestLocation && (
-            <MarkerF
-              position={{ lat: latestLocation.latitude, lng: latestLocation.longitude }}
-              icon={{
-                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                scale: 6,
-                fillColor: "#3f88c5",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                rotation: 0
-              }}
-              title="Delivery Driver"
-            />
-          )}
-          
-          {/* Show directions if available */}
-          {directions && (
-            <DirectionsRenderer
-              directions={directions}
-              options={{
-                suppressMarkers: true,
-                polylineOptions: {
-                  strokeColor: "#3f88c5",
-                  strokeWeight: 5
-                }
-              }}
-            />
-          )}
-        </GoogleMap>
-        
-        {/* Connection status indicator */}
-        <div className="absolute bottom-2 right-2 bg-black/70 rounded-full px-2 py-1 text-xs flex items-center">
-          <span className={`w-2 h-2 rounded-full mr-1 ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}></span>
-          <span>{isSubscribed ? 'Live tracking' : 'Tracking offline'}</span>
-        </div>
-        
-        {isMobile && (
-          <div className="absolute bottom-2 left-2 bg-black/70 rounded-full px-2 py-1 text-xs text-white">
-            Tap map to interact
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <MapContainer
+      locations={locations}
+      zoomLevel={13}
+      enableAnimation={true}
+    />
   );
 };
 

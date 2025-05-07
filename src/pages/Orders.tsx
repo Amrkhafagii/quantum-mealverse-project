@@ -16,9 +16,11 @@ import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
 import { UserSettings } from '@/components/profile/UserSettings';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { syncPendingActions } from '@/services/sync/syncService';
+import { getActiveOrders, getPendingActions } from '@/utils/offlineStorage';
 import { ConnectionStateIndicator } from '@/components/ui/ConnectionStateIndicator';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const Orders = () => {
   const { id: orderIdParam } = useParams();
@@ -26,11 +28,33 @@ const Orders = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
   const { isOnline } = useConnectionStatus();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingActionsCount, setPendingActionsCount] = useState(0);
+  
+  // Update pending actions count
+  useEffect(() => {
+    const checkPendingActions = () => {
+      import('@/utils/offlineStorage').then(({ getPendingActions }) => {
+        const pendingActions = getPendingActions();
+        setPendingActionsCount(pendingActions.length);
+      });
+    };
+    
+    checkPendingActions();
+    const intervalId = setInterval(checkPendingActions, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
   
   // Sync pending actions when coming back online
   useEffect(() => {
     if (isOnline) {
-      syncPendingActions();
+      syncPendingActions().then(() => {
+        // Update pending actions count after sync
+        import('@/utils/offlineStorage').then(({ getPendingActions }) => {
+          const pendingActions = getPendingActions();
+          setPendingActionsCount(pendingActions.length);
+        });
+      });
     }
   }, [isOnline]);
   
@@ -55,8 +79,11 @@ const Orders = () => {
       if (!session?.user?.id) return [];
       
       if (!isOnline) {
-        // When offline, return an empty array or try to use cached data
-        return [];
+        // When offline, use cached orders
+        const cachedOrders = getActiveOrders();
+        return cachedOrders.filter(order => 
+          !['delivered', 'cancelled', 'rejected'].includes(order.status)
+        );
       }
       
       try {
@@ -75,14 +102,27 @@ const Orders = () => {
           throw error;
         }
         
-        console.log('Active orders fetched:', data);
+        // Store active orders for offline access
+        if (data && data.length > 0) {
+          data.forEach(order => {
+            import('@/utils/offlineStorage').then(({ storeActiveOrder }) => {
+              storeActiveOrder(order);
+            });
+          });
+        }
+        
         return data || [];
       } catch (error) {
         console.error('Error in active orders query:', error);
-        return [];
+        
+        // If online fetch failed, try to use cached data
+        const cachedOrders = getActiveOrders();
+        return cachedOrders.filter(order => 
+          !['delivered', 'cancelled', 'rejected'].includes(order.status)
+        );
       }
     },
-    enabled: !!session?.user?.id && isOnline,
+    enabled: !!session?.user?.id,
     refetchInterval: isOnline ? 10000 : false, // Only refresh every 10 seconds when online
     staleTime: 5000, // Prevent unnecessary refetches
   });
@@ -93,22 +133,45 @@ const Orders = () => {
       if (!session?.user?.id) return [];
       
       if (!isOnline) {
-        // When offline, return an empty array or try to use cached data
-        return [];
+        // When offline, use cached orders for past orders
+        const cachedOrders = getActiveOrders();
+        return cachedOrders.filter(order => 
+          ['delivered', 'cancelled', 'rejected'].includes(order.status)
+        ).slice(0, 5);
       }
       
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .in('status', ['delivered', 'cancelled', 'rejected'])
-        .order('created_at', { ascending: false })
-        .limit(5);
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .in('status', ['delivered', 'cancelled', 'rejected'])
+          .order('created_at', { ascending: false })
+          .limit(5);
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      return data || [];
+        // Store past orders for offline access too
+        if (data && data.length > 0) {
+          data.forEach(order => {
+            import('@/utils/offlineStorage').then(({ storeActiveOrder }) => {
+              storeActiveOrder(order);
+            });
+          });
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching past orders:', error);
+        
+        // If online fetch failed, use cached data
+        const cachedOrders = getActiveOrders();
+        return cachedOrders.filter(order => 
+          ['delivered', 'cancelled', 'rejected'].includes(order.status)
+        ).slice(0, 5);
+      }
     },
-    enabled: !!session?.user?.id && isOnline,
+    enabled: !!session?.user?.id,
     staleTime: 30000, // Past orders don't change as frequently
   });
 
@@ -118,6 +181,11 @@ const Orders = () => {
     if (isOnline) {
       await refetch();
     }
+    // Update pending actions count after sync
+    import('@/utils/offlineStorage').then(({ getPendingActions }) => {
+      const pendingActions = getPendingActions();
+      setPendingActionsCount(pendingActions.length);
+    });
     setTimeout(() => setIsSyncing(false), 1000);
   };
 
@@ -168,15 +236,27 @@ const Orders = () => {
             >
               <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>Sync</span>
+              {pendingActionsCount > 0 && (
+                <Badge variant="destructive" className="ml-1 text-xs">
+                  {pendingActionsCount}
+                </Badge>
+              )}
             </Button>
             <UserSettings />
           </div>
         </div>
         
         {!isOnline && (
-          <div className="bg-amber-900/20 border border-amber-500/30 text-amber-200 px-4 py-3 rounded-md mb-6 flex items-center">
-            <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
-            <p>You are currently offline. Some features may be limited.</p>
+          <div className="bg-amber-900/20 border border-amber-500/30 text-amber-200 px-4 py-3 rounded-md mb-6 flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
+              <p>You are currently offline. Limited functionality available.</p>
+            </div>
+            {pendingActionsCount > 0 && (
+              <Badge variant="outline" className="border-amber-500/50 text-amber-200">
+                {pendingActionsCount} pending {pendingActionsCount === 1 ? 'action' : 'actions'}
+              </Badge>
+            )}
           </div>
         )}
         

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { cacheOrderData, getCachedOrder } from '@/utils/locationUtils';
+import { storeActiveOrder, getActiveOrder } from '@/utils/offlineStorage';
 import { toast } from '@/components/ui/use-toast';
 
 export const useOrderData = (orderId: string) => {
@@ -15,7 +15,7 @@ export const useOrderData = (orderId: string) => {
       try {
         // If offline, try to get from cache first
         if (!isOnline) {
-          const cachedData = getCachedOrder(orderId);
+          const cachedData = getActiveOrder(orderId);
           if (cachedData) {
             return cachedData;
           }
@@ -116,8 +116,8 @@ export const useOrderData = (orderId: string) => {
           restaurant: restaurantData || { id: orderData.restaurant_id || '', name: '' }
         };
         
-        // Cache the order data for offline access
-        cacheOrderData(orderId, formattedData);
+        // Store the order data for offline access
+        storeActiveOrder(formattedData);
         
         return formattedData;
       } catch (error) {
@@ -125,12 +125,12 @@ export const useOrderData = (orderId: string) => {
         
         // If we're offline, try to get from cache
         if (!isOnline) {
-          const cachedData = getCachedOrder(orderId);
+          const cachedData = getActiveOrder(orderId);
           if (cachedData) {
             toast({
               title: "Using cached data",
               description: "You're offline. Showing locally saved order information.",
-              variant: "destructive"  // Changed from "warning" to "destructive" to fix the type error
+              variant: "destructive"
             });
             return cachedData;
           }
