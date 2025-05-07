@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapOff, Wifi, Loader2 } from 'lucide-react';
+import { Map, Wifi, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +38,7 @@ export function OfflineMapFallback({
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-quantum-cyan" />
           ) : (
-            <MapOff className="h-5 w-5 text-quantum-cyan" />
+            <Map className="h-5 w-5 text-quantum-cyan" />
           )}
           {title}
         </CardTitle>
@@ -52,7 +52,7 @@ export function OfflineMapFallback({
             </>
           ) : (
             <>
-              <MapOff className="h-16 w-16 text-muted-foreground mb-4" />
+              <Map className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="mb-4 text-muted-foreground">{description}</p>
               
               {showLocationData && locationData && (

@@ -48,15 +48,17 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     refetchInterval: (isOnline && !isLowQuality) ? 10000 : false,
     retry: isLowQuality ? 1 : 3, // Limit retries on low-quality connections
     staleTime: isLowQuality ? 30000 : 10000, // Cache longer on poor connections
-    onError: (error) => {
-      console.error('Error fetching delivery location:', error);
-      if (retryCount > 3) {
-        setIsMapEnabled(false);
-        toast({
-          title: "Map Disabled",
-          description: "Map has been disabled due to connection issues",
-          variant: "destructive",
-        });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching delivery location:', error);
+        if (retryCount > 3) {
+          setIsMapEnabled(false);
+          toast({
+            title: "Map Disabled",
+            description: "Map has been disabled due to connection issues",
+            variant: "destructive",
+          });
+        }
       }
     }
   });
@@ -93,38 +95,27 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
   };
 
   // Prepare locations for the map
-  const locations = [];
+  const driverLocation = deliveryLocation?.latitude && deliveryLocation?.longitude ? {
+    latitude: deliveryLocation.latitude,
+    longitude: deliveryLocation.longitude,
+    title: "Driver Location",
+    type: "driver",
+    timestamp: deliveryLocation.timestamp
+  } : undefined;
   
-  // Add restaurant location
-  if (order.restaurant && order.restaurant.latitude && order.restaurant.longitude) {
-    locations.push({
-      latitude: order.restaurant.latitude,
-      longitude: order.restaurant.longitude,
-      title: order.restaurant.name || "Restaurant",
-      type: "restaurant"
-    });
-  }
+  const restaurantLocation = order.restaurant && order.restaurant.latitude && order.restaurant.longitude ? {
+    latitude: order.restaurant.latitude,
+    longitude: order.restaurant.longitude,
+    title: order.restaurant.name || "Restaurant",
+    type: "restaurant"
+  } : undefined;
   
-  // Add customer location
-  if (order.latitude && order.longitude) {
-    locations.push({
-      latitude: order.latitude,
-      longitude: order.longitude,
-      title: "Delivery Location",
-      type: "customer"
-    });
-  }
-  
-  // Add delivery driver location
-  if (deliveryLocation?.latitude && deliveryLocation?.longitude) {
-    locations.push({
-      latitude: deliveryLocation.latitude,
-      longitude: deliveryLocation.longitude,
-      title: "Driver Location",
-      type: "driver",
-      timestamp: deliveryLocation.timestamp
-    });
-  }
+  const customerLocation = order.latitude && order.longitude ? {
+    latitude: order.latitude,
+    longitude: order.longitude,
+    title: "Delivery Location",
+    type: "customer"
+  } : undefined;
   
   // Handle different situations for map display
   if (!isOnline || !isMapEnabled) {
@@ -159,11 +150,12 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     // Show simplified map for low-quality connections
     return (
       <MapContainer
-        locations={locations}
-        zoomLevel={12}
-        enableAnimation={false}
-        lowPerformanceMode={true}
-        enableControls={false}
+        driverLocation={driverLocation}
+        customerLocation={customerLocation}
+        restaurantLocation={restaurantLocation}
+        isInteractive={false}
+        showRoute={false}
+        height="h-[300px]"
       />
     );
   }
@@ -171,9 +163,12 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
   // Show full-featured map for good connections
   return (
     <MapContainer
-      locations={locations}
-      zoomLevel={13}
-      enableAnimation={true}
+      driverLocation={driverLocation}
+      customerLocation={customerLocation}
+      restaurantLocation={restaurantLocation}
+      showRoute={true}
+      isInteractive={true}
+      height="h-[300px]"
     />
   );
 };

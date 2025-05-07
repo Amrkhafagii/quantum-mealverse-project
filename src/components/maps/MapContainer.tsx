@@ -16,6 +16,11 @@ interface MapContainerProps {
   isInteractive?: boolean;
   height?: string;
   mapId?: string;
+  lowPerformanceMode?: boolean;
+  enableControls?: boolean;
+  enableAnimation?: boolean;
+  zoomLevel?: number;
+  locations?: any[]; // Support the old locations prop for backward compatibility
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -27,7 +32,12 @@ const MapContainer: React.FC<MapContainerProps> = ({
   showRoute = true,
   isInteractive = true,
   height = 'h-[300px]',
-  mapId = 'default-map'
+  mapId = 'default-map',
+  lowPerformanceMode = false,
+  enableControls = true,
+  enableAnimation = true,
+  zoomLevel = 13,
+  locations = []
 }) => {
   const { googleMapsApiKey } = useGoogleMaps();
   const isNative = Capacitor.isNativePlatform();
@@ -52,6 +62,11 @@ const MapContainer: React.FC<MapContainerProps> = ({
             showRoute={showRoute}
             isInteractive={isInteractive}
             height={height}
+            lowPerformanceMode={lowPerformanceMode}
+            enableControls={enableControls}
+            enableAnimation={enableAnimation}
+            zoomLevel={zoomLevel}
+            locations={locations}
           />
         )}
         {children}
