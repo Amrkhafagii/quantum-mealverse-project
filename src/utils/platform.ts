@@ -50,5 +50,22 @@ export const Platform = {
       return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     return false;
+  },
+  
+  // Get safe area insets for the current device
+  getSafeAreaInsets: (): { top: number; right: number; bottom: number; left: number } => {
+    const defaultInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+    
+    if (typeof window === 'undefined') return defaultInsets;
+    
+    // Get CSS variables for safe area insets
+    const computedStyle = getComputedStyle(document.documentElement);
+    
+    return {
+      top: parseInt(computedStyle.getPropertyValue('--sat') || '0', 10),
+      right: parseInt(computedStyle.getPropertyValue('--sar') || '0', 10),
+      bottom: parseInt(computedStyle.getPropertyValue('--sab') || '0', 10),
+      left: parseInt(computedStyle.getPropertyValue('--sal') || '0', 10)
+    };
   }
 };

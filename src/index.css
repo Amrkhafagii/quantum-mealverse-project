@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,6 +11,12 @@
   --quantum-cyan-dark: #18a29e;
   --quantum-accent: #339af0;
   --quantum-highlight: #f44336;
+  
+  /* Safe area variables that will be populated on mobile devices */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
 }
 
 @layer components {
@@ -44,6 +51,28 @@
     padding-right: env(safe-area-inset-right);
   }
   
+  /* Safe area utility classes */
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .pl-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  
+  .pr-safe {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  
+  .px-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  
   .mobile-container {
     @apply px-3 py-2 mx-0;
   }
@@ -54,6 +83,20 @@
   
   .mobile-top-spacing {
     padding-top: calc(16px + env(safe-area-inset-top));
+  }
+  
+  /* Touch interaction feedback */
+  .touch-feedback {
+    @apply transition-opacity active:opacity-70;
+  }
+  
+  /* Improved form elements for touch */
+  .touch-input {
+    @apply h-12 text-base;
+  }
+  
+  .touch-button {
+    @apply h-12 min-w-[44px] text-base;
   }
 }
 
@@ -118,4 +161,25 @@ h6 {
 #root,
 #__next {
   isolation: isolate;
+}
+
+/* Gesture hint animations */
+@keyframes swipe-hint {
+  0% { transform: translateX(0); opacity: 0.8; }
+  50% { transform: translateX(20px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 0.8; }
+}
+
+.swipe-hint {
+  animation: swipe-hint 2s ease-in-out infinite;
+}
+
+@keyframes pinch-hint {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+.pinch-hint {
+  animation: pinch-hint 2s ease-in-out infinite;
 }

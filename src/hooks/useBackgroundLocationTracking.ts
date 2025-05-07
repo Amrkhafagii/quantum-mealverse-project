@@ -54,7 +54,7 @@ export function useBackgroundLocationTracking({ onLocationUpdate }: BackgroundTr
       if (typeof watcher === 'string') {
         setWatcherId(watcher);
       } else if (watcher && typeof watcher === 'object' && 'id' in watcher) {
-        setWatcherId(watcher.id);
+        setWatcherId((watcher as WatcherResult).id);
       } else {
         console.error('Unexpected return type from addWatcher:', watcher);
         return false;

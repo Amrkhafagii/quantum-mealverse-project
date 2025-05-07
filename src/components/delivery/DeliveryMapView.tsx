@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 import { toast } from 'sonner';
+import TouchEnabledMap from '../maps/TouchEnabledMap';
+import { useIsMobile } from '@/hooks/use-mobile';
+import TouchFriendlyButton from '../mobile/TouchFriendlyButton';
 
 interface DeliveryMapViewProps {
   activeAssignment?: DeliveryAssignment;
@@ -18,11 +21,12 @@ interface DeliveryMapViewProps {
 
 const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, className = '' }) => {
   const { googleMapsApiKey } = useGoogleMaps();
-  const { updateDriverLocation, setSelectedDeliveryId } = useDeliveryMap();
+  const { updateDriverLocation, setSelectedDeliveryId, mapZoom, setMapZoom } = useDeliveryMap();
   const [mapReady, setMapReady] = useState(false);
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
   const [isLiveTracking, setIsLiveTracking] = useState(false);
+  const isMobile = useIsMobile();
   
   // Location tracking for the driver
   const { getCurrentLocation } = useLocationTracker({
@@ -142,6 +146,15 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
       toast.error("Failed to update your location");
     }
   };
+
+  // Handle map zoom
+  const handleZoomIn = () => {
+    setMapZoom((prevZoom) => Math.min(prevZoom + 1, 20));
+  };
+
+  const handleZoomOut = () => {
+    setMapZoom((prevZoom) => Math.max(prevZoom - 1, 1));
+  };
   
   return (
     <Card className={className}>
@@ -156,23 +169,34 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
               </span>
             )}
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={handleUpdateLocation}>
+          <TouchFriendlyButton 
+            variant="outline" 
+            size="sm" 
+            onClick={handleUpdateLocation}
+            touchClassName={isMobile ? "h-10 px-4" : ""}
+          >
             <MapPin className="h-4 w-4 mr-2" />
             Update Location
-          </Button>
+          </TouchFriendlyButton>
         </div>
       </CardHeader>
       <CardContent className="p-2">
         {googleMapsApiKey ? (
-          <DeliveryGoogleMap
-            driverLocation={null} // This will be updated by the location tracker
-            restaurantLocation={restaurantLocation}
-            customerLocation={customerLocation}
-            showRoute={true}
-            className="h-[400px] w-full"
-            zoom={14}
-            autoCenter={true}
-          />
+          <TouchEnabledMap 
+            className="h-[400px] w-full relative"
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+          >
+            <DeliveryGoogleMap
+              driverLocation={null} // This will be updated by the location tracker
+              restaurantLocation={restaurantLocation}
+              customerLocation={customerLocation}
+              showRoute={true}
+              className="h-[400px] w-full"
+              zoom={mapZoom || 14}
+              autoCenter={true}
+            />
+          </TouchEnabledMap>
         ) : (
           <div className="flex items-center justify-center h-[400px] bg-gray-100 rounded-md">
             <p className="text-gray-500">Google Maps API key is required to display the map</p>
