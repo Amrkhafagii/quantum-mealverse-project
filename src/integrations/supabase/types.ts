@@ -1477,7 +1477,9 @@ export type Database = {
           delivery_method: string
           formatted_order_id: string | null
           id: string
+          latitude: number | null
           locale: string | null
+          longitude: number | null
           notes: string | null
           payment_method: string
           refund_amount: number | null
@@ -1504,7 +1506,9 @@ export type Database = {
           delivery_method: string
           formatted_order_id?: string | null
           id?: string
+          latitude?: number | null
           locale?: string | null
+          longitude?: number | null
           notes?: string | null
           payment_method: string
           refund_amount?: number | null
@@ -1531,7 +1535,9 @@ export type Database = {
           delivery_method?: string
           formatted_order_id?: string | null
           id?: string
+          latitude?: number | null
           locale?: string | null
+          longitude?: number | null
           notes?: string | null
           payment_method?: string
           refund_amount?: number | null
