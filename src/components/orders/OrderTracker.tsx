@@ -18,10 +18,8 @@ import { OrderStatus } from '@/types/webhook';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
 import { Platform } from '@/utils/platform';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-
-interface OrderTrackerProps {
-  orderId: string;
-}
+import { OrderStatusListener } from './status/OrderStatusListener';
+import { NotificationPermissionPrompt } from '../notifications/NotificationPermissionPrompt';
 
 // Define a more complete restaurant type
 interface RestaurantWithLocation {
@@ -29,6 +27,10 @@ interface RestaurantWithLocation {
   name: string;
   latitude?: number | null;
   longitude?: number | null;
+}
+
+interface OrderTrackerProps {
+  orderId: string;
 }
 
 export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
@@ -218,6 +220,13 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
       </CardHeader>
       
       <CardContent className={isMobile ? 'px-3 py-2' : ''}>
+        {/* Add notification permission prompt for mobile users */}
+        {isMobile && (
+          <div className="mb-4">
+            <NotificationPermissionPrompt variant="inline" />
+          </div>
+        )}
+
         <div className="space-y-6">
           <div className="pt-0 pb-4">
             <OrderStatusDisplay 
@@ -225,6 +234,9 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
               assignmentStatus={assignmentStatus}
               onOrderUpdate={refetch}
             />
+            
+            {/* Add order status listener for notifications */}
+            {isMobile && <OrderStatusListener orderId={orderId} order={order} />}
             
             {/* Add map for orders that are being prepared, picked up or on the way */}
             {showMap && (
