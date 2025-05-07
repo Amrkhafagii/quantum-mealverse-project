@@ -48,7 +48,7 @@ export const getActiveDeliveryAssignments = async (
       }
 
       const order = assignment.orders;
-      const restaurant = order.restaurant;
+      const restaurant = order.restaurant || {};
       
       // Calculate distance in km (if coordinates are available)
       let distance_km = undefined;
