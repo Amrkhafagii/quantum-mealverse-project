@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapOff, RefreshCw, Loader2, Map, MapPin } from 'lucide-react';
+import { MapIcon, RefreshCw, Loader2, Map, MapPin, WifiOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface LocationData {
@@ -44,7 +44,7 @@ export const OfflineMapFallback: React.FC<OfflineMapFallbackProps> = ({
                 repeatType: "reverse" 
               }}
             >
-              <MapOff className="h-16 w-16 text-slate-500" />
+              <WifiOff className="h-16 w-16 text-slate-500" />
             </motion.div>
             <div className="absolute -right-2 -bottom-2">
               <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">

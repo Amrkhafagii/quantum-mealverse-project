@@ -10,15 +10,18 @@ import { NotificationBadge } from '@/components/notifications/NotificationBadge'
 import { UserSettings } from '@/components/profile/UserSettings';
 import { OrderStatusDebug } from '@/components/orders/OrderStatusDebug';
 import { MobileStatusDebug } from '@/components/orders/status/MobileStatusDebug';
+import { NetworkStateIndicator } from '@/components/orders/status/NetworkStateIndicator';
 import { useAuth } from '@/hooks/useAuth';
 import { Platform } from '@/utils/platform';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { toast } from '@/components/ui/use-toast';
 
 const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: order, isLoading, refetch } = useOrderData(id || '');
+  const { data: order, isLoading, refetch, error } = useOrderData(id || '');
   const { user } = useAuth();
   const isMobile = Platform.isNative();
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   
   // Determine if the user is an admin for debug purposes
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -47,11 +50,42 @@ const OrderStatus = () => {
 
   const handleRefresh = async () => {
     console.log('Refreshing order data...');
-    await refetch();
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast({
+        title: "Refreshed",
+        description: "Order information updated",
+      });
+    } catch (refreshError) {
+      console.error('Error refreshing:', refreshError);
+      toast({
+        title: "Refresh failed",
+        description: "Couldn't update order information",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
+
+  // Display network state indicator at top of screen
+  React.useEffect(() => {
+    // Only add this effect for mobile devices
+    if (!isMobile) return;
+    
+    // Add safe area padding for the network indicator
+    document.body.style.paddingTop = 'env(safe-area-inset-top, 20px)';
+    
+    return () => {
+      document.body.style.paddingTop = '';
+    };
+  }, [isMobile]);
 
   const content = (
     <div className={`container mx-auto p-4 py-8 ${isMobile ? 'px-2 pb-16' : ''}`}>
+      {isMobile && <NetworkStateIndicator variant="slim" position="top" />}
+      
       <div className={`flex justify-between items-center mb-6 ${isMobile ? 'px-2' : ''}`}>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
@@ -78,6 +112,14 @@ const OrderStatus = () => {
             <Link to="/orders">View Your Orders</Link>
           </Button>
         </div>
+      ) : error ? (
+        <div className="p-6 bg-red-500/10 rounded-lg border border-red-200 text-center">
+          <p className="text-red-600 mb-4">There was a problem loading your order information</p>
+          <Button onClick={handleRefresh} disabled={isRefreshing}>
+            {isRefreshing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            Try Again
+          </Button>
+        </div>
       ) : (
         <>
           <OrderTracker orderId={id} />
@@ -102,7 +144,7 @@ const OrderStatus = () => {
 
   // Wrap with pull-to-refresh only on mobile
   return isMobile ? (
-    <PullToRefresh onRefresh={handleRefresh}>
+    <PullToRefresh onRefresh={handleRefresh} isRefreshing={isRefreshing}>
       {content}
     </PullToRefresh>
   ) : content;
