@@ -5,7 +5,7 @@ import { Order } from '@/types/order';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import MapContainer from '../maps/MapContainer';
-import OfflineMapFallback from '../maps/OfflineMapFallback';
+import { OfflineMapFallback } from '../maps/OfflineMapFallback';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
@@ -127,7 +127,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
           ? "Map is unavailable while offline" 
           : "Map has been disabled due to poor connection quality"
         }
-        onRetry={handleRetry}
+        retry={handleRetry}
         isRetrying={isRetrying}
         showLocationData={true}
         locationData={{
@@ -143,7 +143,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
   }
   
   if (isLoading && assignmentId) {
-    return <OfflineMapFallback isLoading={true} title="Loading Map" />;
+    return <OfflineMapFallback isLoading={true} title="Loading Map" retry={handleRetry} />;
   }
   
   if (isLowQuality) {
@@ -156,6 +156,10 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
         isInteractive={false}
         showRoute={false}
         height="h-[300px]"
+        zoomLevel={12}
+        lowPerformanceMode={true}
+        enableAnimation={false}
+        enableControls={false}
       />
     );
   }
@@ -169,6 +173,8 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
       showRoute={true}
       isInteractive={true}
       height="h-[300px]"
+      zoomLevel={13}
+      enableAnimation={true}
     />
   );
 };
