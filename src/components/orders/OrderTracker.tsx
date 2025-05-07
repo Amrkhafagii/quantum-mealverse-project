@@ -12,14 +12,15 @@ import { useOrderData } from '@/hooks/useOrderData';
 import { checkAssignmentStatus } from '@/services/orders/webhookService';
 import { useInterval } from '@/hooks/use-interval';
 import OrderLocationMap from './OrderLocationMap';
-import MapContainer from '../maps/MapContainer';
 import { supabase } from '@/integrations/supabase/client';
-import { OrderStatus } from '@/types/webhook';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
 import { Platform } from '@/utils/platform';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { OrderStatusListener } from './status/OrderStatusListener';
 import { NotificationPermissionPrompt } from '../notifications/NotificationPermissionPrompt';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { hapticFeedback } from '@/utils/hapticFeedback';
+import { MobileStatusDebug } from './status/MobileStatusDebug';
 
 // Define a more complete restaurant type
 interface RestaurantWithLocation {
@@ -134,6 +135,24 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     }
   }, isOnline ? 5000 : null); // Only poll when online
   
+  // Handler for pull-to-refresh
+  const handleRefresh = async () => {
+    if (!isOnline) {
+      return;
+    }
+    
+    try {
+      await fixOrderStatus(orderId);
+      await refetch();
+      
+      // Also refresh assignment status
+      const status = await checkAssignmentStatus(orderId);
+      setAssignmentStatus(status);
+    } catch (error) {
+      console.error('Error refreshing order data:', error);
+    }
+  };
+
   if (isLoading || isFixingOrderStatus) {
     return (
       <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
@@ -202,7 +221,8 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
 
   const showMap = ['preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status);
 
-  return (
+  // Wrap content in PullToRefresh for mobile
+  const content = (
     <Card className={`h-full ${isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}`}>
       <CardHeader className={isMobile ? 'px-3 py-4' : ''}>
         <div className="flex justify-between items-center">
@@ -232,7 +252,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
             <OrderStatusDisplay 
               order={order} 
               assignmentStatus={assignmentStatus}
-              onOrderUpdate={refetch}
+              onOrderUpdate={() => {
+                refetch();
+                hapticFeedback.medium();
+              }}
             />
             
             {/* Add order status listener for notifications */}
@@ -300,8 +323,23 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
               </Card>
             </div>
           )}
+          
+          {/* Add simplified debug component for mobile */}
+          {isMobile && process.env.NODE_ENV === 'development' && (
+            <MobileStatusDebug 
+              orderId={orderId}
+              onStatusFixed={refetch}
+            />
+          )}
         </div>
       </CardContent>
     </Card>
   );
+  
+  // Use PullToRefresh only on mobile
+  return isMobile ? (
+    <PullToRefresh onRefresh={handleRefresh} disabled={!isOnline}>
+      {content}
+    </PullToRefresh>
+  ) : content;
 };

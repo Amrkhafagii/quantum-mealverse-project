@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { NotificationBadge } from '@/components/notifications/NotificationBadge';
 import { UserSettings } from '@/components/profile/UserSettings';
 import { OrderStatusDebug } from '@/components/orders/OrderStatusDebug';
+import { MobileStatusDebug } from '@/components/orders/status/MobileStatusDebug';
 import { useAuth } from '@/hooks/useAuth';
 import { Platform } from '@/utils/platform';
 
@@ -76,7 +77,8 @@ const OrderStatus = () => {
           <OrderTracker orderId={id} />
           
           {/* Debug component - only show for admins or in development */}
-          {(isAdmin || process.env.NODE_ENV === 'development') && (
+          {/* Use full debug component on desktop, simplified on mobile */}
+          {(isAdmin || process.env.NODE_ENV === 'development') && !isMobile && (
             <OrderStatusDebug orderId={id} onStatusFixed={refetch} />
           )}
           

@@ -2,10 +2,13 @@
 import { useEffect, useState } from 'react';
 import { Network } from '@capacitor/network';
 import { toast } from '@/components/ui/use-toast';
+import { hapticFeedback } from '@/utils/hapticFeedback';
+import { Platform } from '@/utils/platform';
 
 export const useConnectionStatus = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [connectionType, setConnectionType] = useState<string | null>(null);
+  const isMobile = Platform.isNative();
   
   useEffect(() => {
     // Initial network status check
@@ -33,6 +36,9 @@ export const useConnectionStatus = () => {
     // Set up browser online/offline event listeners as a fallback
     const handleOnline = () => {
       setIsOnline(true);
+      // Provide haptic feedback on mobile
+      if (isMobile) hapticFeedback.success();
+      
       toast({
         title: "Back online",
         description: "Your connection has been restored",
@@ -42,6 +48,9 @@ export const useConnectionStatus = () => {
     
     const handleOffline = () => {
       setIsOnline(false);
+      // Provide haptic feedback on mobile
+      if (isMobile) hapticFeedback.error();
+      
       toast({
         title: "You are offline",
         description: "Some features may be limited until connection is restored",
@@ -62,12 +71,16 @@ export const useConnectionStatus = () => {
           setConnectionType(status.connectionType);
           
           if (!status.connected) {
+            if (isMobile) hapticFeedback.error();
+            
             toast({
               title: "You are offline",
               description: "Some features may be limited until connection is restored",
               variant: "destructive"
             });
           } else {
+            if (isMobile) hapticFeedback.success();
+            
             toast({
               title: "Back online",
               description: `Connected via ${status.connectionType}`,
@@ -91,7 +104,7 @@ export const useConnectionStatus = () => {
         networkListener.remove();
       }
     };
-  }, []);
+  }, [isMobile]);
   
   return {
     isOnline,

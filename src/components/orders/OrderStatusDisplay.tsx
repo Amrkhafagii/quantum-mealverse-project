@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { OrderStatusBadge } from './OrderStatusBadge';
@@ -11,6 +10,7 @@ import { RefreshCw } from 'lucide-react';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { Platform } from '@/utils/platform';
+import { hapticFeedback } from '@/utils/hapticFeedback';
 
 interface OrderStatusDisplayProps {
   order: Order;
@@ -37,13 +37,29 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     if (!order.id || !isOnline) return;
     
     setIsFixing(true);
+    
+    // Provide haptic feedback on mobile
+    if (isMobile) {
+      hapticFeedback.medium();
+    }
+    
     try {
       await fixOrderStatus(order.id);
       if (onOrderUpdate) {
         onOrderUpdate();
       }
+      
+      // Success feedback on mobile
+      if (isMobile) {
+        hapticFeedback.success();
+      }
     } catch (error) {
       console.error('Error refreshing order status:', error);
+      
+      // Error feedback on mobile
+      if (isMobile) {
+        hapticFeedback.error();
+      }
     } finally {
       setIsFixing(false);
     }
@@ -94,7 +110,10 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           {showCancelButton && canBeCancelled && isOnline && (
             <CancelOrderButton 
               orderId={order.id!} 
-              onCancelOrder={onOrderUpdate}
+              onCancelOrder={() => {
+                if (onOrderUpdate) onOrderUpdate();
+                if (isMobile) hapticFeedback.heavy();
+              }}
             />
           )}
         </div>
