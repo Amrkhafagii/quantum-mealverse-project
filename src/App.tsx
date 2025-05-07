@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // Remove the incorrect devtools import 
@@ -7,28 +7,37 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import OrderConfirmation from './pages/OrderConfirmation';
-import Profile from './pages/Profile';
-import NotFound from './pages/NotFound';
-import { useAuth } from './hooks/useAuth';
 import { DeliveryMapProvider } from './contexts/DeliveryMapContext';
 import { MapViewProvider } from './contexts/MapViewContext';
+import { useAuth } from './hooks/useAuth';
+import { LoadingSuspense } from './components/ui/LoadingSuspense';
+
+// Eagerly load critical components
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Create a dummy components for missing files until they can be properly implemented
-const Products = () => <div>Products Page</div>;
-const ProductDetail = () => <div>Product Detail Page</div>;
-const OrderHistory = () => <div>Order History Page</div>;
-const AdminDashboard = () => <div>Admin Dashboard Page</div>;
-const AdminProducts = () => <div>Admin Products Page</div>;
-const AdminOrders = () => <div>Admin Orders Page</div>;
-const AdminUsers = () => <div>Admin Users Page</div>;
-const DeliveryDashboard = () => <div>Delivery Dashboard Page</div>;
+// Lazy load page components
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
+const Profile = lazy(() => import('./pages/Profile'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Lazy load non-critical placeholder components
+const Products = lazy(() => import('./pages/Shop').then(module => ({ default: () => <div>Products Page</div> })));
+const ProductDetail = lazy(() => import('./pages/Shop').then(module => ({ default: () => <div>Product Detail Page</div> })));
+const OrderHistory = lazy(() => import('./pages/Orders').then(module => ({ default: () => <div>Order History Page</div> })));
+
+// Lazy load admin components
+const AdminDashboard = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Dashboard Page</div> })));
+const AdminProducts = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Products Page</div> })));
+const AdminOrders = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Orders Page</div> })));
+const AdminUsers = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Users Page</div> })));
+
+// Lazy load delivery components
+const DeliveryDashboard = lazy(() => import('./pages/delivery/DeliveryDashboard').then(module => ({ default: () => <div>Delivery Dashboard Page</div> })));
 
 // Create placeholder route components
 const AdminRoute = ({children}: {children: React.ReactNode}) => <>{children}</>;
@@ -49,28 +58,110 @@ function App() {
                 <MapViewProvider>
                   <Router>
                     <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="/products" element={<Products />} />
-                      <Route path="/products/:id" element={<ProductDetail />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-                      <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
-                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                      <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
+                      <Route path="/" element={
+                        <LoadingSuspense>
+                          <Home />
+                        </LoadingSuspense>
+                      } />
+                      <Route path="/login" element={
+                        <LoadingSuspense>
+                          <Login />
+                        </LoadingSuspense>
+                      } />
+                      <Route path="/register" element={
+                        <LoadingSuspense>
+                          <Register />
+                        </LoadingSuspense>
+                      } />
+                      <Route path="/products" element={
+                        <LoadingSuspense>
+                          <Products />
+                        </LoadingSuspense>
+                      } />
+                      <Route path="/products/:id" element={
+                        <LoadingSuspense>
+                          <ProductDetail />
+                        </LoadingSuspense>
+                      } />
+                      <Route path="/cart" element={
+                        <LoadingSuspense>
+                          <Cart />
+                        </LoadingSuspense>
+                      } />
+                      <Route path="/checkout" element={
+                        <ProtectedRoute>
+                          <LoadingSuspense>
+                            <Checkout />
+                          </LoadingSuspense>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/order-confirmation" element={
+                        <ProtectedRoute>
+                          <LoadingSuspense>
+                            <OrderConfirmation />
+                          </LoadingSuspense>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/profile" element={
+                        <ProtectedRoute>
+                          <LoadingSuspense>
+                            <Profile />
+                          </LoadingSuspense>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/order-history" element={
+                        <ProtectedRoute>
+                          <LoadingSuspense>
+                            <OrderHistory />
+                          </LoadingSuspense>
+                        </ProtectedRoute>
+                      } />
                       
-                      {/* Admin Routes */}
-                      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                      <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
-                      <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-                      <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                      {/* Admin Routes - Grouped and lazily loaded */}
+                      <Route path="/admin" element={
+                        <AdminRoute>
+                          <LoadingSuspense>
+                            <AdminDashboard />
+                          </LoadingSuspense>
+                        </AdminRoute>
+                      } />
+                      <Route path="/admin/products" element={
+                        <AdminRoute>
+                          <LoadingSuspense>
+                            <AdminProducts />
+                          </LoadingSuspense>
+                        </AdminRoute>
+                      } />
+                      <Route path="/admin/orders" element={
+                        <AdminRoute>
+                          <LoadingSuspense>
+                            <AdminOrders />
+                          </LoadingSuspense>
+                        </AdminRoute>
+                      } />
+                      <Route path="/admin/users" element={
+                        <AdminRoute>
+                          <LoadingSuspense>
+                            <AdminUsers />
+                          </LoadingSuspense>
+                        </AdminRoute>
+                      } />
                       
-                      {/* Delivery Routes */}
-                      <Route path="/delivery" element={<DeliveryRoute><DeliveryDashboard /></DeliveryRoute>} />
+                      {/* Delivery Routes - Lazily loaded */}
+                      <Route path="/delivery" element={
+                        <DeliveryRoute>
+                          <LoadingSuspense>
+                            <DeliveryDashboard />
+                          </LoadingSuspense>
+                        </DeliveryRoute>
+                      } />
                       
                       {/* Not Found Route */}
-                      <Route path="*" element={<NotFound />} />
+                      <Route path="*" element={
+                        <LoadingSuspense>
+                          <NotFound />
+                        </LoadingSuspense>
+                      } />
                     </Routes>
                   </Router>
                 </MapViewProvider>
@@ -79,7 +170,6 @@ function App() {
           </AuthProvider>
         </ThemeProvider>
       </GoogleMapsProvider>
-      {/* Remove ReactQueryDevtools */}
     </QueryClientProvider>
   );
 }

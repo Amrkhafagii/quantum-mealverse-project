@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   DropdownMenu, 
@@ -11,8 +11,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Truck } from 'lucide-react';
+
+// Lazy load the notification dropdown for better initial load performance
+const NotificationDropdown = lazy(() => import('@/components/notifications/NotificationDropdown').then(
+  module => ({ default: module.NotificationDropdown })
+));
 
 export const UserActions = () => {
   const { user, logout } = useAuth();
@@ -47,7 +51,9 @@ export const UserActions = () => {
   
   return (
     <div className="flex items-center space-x-4">
-      <NotificationDropdown />
+      <Suspense fallback={<div className="w-10 h-10"></div>}>
+        <NotificationDropdown />
+      </Suspense>
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

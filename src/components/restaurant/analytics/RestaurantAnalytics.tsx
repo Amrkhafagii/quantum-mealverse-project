@@ -1,14 +1,29 @@
 
-import React, { useState } from 'react';
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import React from 'react';
 import { EnhancedAnalyticsDashboard } from './EnhancedAnalyticsDashboard';
+import { OrdersOverTimeChart } from './OrdersOverTimeChart';
+import { PopularItemsList } from './PopularItemsList';
+import { PerformanceMetricsCard } from './PerformanceMetricsCard';
+import { SalesChart } from './SalesChart';
+import { TopPerformersChart } from './TopPerformersChart';
 
-export const RestaurantAnalytics = () => {
-  const { restaurant } = useRestaurantAuth();
-  
-  if (!restaurant) {
-    return <div>Loading restaurant information...</div>;
-  }
-  
-  return <EnhancedAnalyticsDashboard />;
+const RestaurantAnalytics = () => {
+  return (
+    <div className="space-y-6">
+      <EnhancedAnalyticsDashboard />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <OrdersOverTimeChart />
+        <SalesChart />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <PerformanceMetricsCard />
+        <PopularItemsList />
+        <TopPerformersChart />
+      </div>
+    </div>
+  );
 };
+
+export default RestaurantAnalytics;

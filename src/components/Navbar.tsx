@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, LogOut, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,9 +15,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/useLanguage';
-import LanguageSelector from './LanguageSelector';
-import LocationStatusIndicator from './location/LocationStatusIndicator';
-import { ConnectionStateIndicator } from '@/components/ui/ConnectionStateIndicator';
+
+// Lazy load non-critical components
+const LanguageSelector = lazy(() => import('./LanguageSelector'));
+const LocationStatusIndicator = lazy(() => import('./location/LocationStatusIndicator'));
+const ConnectionStateIndicator = lazy(() => import('./ui/ConnectionStateIndicator'));
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,6 +41,10 @@ const Navbar = () => {
     }
   };
   
+  // Determine if user is a restaurant or delivery user
+  const userType = user?.user_metadata?.user_type;
+  const isCustomerView = !userType || userType === 'customer';
+  
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4">
@@ -50,49 +57,77 @@ const Navbar = () => {
           
           {/* Connection status indicator */}
           <div className="mx-2">
-            <ConnectionStateIndicator size="sm" showText={false} />
+            <Suspense fallback={null}>
+              <ConnectionStateIndicator size="sm" showText={false} />
+            </Suspense>
           </div>
           
           <div className="hidden md:flex space-x-2 items-center">
-            <Link to="/" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
-              {t('nav.home')}
-            </Link>
-            <Link to="/customer" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
-              {t('nav.menu')}
-            </Link>
-            <Link to="/subscription" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
-              Plans
-            </Link>
-            {/* Added Track Order link */}
-            <Link to="/orders" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors flex items-center gap-1">
-              <Package className="h-4 w-4" />
-              Track Orders
-            </Link>
-            {user ? (
+            {isCustomerView ? (
+              // Customer links
               <>
-                <Link to="/dashboard" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                <Link to="/" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                  {t('nav.home')}
+                </Link>
+                <Link to="/customer" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                  {t('nav.menu')}
+                </Link>
+                <Link to="/subscription" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                  Plans
+                </Link>
+                {/* Added Track Order link */}
+                <Link to="/orders" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors flex items-center gap-1">
+                  <Package className="h-4 w-4" />
+                  Track Orders
+                </Link>
+              </>
+            ) : (
+              // Restaurant/Delivery links
+              <>
+                <Link to={userType === 'restaurant' ? '/restaurant/dashboard' : '/delivery/dashboard'} className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
                   Dashboard
                 </Link>
+                {userType === 'restaurant' && (
+                  <Link to="/restaurant/menu" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                    Menu
+                  </Link>
+                )}
+              </>
+            )}
+            
+            {user ? (
+              <>
+                {isCustomerView && (
+                  <Link to="/dashboard" className="px-3 py-2 text-white hover:text-quantum-cyan transition-colors">
+                    Dashboard
+                  </Link>
+                )}
                 
                 {/* Location status indicator */}
-                <LocationStatusIndicator />
+                <Suspense fallback={null}>
+                  <LocationStatusIndicator />
+                </Suspense>
                 
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  aria-label="Cart"
-                  onClick={() => navigate('/cart')} 
-                  className="relative mr-2"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {itemCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
-                      {itemCount}
-                    </Badge>
-                  )}
-                </Button>
+                {isCustomerView && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    aria-label="Cart"
+                    onClick={() => navigate('/cart')} 
+                    className="relative mr-2"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {itemCount > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
+                        {itemCount}
+                      </Badge>
+                    )}
+                  </Button>
+                )}
                 
-                <LanguageSelector variant="minimal" />
+                <Suspense fallback={null}>
+                  <LanguageSelector variant="minimal" />
+                </Suspense>
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -127,7 +162,9 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <LanguageSelector variant="minimal" />
+                <Suspense fallback={null}>
+                  <LanguageSelector variant="minimal" />
+                </Suspense>
                 <Button 
                   variant="ghost" 
                   onClick={() => navigate('/login')}
@@ -145,26 +182,31 @@ const Navbar = () => {
             )}
           </div>
           
+          {/* Mobile version of the navbar */}
           <div className="md:hidden flex items-center space-x-4">
             {user && (
               <>
                 {/* Mobile location indicator */}
-                <LocationStatusIndicator colorVariant="navbar" />
+                <Suspense fallback={null}>
+                  <LocationStatusIndicator colorVariant="navbar" />
+                </Suspense>
                 
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  aria-label="Cart"
-                  onClick={() => navigate('/cart')} 
-                  className="relative"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {itemCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
-                      {itemCount}
-                    </Badge>
-                  )}
-                </Button>
+                {isCustomerView && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    aria-label="Cart"
+                    onClick={() => navigate('/cart')} 
+                    className="relative"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {itemCount > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-quantum-cyan text-quantum-black">
+                        {itemCount}
+                      </Badge>
+                    )}
+                  </Button>
+                )}
               </>
             )}
             
