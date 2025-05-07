@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +20,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const Auth = lazy(() => import('./pages/Auth'));
 const Cart = lazy(() => import('./pages/Cart'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
@@ -28,6 +28,15 @@ const OrderStatus = lazy(() => import('./pages/OrderStatus'));
 const Profile = lazy(() => import('./pages/Profile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Customer = lazy(() => import('./pages/Customer'));
+const Fitness = lazy(() => import('./pages/Fitness'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Restaurant = lazy(() => import('./pages/Restaurant'));
+const MealDetail = lazy(() => import('./pages/MealDetail'));
+
+// Restaurant pages
+const RestaurantDashboard = lazy(() => import('./pages/restaurant/Dashboard'));
+const RestaurantMenu = lazy(() => import('./pages/restaurant/Menu'));
+const RestaurantOrders = lazy(() => import('./pages/restaurant/Orders'));
 
 // Lazy load non-critical placeholder components
 const Products = lazy(() => import('./pages/Shop').then(module => ({ default: () => <div>Products Page</div> })));
@@ -73,6 +82,11 @@ function App() {
                             <Route path="/login" element={
                               <LoadingSuspense>
                                 <Login />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/auth" element={
+                              <LoadingSuspense>
+                                <Auth />
                               </LoadingSuspense>
                             } />
                             <Route path="/register" element={
@@ -134,6 +148,52 @@ function App() {
                                   <OrderHistory />
                                 </LoadingSuspense>
                               </ProtectedRoute>
+                            } />
+                            
+                            {/* Add Fitness Route */}
+                            <Route path="/fitness" element={
+                              <LoadingSuspense>
+                                <Fitness />
+                              </LoadingSuspense>
+                            } />
+                            
+                            {/* Add Subscription/Meal Plans Route */}
+                            <Route path="/subscription" element={
+                              <LoadingSuspense>
+                                <Subscription />
+                              </LoadingSuspense>
+                            } />
+                            
+                            {/* Add Restaurant Routes */}
+                            <Route path="/restaurant/:id" element={
+                              <LoadingSuspense>
+                                <Restaurant />
+                              </LoadingSuspense>
+                            } />
+                            
+                            <Route path="/meal/:id" element={
+                              <LoadingSuspense>
+                                <MealDetail />
+                              </LoadingSuspense>
+                            } />
+                            
+                            {/* Restaurant Dashboard Routes */}
+                            <Route path="/restaurant/dashboard" element={
+                              <LoadingSuspense>
+                                <RestaurantDashboard />
+                              </LoadingSuspense>
+                            } />
+                            
+                            <Route path="/restaurant/menu" element={
+                              <LoadingSuspense>
+                                <RestaurantMenu />
+                              </LoadingSuspense>
+                            } />
+                            
+                            <Route path="/restaurant/orders" element={
+                              <LoadingSuspense>
+                                <RestaurantOrders />
+                              </LoadingSuspense>
                             } />
                             
                             {/* Admin Routes - Grouped and lazily loaded */}
