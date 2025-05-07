@@ -14,6 +14,11 @@ export interface BackgroundGeolocationOptions {
   distanceFilter?: number;
 }
 
+// Define the watcher result interface
+export interface WatcherResult {
+  id: string;
+}
+
 // Create a function to get background watcher options
 export function getBackgroundWatcherOptions(options: BackgroundGeolocationOptions = {}) {
   return {

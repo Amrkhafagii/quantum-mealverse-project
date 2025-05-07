@@ -9,6 +9,11 @@ interface BackgroundTrackingOptions {
   onLocationUpdate?: (location: DeliveryLocation) => void;
 }
 
+// Define the watcher return type to match what the plugin actually returns
+interface WatcherResult {
+  id: string;
+}
+
 export function useBackgroundLocationTracking({ onLocationUpdate }: BackgroundTrackingOptions = {}) {
   const [isTracking, setIsTracking] = useState(false);
   const [watcherId, setWatcherId] = useState<string | null>(null);
@@ -42,7 +47,7 @@ export function useBackgroundLocationTracking({ onLocationUpdate }: BackgroundTr
             }
           }
         }
-      );
+      ) as WatcherResult; // Cast the return value to our interface
 
       setWatcherId(watcher.id);
       setIsTracking(true);
