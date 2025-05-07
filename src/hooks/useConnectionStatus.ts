@@ -10,35 +10,51 @@ export const useConnectionStatus = () => {
   useEffect(() => {
     // Initial network status check
     const checkNetworkStatus = async () => {
-      const status = await Network.getStatus();
-      setIsOnline(status.connected);
-      setConnectionType(status.connectionType);
+      try {
+        const status = await Network.getStatus();
+        setIsOnline(status.connected);
+        setConnectionType(status.connectionType);
+      } catch (error) {
+        console.error('Error checking network status:', error);
+      }
     };
     
     checkNetworkStatus();
     
     // Set up listeners for network status changes
-    const networkListener = Network.addListener('networkStatusChange', status => {
-      setIsOnline(status.connected);
-      setConnectionType(status.connectionType);
-      
-      if (!status.connected) {
-        toast({
-          title: "You are offline",
-          description: "Some features may be limited until connection is restored",
-          variant: "destructive"
+    let networkListener: any = null;
+    
+    const setupNetworkListener = async () => {
+      try {
+        networkListener = await Network.addListener('networkStatusChange', status => {
+          setIsOnline(status.connected);
+          setConnectionType(status.connectionType);
+          
+          if (!status.connected) {
+            toast({
+              title: "You are offline",
+              description: "Some features may be limited until connection is restored",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Back online",
+              description: `Connected via ${status.connectionType}`,
+              variant: "default"
+            });
+          }
         });
-      } else {
-        toast({
-          title: "Back online",
-          description: `Connected via ${status.connectionType}`,
-          variant: "default"
-        });
+      } catch (error) {
+        console.error('Error setting up network listener:', error);
       }
-    });
+    };
+    
+    setupNetworkListener();
     
     return () => {
-      networkListener.remove();
+      if (networkListener) {
+        networkListener.remove();
+      }
     };
   }, []);
   

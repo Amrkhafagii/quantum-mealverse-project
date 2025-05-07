@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { isPlatform } from '@capacitor/core';
+import { Platform } from '@/utils/platform';
 
 interface OrderStatusDisplayProps {
   order: Order;
@@ -27,7 +27,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
 }) => {
   const [isFixing, setIsFixing] = React.useState(false);
   const { isOnline } = useConnectionStatus();
-  const isMobile = isPlatform('ios') || isPlatform('android');
+  const isMobile = Platform.isNative();
   
   // Calculate if the order is in a state where it can be cancelled
   const canBeCancelled = ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status);

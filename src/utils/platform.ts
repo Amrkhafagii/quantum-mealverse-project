@@ -1,31 +1,32 @@
 
-import { isPlatform } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 
 export const Platform = {
   // Check if running on native mobile
   isNative: (): boolean => {
-    return isPlatform('ios') || isPlatform('android');
+    return Capacitor.isNativePlatform();
   },
   
   // Check if running on iOS
   isIOS: (): boolean => {
-    return isPlatform('ios');
+    return Capacitor.getPlatform() === 'ios';
   },
   
   // Check if running on Android
   isAndroid: (): boolean => {
-    return isPlatform('android');
+    return Capacitor.getPlatform() === 'android';
   },
   
   // Check if running on web
   isWeb: (): boolean => {
-    return isPlatform('web');
+    return Capacitor.getPlatform() === 'web';
   },
   
   // Get platform name
   getPlatform: (): 'ios' | 'android' | 'web' => {
-    if (isPlatform('ios')) return 'ios';
-    if (isPlatform('android')) return 'android';
+    const platform = Capacitor.getPlatform();
+    if (platform === 'ios') return 'ios';
+    if (platform === 'android') return 'android';
     return 'web';
   },
   

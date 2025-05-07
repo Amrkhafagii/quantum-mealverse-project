@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Geolocation, Position } from '@capacitor/geolocation';
 import { BackgroundGeolocation } from '@capacitor-community/background-geolocation';
-import { isPlatform } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { toast } from '@/components/ui/use-toast';
 import { DeliveryLocation } from '@/types/location';
 
@@ -26,7 +26,14 @@ export const useNativeLocationService = (options: {
     const checkPermissions = async () => {
       try {
         const permission = await Geolocation.checkPermissions();
-        setPermissionStatus(permission.location);
+        // Handle possible values from Capacitor
+        if (permission.location === 'granted') {
+          setPermissionStatus('granted');
+        } else if (permission.location === 'denied') {
+          setPermissionStatus('denied');
+        } else {
+          setPermissionStatus('prompt');
+        }
       } catch (err) {
         console.error('Error checking location permissions', err);
       }
@@ -38,8 +45,14 @@ export const useNativeLocationService = (options: {
   const requestPermissions = useCallback(async () => {
     try {
       const permission = await Geolocation.requestPermissions();
-      setPermissionStatus(permission.location);
-      return permission.location === 'granted';
+      // Handle possible values from Capacitor
+      if (permission.location === 'granted') {
+        setPermissionStatus('granted');
+        return true;
+      } else {
+        setPermissionStatus('denied');
+        return false;
+      }
     } catch (err) {
       console.error('Error requesting location permissions', err);
       return false;
@@ -97,7 +110,7 @@ export const useNativeLocationService = (options: {
     
     try {
       // If we're on a native platform and background tracking is enabled
-      if (isPlatform('ios') || isPlatform('android')) {
+      if (Capacitor.isNativePlatform()) {
         if (backgroundTracking) {
           // Use background geolocation for more efficient background tracking
           await BackgroundGeolocation.addWatcher(
@@ -205,7 +218,7 @@ export const useNativeLocationService = (options: {
   // Stop tracking
   const stopTracking = useCallback(async () => {
     try {
-      if (isPlatform('ios') || isPlatform('android')) {
+      if (Capacitor.isNativePlatform()) {
         if (backgroundTracking) {
           await BackgroundGeolocation.removeWatcher({
             id: (window as any).backgroundWatcherId
