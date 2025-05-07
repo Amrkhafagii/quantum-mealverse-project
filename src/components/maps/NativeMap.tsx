@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Platform } from '@/utils/platform';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation2 } from 'lucide-react';
 import TouchEnabledMap from './TouchEnabledMap';
+import { useMapView, defaultPosition } from '@/contexts/MapViewContext';
+import debounce from 'lodash/debounce';
 
 // Define a simple interface for the Google Maps plugin
 interface CapacitorGoogleMapsPlugin {
@@ -106,6 +108,65 @@ interface NativeMapProps {
   autoCenter?: boolean;
   onMapClick?: (location: { longitude: number, latitude: number }) => void;
   isInteractive?: boolean;
+  mapId?: string;
+  onMapLoad?: () => void;
+}
+
+// Batch update manager for native map
+class MapBatchManager {
+  private batchTimeout: NodeJS.Timeout | null = null;
+  private interval: number = 200;
+  private pendingMarkers: Record<string, MapLocation> = {};
+  private pendingRemovals: string[] = [];
+  private updateCallback: ((markers: Record<string, MapLocation>, removals: string[]) => void) | null = null;
+  
+  constructor(interval?: number) {
+    if (interval) this.interval = interval;
+  }
+  
+  setUpdateCallback(callback: (markers: Record<string, MapLocation>, removals: string[]) => void) {
+    this.updateCallback = callback;
+  }
+  
+  clearUpdateCallback() {
+    this.updateCallback = null;
+  }
+  
+  addMarker(id: string, location: MapLocation) {
+    this.pendingMarkers[id] = location;
+    this.scheduleBatch();
+  }
+  
+  removeMarker(id: string) {
+    // Remove from pending markers if present
+    if (this.pendingMarkers[id]) {
+      delete this.pendingMarkers[id];
+    }
+    // Add to pending removals
+    this.pendingRemovals.push(id);
+    this.scheduleBatch();
+  }
+  
+  private scheduleBatch() {
+    if (this.batchTimeout !== null) {
+      return;
+    }
+    
+    this.batchTimeout = setTimeout(() => {
+      this.processBatch();
+    }, this.interval);
+  }
+  
+  private processBatch() {
+    if (this.updateCallback) {
+      this.updateCallback(this.pendingMarkers, this.pendingRemovals);
+    }
+    
+    // Clear pending data
+    this.pendingMarkers = {};
+    this.pendingRemovals = [];
+    this.batchTimeout = null;
+  }
 }
 
 const NativeMap: React.FC<NativeMapProps> = ({
@@ -119,14 +180,28 @@ const NativeMap: React.FC<NativeMapProps> = ({
   autoCenter = true,
   onMapClick,
   isInteractive = true,
+  mapId = 'default-map',
+  onMapLoad
 }) => {
   const { googleMapsApiKey } = useGoogleMaps();
+  const { getSavedPosition, savePosition } = useMapView();
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapId = useRef(`map-${Math.random().toString(36).substring(2, 9)}`);
+  const mapInstanceId = useRef(`map-${mapId}-${Math.random().toString(36).substring(2, 9)}`);
   const [mapInitialized, setMapInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasOpenInfoWindow, setHasOpenInfoWindow] = useState(false);
   const [markers, setMarkers] = useState<string[]>([]);
+  
+  // Create a batch manager instance
+  const batchManagerRef = useRef<MapBatchManager>(new MapBatchManager());
+  
+  // Save map position with debounce
+  const debouncedSavePosition = useCallback(
+    debounce((center: {lat: number, lng: number}, zoom: number) => {
+      savePosition(mapId, { center, zoom });
+    }, 500),
+    [savePosition, mapId]
+  );
   
   // Initialize the map
   useEffect(() => {
@@ -137,39 +212,56 @@ const NativeMap: React.FC<NativeMapProps> = ({
         if (mapRef.current) {
           const boundingRect = mapRef.current.getBoundingClientRect();
           
+          // Get initial position from saved state if available
+          const savedPosition = getSavedPosition(mapId);
+          const initialZoom = savedPosition ? savedPosition.zoom : zoom;
+          const initialCenter = savedPosition ? savedPosition.center : defaultPosition.center;
+          
           // Create the map element
           await CapacitorGoogleMaps.create({
             width: Math.round(boundingRect.width),
             height: Math.round(boundingRect.height),
             x: Math.round(boundingRect.x),
             y: Math.round(boundingRect.y),
-            zoom: zoom,
+            zoom: initialZoom,
+            center: initialCenter, // Use saved position
             // apiKey is not in the type but we'll keep it in our implementation
             // and handle it in the actual plugin
             element: mapRef.current,
             forceCreate: true,
-            id: mapId.current
+            id: mapInstanceId.current
           });
+          
+          // Set up position change listener to save map position
+          // Note: This would need to be implemented in the actual plugin
+          // For now we'll just simulate it with a placeholder
           
           // Add click listener
           if (isInteractive && onMapClick) {
-            await CapacitorGoogleMaps.setOnMapClickListener(mapId.current, (event) => {
+            await CapacitorGoogleMaps.setOnMapClickListener(mapInstanceId.current, (event) => {
               if (onMapClick) {
                 onMapClick({
                   latitude: event.latitude,
                   longitude: event.longitude
                 });
               }
+              
+              // Also capture position for saving
+              debouncedSavePosition(
+                { lat: event.latitude, lng: event.longitude },
+                initialZoom
+              );
             });
           }
           
           // Add marker click listener
-          await CapacitorGoogleMaps.setOnMarkerClickListener(mapId.current, (event) => {
+          await CapacitorGoogleMaps.setOnMarkerClickListener(mapInstanceId.current, (event) => {
             console.log('Marker clicked:', event);
             setHasOpenInfoWindow(true);
           });
           
           setMapInitialized(true);
+          if (onMapLoad) onMapLoad();
         }
       } catch (err) {
         console.error('Error initializing map:', err);
@@ -184,148 +276,191 @@ const NativeMap: React.FC<NativeMapProps> = ({
       if (mapInitialized) {
         // Use destroy if available, otherwise just log
         if (CapacitorGoogleMaps.destroy) {
-          CapacitorGoogleMaps.destroy(mapId.current)
+          CapacitorGoogleMaps.destroy(mapInstanceId.current)
             .catch(err => console.error('Error removing map:', err));
         } else {
-          console.log('Map would be destroyed here:', mapId.current);
+          console.log('Map would be destroyed here:', mapInstanceId.current);
         }
       }
     };
-  }, [googleMapsApiKey, zoom, onMapClick, isInteractive]);
+  }, [googleMapsApiKey, zoom, onMapClick, isInteractive, getSavedPosition, mapId, debouncedSavePosition, onMapLoad]);
   
-  // Update markers when locations change
+  // Set up batch manager
   useEffect(() => {
-    if (!mapInitialized) return;
+    const batchManager = batchManagerRef.current;
     
-    const updateMarkers = async () => {
+    // Set up batch update handler
+    batchManager.setUpdateCallback(async (pendingMarkers, pendingRemovals) => {
+      if (!mapInitialized) return;
+      
       try {
-        // Clear existing markers
-        if (CapacitorGoogleMaps.removeMarkers) {
-          await CapacitorGoogleMaps.removeMarkers(mapId.current);
-        } else {
-          // Fallback: remove individual markers if supported
+        // First handle removals
+        for (const markerId of pendingRemovals) {
           if (CapacitorGoogleMaps.removeMarker) {
-            for (const markerId of markers) {
-              await CapacitorGoogleMaps.removeMarker(mapId.current, markerId);
-            }
+            await CapacitorGoogleMaps.removeMarker(mapInstanceId.current, markerId);
           }
         }
         
-        const newMarkers: string[] = [];
+        // Then handle additions/updates
+        const newMarkers = [...markers];
         
-        // Add driver marker
-        if (driverLocation) {
-          const markerId = await CapacitorGoogleMaps.addMarker(mapId.current, {
-            latitude: driverLocation.latitude,
-            longitude: driverLocation.longitude,
-            title: driverLocation.title || 'Driver',
-            snippet: driverLocation.description || '',
-            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-            animation: 'DROP' // Add animation for driver marker
+        for (const [key, location] of Object.entries(pendingMarkers)) {
+          if (!location) continue;
+          
+          const markerId = await CapacitorGoogleMaps.addMarker(mapInstanceId.current, {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            title: location.title || 'Location',
+            snippet: location.description || '',
+            iconUrl: getIconUrlForType(location.type || 'generic')
           });
-          newMarkers.push(markerId);
-        }
-        
-        // Add restaurant marker
-        if (restaurantLocation) {
-          const markerId = await CapacitorGoogleMaps.addMarker(mapId.current, {
-            latitude: restaurantLocation.latitude,
-            longitude: restaurantLocation.longitude,
-            title: restaurantLocation.title || 'Restaurant',
-            snippet: restaurantLocation.description || '',
-            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png'
-          });
-          newMarkers.push(markerId);
-        }
-        
-        // Add customer marker
-        if (customerLocation) {
-          const markerId = await CapacitorGoogleMaps.addMarker(mapId.current, {
-            latitude: customerLocation.latitude,
-            longitude: customerLocation.longitude,
-            title: customerLocation.title || 'Customer',
-            snippet: customerLocation.description || '',
-            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-          });
-          newMarkers.push(markerId);
-        }
-        
-        // Add additional markers
-        for (const marker of additionalMarkers) {
-          const markerId = await CapacitorGoogleMaps.addMarker(mapId.current, {
-            latitude: marker.latitude,
-            longitude: marker.longitude,
-            title: marker.title || 'Location',
-            snippet: marker.description || '',
-            iconUrl: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-          });
+          
           newMarkers.push(markerId);
         }
         
         setMarkers(newMarkers);
         
-        // If we should show route and have both driver and customer locations
-        if (showRoute && driverLocation && (customerLocation || restaurantLocation)) {
-          const destination = customerLocation || restaurantLocation;
-          if (destination) {
-            await CapacitorGoogleMaps.addPolyline(mapId.current, {
-              points: [
-                { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
-                { latitude: destination.latitude, longitude: destination.longitude }
-              ],
-              color: '#4285F4',
-              width: 5
+        // If we should show route and have updated positions, update the route
+        if (showRoute && pendingMarkers['driver'] && 
+           (pendingMarkers['customer'] || pendingMarkers['restaurant'])) {
+          updateRoute();
+        }
+      } catch (err) {
+        console.error('Error in batch update:', err);
+      }
+    });
+    
+    // Cleanup
+    return () => {
+      batchManager.clearUpdateCallback();
+    };
+  }, [mapInitialized, markers, showRoute]);
+  
+  // Helper function to get icon URL based on type
+  const getIconUrlForType = (type: string): string => {
+    switch(type) {
+      case 'driver':
+        return 'https://maps.google.com/mapfiles/ms/icons/green-dot.png';
+      case 'restaurant':
+        return 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+      case 'customer':
+        return 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+      default:
+        return 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+    }
+  };
+  
+  // Update route between points
+  const updateRoute = async () => {
+    if (!mapInitialized) return;
+    
+    if (showRoute && driverLocation && (customerLocation || restaurantLocation)) {
+      const destination = customerLocation || restaurantLocation;
+      if (!destination) return;
+      
+      try {
+        await CapacitorGoogleMaps.addPolyline(mapInstanceId.current, {
+          points: [
+            { latitude: driverLocation.latitude, longitude: driverLocation.longitude },
+            { latitude: destination.latitude, longitude: destination.longitude }
+          ],
+          color: '#4285F4',
+          width: 5
+        });
+      } catch (err) {
+        console.error('Error updating route:', err);
+      }
+    }
+  };
+  
+  // Update markers when locations change
+  useEffect(() => {
+    if (!mapInitialized) return;
+    
+    const batchManager = batchManagerRef.current;
+    
+    // Queue driver marker update
+    if (driverLocation) {
+      batchManager.addMarker('driver', driverLocation);
+    }
+    
+    // Queue restaurant marker update
+    if (restaurantLocation) {
+      batchManager.addMarker('restaurant', restaurantLocation);
+    }
+    
+    // Queue customer marker update
+    if (customerLocation) {
+      batchManager.addMarker('customer', customerLocation);
+    }
+    
+    // Queue additional markers
+    additionalMarkers.forEach((marker, index) => {
+      if (marker) {
+        batchManager.addMarker(`additional-${index}`, marker);
+      }
+    });
+    
+  }, [driverLocation, restaurantLocation, customerLocation, additionalMarkers, mapInitialized]);
+  
+  // Handle auto centering the map
+  useEffect(() => {
+    const centerMap = async () => {
+      if (!mapInitialized || !autoCenter) return;
+      
+      try {
+        const locations = [
+          driverLocation, 
+          restaurantLocation, 
+          customerLocation,
+          ...additionalMarkers
+        ].filter(Boolean) as MapLocation[];
+        
+        if (locations.length > 0) {
+          // If we have multiple locations, fit bounds
+          if (locations.length > 1 && CapacitorGoogleMaps.fitBounds) {
+            const points = locations.map(loc => ({
+              latitude: loc.latitude,
+              longitude: loc.longitude
+            }));
+            
+            await CapacitorGoogleMaps.fitBounds(mapInstanceId.current, { 
+              points,
+              padding: { top: 50, bottom: 50, left: 50, right: 50 } 
+            });
+          } 
+          // Otherwise center on the single location
+          else {
+            await CapacitorGoogleMaps.setCamera(mapInstanceId.current, {
+              latitude: locations[0].latitude,
+              longitude: locations[0].longitude,
+              zoom: zoom,
+              animate: true,
+              animationDuration: 500
             });
           }
-        }
-        
-        // Auto center the map if needed
-        if (autoCenter) {
-          const locations = [
-            driverLocation, 
-            restaurantLocation, 
-            customerLocation,
-            ...additionalMarkers
-          ].filter(Boolean) as MapLocation[];
           
-          if (locations.length > 0) {
-            // If we have multiple locations, fit bounds
-            if (locations.length > 1 && CapacitorGoogleMaps.fitBounds) {
-              const points = locations.map(loc => ({
-                latitude: loc.latitude,
-                longitude: loc.longitude
-              }));
-              
-              await CapacitorGoogleMaps.fitBounds(mapId.current, { 
-                points,
-                padding: { top: 50, bottom: 50, left: 50, right: 50 } 
-              });
-            } 
-            // Otherwise center on the single location
-            else {
-              await CapacitorGoogleMaps.setCamera(mapId.current, {
-                latitude: locations[0].latitude,
-                longitude: locations[0].longitude,
-                zoom: zoom,
-                animate: true,
-                animationDuration: 500
-              });
-            }
+          // Save position
+          if (locations.length === 1) {
+            debouncedSavePosition(
+              { lat: locations[0].latitude, lng: locations[0].longitude },
+              zoom
+            );
           }
         }
       } catch (err) {
-        console.error('Error updating map markers:', err);
+        console.error('Error centering map:', err);
       }
     };
     
-    updateMarkers();
-  }, [mapInitialized, driverLocation, restaurantLocation, customerLocation, additionalMarkers, showRoute, autoCenter, zoom, markers]);
+    centerMap();
+  }, [autoCenter, mapInitialized, driverLocation, restaurantLocation, customerLocation, additionalMarkers, zoom, debouncedSavePosition]);
   
   // Close info window on map click
   const handleMapContainerClick = () => {
     if (hasOpenInfoWindow && mapInitialized) {
       if (CapacitorGoogleMaps.hideInfoWindow) {
-        CapacitorGoogleMaps.hideInfoWindow(mapId.current)
+        CapacitorGoogleMaps.hideInfoWindow(mapInstanceId.current)
           .then(() => setHasOpenInfoWindow(false))
           .catch(err => console.error('Error hiding info window:', err));
       } else {
@@ -375,7 +510,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
     >
       <div 
         ref={mapRef} 
-        id={mapId.current} 
+        id={mapInstanceId.current} 
         className="h-full w-full"
       />
       

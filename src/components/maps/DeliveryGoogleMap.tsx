@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleMap, Marker, InfoWindow, DirectionsRenderer } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
+import { useMapView, defaultPosition } from '@/contexts/MapViewContext';
+import debounce from 'lodash/debounce';
 
 // Declare the googleMapCallback property on the window object
 declare global {
@@ -31,6 +32,8 @@ interface DeliveryGoogleMapProps {
   autoCenter?: boolean;
   onMapClick?: (location: { longitude: number, latitude: number }) => void;
   isInteractive?: boolean;
+  mapId?: string;
+  onMapLoad?: () => void;
 }
 
 // Default map container styles
@@ -39,6 +42,51 @@ const containerStyle = {
   height: '100%',
   borderRadius: '0.375rem' // equivalent to rounded-md in Tailwind
 };
+
+// Batch update manager
+class BatchUpdateManager {
+  private updateInterval: number = 200; // ms
+  private updateTimeout: NodeJS.Timeout | null = null;
+  private pendingUpdates: Record<string, any> = {};
+  private updateCallbacks: Record<string, (value: any) => void> = {};
+
+  constructor(interval?: number) {
+    if (interval) this.updateInterval = interval;
+  }
+
+  registerCallback(key: string, callback: (value: any) => void) {
+    this.updateCallbacks[key] = callback;
+  }
+
+  unregisterCallback(key: string) {
+    delete this.updateCallbacks[key];
+  }
+
+  queueUpdate(key: string, value: any) {
+    this.pendingUpdates[key] = value;
+    
+    if (!this.updateTimeout) {
+      this.updateTimeout = setTimeout(() => {
+        this.processUpdates();
+      }, this.updateInterval);
+    }
+  }
+
+  private processUpdates() {
+    const keys = Object.keys(this.pendingUpdates);
+    keys.forEach(key => {
+      if (this.updateCallbacks[key]) {
+        this.updateCallbacks[key](this.pendingUpdates[key]);
+      }
+    });
+    
+    this.pendingUpdates = {};
+    this.updateTimeout = null;
+  }
+}
+
+// Create a singleton batch update manager
+const batchManager = new BatchUpdateManager();
 
 const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   driverLocation,
@@ -51,8 +99,11 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   autoCenter = true,
   onMapClick,
   isInteractive = true,
+  mapId = 'default-map',
+  onMapLoad,
 }) => {
   const { googleMapsApiKey } = useGoogleMaps();
+  const { getSavedPosition, savePosition } = useMapView();
   
   // For tracking open info windows
   const [selectedMarker, setSelectedMarker] = useState<MapLocation | null>(null);
@@ -65,6 +116,18 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
   const googleRef = useRef<any>(null);
+  const mapInitialized = useRef<boolean>(false);
+  
+  // Store map instance
+  const mapRef = useRef<google.maps.Map | null>(null);
+  
+  // Store markers to avoid re-creating them
+  const markersRef = useRef<{[key: string]: google.maps.Marker}>({});
+  const markersDataRef = useRef<{[key: string]: MapLocation}>({});
+  
+  // Track position change
+  const lastPositionRef = useRef<{center: google.maps.LatLngLiteral, zoom: number} | null>(null);
+  const positionChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     // Only initialize if we have an API key and we haven't initialized yet
@@ -99,11 +162,15 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     }
   }, [googleMapsApiKey, isLoaded, loadError]);
   
-  // Map reference
-  const mapRef = useRef<google.maps.Map | null>(null);
-  
   // Calculate map center and bounds
   const getMapCenter = useCallback(() => {
+    // Try to get saved position first
+    const savedPosition = getSavedPosition(mapId);
+    if (savedPosition) {
+      return savedPosition.center;
+    }
+    
+    // Otherwise calculate from locations
     const locations = [
       driverLocation,
       restaurantLocation,
@@ -112,7 +179,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     ].filter(Boolean) as MapLocation[];
     
     if (locations.length === 0) {
-      return { lat: 0, lng: 0 }; // Default center if no locations
+      return defaultPosition.center; // Default center if no locations
     }
     
     if (locations.length === 1) {
@@ -126,7 +193,13 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
       }),
       { lat: 0, lng: 0 }
     );
-  }, [driverLocation, restaurantLocation, customerLocation, additionalMarkers]);
+  }, [driverLocation, restaurantLocation, customerLocation, additionalMarkers, getSavedPosition, mapId]);
+  
+  // Get initial zoom level
+  const getInitialZoom = useCallback(() => {
+    const savedPosition = getSavedPosition(mapId);
+    return savedPosition ? savedPosition.zoom : zoom;
+  }, [getSavedPosition, mapId, zoom]);
   
   // Function to fit map to bounds of all markers
   const fitBounds = useCallback(() => {
@@ -157,9 +230,171 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     });
   }, [driverLocation, restaurantLocation, customerLocation, additionalMarkers]);
   
+  // Save map position with debounce
+  const debouncedSavePosition = useCallback(
+    debounce((center: google.maps.LatLngLiteral, zoom: number) => {
+      savePosition(mapId, { center, zoom });
+    }, 500), 
+    [savePosition, mapId]
+  );
+  
+  // Update markers efficiently using batch update manager
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !googleRef.current) return;
+
+    // Register batch update handler
+    const updateKey = `map-markers-${mapId}`;
+    
+    batchManager.registerCallback(updateKey, (locations: {
+      driver?: MapLocation,
+      restaurant?: MapLocation,
+      customer?: MapLocation,
+      additional: MapLocation[]
+    }) => {
+      // Process all location updates in one batch
+      
+      // Handle driver location update
+      if (locations.driver) {
+        updateOrCreateMarker('driver', locations.driver, 'driver');
+      }
+      
+      // Handle restaurant location update
+      if (locations.restaurant) {
+        updateOrCreateMarker('restaurant', locations.restaurant, 'restaurant');
+      }
+      
+      // Handle customer location update
+      if (locations.customer) {
+        updateOrCreateMarker('customer', locations.customer, 'customer');
+      }
+      
+      // Handle additional markers
+      if (locations.additional && locations.additional.length > 0) {
+        locations.additional.forEach((marker, index) => {
+          const key = `additional-${index}`;
+          updateOrCreateMarker(key, marker, marker.type || 'generic');
+        });
+      }
+      
+      // Remove any markers that no longer exist
+      const validKeys = ['driver', 'restaurant', 'customer'];
+      if (locations.additional) {
+        locations.additional.forEach((_, index) => {
+          validKeys.push(`additional-${index}`);
+        });
+      }
+      
+      // Clean up unused markers
+      Object.keys(markersRef.current).forEach(key => {
+        if (!validKeys.includes(key)) {
+          // Remove the marker
+          markersRef.current[key].setMap(null);
+          delete markersRef.current[key];
+          delete markersDataRef.current[key];
+        }
+      });
+    });
+    
+    // Function to update or create a marker
+    function updateOrCreateMarker(key: string, location: MapLocation, type: string) {
+      const markerPosition = { lat: location.latitude, lng: location.longitude };
+      const existingMarker = markersRef.current[key];
+      
+      // If marker exists and only position changed, just update position
+      if (existingMarker) {
+        // Check if position changed
+        const currentPosition = existingMarker.getPosition();
+        if (currentPosition && 
+            (Math.abs(currentPosition.lat() - location.latitude) > 0.000001 || 
+             Math.abs(currentPosition.lng() - location.longitude) > 0.000001)) {
+          existingMarker.setPosition(markerPosition);
+        }
+        // Update stored data
+        markersDataRef.current[key] = location;
+        return;
+      }
+      
+      // Create new marker
+      const marker = new googleRef.current.maps.Marker({
+        position: markerPosition,
+        map: mapRef.current,
+        icon: getMarkerIcon(type),
+        title: location.title || type
+      });
+      
+      // Add click listener
+      marker.addListener('click', () => {
+        setSelectedMarker(location);
+      });
+      
+      // Store marker reference
+      markersRef.current[key] = marker;
+      markersDataRef.current[key] = location;
+    }
+    
+    // Get marker icon based on type
+    function getMarkerIcon(locationType?: string) {
+      if (!googleRef.current) return null;
+      
+      switch (locationType) {
+        case 'driver':
+          return {
+            path: googleRef.current.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            fillColor: '#00FF00',
+            fillOpacity: 1,
+            strokeWeight: 1,
+            scale: 6
+          };
+        case 'restaurant':
+          return {
+            path: googleRef.current.maps.SymbolPath.CIRCLE,
+            fillColor: '#FF8C00',
+            fillOpacity: 1,
+            strokeWeight: 1,
+            scale: 8
+          };
+        case 'customer':
+          return {
+            path: googleRef.current.maps.SymbolPath.CIRCLE,
+            fillColor: '#FF0000',
+            fillOpacity: 1,
+            strokeWeight: 1,
+            scale: 8
+          };
+        default:
+          return {
+            path: googleRef.current.maps.SymbolPath.CIRCLE,
+            fillColor: '#3887be',
+            fillOpacity: 1,
+            strokeWeight: 1,
+            scale: 7
+          };
+      }
+    }
+    
+    // Clean up
+    return () => {
+      batchManager.unregisterCallback(updateKey);
+    };
+  }, [isLoaded, mapId]);
+  
+  // Queue location updates to batch manager
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current) return;
+    
+    const updateKey = `map-markers-${mapId}`;
+    batchManager.queueUpdate(updateKey, {
+      driver: driverLocation,
+      restaurant: restaurantLocation,
+      customer: customerLocation,
+      additional: additionalMarkers
+    });
+    
+  }, [isLoaded, driverLocation, restaurantLocation, customerLocation, additionalMarkers, mapId]);
+  
   // Set up directions when route should be displayed
   useEffect(() => {
-    if (!isLoaded || !showRoute || !googleRef.current) return;
+    if (!isLoaded || !showRoute || !googleRef.current || !mapRef.current) return;
     
     // Determine route points - we need both driver and at least one destination
     if (!driverLocation || !(restaurantLocation || customerLocation)) return;
@@ -199,14 +434,54 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   // Handle map load
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
-    if (autoCenter) {
+    mapInitialized.current = true;
+    
+    // Set up position change listener
+    map.addListener('idle', () => {
+      if (!mapRef.current) return;
+      
+      const center = mapRef.current.getCenter();
+      const zoom = mapRef.current.getZoom();
+      
+      if (!center || zoom === undefined) return;
+      
+      const centerLiteral = { lat: center.lat(), lng: center.lng() };
+      lastPositionRef.current = { center: centerLiteral, zoom };
+      
+      // Debounced save position to avoid too many saves
+      debouncedSavePosition(centerLiteral, zoom);
+    });
+    
+    // Initial positioning
+    if (!autoCenter) {
+      const initialCenter = getMapCenter();
+      const initialZoom = getInitialZoom();
+      map.setCenter(initialCenter);
+      map.setZoom(initialZoom);
+    } else {
       fitBounds();
     }
-  }, [fitBounds, autoCenter]);
+    
+    // Call onMapLoad callback if provided
+    if (onMapLoad) onMapLoad();
+  }, [fitBounds, autoCenter, getMapCenter, getInitialZoom, debouncedSavePosition, onMapLoad]);
   
   // Clean up on unmount
   const onUnmount = useCallback(() => {
     mapRef.current = null;
+    mapInitialized.current = false;
+    
+    // Clear all marker references
+    Object.values(markersRef.current).forEach(marker => {
+      marker.setMap(null);
+    });
+    markersRef.current = {};
+    markersDataRef.current = {};
+    
+    // Clear any pending position save
+    if (positionChangeTimeoutRef.current) {
+      clearTimeout(positionChangeTimeoutRef.current);
+    }
   }, []);
   
   // Handle map clicks if callback provided
@@ -220,46 +495,6 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     // Close any open info windows when map is clicked
     setSelectedMarker(null);
   }, [onMapClick]);
-  
-  // Get marker icon based on location type
-  const getMarkerIcon = (locationType?: string) => {
-    if (!googleRef.current) return null;
-    
-    switch (locationType) {
-      case 'driver':
-        return {
-          path: googleRef.current.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          fillColor: '#00FF00',
-          fillOpacity: 1,
-          strokeWeight: 1,
-          scale: 6
-        };
-      case 'restaurant':
-        return {
-          path: googleRef.current.maps.SymbolPath.CIRCLE,
-          fillColor: '#FF8C00',
-          fillOpacity: 1,
-          strokeWeight: 1,
-          scale: 8
-        };
-      case 'customer':
-        return {
-          path: googleRef.current.maps.SymbolPath.CIRCLE,
-          fillColor: '#FF0000',
-          fillOpacity: 1,
-          strokeWeight: 1,
-          scale: 8
-        };
-      default:
-        return {
-          path: googleRef.current.maps.SymbolPath.CIRCLE,
-          fillColor: '#3887be',
-          fillOpacity: 1,
-          strokeWeight: 1,
-          scale: 7
-        };
-    }
-  };
   
   if (loadError) {
     return (
@@ -289,7 +524,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={getMapCenter()}
-        zoom={zoom}
+        zoom={getInitialZoom()}
         options={{
           disableDefaultUI: !isInteractive,
           zoomControl: isInteractive,
@@ -302,78 +537,20 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
         onLoad={onLoad}
         onUnmount={onUnmount}
       >
-        {/* Driver Marker */}
-        {driverLocation && (
-          <Marker
-            position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}
-            icon={getMarkerIcon('driver')}
-            onClick={() => setSelectedMarker(driverLocation)}
-          >
-            {selectedMarker === driverLocation && (
-              <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
-                <div>
-                  {driverLocation.title && <h3>{driverLocation.title}</h3>}
-                  {driverLocation.description && <p>{driverLocation.description}</p>}
-                </div>
-              </InfoWindow>
-            )}
-          </Marker>
-        )}
+        {/* We'll use batch update manager for markers */}
         
-        {/* Restaurant Marker */}
-        {restaurantLocation && (
-          <Marker
-            position={{ lat: restaurantLocation.latitude, lng: restaurantLocation.longitude }}
-            icon={getMarkerIcon('restaurant')}
-            onClick={() => setSelectedMarker(restaurantLocation)}
+        {/* InfoWindow for selected marker */}
+        {selectedMarker && (
+          <InfoWindow 
+            position={{ lat: selectedMarker.latitude, lng: selectedMarker.longitude }}
+            onCloseClick={() => setSelectedMarker(null)}
           >
-            {selectedMarker === restaurantLocation && (
-              <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
-                <div>
-                  {restaurantLocation.title && <h3>{restaurantLocation.title}</h3>}
-                  {restaurantLocation.description && <p>{restaurantLocation.description}</p>}
-                </div>
-              </InfoWindow>
-            )}
-          </Marker>
+            <div>
+              {selectedMarker.title && <h3>{selectedMarker.title}</h3>}
+              {selectedMarker.description && <p>{selectedMarker.description}</p>}
+            </div>
+          </InfoWindow>
         )}
-        
-        {/* Customer Marker */}
-        {customerLocation && (
-          <Marker
-            position={{ lat: customerLocation.latitude, lng: customerLocation.longitude }}
-            icon={getMarkerIcon('customer')}
-            onClick={() => setSelectedMarker(customerLocation)}
-          >
-            {selectedMarker === customerLocation && (
-              <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
-                <div>
-                  {customerLocation.title && <h3>{customerLocation.title}</h3>}
-                  {customerLocation.description && <p>{customerLocation.description}</p>}
-                </div>
-              </InfoWindow>
-            )}
-          </Marker>
-        )}
-        
-        {/* Additional Markers */}
-        {additionalMarkers.map((marker, index) => (
-          <Marker
-            key={`additional-${index}`}
-            position={{ lat: marker.latitude, lng: marker.longitude }}
-            icon={getMarkerIcon(marker.type)}
-            onClick={() => setSelectedMarker(marker)}
-          >
-            {selectedMarker === marker && (
-              <InfoWindow onCloseClick={() => setSelectedMarker(null)}>
-                <div>
-                  {marker.title && <h3>{marker.title}</h3>}
-                  {marker.description && <p>{marker.description}</p>}
-                </div>
-              </InfoWindow>
-            )}
-          </Marker>
-        ))}
         
         {/* Route Display */}
         {showRoute && directions && (

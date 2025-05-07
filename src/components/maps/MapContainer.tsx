@@ -2,7 +2,8 @@
 import React from 'react';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Card, CardContent } from '@/components/ui/card';
-import DeliveryGoogleMap from './DeliveryGoogleMap';
+import { Capacitor } from '@capacitor/core';
+import LazyMap from './LazyMap';
 import { Loader2 } from 'lucide-react';
 
 interface MapContainerProps {
@@ -14,6 +15,7 @@ interface MapContainerProps {
   showRoute?: boolean;
   isInteractive?: boolean;
   height?: string;
+  mapId?: string;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -24,13 +26,15 @@ const MapContainer: React.FC<MapContainerProps> = ({
   children,
   showRoute = true,
   isInteractive = true,
-  height = 'h-[300px]'
+  height = 'h-[300px]',
+  mapId = 'default-map'
 }) => {
   const { googleMapsApiKey } = useGoogleMaps();
+  const isNative = Capacitor.isNativePlatform();
 
   return (
     <Card className={className}>
-      <CardContent className={`p-0 overflow-hidden ${height}`}>
+      <CardContent className={`p-0 overflow-hidden ${height} relative`}>
         {!googleMapsApiKey ? (
           <div className="p-4 flex items-center justify-center h-full">
             <div className="text-center">
@@ -39,13 +43,15 @@ const MapContainer: React.FC<MapContainerProps> = ({
             </div>
           </div>
         ) : (
-          <DeliveryGoogleMap
+          <LazyMap
+            mapId={mapId}
+            isNative={isNative}
             driverLocation={driverLocation}
             customerLocation={customerLocation}
             restaurantLocation={restaurantLocation}
             showRoute={showRoute}
             isInteractive={isInteractive}
-            className={`w-full h-full`}
+            height={height}
           />
         )}
         {children}

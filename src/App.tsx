@@ -1,193 +1,83 @@
-
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { ReactQueryDevtools } from 'react-query/devtools';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
-import { Toaster } from '@/components/ui/toaster';
-import { LanguageProvider } from './hooks/useLanguage';
-import { CurrencyProvider } from './hooks/useCurrency';
-import { KeyboardNavigation } from './components/a11y/KeyboardNavigation';
-import ProtectedRoute from './components/ProtectedRoute';
+import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Customer from './pages/Customer';
+import Register from './pages/Register';
+import Products from './pages/Products';
+import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Restaurant from './pages/Restaurant';
-import Subscription from './pages/Subscription';
-import OrderStatus from './pages/OrderStatus';
-import MealDetail from './pages/MealDetail';
-import NotFound from './pages/NotFound';
-import Nutrition from './pages/Nutrition';
-import Fitness from './pages/Fitness';
-import WorkoutsPage from './pages/Workouts';
-import FitnessProfile from './pages/FitnessProfile';
-import Orders from './pages/Orders';
 import OrderConfirmation from './pages/OrderConfirmation';
-import ThankYou from './pages/ThankYou';
-import Auth from './pages/Auth';
-
-// Restaurant admin routes
-import RestaurantDashboard from './pages/restaurant/Dashboard';
-import RestaurantMenu from './pages/restaurant/Menu';
-import RestaurantOrders from './pages/restaurant/Orders';
-
-// Delivery routes
-import OnboardingPage from './pages/delivery/OnboardingPage';
+import Profile from './pages/Profile';
+import OrderHistory from './pages/OrderHistory';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminProducts from './pages/admin/AdminProducts';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminUsers from './pages/admin/AdminUsers';
 import DeliveryDashboard from './pages/delivery/DeliveryDashboard';
-import DeliverySettings from './pages/delivery/DeliverySettings';
-
-// Import the GoogleMapsProvider and DeliveryMapProvider
-import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import DeliveryRoute from './components/DeliveryRoute';
+import NotFound from './pages/NotFound';
+import { useAuth } from './hooks/useAuth';
+import { useCart } from './hooks/useCart';
 import { DeliveryMapProvider } from './contexts/DeliveryMapContext';
-import { TouchOptimizerProvider } from './contexts/TouchOptimizerContext';
+import { MapViewProvider } from './contexts/MapViewContext';
 
-// Import the Toaster from Sonner
-import { Toaster as SonnerToaster } from 'sonner';
+const queryClient = new QueryClient();
 
 function App() {
+  const { authState } = useAuth();
+  const { cart } = useCart();
+  
   return (
-    <GoogleMapsProvider>
-      <DeliveryMapProvider>
-        <TouchOptimizerProvider>
-          <LanguageProvider>
-            <Router>
-              <AuthProvider>
-                <CurrencyProvider>
-                  <CartProvider>
-                    <KeyboardNavigation />
+    <QueryClientProvider client={queryClient}>
+      <GoogleMapsProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <DeliveryMapProvider>
+                <MapViewProvider>
+                  <Router>
                     <Routes>
                       <Route path="/" element={<Home />} />
                       <Route path="/login" element={<Login />} />
-                      <Route path="/signup" element={<Signup />} />
-                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="/products" element={<Products />} />
+                      <Route path="/products/:id" element={<ProductDetail />} />
+                      <Route path="/cart" element={<Cart />} />
+                      <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                      <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><Profile />} />
+                      <Route path="/order-history" element={<ProtectedRoute><OrderHistory />} />
                       
-                      {/* Customer routes - protected for customer users */}
-                      <Route path="/customer" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Customer />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/cart" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Cart />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/checkout" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Checkout />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                      <Route path="/restaurants/:id" element={<Restaurant />} />
-                      <Route path="/meal/:id" element={<MealDetail />} />
-                      <Route path="/subscription" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Subscription />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/order/status/:id" element={
-                        <ProtectedRoute>
-                          <OrderStatus />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/orders" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Orders />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/orders/:id" element={
-                        <ProtectedRoute>
-                          <Orders />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/order-confirmation/:id" element={
-                        <ProtectedRoute>
-                          <OrderConfirmation />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/thank-you" element={<ThankYou />} />
-                      <Route path="/nutrition" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Nutrition />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/fitness" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <Fitness />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/workouts" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <WorkoutsPage />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/fitness-profile" element={
-                        <ProtectedRoute allowedUserTypes={['customer', undefined]}>
-                          <FitnessProfile />
-                        </ProtectedRoute>
-                      } />
+                      {/* Admin Routes */}
+                      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                      <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+                      <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+                      <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                       
-                      {/* Restaurant Admin Routes - protected for restaurant users */}
-                      <Route path="/restaurant/dashboard" element={
-                        <ProtectedRoute allowedUserTypes={['restaurant']}>
-                          <RestaurantDashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/restaurant/menu" element={
-                        <ProtectedRoute allowedUserTypes={['restaurant']}>
-                          <RestaurantMenu />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/restaurant/orders" element={
-                        <ProtectedRoute allowedUserTypes={['restaurant']}>
-                          <RestaurantOrders />
-                        </ProtectedRoute>
-                      } />
-
-                      {/* Delivery Routes - protected for delivery users */}
-                      <Route path="/delivery/onboarding" element={
-                        <ProtectedRoute allowedUserTypes={['delivery']}>
-                          <OnboardingPage />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/delivery/dashboard" element={
-                        <ProtectedRoute allowedUserTypes={['delivery']} requiresLocation={true}>
-                          <DeliveryDashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/delivery/settings" element={
-                        <ProtectedRoute allowedUserTypes={['delivery']}>
-                          <DeliverySettings />
-                        </ProtectedRoute>
-                      } />
+                      {/* Delivery Routes */}
+                      <Route path="/delivery" element={<DeliveryRoute><DeliveryDashboard /></DeliveryRoute>} />
                       
+                      {/* Not Found Route */}
                       <Route path="*" element={<NotFound />} />
                     </Routes>
-                    
-                    {/* Toast notifications - both implementations */}
-                    <Toaster />
-                    <SonnerToaster 
-                      position="bottom-center" 
-                      toastOptions={{
-                        style: {
-                          background: 'var(--quantum-dark-blue)',
-                          color: 'white',
-                          border: '1px solid var(--quantum-cyan)'
-                        },
-                      }} 
-                    />
-                  </CartProvider>
-                </CurrencyProvider>
-              </AuthProvider>
-            </Router>
-          </LanguageProvider>
-        </TouchOptimizerProvider>
-      </DeliveryMapProvider>
-    </GoogleMapsProvider>
+                  </Router>
+                </MapViewProvider>
+              </DeliveryMapProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </GoogleMapsProvider>
+      <ReactQueryDevtools />
+    </QueryClientProvider>
   );
 }
 
