@@ -12,6 +12,7 @@ import { OrderStatusDebug } from '@/components/orders/OrderStatusDebug';
 import { MobileStatusDebug } from '@/components/orders/status/MobileStatusDebug';
 import { useAuth } from '@/hooks/useAuth';
 import { Platform } from '@/utils/platform';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 
 const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +45,12 @@ const OrderStatus = () => {
     checkAdmin();
   }, [user]);
 
-  return (
+  const handleRefresh = async () => {
+    console.log('Refreshing order data...');
+    await refetch();
+  };
+
+  const content = (
     <div className={`container mx-auto p-4 py-8 ${isMobile ? 'px-2 pb-16' : ''}`}>
       <div className={`flex justify-between items-center mb-6 ${isMobile ? 'px-2' : ''}`}>
         <div className="flex items-center gap-2">
@@ -82,12 +88,24 @@ const OrderStatus = () => {
             <OrderStatusDebug orderId={id} onStatusFixed={refetch} />
           )}
           
+          {/* Use mobile debug component on mobile */}
+          {(isAdmin || process.env.NODE_ENV === 'development') && isMobile && (
+            <MobileStatusDebug orderId={id} onStatusFixed={refetch} />
+          )}
+          
           {/* Add safe area spacing for mobile */}
           {isMobile && <div className="h-16" />}
         </>
       )}
     </div>
   );
+
+  // Wrap with pull-to-refresh only on mobile
+  return isMobile ? (
+    <PullToRefresh onRefresh={handleRefresh}>
+      {content}
+    </PullToRefresh>
+  ) : content;
 };
 
 export default OrderStatus;

@@ -1,106 +1,81 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Map, Wifi, Loader2 } from 'lucide-react';
+import { Map, WifiOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export interface OfflineMapFallbackProps {
-  title?: string;
-  description?: string;
-  isLoading?: boolean;
+interface OfflineMapFallbackProps {
+  retry: () => void;
   isRetrying?: boolean;
-  onRetry?: () => void;
+  isLowBandwidth?: boolean;
+  mapType?: 'delivery' | 'restaurant' | 'general';
   className?: string;
-  showLocationData?: boolean;
-  locationData?: {
-    latitude?: number | null;
-    longitude?: number | null;
-    address?: string;
-    lastUpdated?: string;
-  };
 }
 
-export function OfflineMapFallback({
-  title = "Map Unavailable",
-  description = "Unable to load map due to connection issues",
-  isLoading = false,
+export const OfflineMapFallback: React.FC<OfflineMapFallbackProps> = ({
+  retry,
   isRetrying = false,
-  onRetry,
-  className,
-  showLocationData = false,
-  locationData
-}: OfflineMapFallbackProps) {
+  isLowBandwidth = false,
+  mapType = 'general',
+  className
+}) => {
+  const titles = {
+    delivery: 'Delivery Map Unavailable',
+    restaurant: 'Restaurant Map Unavailable',
+    general: 'Map Unavailable'
+  };
+  
+  const messages = {
+    delivery: isLowBandwidth 
+      ? 'Poor connection detected. Using simplified map view.' 
+      : 'Cannot load delivery map in offline mode.',
+    restaurant: isLowBandwidth 
+      ? 'Poor connection detected. Using simplified map view.' 
+      : 'Cannot load restaurant location in offline mode.',
+    general: isLowBandwidth 
+      ? 'Poor connection detected. Using simplified map view.' 
+      : 'Map cannot be displayed while offline.'
+  };
+
   return (
-    <Card className={cn("w-full h-full min-h-[200px] bg-quantum-darkBlue/30", className)}>
+    <Card className={cn("w-full border border-muted", className)}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          {isLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-quantum-cyan" />
+        <CardTitle className="flex items-center text-lg">
+          {isLowBandwidth ? (
+            <>
+              <WifiOff className="w-5 h-5 mr-2 text-amber-500" />
+              <span>Limited Connectivity</span>
+            </>
           ) : (
-            <Map className="h-5 w-5 text-quantum-cyan" />
+            <>  
+              <Map className="w-5 h-5 mr-2 text-muted-foreground" />
+              <span>{titles[mapType]}</span>
+            </>
           )}
-          {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col items-center justify-center h-full py-8 text-center">
-          {isLoading ? (
+        <p className="text-muted-foreground text-sm mb-4">
+          {messages[mapType]}
+        </p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={retry}
+          disabled={isRetrying}
+          className="w-full text-sm"
+        >
+          {isRetrying ? (
             <>
-              <Loader2 className="h-12 w-12 animate-spin text-quantum-cyan mb-4" />
-              <p className="text-muted-foreground">Loading map data...</p>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Trying to connect...
             </>
           ) : (
-            <>
-              <Map className="h-16 w-16 text-muted-foreground mb-4" />
-              <p className="mb-4 text-muted-foreground">{description}</p>
-              
-              {showLocationData && locationData && (
-                <div className="mb-6 max-w-md bg-quantum-darkBlue/50 p-3 rounded-md">
-                  {locationData.address && (
-                    <p className="mb-2 text-quantum-cyan font-medium">{locationData.address}</p>
-                  )}
-                  
-                  {locationData.latitude && locationData.longitude && (
-                    <p className="text-sm text-muted-foreground">
-                      Location: {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}
-                    </p>
-                  )}
-                  
-                  {locationData.lastUpdated && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Last updated: {locationData.lastUpdated}
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              {onRetry && (
-                <Button 
-                  onClick={onRetry}
-                  disabled={isRetrying}
-                  variant="outline" 
-                  className="mt-2"
-                >
-                  {isRetrying ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Retrying...
-                    </>
-                  ) : (
-                    <>
-                      <Wifi className="h-4 w-4 mr-2" />
-                      Try Again
-                    </>
-                  )}
-                </Button>
-              )}
-            </>
+            'Retry Connection'
           )}
-        </div>
+        </Button>
       </CardContent>
     </Card>
   );
-}
-
-export default OfflineMapFallback;
+};

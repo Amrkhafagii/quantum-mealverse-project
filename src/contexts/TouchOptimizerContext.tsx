@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useRef } from 'react';
-import { useGestures } from '@/hooks/useGestures';
-import { toast } from 'sonner';
+import { hapticFeedback } from '@/utils/hapticFeedback';
 import { Platform } from '@/utils/platform';
 
 type TouchCallbacks = {
@@ -23,6 +22,81 @@ type TouchOptimizerContextType = {
 
 const TouchOptimizerContext = createContext<TouchOptimizerContextType | null>(null);
 
+// Simple gesture detection implementation
+const useGestureDetection = (
+  ref: React.RefObject<HTMLDivElement>,
+  callbacks: {
+    onSwipeLeft?: () => void;
+    onSwipeRight?: () => void;
+    onSwipeUp?: () => void;
+    onSwipeDown?: () => void;
+    onPinchIn?: () => void;
+    onPinchOut?: () => void;
+    onDoubleTap?: () => void;
+  }
+) => {
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastTapTime = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      
+      const now = new Date().getTime();
+      const timeDiff = now - lastTapTime;
+      if (timeDiff < 300 && callbacks.onDoubleTap) {
+        callbacks.onDoubleTap();
+        hapticFeedback.light();
+      }
+      lastTapTime = now;
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      
+      const diffX = touchStartX - touchEndX;
+      const diffY = touchStartY - touchEndY;
+      
+      // Simple swipe detection
+      const threshold = 50;
+      
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Horizontal swipe
+        if (diffX > threshold && callbacks.onSwipeLeft) {
+          callbacks.onSwipeLeft();
+          hapticFeedback.medium();
+        } else if (diffX < -threshold && callbacks.onSwipeRight) {
+          callbacks.onSwipeRight();
+          hapticFeedback.medium();
+        }
+      } else {
+        // Vertical swipe
+        if (diffY > threshold && callbacks.onSwipeUp) {
+          callbacks.onSwipeUp();
+          hapticFeedback.medium();
+        } else if (diffY < -threshold && callbacks.onSwipeDown) {
+          callbacks.onSwipeDown();
+          hapticFeedback.medium();
+        }
+      }
+    };
+    
+    el.addEventListener('touchstart', handleTouchStart);
+    el.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [ref, callbacks]);
+};
+
 export const TouchOptimizerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const callbacksRef = useRef<TouchCallbacks>({});
@@ -38,8 +112,8 @@ export const TouchOptimizerProvider: React.FC<{ children: React.ReactNode }> = (
     callbacksRef.current = {};
   };
   
-  // Set up gesture detection on the container
-  useGestures(containerRef, {
+  // Use our custom hook instead of the imported useGestures
+  useGestureDetection(containerRef, {
     onSwipeLeft: () => callbacksRef.current.onSwipeLeft?.(),
     onSwipeRight: () => callbacksRef.current.onSwipeRight?.(),
     onSwipeUp: () => callbacksRef.current.onSwipeUp?.(),

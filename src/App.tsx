@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,6 +8,8 @@ import { CartProvider } from './contexts/CartContext';
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 import { DeliveryMapProvider } from './contexts/DeliveryMapContext';
 import { MapViewProvider } from './contexts/MapViewContext';
+import { LanguageProvider } from './hooks/useLanguage';
+import { TouchOptimizerProvider } from './contexts/TouchOptimizerContext';
 import { useAuth } from './hooks/useAuth';
 import { LoadingSuspense } from './components/ui/LoadingSuspense';
 import { NotificationsManager } from './components/notifications/NotificationsManager';
@@ -21,6 +24,7 @@ const Register = lazy(() => import('./pages/Register'));
 const Cart = lazy(() => import('./pages/Cart'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
+const OrderStatus = lazy(() => import('./pages/OrderStatus'));
 const Profile = lazy(() => import('./pages/Profile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -42,134 +46,145 @@ const DeliveryDashboard = lazy(() => import('./pages/delivery/DeliveryDashboard'
 const AdminRoute = ({children}: {children: React.ReactNode}) => <>{children}</>;
 const DeliveryRoute = ({children}: {children: React.ReactNode}) => <>{children}</>;
 
-const queryClient = new QueryClient();
-
 function App() {
-  const { user } = useAuth(); // Changed from authState to user which exists in the context
+  // We need to create a QueryClient here, rather than outside the component
+  // to avoid shared client state across renders
+  const queryClient = new QueryClient();
   
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <GoogleMapsProvider>
-          <ThemeProvider>
+        <ThemeProvider>
+          <GoogleMapsProvider>
             <AuthProvider>
-              <CartProvider>
-                <DeliveryMapProvider>
-                  <MapViewProvider>
-                    <Router>
-                      <Routes>
-                        <Route path="/" element={
-                          <LoadingSuspense>
-                            <Home />
-                          </LoadingSuspense>
-                        } />
-                        <Route path="/login" element={
-                          <LoadingSuspense>
-                            <Login />
-                          </LoadingSuspense>
-                        } />
-                        <Route path="/register" element={
-                          <LoadingSuspense>
-                            <Register />
-                          </LoadingSuspense>
-                        } />
-                        <Route path="/products" element={
-                          <LoadingSuspense>
-                            <Products />
-                          </LoadingSuspense>
-                        } />
-                        <Route path="/products/:id" element={
-                          <LoadingSuspense>
-                            <ProductDetail />
-                          </LoadingSuspense>
-                        } />
-                        <Route path="/cart" element={
-                          <LoadingSuspense>
-                            <Cart />
-                          </LoadingSuspense>
-                        } />
-                        <Route path="/checkout" element={
-                          <ProtectedRoute>
-                            <LoadingSuspense>
-                              <Checkout />
-                            </LoadingSuspense>
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/order-confirmation" element={
-                          <ProtectedRoute>
-                            <LoadingSuspense>
-                              <OrderConfirmation />
-                            </LoadingSuspense>
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/profile" element={
-                          <ProtectedRoute>
-                            <LoadingSuspense>
-                              <Profile />
-                            </LoadingSuspense>
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/order-history" element={
-                          <ProtectedRoute>
-                            <LoadingSuspense>
-                              <OrderHistory />
-                            </LoadingSuspense>
-                          </ProtectedRoute>
-                        } />
-                        
-                        {/* Admin Routes - Grouped and lazily loaded */}
-                        <Route path="/admin" element={
-                          <AdminRoute>
-                            <LoadingSuspense>
-                              <AdminDashboard />
-                            </LoadingSuspense>
-                          </AdminRoute>
-                        } />
-                        <Route path="/admin/products" element={
-                          <AdminRoute>
-                            <LoadingSuspense>
-                              <AdminProducts />
-                            </LoadingSuspense>
-                          </AdminRoute>
-                        } />
-                        <Route path="/admin/orders" element={
-                          <AdminRoute>
-                            <LoadingSuspense>
-                              <AdminOrders />
-                            </LoadingSuspense>
-                          </AdminRoute>
-                        } />
-                        <Route path="/admin/users" element={
-                          <AdminRoute>
-                            <LoadingSuspense>
-                              <AdminUsers />
-                            </LoadingSuspense>
-                          </AdminRoute>
-                        } />
-                        
-                        {/* Delivery Routes - Lazily loaded */}
-                        <Route path="/delivery" element={
-                          <DeliveryRoute>
-                            <LoadingSuspense>
-                              <DeliveryDashboard />
-                            </LoadingSuspense>
-                          </DeliveryRoute>
-                        } />
-                        
-                        {/* Not Found Route */}
-                        <Route path="*" element={
-                          <LoadingSuspense>
-                            <NotFound />
-                          </LoadingSuspense>
-                        } />
-                      </Routes>
-                    </Router>
-                  </MapViewProvider>
-                </DeliveryMapProvider>
-              </CartProvider>
+              <LanguageProvider>
+                <CartProvider>
+                  <DeliveryMapProvider>
+                    <MapViewProvider>
+                      <TouchOptimizerProvider>
+                        <Router>
+                          <Routes>
+                            <Route path="/" element={
+                              <LoadingSuspense>
+                                <Home />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/login" element={
+                              <LoadingSuspense>
+                                <Login />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/register" element={
+                              <LoadingSuspense>
+                                <Register />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/products" element={
+                              <LoadingSuspense>
+                                <Products />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/products/:id" element={
+                              <LoadingSuspense>
+                                <ProductDetail />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/cart" element={
+                              <LoadingSuspense>
+                                <Cart />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/checkout" element={
+                              <ProtectedRoute>
+                                <LoadingSuspense>
+                                  <Checkout />
+                                </LoadingSuspense>
+                              </ProtectedRoute>
+                            } />
+                            <Route path="/order-confirmation" element={
+                              <ProtectedRoute>
+                                <LoadingSuspense>
+                                  <OrderConfirmation />
+                                </LoadingSuspense>
+                              </ProtectedRoute>
+                            } />
+                            <Route path="/order-status/:id" element={
+                              <ProtectedRoute>
+                                <LoadingSuspense>
+                                  <OrderStatus />
+                                </LoadingSuspense>
+                              </ProtectedRoute>
+                            } />
+                            <Route path="/profile" element={
+                              <ProtectedRoute>
+                                <LoadingSuspense>
+                                  <Profile />
+                                </LoadingSuspense>
+                              </ProtectedRoute>
+                            } />
+                            <Route path="/order-history" element={
+                              <ProtectedRoute>
+                                <LoadingSuspense>
+                                  <OrderHistory />
+                                </LoadingSuspense>
+                              </ProtectedRoute>
+                            } />
+                            
+                            {/* Admin Routes - Grouped and lazily loaded */}
+                            <Route path="/admin" element={
+                              <AdminRoute>
+                                <LoadingSuspense>
+                                  <AdminDashboard />
+                                </LoadingSuspense>
+                              </AdminRoute>
+                            } />
+                            <Route path="/admin/products" element={
+                              <AdminRoute>
+                                <LoadingSuspense>
+                                  <AdminProducts />
+                                </LoadingSuspense>
+                              </AdminRoute>
+                            } />
+                            <Route path="/admin/orders" element={
+                              <AdminRoute>
+                                <LoadingSuspense>
+                                  <AdminOrders />
+                                </LoadingSuspense>
+                              </AdminRoute>
+                            } />
+                            <Route path="/admin/users" element={
+                              <AdminRoute>
+                                <LoadingSuspense>
+                                  <AdminUsers />
+                                </LoadingSuspense>
+                              </AdminRoute>
+                            } />
+                            
+                            {/* Delivery Routes - Lazily loaded */}
+                            <Route path="/delivery" element={
+                              <DeliveryRoute>
+                                <LoadingSuspense>
+                                  <DeliveryDashboard />
+                                </LoadingSuspense>
+                              </DeliveryRoute>
+                            } />
+                            
+                            {/* Not Found Route */}
+                            <Route path="*" element={
+                              <LoadingSuspense>
+                                <NotFound />
+                              </LoadingSuspense>
+                            } />
+                          </Routes>
+                        </Router>
+                      </TouchOptimizerProvider>
+                    </MapViewProvider>
+                  </DeliveryMapProvider>
+                </CartProvider>
+              </LanguageProvider>
             </AuthProvider>
-          </ThemeProvider>
-        </GoogleMapsProvider>
+          </GoogleMapsProvider>
+        </ThemeProvider>
       </QueryClientProvider>
       
       {/* Add NotificationsManager for mobile notification handling */}
