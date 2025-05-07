@@ -9,7 +9,7 @@ import { DeliveryMapProvider } from './contexts/DeliveryMapContext';
 import { MapViewProvider } from './contexts/MapViewContext';
 import { useAuth } from './hooks/useAuth';
 import { LoadingSuspense } from './components/ui/LoadingSuspense';
-import { NotificationsManager } from './components/ui/NotificationsManager';
+import { NotificationsManager } from './components/notifications/NotificationsManager';
 
 // Eagerly load critical components
 import ProtectedRoute from './components/ProtectedRoute';

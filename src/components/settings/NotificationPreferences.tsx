@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -8,8 +7,8 @@ import { Bell, BellOff, Info } from 'lucide-react';
 import { useNotificationPermissions } from '@/hooks/useNotificationPermissions';
 import { Platform } from '@/utils/platform';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getUserNotificationPreferences, saveUserNotificationPreferences } from '@/services/notification/notificationService';
 
 export const NotificationPreferences = () => {
   const { user } = useAuth();
@@ -22,8 +21,8 @@ export const NotificationPreferences = () => {
   } = useNotificationPermissions();
   
   const [preferences, setPreferences] = useState({
-    orderStatus: true,
-    deliveryAlerts: true,
+    order_status: true,
+    delivery_alerts: true,
     promotions: false,
     reminders: false,
   });
@@ -37,24 +36,11 @@ export const NotificationPreferences = () => {
     const loadPreferences = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('notification_preferences')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (error) {
-          console.error('Error loading notification preferences:', error);
-        } else if (data) {
-          setPreferences({
-            orderStatus: data.order_status !== false,
-            deliveryAlerts: data.delivery_alerts !== false,
-            promotions: data.promotions === true,
-            reminders: data.reminders === true,
-          });
-        }
+        // Use our service instead of direct database calls
+        const prefs = await getUserNotificationPreferences(user.id);
+        setPreferences(prefs);
       } catch (error) {
-        console.error('Error in loadPreferences:', error);
+        console.error('Error loading notification preferences:', error);
       } finally {
         setIsLoading(false);
       }
@@ -69,28 +55,19 @@ export const NotificationPreferences = () => {
     
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user.id,
-          order_status: preferences.orderStatus,
-          delivery_alerts: preferences.deliveryAlerts,
-          promotions: preferences.promotions,
-          reminders: preferences.reminders,
-          updated_at: new Date().toISOString()
-        });
+      // Use our service instead of direct database calls
+      const success = await saveUserNotificationPreferences(user.id, preferences);
         
-      if (error) {
-        console.error('Error saving notification preferences:', error);
+      if (success) {
+        toast({
+          title: 'Preferences Saved',
+          description: 'Your notification preferences have been updated.',
+        });
+      } else {
         toast({
           title: 'Error',
           description: 'Failed to save notification preferences.',
           variant: 'destructive'
-        });
-      } else {
-        toast({
-          title: 'Preferences Saved',
-          description: 'Your notification preferences have been updated.',
         });
       }
     } catch (error) {
@@ -188,8 +165,8 @@ export const NotificationPreferences = () => {
             </div>
             <Switch
               id="orderStatus"
-              checked={preferences.orderStatus}
-              onCheckedChange={handleToggle('orderStatus')}
+              checked={preferences.order_status}
+              onCheckedChange={handleToggle('order_status')}
               disabled={isLoading}
             />
           </div>
@@ -205,8 +182,8 @@ export const NotificationPreferences = () => {
             </div>
             <Switch
               id="deliveryAlerts"
-              checked={preferences.deliveryAlerts}
-              onCheckedChange={handleToggle('deliveryAlerts')}
+              checked={preferences.delivery_alerts}
+              onCheckedChange={handleToggle('delivery_alerts')}
               disabled={isLoading}
             />
           </div>
