@@ -47,9 +47,19 @@ export function useBackgroundLocationTracking({ onLocationUpdate }: BackgroundTr
             }
           }
         }
-      ) as WatcherResult; // Cast the return value to our interface
-
-      setWatcherId(watcher.id);
+      );
+      
+      // The plugin actually returns an object with an id property
+      // Handle it correctly based on the actual return type
+      if (typeof watcher === 'string') {
+        setWatcherId(watcher);
+      } else if (watcher && typeof watcher === 'object' && 'id' in watcher) {
+        setWatcherId(watcher.id);
+      } else {
+        console.error('Unexpected return type from addWatcher:', watcher);
+        return false;
+      }
+      
       setIsTracking(true);
       return true;
     } catch (err) {
