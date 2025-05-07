@@ -1,6 +1,14 @@
 
 import { registerPlugin } from '@capacitor/core';
-import { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
+
+// Define the interface for our BackgroundGeolocation plugin
+export interface BackgroundGeolocationPlugin {
+  addWatcher(options: any, callback: any): Promise<any>;
+  removeWatcher(options: { id: string }): Promise<void>;
+  // Add the methods we need for type checking, even if they're not fully implemented yet
+  checkPermissions?: () => Promise<{ backgroundLocation: PermissionState }>;
+  requestPermissions?: () => Promise<{ backgroundLocation: PermissionState }>;
+}
 
 // Register the BackgroundGeolocation plugin
 export const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');

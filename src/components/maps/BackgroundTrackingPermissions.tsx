@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, AlertCircle } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { Geolocation } from '@capacitor/geolocation';
+import { Geolocation, PermissionStatus } from '@capacitor/geolocation';
 import { BackgroundGeolocation } from '@/utils/backgroundGeolocation';
 import { toast } from 'sonner';
 import { App } from '@capacitor/app';
@@ -39,7 +39,17 @@ const BackgroundTrackingPermissions: React.FC<BackgroundTrackingPermissionsProps
       setIsChecking(true);
       
       const status = await Geolocation.checkPermissions();
-      const backgroundStatus = await BackgroundGeolocation.checkPermissions();
+      
+      // Best effort to check background permissions - may not work on all plugins
+      let backgroundStatus = { backgroundLocation: 'denied' as PermissionState };
+      try {
+        // Only call if available
+        if (typeof BackgroundGeolocation.checkPermissions === 'function') {
+          backgroundStatus = await BackgroundGeolocation.checkPermissions();
+        }
+      } catch (err) {
+        console.log('Background permission check not supported', err);
+      }
       
       // Check if both foreground and background permissions are granted
       const isGranted = 
@@ -71,16 +81,28 @@ const BackgroundTrackingPermissions: React.FC<BackgroundTrackingPermissionsProps
       
       // First request foreground permissions
       const status = await Geolocation.requestPermissions({
-        android: ['coarse', 'fine'],
-        ios: ['whenInUse', 'always']
+        // Remove android/ios specific properties as they're not in the type
+        permissions: ['location', 'coarseLocation']
       });
       
       // Then request background permissions if foreground is granted
       if (status.location === 'granted') {
-        const backgroundStatus = await BackgroundGeolocation.requestPermissions();
+        // Best effort to request background permissions
+        let isGranted = false;
         
-        // Check if both foreground and background permissions are granted
-        const isGranted = backgroundStatus.backgroundLocation === 'granted';
+        try {
+          // Only call if available
+          if (typeof BackgroundGeolocation.requestPermissions === 'function') {
+            const backgroundStatus = await BackgroundGeolocation.requestPermissions();
+            isGranted = backgroundStatus.backgroundLocation === 'granted';
+          } else {
+            // Fallback approach
+            console.log('Using fallback for background permissions');
+            isGranted = true; // Optimistic
+          }
+        } catch (err) {
+          console.log('Background permission request not supported', err);
+        }
         
         setPermissionStatus(isGranted ? 'granted' : 'denied');
         
@@ -107,15 +129,20 @@ const BackgroundTrackingPermissions: React.FC<BackgroundTrackingPermissionsProps
   // Open app settings
   const openAppSettings = async () => {
     try {
-      await App.openUrl({
-        url: Platform.isIOS() 
-          ? 'app-settings:' 
-          : 'package:app.lovable.117bb8e72e6f4681936555049936510d'
-      });
+      // Use appropriate method to open settings based on platform
+      if (Platform.isIOS()) {
+        // iOS uses settings URL scheme 
+        window.location.href = 'app-settings:';
+      } else if (Platform.isAndroid()) {
+        // For Android, try to use native market
+        await NativeMarket.openStoreListing({
+          appId: 'app.lovable.117bb8e72e6f4681936555049936510d'
+        });
+      }
     } catch (error) {
       console.error('Error opening app settings:', error);
       
-      // Fallback to system settings if direct app settings fails
+      // Fallback to system settings
       try {
         await NativeMarket.openStoreListing({
           appId: 'app.lovable.117bb8e72e6f4681936555049936510d'

@@ -13,6 +13,7 @@
   "dependencies": {
     "@capacitor-community/background-geolocation": "^1.2.22",
     "@capacitor-community/capacitor-googlemaps-native": "^1.2.0",
+    "@capacitor-community/native-market": "^7.0.1",
     "@capacitor/app": "^7.0.1",
     "@capacitor/cli": "^7.2.0",
     "@capacitor/core": "^7.2.0",
