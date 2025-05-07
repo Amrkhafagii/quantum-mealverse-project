@@ -1,98 +1,208 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { fixOrderStatus } from '@/utils/orderStatusFix';
+import { manualFixOrderStatus } from '@/utils/manualOrderFix';
 import { supabase } from '@/integrations/supabase/client';
+import { useDeliveryStatusSync } from '@/hooks/useDeliveryStatusSync';
+import { Loader2, RefreshCw, AlertCircle, Info } from 'lucide-react';
 
 interface OrderStatusDebugProps {
   orderId: string;
   onStatusFixed: () => void;
 }
 
-export const OrderStatusDebug: React.FC<OrderStatusDebugProps> = ({ orderId, onStatusFixed }) => {
-  const [isFixing, setIsFixing] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
-
-  const handleFixStatus = async () => {
-    setIsFixing(true);
+export const OrderStatusDebug: React.FC<OrderStatusDebugProps> = ({ 
+  orderId,
+  onStatusFixed
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [orderStatus, setOrderStatus] = useState<string | null>(null);
+  const [deliveryStatus, setDeliveryStatus] = useState<string | null>(null);
+  const [historyCount, setHistoryCount] = useState(0);
+  const [missingStatuses, setMissingStatuses] = useState<string[]>([]);
+  const { isSyncing, lastSyncedAt, sync } = useDeliveryStatusSync(orderId);
+  
+  // Fetch the current statuses
+  const fetchStatuses = async () => {
+    setIsLoading(true);
     try {
-      const success = await fixOrderStatus(orderId);
-      if (success) {
-        onStatusFixed();
-      }
-    } finally {
-      setIsFixing(false);
-    }
-  };
-
-  const fetchDebugInfo = async () => {
-    try {
-      const { data: order, error: orderError } = await supabase
+      // Get current order status
+      const { data: order } = await supabase
         .from('orders')
-        .select('*')
+        .select('status')
         .eq('id', orderId)
         .single();
-        
-      const { data: assignments, error: assignmentError } = await supabase
-        .from('restaurant_assignments')
-        .select('*')
-        .eq('order_id', orderId);
-        
-      const { data: history, error: historyError } = await supabase
-        .from('order_history')
-        .select('*')
-        .eq('order_id', orderId)
-        .order('created_at', { ascending: true });
-        
-      setDebugInfo({
-        order,
-        orderError,
-        assignments,
-        assignmentError,
-        history,
-        historyError
-      });
       
-      setShowDebugInfo(true);
+      if (order) {
+        setOrderStatus(order.status);
+      }
+      
+      // Get delivery status if exists
+      const { data: delivery } = await supabase
+        .from('delivery_assignments')
+        .select('status')
+        .eq('order_id', orderId)
+        .in('status', ['assigned', 'picked_up', 'on_the_way', 'delivered'])
+        .maybeSingle();
+      
+      if (delivery) {
+        setDeliveryStatus(delivery.status);
+      } else {
+        setDeliveryStatus(null);
+      }
+      
+      // Get order history
+      const { data: history } = await supabase
+        .from('order_history')
+        .select('status')
+        .eq('order_id', orderId);
+      
+      if (history) {
+        setHistoryCount(history.length);
+        
+        // Check for missing expected statuses
+        const statuses = new Set(history.map(h => h.status));
+        const expectedStatuses = ['picked_up', 'on_the_way', 'delivered'];
+        const missing = expectedStatuses.filter(s => !statuses.has(s));
+        setMissingStatuses(missing);
+      }
     } catch (error) {
-      console.error('Error fetching debug info:', error);
+      console.error('Error fetching debug data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
+  // Auto-fix function
+  const handleFix = async () => {
+    setIsLoading(true);
+    try {
+      await fixOrderStatus(orderId);
+      await fetchStatuses();
+      onStatusFixed();
+    } catch (error) {
+      console.error('Error fixing order status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Manual fix function
+  const handleManualFix = async () => {
+    setIsLoading(true);
+    try {
+      await manualFixOrderStatus(orderId);
+      await fetchStatuses();
+      onStatusFixed();
+    } catch (error) {
+      console.error('Error manually fixing order:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchStatuses();
+  }, [orderId]);
+  
+  const hasStatusMismatch = 
+    deliveryStatus && 
+    orderStatus && 
+    ['picked_up', 'on_the_way', 'delivered'].includes(deliveryStatus) && 
+    orderStatus !== deliveryStatus;
+    
+  const hasIssues = hasStatusMismatch || missingStatuses.length > 0;
+  
   return (
-    <Card className="mt-4 bg-yellow-900/10 border-yellow-500/30">
-      <CardHeader>
-        <CardTitle className="text-sm">Order Status Debug</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleFixStatus}
-            disabled={isFixing}
-          >
-            {isFixing ? 'Fixing...' : 'Fix Status Sync Issue'}
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={fetchDebugInfo}
-          >
-            {showDebugInfo ? 'Hide' : 'Show'} Debug Info
-          </Button>
-        </div>
-        
-        {showDebugInfo && debugInfo && (
-          <div className="bg-black/80 p-4 rounded text-xs font-mono overflow-x-auto max-h-80 overflow-y-auto">
-            <pre className="text-green-400">
-              {JSON.stringify(debugInfo, null, 2)}
-            </pre>
+    <Card className="mt-6 bg-slate-900 text-white">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            Order Status Debug
+            {hasIssues && <Badge variant="destructive">Issues Detected</Badge>}
           </div>
-        )}
+        </CardTitle>
+        <Button 
+          size="sm" 
+          variant="ghost" 
+          onClick={fetchStatuses}
+          disabled={isLoading || isSyncing}
+        >
+          {(isLoading || isSyncing) ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="text-xs space-y-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-gray-400">Order Status</p>
+              <p className="font-mono">{orderStatus || "None"}</p>
+            </div>
+            <div>
+              <p className="text-gray-400">Delivery Status</p>
+              <p className="font-mono">{deliveryStatus || "None"}</p>
+            </div>
+          </div>
+          
+          <div>
+            <p className="text-gray-400">Order History Entries</p>
+            <p className="font-mono">{historyCount} entries</p>
+            
+            {missingStatuses.length > 0 && (
+              <div className="mt-1 p-1 bg-red-950 rounded text-red-400">
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  <p>Missing history entries for: {missingStatuses.join(', ')}</p>
+                </div>
+              </div>
+            )}
+            
+            {hasStatusMismatch && (
+              <div className="mt-1 p-1 bg-red-950 rounded text-red-400">
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  <p>Status mismatch: Order status doesn't match delivery status</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2 pt-2">
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={handleFix}
+              disabled={isLoading || isSyncing}
+            >
+              {isLoading || isSyncing ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : null}
+              Auto-Fix Status
+            </Button>
+            <Button 
+              size="sm" 
+              variant="destructive"
+              onClick={handleManualFix}
+              disabled={isLoading || isSyncing}
+            >
+              Manual Fix
+            </Button>
+          </div>
+          
+          {lastSyncedAt && (
+            <p className="text-gray-400 text-xs mt-2">
+              Last synced: {lastSyncedAt.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

@@ -32,7 +32,7 @@ export async function fixOrderStatus(orderId: string): Promise<boolean> {
       // Fetch restaurant location data for current restaurant if available
       const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('latitude, longitude')
+        .select('latitude, longitude, name')
         .eq('id', order.restaurant_id)
         .single();
       
@@ -57,7 +57,7 @@ export async function fixOrderStatus(orderId: string): Promise<boolean> {
       // Also check for any delivery assignments that might need location data
       const { data: deliveryAssignments } = await supabase
         .from('delivery_assignments')
-        .select('id, latitude, longitude')
+        .select('id, latitude, longitude, status')
         .eq('order_id', orderId)
         .eq('restaurant_id', order.restaurant_id);
         
@@ -80,6 +80,61 @@ export async function fixOrderStatus(orderId: string): Promise<boolean> {
             .is('latitude', null);
             
           console.log(`Updated delivery assignments for order ${orderId} with restaurant location data`);
+        }
+
+        // Check for delivery status inconsistencies
+        const activeDelivery = deliveryAssignments.find(a => ['assigned', 'picked_up', 'on_the_way', 'delivered'].includes(a.status));
+        if (activeDelivery) {
+          // Status mapping between delivery_assignments and orders tables
+          const statusMap: Record<string, string> = {
+            'picked_up': 'picked_up',
+            'on_the_way': 'on_the_way',
+            'delivered': 'delivered'
+          };
+
+          // If delivery status is ahead of order status, update order status to match
+          if (statusMap[activeDelivery.status] && order.status !== statusMap[activeDelivery.status]) {
+            console.log(`Fixing mismatch: delivery assignment status is '${activeDelivery.status}' but order status is '${order.status}'`);
+            
+            // Update the order status to match the delivery status
+            await supabase
+              .from('orders')
+              .update({ 
+                status: statusMap[activeDelivery.status], 
+                updated_at: new Date().toISOString() 
+              })
+              .eq('id', orderId);
+            
+            // Check if the order history has this status
+            const { data: history } = await supabase
+              .from('order_history')
+              .select('*')
+              .eq('order_id', orderId)
+              .eq('status', statusMap[activeDelivery.status])
+              .maybeSingle();
+            
+            // If status is missing from history, add it
+            if (!history) {
+              // Get restaurant name
+              const restaurantName = restaurant?.name || 'Unknown Restaurant';
+              
+              // Add the missing history entry
+              await supabase.from('order_history').insert({
+                order_id: orderId,
+                status: statusMap[activeDelivery.status],
+                previous_status: order.status,
+                restaurant_id: order.restaurant_id,
+                restaurant_name: restaurantName,
+                details: {
+                  delivery_assignment_id: activeDelivery.id,
+                  auto_fixed: true,
+                  fixed_at: new Date().toISOString()
+                }
+              });
+              
+              console.log(`Added missing order history entry for status '${statusMap[activeDelivery.status]}'`);
+            }
+          }
         }
       }
     }

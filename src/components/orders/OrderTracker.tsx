@@ -38,20 +38,34 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
 
   // Find the delivery assignment ID for this order
   React.useEffect(() => {
-    if (orderId && ['preparing', 'ready_for_pickup', 'on_the_way', 'picked_up'].includes(order?.status || '')) {
+    if (orderId && ['preparing', 'ready_for_pickup', 'on_the_way', 'picked_up', 'delivered'].includes(order?.status || '')) {
       // Fetch the active delivery assignment for this order
       const fetchDeliveryAssignment = async () => {
         try {
           const { data, error } = await supabase
             .from('delivery_assignments')
-            .select('id')
+            .select('id, status')
             .eq('order_id', orderId)
-            .in('status', ['assigned', 'picked_up', 'on_the_way'])
+            .in('status', ['assigned', 'picked_up', 'on_the_way', 'delivered'])
             .maybeSingle();
             
           if (!error && data) {
-            console.log('Found delivery assignment for tracking:', data.id);
+            console.log('Found delivery assignment for tracking:', data.id, 'with status:', data.status);
             setDeliveryAssignmentId(data.id);
+            
+            // Extra check: ensure order status and delivery assignment status are in sync
+            const statusMap: Record<string, string> = {
+              'picked_up': 'picked_up',
+              'on_the_way': 'on_the_way',
+              'delivered': 'delivered'
+            };
+            
+            // If delivery status doesn't match order status, fix it
+            if (statusMap[data.status] && order?.status !== statusMap[data.status]) {
+              console.log(`Status mismatch detected - delivery: ${data.status}, order: ${order?.status}`);
+              await fixOrderStatus(orderId);
+              await refetch();
+            }
           } else {
             console.log('No active delivery assignment found for order:', orderId);
             setDeliveryAssignmentId(null);
@@ -63,12 +77,12 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
       
       fetchDeliveryAssignment();
     }
-  }, [orderId, order?.status]);
+  }, [orderId, order?.status, refetch]);
 
   // Check for restaurant assignments that might be accepted but order status is still pending
   React.useEffect(() => {
     const checkAndFixOrderStatus = async () => {
-      if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
+      if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'picked_up', 'on_the_way'].includes(order.status)) {
         try {
           setIsFixingOrderStatus(true);
           // Try to fix the order status using our enhanced utility
@@ -101,7 +115,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   }, [orderId, order?.status]);
 
   useInterval(() => {
-    if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted', 'preparing', 'ready_for_pickup'].includes(order.status)) {
+    if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status)) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
