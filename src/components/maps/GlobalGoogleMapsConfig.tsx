@@ -7,11 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const GlobalGoogleMapsConfig: React.FC = () => {
   const { googleMapsApiKey, setGoogleMapsApiKey, isLoading } = useGoogleMaps();
   const [apiKey, setApiKey] = useState('');
   const [showConfig, setShowConfig] = useState(false);
+  const { user } = useAuth();
+  
+  // Determine if user is an admin (only admins should see this component)
+  const userType = user?.user_metadata?.user_type;
+  const isAdmin = userType === 'admin';
+  
+  // If not admin, don't render the component
+  if (!isAdmin) return null;
 
   useEffect(() => {
     if (googleMapsApiKey) {

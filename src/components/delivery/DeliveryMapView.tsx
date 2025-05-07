@@ -1,305 +1,321 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Navigation2 } from 'lucide-react';
-import { DeliveryAssignment } from '@/types/delivery-assignment';
-import { useLocationTracker } from '@/hooks/useLocationTracker';
-import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
-import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
-import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
-import TouchFriendlyButton from '../mobile/TouchFriendlyButton';
-import { Capacitor } from '@capacitor/core';
-import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
-import NativeMap from '../maps/NativeMap';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { LoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
-import TouchEnabledMap from '../maps/TouchEnabledMap';
-import BackgroundTrackingPermissions from '../maps/BackgroundTrackingPermissions';
-import BatteryEfficientTracker from './BatteryEfficientTracker';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
+import { useMapView } from '@/contexts/MapViewContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { OfflineMapFallback } from '@/components/maps/OfflineMapFallback';
+import { DeliveryLocationControls } from './DeliveryLocationControls';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { BatteryEfficientTracker } from './BatteryEfficientTracker';
+import { Order } from '@/types/order';
+import { Loader2 } from 'lucide-react';
 
-interface DeliveryMapViewProps {
-  activeAssignment?: DeliveryAssignment;
-  className?: string;
-}
-
-const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, className = '' }) => {
-  const { googleMapsApiKey } = useGoogleMaps();
-  const { updateDriverLocation, setSelectedDeliveryId, mapZoom, setMapZoom } = useDeliveryMap();
-  const [mapReady, setMapReady] = useState(false);
-  const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
-  const [customerLocation, setCustomerLocation] = useState<any>(null);
-  const [isLiveTracking, setIsLiveTracking] = useState(false);
-  const [showBackgroundControls, setShowBackgroundControls] = useState(false);
-  const isMobile = useIsMobile();
-  const isNative = Capacitor.isNativePlatform();
-  
-  // Location tracking for the driver
-  const { getCurrentLocation } = useLocationTracker({
-    watchPosition: true,
-    trackingInterval: 5000,
-    onLocationUpdate: (pos) => {
-      if (mapReady) {
-        updateDriverLocation({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          title: 'Your location',
-          type: 'driver'
-        });
-      }
-    }
-  });
-  
-  // Real-time location updates for active delivery
-  const { isSubscribed, latestLocation } = useRealtimeLocation({
-    assignmentId: activeAssignment?.id,
-    onLocationUpdate: (location) => {
-      if (location && mapReady) {
-        updateDriverLocation({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          title: 'Driver location',
-          type: 'driver'
-        });
-        setIsLiveTracking(true);
-      }
-    }
-  });
-  
-  // Initialize map when API key is available
-  useEffect(() => {
-    if (googleMapsApiKey) {
-      setMapReady(true);
-    }
-  }, [googleMapsApiKey]);
-  
-  // Update restaurant and customer locations when assignment changes
-  useEffect(() => {
-    if (activeAssignment) {
-      setSelectedDeliveryId(activeAssignment.id);
-      
-      if (activeAssignment.restaurant) {
-        if (activeAssignment.restaurant.latitude && activeAssignment.restaurant.longitude) {
-          setRestaurantLocation({
-            latitude: activeAssignment.restaurant.latitude,
-            longitude: activeAssignment.restaurant.longitude,
-            title: activeAssignment.restaurant.name || 'Restaurant',
-            description: activeAssignment.restaurant.address || '',
-            type: 'restaurant'
-          });
-        } else {
-          setRestaurantLocation(null);
-        }
-      } else {
-        setRestaurantLocation(null);
-      }
-      
-      if (activeAssignment.customer) {
-        if (activeAssignment.customer.latitude && activeAssignment.customer.longitude) {
-          setCustomerLocation({
-            latitude: activeAssignment.customer.latitude,
-            longitude: activeAssignment.customer.longitude,
-            title: activeAssignment.customer.name || 'Customer',
-            description: activeAssignment.customer.address || '',
-            type: 'customer'
-          });
-        } else {
-          setCustomerLocation(null);
-        }
-      } else {
-        setCustomerLocation(null);
-      }
-    } else {
-      setSelectedDeliveryId(null);
-      setRestaurantLocation(null);
-      setCustomerLocation(null);
-    }
-    
-    return () => {
-      setSelectedDeliveryId(null);
-    };
-  }, [activeAssignment, setSelectedDeliveryId]);
-  
-  // Handle manual location update
-  const handleUpdateLocation = async () => {
-    try {
-      const location = await getCurrentLocation();
-      if (location) {
-        updateDriverLocation({
-          latitude: location.latitude,
-          longitude: location.longitude,
-          title: 'Your location',
-          type: 'driver'
-        });
-        
-        toast.success("Location updated on map");
-      }
-    } catch (error) {
-      console.error('Error updating location:', error);
-      toast.error("Failed to update your location");
-    }
-  };
-
-  // Handle map zoom
-  const handleZoomIn = () => {
-    setMapZoom((prevZoom) => Math.min(prevZoom + 1, 20));
-  };
-
-  const handleZoomOut = () => {
-    setMapZoom((prevZoom) => Math.max(prevZoom - 1, 1));
-  };
-  
-  // Toggle background tracking controls
-  const toggleBackgroundControls = () => {
-    setShowBackgroundControls(prev => !prev);
-  };
-  
-  // Create an order object that can be passed to the BatteryEfficientTracker
-  const orderForTracker = activeAssignment ? {
-    id: activeAssignment.order_id,
-    status: activeAssignment.status,
-    latitude: customerLocation?.latitude,
-    longitude: customerLocation?.longitude,
-    restaurant: restaurantLocation ? {
-      latitude: restaurantLocation.latitude,
-      longitude: restaurantLocation.longitude,
-      name: restaurantLocation.title
-    } : undefined
-  } : undefined;
-  
-  return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center">
-            Delivery Map
-            {isLiveTracking && (
-              <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                <span className="mr-1 h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                Live
-              </span>
-            )}
-          </CardTitle>
-          <div className="flex space-x-2">
-            {isNative && (
-              <TouchFriendlyButton 
-                variant="outline" 
-                size="sm" 
-                onClick={toggleBackgroundControls}
-                touchClassName={isMobile ? "h-10 px-4" : ""}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                {showBackgroundControls ? "Hide Tracking" : "Background Tracking"}
-              </TouchFriendlyButton>
-            )}
-            
-            <TouchFriendlyButton 
-              variant="outline" 
-              size="sm" 
-              onClick={handleUpdateLocation}
-              touchClassName={isMobile ? "h-10 px-4" : ""}
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Update Location
-            </TouchFriendlyButton>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-2">
-        {showBackgroundControls && isNative && (
-          <div className="mb-4">
-            <BackgroundTrackingPermissions 
-              onTrackingStarted={() => setIsLiveTracking(true)}
-              onTrackingStopped={() => setIsLiveTracking(false)}
-            />
-          </div>
-        )}
-
-        {/* Battery Efficient Tracker for native devices */}
-        {isNative && orderForTracker && (
-          <div className="mb-4">
-            <BatteryEfficientTracker
-              order={orderForTracker}
-              onLocationUpdate={(loc) => {
-                if (loc && mapReady) {
-                  updateDriverLocation({
-                    latitude: loc.latitude,
-                    longitude: loc.longitude,
-                    title: 'Your location',
-                    type: 'driver'
-                  });
-                }
-              }}
-            />
-          </div>
-        )}
-
-        {googleMapsApiKey ? (
-          isNative ? (
-            <NativeMap
-              driverLocation={null} // This will be updated by the location tracker
-              restaurantLocation={restaurantLocation}
-              customerLocation={customerLocation}
-              showRoute={true}
-              className="h-[400px] w-full"
-              zoom={mapZoom || 14}
-              autoCenter={true}
-            />
-          ) : (
-            <TouchEnabledMap 
-              className="h-[400px] w-full relative"
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-            >
-              <DeliveryGoogleMap
-                driverLocation={null} // This will be updated by the location tracker
-                restaurantLocation={restaurantLocation}
-                customerLocation={customerLocation}
-                showRoute={true}
-                className="h-[400px] w-full"
-                zoom={mapZoom || 14}
-                autoCenter={true}
-              />
-            </TouchEnabledMap>
-          )
-        ) : (
-          <div className="flex items-center justify-center h-[400px] bg-gray-100 rounded-md">
-            <p className="text-gray-500">Google Maps API key is required to display the map</p>
-          </div>
-        )}
-        
-        {activeAssignment && (
-          <div className="mt-2 text-sm space-y-1">
-            {restaurantLocation && (
-              <p className="flex items-center">
-                <span className="inline-block w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
-                Restaurant: {activeAssignment.restaurant?.name || 'Unknown'}
-              </p>
-            )}
-            
-            {customerLocation && (
-              <p className="flex items-center">
-                <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                Customer: {activeAssignment.customer?.address || 'Unknown'}
-              </p>
-            )}
-            
-            {activeAssignment.distance_km && (
-              <p className="flex items-center">
-                <Navigation2 className="h-4 w-4 mr-2 text-quantum-cyan" />
-                Distance: {activeAssignment.distance_km.toFixed(1)} km
-              </p>
-            )}
-            
-            {isSubscribed && (
-              <p className="text-xs text-green-500 flex items-center mt-2">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1.5"></span>
-                Real-time tracking enabled
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+const containerStyle = {
+  width: '100%',
+  height: '400px'
 };
 
-export default DeliveryMapView;
+const defaultCenter = {
+  lat: 37.7749,
+  lng: -122.4194
+};
+
+interface DeliveryMapViewProps {
+  showControls?: boolean;
+}
+
+export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls = true }) => {
+  const { googleMapsApiKey, isLoaded: isGoogleMapsLoaded } = useGoogleMaps();
+  const { hasPermission, location } = useLocationPermission();
+  const { assignments, activeAssignment } = useDeliveryAssignments();
+  const { getSavedPosition, savePosition, lowPerformanceMode } = useMapView();
+  const { isLowQuality } = useNetworkQuality();
+  const { isOnline } = useConnectionStatus();
+  const mapRef = useRef<google.maps.Map | null>(null);
+  
+  // Map state
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [center, setCenter] = useState(defaultCenter);
+  const [retryCount, setRetryCount] = useState(0);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+
+  // Use saved position or current location
+  const savedPosition = getSavedPosition('delivery-map');
+  
+  // Set initial center from saved position or current location
+  useEffect(() => {
+    if (savedPosition && savedPosition.center) {
+      setCenter({
+        lat: savedPosition.center.lat,
+        lng: savedPosition.center.lng
+      });
+    } else if (location) {
+      setCenter({
+        lat: location.latitude,
+        lng: location.longitude
+      });
+    }
+  }, [savedPosition, location]);
+  
+  // When map is loaded successfully
+  const handleMapLoad = (map: google.maps.Map) => {
+    mapRef.current = map;
+    setMapLoaded(true);
+    setMapLoadError(null);
+    
+    // Set initial bounds to fit all markers
+    if (activeAssignment && mapRef.current) {
+      const bounds = new google.maps.LatLngBounds();
+      
+      // Add driver location to bounds
+      if (location) {
+        bounds.extend(new google.maps.LatLng(
+          location.latitude,
+          location.longitude
+        ));
+      }
+      
+      // Add restaurant location to bounds
+      if (activeAssignment.restaurant) {
+        bounds.extend(new google.maps.LatLng(
+          activeAssignment.restaurant.latitude,
+          activeAssignment.restaurant.longitude
+        ));
+      }
+      
+      // Add delivery location to bounds
+      if (activeAssignment.latitude && activeAssignment.longitude) {
+        bounds.extend(new google.maps.LatLng(
+          activeAssignment.latitude,
+          activeAssignment.longitude
+        ));
+      }
+      
+      mapRef.current.fitBounds(bounds, {
+        padding: 60
+      });
+    }
+  };
+  
+  // Handle map errors
+  const handleMapError = () => {
+    setMapLoadError("Failed to load Google Maps");
+    setRetryCount(prevCount => prevCount + 1);
+  };
+
+  // Save map position when it changes
+  const handleCenterChanged = () => {
+    if (mapRef.current) {
+      const newCenter = mapRef.current.getCenter();
+      const zoom = mapRef.current.getZoom();
+      
+      if (newCenter && zoom) {
+        savePosition('delivery-map', {
+          center: {
+            lat: newCenter.lat(),
+            lng: newCenter.lng()
+          },
+          zoom
+        });
+      }
+    }
+  };
+  
+  // Handle retry attempts
+  const retryLoadingMap = () => {
+    setMapLoadError(null);
+    setRetryCount(prevCount => prevCount + 1);
+  };
+  
+  // If offline, show offline fallback
+  if (!isOnline) {
+    return (
+      <OfflineMapFallback 
+        title="Map Unavailable Offline"
+        description="You are currently offline. The delivery map will be available when your connection is restored."
+        retry={retryLoadingMap}
+        isRetrying={false}
+        showLocationData={true}
+        locationData={location ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          address: "Your Current Location"
+        } : undefined}
+      />
+    );
+  }
+  
+  // If map failed to load, show error
+  if (mapLoadError) {
+    return (
+      <OfflineMapFallback 
+        title="Map Loading Error"
+        description="There was a problem loading the map. This might be due to network issues or an invalid API key."
+        retry={retryLoadingMap}
+        isRetrying={false}
+      />
+    );
+  }
+  
+  // If no API key, show fallback
+  if (!googleMapsApiKey) {
+    return (
+      <OfflineMapFallback 
+        title="Map Configuration Required"
+        description="A Google Maps API key is required to use maps in this application."
+      />
+    );
+  }
+  
+  // If no permission, show fallback with prompt
+  if (!hasPermission) {
+    return (
+      <OfflineMapFallback 
+        title="Location Permission Required"
+        description="Please enable location services to use the delivery map features."
+      />
+    );
+  }
+
+  // Convert delivery assignment to a format suitable for the map
+  const mapMarkers = assignments.map(assignment => {
+    const order: Partial<Order> = {
+      id: assignment.id,
+      status: assignment.status,
+      latitude: assignment.latitude,
+      longitude: assignment.longitude,
+      restaurant: {
+        latitude: assignment.restaurant?.latitude,
+        longitude: assignment.restaurant?.longitude,
+        name: assignment.restaurant?.name,
+      }
+    } as Order;
+    
+    return order;
+  });
+  
+  return (
+    <div className="relative w-full">
+      {showControls && (
+        <DeliveryLocationControls />
+      )}
+      
+      <BatteryEfficientTracker />
+      
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          {!isGoogleMapsLoaded ? (
+            <div className="h-[400px] flex items-center justify-center bg-slate-800">
+              <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+            </div>
+          ) : (
+            <LoadScript
+              googleMapsApiKey={googleMapsApiKey}
+              onError={handleMapError}
+              loadingElement={
+                <div className="h-[400px] flex items-center justify-center bg-slate-800">
+                  <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+                </div>
+              }
+            >
+              <GoogleMap
+                mapContainerStyle={containerStyle}
+                center={center}
+                zoom={12}
+                onLoad={handleMapLoad}
+                onCenterChanged={handleCenterChanged}
+                options={{
+                  fullscreenControl: false,
+                  mapTypeControl: false,
+                  streetViewControl: false,
+                  // Use less demanding map rendering for low quality connections
+                  disableDefaultUI: lowPerformanceMode || isLowQuality,
+                  gestureHandling: 'greedy',
+                }}
+              >
+                {/* Driver marker */}
+                {location && (
+                  <Marker
+                    position={{ 
+                      lat: location.latitude, 
+                      lng: location.longitude 
+                    }}
+                    icon={{
+                      url: '/assets/driver-marker.png',
+                      scaledSize: new google.maps.Size(40, 40)
+                    }}
+                  />
+                )}
+                
+                {/* Customer and restaurant markers */}
+                {mapMarkers.map((order) => (
+                  <React.Fragment key={order.id}>
+                    {/* Restaurant marker */}
+                    {order.restaurant && order.restaurant.latitude && (
+                      <Marker
+                        position={{ 
+                          lat: order.restaurant.latitude, 
+                          lng: order.restaurant.longitude 
+                        }}
+                        icon={{
+                          url: '/assets/restaurant-marker.png',
+                          scaledSize: new google.maps.Size(32, 32)
+                        }}
+                        onClick={() => setSelectedOrder(order)}
+                      />
+                    )}
+                    
+                    {/* Delivery location marker */}
+                    {order.latitude && order.longitude && (
+                      <Marker
+                        position={{ lat: order.latitude, lng: order.longitude }}
+                        icon={{
+                          url: '/assets/customer-marker.png',
+                          scaledSize: new google.maps.Size(32, 32)
+                        }}
+                        onClick={() => setSelectedOrder(order)}
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
+                
+                {/* Info window for selected location */}
+                {selectedOrder && (
+                  <InfoWindow
+                    position={{ 
+                      lat: selectedOrder.latitude || 0, 
+                      lng: selectedOrder.longitude || 0 
+                    }}
+                    onCloseClick={() => setSelectedOrder(null)}
+                  >
+                    <div className="p-2">
+                      <h3 className="font-semibold">Order #{selectedOrder.id.slice(-6)}</h3>
+                      <p className="text-sm">Status: {selectedOrder.status}</p>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-2 text-xs"
+                        onClick={() => {
+                          // Navigate to order details
+                          window.location.href = `/orders/${selectedOrder.id}`;
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </InfoWindow>
+                )}
+              </GoogleMap>
+            </LoadScript>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
