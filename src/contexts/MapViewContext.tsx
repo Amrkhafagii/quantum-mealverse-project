@@ -1,106 +1,99 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from '@/utils/platform';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+
+// Default map position (San Francisco)
+export const defaultPosition = {
+  center: { lat: 37.7749, lng: -122.4194 },
+  zoom: 12
+};
 
 interface MapPosition {
   center: { lat: number; lng: number };
   zoom: number;
-  bearing?: number;
-  pitch?: number;
-}
-
-interface MapViewState {
-  // Store last positions by map id/name
-  positions: Record<string, MapPosition>;
-  // Store when position was last saved
-  lastUpdated: Record<string, number>;
 }
 
 interface MapViewContextType {
-  // Get saved position for a specific map
   getSavedPosition: (mapId: string) => MapPosition | null;
-  // Save position for a specific map
   savePosition: (mapId: string, position: MapPosition) => void;
-  // Clear saved position
-  clearPosition: (mapId: string) => void;
+  clearSavedPosition: (mapId: string) => void;
+  lowPerformanceMode: boolean;
+  setLowPerformanceMode: (mode: boolean) => void;
 }
 
-const defaultPosition = {
-  center: { lat: 30.0444, lng: 31.2357 }, // Egypt's coordinates as default
-  zoom: 13
-};
+const MapViewContext = createContext<MapViewContextType>({
+  getSavedPosition: () => defaultPosition,
+  savePosition: () => {},
+  clearSavedPosition: () => {},
+  lowPerformanceMode: false,
+  setLowPerformanceMode: () => {}
+});
 
-const MapViewContext = createContext<MapViewContextType | null>(null);
+export const useMapView = () => useContext(MapViewContext);
 
-export const MapViewProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const [viewState, setViewState] = useState<MapViewState>({
-    positions: {},
-    lastUpdated: {}
-  });
-
-  // Load saved positions from localStorage on mount
+export const MapViewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [savedPositions, setSavedPositions] = useState<Record<string, MapPosition>>({});
+  const [lowPerformanceMode, setLowPerformanceMode] = useState(false);
+  const { isLowQuality } = useConnectionStatus();
+  const isNative = Platform.isNative();
+  
+  // Initialize with saved positions from localStorage if available
   useEffect(() => {
     try {
-      const savedState = localStorage.getItem('mapViewState');
-      if (savedState) {
-        setViewState(JSON.parse(savedState));
+      const savedData = localStorage.getItem('map-positions');
+      if (savedData) {
+        setSavedPositions(JSON.parse(savedData));
       }
     } catch (error) {
-      console.error('Error loading map view state from storage:', error);
+      console.error('Error loading saved map positions:', error);
     }
-  }, []);
-
-  // Save to localStorage when view state changes
+    
+    // Enable low performance mode on native devices with low network quality
+    if (isNative && isLowQuality) {
+      setLowPerformanceMode(true);
+    }
+  }, [isNative, isLowQuality]);
+  
+  // Save positions to localStorage when updated
   useEffect(() => {
     try {
-      localStorage.setItem('mapViewState', JSON.stringify(viewState));
+      localStorage.setItem('map-positions', JSON.stringify(savedPositions));
     } catch (error) {
-      console.error('Error saving map view state to storage:', error);
+      console.error('Error saving map positions:', error);
     }
-  }, [viewState]);
-
-  const getSavedPosition = (mapId: string): MapPosition | null => {
-    return viewState.positions[mapId] || null;
+  }, [savedPositions]);
+  
+  const getSavedPosition = (mapId: string): MapPosition => {
+    return savedPositions[mapId] || defaultPosition;
   };
-
+  
   const savePosition = (mapId: string, position: MapPosition) => {
-    setViewState(prev => ({
-      positions: {
-        ...prev.positions,
-        [mapId]: position
-      },
-      lastUpdated: {
-        ...prev.lastUpdated,
-        [mapId]: Date.now()
-      }
+    setSavedPositions(prev => ({
+      ...prev,
+      [mapId]: position
     }));
   };
-
-  const clearPosition = (mapId: string) => {
-    setViewState(prev => {
-      const newPositions = { ...prev.positions };
-      const newLastUpdated = { ...prev.lastUpdated };
+  
+  const clearSavedPosition = (mapId: string) => {
+    setSavedPositions(prev => {
+      const newPositions = { ...prev };
       delete newPositions[mapId];
-      delete newLastUpdated[mapId];
-      return {
-        positions: newPositions,
-        lastUpdated: newLastUpdated
-      };
+      return newPositions;
     });
   };
-
+  
   return (
-    <MapViewContext.Provider value={{ getSavedPosition, savePosition, clearPosition }}>
+    <MapViewContext.Provider 
+      value={{ 
+        getSavedPosition, 
+        savePosition, 
+        clearSavedPosition,
+        lowPerformanceMode,
+        setLowPerformanceMode
+      }}
+    >
       {children}
     </MapViewContext.Provider>
   );
 };
-
-export const useMapView = () => {
-  const context = useContext(MapViewContext);
-  if (!context) {
-    throw new Error('useMapView must be used within a MapViewProvider');
-  }
-  return context;
-};
-
-export { defaultPosition };

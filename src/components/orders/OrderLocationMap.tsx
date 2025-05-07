@@ -9,6 +9,7 @@ import { OfflineMapFallback } from '../maps/OfflineMapFallback';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import UnifiedMapView from '../maps/UnifiedMapView';
 
 interface OrderLocationMapProps {
   order: Order;
@@ -117,64 +118,16 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     type: "customer"
   } : undefined;
   
-  // Handle different situations for map display
-  if (!isOnline || !isMapEnabled) {
-    // Show fallback for offline or disabled map
-    return (
-      <OfflineMapFallback 
-        title={!isOnline ? "Offline Mode" : "Map Disabled"}
-        description={!isOnline 
-          ? "Map is unavailable while offline" 
-          : "Map has been disabled due to poor connection quality"
-        }
-        retry={handleRetry}
-        isRetrying={isRetrying}
-        showLocationData={true}
-        locationData={{
-          latitude: order.latitude,
-          longitude: order.longitude,
-          address: order.delivery_address,
-          lastUpdated: deliveryLocation?.timestamp 
-            ? format(new Date(deliveryLocation.timestamp), 'HH:mm:ss')
-            : undefined
-        }}
-      />
-    );
-  }
-  
-  if (isLoading && assignmentId) {
-    return <OfflineMapFallback isLoading={true} title="Loading Map" retry={handleRetry} />;
-  }
-  
-  if (isLowQuality) {
-    // Show simplified map for low-quality connections
-    return (
-      <MapContainer
-        driverLocation={driverLocation}
-        customerLocation={customerLocation}
-        restaurantLocation={restaurantLocation}
-        isInteractive={false}
-        showRoute={false}
-        height="h-[300px]"
-        zoomLevel={12}
-        lowPerformanceMode={true}
-        enableAnimation={false}
-        enableControls={false}
-      />
-    );
-  }
-  
-  // Show full-featured map for good connections
+  // Use our new UnifiedMapView component that handles platform differences
   return (
-    <MapContainer
+    <UnifiedMapView
       driverLocation={driverLocation}
-      customerLocation={customerLocation}
       restaurantLocation={restaurantLocation}
-      showRoute={true}
-      isInteractive={true}
+      customerLocation={customerLocation}
+      showRoute={isOnline && !isLowQuality}
+      title="Order Location"
+      isInteractive={isOnline && isMapEnabled && !isLoading}
       height="h-[300px]"
-      zoomLevel={13}
-      enableAnimation={true}
     />
   );
 };

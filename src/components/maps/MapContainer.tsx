@@ -3,8 +3,10 @@ import React from 'react';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Capacitor } from '@capacitor/core';
+import { Platform } from '@/utils/platform';
 import LazyMap from './LazyMap';
 import { Loader2 } from 'lucide-react';
+import { useMapView } from '@/contexts/MapViewContext';
 
 interface MapContainerProps {
   className?: string;
@@ -21,6 +23,7 @@ interface MapContainerProps {
   enableAnimation?: boolean;
   zoomLevel?: number;
   locations?: any[]; // Support the old locations prop for backward compatibility
+  forceWebView?: boolean; // Force web view even on native platforms
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -33,14 +36,22 @@ const MapContainer: React.FC<MapContainerProps> = ({
   isInteractive = true,
   height = 'h-[300px]',
   mapId = 'default-map',
-  lowPerformanceMode = false,
+  lowPerformanceMode: forceLowPerformanceMode,
   enableControls = true,
   enableAnimation = true,
   zoomLevel = 13,
-  locations = []
+  locations = [],
+  forceWebView = false
 }) => {
   const { googleMapsApiKey } = useGoogleMaps();
-  const isNative = Capacitor.isNativePlatform();
+  const { lowPerformanceMode: contextLowPerformanceMode } = useMapView();
+  
+  // Use forced low performance mode or get from context
+  const lowPerformanceMode = forceLowPerformanceMode !== undefined ? 
+    forceLowPerformanceMode : contextLowPerformanceMode;
+  
+  // Check if we're on a native platform
+  const isNativePlatform = Capacitor.isNativePlatform() && !forceWebView;
 
   return (
     <Card className={className}>
@@ -55,7 +66,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         ) : (
           <LazyMap
             mapId={mapId}
-            isNative={isNative}
+            isNative={isNativePlatform}
             driverLocation={driverLocation}
             customerLocation={customerLocation}
             restaurantLocation={restaurantLocation}
