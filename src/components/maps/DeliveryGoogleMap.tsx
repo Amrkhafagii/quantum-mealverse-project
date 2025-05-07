@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer, DirectionsService } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
@@ -23,7 +24,6 @@ interface DeliveryGoogleMapProps {
   autoCenter?: boolean;
   onMapClick?: (location: { longitude: number, latitude: number }) => void;
   isInteractive?: boolean;
-  googleMapsApiKey?: string;
 }
 
 // Default map container styles
@@ -32,6 +32,9 @@ const containerStyle = {
   height: '100%',
   borderRadius: '0.375rem' // equivalent to rounded-md in Tailwind
 };
+
+// Create a single instance of the loader options across the app
+let loaderInstance: any = null;
 
 const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   driverLocation,
@@ -44,12 +47,8 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   autoCenter = true,
   onMapClick,
   isInteractive = true,
-  googleMapsApiKey: propGoogleMapsApiKey
 }) => {
-  const { googleMapsApiKey: contextGoogleMapsApiKey } = useGoogleMaps();
-  
-  // Use API key from props or context
-  const googleMapsApiKey = propGoogleMapsApiKey || contextGoogleMapsApiKey;
+  const { googleMapsApiKey } = useGoogleMaps();
   
   // For tracking open info windows
   const [selectedMarker, setSelectedMarker] = useState<MapLocation | null>(null);
@@ -58,11 +57,48 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [directionsError, setDirectionsError] = useState<string | null>(null);
   
-  // Initialize Google Maps JS API
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: googleMapsApiKey || '',
-    libraries: ['places'],
-  });
+  // Initialize Google Maps JS API only if we have a valid API key
+  // We're using a ref to ensure we don't re-initialize the loader
+  const apiKeyRef = useRef<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<Error | null>(null);
+  const googleRef = useRef<any>(null);
+  
+  useEffect(() => {
+    // Only initialize if we have an API key and we haven't initialized yet
+    if (googleMapsApiKey && !isLoaded && !loadError) {
+      // Store the API key we're using
+      apiKeyRef.current = googleMapsApiKey;
+      
+      // Create a script element to load the Google Maps API
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&callback=googleMapCallback`;
+      script.async = true;
+      script.defer = true;
+      
+      // Define the callback function
+      window.googleMapCallback = () => {
+        googleRef.current = window.google;
+        setIsLoaded(true);
+      };
+      
+      // Handle errors
+      script.onerror = () => {
+        setLoadError(new Error('Failed to load Google Maps API'));
+      };
+      
+      // Add the script to the document
+      document.head.appendChild(script);
+      
+      // Clean up
+      return () => {
+        window.googleMapCallback = null;
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      };
+    }
+  }, [googleMapsApiKey, isLoaded, loadError]);
   
   // Map reference
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -95,7 +131,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   
   // Function to fit map to bounds of all markers
   const fitBounds = useCallback(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !googleRef.current) return;
     
     const locations = [
       driverLocation,
@@ -106,7 +142,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     
     if (locations.length <= 1) return;
     
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = new googleRef.current.maps.LatLngBounds();
     locations.forEach(loc => {
       bounds.extend({ lat: loc.latitude, lng: loc.longitude });
     });
@@ -114,33 +150,33 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     mapRef.current.fitBounds(bounds);
     
     // Adjust zoom if too zoomed in
-    const listener = google.maps.event.addListener(mapRef.current, 'idle', () => {
+    const listener = googleRef.current.maps.event.addListener(mapRef.current, 'idle', () => {
       if (mapRef.current && mapRef.current.getZoom() !== undefined && mapRef.current.getZoom() > 16) {
         mapRef.current.setZoom(16);
       }
-      google.maps.event.removeListener(listener);
+      googleRef.current.maps.event.removeListener(listener);
     });
   }, [driverLocation, restaurantLocation, customerLocation, additionalMarkers]);
   
   // Set up directions when route should be displayed
   useEffect(() => {
-    if (!isLoaded || !showRoute || !driverLocation || !(restaurantLocation || customerLocation)) return;
+    if (!isLoaded || !showRoute || !driverLocation || !(restaurantLocation || customerLocation) || !googleRef.current) return;
     
     // Determine route points
     const start = driverLocation;
     const end = customerLocation || restaurantLocation;
     if (!end) return;
     
-    const directionsService = new google.maps.DirectionsService();
+    const directionsService = new googleRef.current.maps.DirectionsService();
     
     directionsService.route(
       {
         origin: { lat: start.latitude, lng: start.longitude },
         destination: { lat: end.latitude, lng: end.longitude },
-        travelMode: google.maps.TravelMode.DRIVING,
+        travelMode: googleRef.current.maps.TravelMode.DRIVING,
       },
-      (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK) {
+      (result: google.maps.DirectionsResult, status: google.maps.DirectionsStatus) => {
+        if (status === googleRef.current.maps.DirectionsStatus.OK) {
           setDirections(result);
           setDirectionsError(null);
         } else {
@@ -186,10 +222,12 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   
   // Get marker icon based on location type
   const getMarkerIcon = (locationType?: string) => {
+    if (!googleRef.current) return null;
+    
     switch (locationType) {
       case 'driver':
         return {
-          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          path: googleRef.current.maps.SymbolPath.FORWARD_CLOSED_ARROW,
           fillColor: '#00FF00',
           fillOpacity: 1,
           strokeWeight: 1,
@@ -197,7 +235,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
         };
       case 'restaurant':
         return {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: googleRef.current.maps.SymbolPath.CIRCLE,
           fillColor: '#FF8C00',
           fillOpacity: 1,
           strokeWeight: 1,
@@ -205,7 +243,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
         };
       case 'customer':
         return {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: googleRef.current.maps.SymbolPath.CIRCLE,
           fillColor: '#FF0000',
           fillOpacity: 1,
           strokeWeight: 1,
@@ -213,7 +251,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
         };
       default:
         return {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: googleRef.current.maps.SymbolPath.CIRCLE,
           fillColor: '#3887be',
           fillOpacity: 1,
           strokeWeight: 1,
@@ -233,7 +271,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     );
   }
   
-  if (!isLoaded) {
+  if (!isLoaded || !googleRef.current) {
     return (
       <div className={`${className} flex items-center justify-center bg-gray-100 rounded-md border`}>
         <div className="text-center p-4">
@@ -244,6 +282,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     );
   }
   
+  // Once the map is loaded, render it
   return (
     <div className={`${className} relative`}>
       <GoogleMap

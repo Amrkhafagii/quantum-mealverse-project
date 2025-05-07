@@ -163,15 +163,21 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
         </div>
       </CardHeader>
       <CardContent className="p-2">
-        <DeliveryGoogleMap
-          driverLocation={null} // This will be updated by the location tracker
-          restaurantLocation={restaurantLocation}
-          customerLocation={customerLocation}
-          showRoute={true}
-          className="h-[400px] w-full"
-          zoom={14}
-          autoCenter={true}
-        />
+        {googleMapsApiKey ? (
+          <DeliveryGoogleMap
+            driverLocation={null} // This will be updated by the location tracker
+            restaurantLocation={restaurantLocation}
+            customerLocation={customerLocation}
+            showRoute={true}
+            className="h-[400px] w-full"
+            zoom={14}
+            autoCenter={true}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-[400px] bg-gray-100 rounded-md">
+            <p className="text-gray-500">Google Maps API key is required to display the map</p>
+          </div>
+        )}
         
         {activeAssignment && (
           <div className="mt-2 text-sm space-y-1">
