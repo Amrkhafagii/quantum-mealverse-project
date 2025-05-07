@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
@@ -54,8 +55,8 @@ function App() {
                       <Route path="/cart" element={<Cart />} />
                       <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                       <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
-                      <Route path="/profile" element={<ProtectedRoute><Profile />} />
-                      <Route path="/order-history" element={<ProtectedRoute><OrderHistory />} />
+                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                      <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
                       
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
