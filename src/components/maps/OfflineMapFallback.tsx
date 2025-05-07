@@ -129,5 +129,5 @@ export const OfflineMapFallback: React.FC<OfflineMapFallbackProps> = ({
   );
 };
 
-// Add a default export to fix the import issue
+// Export as default as well to fix the import issue
 export default OfflineMapFallback;
