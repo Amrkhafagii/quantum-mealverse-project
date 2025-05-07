@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,7 +21,8 @@ const DeliverySettings = () => {
   const [searchParams] = useSearchParams();
   const locationDenied = searchParams.get('locationDenied') === 'true';
   const { deliveryUser, loading, refreshDeliveryUser } = useDeliveryUser(user?.id);
-  const { permissionStatus, updateLocation } = useDeliveryLocationService();
+  const locationService = useDeliveryLocationService();
+  const { permissionStatus, updateLocation } = locationService;
   const [activeTab, setActiveTab] = useState('profile');
 
   const handleLogout = async () => {

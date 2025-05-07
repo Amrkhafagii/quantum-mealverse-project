@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useLocationTracker } from './useLocationTracker';
 import { useDeliveryLocationService } from './useDeliveryLocationService';
 import { useNetworkQuality } from './useNetworkQuality';
 import { calculateDistance } from '@/utils/locationUtils';
@@ -35,13 +34,14 @@ export function useIntelligentTracking({
   const isNative = Capacitor.isNativePlatform();
 
   // Use the delivery location service for location tracking
+  const locationService = useDeliveryLocationService();
   const { 
     location,
     updateLocation,
     isTracking,
     startTracking,
     stopTracking
-  } = useDeliveryLocationService();
+  } = locationService;
 
   // Monitor device battery level if available on this platform
   useEffect(() => {

@@ -11,7 +11,7 @@ import { OfflineMapFallback } from '@/components/maps/OfflineMapFallback';
 import { DeliveryLocationControls } from './DeliveryLocationControls';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { BatteryEfficientTracker } from './BatteryEfficientTracker';
+import BatteryEfficientTracker from './BatteryEfficientTracker';
 import { Order } from '@/types/order';
 import { Loader2 } from 'lucide-react';
 
@@ -27,12 +27,18 @@ const defaultCenter = {
 
 interface DeliveryMapViewProps {
   showControls?: boolean;
+  activeAssignment?: any;
+  className?: string;
 }
 
-export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls = true }) => {
+export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ 
+  showControls = true,
+  activeAssignment,
+  className = ''
+}) => {
   const { googleMapsApiKey, isLoaded: isGoogleMapsLoaded } = useGoogleMaps();
-  const { hasPermission, location } = useLocationPermission();
-  const { assignments, activeAssignment } = useDeliveryAssignments();
+  const locationPermission = useLocationPermission();
+  const deliveryAssignments = useDeliveryAssignments();
   const { getSavedPosition, savePosition, lowPerformanceMode } = useMapView();
   const { isLowQuality } = useNetworkQuality();
   const { isOnline } = useConnectionStatus();
@@ -45,6 +51,10 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
   const [retryCount, setRetryCount] = useState(0);
   const [mapLoadError, setMapLoadError] = useState<string | null>(null);
 
+  // Extract hasPermission and location from locationPermission
+  const hasPermission = locationPermission.permissionStatus === 'granted';
+  const location = locationPermission.location;
+  
   // Use saved position or current location
   const savedPosition = getSavedPosition('delivery-map');
   
@@ -57,8 +67,8 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
       });
     } else if (location) {
       setCenter({
-        lat: location.latitude,
-        lng: location.longitude
+        lat: location.coords.latitude,
+        lng: location.coords.longitude
       });
     }
   }, [savedPosition, location]);
@@ -76,8 +86,8 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
       // Add driver location to bounds
       if (location) {
         bounds.extend(new google.maps.LatLng(
-          location.latitude,
-          location.longitude
+          location.coords.latitude,
+          location.coords.longitude
         ));
       }
       
@@ -97,9 +107,8 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
         ));
       }
       
-      mapRef.current.fitBounds(bounds, {
-        padding: 60
-      });
+      // Fix the padding error
+      mapRef.current.fitBounds(bounds);
     }
   };
   
@@ -143,8 +152,8 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
         isRetrying={false}
         showLocationData={true}
         locationData={location ? {
-          latitude: location.latitude,
-          longitude: location.longitude,
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
           address: "Your Current Location"
         } : undefined}
       />
@@ -184,24 +193,10 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
   }
 
   // Convert delivery assignment to a format suitable for the map
-  const mapMarkers = assignments.map(assignment => {
-    const order: Partial<Order> = {
-      id: assignment.id,
-      status: assignment.status,
-      latitude: assignment.latitude,
-      longitude: assignment.longitude,
-      restaurant: {
-        latitude: assignment.restaurant?.latitude,
-        longitude: assignment.restaurant?.longitude,
-        name: assignment.restaurant?.name,
-      }
-    } as Order;
-    
-    return order;
-  });
+  const mapMarkers = activeAssignment ? [activeAssignment] : [];
   
   return (
-    <div className="relative w-full">
+    <div className={`relative w-full ${className}`}>
       {showControls && (
         <DeliveryLocationControls />
       )}
@@ -243,8 +238,8 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
                 {location && (
                   <Marker
                     position={{ 
-                      lat: location.latitude, 
-                      lng: location.longitude 
+                      lat: location.coords.latitude, 
+                      lng: location.coords.longitude 
                     }}
                     icon={{
                       url: '/assets/driver-marker.png',
@@ -319,3 +314,5 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ showControls =
     </div>
   );
 };
+
+export default DeliveryMapView;

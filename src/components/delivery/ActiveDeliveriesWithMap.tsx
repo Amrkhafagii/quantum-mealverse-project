@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ActiveDeliveries } from './ActiveDeliveries';
-import DeliveryMapView from './DeliveryMapView';
+import { DeliveryMapView } from './DeliveryMapView';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useAuth } from '@/hooks/useAuth';

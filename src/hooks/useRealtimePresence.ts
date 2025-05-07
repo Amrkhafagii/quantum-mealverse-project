@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -88,7 +87,7 @@ export function useRealtimePresence(roomName: string, enabled = true) {
             user_id: user.id,
             online_at: new Date().toISOString(),
             client_info: {
-              platform: Platform.getPlatform(),
+              platform: Platform.getPlatformName(),
               version: '1.0.0',
               timestamp: new Date().toISOString(),
             },
@@ -114,7 +113,7 @@ export function useRealtimePresence(roomName: string, enabled = true) {
         user_id: user.id,
         online_at: new Date().toISOString(),
         client_info: {
-          platform: Platform.getPlatform(),
+          platform: Platform.getPlatformName(),
           version: '1.0.0',
           timestamp: new Date().toISOString(),
         },

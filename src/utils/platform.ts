@@ -25,7 +25,8 @@ export const Platform = {
       }
       
       // Check for iOS browser
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const userAgent = navigator.userAgent;
+      return /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
     }
     return false;
   },
@@ -79,4 +80,16 @@ export const Platform = {
     if (Platform.isMobileBrowser()) return 'mobile-web';
     return 'web';
   },
+
+  /**
+   * Gets the platform identifier
+   * Added to fix getPlatform method references
+   */
+  getPlatform: () => {
+    if (Platform.isIOS()) return 'ios';
+    if (Platform.isAndroid()) return 'android';
+    if (Platform.isNative()) return 'native';
+    if (Platform.isMobileBrowser()) return 'mobile-web';
+    return 'web';
+  }
 };
