@@ -46,13 +46,19 @@ export const getActiveDeliveryAssignments = async (
         console.warn(`No order data found for assignment ${assignment.id}`);
         return null;
       }
-
-      const order = assignment.orders;
-      const restaurant = order.restaurant || {};
+      
+      // Use type assertion to help TypeScript understand the structure
+      const order = assignment.orders as any;
+      const restaurant = order.restaurant as any || {};
       
       // Calculate distance in km (if coordinates are available)
       let distance_km = undefined;
-      if (restaurant?.latitude && restaurant?.longitude && order.latitude && order.longitude) {
+      if (
+        restaurant?.latitude && 
+        restaurant?.longitude && 
+        order?.latitude && 
+        order?.longitude
+      ) {
         distance_km = calculateDistance(
           restaurant.latitude, 
           restaurant.longitude, 
@@ -101,7 +107,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c; // Distance in km (rounded to 1 decimal)
+  return R * c; // Distance in km
 }
 
 // Get past delivery assignments for a delivery user
