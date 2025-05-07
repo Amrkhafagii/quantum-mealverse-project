@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EarningsSummary } from '@/components/delivery/dashboard/EarningsSummary';
 import { DeliveryHistory } from '@/components/delivery/dashboard/DeliveryHistory';
 import { DeliveryStats } from '@/components/delivery/dashboard/DeliveryStats';
+import { AvailableOrders } from '@/components/delivery/AvailableOrders';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -144,11 +145,16 @@ const DeliveryDashboard: React.FC = () => {
       {deliveryUser && <DeliveryStats deliveryUser={deliveryUser} />}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid grid-cols-3 mb-4">
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="available">Available Orders</TabsTrigger>
           <TabsTrigger value="active">Active Deliveries</TabsTrigger>
           <TabsTrigger value="earnings">Earnings</TabsTrigger>
           <TabsTrigger value="history">Delivery History</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="available" className="mt-2">
+          <AvailableOrders />
+        </TabsContent>
         
         <TabsContent value="active" className="mt-2">
           <ActiveDeliveriesWithMap />
