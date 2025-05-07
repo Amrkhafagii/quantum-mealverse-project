@@ -1,77 +1,82 @@
 
-import { Capacitor } from '@capacitor/core';
-import { Network } from '@capacitor/network';
-
-export class Platform {
+/**
+ * Utility for platform-specific checks and functionality
+ */
+export const Platform = {
   /**
-   * Check if the app is running on iOS
+   * Checks if the app is running in a native environment (Capacitor)
    */
-  static isIOS(): boolean {
-    return Capacitor.getPlatform() === 'ios';
-  }
-  
-  /**
-   * Check if the app is running on Android
-   */
-  static isAndroid(): boolean {
-    return Capacitor.getPlatform() === 'android';
-  }
-  
-  /**
-   * Check if the app is running on web
-   */
-  static isWeb(): boolean {
-    return Capacitor.getPlatform() === 'web';
-  }
-  
-  /**
-   * Check if the app is running on a native platform
-   */
-  static isNative(): boolean {
-    return Capacitor.isNativePlatform();
-  }
-  
-  /**
-   * Get the current platform
-   */
-  static getPlatform(): string {
-    return Capacitor.getPlatform();
-  }
+  isNative: () => {
+    return typeof window !== 'undefined' && 
+      window.hasOwnProperty('Capacitor') && 
+      // @ts-ignore - Capacitor global
+      window.Capacitor?.isNativePlatform();
+  },
 
   /**
-   * Check if the device is online
-   * @returns Promise with connection status
+   * Checks if the app is running on iOS
    */
-  static async isOnline(): Promise<boolean> {
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const status = await Network.getStatus();
-        return status.connected;
-      } catch (error) {
-        console.error('Error checking network status:', error);
-        // Fallback to browser API
-        return navigator.onLine;
+  isIOS: () => {
+    if (typeof window !== 'undefined') {
+      // Check for native iOS via Capacitor
+      if (window.hasOwnProperty('Capacitor')) {
+        // @ts-ignore - Capacitor global
+        return window.Capacitor?.getPlatform() === 'ios';
       }
-    } else {
-      return navigator.onLine;
+      
+      // Check for iOS browser
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     }
-  }
+    return false;
+  },
 
   /**
-   * Get current connection type
-   * @returns Promise with connection type
+   * Checks if the app is running on Android
    */
-  static async getConnectionType(): Promise<string> {
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const status = await Network.getStatus();
-        return status.connectionType;
-      } catch (error) {
-        console.error('Error getting connection type:', error);
-        return 'unknown';
+  isAndroid: () => {
+    if (typeof window !== 'undefined') {
+      // Check for native Android via Capacitor
+      if (window.hasOwnProperty('Capacitor')) {
+        // @ts-ignore - Capacitor global
+        return window.Capacitor?.getPlatform() === 'android';
       }
-    } else {
-      return navigator.onLine ? 'wifi' : 'none';
+      
+      // Check for Android browser
+      return /Android/.test(navigator.userAgent);
     }
-  }
-}
+    return false;
+  },
+
+  /**
+   * Checks if the app is running in a web browser
+   */
+  isWeb: () => {
+    return !Platform.isNative();
+  },
+
+  /**
+   * Checks if the app is running in a mobile browser (not a native app)
+   */
+  isMobileBrowser: () => {
+    if (typeof window !== 'undefined' && !Platform.isNative()) {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      
+      // Basic mobile browser detection
+      return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i.test(userAgent);
+    }
+    return false;
+  },
+
+  /**
+   * Gets the current platform name
+   */
+  getPlatformName: () => {
+    if (Platform.isNative()) {
+      if (Platform.isIOS()) return 'ios';
+      if (Platform.isAndroid()) return 'android';
+      return 'native';
+    }
+    if (Platform.isMobileBrowser()) return 'mobile-web';
+    return 'web';
+  },
+};

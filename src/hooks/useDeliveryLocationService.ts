@@ -16,7 +16,15 @@ export interface DeliveryLocationConfig {
   aggressiveTrackingThreshold: number; // Distance in meters to trigger more frequent updates
 }
 
-export function useDeliveryLocationService() {
+export interface DeliveryLocationServiceReturn {
+  config: DeliveryLocationConfig;
+  updateTrackingInterval: (distanceToDestination?: number) => void;
+  batteryLevel: number | null;
+  isBatteryLow: boolean;
+  getAdjustedTrackingInterval: (distanceToDestination?: number) => number;
+}
+
+export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
   const [config, setConfig] = useState<DeliveryLocationConfig>({
     trackingInterval: DEFAULT_TRACKING_INTERVAL,
     accuracyLevel: 'balanced',

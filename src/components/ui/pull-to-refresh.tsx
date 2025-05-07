@@ -8,12 +8,14 @@ export interface PullToRefreshProps {
   children: ReactNode;
   onRefresh: () => Promise<void>;
   isRefreshing?: boolean;  // Added isRefreshing prop
+  disabled?: boolean;  // Added disabled prop to allow disabling pull to refresh
 }
 
 export const PullToRefresh: React.FC<PullToRefreshProps> = ({ 
   children, 
   onRefresh,
-  isRefreshing: externalRefreshing
+  isRefreshing: externalRefreshing,
+  disabled = false
 }) => {
   const [startY, setStartY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -33,6 +35,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   
   // Handle pull to refresh
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Skip if disabled
+    if (disabled) return;
+    
     // Only enable pull to refresh if scrolled to top
     if (containerRef.current && containerRef.current.scrollTop === 0) {
       setStartY(e.touches[0].clientY);
@@ -42,7 +47,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   };
   
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (startY === 0 || isRefreshing) return;
+    if (startY === 0 || isRefreshing || disabled) return;
     
     const currentY = e.touches[0].clientY;
     const distance = Math.max(0, currentY - startY);
@@ -54,6 +59,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   };
   
   const handleTouchEnd = async () => {
+    // Skip if disabled
+    if (disabled) return;
+    
     // If pulled past threshold, trigger refresh
     if (pullDistance > pullThreshold && !isRefreshing) {
       setIsRefreshing(true);
@@ -84,8 +92,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   }, [isRefreshing, controls]);
   
   // Only add touch handlers on mobile devices
-  const isMobile = Platform.isNative() || Platform.isMobileBrowser();
-  const touchProps = isMobile ? {
+  const isMobile = Platform.isNative() || Platform.isMobileBrowser?.();
+  const touchProps = isMobile && !disabled ? {
     onTouchStart: handleTouchStart,
     onTouchMove: handleTouchMove,
     onTouchEnd: handleTouchEnd
@@ -127,8 +135,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
       {/* Content with padding for pull distance */}
       <motion.div
         style={{ 
-          y: isRefreshing ? 40 : pullDistance,
-          transition: isRefreshing ? { type: 'spring', stiffness: 300, damping: 30 } : undefined
+          y: isRefreshing ? 40 : pullDistance
         }}
       >
         {children}

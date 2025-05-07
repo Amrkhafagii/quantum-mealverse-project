@@ -27,6 +27,7 @@ const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
 const OrderStatus = lazy(() => import('./pages/OrderStatus'));
 const Profile = lazy(() => import('./pages/Profile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Customer = lazy(() => import('./pages/Customer'));
 
 // Lazy load non-critical placeholder components
 const Products = lazy(() => import('./pages/Shop').then(module => ({ default: () => <div>Products Page</div> })));
@@ -87,6 +88,11 @@ function App() {
                             <Route path="/products/:id" element={
                               <LoadingSuspense>
                                 <ProductDetail />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/customer" element={
+                              <LoadingSuspense>
+                                <Customer />
                               </LoadingSuspense>
                             } />
                             <Route path="/cart" element={
