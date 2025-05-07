@@ -1,8 +1,15 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, DirectionsRenderer, DirectionsService } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, DirectionsRenderer } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
+
+// Declare the googleMapCallback property on the window object
+declare global {
+  interface Window {
+    googleMapCallback: () => void;
+  }
+}
 
 // Define types for our component props
 interface MapLocation {
@@ -33,9 +40,6 @@ const containerStyle = {
   borderRadius: '0.375rem' // equivalent to rounded-md in Tailwind
 };
 
-// Create a single instance of the loader options across the app
-let loaderInstance: any = null;
-
 const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   driverLocation,
   restaurantLocation,
@@ -57,9 +61,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [directionsError, setDirectionsError] = useState<string | null>(null);
   
-  // Initialize Google Maps JS API only if we have a valid API key
-  // We're using a ref to ensure we don't re-initialize the loader
-  const apiKeyRef = useRef<string | null>(null);
+  // State to track if Google Maps API is loaded
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
   const googleRef = useRef<any>(null);
@@ -67,9 +69,6 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   useEffect(() => {
     // Only initialize if we have an API key and we haven't initialized yet
     if (googleMapsApiKey && !isLoaded && !loadError) {
-      // Store the API key we're using
-      apiKeyRef.current = googleMapsApiKey;
-      
       // Create a script element to load the Google Maps API
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&callback=googleMapCallback`;
@@ -92,7 +91,7 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
       
       // Clean up
       return () => {
-        window.googleMapCallback = null;
+        window.googleMapCallback = null as any;
         if (script.parentNode) {
           script.parentNode.removeChild(script);
         }
@@ -160,9 +159,11 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   
   // Set up directions when route should be displayed
   useEffect(() => {
-    if (!isLoaded || !showRoute || !driverLocation || !(restaurantLocation || customerLocation) || !googleRef.current) return;
+    if (!isLoaded || !showRoute || !googleRef.current) return;
     
-    // Determine route points
+    // Determine route points - we need both driver and at least one destination
+    if (!driverLocation || !(restaurantLocation || customerLocation)) return;
+    
     const start = driverLocation;
     const end = customerLocation || restaurantLocation;
     if (!end) return;
