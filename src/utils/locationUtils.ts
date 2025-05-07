@@ -1,4 +1,4 @@
-import { DeliveryLocation } from '@/types/location';
+import { DeliveryLocation, LocationFreshness } from '@/types/location';
 
 /**
  * Save delivery location to local storage
@@ -108,7 +108,7 @@ export const calculateBearing = (
  */
 export const isLocationStale = (timestamp: string, maxAgeSecs: number = 60): boolean => {
   const freshness = calculateLocationFreshness(timestamp);
-  return freshness > maxAgeSecs;
+  return freshness === 'stale' || freshness === 'invalid';
 };
 
 /**
@@ -118,10 +118,20 @@ export const isLocationStale = (timestamp: string, maxAgeSecs: number = 60): boo
  * - stale: 5-30 minutes old
  * - invalid: older than 30 minutes
  */
-export const calculateLocationFreshness = (timestamp: string): number => {
+export const calculateLocationFreshness = (timestamp: string): LocationFreshness => {
   const locationTimestamp = new Date(timestamp).getTime();
   const currentTimestamp = new Date().getTime();
-  return Math.floor((currentTimestamp - locationTimestamp) / 1000);
+  const ageInSeconds = Math.floor((currentTimestamp - locationTimestamp) / 1000);
+  
+  if (ageInSeconds < 120) { // Less than 2 minutes
+    return 'fresh';
+  } else if (ageInSeconds < 300) { // 2-5 minutes
+    return 'moderate';
+  } else if (ageInSeconds < 1800) { // 5-30 minutes
+    return 'stale';
+  } else { // More than 30 minutes
+    return 'invalid';
+  }
 };
 
 /**

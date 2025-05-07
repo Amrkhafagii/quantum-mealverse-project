@@ -48,7 +48,7 @@ export function useSupabaseChannel({
       // Configure the channel with postgres changes if table is provided
       if (table) {
         channel.on(
-          'postgres_changes',
+          'postgres_changes' as any, // Type assertion to work around TypeScript error
           {
             event,
             schema,
@@ -68,7 +68,7 @@ export function useSupabaseChannel({
       channel
         .subscribe((status) => {
           console.log(`Channel ${channelName} status:`, status);
-          setStatus(status);
+          setStatus(status as any);
           
           if (status === 'SUBSCRIBED') {
             setIsSubscribed(true);

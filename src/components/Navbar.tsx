@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/useLanguage';
 import LanguageSelector from './LanguageSelector';
 import LocationStatusIndicator from './location/LocationStatusIndicator';
-import ConnectionStateIndicator from '@/components/ui/ConnectionStateIndicator';
+import { ConnectionStateIndicator } from '@/components/ui/ConnectionStateIndicator';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

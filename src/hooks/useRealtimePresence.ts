@@ -46,7 +46,8 @@ export function useRealtimePresence(roomName: string, enabled = true) {
         .on('presence', { event: 'sync' }, () => {
           const state = newChannel.presenceState();
           console.log('Presence synced:', state);
-          setPresenceState(state);
+          // Convert the type to match our state type
+          setPresenceState(state as unknown as Record<string, PresenceState[]>);
           
           // Extract user IDs from presence state
           const users = Object.values(state).flatMap(

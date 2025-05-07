@@ -21,9 +21,9 @@ export const useDeliveryLocationCache = () => {
       setCachedLocation(cachedLocation);
       
       if (cachedLocation.timestamp) {
-        const freshness = calculateLocationFreshness(cachedLocation.timestamp);
+        const freshness = calculateLocationFreshness(new Date(cachedLocation.timestamp).toISOString());
         setCachedLocationFreshness(freshness);
-        setIsStale(isLocationStale(cachedLocation.timestamp));
+        setIsStale(isLocationStale(new Date(cachedLocation.timestamp).toISOString()));
         setLastUpdated(new Date(cachedLocation.timestamp));
       }
     }
@@ -34,9 +34,9 @@ export const useDeliveryLocationCache = () => {
     if (!cachedLocation?.timestamp) return;
     
     const checkFreshness = () => {
-      const freshness = calculateLocationFreshness(cachedLocation.timestamp);
+      const freshness = calculateLocationFreshness(new Date(cachedLocation.timestamp).toISOString());
       setCachedLocationFreshness(freshness);
-      setIsStale(isLocationStale(cachedLocation.timestamp));
+      setIsStale(isLocationStale(new Date(cachedLocation.timestamp).toISOString()));
     };
     
     // Check immediately and then every minute
