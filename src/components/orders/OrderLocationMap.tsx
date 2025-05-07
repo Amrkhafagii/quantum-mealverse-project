@@ -5,6 +5,8 @@ import { MapPin, Navigation, Loader2 } from 'lucide-react';
 import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
 import { supabase } from '@/integrations/supabase/client';
 import { GoogleMap, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
+import { Platform } from '@/utils/platform';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 
 interface OrderLocationMapProps {
   order: Order;
@@ -28,6 +30,8 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     lat: 30.0444, // Default to Egypt's coordinates
     lng: 31.2357
   });
+  const { isOnline } = useConnectionStatus();
+  const isMobile = Platform.isNative();
   
   // Use the directly provided assignmentId if available, otherwise fetch it
   const { latestLocation, isSubscribed } = useRealtimeLocation({
@@ -37,7 +41,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
   // Only fetch delivery assignment if assignmentId is not provided
   useEffect(() => {
     const fetchDeliveryAssignment = async () => {
-      if (!order?.id || assignmentId) {
+      if (!order?.id || assignmentId || !isOnline) {
         setIsLoading(false);
         return; // Don't fetch if we already have assignmentId or no order
       }
@@ -64,11 +68,11 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     };
     
     fetchDeliveryAssignment();
-  }, [order?.id, assignmentId]);
+  }, [order?.id, assignmentId, isOnline]);
   
   // Calculate directions when we have the delivery location
   useEffect(() => {
-    if (!map || !latestLocation || !order) return;
+    if (!map || !latestLocation || !order || !isOnline) return;
     
     const directionsService = new google.maps.DirectionsService();
     
@@ -88,7 +92,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
         }
       });
     }
-  }, [map, latestLocation, order]);
+  }, [map, latestLocation, order, isOnline]);
   
   // Update center based on the latest available location
   useEffect(() => {
@@ -107,7 +111,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
         <CardContent className="p-6 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2">Loading map...</span>
@@ -116,9 +120,20 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     );
   }
 
+  if (!isOnline) {
+    return (
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
+        <CardContent className="p-6 text-center">
+          <MapPin className="h-6 w-6 mx-auto mb-2 text-amber-500" />
+          <p className="text-sm text-amber-500">Map unavailable while offline.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!order.latitude || !order.longitude) {
     return (
-      <Card>
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
         <CardContent className="p-6 text-center">
           <MapPin className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">No location information available for this order.</p>
@@ -136,13 +151,20 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     order.restaurant.longitude !== null;
 
   return (
-    <Card>
+    <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
       <CardContent className="p-2 h-[300px]">
         <GoogleMap
           mapContainerStyle={{ width: '100%', height: '100%' }}
           center={center}
           zoom={14}
           onLoad={(map) => setMap(map)}
+          options={{
+            fullscreenControl: false,
+            zoomControl: !isMobile,
+            mapTypeControl: false,
+            streetViewControl: false,
+            gestureHandling: isMobile ? 'cooperative' : 'auto'
+          }}
         >
           {/* Restaurant marker - Only show if restaurant has location data */}
           {hasRestaurantLocation && (
@@ -205,6 +227,12 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
           <span className={`w-2 h-2 rounded-full mr-1 ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}></span>
           <span>{isSubscribed ? 'Live tracking' : 'Tracking offline'}</span>
         </div>
+        
+        {isMobile && (
+          <div className="absolute bottom-2 left-2 bg-black/70 rounded-full px-2 py-1 text-xs text-white">
+            Tap map to interact
+          </div>
+        )}
       </CardContent>
     </Card>
   );

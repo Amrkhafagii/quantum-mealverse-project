@@ -9,6 +9,8 @@ import { Order } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { isPlatform } from '@capacitor/core';
 
 interface OrderStatusDisplayProps {
   order: Order;
@@ -24,13 +26,15 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   showCancelButton = true
 }) => {
   const [isFixing, setIsFixing] = React.useState(false);
+  const { isOnline } = useConnectionStatus();
+  const isMobile = isPlatform('ios') || isPlatform('android');
   
   // Calculate if the order is in a state where it can be cancelled
   const canBeCancelled = ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status);
 
   // Handle refreshing the order status
   const handleRefreshStatus = async () => {
-    if (!order.id) return;
+    if (!order.id || !isOnline) return;
     
     setIsFixing(true);
     try {
@@ -46,8 +50,8 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   };
   
   return (
-    <Card className="bg-quantum-black/30 border-quantum-cyan/20">
-      <CardContent className="p-4">
+    <Card className={`bg-quantum-black/30 border-quantum-cyan/20 ${isMobile ? 'rounded-lg shadow-lg' : ''}`}>
+      <CardContent className={`${isMobile ? 'p-3' : 'p-4'}`}>
         <div className="flex flex-col md:flex-row md:justify-between md:items-center">
           <div className="space-y-2 mb-4 md:mb-0">
             <div className="flex items-center gap-3">
@@ -59,9 +63,9 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
                 size="sm"
                 className="ml-2 h-6 w-6 p-0" 
                 onClick={handleRefreshStatus}
-                disabled={isFixing}
+                disabled={isFixing || !isOnline}
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                <RefreshCw className={`h-3.5 w-3.5 ${isFixing ? 'animate-spin' : ''}`} />
                 <span className="sr-only">Refresh status</span>
               </Button>
             </div>
@@ -78,9 +82,16 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
                 updatedAt={order.updated_at || order.created_at || ''}
               />
             )}
+            
+            {!isOnline && (
+              <div className="text-amber-500 text-xs flex items-center mt-2">
+                <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
+                Currently offline - some features limited
+              </div>
+            )}
           </div>
           
-          {showCancelButton && canBeCancelled && (
+          {showCancelButton && canBeCancelled && isOnline && (
             <CancelOrderButton 
               orderId={order.id!} 
               onCancelOrder={onOrderUpdate}

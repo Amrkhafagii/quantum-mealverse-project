@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, AlertCircle } from 'lucide-react';
@@ -17,6 +16,8 @@ import MapContainer from '../maps/MapContainer';
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { fixOrderStatus } from '@/utils/orderStatusFix';
+import { Platform } from '@/utils/platform';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 
 interface OrderTrackerProps {
   orderId: string;
@@ -35,49 +36,53 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const [isFixingOrderStatus, setIsFixingOrderStatus] = React.useState(false);
   const [deliveryAssignmentId, setDeliveryAssignmentId] = React.useState<string | null>(null);
   const { data: order, isLoading, error, refetch } = useOrderData(orderId);
-
+  const { isOnline } = useConnectionStatus();
+  const isMobile = Platform.isNative();
+  
   // Find the delivery assignment ID for this order
   React.useEffect(() => {
-    if (orderId && ['preparing', 'ready_for_pickup', 'on_the_way', 'picked_up', 'delivered'].includes(order?.status || '')) {
-      // Fetch the active delivery assignment for this order
-      const fetchDeliveryAssignment = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('delivery_assignments')
-            .select('id, status')
-            .eq('order_id', orderId)
-            .in('status', ['assigned', 'picked_up', 'on_the_way', 'delivered'])
-            .maybeSingle();
-            
-          if (!error && data) {
-            console.log('Found delivery assignment for tracking:', data.id, 'with status:', data.status);
-            setDeliveryAssignmentId(data.id);
-            
-            // Extra check: ensure order status and delivery assignment status are in sync
-            const statusMap: Record<string, string> = {
-              'picked_up': 'picked_up',
-              'on_the_way': 'on_the_way',
-              'delivered': 'delivered'
-            };
-            
-            // If delivery status doesn't match order status, fix it
-            if (statusMap[data.status] && order?.status !== statusMap[data.status]) {
-              console.log(`Status mismatch detected - delivery: ${data.status}, order: ${order?.status}`);
-              await fixOrderStatus(orderId);
-              await refetch();
-            }
-          } else {
-            console.log('No active delivery assignment found for order:', orderId);
-            setDeliveryAssignmentId(null);
-          }
-        } catch (err) {
-          console.error('Error fetching delivery assignment:', err);
-        }
-      };
-      
-      fetchDeliveryAssignment();
+    if (!orderId || !isOnline || !['preparing', 'ready_for_pickup', 'on_the_way', 'picked_up', 'delivered'].includes(order?.status || '')) {
+      return;
     }
-  }, [orderId, order?.status, refetch]);
+
+    // Fetch the active delivery assignment for this order
+    const fetchDeliveryAssignment = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('delivery_assignments')
+          .select('id, status')
+          .eq('order_id', orderId)
+          .in('status', ['assigned', 'picked_up', 'on_the_way', 'delivered'])
+          .maybeSingle();
+          
+        if (!error && data) {
+          console.log('Found delivery assignment for tracking:', data.id, 'with status:', data.status);
+          setDeliveryAssignmentId(data.id);
+          
+          // Extra check: ensure order status and delivery assignment status are in sync
+          const statusMap: Record<string, string> = {
+            'picked_up': 'picked_up',
+            'on_the_way': 'on_the_way',
+            'delivered': 'delivered'
+          };
+          
+          // If delivery status doesn't match order status, fix it
+          if (statusMap[data.status] && order?.status !== statusMap[data.status]) {
+            console.log(`Status mismatch detected - delivery: ${data.status}, order: ${order?.status}`);
+            await fixOrderStatus(orderId);
+            await refetch();
+          }
+        } else {
+          console.log('No active delivery assignment found for order:', orderId);
+          setDeliveryAssignmentId(null);
+        }
+      } catch (err) {
+        console.error('Error fetching delivery assignment:', err);
+      }
+    };
+    
+    fetchDeliveryAssignment();
+  }, [orderId, order?.status, refetch, isOnline]);
 
   // Check for restaurant assignments that might be accepted but order status is still pending
   React.useEffect(() => {
@@ -102,7 +107,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
     };
     
     checkAndFixOrderStatus();
-  }, [order, orderId, refetch]);
+  }, [order, orderId, refetch, isOnline]);
 
   React.useEffect(() => {
     if (orderId && order && ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
@@ -112,7 +117,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
         })
         .catch(() => {});
     }
-  }, [orderId, order?.status]);
+  }, [orderId, order?.status, isOnline]);
 
   useInterval(() => {
     if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status)) {
@@ -127,22 +132,24 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   
   if (isLoading || isFixingOrderStatus) {
     return (
-      <Card>
-        <CardContent className="p-6">
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
+        <CardContent className={`p-6 flex justify-center items-center ${isMobile ? 'min-h-[200px]' : ''}`}>
           <div className="text-center py-8">{isFixingOrderStatus ? 'Fixing order status...' : 'Loading order details...'}</div>
         </CardContent>
       </Card>
     );
   }
   
-  if (error) {
+  if (error || !isOnline) {
     return (
-      <Card>
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
         <CardContent className="p-6">
           <div className="text-center py-8 space-y-4">
             <AlertCircle className="h-8 w-8 text-red-500 mx-auto" />
-            <p>There was an error loading your order details.</p>
-            <p className="text-sm text-gray-500">Please try again later or contact support.</p>
+            <p>{!isOnline ? 'You are currently offline' : 'There was an error loading your order details.'}</p>
+            <p className="text-sm text-gray-500">
+              {!isOnline ? 'Please check your connection and try again' : 'Please try again later or contact support.'}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -151,7 +158,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
 
   if (!order) {
     return (
-      <Card>
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
         <CardContent className="p-6">
           <div className="text-center py-8">Order not found</div>
         </CardContent>
@@ -192,10 +199,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   const showMap = ['preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status);
 
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className={`h-full ${isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}`}>
+      <CardHeader className={isMobile ? 'px-3 py-4' : ''}>
         <div className="flex justify-between items-center">
-          <CardTitle>
+          <CardTitle className={isMobile ? 'text-lg' : ''}>
             Order #{order.formatted_order_id || order.id.substring(0, 8)}
           </CardTitle>
           <OrderStatusBadge status={order.status} />
@@ -208,7 +215,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
         </CardDescription>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className={isMobile ? 'px-3 py-2' : ''}>
         <div className="space-y-6">
           <div className="pt-0 pb-4">
             <OrderStatusDisplay 
@@ -219,7 +226,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
             
             {/* Add map for orders that are being prepared, picked up or on the way */}
             {showMap && (
-              <div className="mt-4">
+              <div className={`mt-4 ${isMobile ? 'h-[250px] rounded-lg overflow-hidden' : ''}`}>
                 {order.latitude && order.longitude ? (
                   <OrderLocationMap 
                     order={order} 
@@ -238,13 +245,13 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
 
           <OrderDetailsGrid order={order} />
           
-          <div className="pt-4">
-            <h3 className="text-lg font-medium mb-4">Order Status</h3>
+          <div className={`pt-4 ${isMobile ? 'pb-16' : ''}`}>
+            <h3 className={`font-medium mb-4 ${isMobile ? 'text-base' : 'text-lg'}`}>Order Status</h3>
             <OrderStatusTimeline orderId={orderId} />
           </div>
           
           <div className="pt-2">
-            <h3 className="text-lg font-medium mb-4">Order Items</h3>
+            <h3 className={`font-medium mb-4 ${isMobile ? 'text-base' : 'text-lg'}`}>Order Items</h3>
             <OrderItemsList 
               items={order.order_items}
               subtotal={order.subtotal}

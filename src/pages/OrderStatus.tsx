@@ -10,11 +10,13 @@ import { NotificationBadge } from '@/components/notifications/NotificationBadge'
 import { UserSettings } from '@/components/profile/UserSettings';
 import { OrderStatusDebug } from '@/components/orders/OrderStatusDebug';
 import { useAuth } from '@/hooks/useAuth';
+import { Platform } from '@/utils/platform';
 
 const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
   const { data: order, isLoading, refetch } = useOrderData(id || '');
   const { user } = useAuth();
+  const isMobile = Platform.isNative();
   
   // Determine if the user is an admin for debug purposes
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -42,15 +44,15 @@ const OrderStatus = () => {
   }, [user]);
 
   return (
-    <div className="container mx-auto p-4 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className={`container mx-auto p-4 py-8 ${isMobile ? 'px-2 pb-16' : ''}`}>
+      <div className={`flex justify-between items-center mb-6 ${isMobile ? 'px-2' : ''}`}>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/orders">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold text-quantum-cyan">Order Status</h1>
+          <h1 className={`font-bold text-quantum-cyan ${isMobile ? 'text-xl' : 'text-2xl'}`}>Order Status</h1>
         </div>
         <div className="flex items-center gap-4">
           <NotificationBadge variant="small" />
@@ -77,6 +79,9 @@ const OrderStatus = () => {
           {(isAdmin || process.env.NODE_ENV === 'development') && (
             <OrderStatusDebug orderId={id} onStatusFixed={refetch} />
           )}
+          
+          {/* Add safe area spacing for mobile */}
+          {isMobile && <div className="h-16" />}
         </>
       )}
     </div>
