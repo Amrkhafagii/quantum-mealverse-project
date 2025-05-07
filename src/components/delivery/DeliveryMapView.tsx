@@ -1,18 +1,20 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
-import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
-import { Button } from "@/components/ui/button";
-import { MapPin, Navigation2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, Navigation2 } from 'lucide-react';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 import { toast } from 'sonner';
-import TouchEnabledMap from '../maps/TouchEnabledMap';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TouchFriendlyButton from '../mobile/TouchFriendlyButton';
+import { Capacitor } from '@capacitor/core';
+import DeliveryGoogleMap from '../maps/DeliveryGoogleMap';
+import NativeMap from '../maps/NativeMap';
+import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
+import TouchEnabledMap from '../maps/TouchEnabledMap';
+import BackgroundTrackingPermissions from '../maps/BackgroundTrackingPermissions';
 
 interface DeliveryMapViewProps {
   activeAssignment?: DeliveryAssignment;
@@ -26,7 +28,9 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
   const [restaurantLocation, setRestaurantLocation] = useState<any>(null);
   const [customerLocation, setCustomerLocation] = useState<any>(null);
   const [isLiveTracking, setIsLiveTracking] = useState(false);
+  const [showBackgroundControls, setShowBackgroundControls] = useState(false);
   const isMobile = useIsMobile();
+  const isNative = Capacitor.isNativePlatform();
   
   // Location tracking for the driver
   const { getCurrentLocation } = useLocationTracker({
@@ -156,6 +160,11 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     setMapZoom((prevZoom) => Math.max(prevZoom - 1, 1));
   };
   
+  // Toggle background tracking controls
+  const toggleBackgroundControls = () => {
+    setShowBackgroundControls(prev => !prev);
+  };
+  
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
@@ -169,25 +178,44 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
               </span>
             )}
           </CardTitle>
-          <TouchFriendlyButton 
-            variant="outline" 
-            size="sm" 
-            onClick={handleUpdateLocation}
-            touchClassName={isMobile ? "h-10 px-4" : ""}
-          >
-            <MapPin className="h-4 w-4 mr-2" />
-            Update Location
-          </TouchFriendlyButton>
+          <div className="flex space-x-2">
+            {isNative && (
+              <TouchFriendlyButton 
+                variant="outline" 
+                size="sm" 
+                onClick={toggleBackgroundControls}
+                touchClassName={isMobile ? "h-10 px-4" : ""}
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                {showBackgroundControls ? "Hide Tracking" : "Background Tracking"}
+              </TouchFriendlyButton>
+            )}
+            
+            <TouchFriendlyButton 
+              variant="outline" 
+              size="sm" 
+              onClick={handleUpdateLocation}
+              touchClassName={isMobile ? "h-10 px-4" : ""}
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Update Location
+            </TouchFriendlyButton>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-2">
+        {showBackgroundControls && isNative && (
+          <div className="mb-4">
+            <BackgroundTrackingPermissions 
+              onTrackingStarted={() => setIsLiveTracking(true)}
+              onTrackingStopped={() => setIsLiveTracking(false)}
+            />
+          </div>
+        )}
+
         {googleMapsApiKey ? (
-          <TouchEnabledMap 
-            className="h-[400px] w-full relative"
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-          >
-            <DeliveryGoogleMap
+          isNative ? (
+            <NativeMap
               driverLocation={null} // This will be updated by the location tracker
               restaurantLocation={restaurantLocation}
               customerLocation={customerLocation}
@@ -196,7 +224,23 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
               zoom={mapZoom || 14}
               autoCenter={true}
             />
-          </TouchEnabledMap>
+          ) : (
+            <TouchEnabledMap 
+              className="h-[400px] w-full relative"
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+            >
+              <DeliveryGoogleMap
+                driverLocation={null} // This will be updated by the location tracker
+                restaurantLocation={restaurantLocation}
+                customerLocation={customerLocation}
+                showRoute={true}
+                className="h-[400px] w-full"
+                zoom={mapZoom || 14}
+                autoCenter={true}
+              />
+            </TouchEnabledMap>
+          )
         ) : (
           <div className="flex items-center justify-center h-[400px] bg-gray-100 rounded-md">
             <p className="text-gray-500">Google Maps API key is required to display the map</p>

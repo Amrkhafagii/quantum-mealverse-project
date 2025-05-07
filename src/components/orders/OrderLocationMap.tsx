@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Order } from '@/types/order';
@@ -7,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { GoogleMap, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
 import { Platform } from '@/utils/platform';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { Capacitor } from '@capacitor/core';
+import NativeMap from '../maps/NativeMap';
 
 interface OrderLocationMapProps {
   order: Order;
@@ -32,6 +35,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
   });
   const { isOnline } = useConnectionStatus();
   const isMobile = Platform.isNative();
+  const isNativePlatform = Capacitor.isNativePlatform();
   
   // Use the directly provided assignmentId if available, otherwise fetch it
   const { latestLocation, isSubscribed } = useRealtimeLocation({
@@ -72,7 +76,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
   
   // Calculate directions when we have the delivery location
   useEffect(() => {
-    if (!map || !latestLocation || !order || !isOnline) return;
+    if (!map || !latestLocation || !order || !isOnline || isNativePlatform) return;
     
     const directionsService = new google.maps.DirectionsService();
     
@@ -92,7 +96,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
         }
       });
     }
-  }, [map, latestLocation, order, isOnline]);
+  }, [map, latestLocation, order, isOnline, isNativePlatform]);
   
   // Update center based on the latest available location
   useEffect(() => {
@@ -150,6 +154,53 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
     'longitude' in order.restaurant &&
     order.restaurant.longitude !== null;
 
+  // Prepare data for the native map component
+  const driverLocation = latestLocation ? {
+    latitude: latestLocation.latitude,
+    longitude: latestLocation.longitude,
+    title: 'Driver Location',
+    type: 'driver' as const
+  } : null;
+
+  const customerLocation = order.latitude && order.longitude ? {
+    latitude: order.latitude,
+    longitude: order.longitude,
+    title: 'Delivery Address',
+    type: 'customer' as const
+  } : null;
+
+  const restaurantLocation = hasRestaurantLocation ? {
+    latitude: (order.restaurant as RestaurantWithLocation).latitude!,
+    longitude: (order.restaurant as RestaurantWithLocation).longitude!,
+    title: (order.restaurant as RestaurantWithLocation).name || 'Restaurant',
+    type: 'restaurant' as const
+  } : null;
+
+  // Use native map if on a native platform
+  if (isNativePlatform) {
+    return (
+      <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
+        <CardContent className="p-2 h-[300px]">
+          <NativeMap
+            driverLocation={driverLocation}
+            customerLocation={customerLocation}
+            restaurantLocation={restaurantLocation}
+            showRoute={true}
+            className="h-full w-full"
+            autoCenter={true}
+          />
+          
+          {/* Connection status indicator */}
+          <div className="absolute bottom-2 right-2 bg-black/70 rounded-full px-2 py-1 text-xs flex items-center text-white z-10">
+            <span className={`w-2 h-2 rounded-full mr-1 ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}></span>
+            <span>{isSubscribed ? 'Live tracking' : 'Tracking offline'}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Use web map for non-native platforms
   return (
     <Card className={isMobile ? 'mx-0 rounded-lg shadow-lg' : ''}>
       <CardContent className="p-2 h-[300px]">
