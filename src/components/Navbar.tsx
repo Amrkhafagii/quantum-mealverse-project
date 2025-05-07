@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, LogOut, Package } from 'lucide-react';
@@ -17,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/useLanguage';
 import LanguageSelector from './LanguageSelector';
 import LocationStatusIndicator from './location/LocationStatusIndicator';
+import ConnectionStateIndicator from '@/components/ui/ConnectionStateIndicator';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,13 +37,18 @@ const Navbar = () => {
   };
   
   return (
-    <nav className="bg-quantum-black/70 backdrop-blur-md fixed w-full z-50 py-4">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-md border-b border-white/10">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link to="/" className="text-2xl font-bold text-quantum-cyan neon-text">
-              Quantum<span className="text-quantum-purple">Fit</span>
+            <Link to="/" className="flex items-center">
+              <span className="text-2xl font-bold text-white neon-text">Quantum<span className="text-quantum-cyan">Eats</span></span>
             </Link>
+          </div>
+          
+          {/* Connection status indicator */}
+          <div className="mx-2">
+            <ConnectionStateIndicator size="sm" showText={false} />
           </div>
           
           <div className="hidden md:flex space-x-2 items-center">
@@ -243,7 +248,7 @@ const Navbar = () => {
           )}
         </div>
       )}
-    </nav>
+    </header>
   );
 };
 

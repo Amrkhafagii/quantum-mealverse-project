@@ -61,7 +61,7 @@ export const syncPendingActions = async (): Promise<boolean> => {
     toast({
       title: allSucceeded ? 'All pending actions synchronized' : 'Some actions synchronized',
       description: `${successCount}/${totalActions} actions completed successfully`,
-      variant: allSucceeded ? 'default' : 'warning',
+      variant: allSucceeded ? 'default' : 'destructive' // Changed from "warning" to "destructive" to fix the type error
     });
   }
   

@@ -16,12 +16,16 @@ import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
 import { UserSettings } from '@/components/profile/UserSettings';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { syncPendingActions } from '@/services/sync/syncService';
+import { ConnectionStateIndicator } from '@/components/ui/ConnectionStateIndicator';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Orders = () => {
   const { id: orderIdParam } = useParams();
   const navigate = useNavigate();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
   const { isOnline } = useConnectionStatus();
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Sync pending actions when coming back online
   useEffect(() => {
@@ -45,7 +49,7 @@ const Orders = () => {
     },
   });
   
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['active-orders', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
@@ -108,6 +112,15 @@ const Orders = () => {
     staleTime: 30000, // Past orders don't change as frequently
   });
 
+  const handleSync = async () => {
+    setIsSyncing(true);
+    await syncPendingActions();
+    if (isOnline) {
+      await refetch();
+    }
+    setTimeout(() => setIsSyncing(false), 1000);
+  };
+
   if (!session) {
     return (
       <div className="min-h-screen bg-quantum-black text-white relative">
@@ -141,8 +154,23 @@ const Orders = () => {
       
       <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Track Your Orders</h1>
-          <UserSettings />
+          <div className="flex items-center gap-2">
+            <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Track Your Orders</h1>
+            <ConnectionStateIndicator showText={true} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="flex items-center gap-1 text-quantum-cyan hover:bg-quantum-cyan/20"
+              onClick={handleSync}
+              disabled={!isOnline || isSyncing}
+            >
+              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>Sync</span>
+            </Button>
+            <UserSettings />
+          </div>
         </div>
         
         {!isOnline && (

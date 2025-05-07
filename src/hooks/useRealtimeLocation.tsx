@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryLocation } from '@/types/delivery-assignment';
 import { toast } from './use-toast';
+import { useSupabaseChannel } from './useSupabaseChannel';
+import { useConnectionStatus } from './useConnectionStatus';
+import { Platform } from '@/utils/platform';
 
 interface RealtimeLocationOptions {
   assignmentId?: string;
@@ -12,73 +15,60 @@ export const useRealtimeLocation = ({
   assignmentId, 
   onLocationUpdate 
 }: RealtimeLocationOptions) => {
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [latestLocation, setLatestLocation] = useState<DeliveryLocation | null>(null);
   const [locationHistory, setLocationHistory] = useState<DeliveryLocation[]>([]);
-  const [error, setError] = useState<Error | null>(null);
+  const { isOnline } = useConnectionStatus();
+  const isMobile = Platform.isNative();
 
-  useEffect(() => {
-    // Don't subscribe if no assignment ID is provided
-    if (!assignmentId) {
-      setIsSubscribed(false);
-      return () => {};
-    }
-
-    // Set up the real-time subscription
-    const channel = supabase
-      .channel('public:delivery_locations')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'delivery_locations',
-          filter: `assignment_id=eq.${assignmentId}` 
-        }, 
-        (payload) => {
-          console.log('New location update received:', payload);
-          const newLocation = payload.new as DeliveryLocation;
-          
-          // Update state with latest location
-          setLatestLocation(newLocation);
-          
-          // Add to history (keeping most recent locations)
-          setLocationHistory(prev => {
-            const updated = [newLocation, ...prev].slice(0, 50); // Keep last 50 points
-            return updated;
-          });
-          
-          // Call the callback if provided
-          if (onLocationUpdate) {
-            onLocationUpdate(newLocation);
-          }
-        })
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-        
-        if (status === 'SUBSCRIBED') {
-          setIsSubscribed(true);
-          toast({
-            title: 'Live tracking enabled',
-            description: 'You are now receiving real-time location updates',
-            duration: 3000,
-          });
-        } else if (status === 'CHANNEL_ERROR') {
-          setError(new Error('Failed to subscribe to real-time updates'));
-          toast({
-            title: 'Live tracking error',
-            description: 'Could not connect to real-time updates',
-            variant: 'destructive',
-          });
-        }
+  // Use the optimized Supabase channel hook
+  const { isSubscribed, error } = useSupabaseChannel({
+    channelName: `delivery_locations_${assignmentId || 'none'}`,
+    event: 'INSERT',
+    table: 'delivery_locations',
+    schema: 'public',
+    filter: assignmentId ? `assignment_id=eq.${assignmentId}` : undefined,
+    enabled: !!assignmentId && isOnline,
+    onMessage: (payload) => {
+      console.log('New location update received:', payload);
+      const newLocation = payload.new as DeliveryLocation;
+      
+      // Update state with latest location
+      setLatestLocation(newLocation);
+      
+      // Add to history (keeping most recent locations)
+      setLocationHistory(prev => {
+        // On mobile devices, keep fewer points to conserve memory
+        const maxPoints = isMobile ? 20 : 50;
+        const updated = [newLocation, ...prev].slice(0, maxPoints);
+        return updated;
       });
+      
+      // Call the callback if provided
+      if (onLocationUpdate) {
+        onLocationUpdate(newLocation);
+      }
+    },
+    onError: (err) => {
+      console.error('Error in real-time location subscription:', err);
+      
+      toast({
+        title: 'Live tracking error',
+        description: 'Could not connect to real-time updates',
+        variant: 'destructive',
+      });
+    },
+  });
 
-    // Clean up subscription on unmount
-    return () => {
-      console.log('Cleaning up realtime subscription');
-      supabase.removeChannel(channel);
-      setIsSubscribed(false);
-    };
-  }, [assignmentId, onLocationUpdate]);
+  // Show toast when subscription is successful
+  useEffect(() => {
+    if (isSubscribed && assignmentId) {
+      toast({
+        title: 'Live tracking enabled',
+        description: 'You are now receiving real-time location updates',
+        duration: 3000,
+      });
+    }
+  }, [isSubscribed, assignmentId]);
 
   return {
     isSubscribed,

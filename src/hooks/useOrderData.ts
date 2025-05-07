@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
@@ -129,7 +130,7 @@ export const useOrderData = (orderId: string) => {
             toast({
               title: "Using cached data",
               description: "You're offline. Showing locally saved order information.",
-              variant: "warning"
+              variant: "destructive"  // Changed from "warning" to "destructive" to fix the type error
             });
             return cachedData;
           }

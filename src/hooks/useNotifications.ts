@@ -9,6 +9,8 @@ import {
   markNotificationAsRead, 
   markAllNotificationsAsRead 
 } from '@/services/notification/notificationService';
+import { useSupabaseChannel } from './useSupabaseChannel';
+import { useConnectionStatus } from './useConnectionStatus';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -16,6 +18,7 @@ export const useNotifications = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isOnline } = useConnectionStatus();
 
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
@@ -57,40 +60,35 @@ export const useNotifications = () => {
     return success;
   }, [user?.id]);
 
-  // Subscribe to notifications
+  // Initial fetch
   useEffect(() => {
-    if (!user?.id) return;
-    
-    // Initial fetch
-    fetchNotifications();
+    if (user?.id && isOnline) {
+      fetchNotifications();
+    }
+  }, [user?.id, fetchNotifications, isOnline]);
 
-    // Subscribe to changes
-    const subscription = supabase
-      .channel('notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`,
-      }, (payload) => {
-        const newNotification = payload.new as Notification;
-        
-        // Add notification to state
-        setNotifications(prev => [newNotification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-        
-        // Show toast notification
-        toast({
-          title: newNotification.title,
-          description: newNotification.message,
-        });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [user?.id, fetchNotifications, toast]);
+  // Use the optimized Supabase channel hook for notifications
+  useSupabaseChannel({
+    channelName: `notifications_${user?.id || 'none'}`,
+    event: 'INSERT',
+    table: 'notifications',
+    schema: 'public',
+    filter: user?.id ? `user_id=eq.${user.id}` : undefined,
+    enabled: !!user?.id && isOnline,
+    onMessage: (payload) => {
+      const newNotification = payload.new as Notification;
+      
+      // Add notification to state
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+      
+      // Show toast notification
+      toast({
+        title: newNotification.title,
+        description: newNotification.message,
+      });
+    },
+  });
 
   return {
     notifications,

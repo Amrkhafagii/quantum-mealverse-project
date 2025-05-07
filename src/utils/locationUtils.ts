@@ -1,4 +1,3 @@
-
 import { DeliveryLocation } from '@/types/location';
 
 /**
@@ -107,10 +106,9 @@ export const calculateBearing = (
  * Determine if a location is stale based on timestamp
  * Returns true if the location is older than 5 minutes
  */
-export const isLocationStale = (timestamp: number): boolean => {
-  const now = Date.now();
-  const ageInMinutes = (now - timestamp) / (1000 * 60);
-  return ageInMinutes > 5; // Location is stale if older than 5 minutes
+export const isLocationStale = (timestamp: string, maxAgeSecs: number = 60): boolean => {
+  const freshness = calculateLocationFreshness(timestamp);
+  return freshness > maxAgeSecs;
 };
 
 /**
@@ -120,19 +118,10 @@ export const isLocationStale = (timestamp: number): boolean => {
  * - stale: 5-30 minutes old
  * - invalid: older than 30 minutes
  */
-export const calculateLocationFreshness = (timestamp: number): 'fresh' | 'moderate' | 'stale' | 'invalid' => {
-  const now = Date.now();
-  const ageInMinutes = (now - timestamp) / (1000 * 60);
-  
-  if (ageInMinutes < 2) {
-    return 'fresh';
-  } else if (ageInMinutes < 5) {
-    return 'moderate';
-  } else if (ageInMinutes < 30) {
-    return 'stale';
-  } else {
-    return 'invalid';
-  }
+export const calculateLocationFreshness = (timestamp: string): number => {
+  const locationTimestamp = new Date(timestamp).getTime();
+  const currentTimestamp = new Date().getTime();
+  return Math.floor((currentTimestamp - locationTimestamp) / 1000);
 };
 
 /**

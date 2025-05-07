@@ -13,6 +13,7 @@ import { Loader2, WifiOff } from 'lucide-react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { ConnectionStateIndicator } from '@/components/ui/ConnectionStateIndicator';
 
 const Checkout = () => {
   const {
@@ -36,7 +37,10 @@ const Checkout = () => {
       <Navbar />
       
       <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
-        <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Checkout</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Checkout</h1>
+          <ConnectionStateIndicator showText={true} />
+        </div>
         
         {!isOnline && (
           <div className="bg-amber-900/20 border border-amber-500/30 text-amber-200 px-4 py-3 rounded-md mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
