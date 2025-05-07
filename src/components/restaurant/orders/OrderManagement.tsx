@@ -44,3 +44,5 @@ export const OrderManagement = () => {
     </Tabs>
   );
 };
+
+export default OrderManagement;

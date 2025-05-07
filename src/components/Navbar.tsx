@@ -1,8 +1,7 @@
-
 import React, { useState, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, LogOut, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
 import { 
@@ -18,8 +17,12 @@ import { useLanguage } from '@/hooks/useLanguage';
 
 // Lazy load non-critical components
 const LanguageSelector = lazy(() => import('./LanguageSelector'));
-const LocationStatusIndicator = lazy(() => import('./location/LocationStatusIndicator'));
-const ConnectionStateIndicator = lazy(() => import('./ui/ConnectionStateIndicator'));
+const LocationStatusIndicator = lazy(() => import('./location/LocationStatusIndicator').then(
+  module => ({ default: module.LocationStatusIndicator })
+));
+const ConnectionStateIndicator = lazy(() => import('./ui/ConnectionStateIndicator').then(
+  module => ({ default: module.ConnectionStateIndicator })
+));
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

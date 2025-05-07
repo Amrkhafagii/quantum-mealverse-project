@@ -3,9 +3,11 @@ import React, { lazy, Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
-// Lazy load non-critical components
+// Lazy load non-critical components with proper default export handling
 const RestaurantAnalytics = lazy(() => import('./analytics/RestaurantAnalytics'));
-const OrderManagement = lazy(() => import('./orders/OrderManagement'));
+const OrderManagement = lazy(() => import('./orders/OrderManagement').then(
+  module => ({ default: module.OrderManagement })
+));
 
 export const RestaurantDashboard = () => {
   return (
