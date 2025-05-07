@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { cn } from '@/lib/utils';
@@ -9,12 +8,16 @@ interface LocationStatusIndicatorProps {
   showText?: boolean;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  colorVariant?: string;
+  showTooltip?: boolean;
 }
 
 export function LocationStatusIndicator({ 
   showText = false, 
   className, 
-  size = 'md' 
+  size = 'md',
+  colorVariant,
+  showTooltip = true
 }: LocationStatusIndicatorProps) {
   const { isOnline, connectionType } = useConnectionStatus();
   const [showReconnecting, setShowReconnecting] = useState(false);
@@ -37,10 +40,12 @@ export function LocationStatusIndicator({
     lg: 20
   }[size];
   
-  // Determine indicator classnames based on connection state
+  // Determine indicator classnames based on connection state and colorVariant
   const indicatorClass = cn(
     "flex items-center gap-1.5 transition-colors duration-300",
-    showReconnecting ? "text-green-500" : isOnline ? "text-green-500" : "text-amber-500",
+    colorVariant === 'navbar' 
+      ? "text-white/80" 
+      : (showReconnecting ? "text-green-500" : isOnline ? "text-green-500" : "text-amber-500"),
     className
   );
   
@@ -50,18 +55,28 @@ export function LocationStatusIndicator({
       ? connectionType === 'wifi' ? "Online (WiFi)" : "Online" 
       : "Offline";
   
+  const content = (
+    <div className={indicatorClass}>
+      {isOnline ? (
+        <Wifi size={iconSize} className="animate-pulse" />
+      ) : (
+        <WifiOff size={iconSize} className="animate-pulse" />
+      )}
+      {showText && <span className="text-sm">{connectionText}</span>}
+    </div>
+  );
+  
+  // If tooltip is disabled, just return the content
+  if (!showTooltip) {
+    return content;
+  }
+  
+  // Otherwise wrap in tooltip
   return (
     <TooltipProvider>
       <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
-          <div className={indicatorClass}>
-            {isOnline ? (
-              <Wifi size={iconSize} className="animate-pulse" />
-            ) : (
-              <WifiOff size={iconSize} className="animate-pulse" />
-            )}
-            {showText && <span className="text-sm">{connectionText}</span>}
-          </div>
+          {content}
         </TooltipTrigger>
         <TooltipContent>
           <p>

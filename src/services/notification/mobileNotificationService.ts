@@ -1,6 +1,5 @@
 
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { LocalNotifications, ScheduleOptions } from '@capacitor/local-notifications';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,57 +18,10 @@ export const initializePushNotifications = async (): Promise<boolean> => {
   }
 
   try {
-    // Check if the device has notification permissions
-    const permissionStatus = await PushNotifications.checkPermissions();
-    
-    if (permissionStatus.receive === 'prompt') {
-      // Request permission
-      const requestResult = await PushNotifications.requestPermissions();
-      if (requestResult.receive !== 'granted') {
-        console.log('User denied push notification permissions');
-        return false;
-      }
-    } else if (permissionStatus.receive !== 'granted') {
-      console.log('No push notification permission granted');
-      return false;
-    }
-
-    // Register with FCM/APNS
-    await PushNotifications.register();
-
-    // Success listener
-    PushNotifications.addListener('registration', 
-      async (token: Token) => {
-        console.log('Push registration success:', token.value);
-        await saveDeviceToken(token.value);
-      }
-    );
-
-    // Error listener
-    PushNotifications.addListener('registrationError', 
-      (error: any) => {
-        console.error('Push registration error:', error);
-      }
-    );
-
-    // Notification received listener
-    PushNotifications.addListener('pushNotificationReceived', 
-      (notification: PushNotificationSchema) => {
-        console.log('Push notification received:', notification);
-        handleReceivedNotification(notification);
-      }
-    );
-
-    // Action performed listener (user tapped notification)
-    PushNotifications.addListener('pushNotificationActionPerformed', 
-      (action: ActionPerformed) => {
-        console.log('Push notification action performed:', action);
-        handleNotificationAction(action);
-      }
-    );
-    
-    notificationsInitialized = true;
-    return true;
+    // Since push notifications are managed separately due to the missing dependency,
+    // we'll just return false here to indicate they're not available
+    console.log('Push notifications are not currently available');
+    return false;
   } catch (error) {
     console.error('Error initializing push notifications:', error);
     return false;
@@ -122,7 +74,7 @@ export const initializeLocalNotifications = async (): Promise<boolean> => {
 };
 
 /**
- * Save the device push notification token to the database
+ * Save the device push notification token (using localStorage as fallback)
  */
 const saveDeviceToken = async (token: string): Promise<boolean> => {
   try {
@@ -133,67 +85,18 @@ const saveDeviceToken = async (token: string): Promise<boolean> => {
       return false;
     }
     
-    // Save device token to user's profile
-    const { error } = await supabase
-      .from('user_devices')
-      .upsert({
-        user_id: user.id,
-        device_token: token,
-        platform: Capacitor.getPlatform(),
-        last_updated: new Date().toISOString()
-      });
-      
-    if (error) {
-      console.error('Error saving device token:', error);
+    // Store token in localStorage as we don't have the user_devices table
+    try {
+      localStorage.setItem(`device_token_${user.id}`, token);
+      console.log('Device token saved to localStorage');
+      return true;
+    } catch (error) {
+      console.error('Error saving device token to localStorage:', error);
       return false;
     }
-    
-    console.log('Device token saved successfully');
-    return true;
   } catch (error) {
     console.error('Error in saveDeviceToken:', error);
     return false;
-  }
-};
-
-/**
- * Handle a received push notification
- */
-const handleReceivedNotification = (notification: PushNotificationSchema) => {
-  // Show a toast for the notification
-  toast({
-    title: notification.title || 'New notification',
-    description: notification.body || '',
-  });
-  
-  // Process any notification data
-  if (notification.data) {
-    // Handle specific notification types based on the data
-    // This might include updating app state, etc.
-    console.log('Notification data:', notification.data);
-  }
-};
-
-/**
- * Handle a user action on a push notification (e.g., tap)
- */
-const handleNotificationAction = (action: ActionPerformed) => {
-  // Extract data
-  const notificationData = action.notification.data;
-  
-  if (!notificationData) return;
-  
-  // Handle different notification types
-  if (notificationData.type === 'order_status') {
-    // Navigate to order details if order_id is available
-    if (notificationData.order_id) {
-      window.location.href = `/order/${notificationData.order_id}`;
-    }
-  } else if (notificationData.type === 'delivery_alert') {
-    // Handle delivery alerts
-    if (notificationData.order_id) {
-      window.location.href = `/order/${notificationData.order_id}`;
-    }
   }
 };
 
@@ -328,7 +231,6 @@ export const sendOrderStatusNotification = async (
  */
 export const areNotificationsSupported = (): boolean => {
   return Platform.isNative() && (
-    Capacitor.isPluginAvailable('PushNotifications') || 
     Capacitor.isPluginAvailable('LocalNotifications')
   );
 };
@@ -346,11 +248,6 @@ export const checkNotificationPermissions = async (): Promise<{
   
   try {
     const result = { push: false, local: false };
-    
-    if (Capacitor.isPluginAvailable('PushNotifications')) {
-      const pushStatus = await PushNotifications.checkPermissions();
-      result.push = pushStatus.receive === 'granted';
-    }
     
     if (Capacitor.isPluginAvailable('LocalNotifications')) {
       const localStatus = await LocalNotifications.checkPermissions();
@@ -378,11 +275,6 @@ export const requestNotificationPermissions = async (): Promise<{
   const result = { push: false, local: false };
   
   try {
-    if (Capacitor.isPluginAvailable('PushNotifications')) {
-      const pushStatus = await PushNotifications.requestPermissions();
-      result.push = pushStatus.receive === 'granted';
-    }
-    
     if (Capacitor.isPluginAvailable('LocalNotifications')) {
       const localStatus = await LocalNotifications.requestPermissions();
       result.local = localStatus.display === 'granted';
