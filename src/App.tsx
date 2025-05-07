@@ -2,8 +2,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query/devtools';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+// Remove the incorrect devtools import 
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
@@ -79,7 +79,7 @@ function App() {
           </AuthProvider>
         </ThemeProvider>
       </GoogleMapsProvider>
-      <ReactQueryDevtools />
+      {/* Remove ReactQueryDevtools */}
     </QueryClientProvider>
   );
 }
