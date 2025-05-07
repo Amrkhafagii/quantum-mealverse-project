@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useDeliveryLocationService } from './useDeliveryLocationService';
 import { useNetworkQuality } from './useNetworkQuality';
@@ -172,7 +171,12 @@ export function useIntelligentTracking({
       if (orderId) {
         updateLocation().then(location => {
           if (location && onLocationUpdate) {
-            onLocationUpdate(location);
+            // Ensure the location conforms to the expected structure
+            const locationWithOptionalTimestamp: DeliveryLocation = {
+              ...location,
+              // No need to handle timestamp specifically since it's now optional
+            };
+            onLocationUpdate(locationWithOptionalTimestamp);
           }
         });
       }

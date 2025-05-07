@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { LoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
@@ -14,6 +13,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import BatteryEfficientTracker from './BatteryEfficientTracker';
 import { Order } from '@/types/order';
 import { Loader2 } from 'lucide-react';
+import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 
 const containerStyle = {
   width: '100%',

@@ -9,7 +9,7 @@ export interface LocationWithAccuracy {
 export interface DeliveryLocation {
   latitude: number;
   longitude: number;
-  timestamp: number;
+  timestamp?: number; // Make timestamp optional to match the implementation in useDeliveryLocationService
   accuracy?: number;
 }
 
