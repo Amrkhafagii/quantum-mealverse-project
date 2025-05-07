@@ -1,10 +1,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Geolocation, Position } from '@capacitor/geolocation';
-import { BackgroundGeolocation } from '@capacitor-community/background-geolocation';
+import { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
+import { registerPlugin } from '@capacitor/core';
 import { Capacitor } from '@capacitor/core';
 import { toast } from '@/components/ui/use-toast';
 import { DeliveryLocation } from '@/types/location';
+
+// Register the BackgroundGeolocation plugin
+const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
 
 export const useNativeLocationService = (options: {
   backgroundTracking?: boolean;
