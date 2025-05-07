@@ -23,8 +23,10 @@ export const UserActions = () => {
   const isRestaurantUser = userType === 'restaurant';
   
   const handleLogout = async () => {
-    await logout();
-    navigate('/');
+    const success = await logout();
+    if (success) {
+      navigate('/');
+    }
   };
   
   if (!user) {

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+
+import React, { createContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { userTypeService } from '@/services/supabaseClient';
 
 interface UserType {
@@ -33,8 +33,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
 
   // Function to get user type from either metadata or database
   const getUserType = async (): Promise<string | null> => {
@@ -126,7 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserType(null);
       
       console.log("Logout successful");
-      navigate('/login');
       return true;
     } catch (error) {
       console.error('Error logging out:', error);
