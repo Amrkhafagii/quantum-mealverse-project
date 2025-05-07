@@ -256,10 +256,18 @@ export const pickupDelivery = async (
       } else {
         // Record in order history
         try {
+          // Get restaurant name first
+          const { data: restaurant } = await supabase
+            .from('restaurants')
+            .select('name')
+            .eq('id', result.data.restaurant_id)
+            .single();
+            
           await supabase.from('order_history').insert({
             order_id: result.data.order_id,
             status: 'picked_up',
             restaurant_id: result.data.restaurant_id,
+            restaurant_name: restaurant?.name || 'Unknown Restaurant',
             details: { 
               delivery_assignment_id: assignmentId,
               picked_up_at: new Date().toISOString()
@@ -307,10 +315,18 @@ export const startDeliveryToCustomer = async (
       } else {
         // Record in order history for tracking
         try {
+          // Get restaurant name first
+          const { data: restaurant } = await supabase
+            .from('restaurants')
+            .select('name')
+            .eq('id', assignmentData.restaurant_id)
+            .single();
+            
           await supabase.from('order_history').insert({
             order_id: assignmentData.order_id,
             status: 'on_the_way',
             restaurant_id: assignmentData.restaurant_id,
+            restaurant_name: restaurant?.name || 'Unknown Restaurant',
             details: { 
               delivery_assignment_id: assignmentId,
               started_at: new Date().toISOString()
@@ -341,7 +357,7 @@ export const completeDelivery = async (
     // Get the assignment to verify it's valid
     const { data: assignment, error: assignmentError } = await supabase
       .from('delivery_assignments')
-      .select('*, orders:order_id(*)')
+      .select('*, orders:order_id(*), restaurant:restaurant_id(name)')
       .eq('id', assignmentId)
       .eq('delivery_user_id', deliveryUserId)
       .single();
@@ -370,11 +386,14 @@ export const completeDelivery = async (
       
     // Record order history
     try {
+      // Get the restaurant name using the relationship
+      const restaurantName = assignment.restaurant?.name || 'Unknown Restaurant';
+      
       await supabase.from('order_history').insert({
         order_id: assignment.order_id,
         status: 'delivered',
         restaurant_id: assignment.restaurant_id,
-        restaurant_name: assignment.orders?.restaurant?.name || 'Restaurant',
+        restaurant_name: restaurantName,
         details: { 
           delivered_at: new Date().toISOString(),
           delivery_user_id: deliveryUserId,
