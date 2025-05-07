@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
+import { fixOrderStatus } from '@/utils/orderStatusFix';
 
 // Get active delivery assignments for a delivery user
 export const getActiveDeliveryAssignments = async (
@@ -9,7 +9,26 @@ export const getActiveDeliveryAssignments = async (
   try {
     const { data, error } = await supabase
       .from('delivery_assignments')
-      .select('*')
+      .select(`
+        *,
+        orders:order_id (
+          id,
+          customer_name,
+          delivery_address,
+          latitude,
+          longitude,
+          total,
+          status,
+          created_at,
+          restaurant:restaurant_id (
+            id,
+            name,
+            address,
+            latitude,
+            longitude
+          )
+        )
+      `)
       .eq('delivery_user_id', deliveryUserId)
       .in('status', ['assigned', 'picked_up', 'on_the_way'])
       .order('created_at', { ascending: false });
@@ -19,30 +38,70 @@ export const getActiveDeliveryAssignments = async (
       throw error;
     }
 
-    // Simulate restaurant and customer data for demonstration
-    return (data || []).map(assignment => ({
-      ...assignment,
-      status: assignment.status as DeliveryAssignment['status'],
-      restaurant: {
-        name: 'Restaurant Name',
-        address: '123 Restaurant St.',
-        latitude: 37.7749 + (Math.random() * 0.01),
-        longitude: -122.4194 + (Math.random() * 0.01),
-      },
-      customer: {
-        name: 'Customer Name',
-        address: '456 Customer Ave.',
-        latitude: 37.7749 + (Math.random() * 0.01),
-        longitude: -122.4194 + (Math.random() * 0.01),
-      },
-      distance_km: 2.5 + (Math.random() * 2),
-      estimate_minutes: 15 + Math.floor(Math.random() * 10)
-    }));
+    // Transform the data to match the DeliveryAssignment type
+    const assignments = (data || []).map(assignment => {
+      // Ensure the order exists
+      if (!assignment.orders) {
+        console.warn(`No order data found for assignment ${assignment.id}`);
+        return null;
+      }
+
+      const order = assignment.orders;
+      const restaurant = order.restaurant;
+      
+      // Calculate distance in km (if coordinates are available)
+      let distance_km = undefined;
+      if (restaurant?.latitude && restaurant?.longitude && order.latitude && order.longitude) {
+        distance_km = calculateDistance(
+          restaurant.latitude, 
+          restaurant.longitude, 
+          order.latitude, 
+          order.longitude
+        );
+      }
+      
+      // Estimate delivery time (basic calculation: 5 minutes base + 3 minutes per km)
+      const estimate_minutes = distance_km ? Math.round(5 + (distance_km * 3)) : undefined;
+      
+      return {
+        ...assignment,
+        restaurant: restaurant ? {
+          name: restaurant.name || 'Unknown Restaurant',
+          address: restaurant.address || '',
+          latitude: restaurant.latitude || 0,
+          longitude: restaurant.longitude || 0,
+        } : undefined,
+        customer: {
+          name: order.customer_name || 'Customer',
+          address: order.delivery_address || '',
+          latitude: order.latitude || 0,
+          longitude: order.longitude || 0,
+        },
+        distance_km,
+        estimate_minutes,
+        status: assignment.status as DeliveryAssignment['status'],
+      };
+    }).filter(Boolean) as DeliveryAssignment[];
+
+    return assignments;
   } catch (error) {
     console.error('Error in getActiveDeliveryAssignments:', error);
     throw error;
   }
 };
+
+// Helper function to calculate distance between two points using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // Distance in km (rounded to 1 decimal)
+}
 
 // Get past delivery assignments for a delivery user
 export const getPastDeliveryAssignments = async (

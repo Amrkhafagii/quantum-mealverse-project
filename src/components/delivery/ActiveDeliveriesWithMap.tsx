@@ -11,9 +11,18 @@ import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 const ActiveDeliveriesWithMap: React.FC = () => {
   const { user } = useAuth();
   const { deliveryUser } = useDeliveryUser(user?.id);
-  const { activeAssignments } = useDeliveryAssignments(deliveryUser?.id);
+  const { activeAssignments, refreshData } = useDeliveryAssignments(deliveryUser?.id);
   const [selectedAssignment, setSelectedAssignment] = useState<DeliveryAssignment | null>(null);
   const { selectedDeliveryId } = useDeliveryMap();
+  
+  // Refresh data periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshData();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [refreshData]);
   
   // Select the first active assignment by default or sync with context
   useEffect(() => {

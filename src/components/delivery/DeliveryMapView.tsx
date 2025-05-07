@@ -9,7 +9,7 @@ import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useRealtimeLocation } from '@/hooks/useRealtimeLocation';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface DeliveryMapViewProps {
   activeAssignment?: DeliveryAssignment;
@@ -72,27 +72,50 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
     if (activeAssignment) {
       setSelectedDeliveryId(activeAssignment.id);
       
+      console.log('Active assignment restaurant data:', activeAssignment.restaurant);
+      console.log('Active assignment customer data:', activeAssignment.customer);
+      
       if (activeAssignment.restaurant) {
-        setRestaurantLocation({
-          latitude: activeAssignment.restaurant.latitude,
-          longitude: activeAssignment.restaurant.longitude,
-          title: activeAssignment.restaurant.name,
-          description: activeAssignment.restaurant.address,
-          type: 'restaurant'
-        });
+        // Make sure we have valid coordinates
+        if (activeAssignment.restaurant.latitude && activeAssignment.restaurant.longitude) {
+          setRestaurantLocation({
+            latitude: activeAssignment.restaurant.latitude,
+            longitude: activeAssignment.restaurant.longitude,
+            title: activeAssignment.restaurant.name || 'Restaurant',
+            description: activeAssignment.restaurant.address || '',
+            type: 'restaurant'
+          });
+          console.log('Set restaurant location:', activeAssignment.restaurant);
+        } else {
+          console.warn('Missing restaurant coordinates in assignment:', activeAssignment.id);
+          setRestaurantLocation(null);
+        }
+      } else {
+        setRestaurantLocation(null);
       }
       
       if (activeAssignment.customer) {
-        setCustomerLocation({
-          latitude: activeAssignment.customer.latitude,
-          longitude: activeAssignment.customer.longitude,
-          title: 'Customer',
-          description: activeAssignment.customer.address,
-          type: 'customer'
-        });
+        // Make sure we have valid coordinates
+        if (activeAssignment.customer.latitude && activeAssignment.customer.longitude) {
+          setCustomerLocation({
+            latitude: activeAssignment.customer.latitude,
+            longitude: activeAssignment.customer.longitude,
+            title: activeAssignment.customer.name || 'Customer',
+            description: activeAssignment.customer.address || '',
+            type: 'customer'
+          });
+          console.log('Set customer location:', activeAssignment.customer);
+        } else {
+          console.warn('Missing customer coordinates in assignment:', activeAssignment.id);
+          setCustomerLocation(null);
+        }
+      } else {
+        setCustomerLocation(null);
       }
     } else {
       setSelectedDeliveryId(null);
+      setRestaurantLocation(null);
+      setCustomerLocation(null);
     }
     
     return () => {
@@ -112,18 +135,11 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
           type: 'driver'
         });
         
-        toast({
-          title: "Location updated",
-          description: "Your location has been updated on the map",
-        });
+        toast.success("Location updated on map");
       }
     } catch (error) {
       console.error('Error updating location:', error);
-      toast({
-        title: "Location error",
-        description: "Failed to update your location",
-        variant: "destructive",
-      });
+      toast.error("Failed to update your location");
     }
   };
   
@@ -159,17 +175,17 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({ activeAssignment, cla
         
         {activeAssignment && (
           <div className="mt-2 text-sm space-y-1">
-            {activeAssignment.restaurant && (
+            {restaurantLocation && (
               <p className="flex items-center">
                 <span className="inline-block w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
-                Restaurant: {activeAssignment.restaurant.name || 'Unknown'}
+                Restaurant: {activeAssignment.restaurant?.name || 'Unknown'}
               </p>
             )}
             
-            {activeAssignment.customer && (
+            {customerLocation && (
               <p className="flex items-center">
                 <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                Customer: {activeAssignment.customer.address || 'Unknown'}
+                Customer: {activeAssignment.customer?.address || 'Unknown'}
               </p>
             )}
             
