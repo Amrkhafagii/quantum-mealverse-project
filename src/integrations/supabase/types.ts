@@ -314,6 +314,8 @@ export type Database = {
           delivery_user_id: string | null
           estimated_delivery_time: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           order_id: string
           pickup_time: string | null
           restaurant_id: string | null
@@ -326,6 +328,8 @@ export type Database = {
           delivery_user_id?: string | null
           estimated_delivery_time?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           order_id: string
           pickup_time?: string | null
           restaurant_id?: string | null
@@ -338,6 +342,8 @@ export type Database = {
           delivery_user_id?: string | null
           estimated_delivery_time?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           order_id?: string
           pickup_time?: string | null
           restaurant_id?: string | null

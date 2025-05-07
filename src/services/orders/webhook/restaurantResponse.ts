@@ -75,8 +75,7 @@ export const sendRestaurantResponse = async (
       } else {
         console.log(`Successfully updated order ${orderId} status to restaurant_${action}ed`);
         
-        // NEW: Cancel ALL other assignments for this order
-        // This ensures consistency and that no other restaurant can interact with this order anymore
+        // Cancel ALL other assignments for this order
         const { error: cancelError } = await supabase
           .from('restaurant_assignments')
           .update({ 

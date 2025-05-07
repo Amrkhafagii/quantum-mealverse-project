@@ -86,7 +86,7 @@ export const createDeliveryAssignmentForOrder = async (
       throw restaurantError;
     }
     
-    // Create new delivery assignment
+    // Create new delivery assignment with location data
     const { data: newAssignment, error: createError } = await supabase
       .from('delivery_assignments')
       .insert({

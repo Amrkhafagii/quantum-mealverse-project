@@ -29,6 +29,13 @@ export async function fixOrderStatus(orderId: string): Promise<boolean> {
         order.status === 'on_the_way' || 
         order.status === 'delivered') {
       
+      // Fetch restaurant location data for current restaurant if available
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('latitude, longitude')
+        .eq('id', order.restaurant_id)
+        .single();
+      
       // Cancel ALL restaurant assignments except for the accepted one
       const { error: cancelError } = await supabase
         .from('restaurant_assignments')
@@ -45,6 +52,35 @@ export async function fixOrderStatus(orderId: string): Promise<boolean> {
         // Continue despite error
       } else {
         console.log(`Successfully cancelled all other assignments for order ${orderId}`);
+      }
+      
+      // Also check for any delivery assignments that might need location data
+      const { data: deliveryAssignments } = await supabase
+        .from('delivery_assignments')
+        .select('id, latitude, longitude')
+        .eq('order_id', orderId)
+        .eq('restaurant_id', order.restaurant_id);
+        
+      // Update delivery assignment with restaurant coordinates if missing
+      if (deliveryAssignments && deliveryAssignments.length > 0 && restaurant) {
+        // Only update if the restaurant has coordinates and the assignment doesn't
+        const needsUpdate = deliveryAssignments.some(
+          assignment => (!assignment.latitude || !assignment.longitude) && restaurant.latitude && restaurant.longitude
+        );
+        
+        if (needsUpdate) {
+          await supabase
+            .from('delivery_assignments')
+            .update({
+              latitude: restaurant.latitude,
+              longitude: restaurant.longitude
+            })
+            .eq('order_id', orderId)
+            .eq('restaurant_id', order.restaurant_id)
+            .is('latitude', null);
+            
+          console.log(`Updated delivery assignments for order ${orderId} with restaurant location data`);
+        }
       }
     }
     
