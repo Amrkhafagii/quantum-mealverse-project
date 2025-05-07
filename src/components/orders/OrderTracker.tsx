@@ -41,7 +41,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   
   // Find the delivery assignment ID for this order
   React.useEffect(() => {
-    if (!orderId || !isOnline || !['preparing', 'ready_for_pickup', 'on_the_way', 'picked_up', 'delivered'].includes(order?.status || '')) {
+    if (!orderId || !isOnline || !['preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order?.status || '')) {
       return;
     }
 
@@ -110,7 +110,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   }, [order, orderId, refetch, isOnline]);
 
   React.useEffect(() => {
-    if (orderId && order && ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status)) {
+    if (orderId && order && ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status) && isOnline) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
@@ -120,7 +120,9 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
   }, [orderId, order?.status, isOnline]);
 
   useInterval(() => {
-    if (order && ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status)) {
+    if (order && 
+        ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'restaurant_accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status) && 
+        isOnline) {
       checkAssignmentStatus(orderId)
         .then(status => {
           setAssignmentStatus(status);
@@ -128,7 +130,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orderId }) => {
         })
         .catch(() => {});
     }
-  }, 5000);
+  }, isOnline ? 5000 : null); // Only poll when online
   
   if (isLoading || isFixingOrderStatus) {
     return (

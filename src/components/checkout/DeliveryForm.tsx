@@ -8,19 +8,21 @@ import { DeliveryMethodField } from './DeliveryMethodField';
 import { PaymentMethodField } from './PaymentMethodField';
 import { DeliveryDetailsFields } from './DeliveryDetailsFields';
 import { ReadOnlyDeliveryDetails } from './ReadOnlyDeliveryDetails';
-import { Edit2 } from 'lucide-react';
+import { Edit2, WifiOff } from 'lucide-react';
 import { useDeliveryForm, type DeliveryFormValues } from '@/hooks/useDeliveryForm';
 
 interface DeliveryFormProps {
   onSubmit: (data: DeliveryFormValues) => void;
   defaultValues?: Partial<DeliveryFormValues>;
   isSubmitting?: boolean;
+  disabled?: boolean;
 }
 
 export const DeliveryForm: React.FC<DeliveryFormProps> = ({ 
   onSubmit, 
   defaultValues,
-  isSubmitting = false 
+  isSubmitting = false,
+  disabled = false
 }) => {
   const [isEditing, setIsEditing] = useState(!defaultValues?.fullName);
   const { form, handleSubmit } = useDeliveryForm({ onSubmit, defaultValues, isSubmitting });
@@ -76,12 +78,20 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
             variant="ghost"
             onClick={toggleEdit}
             className="flex items-center gap-2"
+            disabled={disabled}
           >
             <Edit2 className="h-4 w-4" />
             {isEditing ? "Cancel Editing" : "Edit Details"}
           </Button>
         )}
       </div>
+      
+      {disabled && (
+        <div className="mb-6 p-3 bg-amber-900/20 border border-amber-500/30 text-amber-200 rounded-md flex items-center">
+          <WifiOff className="h-5 w-5 mr-2" />
+          <p>You need to be online to place an order.</p>
+        </div>
+      )}
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6" id="delivery-form">
@@ -104,10 +114,10 @@ export const DeliveryForm: React.FC<DeliveryFormProps> = ({
           <Button 
             type="submit" 
             className="cyber-button w-full py-6 text-lg"
-            disabled={isSubmitting || (!formIsValid && !isDeliveryMethodPickup)}
+            disabled={isSubmitting || (!formIsValid && !isDeliveryMethodPickup) || disabled}
             id="place-order-button"
           >
-            {isSubmitting ? "Processing..." : "Place Order"}
+            {isSubmitting ? "Processing..." : disabled ? "Connection Required" : "Place Order"}
           </Button>
         </form>
       </Form>

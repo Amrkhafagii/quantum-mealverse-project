@@ -1,5 +1,6 @@
 
 import { Capacitor } from '@capacitor/core';
+import { Network } from '@capacitor/network';
 
 export class Platform {
   /**
@@ -35,5 +36,42 @@ export class Platform {
    */
   static getPlatform(): string {
     return Capacitor.getPlatform();
+  }
+
+  /**
+   * Check if the device is online
+   * @returns Promise with connection status
+   */
+  static async isOnline(): Promise<boolean> {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const status = await Network.getStatus();
+        return status.connected;
+      } catch (error) {
+        console.error('Error checking network status:', error);
+        // Fallback to browser API
+        return navigator.onLine;
+      }
+    } else {
+      return navigator.onLine;
+    }
+  }
+
+  /**
+   * Get current connection type
+   * @returns Promise with connection type
+   */
+  static async getConnectionType(): Promise<string> {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const status = await Network.getStatus();
+        return status.connectionType;
+      } catch (error) {
+        console.error('Error getting connection type:', error);
+        return 'unknown';
+      }
+    } else {
+      return navigator.onLine ? 'wifi' : 'none';
+    }
   }
 }

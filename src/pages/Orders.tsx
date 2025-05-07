@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -13,11 +14,21 @@ import { PastOrdersList } from '@/components/orders/PastOrdersList';
 import { NoActiveOrdersDisplay } from '@/components/orders/NoActiveOrdersDisplay';
 import { SelectOrderPrompt } from '@/components/orders/SelectOrderPrompt';
 import { UserSettings } from '@/components/profile/UserSettings';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { syncPendingActions } from '@/services/sync/syncService';
 
 const Orders = () => {
   const { id: orderIdParam } = useParams();
   const navigate = useNavigate();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(orderIdParam || null);
+  const { isOnline } = useConnectionStatus();
+  
+  // Sync pending actions when coming back online
+  useEffect(() => {
+    if (isOnline) {
+      syncPendingActions();
+    }
+  }, [isOnline]);
   
   // Only update URL when selectedOrderId changes and it's different from the URL parameter
   useEffect(() => {
@@ -38,6 +49,11 @@ const Orders = () => {
     queryKey: ['active-orders', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
+      
+      if (!isOnline) {
+        // When offline, return an empty array or try to use cached data
+        return [];
+      }
       
       try {
         // Fix the "not.in" syntax issue by using "not" with individual "eq" filters
@@ -62,8 +78,8 @@ const Orders = () => {
         return [];
       }
     },
-    enabled: !!session?.user?.id,
-    refetchInterval: 10000, // Refresh every 10 seconds to catch status updates
+    enabled: !!session?.user?.id && isOnline,
+    refetchInterval: isOnline ? 10000 : false, // Only refresh every 10 seconds when online
     staleTime: 5000, // Prevent unnecessary refetches
   });
   
@@ -71,6 +87,11 @@ const Orders = () => {
     queryKey: ['past-orders', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
+      
+      if (!isOnline) {
+        // When offline, return an empty array or try to use cached data
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('orders')
@@ -83,7 +104,7 @@ const Orders = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!session?.user?.id,
+    enabled: !!session?.user?.id && isOnline,
     staleTime: 30000, // Past orders don't change as frequently
   });
 
@@ -100,7 +121,7 @@ const Orders = () => {
     );
   }
   
-  if (isLoading) {
+  if (isLoading && isOnline) {
     return (
       <div className="min-h-screen bg-quantum-black text-white relative">
         <ParticleBackground />
@@ -123,6 +144,13 @@ const Orders = () => {
           <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Track Your Orders</h1>
           <UserSettings />
         </div>
+        
+        {!isOnline && (
+          <div className="bg-amber-900/20 border border-amber-500/30 text-amber-200 px-4 py-3 rounded-md mb-6 flex items-center">
+            <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
+            <p>You are currently offline. Some features may be limited.</p>
+          </div>
+        )}
         
         {(!orders || orders.length === 0) && (!pastOrders || pastOrders.length === 0) ? (
           <EmptyOrdersState />

@@ -1,13 +1,27 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { cacheOrderData, getCachedOrder } from '@/utils/locationUtils';
+import { toast } from '@/components/ui/use-toast';
 
 export const useOrderData = (orderId: string) => {
+  const { isOnline } = useConnectionStatus();
+
   return useQuery({
     queryKey: ['order-details', orderId],
     queryFn: async () => {
       try {
+        // If offline, try to get from cache first
+        if (!isOnline) {
+          const cachedData = getCachedOrder(orderId);
+          if (cachedData) {
+            return cachedData;
+          }
+          throw new Error('You are offline and this order is not cached');
+        }
+
+        // Otherwise fetch from server
         // Instead of trying to join with restaurants directly, we'll fetch the order first
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
@@ -101,9 +115,26 @@ export const useOrderData = (orderId: string) => {
           restaurant: restaurantData || { id: orderData.restaurant_id || '', name: '' }
         };
         
+        // Cache the order data for offline access
+        cacheOrderData(orderId, formattedData);
+        
         return formattedData;
       } catch (error) {
         console.error('Error fetching order data:', error);
+        
+        // If we're offline, try to get from cache
+        if (!isOnline) {
+          const cachedData = getCachedOrder(orderId);
+          if (cachedData) {
+            toast({
+              title: "Using cached data",
+              description: "You're offline. Showing locally saved order information.",
+              variant: "warning"
+            });
+            return cachedData;
+          }
+        }
+        
         throw error;
       }
     },
@@ -113,6 +144,10 @@ export const useOrderData = (orderId: string) => {
       // Get the data from the query object
       const data = query.state.data as Order | undefined;
       if (!data) return false;
+      
+      // Don't refetch if offline
+      if (!isOnline) return false;
+      
       // Add 'ready_for_pickup' to the list of statuses that should trigger refetching
       return ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'preparing', 'restaurant_accepted', 'ready_for_pickup'].includes(data.status) ? 5000 : false;
     },

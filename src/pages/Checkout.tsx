@@ -9,7 +9,10 @@ import { DeliveryForm } from '@/components/checkout/DeliveryForm';
 import { EmptyCartMessage } from '@/components/checkout/EmptyCartMessage';
 import { AuthOptions } from '@/components/checkout/AuthOptions';
 import { useCheckout } from '@/hooks/useCheckout';
-import { Loader2 } from 'lucide-react';
+import { Loader2, WifiOff } from 'lucide-react';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const Checkout = () => {
   const {
@@ -23,6 +26,9 @@ const Checkout = () => {
     handleAuthSubmit,
     handleSubmit
   } = useCheckout();
+  
+  const { isOnline } = useConnectionStatus();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -31,6 +37,22 @@ const Checkout = () => {
       
       <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
         <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Checkout</h1>
+        
+        {!isOnline && (
+          <div className="bg-amber-900/20 border border-amber-500/30 text-amber-200 px-4 py-3 rounded-md mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center">
+              <WifiOff className="h-5 w-5 mr-2" />
+              <p className="text-amber-200">You are currently offline. Checkout is not available.</p>
+            </div>
+            <Button 
+              variant="outline" 
+              className="border-amber-500/50 text-amber-200 hover:bg-amber-900/30"
+              onClick={() => navigate(-1)}
+            >
+              Return to previous page
+            </Button>
+          </div>
+        )}
         
         {items.length === 0 ? (
           <EmptyCartMessage />
@@ -59,6 +81,7 @@ const Checkout = () => {
                       onSubmit={handleSubmit}
                       defaultValues={defaultValues}
                       isSubmitting={isSubmitting}
+                      disabled={!isOnline}
                     />
                   )}
                 </>

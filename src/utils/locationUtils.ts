@@ -134,3 +134,125 @@ export const calculateLocationFreshness = (timestamp: number): 'fresh' | 'modera
     return 'invalid';
   }
 };
+
+/**
+ * Cache an order for offline access
+ */
+export const cacheOrderData = (orderId: string, orderData: any): void => {
+  try {
+    const cachedOrders = getCachedOrders();
+    cachedOrders[orderId] = {
+      data: orderData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('cached_orders', JSON.stringify(cachedOrders));
+  } catch (error) {
+    console.error('Error caching order data:', error);
+  }
+};
+
+/**
+ * Get a cached order by ID
+ */
+export const getCachedOrder = (orderId: string): any | null => {
+  try {
+    const cachedOrders = getCachedOrders();
+    return cachedOrders[orderId]?.data || null;
+  } catch (error) {
+    console.error('Error getting cached order:', error);
+    return null;
+  }
+};
+
+/**
+ * Get all cached orders
+ */
+export const getCachedOrders = (): Record<string, { data: any, timestamp: number }> => {
+  try {
+    const cached = localStorage.getItem('cached_orders');
+    return cached ? JSON.parse(cached) : {};
+  } catch (error) {
+    console.error('Error getting cached orders:', error);
+    return {};
+  }
+};
+
+/**
+ * Clear a cached order by ID
+ */
+export const clearCachedOrder = (orderId: string): void => {
+  try {
+    const cachedOrders = getCachedOrders();
+    if (cachedOrders[orderId]) {
+      delete cachedOrders[orderId];
+      localStorage.setItem('cached_orders', JSON.stringify(cachedOrders));
+    }
+  } catch (error) {
+    console.error('Error clearing cached order:', error);
+  }
+};
+
+/**
+ * Clear all cached orders
+ */
+export const clearAllCachedOrders = (): void => {
+  try {
+    localStorage.removeItem('cached_orders');
+  } catch (error) {
+    console.error('Error clearing all cached orders:', error);
+  }
+};
+
+/**
+ * Store pending actions to be performed when online
+ */
+export const storePendingAction = (action: { type: string, payload: any }): void => {
+  try {
+    const pendingActions = getPendingActions();
+    pendingActions.push({
+      ...action,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now()
+    });
+    localStorage.setItem('pending_actions', JSON.stringify(pendingActions));
+  } catch (error) {
+    console.error('Error storing pending action:', error);
+  }
+};
+
+/**
+ * Get all pending actions
+ */
+export const getPendingActions = (): Array<{ type: string, payload: any, id: string, timestamp: number }> => {
+  try {
+    const cached = localStorage.getItem('pending_actions');
+    return cached ? JSON.parse(cached) : [];
+  } catch (error) {
+    console.error('Error getting pending actions:', error);
+    return [];
+  }
+};
+
+/**
+ * Remove a pending action by ID
+ */
+export const removePendingAction = (actionId: string): void => {
+  try {
+    const pendingActions = getPendingActions();
+    const updatedActions = pendingActions.filter(action => action.id !== actionId);
+    localStorage.setItem('pending_actions', JSON.stringify(updatedActions));
+  } catch (error) {
+    console.error('Error removing pending action:', error);
+  }
+};
+
+/**
+ * Clear all pending actions
+ */
+export const clearAllPendingActions = (): void => {
+  try {
+    localStorage.removeItem('pending_actions');
+  } catch (error) {
+    console.error('Error clearing all pending actions:', error);
+  }
+};

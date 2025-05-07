@@ -12,6 +12,7 @@ import {
 } from '@/services/orders/orderService';
 import { sendOrderToWebhook } from '@/integrations/webhook';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -23,12 +24,22 @@ export const useOrderSubmission = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isOnline } = useConnectionStatus();
 
   const handleSubmit = async (data: DeliveryFormValues) => {
     if (items.length === 0) {
       toast({
         title: "Cart is empty",
         description: "Please add some items to your cart before checkout",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isOnline) {
+      toast({
+        title: "You are offline",
+        description: "Please connect to the internet to place an order",
         variant: "destructive"
       });
       return;
