@@ -33,6 +33,12 @@ const Fitness = lazy(() => import('./pages/Fitness'));
 const Subscription = lazy(() => import('./pages/Subscription'));
 const Restaurant = lazy(() => import('./pages/Restaurant'));
 const MealDetail = lazy(() => import('./pages/MealDetail'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Nutrition = lazy(() => import('./pages/Nutrition'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Workouts = lazy(() => import('./pages/Workouts'));
+const Signup = lazy(() => import('./pages/Signup'));
+const Contact = lazy(() => import('./pages/Contact'));
 
 // Restaurant pages
 const RestaurantDashboard = lazy(() => import('./pages/restaurant/Dashboard'));
@@ -82,6 +88,8 @@ function App() {
                                 <Home />
                               </LoadingSuspense>
                             } />
+
+                            {/* Auth routes */}
                             <Route path="/login" element={
                               <LoadingSuspense>
                                 <Login />
@@ -97,6 +105,13 @@ function App() {
                                 <Register />
                               </LoadingSuspense>
                             } />
+                            <Route path="/signup" element={
+                              <LoadingSuspense>
+                                <Signup />
+                              </LoadingSuspense>
+                            } />
+
+                            {/* Customer routes */}
                             <Route path="/products" element={
                               <LoadingSuspense>
                                 <Products />
@@ -111,6 +126,13 @@ function App() {
                               <LoadingSuspense>
                                 <Customer />
                               </LoadingSuspense>
+                            } />
+                            <Route path="/dashboard" element={
+                              <ProtectedRoute>
+                                <LoadingSuspense>
+                                  <Dashboard />
+                                </LoadingSuspense>
+                              </ProtectedRoute>
                             } />
                             <Route path="/cart" element={
                               <LoadingSuspense>
@@ -153,10 +175,32 @@ function App() {
                               </ProtectedRoute>
                             } />
                             
-                            {/* Fitness Route */}
+                            {/* Fitness, Nutrition, Workouts */}
                             <Route path="/fitness" element={
                               <LoadingSuspense>
                                 <Fitness />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/nutrition" element={
+                              <LoadingSuspense>
+                                <Nutrition />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/workouts" element={
+                              <LoadingSuspense>
+                                <Workouts />
+                              </LoadingSuspense>
+                            } />
+                            
+                            {/* Orders Route */}
+                            <Route path="/orders" element={
+                              <LoadingSuspense>
+                                <Orders />
+                              </LoadingSuspense>
+                            } />
+                            <Route path="/orders/:id" element={
+                              <LoadingSuspense>
+                                <Orders />
                               </LoadingSuspense>
                             } />
                             
@@ -164,6 +208,13 @@ function App() {
                             <Route path="/subscription" element={
                               <LoadingSuspense>
                                 <Subscription />
+                              </LoadingSuspense>
+                            } />
+                            
+                            {/* Contact Route */}
+                            <Route path="/contact" element={
+                              <LoadingSuspense>
+                                <Contact />
                               </LoadingSuspense>
                             } />
                             
