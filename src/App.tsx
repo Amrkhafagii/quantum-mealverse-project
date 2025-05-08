@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -38,6 +39,11 @@ const RestaurantDashboard = lazy(() => import('./pages/restaurant/Dashboard'));
 const RestaurantMenu = lazy(() => import('./pages/restaurant/Menu'));
 const RestaurantOrders = lazy(() => import('./pages/restaurant/Orders'));
 
+// Delivery pages
+const DeliveryDashboard = lazy(() => import('./pages/delivery/DeliveryDashboard'));
+const DeliverySettings = lazy(() => import('./pages/delivery/DeliverySettings'));
+const OnboardingPage = lazy(() => import('./pages/delivery/OnboardingPage'));
+
 // Lazy load non-critical placeholder components
 const Products = lazy(() => import('./pages/Shop').then(module => ({ default: () => <div>Products Page</div> })));
 const ProductDetail = lazy(() => import('./pages/Shop').then(module => ({ default: () => <div>Product Detail Page</div> })));
@@ -48,9 +54,6 @@ const AdminDashboard = lazy(() => import('./pages/Admin').then(module => ({ defa
 const AdminProducts = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Products Page</div> })));
 const AdminOrders = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Orders Page</div> })));
 const AdminUsers = lazy(() => import('./pages/Admin').then(module => ({ default: () => <div>Admin Users Page</div> })));
-
-// Lazy load delivery components
-const DeliveryDashboard = lazy(() => import('./pages/delivery/DeliveryDashboard').then(module => ({ default: () => <div>Delivery Dashboard Page</div> })));
 
 // Create placeholder route components
 const AdminRoute = ({children}: {children: React.ReactNode}) => <>{children}</>;
@@ -150,33 +153,21 @@ function App() {
                               </ProtectedRoute>
                             } />
                             
-                            {/* Add Fitness Route */}
+                            {/* Fitness Route */}
                             <Route path="/fitness" element={
                               <LoadingSuspense>
                                 <Fitness />
                               </LoadingSuspense>
                             } />
                             
-                            {/* Add Subscription/Meal Plans Route */}
+                            {/* Subscription/Meal Plans Route */}
                             <Route path="/subscription" element={
                               <LoadingSuspense>
                                 <Subscription />
                               </LoadingSuspense>
                             } />
                             
-                            {/* Add Restaurant Routes */}
-                            <Route path="/restaurant/:id" element={
-                              <LoadingSuspense>
-                                <Restaurant />
-                              </LoadingSuspense>
-                            } />
-                            
-                            <Route path="/meal/:id" element={
-                              <LoadingSuspense>
-                                <MealDetail />
-                              </LoadingSuspense>
-                            } />
-                            
+                            {/* Note: More specific routes should come before less specific ones */}
                             {/* Restaurant Dashboard Routes */}
                             <Route path="/restaurant/dashboard" element={
                               <LoadingSuspense>
@@ -194,6 +185,53 @@ function App() {
                               <LoadingSuspense>
                                 <RestaurantOrders />
                               </LoadingSuspense>
+                            } />
+                            
+                            {/* Restaurant Detail Route (must come AFTER the more specific routes) */}
+                            <Route path="/restaurant/:id" element={
+                              <LoadingSuspense>
+                                <Restaurant />
+                              </LoadingSuspense>
+                            } />
+                            
+                            <Route path="/meal/:id" element={
+                              <LoadingSuspense>
+                                <MealDetail />
+                              </LoadingSuspense>
+                            } />
+                            
+                            {/* Delivery Routes */}
+                            <Route path="/delivery" element={
+                              <DeliveryRoute>
+                                <LoadingSuspense>
+                                  <DeliveryDashboard />
+                                </LoadingSuspense>
+                              </DeliveryRoute>
+                            } />
+                            
+                            {/* Add missing delivery routes */}
+                            <Route path="/delivery/dashboard" element={
+                              <DeliveryRoute>
+                                <LoadingSuspense>
+                                  <DeliveryDashboard />
+                                </LoadingSuspense>
+                              </DeliveryRoute>
+                            } />
+                            
+                            <Route path="/delivery/settings" element={
+                              <DeliveryRoute>
+                                <LoadingSuspense>
+                                  <DeliverySettings />
+                                </LoadingSuspense>
+                              </DeliveryRoute>
+                            } />
+                            
+                            <Route path="/delivery/onboarding" element={
+                              <DeliveryRoute>
+                                <LoadingSuspense>
+                                  <OnboardingPage />
+                                </LoadingSuspense>
+                              </DeliveryRoute>
                             } />
                             
                             {/* Admin Routes - Grouped and lazily loaded */}
@@ -224,15 +262,6 @@ function App() {
                                   <AdminUsers />
                                 </LoadingSuspense>
                               </AdminRoute>
-                            } />
-                            
-                            {/* Delivery Routes - Lazily loaded */}
-                            <Route path="/delivery" element={
-                              <DeliveryRoute>
-                                <LoadingSuspense>
-                                  <DeliveryDashboard />
-                                </LoadingSuspense>
-                              </DeliveryRoute>
                             } />
                             
                             {/* Not Found Route */}
