@@ -2,7 +2,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.117bb8e72e6f4681936555049936510d',
+  appId: 'com.lovable.quantummealverse',
   appName: 'quantum-mealverse-project',
   webDir: 'dist',
   server: {
