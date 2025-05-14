@@ -5,10 +5,7 @@ const config: CapacitorConfig = {
   appId: 'com.lovable.quantummealverse',
   appName: 'quantum-mealverse-project',
   webDir: 'dist',
-  server: {
-    url: 'https://117bb8e7-2e6f-4681-9365-55049936510d.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-  },
+ 
   plugins: {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"]
