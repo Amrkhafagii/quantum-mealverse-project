@@ -55,6 +55,10 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Background location access enables delivery tracking and ensures accurate ETAs even when the app is in the background.</string>
 	
+	<!-- Motion Usage Description -->
+	<key>NSMotionUsageDescription</key>
+	<string>Motion detection helps optimize battery usage by adjusting location tracking when you're not moving.</string>
+	
 	<!-- Background Modes Configuration -->
 	<key>UIBackgroundModes</key>
 	<array>
@@ -63,5 +67,9 @@
 		<string>remote-notification</string>
 		<string>processing</string>
 	</array>
+	
+	<!-- Minimum Background Fetch Interval -->
+	<key>UIBackgroundFetchIntervalMinimum</key>
+	<integer>3600</integer>
 </dict>
 </plist>

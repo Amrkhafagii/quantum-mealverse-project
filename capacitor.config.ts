@@ -27,8 +27,11 @@ const config: CapacitorConfig = {
       ios: {
         activityType: "fitness", // Activity type that most closely represents the user activity
         desiredAccuracy: "best", // Location accuracy
-        pauseLocationUpdatesAutomatically: false,
+        pauseLocationUpdatesAutomatically: true,  // Enable automatic pausing
         showsBackgroundLocationIndicator: true,
+        activityRecognitionInterval: 10000, // 10 seconds for activity recognition
+        distanceFilter: 10, // Default distance filter in meters
+        significantChangesOnly: false, // Use significant changes only when in low power mode
       },
       // Android-specific configuration
       android: {
@@ -40,7 +43,10 @@ const config: CapacitorConfig = {
           title: "Location Tracking Active",
           text: "Quantum Mealverse is tracking your location for delivery",
           priority: 1 // High priority
-        }
+        },
+        locationUpdateInterval: 10000, // 10 seconds
+        fastestLocationUpdateInterval: 5000, // 5 seconds
+        motionTriggerDelay: 60000, // 1 minute delay before triggering motion detection
       }
     }
   }
