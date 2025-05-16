@@ -20,11 +20,25 @@ export interface BackgroundGeolocationOptions {
   requestPermissions?: boolean;
   stale?: boolean;
   distanceFilter?: number;
-}
-
-// Define the watcher result interface
-export interface WatcherResult {
-  id: string;
+  // Add iOS and Android specific configuration options
+  ios?: {
+    significantChangesOnly?: boolean;
+    activityType?: 'other' | 'automotiveNavigation' | 'fitness' | 'otherNavigation';
+    desiredAccuracy?: 'best' | 'bestForNavigation' | 'nearestTenMeters' | 'hundredMeters' | 'kilometer' | 'threeKilometers';
+    pauseLocationUpdatesAutomatically?: boolean;
+    distanceFilter?: number;
+  };
+  android?: {
+    locationUpdateInterval?: number;
+    distanceFilter?: number;
+    stationaryRadius?: number;
+    notificationIconColor?: string;
+    notification?: {
+      title?: string;
+      text?: string;
+      priority?: number;
+    };
+  };
 }
 
 // Create a function to get background watcher options
@@ -35,5 +49,7 @@ export function getBackgroundWatcherOptions(options: BackgroundGeolocationOption
     requestPermissions: options.requestPermissions !== false,
     stale: options.stale || false,
     distanceFilter: options.distanceFilter || 10,
+    ios: options.ios || {},
+    android: options.android || {},
   };
 }

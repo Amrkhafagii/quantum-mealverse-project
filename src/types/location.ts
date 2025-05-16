@@ -9,8 +9,10 @@ export interface LocationWithAccuracy {
 export interface DeliveryLocation {
   latitude: number;
   longitude: number;
-  timestamp?: number; // Make timestamp optional to match the implementation in useDeliveryLocationService
+  timestamp?: number;
   accuracy?: number;
+  speed?: number;
+  isMoving?: boolean;
 }
 
 export type LocationFreshness = 'fresh' | 'moderate' | 'stale' | 'invalid';
