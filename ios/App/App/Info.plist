@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -45,5 +46,22 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	
+	<!-- Location Permission Usage Descriptions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show nearby restaurants and enable delivery tracking.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Always allowing location access enables real-time delivery tracking and ensures accurate ETAs even when the app is in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Background location access enables delivery tracking and ensures accurate ETAs even when the app is in the background.</string>
+	
+	<!-- Background Modes Configuration -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>processing</string>
+	</array>
 </dict>
 </plist>
