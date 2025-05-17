@@ -1,320 +1,194 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation, Position } from '@capacitor/geolocation';
+import { useToast } from '@/components/ui/use-toast';
+import { useLocationPermissions } from '@/hooks/useLocationPermissions';
+import { Platform } from '@/utils/platform';
+import LocationPermissions from '@/plugins/LocationPermissionsPlugin';
 
-export const useLocationPermission = () => {
-  const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
-  const [trackingEnabled, setTrackingEnabled] = useState<boolean>(false);
-  const [isRequesting, setIsRequesting] = useState<boolean>(false);
-  const [location, setLocation] = useState<GeolocationPosition | null>(null);
-  const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState<boolean>(false);
-  const [hasInitialized, setHasInitialized] = useState<boolean>(false);
+interface LocationPermissionHookResponse {
+  location: Position | null;
+  permissionStatus: PermissionState;
+  backgroundPermissionStatus: PermissionState;
+  hasShownInitialPrompt: boolean;
+  hasInitialized: boolean;
+  isRequesting: boolean;
+  requestPermission: () => Promise<boolean>;
+  requestBackgroundPermission: () => Promise<boolean>;
+  getCurrentLocation: () => Promise<Position | null>;
+  isTracking: boolean;
+  toggleTracking: () => Promise<boolean>;
+  locationIsValid: () => boolean;
+  isLocationStale: () => boolean;
+}
 
-  // Check browser's stored permission preference on initialization
-  useEffect(() => {
-    const initialize = async () => {
-      try {
-        // Try to get cached location data
-        const cachedLocationString = localStorage.getItem('userLocation');
-        const storedPermission = localStorage.getItem('locationPermission');
-        
-        if (cachedLocationString) {
-          try {
-            const cachedLocation = JSON.parse(cachedLocationString);
-            if (cachedLocation?.latitude && cachedLocation?.longitude) {
-              // If we have cached location, create a position object from it
-              const position = {
-                coords: {
-                  latitude: cachedLocation.latitude,
-                  longitude: cachedLocation.longitude,
-                  accuracy: 0,
-                  altitude: null,
-                  altitudeAccuracy: null,
-                  heading: null,
-                  speed: null
-                },
-                timestamp: cachedLocation.timestamp || Date.now()
-              } as GeolocationPosition;
-              
-              setLocation(position);
-            }
-          } catch (e) {
-            console.error('Error parsing cached location:', e);
-          }
-        }
-        
-        // Check stored permission state
-        if (storedPermission === 'granted') {
-          setHasShownInitialPrompt(true);
-          setPermissionStatus('granted');
-        } else if (storedPermission === 'denied') {
-          setPermissionStatus('denied');
-          setHasShownInitialPrompt(true);
-        }
-        
-        // Check browser permission API
-        await checkPermission();
-        
-        // Also fetch user preferences from database
-        await fetchPreferences();
-        
-        setHasInitialized(true);
-      } catch (err) {
-        console.error('Error initializing location permissions:', err);
-        setHasInitialized(true);
+export function useLocationPermission(): LocationPermissionHookResponse {
+  const [location, setLocation] = useState<Position | null>(null);
+  const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const { toast } = useToast();
+  
+  // Use our enhanced permissions hook
+  const {
+    permissionStatus,
+    backgroundPermissionStatus,
+    requestPermission: requestBasicPermission,
+    requestBackgroundPermission: requestBgPermission,
+    isRequesting
+  } = useLocationPermissions();
+
+  // Get current location if permission is granted
+  const getCurrentLocation = useCallback(async (): Promise<Position | null> => {
+    try {
+      if (permissionStatus !== 'granted') {
+        console.log('Location permission not granted');
+        return null;
       }
+
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+      
+      setLocation(position);
+      localStorage.setItem('lastLocationTimestamp', new Date().toISOString());
+      return position;
+    } catch (error) {
+      console.error('Error getting location:', error);
+      toast({
+        title: 'Location Error',
+        description: 'Could not get your location. Please try again.',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [permissionStatus, toast]);
+
+  // Initialize on mount
+  useEffect(() => {
+    const init = async () => {
+      // Check if there's a saved location in localStorage
+      const lastLocationTimestamp = localStorage.getItem('lastLocationTimestamp');
+      if (lastLocationTimestamp) {
+        // If we have permission, update location
+        if (permissionStatus === 'granted') {
+          await getCurrentLocation();
+        }
+      }
+      
+      setHasInitialized(true);
     };
     
-    initialize();
-  }, []);
+    init();
+  }, [permissionStatus, getCurrentLocation]);
 
-  // Check if location tracking is enabled in preferences
-  const fetchPreferences = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const { data, error } = await supabase
-          .from('user_preferences')
-          .select('location_tracking_enabled')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (!error && data) {
-          setTrackingEnabled(data.location_tracking_enabled === true);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching location preferences:', error);
-    }
-  };
-
-  // Check browser permission status
-  const checkPermission = async () => {
-    if ('permissions' in navigator) {
-      try {
-        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-        
-        // Update our state with the current browser permission status
-        setPermissionStatus(permissionStatus.state);
-        
-        // Store permission state in localStorage for future reference
-        try {
-          localStorage.setItem('locationPermission', permissionStatus.state);
-        } catch (e) {
-          console.error('Error writing to localStorage', e);
-        }
-        
-        // Set up listener for permission changes
-        permissionStatus.onchange = () => {
-          setPermissionStatus(permissionStatus.state);
-          // Update localStorage when permission changes
-          try {
-            localStorage.setItem('locationPermission', permissionStatus.state);
-            
-            // If permission is revoked, clear cached location data
-            if (permissionStatus.state === 'denied') {
-              localStorage.removeItem('userLocation');
-            }
-          } catch (e) {
-            console.error('Error writing to localStorage', e);
-          }
-        };
-        
-        return permissionStatus.state;
-      } catch (error) {
-        console.error('Error checking geolocation permission:', error);
-      }
-    }
-    return null;
-  };
-
-  // Updated requestPermission function with better UX
+  // Request permission wrapper
   const requestPermission = useCallback(async (): Promise<boolean> => {
-    setIsRequesting(true);
     setHasShownInitialPrompt(true);
     
     try {
-      if ('geolocation' in navigator) {
-        return new Promise<boolean>((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              // Permission granted
-              setPermissionStatus('granted');
-              setLocation(position);
-              
-              // Cache location in localStorage
-              try {
-                localStorage.setItem('userLocation', JSON.stringify({
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                  timestamp: new Date().getTime()
-                }));
-                localStorage.setItem('locationPermission', 'granted');
-              } catch (e) {
-                console.error('Error writing to localStorage', e);
-              }
-              
-              // Update user preferences
-              await toggleTracking(true);
-              
-              setIsRequesting(false);
-              
-              // Show success notification
-              toast.success("Location enabled", { 
-                description: "We can now find nearby restaurants for you"
-              });
-              
-              resolve(true);
-            },
-            (error) => {
-              // Permission denied
-              console.error('Error requesting location permission:', error);
-              setPermissionStatus('denied');
-              
-              try {
-                localStorage.setItem('locationPermission', 'denied');
-                // Clear any cached location data
-                localStorage.removeItem('userLocation');
-              } catch (e) {
-                console.error('Error writing to localStorage', e);
-              }
-              
-              setIsRequesting(false);
-              
-              // Show error notification based on error code
-              if (error.code === 1) { // PERMISSION_DENIED
-                toast.error("Location access denied", {
-                  description: "Please enable location access in your browser settings"
-                });
-              } else {
-                toast.error("Location error", {
-                  description: "Could not access your location. Please try again."
-                });
-              }
-              
-              resolve(false);
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-          );
-        });
+      const granted = await requestBasicPermission();
+      
+      if (granted) {
+        await getCurrentLocation();
+        
+        // Save permission status
+        localStorage.setItem('locationPermission', 'granted');
       }
-      setIsRequesting(false);
-      return false;
+      
+      return granted;
     } catch (error) {
       console.error('Error requesting location permission:', error);
-      setIsRequesting(false);
       return false;
     }
-  }, []);
-  
-  // Fixed toggleTracking function to properly handle the constraint issue
-  const toggleTracking = async (enabled: boolean): Promise<boolean> => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) return false;
-      
-      // First check if a preference entry already exists
-      const { data: existingPref } = await supabase
-        .from('user_preferences')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .single();
-      
-      let result;
-      
-      if (existingPref) {
-        // If entry exists, use update instead of upsert
-        result = await supabase
-          .from('user_preferences')
-          .update({
-            location_tracking_enabled: enabled,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', session.user.id);
-      } else {
-        // If no entry exists, insert a new one
-        result = await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: session.user.id,
-            location_tracking_enabled: enabled,
-            currency: 'USD' // Default currency
-          });
-      }
-      
-      if (result.error) {
-        console.error('Error updating location tracking preferences:', result.error);
-        return false;
-      }
-      
-      // Since the update was successful, update the local state
-      setTrackingEnabled(enabled);
-      
-      // If tracking was enabled, try to get the current position
-      if (enabled && permissionStatus === 'granted') {
-        navigator.geolocation.getCurrentPosition(
-          (position) => setLocation(position),
-          (error) => console.error('Error getting position:', error)
-        );
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error updating location tracking preferences:', error);
-      return false;
-    }
-  };
+  }, [requestBasicPermission, getCurrentLocation]);
 
-  // Compute if tracking is currently active (both permission granted and enabled in preferences)
-  const isTracking = permissionStatus === 'granted' && trackingEnabled;
-
-  // Reset the location data and permission state
-  const resetLocationState = useCallback(() => {
+  // Request background permission wrapper
+  const requestBackgroundPermission = useCallback(async (): Promise<boolean> => {
+    if (!Platform.isAndroid()) return true;
+    
+    setHasShownInitialPrompt(true);
+    
     try {
-      localStorage.removeItem('userLocation');
-      localStorage.removeItem('locationPermission');
-      setPermissionStatus('prompt');
-      setLocation(null);
-      setHasShownInitialPrompt(false);
-    } catch (e) {
-      console.error('Error resetting location state:', e);
-    }
-  }, []);
-
-  // Check if cached location data is too old (more than 30 minutes)
-  const isLocationStale = useCallback(() => {
-    try {
-      const cachedLocationString = localStorage.getItem('userLocation');
-      if (cachedLocationString) {
-        const cachedLocation = JSON.parse(cachedLocationString);
-        if (cachedLocation?.timestamp) {
-          const now = new Date().getTime();
-          const cacheTime = cachedLocation.timestamp;
-          const diffMinutes = (now - cacheTime) / (1000 * 60);
-          return diffMinutes > 30; // Consider stale after 30 minutes
+      const granted = await requestBgPermission();
+      
+      if (granted) {
+        // Save background permission status
+        localStorage.setItem('backgroundLocationPermission', 'granted');
+        
+        // Start foreground service on Android
+        if (Platform.isNative() && Platform.isAndroid()) {
+          // Trigger foreground service on native Android
+          const event = new CustomEvent('startLocationService');
+          document.dispatchEvent(event);
         }
       }
-      return true; // No timestamp means it's stale
-    } catch (e) {
-      console.error('Error checking if location is stale:', e);
+      
+      return granted;
+    } catch (error) {
+      console.error('Error requesting background location permission:', error);
+      return false;
+    }
+  }, [requestBgPermission]);
+
+  // Toggle tracking state
+  const toggleTracking = useCallback(async (): Promise<boolean> => {
+    if (isTracking) {
+      setIsTracking(false);
+      return true;
+    } else {
+      if (permissionStatus !== 'granted') {
+        const granted = await requestPermission();
+        if (!granted) return false;
+      }
+      
+      setIsTracking(true);
+      
+      // If on Android and background permission not granted, request it
+      if (Platform.isAndroid() && backgroundPermissionStatus !== 'granted') {
+        requestBackgroundPermission();
+      }
+      
+      await getCurrentLocation();
       return true;
     }
+  }, [isTracking, permissionStatus, backgroundPermissionStatus, requestPermission, requestBackgroundPermission, getCurrentLocation]);
+
+  // Check if location is valid
+  const locationIsValid = useCallback(() => {
+    return !!(location && 
+      location.coords && 
+      location.coords.latitude && 
+      location.coords.longitude);
+  }, [location]);
+
+  // Check if location is stale (older than 5 minutes)
+  const isLocationStale = useCallback(() => {
+    const lastLocationTimestamp = localStorage.getItem('lastLocationTimestamp');
+    if (!lastLocationTimestamp) return true;
+    
+    const lastLocationTime = new Date(lastLocationTimestamp).getTime();
+    const currentTime = new Date().getTime();
+    const fiveMinutesInMs = 5 * 60 * 1000;
+    
+    return currentTime - lastLocationTime > fiveMinutesInMs;
   }, []);
 
-  return { 
-    permissionStatus, 
-    trackingEnabled, 
-    requestPermission,
-    isRequesting,
-    toggleTracking,
-    isTracking,
+  return {
     location,
+    permissionStatus,
+    backgroundPermissionStatus,
     hasShownInitialPrompt,
     hasInitialized,
-    resetLocationState,
+    isRequesting,
+    requestPermission,
+    requestBackgroundPermission,
+    getCurrentLocation,
+    isTracking,
+    toggleTracking,
+    locationIsValid,
     isLocationStale
   };
-};
+}
