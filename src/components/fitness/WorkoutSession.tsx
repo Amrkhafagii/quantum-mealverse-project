@@ -11,6 +11,7 @@ import { Check, X } from 'lucide-react';
 import ExerciseLogForm from './ExerciseLogForm';
 import WorkoutTimer from './WorkoutTimer';
 import { checkAchievements, updateWorkoutStreak } from '@/services/achievementService';
+import { HapticButton } from '@/components/ui/haptic-button';
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
@@ -149,9 +150,13 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
               <X className="h-4 w-4 mr-2" /> Cancel
             </Button>
             
-            <Button className="bg-green-500 hover:bg-green-600" onClick={handleCompleteWorkout}>
+            <HapticButton 
+              hapticEffect="success" 
+              className="bg-green-500 hover:bg-green-600" 
+              onClick={handleCompleteWorkout}
+            >
               <Check className="h-4 w-4 mr-2" /> Complete Workout
-            </Button>
+            </HapticButton>
           </div>
         </div>
       </CardContent>

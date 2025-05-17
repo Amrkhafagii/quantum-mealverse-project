@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { HapticButton } from "@/components/ui/haptic-button";
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 
@@ -67,13 +67,14 @@ export const MealCard: React.FC<MealCardProps> = ({
             <p>{macros.fat}g</p>
           </div>
         </div>
-        <Button 
+        <HapticButton 
           onClick={handleAddToCart}
+          hapticEffect="success"
           className="w-full cyber-button flex items-center justify-center gap-2"
         >
           <ShoppingCart className="w-4 h-4" />
           Add to Cart
-        </Button>
+        </HapticButton>
       </div>
     </Card>
   );

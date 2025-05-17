@@ -96,7 +96,7 @@ export function useSyncManager() {
       toast({
         title: "Offline",
         description: "You are currently offline. Sync will happen automatically when you're back online.",
-        variant: "warning"
+        variant: "destructive" // Changed from "warning" to "destructive" to fix the type error
       });
       return false;
     }

@@ -21,6 +21,19 @@ const config: CapacitorConfig = {
       androidSpinnerStyle: "large",
       spinnerColor: "#23cfc9",
     },
+    Haptics: {
+      // iOS-specific configuration
+      ios: {
+        enableSelectionFeedback: true,
+        selectionFeedbackStyle: "medium", // light, medium, heavy
+        enableImpactFeedback: true,
+      },
+      // Android-specific configuration
+      android: {
+        enableVibrationFallback: true,
+        feedbackVibrationDuration: 50 // Default duration for haptic feedback in milliseconds
+      }
+    },
     // Configure background location-related preferences
     BackgroundGeolocation: {
       // iOS-specific configuration
