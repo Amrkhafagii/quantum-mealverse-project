@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Bell, Check, Loader2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { 
@@ -16,6 +16,8 @@ import { Notification } from '@/types/notification';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationBadge } from './NotificationBadge';
 import { useNavigate } from 'react-router-dom';
+import { useBadge } from '@/hooks/useBadge';
+import { Platform } from '@/utils/platform';
 
 export const NotificationDropdown = () => {
   const navigate = useNavigate();
@@ -25,6 +27,16 @@ export const NotificationDropdown = () => {
     markAsRead, 
     markAllAsRead 
   } = useNotifications();
+  const { updateBadgeCount, isSupported } = useBadge();
+  
+  // When dropdown opens, sync the badge with actual notifications
+  const handleDropdownOpenChange = (open: boolean) => {
+    if (open && isSupported && Platform.isNative()) {
+      // Ensure the app badge matches the actual unread count
+      const unreadCount = notifications.filter(n => !n.is_read).length;
+      updateBadgeCount(unreadCount);
+    }
+  };
   
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
@@ -50,7 +62,7 @@ export const NotificationDropdown = () => {
   };
   
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleDropdownOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <NotificationBadge />

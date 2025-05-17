@@ -2,100 +2,163 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Notification } from '@/types/notification';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  getNotifications, 
-  markNotificationAsRead, 
-  markAllNotificationsAsRead 
-} from '@/services/notification/notificationService';
-import { useSupabaseChannel } from './useSupabaseChannel';
-import { useConnectionStatus } from './useConnectionStatus';
+import { useAuth } from './useAuth';
+import { Platform } from '@/utils/platform';
+import { nativeServices } from '@/utils/nativeServices';
 
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const { toast } = useToast();
-  const { isOnline } = useConnectionStatus();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
 
+  // Fetch notifications from database
   const fetchNotifications = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
 
-    setIsLoading(true);
     try {
-      const fetchedNotifications = await getNotifications(user.id);
-      setNotifications(fetchedNotifications);
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const typedNotifications = data as Notification[];
+      setNotifications(typedNotifications);
       
-      // Calculate unread count
-      const unread = fetchedNotifications.filter(n => !n.is_read).length;
+      // Count unread notifications
+      const unread = typedNotifications.filter(n => !n.is_read).length;
       setUnreadCount(unread);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+      
+      // Update app icon badge if on native platform
+      if (Platform.isNative()) {
+        nativeServices.setBadgeCount(unread);
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
-  const handleReadNotification = useCallback(async (notificationId: string) => {
-    const success = await markNotificationAsRead(notificationId);
-    if (success) {
+  // Mark a notification as read
+  const markAsRead = async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
       setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        prev.map(notification => 
+          notification.id === id ? { ...notification, is_read: true } : notification
+        )
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    }
-    return success;
-  }, []);
-
-  const handleReadAllNotifications = useCallback(async () => {
-    if (!user?.id) return false;
-    
-    const success = await markAllNotificationsAsRead(user.id);
-    if (success) {
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    }
-    return success;
-  }, [user?.id]);
-
-  // Initial fetch
-  useEffect(() => {
-    if (user?.id && isOnline) {
-      fetchNotifications();
-    }
-  }, [user?.id, fetchNotifications, isOnline]);
-
-  // Use the optimized Supabase channel hook for notifications
-  useSupabaseChannel({
-    channelName: `notifications_${user?.id || 'none'}`,
-    event: 'INSERT',
-    table: 'notifications',
-    schema: 'public',
-    filter: user?.id ? `user_id=eq.${user.id}` : undefined,
-    enabled: !!user?.id && isOnline,
-    onMessage: (payload) => {
-      const newNotification = payload.new as Notification;
       
-      // Add notification to state
-      setNotifications(prev => [newNotification, ...prev]);
-      setUnreadCount(prev => prev + 1);
-      
-      // Show toast notification
-      toast({
-        title: newNotification.title,
-        description: newNotification.message,
+      // Decrement unread count
+      setUnreadCount(prev => {
+        const newCount = Math.max(0, prev - 1);
+        
+        // Update app badge if on native platform
+        if (Platform.isNative()) {
+          nativeServices.setBadgeCount(newCount);
+        }
+        
+        return newCount;
       });
-    },
-  });
+
+      return true;
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+      return false;
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async (): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, is_read: true }))
+      );
+      
+      // Reset unread count and app badge
+      setUnreadCount(0);
+      
+      // Clear app badge if on native platform
+      if (Platform.isNative()) {
+        nativeServices.clearBadgeCount();
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+      return false;
+    }
+  };
+
+  // Load notifications on mount and when user changes
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Subscribe to notifications
+    if (user) {
+      const channel = supabase
+        .channel(`user-notifications-${user.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          fetchNotifications();
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user, fetchNotifications]);
 
   return {
     notifications,
     unreadCount,
     isLoading,
-    fetchNotifications,
-    markAsRead: handleReadNotification,
-    markAllAsRead: handleReadAllNotifications
+    error,
+    markAsRead,
+    markAllAsRead,
+    refresh: fetchNotifications
   };
 };

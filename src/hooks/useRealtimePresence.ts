@@ -1,152 +1,172 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { RealtimeChannel } from '@supabase/supabase-js';
 import { useAuth } from './useAuth';
-import { useConnectionStatus } from './useConnectionStatus';
 import { Platform } from '@/utils/platform';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface PresenceState {
   user_id: string;
-  online_at: string;
-  client_info?: {
-    platform: string;
-    version?: string;
-    timestamp: string;
+  timestamp: number;
+  status: 'online' | 'away' | 'offline';
+  platform: string;
+  location?: {
+    latitude: number;
+    longitude: number;
   };
-  [key: string]: any;
 }
 
-export function useRealtimePresence(roomName: string, enabled = true) {
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  const [presenceState, setPresenceState] = useState<Record<string, PresenceState[]>>({});
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const [isTracking, setIsTracking] = useState(false);
-  const { user } = useAuth();
-  const { isOnline } = useConnectionStatus();
+export function useRealtimePresence(options: { 
+  channelName?: string;
+  updateInterval?: number;
+  includeLocation?: boolean;
+  enabled?: boolean;
+} = {}) {
+  const {
+    channelName = 'presence',
+    updateInterval = 30000, // 30 seconds
+    includeLocation = false,
+    enabled = true
+  } = options;
   
-  // Create or cleanup channel based on enabled state and online status
+  const { user } = useAuth();
+  const [onlineUsers, setOnlineUsers] = useState<Record<string, PresenceState>>({});
+  const [presenceChannel, setPresenceChannel] = useState<RealtimeChannel | null>(null);
+  
+  // Setup realtime presence subscription
   useEffect(() => {
-    // Don't create channel if disabled or offline
-    if (!enabled || !isOnline || !user?.id) {
-      if (channel) {
-        console.log(`Removing presence channel for room ${roomName}`);
-        supabase.removeChannel(channel);
-        setChannel(null);
-        setIsTracking(false);
-      }
-      return;
+    if (!user || !enabled) return;
+    
+    // Create initial presence state
+    const initialState: PresenceState = {
+      user_id: user.id,
+      timestamp: Date.now(),
+      status: 'online',
+      platform: Platform.getPlatformName(),
+    };
+    
+    // Add location if enabled
+    if (includeLocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          initialState.location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+        },
+        (err) => {
+          console.warn('Could not get user location for presence:', err);
+        }
+      );
     }
     
-    if (!channel) {
-      console.log(`Creating presence channel for room ${roomName}`);
-      const newChannel = supabase.channel(roomName);
-      
-      newChannel
-        .on('presence', { event: 'sync' }, () => {
-          const state = newChannel.presenceState();
-          console.log('Presence synced:', state);
-          // Convert the type to match our state type
-          setPresenceState(state as unknown as Record<string, PresenceState[]>);
-          
-          // Extract user IDs from presence state
-          const users = Object.values(state).flatMap(
-            presences => presences.map((p: any) => p.user_id)
-          );
-          setOnlineUsers([...new Set(users)]); // Remove duplicates
-        })
-        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-          console.log('User joined:', key, newPresences);
-        })
-        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-          console.log('User left:', key, leftPresences);
+    // Create and subscribe to presence channel
+    const channel = supabase.channel(`${channelName}:${user.id}`)
+      .on('presence', { event: 'sync' }, () => {
+        // Get current state of all users in the channel
+        const state = channel.presenceState();
+        const newState: Record<string, PresenceState> = {};
+        
+        // Process all users' presence data
+        Object.keys(state).forEach(key => {
+          const userPresence = state[key][0] as PresenceState;
+          newState[userPresence.user_id] = userPresence;
         });
-      
-      setChannel(newChannel);
-    }
+        
+        setOnlineUsers(newState);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        const presence = newPresences[0] as PresenceState;
+        console.log('User joined:', presence.user_id, 'on', presence.platform);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        const presence = leftPresences[0] as PresenceState;
+        console.log('User left:', presence.user_id, 'from', presence.platform);
+      });
     
-    return () => {
+    // Track presence
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track(initialState);
+        setPresenceChannel(channel);
+      }
+    });
+    
+    // Update presence state periodically
+    const intervalId = setInterval(async () => {
       if (channel) {
+        const updatedState: PresenceState = {
+          user_id: user.id,
+          timestamp: Date.now(),
+          status: document.visibilityState === 'visible' ? 'online' : 'away',
+          platform: Platform.getPlatformName(),
+        };
+        
+        // Update location if enabled
+        if (includeLocation) {
+          try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                timeout: 10000,
+                maximumAge: 60000,
+              });
+            });
+            
+            updatedState.location = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            };
+          } catch (err) {
+            console.warn('Could not update location for presence:', err);
+          }
+        }
+        
+        await channel.track(updatedState);
+      }
+    }, updateInterval);
+    
+    // Cleanup
+    return () => {
+      clearInterval(intervalId);
+      if (channel) {
+        channel.untrack();
         supabase.removeChannel(channel);
-        setChannel(null);
-        setIsTracking(false);
       }
     };
-  }, [roomName, enabled, user?.id, isOnline]);
+  }, [user, enabled, channelName, updateInterval, includeLocation]);
   
-  // Start tracking presence
-  const startTracking = useCallback(async (customState = {}) => {
-    if (!channel || !user?.id) return false;
+  // Update status when page visibility changes
+  useEffect(() => {
+    if (!presenceChannel || !user) return;
     
-    try {
-      setIsTracking(true);
-      const status = await channel.subscribe(async (status) => {
-        console.log('Presence subscription status:', status);
-        
-        if (status === 'SUBSCRIBED') {
-          const trackStatus = await channel.track({
-            user_id: user.id,
-            online_at: new Date().toISOString(),
-            client_info: {
-              platform: Platform.getPlatformName(),
-              version: '1.0.0',
-              timestamp: new Date().toISOString(),
-            },
-            ...customState
-          });
-          console.log('Presence track status:', trackStatus);
-        }
-      });
-      return true;
-    } catch (error) {
-      console.error('Error tracking presence:', error);
-      setIsTracking(false);
-      return false;
-    }
-  }, [channel, user]);
-  
-  // Update tracking status with new state
-  const updateState = useCallback(async (customState = {}) => {
-    if (!channel || !user?.id || !isTracking) return false;
-    
-    try {
-      const trackStatus = await channel.track({
+    const handleVisibilityChange = async () => {
+      await presenceChannel.track({
         user_id: user.id,
-        online_at: new Date().toISOString(),
-        client_info: {
-          platform: Platform.getPlatformName(),
-          version: '1.0.0',
-          timestamp: new Date().toISOString(),
-        },
-        ...customState
+        timestamp: Date.now(),
+        status: document.visibilityState === 'visible' ? 'online' : 'away',
+        platform: Platform.getPlatformName(),
       });
-      console.log('Presence track update status:', trackStatus);
-      return true;
-    } catch (error) {
-      console.error('Error updating presence state:', error);
-      return false;
-    }
-  }, [channel, user, isTracking]);
-  
-  // Stop tracking presence
-  const stopTracking = useCallback(async () => {
-    if (!channel) return;
+    };
     
-    try {
-      await channel.untrack();
-      setIsTracking(false);
-      return true;
-    } catch (error) {
-      console.error('Error untracking presence:', error);
-      return false;
-    }
-  }, [channel]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [presenceChannel, user]);
   
   return {
-    presenceState,
     onlineUsers,
-    isTracking,
-    startTracking,
-    updateState,
-    stopTracking
+    currentUser: user ? onlineUsers[user.id] : undefined,
+    updatePresence: async (status: 'online' | 'away' | 'offline') => {
+      if (!presenceChannel || !user) return;
+      
+      await presenceChannel.track({
+        user_id: user.id,
+        timestamp: Date.now(),
+        status,
+        platform: Platform.getPlatformName(),
+      });
+    }
   };
 }

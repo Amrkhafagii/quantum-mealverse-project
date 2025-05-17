@@ -1,139 +1,125 @@
 
-import React from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { MapPin, MapPinOff, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MapPin, AlertTriangle, Info } from 'lucide-react';
-import { useLocationPermissions } from '@/hooks/useLocationPermissions';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Platform } from '@/utils/platform';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
-interface BackgroundLocationPermissionsPromptProps {
-  onPermissionGranted?: () => void;
-  onPermissionDenied?: () => void;
-  dismissable?: boolean;
-  onDismiss?: () => void;
-  compact?: boolean;
-}
-
-const BackgroundLocationPermissionsPrompt: React.FC<BackgroundLocationPermissionsPromptProps> = ({
-  onPermissionGranted,
-  onPermissionDenied,
-  dismissable = true,
-  onDismiss,
-  compact = false
-}) => {
-  const { 
-    permissionStatus, 
+export const BackgroundLocationPermissionsPrompt = () => {
+  const [androidVersion, setAndroidVersion] = useState<number>(0);
+  const {
+    permissionStatus,
     backgroundPermissionStatus,
-    requestPermission, 
-    requestBackgroundPermission, 
+    requestPermission,
+    requestBackgroundPermission,
     isRequesting,
     hasEducationalUiBeenShown
-  } = useLocationPermissions();
-
-  const isAndroid10OrAbove = Platform.isAndroid() && Platform.getAndroidVersion() >= 10;
-  const needsBackgroundPermission = Platform.isAndroid() && 
-                                    backgroundPermissionStatus !== 'granted' &&
-                                    permissionStatus === 'granted';
-
+  } = useLocationPermission();
+  
+  // Get Android version on component mount
+  useEffect(() => {
+    const getAndroidVersion = async () => {
+      if (Platform.isAndroid()) {
+        const version = await Platform.getAndroidVersion();
+        setAndroidVersion(version);
+      }
+    };
+    
+    getAndroidVersion();
+  }, []);
+  
+  // Check if we need background permission explanation
+  // For Android 10+ (API level 29+), we need to show educational UI
+  const needsBackgroundExplanation = Platform.isAndroid() && androidVersion >= 10 && 
+    permissionStatus === 'granted' && backgroundPermissionStatus !== 'granted';
+  
+  // When user has foreground but not background permission and hasn't seen educational UI
+  const showEducationalUI = needsBackgroundExplanation && !hasEducationalUiBeenShown;
+  
+  // Handle permission request
   const handleRequestPermission = async () => {
-    // First request regular location permission if not already granted
     if (permissionStatus !== 'granted') {
-      const result = await requestPermission();
-      if (!result) {
-        if (onPermissionDenied) onPermissionDenied();
-        return;
-      }
-    }
-
-    // If on Android 10+ and need background permission, request it
-    if (isAndroid10OrAbove && needsBackgroundPermission) {
-      const result = await requestBackgroundPermission();
-      if (result && onPermissionGranted) {
-        onPermissionGranted();
-      } else if (!result && onPermissionDenied) {
-        onPermissionDenied();
-      }
-    } else if (onPermissionGranted) {
-      onPermissionGranted();
+      await requestPermission();
+    } else if (backgroundPermissionStatus !== 'granted') {
+      await requestBackgroundPermission();
     }
   };
-
-  // If all permissions are granted or we're not on Android, don't show
-  if ((permissionStatus === 'granted' && (!isAndroid10OrAbove || backgroundPermissionStatus === 'granted')) ||
-      !Platform.isNative()) {
+  
+  // Don't show anything if not on Android or if we don't need permissions
+  if (!Platform.isAndroid() || 
+      (permissionStatus === 'granted' && backgroundPermissionStatus === 'granted') || 
+      (!showEducationalUI && backgroundPermissionStatus !== 'prompt')) {
     return null;
   }
-
+  
   return (
-    <Card className={compact ? "border-quantum-cyan/20" : "holographic-card"}>
-      <CardHeader className={compact ? "p-4" : "p-6"}>
-        <CardTitle className="flex items-center gap-2 text-quantum-cyan">
-          <MapPin className="h-5 w-5" />
-          {isAndroid10OrAbove && needsBackgroundPermission
-            ? "Background Location Required"
-            : "Enable Location Services"}
-        </CardTitle>
+    <Card className="border-yellow-200 dark:border-yellow-800 mb-6">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-medium">Location Access</CardTitle>
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">
+            Important
+          </Badge>
+        </div>
+        <CardDescription>
+          This app requires background location access to function properly
+        </CardDescription>
       </CardHeader>
-      <CardContent className={compact ? "p-4 pt-0" : "p-6 pt-0"}>
+      <CardContent className="pt-2">
         <div className="space-y-4">
-          {isAndroid10OrAbove && needsBackgroundPermission ? (
-            <>
-              <Alert variant="default" className="bg-blue-900/30 border-blue-500/30">
-                <Info className="h-4 w-4 text-blue-400" />
-                <AlertTitle>Background Location Access</AlertTitle>
-                <AlertDescription>
-                  To track deliveries even when the app is closed, we need permission to access your location in the background. This helps optimize delivery routes and provide accurate ETAs.
-                </AlertDescription>
-              </Alert>
-              <p className="text-gray-300 text-sm">
-                When prompted, please select "Allow all the time" to enable background location tracking.
+          <div className="flex items-start gap-3">
+            <MapPin className="h-5 w-5 text-primary mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Background location access</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                This allows the app to track your location even when the app is closed or not in use. This is essential for:
               </p>
-            </>
-          ) : (
-            <p className="text-gray-300">
-              We need your location to find restaurants near you and provide personalized meal recommendations.
-            </p>
-          )}
+              <ul className="list-disc list-inside text-xs text-muted-foreground mt-2 space-y-1 ml-2">
+                <li>Sending real-time delivery updates</li>
+                <li>Optimizing delivery routes automatically</li>
+                <li>Calculating accurate arrival times</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="text-xs">
+                Your location data is only used while you're on an active delivery and is not stored permanently.
+                You can disable this permission anytime in your device settings.
+              </p>
+            </div>
+          </div>
           
           {permissionStatus === 'denied' && (
-            <Alert variant="destructive" className="bg-red-900/20 border-red-700/30">
-              <AlertTriangle className="h-4 w-4 text-red-400" />
-              <AlertTitle>Permission Denied</AlertTitle>
-              <AlertDescription>
-                Location access is denied. Please enable location services in your device settings to use this feature.
-              </AlertDescription>
-            </Alert>
+            <div className="flex items-start gap-3">
+              <MapPinOff className="h-5 w-5 text-destructive mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-destructive">Permission denied</p>
+                <p className="text-xs mt-1">
+                  Location access has been denied. Please enable location permissions in your device settings.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </CardContent>
-      <CardFooter className={compact ? "p-4 pt-0 flex justify-between" : "p-6 pt-0 flex justify-between"}>
-        <div className="flex gap-2">
-          <Button
+      <CardFooter className="flex justify-end gap-3 pt-2">
+        {(permissionStatus !== 'granted' || backgroundPermissionStatus !== 'granted') && (
+          <Button 
             onClick={handleRequestPermission}
             disabled={isRequesting || permissionStatus === 'denied'}
-            className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
           >
-            {isRequesting ? 'Requesting...' : (
-              isAndroid10OrAbove && needsBackgroundPermission 
-                ? 'Enable Background Location' 
-                : 'Enable Location'
-            )}
+            {isRequesting ? 'Requesting...' : 
+              permissionStatus !== 'granted' ? 
+                'Allow location access' : 
+                'Allow background location'}
           </Button>
-          
-          {dismissable && (
-            <Button
-              variant="ghost"
-              onClick={onDismiss}
-              className="border border-gray-700"
-            >
-              Not Now
-            </Button>
-          )}
-        </div>
+        )}
       </CardFooter>
     </Card>
   );
 };
-
-export default BackgroundLocationPermissionsPrompt;

@@ -1,101 +1,87 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { MapPin, Shield, Clock } from 'lucide-react';
+import { Shield, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
-import { formatDistanceToNow } from 'date-fns';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/components/ui/use-toast';
 
-const LocationSettingsPanel: React.FC = () => {
+export const LocationSettingsPanel = () => {
   const { 
     permissionStatus, 
-    trackingEnabled, 
-    isTracking,
-    toggleTracking
+    backgroundPermissionStatus,
+    requestPermissions,
+    trackingEnabled,
+    enableTracking 
   } = useLocationPermission();
 
-  const handleToggleTracking = async () => {
-    await toggleTracking(!trackingEnabled);
+  const handleLocationToggle = async (enabled: boolean) => {
+    if (enabled && permissionStatus !== 'granted') {
+      const granted = await requestPermissions();
+      if (!granted) {
+        toast({
+          title: 'Location permission required',
+          description: 'Please grant location permission to enable tracking',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+    
+    enableTracking(enabled);
   };
 
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-quantum-cyan" />
-          Location Settings
-        </CardTitle>
-        <CardDescription>Manage how the app uses your location</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <div className="font-medium">Location Tracking</div>
-            <div className="text-sm text-gray-400">
-              {trackingEnabled 
-                ? "Enabled: Get restaurant recommendations near you" 
-                : "Disabled: You won't see nearby recommendations"}
-            </div>
-          </div>
-          <Switch
-            checked={trackingEnabled}
-            onCheckedChange={handleToggleTracking}
-          />
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <div className="font-medium">Browser Permission</div>
-            <div className="text-sm text-gray-400">
-              {permissionStatus === 'granted' 
-                ? "Granted: Browser has access to your location" 
-                : permissionStatus === 'denied'
-                ? "Denied: Update your browser settings to enable"
-                : "Not set: Permission has not been requested"}
-            </div>
-          </div>
-          <div className="flex h-5 w-5 items-center justify-center">
-            {permissionStatus === 'granted' ? (
-              <Shield className="h-5 w-5 text-green-500" />
-            ) : permissionStatus === 'denied' ? (
-              <Shield className="h-5 w-5 text-red-500" />
-            ) : (
-              <Shield className="h-5 w-5 text-yellow-500" />
-            )}
-          </div>
-        </div>
-        
-        {permissionStatus === 'denied' && (
-          <div className="rounded-md p-4 bg-quantum-black/40">
-            <p className="text-sm text-gray-300">
-              Location access is currently denied in your browser settings. To enable:
-            </p>
-            <ol className="list-decimal list-inside mt-2 text-sm text-gray-400 space-y-1">
-              <li>Open your browser settings</li>
-              <li>Navigate to Privacy &amp; Security</li>
-              <li>Update location permissions for this site</li>
-            </ol>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-3"
-              onClick={() => window.location.reload()}
-            >
-              Refresh Page
-            </Button>
-          </div>
-        )}
-        
-        <div className="border-t border-quantum-gray/20 pt-4">
-          <p className="text-xs text-gray-400">
-            Location data is only used while you use the app and is not shared with third parties.
+    <div className="rounded-lg border p-4 space-y-4">
+      <div className="flex items-start gap-4">
+        <Shield className="h-5 w-5 mt-0.5 text-muted-foreground" />
+        <div>
+          <h3 className="text-base font-medium">Location Services</h3>
+          <p className="text-sm text-muted-foreground">
+            Control how the app accesses and uses your location
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="location-tracking" className="font-medium">
+              Location Tracking
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Allow the app to access your location
+            </p>
+          </div>
+          <Switch 
+            id="location-tracking"
+            checked={trackingEnabled}
+            onCheckedChange={handleLocationToggle}
+          />
+        </div>
+
+        {permissionStatus === 'denied' && (
+          <div className="flex items-start gap-2 rounded-md bg-yellow-50 dark:bg-yellow-950 p-3">
+            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <div className="text-xs text-yellow-600 dark:text-yellow-400">
+              <p className="font-medium">Location access is denied</p>
+              <p>Please enable location access in your device settings to use this feature.</p>
+            </div>
+          </div>
+        )}
+
+        {Platform.isAndroid() && backgroundPermissionStatus !== 'granted' && trackingEnabled && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => requestPermissions()}
+            className="w-full"
+          >
+            Enable background location
+          </Button>
+        )}
+      </div>
+    </div>
   );
 };
-
-export default LocationSettingsPanel;

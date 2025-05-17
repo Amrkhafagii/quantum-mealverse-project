@@ -1,80 +1,37 @@
 
-import { useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { useNotificationPermissions } from '@/hooks/useNotificationPermissions';
-import { useAuth } from '@/hooks/useAuth';
-import { useNotifications } from '@/hooks/useNotifications'; 
-import { supabase } from '@/integrations/supabase/client';
-import { sendLocalNotification } from '@/services/notification/mobileNotificationService';
+import React, { useEffect } from 'react';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Platform } from '@/utils/platform';
+import { useBadge } from '@/hooks/useBadge';
+import { BadgeService } from '@/services/badge/badgeService';
+import { BadgeCountSync } from './BadgeCountSync';
 
-/**
- * NotificationsManager is a component that manages the notification system
- * It should be rendered once at the app root level
- */
-export const NotificationsManager = () => {
-  const { user } = useAuth();
-  const { isSupported, isPermissionGranted, initializeNotifications } = useNotificationPermissions();
-  const { fetchNotifications } = useNotifications();
+interface NotificationsManagerProps {
+  children: React.ReactNode;
+}
 
-  // Initialize notifications when the user logs in and permissions are granted
+export const NotificationsManager: React.FC<NotificationsManagerProps> = ({ children }) => {
+  const { unreadCount, isLoading } = useNotifications();
+  const { isSupported, requestPermission } = useBadge();
+  
+  // Request badge permission when component mounts
   useEffect(() => {
-    if (user && isPermissionGranted && isSupported) {
-      initializeNotifications();
-      fetchNotifications();
-    }
-  }, [user, isPermissionGranted, isSupported, initializeNotifications, fetchNotifications]);
-
-  // Listen for real-time notifications
-  useEffect(() => {
-    if (!user || !isPermissionGranted) return;
-
-    // Set up a Supabase subscription to listen for new notifications
-    const channel = supabase
-      .channel(`notifications_${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          handleNewNotification(payload.new);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const requestBadgePermission = async () => {
+      if (Platform.isNative() && isSupported) {
+        await BadgeService.requestPermission();
+      }
     };
-  }, [user, isPermissionGranted]);
-
-  // Handle new notifications from Supabase
-  const handleNewNotification = (notification: any) => {
-    if (!notification) return;
-
-    // If on a native platform, show a local notification
-    if (Platform.isNative() && isPermissionGranted) {
-      sendLocalNotification(
-        notification.title || 'New notification',
-        notification.message || '',
-        Date.now(),
-        {
-          type: notification.type || 'system',
-          id: notification.id,
-          link: notification.link
-        }
-      );
-    }
     
-    // The fetchNotifications() call will handle updating the UI
-    fetchNotifications();
-  };
-
-  // This component doesn't render anything
-  return null;
+    requestBadgePermission();
+  }, [isSupported]);
+  
+  return (
+    <>
+      {/* The BadgeCountSync component ensures app icon badges stay in sync */}
+      <BadgeCountSync />
+      
+      {/* Render children */}
+      {children}
+    </>
+  );
 };
-
-export default NotificationsManager;

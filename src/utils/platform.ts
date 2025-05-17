@@ -34,4 +34,18 @@ export class Platform {
       return 0;
     }
   }
+  
+  static isMobileBrowser(): boolean {
+    if (this.isNative()) return false;
+    
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+  }
+  
+  static getPlatformName(): string {
+    if (this.isIOS()) return 'ios';
+    if (this.isAndroid()) return 'android';
+    if (this.isMobileBrowser()) return 'mobile-web';
+    return 'web';
+  }
 }

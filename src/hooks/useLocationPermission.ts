@@ -1,194 +1,170 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { Geolocation, Position } from '@capacitor/geolocation';
-import { useToast } from '@/components/ui/use-toast';
-import { useLocationPermissions } from '@/hooks/useLocationPermissions';
+import { useState, useEffect } from 'react';
+import { Geolocation, GeolocationPermissionState } from '@capacitor/geolocation';
 import { Platform } from '@/utils/platform';
 import LocationPermissions from '@/plugins/LocationPermissionsPlugin';
 
-interface LocationPermissionHookResponse {
-  location: Position | null;
-  permissionStatus: PermissionState;
-  backgroundPermissionStatus: PermissionState;
-  hasShownInitialPrompt: boolean;
-  hasInitialized: boolean;
-  isRequesting: boolean;
+export type LocationPermissionState = 'prompt' | 'granted' | 'denied';
+
+export interface LocationPermissionHookResponse {
+  permissionStatus: LocationPermissionState;
+  backgroundPermissionStatus: LocationPermissionState;
   requestPermission: () => Promise<boolean>;
   requestBackgroundPermission: () => Promise<boolean>;
-  getCurrentLocation: () => Promise<Position | null>;
-  isTracking: boolean;
-  toggleTracking: () => Promise<boolean>;
-  locationIsValid: () => boolean;
-  isLocationStale: () => boolean;
+  requestPermissions: () => Promise<boolean>;
+  isRequesting: boolean;
+  hasEducationalUiBeenShown: boolean;
+  showEducationalUi: () => void;
+  trackingEnabled: boolean;
+  enableTracking: (enable: boolean) => void;
 }
 
 export function useLocationPermission(): LocationPermissionHookResponse {
-  const [location, setLocation] = useState<Position | null>(null);
-  const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState(false);
-  const [isTracking, setIsTracking] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const { toast } = useToast();
-  
-  // Use our enhanced permissions hook
-  const {
-    permissionStatus,
-    backgroundPermissionStatus,
-    requestPermission: requestBasicPermission,
-    requestBackgroundPermission: requestBgPermission,
-    isRequesting
-  } = useLocationPermissions();
+  const [permissionStatus, setPermissionStatus] = useState<LocationPermissionState>('prompt');
+  const [backgroundPermissionStatus, setBackgroundPermissionStatus] = useState<LocationPermissionState>('prompt');
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [hasEducationalUiBeenShown, setHasEducationalUiBeenShown] = useState(false);
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
 
-  // Get current location if permission is granted
-  const getCurrentLocation = useCallback(async (): Promise<Position | null> => {
-    try {
-      if (permissionStatus !== 'granted') {
-        console.log('Location permission not granted');
-        return null;
-      }
-
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000
-      });
-      
-      setLocation(position);
-      localStorage.setItem('lastLocationTimestamp', new Date().toISOString());
-      return position;
-    } catch (error) {
-      console.error('Error getting location:', error);
-      toast({
-        title: 'Location Error',
-        description: 'Could not get your location. Please try again.',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  }, [permissionStatus, toast]);
-
-  // Initialize on mount
+  // Check permissions on component mount
   useEffect(() => {
-    const init = async () => {
-      // Check if there's a saved location in localStorage
-      const lastLocationTimestamp = localStorage.getItem('lastLocationTimestamp');
-      if (lastLocationTimestamp) {
-        // If we have permission, update location
-        if (permissionStatus === 'granted') {
-          await getCurrentLocation();
+    checkPermissions();
+  }, []);
+  
+  // Check both foreground and background permissions
+  const checkPermissions = async () => {
+    if (Platform.isNative()) {
+      try {
+        // Use custom plugin for checking both permissions
+        const permissionStatus = await LocationPermissions.checkPermissionStatus();
+        
+        setPermissionStatus(permissionStatus.location as LocationPermissionState);
+        setBackgroundPermissionStatus(permissionStatus.backgroundLocation as LocationPermissionState);
+      } catch (error) {
+        console.error('Error checking location permissions:', error);
+        
+        // Fallback to standard Capacitor Geolocation for foreground permission
+        try {
+          const status = await Geolocation.checkPermissions();
+          setPermissionStatus(status.location);
+        } catch (fallbackError) {
+          console.error('Fallback permission check failed:', fallbackError);
+          setPermissionStatus('denied');
         }
       }
-      
-      setHasInitialized(true);
-    };
-    
-    init();
-  }, [permissionStatus, getCurrentLocation]);
+    } else {
+      try {
+        // Web permission check
+        const status = await Geolocation.checkPermissions();
+        setPermissionStatus(status.location);
+      } catch (error) {
+        console.error('Error checking web location permission:', error);
+        setPermissionStatus('denied');
+      }
+    }
+  };
 
-  // Request permission wrapper
-  const requestPermission = useCallback(async (): Promise<boolean> => {
-    setHasShownInitialPrompt(true);
+  // Request foreground location permission
+  const requestPermission = async (): Promise<boolean> => {
+    setIsRequesting(true);
     
     try {
-      const granted = await requestBasicPermission();
-      
-      if (granted) {
-        await getCurrentLocation();
+      if (Platform.isNative()) {
+        // Use custom plugin for requesting foreground permission only
+        const result = await LocationPermissions.requestLocationPermission({
+          includeBackground: false
+        });
         
-        // Save permission status
-        localStorage.setItem('locationPermission', 'granted');
+        setPermissionStatus(result.location as LocationPermissionState);
+        setBackgroundPermissionStatus(result.backgroundLocation as LocationPermissionState);
+        
+        return result.location === 'granted';
+      } else {
+        // Web permission request
+        const result = await Geolocation.requestPermissions();
+        setPermissionStatus(result.location);
+        return result.location === 'granted';
       }
-      
-      return granted;
     } catch (error) {
       console.error('Error requesting location permission:', error);
       return false;
+    } finally {
+      setIsRequesting(false);
     }
-  }, [requestBasicPermission, getCurrentLocation]);
-
-  // Request background permission wrapper
-  const requestBackgroundPermission = useCallback(async (): Promise<boolean> => {
-    if (!Platform.isAndroid()) return true;
+  };
+  
+  // Request background location permission (requires foreground permission first)
+  const requestBackgroundPermission = async (): Promise<boolean> => {
+    if (permissionStatus !== 'granted') {
+      console.warn('Foreground location permission must be granted before requesting background permission');
+      return false;
+    }
     
-    setHasShownInitialPrompt(true);
+    setIsRequesting(true);
     
     try {
-      const granted = await requestBgPermission();
-      
-      if (granted) {
-        // Save background permission status
-        localStorage.setItem('backgroundLocationPermission', 'granted');
-        
-        // Start foreground service on Android
-        if (Platform.isNative() && Platform.isAndroid()) {
-          // Trigger foreground service on native Android
-          const event = new CustomEvent('startLocationService');
-          document.dispatchEvent(event);
-        }
+      if (!Platform.isNative() || !Platform.isAndroid()) {
+        console.warn('Background location permission is only relevant on Android native app');
+        return false;
       }
       
-      return granted;
+      // Use custom plugin for requesting both permissions
+      const result = await LocationPermissions.requestLocationPermission({
+        includeBackground: true
+      });
+      
+      setPermissionStatus(result.location as LocationPermissionState);
+      setBackgroundPermissionStatus(result.backgroundLocation as LocationPermissionState);
+      
+      return result.backgroundLocation === 'granted';
     } catch (error) {
       console.error('Error requesting background location permission:', error);
       return false;
+    } finally {
+      setIsRequesting(false);
     }
-  }, [requestBgPermission]);
-
-  // Toggle tracking state
-  const toggleTracking = useCallback(async (): Promise<boolean> => {
-    if (isTracking) {
-      setIsTracking(false);
-      return true;
-    } else {
-      if (permissionStatus !== 'granted') {
-        const granted = await requestPermission();
-        if (!granted) return false;
-      }
-      
-      setIsTracking(true);
-      
-      // If on Android and background permission not granted, request it
-      if (Platform.isAndroid() && backgroundPermissionStatus !== 'granted') {
-        requestBackgroundPermission();
-      }
-      
-      await getCurrentLocation();
-      return true;
+  };
+  
+  // Request both foreground and background permissions (if needed)
+  const requestPermissions = async (): Promise<boolean> => {
+    // First, request foreground permission if needed
+    if (permissionStatus !== 'granted') {
+      const foregroundGranted = await requestPermission();
+      if (!foregroundGranted) return false;
     }
-  }, [isTracking, permissionStatus, backgroundPermissionStatus, requestPermission, requestBackgroundPermission, getCurrentLocation]);
-
-  // Check if location is valid
-  const locationIsValid = useCallback(() => {
-    return !!(location && 
-      location.coords && 
-      location.coords.latitude && 
-      location.coords.longitude);
-  }, [location]);
-
-  // Check if location is stale (older than 5 minutes)
-  const isLocationStale = useCallback(() => {
-    const lastLocationTimestamp = localStorage.getItem('lastLocationTimestamp');
-    if (!lastLocationTimestamp) return true;
     
-    const lastLocationTime = new Date(lastLocationTimestamp).getTime();
-    const currentTime = new Date().getTime();
-    const fiveMinutesInMs = 5 * 60 * 1000;
+    // Then, request background permission if on Android
+    if (Platform.isNative() && Platform.isAndroid()) {
+      // Show educational UI before requesting background permission
+      showEducationalUi();
+      
+      // Request background permission
+      return await requestBackgroundPermission();
+    }
     
-    return currentTime - lastLocationTime > fiveMinutesInMs;
-  }, []);
+    return permissionStatus === 'granted';
+  };
+  
+  // Show educational UI explaining why background location is needed
+  const showEducationalUi = () => {
+    setHasEducationalUiBeenShown(true);
+  };
+  
+  // Toggle location tracking
+  const enableTracking = (enable: boolean) => {
+    setTrackingEnabled(enable);
+  };
 
   return {
-    location,
     permissionStatus,
     backgroundPermissionStatus,
-    hasShownInitialPrompt,
-    hasInitialized,
-    isRequesting,
     requestPermission,
     requestBackgroundPermission,
-    getCurrentLocation,
-    isTracking,
-    toggleTracking,
-    locationIsValid,
-    isLocationStale
+    requestPermissions,
+    isRequesting,
+    hasEducationalUiBeenShown,
+    showEducationalUi,
+    trackingEnabled,
+    enableTracking
   };
 }

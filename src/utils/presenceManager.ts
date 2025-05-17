@@ -1,190 +1,236 @@
+
 import { supabase } from '@/integrations/supabase/client';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { Platform } from '@/utils/platform';
 
-interface UserPresenceState {
+interface PresenceUser {
   user_id: string;
-  online_at: string;
-  client_info: {
-    platform: string;
-    version?: string;
-    timestamp: string;
-  };
-  [key: string]: any;
+  status: 'online' | 'away' | 'offline';
+  timestamp: number;
+  platform: string;
+  metadata?: Record<string, any>;
+}
+
+interface PresenceOptions {
+  channelName: string;
+  userId: string;
+  metadata?: Record<string, any>;
+  onSync?: (state: Record<string, PresenceUser[]>) => void;
+  onJoin?: (key: string, user: PresenceUser) => void;
+  onLeave?: (key: string, user: PresenceUser) => void;
+  updateInterval?: number;
 }
 
 class PresenceManager {
-  private static instance: PresenceManager;
-  private channels: Map<string, { channel: any, state: UserPresenceState }> = new Map();
-  
-  private constructor() {
-    // Private constructor to enforce singleton
-    window.addEventListener('beforeunload', () => {
-      this.cleanupAllChannels();
-    });
-  }
-  
-  public static getInstance(): PresenceManager {
-    if (!PresenceManager.instance) {
-      PresenceManager.instance = new PresenceManager();
-    }
-    return PresenceManager.instance;
-  }
+  private channel: RealtimeChannel | null = null;
+  private options: PresenceOptions | null = null;
+  private intervalId: number | null = null;
+  private isSubscribed = false;
   
   /**
-   * Join a presence channel
-   * @param channelName Name of the channel
-   * @param userId User ID
-   * @param additionalState Any additional state to track
-   * @returns Success status
+   * Initialize presence and start tracking
    */
-  public async joinChannel(channelName: string, userId: string, additionalState: Record<string, any> = {}): Promise<boolean> {
-    if (this.channels.has(channelName)) {
-      console.log(`Already in channel ${channelName}`);
-      return true;
+  public async initialize(options: PresenceOptions): Promise<boolean> {
+    if (this.channel) {
+      console.warn('Presence manager already initialized. Call cleanup() first.');
+      return false;
     }
     
-    try {
-      const presenceState: UserPresenceState = {
-        user_id: userId,
-        online_at: new Date().toISOString(),
-        client_info: {
-          platform: Platform.getPlatformName(),
-          version: '1.0.0',
-          timestamp: new Date().toISOString(),
-        },
-        ...additionalState
-      };
-      
-      const channel = supabase.channel(channelName);
-      
-      channel.on('presence', { event: 'sync' }, () => {
-        // Update app-wide state if needed
-        console.log(`Presence synced for channel ${channelName}:`, channel.presenceState());
+    this.options = options;
+    
+    // Create the presence channel
+    this.channel = supabase.channel(options.channelName);
+    
+    // Set up event handlers
+    this.channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = this.channel!.presenceState();
+        if (options.onSync) {
+          options.onSync(state as Record<string, PresenceUser[]>);
+        }
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        if (options.onJoin) {
+          options.onJoin(key, newPresences[0] as PresenceUser);
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        if (options.onLeave) {
+          options.onLeave(key, leftPresences[0] as PresenceUser);
+        }
       });
-      
-      // Subscribe to the channel
-      const status = await channel.subscribe(async (status) => {
+    
+    // Subscribe to the channel
+    try {
+      const status = await this.channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          // Start tracking presence
-          await channel.track(presenceState);
+          this.isSubscribed = true;
+          this.trackPresence();
+          this.setupUpdateInterval();
         }
       });
       
-      this.channels.set(channelName, { channel, state: presenceState });
-      return true;
+      return this.isSubscribed;
     } catch (error) {
-      console.error(`Error joining channel ${channelName}:`, error);
+      console.error('Error subscribing to presence channel:', error);
       return false;
     }
   }
   
   /**
-   * Update state in a joined channel
-   * @param channelName Channel name
-   * @param newState New state to merge
-   * @returns Success status
+   * Track initial presence state
    */
-  public async updateState(channelName: string, newState: Record<string, any>): Promise<boolean> {
-    const channelData = this.channels.get(channelName);
+  private async trackPresence(): Promise<void> {
+    if (!this.channel || !this.options || !this.isSubscribed) return;
     
-    if (!channelData) {
-      console.error(`Not in channel ${channelName}`);
-      return false;
+    // Create base presence state
+    const presenceData: PresenceUser = {
+      user_id: this.options.userId,
+      status: 'online',
+      timestamp: Date.now(),
+      platform: Platform.getPlatformName(),
+    };
+    
+    // Add metadata if available
+    if (this.options.metadata) {
+      presenceData.metadata = this.options.metadata;
     }
     
     try {
-      const updatedState = {
-        ...channelData.state,
-        ...newState,
-        // Always update timestamp
-        online_at: new Date().toISOString(),
-        client_info: {
-          ...channelData.state.client_info,
-          timestamp: new Date().toISOString(),
-        }
+      await this.channel.track(presenceData);
+    } catch (error) {
+      console.error('Error tracking presence:', error);
+    }
+  }
+  
+  /**
+   * Set up interval to update presence regularly
+   */
+  private setupUpdateInterval(): void {
+    if (!this.options) return;
+    
+    const updateInterval = this.options.updateInterval || 30000; // Default to 30 seconds
+    
+    this.intervalId = window.setInterval(async () => {
+      if (!this.channel || !this.options || !this.isSubscribed) {
+        this.cleanup();
+        return;
+      }
+      
+      // Create updated presence state
+      const presenceData: PresenceUser = {
+        user_id: this.options.userId,
+        status: document.visibilityState === 'visible' ? 'online' : 'away',
+        timestamp: Date.now(),
+        platform: Platform.getPlatformName(),
       };
       
-      await channelData.channel.track(updatedState);
+      // Add metadata if available
+      if (this.options.metadata) {
+        presenceData.metadata = this.options.metadata;
+      }
       
-      // Update our stored state
-      this.channels.set(channelName, {
-        channel: channelData.channel,
-        state: updatedState
-      });
-      
-      return true;
-    } catch (error) {
-      console.error(`Error updating state in channel ${channelName}:`, error);
-      return false;
-    }
+      try {
+        await this.channel.track(presenceData);
+      } catch (error) {
+        console.error('Error updating presence:', error);
+      }
+    }, updateInterval);
+    
+    // Add visibility change listener
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
   
   /**
-   * Leave a channel
-   * @param channelName Channel name
-   * @returns Success status
+   * Handle page visibility changes
    */
-  public async leaveChannel(channelName: string): Promise<boolean> {
-    const channelData = this.channels.get(channelName);
+  private handleVisibilityChange = async (): Promise<void> => {
+    if (!this.channel || !this.options || !this.isSubscribed) return;
     
-    if (!channelData) {
-      return true; // Already left
+    // Update status based on visibility state
+    const presenceData: PresenceUser = {
+      user_id: this.options.userId,
+      status: document.visibilityState === 'visible' ? 'online' : 'away',
+      timestamp: Date.now(),
+      platform: Platform.getPlatformName(),
+    };
+    
+    // Add metadata if available
+    if (this.options.metadata) {
+      presenceData.metadata = this.options.metadata;
     }
     
     try {
-      await channelData.channel.untrack();
-      supabase.removeChannel(channelData.channel);
-      this.channels.delete(channelName);
+      await this.channel.track(presenceData);
+    } catch (error) {
+      console.error('Error updating presence on visibility change:', error);
+    }
+  };
+  
+  /**
+   * Update user's presence status and metadata
+   */
+  public async updateStatus(
+    status: 'online' | 'away' | 'offline', 
+    metadata?: Record<string, any>
+  ): Promise<boolean> {
+    if (!this.channel || !this.options || !this.isSubscribed) return false;
+    
+    // Create presence update
+    const presenceData: PresenceUser = {
+      user_id: this.options.userId,
+      status,
+      timestamp: Date.now(),
+      platform: Platform.getPlatformName(),
+    };
+    
+    // Add metadata if available
+    if (metadata || this.options.metadata) {
+      presenceData.metadata = {
+        ...this.options.metadata,
+        ...metadata,
+      };
+    }
+    
+    try {
+      await this.channel.track(presenceData);
       return true;
     } catch (error) {
-      console.error(`Error leaving channel ${channelName}:`, error);
+      console.error('Error updating presence status:', error);
       return false;
     }
   }
   
   /**
-   * Get all users in a channel
-   * @param channelName Channel name
-   * @returns Array of user IDs
+   * Clean up resources
    */
-  public getUsersInChannel(channelName: string): string[] {
-    const channelData = this.channels.get(channelName);
-    
-    if (!channelData) {
-      return [];
+  public async cleanup(): Promise<void> {
+    if (this.intervalId !== null) {
+      window.clearInterval(this.intervalId);
+      this.intervalId = null;
     }
     
-    const state = channelData.channel.presenceState();
-    return Object.values(state).flatMap(
-      (presences: any) => presences.map((p: any) => p.user_id)
-    );
-  }
-  
-  /**
-   * Get presence state for a channel
-   * @param channelName Channel name
-   * @returns Presence state or null if not in channel
-   */
-  public getChannelState(channelName: string): Record<string, any[]> | null {
-    const channelData = this.channels.get(channelName);
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     
-    if (!channelData) {
-      return null;
+    if (this.channel && this.isSubscribed) {
+      try {
+        // Set offline status before untracking
+        if (this.options) {
+          await this.updateStatus('offline');
+        }
+        
+        await this.channel.untrack();
+        await supabase.removeChannel(this.channel);
+      } catch (error) {
+        console.error('Error cleaning up presence manager:', error);
+      }
     }
     
-    return channelData.channel.presenceState();
-  }
-  
-  /**
-   * Clean up all channels on app exit
-   */
-  private async cleanupAllChannels(): Promise<void> {
-    const channelNames = Array.from(this.channels.keys());
-    
-    for (const channelName of channelNames) {
-      await this.leaveChannel(channelName);
-    }
+    this.channel = null;
+    this.options = null;
+    this.isSubscribed = false;
   }
 }
 
-export default PresenceManager.getInstance();
+// Export a singleton instance
+export const presenceManager = new PresenceManager();

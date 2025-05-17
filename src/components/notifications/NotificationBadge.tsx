@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
+import { useBadge } from '@/hooks/useBadge';
+import { Platform } from '@/utils/platform';
 
 interface NotificationBadgeProps {
   className?: string;
@@ -16,8 +18,16 @@ export const NotificationBadge = ({
   onClick 
 }: NotificationBadgeProps) => {
   const { unreadCount } = useNotifications();
+  const { updateBadgeCount, isSupported } = useBadge();
   
   const hasUnread = unreadCount > 0;
+  
+  // Update app icon badge when unread count changes
+  useEffect(() => {
+    if (isSupported && Platform.isNative()) {
+      updateBadgeCount(unreadCount);
+    }
+  }, [unreadCount, isSupported, updateBadgeCount]);
   
   return (
     <button 

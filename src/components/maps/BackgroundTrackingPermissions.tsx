@@ -1,26 +1,25 @@
 
-import React from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { MapPin, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
-import { useLocationPermission } from '@/hooks/useLocationPermission';
-import { Platform } from '@/utils/platform';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { nativeServices } from '@/utils/nativeServices';
+import React, { useState, useEffect } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { MapPin, Settings } from "lucide-react";
+import { useLocationPermission } from "@/hooks/useLocationPermission";
+import { Platform } from "@/utils/platform";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 
-interface BackgroundTrackingPermissionsProps {
-  onPermissionChanged?: (granted: boolean) => void;
-  showStatus?: boolean;
-  compact?: boolean;
-}
-
-const BackgroundTrackingPermissions: React.FC<BackgroundTrackingPermissionsProps> = ({
-  onPermissionChanged,
-  showStatus = true,
-  compact = false
-}) => {
+export const BackgroundTrackingPermissions = () => {
+  const [showDialog, setShowDialog] = useState(false);
+  const [androidVersion, setAndroidVersion] = useState<number>(0);
   const {
     permissionStatus,
     backgroundPermissionStatus,
@@ -29,115 +28,109 @@ const BackgroundTrackingPermissions: React.FC<BackgroundTrackingPermissionsProps
     isRequesting
   } = useLocationPermission();
 
-  const handleEnableBackgroundTracking = async () => {
-    // Request foreground permission if needed
+  // Get Android version when component mounts
+  useEffect(() => {
+    const getVersion = async () => {
+      if (Platform.isAndroid()) {
+        const version = await Platform.getAndroidVersion();
+        setAndroidVersion(version);
+      }
+    };
+
+    getVersion();
+  }, []);
+
+  // Only show for Android devices that need background permission
+  const needsBackgroundPermission = Platform.isAndroid() && 
+    (androidVersion >= 10) && 
+    permissionStatus === 'granted' && 
+    backgroundPermissionStatus !== 'granted';
+    
+  if (!needsBackgroundPermission) {
+    return null;
+  }
+
+  const handleRequestPermission = async () => {
     if (permissionStatus !== 'granted') {
-      const foregroundGranted = await requestPermission();
-      if (!foregroundGranted) {
-        toast({
-          title: "Permission Denied",
-          description: "Location permission is required for tracking",
+      const granted = await requestPermission();
+      if (!granted) {
+        toast({ 
+          title: "Permission denied", 
+          description: "Location permission is required for delivery tracking",
           variant: "destructive"
         });
-        if (onPermissionChanged) onPermissionChanged(false);
         return;
       }
     }
     
-    // Request background permission on Android 10+
-    if (Platform.isAndroid()) {
-      const backgroundGranted = await requestBackgroundPermission();
-      
-      if (backgroundGranted) {
-        // Start foreground service
-        await nativeServices.startLocationTrackingService();
-        
-        toast({
-          title: "Background Tracking Enabled",
-          description: "Delivery tracking will work even when the app is in the background",
+    if (backgroundPermissionStatus !== 'granted') {
+      const granted = await requestBackgroundPermission();
+      if (granted) {
+        toast({ 
+          title: "Permission granted", 
+          description: "Background location is now enabled",
+          variant: "default"
         });
-        
-        if (onPermissionChanged) onPermissionChanged(true);
       } else {
-        toast({
-          title: "Limited Tracking",
-          description: "Tracking will only work when the app is open",
-          variant: "warning"
+        toast({ 
+          title: "Permission denied", 
+          description: "Background location is required for delivery tracking",
+          variant: "destructive"
         });
-        
-        if (onPermissionChanged) onPermissionChanged(false);
       }
     }
+    
+    setShowDialog(false);
   };
 
-  if (!Platform.isAndroid() || !showStatus) {
-    return null;
-  }
-
-  // If we have all permissions, just show status
-  if (permissionStatus === 'granted' && backgroundPermissionStatus === 'granted' && showStatus) {
-    return (
-      <div className="mb-4">
-        <Alert variant="default" className="bg-green-900/20 border-green-500/30">
-          <CheckCircle2 className="h-4 w-4 text-green-400" />
-          <AlertTitle>Background Tracking Enabled</AlertTitle>
-          <AlertDescription>
-            Delivery tracking is active even when the app is running in the background.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
-    <Card className={`mb-4 ${compact ? "border-quantum-cyan/20" : "holographic-card"}`}>
-      <CardHeader className={compact ? "p-4" : "p-6"}>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2 text-quantum-cyan">
-            <MapPin className="h-5 w-5" />
-            Background Tracking
-          </CardTitle>
-          
-          {permissionStatus === 'granted' && (
-            <Badge variant={backgroundPermissionStatus === 'granted' ? "success" : "destructive"}>
-              {backgroundPermissionStatus === 'granted' ? "Enabled" : "Limited"}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className={compact ? "p-4 pt-0" : "p-6 pt-0"}>
-        <div className="space-y-4">
-          <Alert variant="default" className="bg-blue-900/30 border-blue-500/30">
-            <Info className="h-4 w-4 text-blue-400" />
-            <AlertTitle>Enhanced Delivery Tracking</AlertTitle>
-            <AlertDescription>
-              To optimize deliveries and provide the best experience, we need permission to track location in the background.
-              This helps with route optimization and accurate delivery times.
-            </AlertDescription>
-          </Alert>
-          
-          {permissionStatus === 'denied' && (
-            <Alert variant="destructive" className="bg-red-900/20 border-red-700/30">
-              <AlertTriangle className="h-4 w-4 text-red-400" />
-              <AlertTitle>Location Access Required</AlertTitle>
-              <AlertDescription>
-                Please enable location access in your device settings before enabling background tracking.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      </CardContent>
-      <CardFooter className={compact ? "p-4 pt-0" : "p-6 pt-0"}>
-        <Button
-          onClick={handleEnableBackgroundTracking}
-          disabled={isRequesting || permissionStatus === 'denied'}
-          className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
-        >
-          {isRequesting ? 'Requesting...' : 'Enable Background Tracking'}
-        </Button>
-      </CardFooter>
-    </Card>
+    <>
+      <Alert variant="warning" className="mb-4 border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950">
+        <MapPin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+        <AlertTitle className="text-yellow-800 dark:text-yellow-300">Background location required</AlertTitle>
+        <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-sm">
+          To track deliveries properly, this app needs permission to access your location in the background.
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2 border-yellow-300 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900"
+            onClick={() => setShowDialog(true)}
+          >
+            Enable background location
+          </Button>
+        </AlertDescription>
+      </Alert>
+
+      <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Background Location Permission</AlertDialogTitle>
+            <AlertDialogDescription>
+              For delivery tracking to work properly, the app needs permission to access your location even when the app is not in use.
+              
+              <div className="mt-4 space-y-2">
+                <p className="font-medium text-sm">This permission is needed to:</p>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  <li>Track delivery progress in real-time</li>
+                  <li>Calculate accurate delivery times</li>
+                  <li>Optimize delivery routes</li>
+                  <li>Notify you when deliveries are nearby</li>
+                </ul>
+              </div>
+              
+              <div className="mt-4 text-sm">
+                Your location data is only used during active deliveries and is not stored permanently.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Later</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRequestPermission} disabled={isRequesting}>
+              {isRequesting ? "Requesting..." : "Grant Permission"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
-
-export default BackgroundTrackingPermissions;

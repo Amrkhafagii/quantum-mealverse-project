@@ -1,5 +1,6 @@
 
 import { Platform } from '@/utils/platform';
+import { BadgeService } from '@/services/badge/badgeService';
 
 export const nativeServices = {
   /**
@@ -42,5 +43,26 @@ export const nativeServices = {
       console.error('Error stopping location tracking service:', error);
       return false;
     }
+  },
+  
+  /**
+   * Set the application badge number
+   */
+  setBadgeCount: async (count: number): Promise<boolean> => {
+    return BadgeService.setBadgeCount(count);
+  },
+  
+  /**
+   * Get the current badge count
+   */
+  getBadgeCount: async (): Promise<number> => {
+    return BadgeService.getBadgeCount();
+  },
+  
+  /**
+   * Clear the application badge (set to 0)
+   */
+  clearBadgeCount: async (): Promise<boolean> => {
+    return BadgeService.clearBadge();
   }
 };

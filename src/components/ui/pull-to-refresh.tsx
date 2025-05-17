@@ -1,145 +1,167 @@
 
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
-import { motion, useAnimation } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import * as React from 'react';
+import { ArrowDownIcon, CheckCircleIcon, LoaderCircleIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Platform } from '@/utils/platform';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 
-export interface PullToRefreshProps {
-  children: ReactNode;
-  onRefresh: () => Promise<void>;
-  isRefreshing?: boolean;  // Added isRefreshing prop
-  disabled?: boolean;  // Added disabled prop to allow disabling pull to refresh
+interface PullToRefreshProps {
+  onRefresh: () => Promise<any>;
+  children: React.ReactNode;
+  className?: string;
+  pullDownThreshold?: number;
+  maxPullDownDistance?: number;
+  contentsProps?: React.HTMLAttributes<HTMLDivElement>;
+  containerProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
-export const PullToRefresh: React.FC<PullToRefreshProps> = ({ 
-  children, 
+export const PullToRefresh = ({
   onRefresh,
-  isRefreshing: externalRefreshing,
-  disabled = false
-}) => {
-  const [startY, setStartY] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const controls = useAnimation();
+  children,
+  className,
+  pullDownThreshold = 80,
+  maxPullDownDistance = 120,
+  contentsProps,
+  containerProps,
+}: PullToRefreshProps) => {
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [pullDistance, setPullDistance] = React.useState(0);
+  const [startY, setStartY] = React.useState(0);
+  const [status, setStatus] = React.useState<'pull' | 'release' | 'refreshing' | 'done'>('pull');
+  const { isOnline } = useConnectionStatus();
   
-  // Threshold to trigger refresh
-  const pullThreshold = 80;
+  // Don't use pull to refresh on desktop browsers
+  const isMobile = Platform.isMobileBrowser() || Platform.isNative();
   
-  // Use external refreshing state if provided
-  useEffect(() => {
-    if (externalRefreshing !== undefined) {
-      setIsRefreshing(externalRefreshing);
-    }
-  }, [externalRefreshing]);
-  
-  // Handle pull to refresh
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Skip if disabled
-    if (disabled) return;
-    
-    // Only enable pull to refresh if scrolled to top
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
-      setStartY(e.touches[0].clientY);
-    } else {
-      setStartY(0);
-    }
+  const handleStart = (clientY: number) => {
+    if (refreshing) return;
+    setStartY(clientY);
   };
-  
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (startY === 0 || isRefreshing || disabled) return;
+
+  const handleMove = (clientY: number) => {
+    if (refreshing || !isMobile) return;
+    const container = document.scrollingElement || document.documentElement;
     
-    const currentY = e.touches[0].clientY;
-    const distance = Math.max(0, currentY - startY);
+    // Only activate when at the top of the page
+    if (container.scrollTop > 0) return;
     
-    // Add resistance to the pull
-    const pullWithResistance = Math.min(distance * 0.4, pullThreshold * 1.5);
-    
-    setPullDistance(pullWithResistance);
+    const distance = Math.max(0, Math.min(clientY - startY, maxPullDownDistance));
+    setPullDistance(distance);
+    setStatus(distance > pullDownThreshold ? 'release' : 'pull');
   };
-  
-  const handleTouchEnd = async () => {
-    // Skip if disabled
-    if (disabled) return;
+
+  const handleEnd = async () => {
+    if (refreshing || !isMobile) return;
     
-    // If pulled past threshold, trigger refresh
-    if (pullDistance > pullThreshold && !isRefreshing) {
-      setIsRefreshing(true);
-      
+    if (pullDistance > pullDownThreshold && isOnline) {
+      setStatus('refreshing');
+      setRefreshing(true);
       try {
         await onRefresh();
+        setStatus('done');
+        setTimeout(() => {
+          setPullDistance(0);
+          setRefreshing(false);
+          setStatus('pull');
+        }, 1000);
       } catch (error) {
-        console.error('Error refreshing:', error);
-      } finally {
-        // Only set isRefreshing to false if externalRefreshing is undefined
-        if (externalRefreshing === undefined) {
-          setIsRefreshing(false);
-        }
+        console.error('Refresh failed:', error);
+        setPullDistance(0);
+        setRefreshing(false);
+        setStatus('pull');
       }
-    }
-    
-    // Reset pull distance
-    setPullDistance(0);
-  };
-  
-  // Animate refresh indicator
-  useEffect(() => {
-    if (isRefreshing) {
-      controls.start({ y: 40, opacity: 1 });
     } else {
-      controls.start({ y: 0, opacity: 0 });
+      setPullDistance(0);
     }
-  }, [isRefreshing, controls]);
-  
-  // Only add touch handlers on mobile devices
-  const isMobile = Platform.isNative() || Platform.isMobileBrowser?.();
-  const touchProps = isMobile && !disabled ? {
-    onTouchStart: handleTouchStart,
-    onTouchMove: handleTouchMove,
-    onTouchEnd: handleTouchEnd
-  } : {};
-  
+  };
+
+  React.useEffect(() => {
+    if (!isMobile) return;
+    
+    const handleTouchStart = (e: TouchEvent) => handleStart(e.touches[0].clientY);
+    const handleTouchMove = (e: TouchEvent) => handleMove(e.touches[0].clientY);
+    const handleTouchEnd = () => handleEnd();
+    
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [refreshing, startY, pullDistance, pullDownThreshold, isOnline, isMobile]);
+
+  const getIcon = () => {
+    switch (status) {
+      case 'pull':
+        return <ArrowDownIcon className="animate-bounce h-5 w-5" />;
+      case 'release':
+        return <ArrowDownIcon className="h-5 w-5 transform rotate-180" />;
+      case 'refreshing':
+        return <LoaderCircleIcon className="animate-spin h-5 w-5" />;
+      case 'done':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getMessage = () => {
+    switch (status) {
+      case 'pull':
+        return 'Pull down to refresh';
+      case 'release':
+        return 'Release to refresh';
+      case 'refreshing':
+        return 'Refreshing...';
+      case 'done':
+        return 'Updated!';
+      default:
+        return '';
+    }
+  };
+
   return (
-    <div 
-      ref={containerRef}
-      className="h-full overflow-y-auto relative"
-      {...touchProps}
+    <div
+      {...containerProps}
+      className={cn('overflow-hidden', containerProps?.className)}
     >
-      {/* Pull to refresh indicator */}
-      <motion.div 
-        className="absolute top-0 left-0 right-0 flex justify-center z-10 pointer-events-none"
-        initial={{ y: 0, opacity: 0 }}
-        animate={controls}
-      >
-        <div className="bg-quantum-darkBlue/80 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg flex items-center">
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          <span className="text-sm">Refreshing...</span>
+      {isMobile && (
+        <div
+          className={cn(
+            'flex flex-col items-center justify-center transition-transform duration-300',
+            pullDistance > 0 && !refreshing ? 'transition-none' : '',
+          )}
+          style={{
+            transform: `translateY(${pullDistance}px)`,
+            minHeight: '30px',
+            marginTop: '-30px',
+          }}
+        >
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {getIcon()}
+            <span>{getMessage()}</span>
+          </div>
         </div>
-      </motion.div>
+      )}
       
-      {/* Pull indicator */}
-      <motion.div 
-        className="absolute top-0 left-0 right-0 flex justify-center z-10 pointer-events-none"
-        style={{ 
-          y: pullDistance, 
-          opacity: pullDistance > 0 ? Math.min(pullDistance / pullThreshold, 1) : 0 
-        }}
-      >
-        <div className="bg-quantum-darkBlue/80 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg">
-          <span className="text-sm">
-            {pullDistance > pullThreshold ? 'Release to refresh' : 'Pull to refresh'}
-          </span>
-        </div>
-      </motion.div>
-      
-      {/* Content with padding for pull distance */}
-      <motion.div
-        style={{ 
-          y: isRefreshing ? 40 : pullDistance
+      <div
+        {...contentsProps}
+        className={cn(
+          'transition-transform duration-300',
+          pullDistance > 0 && !refreshing ? 'transition-none' : '',
+          className,
+          contentsProps?.className
+        )}
+        style={{
+          transform: `translateY(${pullDistance}px)`,
+          ...contentsProps?.style,
         }}
       >
         {children}
-      </motion.div>
+      </div>
     </div>
   );
 };
