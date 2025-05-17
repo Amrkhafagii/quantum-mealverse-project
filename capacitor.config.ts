@@ -48,6 +48,24 @@ const config: CapacitorConfig = {
         fastestLocationUpdateInterval: 5000, // 5 seconds
         motionTriggerDelay: 60000, // 1 minute delay before triggering motion detection
       }
+    },
+    // Add the Background Sync configuration
+    BackgroundSync: {
+      // iOS-specific configuration
+      ios: {
+        minimumBackgroundFetchInterval: 900, // 15 minutes in seconds
+        backgroundSyncIdentifier: "com.lovable.quantummealverse.background-sync"
+      },
+      // Android-specific configuration
+      android: {
+        notificationChannelId: "background_sync",
+        notificationTitle: "Data Sync",
+        notificationText: "Syncing your data",
+        syncMinimumInterval: 15, // 15 minutes
+        batterySaverEnabled: true,
+        requiresNetworkConnectivity: true,
+        requiresCharging: false
+      }
     }
   }
 };

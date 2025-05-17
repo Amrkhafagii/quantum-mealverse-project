@@ -2,6 +2,7 @@ import UIKit
 import Capacitor
 import CoreLocation
 import CoreMotion
+import BackgroundTasks
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
@@ -39,6 +40,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         
         // Register for remote notifications
         registerForPushNotifications(application)
+        
+        // Register background tasks
+        if #available(iOS 13.0, *) {
+            BackgroundSync.register()
+        }
         
         // Override point for customization after application launch.
         return true
@@ -367,6 +373,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         
         // Save the current location state
         saveCriticalLocationData()
+        
+        // Schedule background sync when going to background
+        if #available(iOS 13.0, *) {
+            BackgroundSync.scheduleAppRefresh()
+        }
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
@@ -451,63 +462,82 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         // This is called when the system wakes up the app for a background fetch
         print("Background fetch initiated")
         
-        // Request a single location update during background fetch
-        guard let locationManager = locationManager else {
-            completionHandler(.failed)
-            return
-        }
-        
-        // Only proceed if we have authorization
-        if locationManager.authorizationStatus == .authorizedAlways {
-            // Reset location manager with energy efficient settings for this fetch
-            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
-            locationManager.distanceFilter = 50
+        // Start a sync operation
+        if #available(iOS 13.0, *) {
+            // For iOS 13+, we use the BGTask framework registered in didFinishLaunchingWithOptions
+            // Just forward to the notification-based sync if needed
+            NotificationCenter.default.post(name: Notification.Name("backgroundSyncStarted"), object: nil)
             
-            // Set a timeout for the fetch
-            let locationFetchTimeout = DispatchWorkItem {
-                print("Location fetch timed out")
-                completionHandler(.failed)
+            // Set a timeout to ensure we call the completion handler
+            DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+                completionHandler(.noData)
             }
             
-            // Schedule timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + 25, execute: locationFetchTimeout)
-            
-            // Create a one-time location update handler
-            let locationUpdateHandler: ((CLLocation) -> Void) = { [weak self] location in
-                guard let self = self else { return }
-                
-                // Cancel the timeout
-                locationFetchTimeout.cancel()
-                
-                // Process the location
-                if self.isQualityLocation(location) {
-                    // Post the location update
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("locationUpdate"),
-                        object: nil,
-                        userInfo: [
-                            "latitude": location.coordinate.latitude,
-                            "longitude": location.coordinate.longitude,
-                            "accuracy": location.horizontalAccuracy,
-                            "timestamp": location.timestamp.timeIntervalSince1970 * 1000,
-                            "source": "background_fetch"
-                        ]
-                    )
-                    completionHandler(.newData)
-                } else {
-                    completionHandler(.noData)
-                }
+            // Listen for sync completion
+            let observer = NotificationCenter.default.addObserver(forName: Notification.Name("backgroundSyncCompleted"), object: nil, queue: .main) { _ in
+                NotificationCenter.default.removeObserver(observer)
+                completionHandler(.newData)
             }
-            
-            // Temporarily store the handler
-            // In a real implementation, you'd use a more robust solution to handle the callback
-            objc_setAssociatedObject(self, "oneTimeLocationHandler", locationUpdateHandler, .OBJC_ASSOCIATION_RETAIN)
-            
-            // Request a single location update
-            locationManager.requestLocation()
         } else {
-            // No authorization for background location
-            completionHandler(.noData)
+            // Legacy background fetch handling
+            // Request a single location update during background fetch
+            guard let locationManager = locationManager else {
+                completionHandler(.failed)
+                return
+            }
+            
+            // Only proceed if we have authorization
+            if locationManager.authorizationStatus == .authorizedAlways {
+                // Reset location manager with energy efficient settings for this fetch
+                locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+                locationManager.distanceFilter = 50
+                
+                // Set a timeout for the fetch
+                let locationFetchTimeout = DispatchWorkItem {
+                    print("Location fetch timed out")
+                    completionHandler(.failed)
+                }
+                
+                // Schedule timeout
+                DispatchQueue.main.asyncAfter(deadline: .now() + 25, execute: locationFetchTimeout)
+                
+                // Create a one-time location update handler
+                let locationUpdateHandler: ((CLLocation) -> Void) = { [weak self] location in
+                    guard let self = self else { return }
+                    
+                    // Cancel the timeout
+                    locationFetchTimeout.cancel()
+                    
+                    // Process the location
+                    if self.isQualityLocation(location) {
+                        // Post the location update
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("locationUpdate"),
+                            object: nil,
+                            userInfo: [
+                                "latitude": location.coordinate.latitude,
+                                "longitude": location.coordinate.longitude,
+                                "accuracy": location.horizontalAccuracy,
+                                "timestamp": location.timestamp.timeIntervalSince1970 * 1000,
+                                "source": "background_fetch"
+                            ]
+                        )
+                        completionHandler(.newData)
+                    } else {
+                        completionHandler(.noData)
+                    }
+                }
+                
+                // Temporarily store the handler
+                // In a real implementation, you'd use a more robust solution to handle the callback
+                objc_setAssociatedObject(self, "oneTimeLocationHandler", locationUpdateHandler, .OBJC_ASSOCIATION_RETAIN)
+                
+                // Request a single location update
+                locationManager.requestLocation()
+            } else {
+                // No authorization for background location
+                completionHandler(.noData)
+            }
         }
     }
 }

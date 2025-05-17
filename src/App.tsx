@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,6 +12,7 @@ import { TouchOptimizerProvider } from './contexts/TouchOptimizerContext';
 import { useAuth } from './hooks/useAuth';
 import { LoadingSuspense } from './components/ui/LoadingSuspense';
 import { NotificationsManager } from './components/notifications/NotificationsManager';
+import { BackgroundSyncManager } from '@/components/sync/BackgroundSyncManager';
 
 // Eagerly load critical components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -71,7 +71,7 @@ function App() {
   const queryClient = new QueryClient();
   
   return (
-    <>
+    <BackgroundSyncManager>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <GoogleMapsProvider>
@@ -335,7 +335,7 @@ function App() {
       
       {/* Add NotificationsManager for mobile notification handling */}
       <NotificationsManager />
-    </>
+    </BackgroundSyncManager>
   );
 }
 
