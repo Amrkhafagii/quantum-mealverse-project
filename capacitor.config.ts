@@ -79,6 +79,30 @@ const config: CapacitorConfig = {
         requiresNetworkConnectivity: true,
         requiresCharging: false
       }
+    },
+    // Add the RouteOptimization configuration
+    RouteOptimization: {
+      // iOS-specific configuration (MapKit/Google Maps SDK)
+      ios: {
+        preferMapKit: true, // Use native MapKit when available
+        useGoogleMapsWhenAvailable: true,
+        routeOptimizationStrategy: "fastest", // fastest, shortest, or balanced
+        avoidHighways: false,
+        avoidTolls: false,
+        avoidFerries: true,
+        considerTraffic: true, // Use traffic information when available
+        promptForGoogleAPI: false, // Don't prompt for Google API key
+      },
+      // Android-specific configuration (Google Maps Routes API)
+      android: {
+        routeOptimizationStrategy: "fastest", // fastest, shortest, or balanced
+        backgroundComputation: true, // Allow computation in background
+        cacheDuration: 30, // Cache routes for 30 minutes
+        priorityLevel: "high", // high, medium, or low
+        avoidHighways: false,
+        avoidTolls: false,
+        avoidFerries: true
+      }
     }
   }
 };
