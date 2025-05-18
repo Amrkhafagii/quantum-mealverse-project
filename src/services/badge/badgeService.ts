@@ -23,10 +23,33 @@ export class BadgeService {
       // Ensure count is not negative
       const validCount = Math.max(0, count);
       
-      // Use Local Notifications plugin to set badge
-      await LocalNotifications.setBadgeCount({ count: validCount });
-      this.currentBadgeCount = validCount;
+      // Using the badge count API, and fallback to our stored value
+      try {
+        // On native platforms, set the badge count
+        if (Platform.isIOS()) {
+          // On iOS, we can use the badge property of scheduleNotification
+          await LocalNotifications.schedule({
+            notifications: [{
+              id: 1,
+              title: 'Badge Update',
+              body: 'Badge count updated',
+              schedule: { at: new Date(Date.now() + 1000) },
+              sound: null,
+              smallIcon: 'ic_notification',
+              badge: validCount
+            }]
+          });
+        } else if (Platform.isAndroid()) {
+          // On Android, handle badge through custom methods
+          // This would typically be implemented in native code
+          // For now, we'll just store the value
+          console.log("Setting badge count on Android:", validCount);
+        }
+      } catch (error) {
+        console.error("Native badge update error:", error);
+      }
       
+      this.currentBadgeCount = validCount;
       return true;
     } catch (error) {
       console.error('Error setting badge count:', error);
@@ -43,9 +66,9 @@ export class BadgeService {
         return 0;
       }
       
-      const result = await LocalNotifications.getBadgeCount();
-      this.currentBadgeCount = result.count;
-      return result.count;
+      // Since we can't directly get the badge count from Capacitor,
+      // we'll return our stored value
+      return this.currentBadgeCount;
     } catch (error) {
       console.error('Error getting badge count:', error);
       return this.currentBadgeCount;

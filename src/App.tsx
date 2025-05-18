@@ -81,248 +81,250 @@ function App() {
                   <DeliveryMapProvider>
                     <MapViewProvider>
                       <TouchOptimizerProvider>
-                        <Router>
-                          <Routes>
-                            <Route path="/" element={
-                              <LoadingSuspense>
-                                <Home />
-                              </LoadingSuspense>
-                            } />
+                        <NotificationsManager>
+                          <Router>
+                            <Routes>
+                              <Route path="/" element={
+                                <LoadingSuspense>
+                                  <Home />
+                                </LoadingSuspense>
+                              } />
 
-                            {/* Auth routes */}
-                            <Route path="/login" element={
-                              <LoadingSuspense>
-                                <Login />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/auth" element={
-                              <LoadingSuspense>
-                                <Auth />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/register" element={
-                              <LoadingSuspense>
-                                <Register />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/signup" element={
-                              <LoadingSuspense>
-                                <Signup />
-                              </LoadingSuspense>
-                            } />
+                              {/* Auth routes */}
+                              <Route path="/login" element={
+                                <LoadingSuspense>
+                                  <Login />
+                                </LoadingSuspense>
+                              } />
+                              <Route path="/auth" element={
+                                <LoadingSuspense>
+                                  <Auth />
+                                </LoadingSuspense>
+                              } />
+                              <Route path="/register" element={
+                                <LoadingSuspense>
+                                  <Register />
+                                </LoadingSuspense>
+                              } />
+                              <Route path="/signup" element={
+                                <LoadingSuspense>
+                                  <Signup />
+                                </LoadingSuspense>
+                              } />
 
-                            {/* Customer routes */}
-                            <Route path="/products" element={
-                              <LoadingSuspense>
-                                <Products />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/products/:id" element={
-                              <LoadingSuspense>
-                                <ProductDetail />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/customer" element={
-                              <LoadingSuspense>
-                                <Customer />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/dashboard" element={
-                              <ProtectedRoute>
+                              {/* Customer routes */}
+                              <Route path="/products" element={
                                 <LoadingSuspense>
-                                  <Dashboard />
+                                  <Products />
                                 </LoadingSuspense>
-                              </ProtectedRoute>
-                            } />
-                            <Route path="/cart" element={
-                              <LoadingSuspense>
-                                <Cart />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/checkout" element={
-                              <ProtectedRoute>
+                              } />
+                              <Route path="/products/:id" element={
                                 <LoadingSuspense>
-                                  <Checkout />
+                                  <ProductDetail />
                                 </LoadingSuspense>
-                              </ProtectedRoute>
-                            } />
-                            <Route path="/order-confirmation" element={
-                              <ProtectedRoute>
+                              } />
+                              <Route path="/customer" element={
                                 <LoadingSuspense>
-                                  <OrderConfirmation />
+                                  <Customer />
                                 </LoadingSuspense>
-                              </ProtectedRoute>
-                            } />
-                            <Route path="/order-status/:id" element={
-                              <ProtectedRoute>
+                              } />
+                              <Route path="/dashboard" element={
+                                <ProtectedRoute>
+                                  <LoadingSuspense>
+                                    <Dashboard />
+                                  </LoadingSuspense>
+                                </ProtectedRoute>
+                              } />
+                              <Route path="/cart" element={
                                 <LoadingSuspense>
-                                  <OrderStatus />
+                                  <Cart />
                                 </LoadingSuspense>
-                              </ProtectedRoute>
-                            } />
-                            <Route path="/profile" element={
-                              <ProtectedRoute>
+                              } />
+                              <Route path="/checkout" element={
+                                <ProtectedRoute>
+                                  <LoadingSuspense>
+                                    <Checkout />
+                                  </LoadingSuspense>
+                                </ProtectedRoute>
+                              } />
+                              <Route path="/order-confirmation" element={
+                                <ProtectedRoute>
+                                  <LoadingSuspense>
+                                    <OrderConfirmation />
+                                  </LoadingSuspense>
+                                </ProtectedRoute>
+                              } />
+                              <Route path="/order-status/:id" element={
+                                <ProtectedRoute>
+                                  <LoadingSuspense>
+                                    <OrderStatus />
+                                  </LoadingSuspense>
+                                </ProtectedRoute>
+                              } />
+                              <Route path="/profile" element={
+                                <ProtectedRoute>
+                                  <LoadingSuspense>
+                                    <Profile />
+                                  </LoadingSuspense>
+                                </ProtectedRoute>
+                              } />
+                              <Route path="/order-history" element={
+                                <ProtectedRoute>
+                                  <LoadingSuspense>
+                                    <OrderHistory />
+                                  </LoadingSuspense>
+                                </ProtectedRoute>
+                              } />
+                              
+                              {/* Fitness, Nutrition, Workouts */}
+                              <Route path="/fitness" element={
                                 <LoadingSuspense>
-                                  <Profile />
+                                  <Fitness />
                                 </LoadingSuspense>
-                              </ProtectedRoute>
-                            } />
-                            <Route path="/order-history" element={
-                              <ProtectedRoute>
+                              } />
+                              <Route path="/nutrition" element={
                                 <LoadingSuspense>
-                                  <OrderHistory />
+                                  <Nutrition />
                                 </LoadingSuspense>
-                              </ProtectedRoute>
-                            } />
-                            
-                            {/* Fitness, Nutrition, Workouts */}
-                            <Route path="/fitness" element={
-                              <LoadingSuspense>
-                                <Fitness />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/nutrition" element={
-                              <LoadingSuspense>
-                                <Nutrition />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/workouts" element={
-                              <LoadingSuspense>
-                                <Workouts />
-                              </LoadingSuspense>
-                            } />
-                            
-                            {/* Orders Route */}
-                            <Route path="/orders" element={
-                              <LoadingSuspense>
-                                <Orders />
-                              </LoadingSuspense>
-                            } />
-                            <Route path="/orders/:id" element={
-                              <LoadingSuspense>
-                                <Orders />
-                              </LoadingSuspense>
-                            } />
-                            
-                            {/* Subscription/Meal Plans Route */}
-                            <Route path="/subscription" element={
-                              <LoadingSuspense>
-                                <Subscription />
-                              </LoadingSuspense>
-                            } />
-                            
-                            {/* Contact Route */}
-                            <Route path="/contact" element={
-                              <LoadingSuspense>
-                                <Contact />
-                              </LoadingSuspense>
-                            } />
-                            
-                            {/* Note: More specific routes should come before less specific ones */}
-                            {/* Restaurant Dashboard Routes */}
-                            <Route path="/restaurant/dashboard" element={
-                              <LoadingSuspense>
-                                <RestaurantDashboard />
-                              </LoadingSuspense>
-                            } />
-                            
-                            <Route path="/restaurant/menu" element={
-                              <LoadingSuspense>
-                                <RestaurantMenu />
-                              </LoadingSuspense>
-                            } />
-                            
-                            <Route path="/restaurant/orders" element={
-                              <LoadingSuspense>
-                                <RestaurantOrders />
-                              </LoadingSuspense>
-                            } />
-                            
-                            {/* Restaurant Detail Route (must come AFTER the more specific routes) */}
-                            <Route path="/restaurant/:id" element={
-                              <LoadingSuspense>
-                                <Restaurant />
-                              </LoadingSuspense>
-                            } />
-                            
-                            <Route path="/meal/:id" element={
-                              <LoadingSuspense>
-                                <MealDetail />
-                              </LoadingSuspense>
-                            } />
-                            
-                            {/* Delivery Routes */}
-                            <Route path="/delivery" element={
-                              <DeliveryRoute>
+                              } />
+                              <Route path="/workouts" element={
                                 <LoadingSuspense>
-                                  <DeliveryDashboard />
+                                  <Workouts />
                                 </LoadingSuspense>
-                              </DeliveryRoute>
-                            } />
-                            
-                            {/* Add missing delivery routes */}
-                            <Route path="/delivery/dashboard" element={
-                              <DeliveryRoute>
+                              } />
+                              
+                              {/* Orders Route */}
+                              <Route path="/orders" element={
                                 <LoadingSuspense>
-                                  <DeliveryDashboard />
+                                  <Orders />
                                 </LoadingSuspense>
-                              </DeliveryRoute>
-                            } />
-                            
-                            <Route path="/delivery/settings" element={
-                              <DeliveryRoute>
+                              } />
+                              <Route path="/orders/:id" element={
                                 <LoadingSuspense>
-                                  <DeliverySettings />
+                                  <Orders />
                                 </LoadingSuspense>
-                              </DeliveryRoute>
-                            } />
-                            
-                            <Route path="/delivery/onboarding" element={
-                              <DeliveryRoute>
+                              } />
+                              
+                              {/* Subscription/Meal Plans Route */}
+                              <Route path="/subscription" element={
                                 <LoadingSuspense>
-                                  <OnboardingPage />
+                                  <Subscription />
                                 </LoadingSuspense>
-                              </DeliveryRoute>
-                            } />
-                            
-                            {/* Admin Routes - Grouped and lazily loaded */}
-                            <Route path="/admin" element={
-                              <AdminRoute>
+                              } />
+                              
+                              {/* Contact Route */}
+                              <Route path="/contact" element={
                                 <LoadingSuspense>
-                                  <AdminDashboard />
+                                  <Contact />
                                 </LoadingSuspense>
-                              </AdminRoute>
-                            } />
-                            <Route path="/admin/products" element={
-                              <AdminRoute>
+                              } />
+                              
+                              {/* Note: More specific routes should come before less specific ones */}
+                              {/* Restaurant Dashboard Routes */}
+                              <Route path="/restaurant/dashboard" element={
                                 <LoadingSuspense>
-                                  <AdminProducts />
+                                  <RestaurantDashboard />
                                 </LoadingSuspense>
-                              </AdminRoute>
-                            } />
-                            <Route path="/admin/orders" element={
-                              <AdminRoute>
+                              } />
+                              
+                              <Route path="/restaurant/menu" element={
                                 <LoadingSuspense>
-                                  <AdminOrders />
+                                  <RestaurantMenu />
                                 </LoadingSuspense>
-                              </AdminRoute>
-                            } />
-                            <Route path="/admin/users" element={
-                              <AdminRoute>
+                              } />
+                              
+                              <Route path="/restaurant/orders" element={
                                 <LoadingSuspense>
-                                  <AdminUsers />
+                                  <RestaurantOrders />
                                 </LoadingSuspense>
-                              </AdminRoute>
-                            } />
-                            
-                            {/* Not Found Route */}
-                            <Route path="*" element={
-                              <LoadingSuspense>
-                                <NotFound />
-                              </LoadingSuspense>
-                            } />
-                          </Routes>
-                        </Router>
+                              } />
+                              
+                              {/* Restaurant Detail Route (must come AFTER the more specific routes) */}
+                              <Route path="/restaurant/:id" element={
+                                <LoadingSuspense>
+                                  <Restaurant />
+                                </LoadingSuspense>
+                              } />
+                              
+                              <Route path="/meal/:id" element={
+                                <LoadingSuspense>
+                                  <MealDetail />
+                                </LoadingSuspense>
+                              } />
+                              
+                              {/* Delivery Routes */}
+                              <Route path="/delivery" element={
+                                <DeliveryRoute>
+                                  <LoadingSuspense>
+                                    <DeliveryDashboard />
+                                  </LoadingSuspense>
+                                </DeliveryRoute>
+                              } />
+                              
+                              {/* Add missing delivery routes */}
+                              <Route path="/delivery/dashboard" element={
+                                <DeliveryRoute>
+                                  <LoadingSuspense>
+                                    <DeliveryDashboard />
+                                  </LoadingSuspense>
+                                </DeliveryRoute>
+                              } />
+                              
+                              <Route path="/delivery/settings" element={
+                                <DeliveryRoute>
+                                  <LoadingSuspense>
+                                    <DeliverySettings />
+                                  </LoadingSuspense>
+                                </DeliveryRoute>
+                              } />
+                              
+                              <Route path="/delivery/onboarding" element={
+                                <DeliveryRoute>
+                                  <LoadingSuspense>
+                                    <OnboardingPage />
+                                  </LoadingSuspense>
+                                </DeliveryRoute>
+                              } />
+                              
+                              {/* Admin Routes - Grouped and lazily loaded */}
+                              <Route path="/admin" element={
+                                <AdminRoute>
+                                  <LoadingSuspense>
+                                    <AdminDashboard />
+                                  </LoadingSuspense>
+                                </AdminRoute>
+                              } />
+                              <Route path="/admin/products" element={
+                                <AdminRoute>
+                                  <LoadingSuspense>
+                                    <AdminProducts />
+                                  </LoadingSuspense>
+                                </AdminRoute>
+                              } />
+                              <Route path="/admin/orders" element={
+                                <AdminRoute>
+                                  <LoadingSuspense>
+                                    <AdminOrders />
+                                  </LoadingSuspense>
+                                </AdminRoute>
+                              } />
+                              <Route path="/admin/users" element={
+                                <AdminRoute>
+                                  <LoadingSuspense>
+                                    <AdminUsers />
+                                  </LoadingSuspense>
+                                </AdminRoute>
+                              } />
+                              
+                              {/* Not Found Route */}
+                              <Route path="*" element={
+                                <LoadingSuspense>
+                                  <NotFound />
+                                </LoadingSuspense>
+                              } />
+                            </Routes>
+                          </Router>
+                        </NotificationsManager>
                       </TouchOptimizerProvider>
                     </MapViewProvider>
                   </DeliveryMapProvider>
@@ -332,9 +334,6 @@ function App() {
           </GoogleMapsProvider>
         </ThemeProvider>
       </QueryClientProvider>
-      
-      {/* Add NotificationsManager for mobile notification handling */}
-      <NotificationsManager />
     </BackgroundSyncManager>
   );
 }

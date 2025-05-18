@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
+import { Platform } from '@/utils/platform'; // Add missing import
 
 export const LocationSettingsPanel = () => {
   const { 

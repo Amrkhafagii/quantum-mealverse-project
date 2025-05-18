@@ -85,7 +85,7 @@ export const BackgroundTrackingPermissions = () => {
 
   return (
     <>
-      <Alert variant="warning" className="mb-4 border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950">
+      <Alert className="mb-4 border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950">
         <MapPin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
         <AlertTitle className="text-yellow-800 dark:text-yellow-300">Background location required</AlertTitle>
         <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-sm">

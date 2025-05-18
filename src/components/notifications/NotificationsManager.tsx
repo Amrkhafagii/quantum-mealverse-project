@@ -7,12 +7,12 @@ import { BadgeService } from '@/services/badge/badgeService';
 import { BadgeCountSync } from './BadgeCountSync';
 
 interface NotificationsManagerProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const NotificationsManager: React.FC<NotificationsManagerProps> = ({ children }) => {
   const { unreadCount, isLoading } = useNotifications();
-  const { isSupported, requestPermission } = useBadge();
+  const { isSupported } = useBadge();
   
   // Request badge permission when component mounts
   useEffect(() => {

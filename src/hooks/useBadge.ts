@@ -74,6 +74,15 @@ export function useBadge() {
     return success;
   };
   
+  // Add requestPermission method to match the interface used in components
+  const requestPermission = async () => {
+    if (!isSupported) return false;
+    
+    const granted = await BadgeService.requestPermission();
+    setPermissionGranted(granted);
+    return granted;
+  };
+  
   return {
     badgeCount,
     permissionGranted,
@@ -82,5 +91,6 @@ export function useBadge() {
     incrementBadge,
     decrementBadge,
     clearBadge,
+    requestPermission
   };
 }
