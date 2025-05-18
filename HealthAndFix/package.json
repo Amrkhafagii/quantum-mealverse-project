@@ -1,3 +1,4 @@
+
 {
   "name": "HealthAndFix",
   "version": "0.0.1",
@@ -7,7 +8,9 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "web": "react-scripts start",
+    "build-web": "react-scripts build"
   },
   "dependencies": {
     "react": "19.0.0",
