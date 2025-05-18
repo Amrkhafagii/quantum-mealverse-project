@@ -1,101 +1,83 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Fingerprint, Scan, ShieldCheck } from 'lucide-react'; // Fixed FaceIcon import
+import React from 'react';
+import { Button } from "@/components/ui/button";
+import { Fingerprint } from 'lucide-react';
+import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { Platform } from '@/utils/platform';
-import { getBiometricAuthImplementation } from '@/services/auth/biometricAuthService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface BiometricLoginButtonProps {
-  userId?: string;
-  onAuthSuccess: (token: string) => void;
-  onAuthError: (error: Error) => void;
-  className?: string;
+  onSuccess?: () => void;
 }
 
-export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({
-  userId,
-  onAuthSuccess,
-  onAuthError,
-  className = '',
-}) => {
-  const [isAvailable, setIsAvailable] = useState(false);
-  const [biometricType, setBiometricType] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSuccess }) => {
+  const { isAvailable, biometryType, authenticateWithBiometrics } = useBiometricAuth();
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
-  // Get the appropriate biometric implementation for the platform
-  const biometricAuth = getBiometricAuthImplementation();
+  // Only show if biometrics are available and we're on a native platform
+  if (!isAvailable || !Platform.isNative()) {
+    return null;
+  }
   
-  useEffect(() => {
-    checkBiometricAvailability();
-  }, []);
-  
-  const checkBiometricAvailability = async () => {
+  const handleBiometricLogin = async () => {
     try {
-      const { available, biometryType } = await biometricAuth.isAvailable();
-      setIsAvailable(available);
-      setBiometricType(biometryType);
-    } catch (error) {
-      console.error('Error checking biometric availability:', error);
-      setIsAvailable(false);
-    }
-  };
-  
-  const handleBiometricAuth = async () => {
-    if (!isAvailable || !userId) return;
-    
-    setIsLoading(true);
-    
-    try {
-      const { authenticated } = await biometricAuth.authenticate({
-        reason: 'Login to your account',
-        title: 'Biometric Authentication',
-      });
+      const authenticated = await authenticateWithBiometrics("Sign in to your account");
       
       if (authenticated) {
-        // In a real app, we would validate the stored biometric credentials
-        // with the server and get a new authentication token
-        const dummyToken = `biometric-${userId}-${Date.now()}`;
-        onAuthSuccess(dummyToken);
+        // In a real implementation, this would retrieve a stored token
+        // and validate it with the server
+        const storedUserId = localStorage.getItem('biometric_user_id');
+        
+        if (storedUserId) {
+          // Mock login to simulate success for the demo
+          // This would actually retrieve the stored token and use it instead
+          await login('user@example.com', 'password');
+          
+          toast({
+            title: "Biometric login successful",
+            description: "Welcome back!"
+          });
+          
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            navigate('/');
+          }
+        } else {
+          toast({
+            title: "Biometric login failed",
+            description: "No stored credentials found. Please log in with your password first.",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
-      console.error('Biometric authentication error:', error);
-      onAuthError(error instanceof Error ? error : new Error('Authentication failed'));
-    } finally {
-      setIsLoading(false);
+      console.error('Biometric login error:', error);
     }
   };
   
-  // Don't render the button if biometrics aren't available
-  if (!isAvailable) return null;
-  
-  // Choose appropriate icon based on biometric type
-  let BiometricIcon = Fingerprint;
-  if (biometricType === 'face' || biometricType === 'faceId') {
-    BiometricIcon = Scan;
-  } else if (biometricType === 'webauthn') {
-    BiometricIcon = ShieldCheck;
-  }
+  const getButtonText = () => {
+    if (biometryType === 'faceId') {
+      return 'Sign in with Face ID';
+    } else if (biometryType === 'touchId' || biometryType === 'fingerprint') {
+      return 'Sign in with Touch ID';
+    }
+    return 'Sign in with Biometrics';
+  };
   
   return (
     <Button
+      type="button"
       variant="outline"
-      onClick={handleBiometricAuth}
-      disabled={isLoading || !isAvailable}
-      className={`${className} flex items-center justify-center gap-2`}
-      aria-label={`Sign in with ${biometricType === 'faceId' ? 'Face ID' : biometricType === 'touchId' ? 'Touch ID' : 'Biometrics'}`}
+      className="w-full mt-4"
+      onClick={handleBiometricLogin}
     >
-      <BiometricIcon className="h-5 w-5" aria-hidden="true" />
-      <span>
-        {Platform.isIOS() && biometricType === 'faceId'
-          ? 'Sign in with Face ID'
-          : Platform.isIOS() && biometricType === 'touchId'
-          ? 'Sign in with Touch ID'
-          : Platform.isAndroid()
-          ? 'Sign in with Biometrics'
-          : 'Use Biometric Login'}
-      </span>
+      <Fingerprint className="mr-2 h-4 w-4" />
+      {getButtonText()}
     </Button>
   );
 };
-
-export default BiometricLoginButton;

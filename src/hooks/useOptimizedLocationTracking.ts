@@ -1,243 +1,224 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Platform } from '@/utils/platform';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
-import { useBatteryStatus } from '@/hooks/useBatteryStatus';
+import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
+import { BackgroundGeolocation, getBackgroundWatcherOptions } from '@/utils/backgroundGeolocation';
 import { DeliveryLocation } from '@/types/location';
-import { useBackgroundLocationTracking } from '@/hooks/useBackgroundLocationTracking';
-import { useCurrentLocation } from '@/hooks/useCurrentLocation';
+import { toast } from '@/components/ui/use-toast';
 
-interface OptimizedLocationTrackingProps {
+interface OptimizedTrackingOptions {
   onLocationUpdate?: (location: DeliveryLocation) => void;
   lowPowerMode?: boolean;
   distanceFilter?: number;
   trackingInterval?: number;
+  enableActivityDetection?: boolean;
 }
 
 export function useOptimizedLocationTracking({
   onLocationUpdate,
-  lowPowerMode: forceLowPowerMode,
-  distanceFilter = 10, // meters
-  trackingInterval = 30000, // 30 seconds
-}: OptimizedLocationTrackingProps = {}) {
-  // Get current location from Capacitor plugin
-  const { getCurrentLocation, isLoadingLocation } = useCurrentLocation();
-  
-  // Use the background tracking hook on native
-  const {
-    isBackgroundTracking,
-    startBackgroundTracking,
-    stopBackgroundTracking
-  } = useBackgroundLocationTracking({
-    onLocationUpdate
-  });
-  
-  // Track motion state to optimize tracking
-  const [isMoving, setIsMoving] = useState(false);
-  const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
-  const [locationUpdateCount, setLocationUpdateCount] = useState(0);
-  
-  // State for tracking state
+  lowPowerMode = false,
+  distanceFilter = 10,
+  trackingInterval = 10000,
+  enableActivityDetection = true
+}: OptimizedTrackingOptions = {}) {
   const [isTracking, setIsTracking] = useState(false);
-  const [trackingIntervalId, setTrackingIntervalId] = useState<number | null>(null);
-  const [isLowBattery, setIsLowBattery] = useState(false);
+  const [watcherId, setWatcherId] = useState<string | null>(null);
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
-  
-  // Get network and battery status
-  const { isOnline } = useConnectionStatus();
-  const { isLowQuality } = useNetworkQuality();
-  const { level, isLowBattery: deviceIsLowBattery } = useBatteryStatus();
-  
-  // Determine if we should use low power mode
-  const lowPowerMode = forceLowPowerMode || 
-    deviceIsLowBattery || 
-    !isMoving || 
-    isLowQuality;
-  
-  // Update battery status
+  const [isLowBattery, setIsLowBattery] = useState(false);
+  const [isMoving, setIsMoving] = useState(true);
+
+  // Monitor battery level
   useEffect(() => {
-    if (level !== null) {
-      setBatteryLevel(level);
-      setIsLowBattery(deviceIsLowBattery);
-    }
-  }, [level, deviceIsLowBattery]);
-  
-  // Function to determine if the user is moving
-  const detectMotion = useCallback((newLocation: DeliveryLocation) => {
-    if (!lastLocation) {
-      setLastLocation(newLocation);
-      return;
-    }
-    
-    // Calculate distance between last location and new location
-    const distance = calculateDistance(
-      lastLocation.latitude,
-      lastLocation.longitude,
-      newLocation.latitude,
-      newLocation.longitude
-    );
-    
-    // If the distance is greater than the threshold, the user is moving
-    const wasMoving = isMoving;
-    const nowMoving = distance > distanceFilter;
-    
-    if (wasMoving !== nowMoving) {
-      setIsMoving(nowMoving);
-      
-      // If the user has started moving, increase update frequency
-      if (nowMoving && isTracking) {
-        restartTracking();
-      }
-      // If the user has stopped moving, decrease update frequency
-      else if (!nowMoving && isTracking) {
-        restartTracking();
-      }
-    }
-    
-    setLastLocation(newLocation);
-  }, [lastLocation, isMoving, distanceFilter, isTracking]);
-  
-  // Helper function to calculate distance between two points
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
-    
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-    
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    
-    return R * c; // Distance in meters
-  };
-  
-  // Get current location and update state
-  const updateLocation = useCallback(async () => {
-    try {
-      const location = await getCurrentLocation();
-      
-      if (location) {
-        setLocationUpdateCount(prev => prev + 1);
+    if (!Capacitor.isNativePlatform()) return;
+
+    const checkBatteryLevel = async () => {
+      try {
+        const batteryInfo = await Device.getBatteryInfo();
+        const level = batteryInfo.batteryLevel;
         
-        // Check if the user is moving
-        detectMotion(location);
-        
-        // Call the onLocationUpdate callback
-        if (onLocationUpdate) {
-          onLocationUpdate({
-            ...location,
-            isMoving
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error updating location:', error);
-    }
-  }, [getCurrentLocation, detectMotion, onLocationUpdate, isMoving]);
-  
-  // Start tracking location
-  const startTracking = useCallback(async (): Promise<boolean> => {
-    try {
-      // If we're already tracking, no need to start again
-      if (isTracking) return true;
-      
-      // Use background tracking on native platforms
-      if (Platform.isNative()) {
-        const success = await startBackgroundTracking();
-        setIsTracking(success);
-        return success;
-      }
-      
-      // On web, use a simple interval
-      await updateLocation();
-      
-      // Base interval on battery status and if the user is moving
-      const interval = lowPowerMode ? trackingInterval * 2 : trackingInterval;
-      
-      const id = window.setInterval(() => {
-        updateLocation();
-      }, interval);
-      
-      setTrackingIntervalId(id as unknown as number);
-      setIsTracking(true);
-      
-      return true;
-    } catch (error) {
-      console.error('Error starting location tracking:', error);
-      return false;
-    }
-  }, [
-    isTracking, 
-    updateLocation, 
-    lowPowerMode, 
-    trackingInterval, 
-    startBackgroundTracking
-  ]);
-  
-  // Stop tracking location
-  const stopTracking = useCallback(async (): Promise<boolean> => {
-    try {
-      // If we're already not tracking, no need to stop
-      if (!isTracking) return true;
-      
-      // Stop background tracking on native platforms
-      if (Platform.isNative()) {
-        const success = await stopBackgroundTracking();
-        setIsTracking(!success);
-        return success;
-      }
-      
-      // Clear the interval on web
-      if (trackingIntervalId) {
-        clearInterval(trackingIntervalId);
-        setTrackingIntervalId(null);
-      }
-      
-      setIsTracking(false);
-      return true;
-    } catch (error) {
-      console.error('Error stopping location tracking:', error);
-      return false;
-    }
-  }, [isTracking, trackingIntervalId, stopBackgroundTracking]);
-  
-  // Restart tracking with new interval
-  const restartTracking = useCallback(async (): Promise<boolean> => {
-    await stopTracking();
-    return await startTracking();
-  }, [stopTracking, startTracking]);
-  
-  // Stop tracking when component unmounts
-  useEffect(() => {
-    return () => {
-      if (trackingIntervalId) {
-        clearInterval(trackingIntervalId);
-      }
-      
-      if (Platform.isNative() && isBackgroundTracking) {
-        stopBackgroundTracking();
+        setBatteryLevel(level);
+        setIsLowBattery(level < 0.2); // 20% threshold for low battery
+      } catch (err) {
+        console.error('Error checking battery level:', err);
       }
     };
-  }, [trackingIntervalId, isBackgroundTracking, stopBackgroundTracking]);
-  
+
+    // Check battery initially and on interval
+    checkBatteryLevel();
+    const batteryInterval = setInterval(checkBatteryLevel, 60000); // every minute
+
+    return () => clearInterval(batteryInterval);
+  }, []);
+
+  // Get optimized watcher options based on current state
+  const getOptimizedWatcherOptions = useCallback(() => {
+    // Start with base options
+    const options = getBackgroundWatcherOptions();
+
+    // Adjust distance filter based on battery, movement and power mode
+    let adjustedDistanceFilter = distanceFilter;
+
+    // Increase filter when battery is low or device is stationary
+    if (isLowBattery) {
+      adjustedDistanceFilter = Math.max(50, distanceFilter * 2);
+    } else if (!isMoving) {
+      adjustedDistanceFilter = Math.max(30, distanceFilter * 1.5);
+    }
+
+    // Always use higher distance filter in low power mode
+    if (lowPowerMode) {
+      adjustedDistanceFilter = Math.max(100, distanceFilter * 3);
+    }
+
+    // Configure iOS-specific options
+    if (Capacitor.getPlatform() === 'ios') {
+      options.ios = {
+        // Use significant changes only when battery is low or in low power mode
+        significantChangesOnly: isLowBattery || lowPowerMode,
+        activityType: lowPowerMode ? 'other' : 'fitness',
+        // Lower accuracy when battery is low
+        desiredAccuracy: isLowBattery ? 'nearestTenMeters' : 'best',
+        pauseLocationUpdatesAutomatically: true,
+        distanceFilter: adjustedDistanceFilter
+      };
+    } 
+    // Configure Android-specific options
+    else if (Capacitor.getPlatform() === 'android') {
+      options.android = {
+        // Lower frequency when battery is low or in low power mode
+        locationUpdateInterval: isLowBattery || lowPowerMode 
+          ? trackingInterval * 3 
+          : trackingInterval,
+        distanceFilter: adjustedDistanceFilter,
+        // Enable activity detection
+        stationaryRadius: 25, // 25 meters considered stationary
+        notificationIconColor: '#23cfc9',
+        notification: {
+          title: 'Location Tracking',
+          text: isLowBattery 
+            ? 'Running in battery saving mode' 
+            : 'Tracking your location'
+        }
+      };
+    }
+
+    return options;
+  }, [isLowBattery, isMoving, lowPowerMode, distanceFilter, trackingInterval]);
+
+  // Start tracking with optimized settings
+  const startTracking = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) {
+      console.warn("Background tracking is only supported on native platforms");
+      return false;
+    }
+
+    try {
+      // Use optimized options for tracking
+      const options = getOptimizedWatcherOptions();
+
+      const watcher = await BackgroundGeolocation.addWatcher(
+        options,
+        (position, err) => {
+          if (err) {
+            console.error('Location error:', err);
+            return;
+          }
+          
+          if (position) {
+            // Extract movement information if available
+            const isDeviceMoving = typeof position.is_moving !== 'undefined' 
+              ? position.is_moving 
+              : true;
+              
+            if (isMoving !== isDeviceMoving) {
+              setIsMoving(isDeviceMoving);
+            }
+            
+            const locationData: DeliveryLocation = {
+              latitude: position.latitude,
+              longitude: position.longitude,
+              accuracy: position.accuracy,
+              timestamp: Date.now(),
+              speed: position.speed || 0,
+              isMoving: isDeviceMoving
+            };
+            
+            if (onLocationUpdate) {
+              onLocationUpdate(locationData);
+            }
+          }
+        }
+      );
+      
+      if (typeof watcher === 'string') {
+        setWatcherId(watcher);
+      } else if (watcher && typeof watcher === 'object' && 'id' in watcher) {
+        setWatcherId(watcher.id);
+      } else {
+        console.error('Unexpected return type from addWatcher:', watcher);
+        return false;
+      }
+      
+      setIsTracking(true);
+      
+      // Show toast with current optimization mode
+      const statusMessage = isLowBattery 
+        ? 'Started location tracking in battery saving mode' 
+        : lowPowerMode 
+          ? 'Started location tracking in low power mode'
+          : 'Started location tracking';
+          
+      toast({
+        title: "Location Tracking Active",
+        description: statusMessage,
+        variant: "default"
+      });
+      
+      return true;
+    } catch (err) {
+      console.error('Error starting optimized location tracking', err);
+      toast({
+        title: "Location tracking failed",
+        description: "Could not start tracking your location. Please check your settings.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [getOptimizedWatcherOptions, isLowBattery, isMoving, lowPowerMode, onLocationUpdate]);
+
+  // Stop tracking
+  const stopTracking = useCallback(async () => {
+    if (!watcherId) return true;
+
+    try {
+      await BackgroundGeolocation.removeWatcher({
+        id: watcherId
+      });
+      setWatcherId(null);
+      setIsTracking(false);
+      return true;
+    } catch (err) {
+      console.error('Error stopping location tracking', err);
+      return false;
+    }
+  }, [watcherId]);
+
+  // Update tracking options when battery level or movement changes
+  useEffect(() => {
+    if (isTracking && watcherId) {
+      // Restart tracking with updated options
+      stopTracking().then(() => {
+        startTracking();
+      });
+    }
+  }, [isLowBattery, isMoving, lowPowerMode, stopTracking, startTracking, isTracking, watcherId]);
+
   return {
-    isTracking: isTracking || isBackgroundTracking,
+    isTracking,
     startTracking,
     stopTracking,
-    restartTracking,
-    lastLocation,
-    isMoving,
-    updateLocation,
-    isLoading: isLoadingLocation,
-    locationUpdateCount,
+    batteryLevel,
     isLowBattery,
-    batteryLevel
+    isMoving
   };
 }
-
-export default useOptimizedLocationTracking;

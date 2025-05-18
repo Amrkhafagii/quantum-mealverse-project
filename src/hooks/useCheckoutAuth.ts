@@ -1,71 +1,159 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
-import { AuthFormData } from '@/types/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
+import { handleAuthSubmit } from '@/services/auth/authCheckout';
+import { useToast } from "@/components/ui/use-toast";
+import { Order } from '@/types/order';
+
+interface DeliveryInfoDB {
+  address: string;
+  city: string;
+  created_at: string;
+  full_name: string;
+  id: string;
+  phone: string;
+  updated_at: string;
+  user_id: string;
+  // Note: latitude and longitude are managed in the user_locations table, not in delivery_info
+}
 
 export const useCheckoutAuth = () => {
-  const { user: authUser, login } = useAuth();
-  const [loggedInUser, setLoggedInUser] = useState<any>(null);
-  const [hasDeliveryInfo, setHasDeliveryInfo] = useState<boolean>(false);
-  const [defaultValues, setDefaultValues] = useState<any>({
-    email: '',
-    fullName: '',
-    address: '',
-    city: '',
-    zipCode: '',
-    phoneNumber: '',
-    deliveryMethod: 'standard',
-    paymentMethod: 'card',
-  });
-  const [showLoginPrompt, setShowLoginPrompt] = useState<boolean>(false);
-  const [isLoadingUserData, setIsLoadingUserData] = useState<boolean>(true);
   const { toast } = useToast();
+  const [loggedInUser, setLoggedInUser] = useState<any>(null);
+  const [hasDeliveryInfo, setHasDeliveryInfo] = useState(false);
+  const [defaultValues, setDefaultValues] = useState<Partial<DeliveryFormValues>>({});
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
-  // Check if user is logged in on mount
   useEffect(() => {
-    const checkUser = async () => {
+    const checkLoginStatus = async () => {
       setIsLoadingUserData(true);
-      
-      if (authUser) {
-        setLoggedInUser(authUser);
-        setDefaultValues(prev => ({
-          ...prev,
-          email: authUser.email || '',
-          fullName: authUser.displayName || '',
-        }));
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        // Check if user has delivery info saved
-        // For now, let's just assume they don't have info saved
-        setHasDeliveryInfo(false);
-      } else {
+        if (sessionError) {
+          setShowLoginPrompt(true);
+          setIsLoadingUserData(false);
+          return;
+        }
+        
+        if (session?.user) {
+          setLoggedInUser(session.user);
+          
+          try {
+            // First check if user has delivery info
+            const { data: deliveryInfo } = await supabase
+              .from('delivery_info')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+
+            // Get user location data
+            const { data: locationData } = await supabase
+              .from('user_locations')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('timestamp', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+              
+            // If no delivery info, check previous orders
+            const { data: previousOrders } = await supabase
+              .from('orders')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            // Prioritize using delivery information
+            if (deliveryInfo) {
+              setHasDeliveryInfo(true);
+              
+              const latitude = locationData?.latitude || 0;
+              const longitude = locationData?.longitude || 0;
+              
+              // Properly cast delivery and payment methods to the expected types
+              const deliveryMethodCast = previousOrders?.delivery_method === "delivery" || previousOrders?.delivery_method === "pickup" 
+                ? (previousOrders.delivery_method as "delivery" | "pickup") 
+                : "delivery" as const;
+                
+              const paymentMethodCast = previousOrders?.payment_method === "cash" || previousOrders?.payment_method === "visa" 
+                ? (previousOrders.payment_method as "cash" | "visa") 
+                : "cash" as const;
+              
+              setDefaultValues({
+                email: session.user.email || "",
+                fullName: (deliveryInfo as DeliveryInfoDB).full_name,
+                phone: (deliveryInfo as DeliveryInfoDB).phone,
+                address: (deliveryInfo as DeliveryInfoDB).address,
+                city: (deliveryInfo as DeliveryInfoDB).city,
+                latitude: latitude,
+                longitude: longitude,
+                deliveryMethod: deliveryMethodCast,
+                paymentMethod: paymentMethodCast
+              });
+            } else if (previousOrders) {
+              // If no delivery info but there are previous orders, use order information
+              setHasDeliveryInfo(true);
+              
+              const latitude = locationData?.latitude || 0;
+              const longitude = locationData?.longitude || 0;
+              
+              // Cast string types to the specific union types required
+              const deliveryMethodCast = previousOrders.delivery_method === "delivery" || previousOrders.delivery_method === "pickup" 
+                ? (previousOrders.delivery_method as "delivery" | "pickup") 
+                : "delivery" as const;
+                
+              const paymentMethodCast = previousOrders.payment_method === "cash" || previousOrders.payment_method === "visa" 
+                ? (previousOrders.payment_method as "cash" | "visa") 
+                : "cash" as const;
+              
+              setDefaultValues({
+                fullName: previousOrders.customer_name,
+                email: previousOrders.customer_email || session.user.email,
+                phone: previousOrders.customer_phone,
+                address: previousOrders.delivery_address,
+                city: previousOrders.city,
+                notes: previousOrders.notes || "",
+                latitude: locationData?.latitude || 0,
+                longitude: locationData?.longitude || 0,
+                deliveryMethod: deliveryMethodCast,
+                paymentMethod: paymentMethodCast
+              });
+            } else if (session.user.email) {
+              // Fallback to just email if no previous data exists
+              const latitude = locationData?.latitude || 0;
+              const longitude = locationData?.longitude || 0;
+              
+              setDefaultValues({
+                email: session.user.email,
+                latitude: latitude,
+                longitude: longitude,
+                deliveryMethod: "delivery" as const,
+                paymentMethod: "cash" as const
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
+            setShowLoginPrompt(true);
+          }
+        } else {
+          setShowLoginPrompt(true);
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
         setShowLoginPrompt(true);
+      } finally {
+        setIsLoadingUserData(false);
       }
-      
-      setIsLoadingUserData(false);
     };
     
-    checkUser();
-  }, [authUser]);
-
-  const handleAuthSubmit = async (data: AuthFormData) => {
-    try {
-      await login(data.email, data.password);
-      
-      toast({
-        title: "Login successful",
-        description: "You've been logged in successfully.",
-      });
-      
-      setShowLoginPrompt(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
+    checkLoginStatus();
+    
+    return () => {};
+  }, []);
 
   return {
     loggedInUser,
@@ -73,10 +161,14 @@ export const useCheckoutAuth = () => {
     defaultValues,
     showLoginPrompt,
     isLoadingUserData,
-    handleAuthSubmit,
-    setLoggedInUser,
-    setShowLoginPrompt,
-    setHasDeliveryInfo,
-    setDefaultValues
+    handleAuthSubmit: (data: any) => {
+      return handleAuthSubmit(data, {
+        setLoggedInUser,
+        setShowLoginPrompt,
+        setHasDeliveryInfo,
+        setDefaultValues,
+        toast
+      });
+    }
   };
 };

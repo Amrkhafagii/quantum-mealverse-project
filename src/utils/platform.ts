@@ -1,61 +1,64 @@
 
-/**
- * Platform detection utility for cross-platform code
- */
+import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
+
 export class Platform {
-  static get isWeb(): boolean {
-    return typeof window !== 'undefined' && typeof document !== 'undefined';
-  }
-
-  static get isNative(): boolean {
-    return !this.isWeb;
-  }
-
-  static get isIOS(): boolean {
-    return this.isNative && this._getPlatformName() === 'ios';
-  }
-
-  static get isAndroid(): boolean {
-    return this.isNative && this._getPlatformName() === 'android';
-  }
-
-  // Fix: Don't use function call syntax for boolean properties
   static isNative(): boolean {
-    return !this.isWeb;
-  }
-
-  static isIOS(): boolean {
-    return this.isNative && this._getPlatformName() === 'ios';
+    return Capacitor.isNativePlatform();
   }
 
   static isAndroid(): boolean {
-    return this.isNative && this._getPlatformName() === 'android';
+    return Capacitor.getPlatform() === 'android';
   }
 
-  // Add new utility method to check Android version
-  static getAndroidVersion(): number | null {
-    if (!this.isAndroid) return null;
+  static isIOS(): boolean {
+    return Capacitor.getPlatform() === 'ios';
+  }
+
+  static isWeb(): boolean {
+    return !this.isNative();
+  }
+  
+  static isTablet(): boolean {
+    // Simple heuristic for tablet detection
+    if (this.isNative()) {
+      // For native, we'll need to implement platform-specific logic in future
+      // For now, assume it's not a tablet
+      return false;
+    } else {
+      // For web: use screen dimensions as a heuristic
+      const minTabletWidth = 768; // Common breakpoint for tablets
+      return window.innerWidth >= minTabletWidth && !this.isMobileBrowser();
+    }
+  }
+  
+  static async getAndroidVersion(): Promise<number> {
+    if (!this.isAndroid()) {
+      return 0;
+    }
     
     try {
-      const { Device } = require('@capacitor/device');
-      const info = Device.getInfo();
-      return info?.androidSDKVersion || null;
-    } catch (e) {
-      console.error('Error getting Android version:', e);
-      return null;
+      const info = await Device.getInfo();
+      const versionString = info.osVersion || '';
+      const majorVersion = parseInt(versionString.split('.')[0]);
+      return isNaN(majorVersion) ? 0 : majorVersion;
+    } catch (err) {
+      console.error('Error getting Android version', err);
+      return 0;
     }
   }
-
-  private static _getPlatformName(): string {
-    try {
-      // For React Native environments
-      if (!this.isWeb) {
-        const { Capacitor } = require('@capacitor/core');
-        return Capacitor.getPlatform().toLowerCase();
-      }
-    } catch (e) {
-      // Ignore errors when React Native is not available
-    }
+  
+  static isMobileBrowser(): boolean {
+    if (this.isNative()) return false;
+    
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+  }
+  
+  static getPlatformName(): string {
+    if (this.isIOS()) return 'ios';
+    if (this.isAndroid()) return 'android';
+    if (this.isMobileBrowser()) return 'mobile-web';
     return 'web';
   }
 }

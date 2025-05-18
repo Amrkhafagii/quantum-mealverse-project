@@ -1,45 +1,48 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useMediaQuery } from 'react-responsive';
+import { useScreenDimensions } from '../hooks/useScreenDimensions';
 import { Platform } from '@/utils/platform';
+import { useTheme } from '@/components/theme-provider';
 
-export interface ResponsiveContextType {
+interface ResponsiveContextType {
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
   isPortrait: boolean;
   isLandscape: boolean;
-  isFoldable: boolean;
-  isDarkMode: boolean;
+  isPadWidth: boolean;
+  screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   isPlatformIOS: boolean;
   isPlatformAndroid: boolean;
+  isPlatformWeb: boolean;
   safeAreaTop: number;
   safeAreaBottom: number;
   safeAreaLeft: number;
   safeAreaRight: number;
-  windowWidth: number;
-  windowHeight: number;
+  isFoldable: boolean;
+  isDarkMode: boolean;
+  isReducedMotion: boolean;
 }
 
-const defaultResponsiveContext: ResponsiveContextType = {
+const ResponsiveContext = createContext<ResponsiveContextType>({
   isMobile: false,
   isTablet: false,
   isDesktop: true,
   isPortrait: true,
   isLandscape: false,
-  isFoldable: false,
-  isDarkMode: false,
+  isPadWidth: false,
+  screenSize: 'lg',
   isPlatformIOS: false,
   isPlatformAndroid: false,
+  isPlatformWeb: true,
   safeAreaTop: 0,
   safeAreaBottom: 0,
   safeAreaLeft: 0,
   safeAreaRight: 0,
-  windowWidth: 0,
-  windowHeight: 0,
-};
-
-const ResponsiveContext = createContext<ResponsiveContextType>(defaultResponsiveContext);
+  isFoldable: false,
+  isDarkMode: false,
+  isReducedMotion: false,
+});
 
 export const useResponsive = () => useContext(ResponsiveContext);
 
@@ -48,107 +51,77 @@ interface ResponsiveProviderProps {
 }
 
 export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children }) => {
-  // Screen size breakpoints
-  const isMobile = useMediaQuery({ maxWidth: 767 });
-  const isTablet = useMediaQuery({ minWidth: 768, maxWidth: 1023 });
-  const isDesktop = useMediaQuery({ minWidth: 1024 });
+  const dimensions = useScreenDimensions();
+  const { theme } = useTheme();
+  const [isReducedMotion, setIsReducedMotion] = useState(false);
   
-  // Orientation detection
-  const isPortrait = useMediaQuery({ orientation: 'portrait' });
-  const isLandscape = useMediaQuery({ orientation: 'landscape' });
-  
-  // Platform detection
-  const isPlatformIOS = Platform.isIOS;
-  const isPlatformAndroid = Platform.isAndroid;
-  
-  // Color scheme detection
-  const isDarkMode = useMediaQuery({ query: '(prefers-color-scheme: dark)' });
-  
-  // Foldable device detection (simplified version)
-  const [isFoldable, setIsFoldable] = useState(false);
-  
-  // Safe area insets (used for mobile devices)
+  // Get safe area values - These would ideally come from native APIs
   const [safeArea, setSafeArea] = useState({
     top: 0,
     bottom: 0,
     left: 0,
-    right: 0
+    right: 0,
   });
   
-  // Window dimensions
-  const [windowDimensions, setWindowDimensions] = useState({
-    width: 0,
-    height: 0
-  });
-  
-  // Effect to handle window resize and detect dimensions
   useEffect(() => {
-    function handleResize() {
-      setWindowDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-    }
+    // Check for reduced motion preference
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setIsReducedMotion(mediaQuery.matches);
     
-    // Initialize dimensions
-    handleResize();
+    const handleReducedMotionChange = (event: MediaQueryListEvent) => {
+      setIsReducedMotion(event.matches);
+    };
     
-    // Add event listener
-    window.addEventListener('resize', handleResize);
+    mediaQuery.addEventListener('change', handleReducedMotionChange);
     
-    // Check for foldable device support
-    if (typeof window !== 'undefined' && 'screen' in window) {
-      try {
-        // @ts-ignore - TypeScript doesn't know about experimental screen spanning API
-        if (window.screen.isExtended !== undefined) {
-          setIsFoldable(true);
-        }
-      } catch (e) {
-        // Not a foldable device or API not available
-      }
-    }
-    
-    // Get safe area insets from CSS variables if available
-    if (typeof document !== 'undefined') {
-      const computedStyle = getComputedStyle(document.documentElement);
-      
-      const safeAreaTop = parseInt(computedStyle.getPropertyValue('--sat') || '0', 10);
-      const safeAreaBottom = parseInt(computedStyle.getPropertyValue('--sab') || '0', 10);
-      const safeAreaLeft = parseInt(computedStyle.getPropertyValue('--sal') || '0', 10);
-      const safeAreaRight = parseInt(computedStyle.getPropertyValue('--sar') || '0', 10);
-      
-      setSafeArea({
-        top: safeAreaTop,
-        bottom: safeAreaBottom,
-        left: safeAreaLeft,
-        right: safeAreaRight
-      });
-    }
-    
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      mediaQuery.removeEventListener('change', handleReducedMotionChange);
+    };
   }, []);
   
-  // Combine all context values
-  const contextValue: ResponsiveContextType = {
-    isMobile,
-    isTablet,
-    isDesktop,
-    isPortrait,
-    isLandscape,
-    isFoldable,
-    isDarkMode,
-    isPlatformIOS,
-    isPlatformAndroid,
+  useEffect(() => {
+    // For native platforms, we would use the actual safe area API
+    // This is a simple approximation for iOS-like devices
+    if (Platform.isIOS()) {
+      setSafeArea({
+        top: dimensions.isLandscape ? 0 : 47, // Approximate status bar height
+        bottom: dimensions.isLandscape ? 21 : 34, // Approximate home indicator height
+        left: dimensions.isLandscape ? 44 : 0, // Only in landscape
+        right: dimensions.isLandscape ? 44 : 0, // Only in landscape
+      });
+    } else {
+      // Android or other platforms might have different safe areas
+      setSafeArea({
+        top: 24, // Approximate status bar height
+        bottom: 0,
+        left: 0,
+        right: 0,
+      });
+    }
+  }, [dimensions.isLandscape]);
+  
+  const value = {
+    isMobile: dimensions.deviceType === 'mobile',
+    isTablet: dimensions.deviceType === 'tablet',
+    isDesktop: dimensions.deviceType === 'desktop',
+    isPortrait: dimensions.isPortrait,
+    isLandscape: dimensions.isLandscape,
+    isPadWidth: dimensions.width >= 768,
+    screenSize: dimensions.screenSize,
+    isPlatformIOS: Platform.isIOS(),
+    isPlatformAndroid: Platform.isAndroid(),
+    isPlatformWeb: Platform.isWeb(),
     safeAreaTop: safeArea.top,
     safeAreaBottom: safeArea.bottom,
     safeAreaLeft: safeArea.left,
     safeAreaRight: safeArea.right,
-    windowWidth: windowDimensions.width,
-    windowHeight: windowDimensions.height,
+    isFoldable: dimensions.foldable,
+    isDarkMode: theme === 'dark',
+    isReducedMotion,
   };
   
   return (
-    <ResponsiveContext.Provider value={contextValue}>
+    <ResponsiveContext.Provider value={value}>
       {children}
     </ResponsiveContext.Provider>
   );
