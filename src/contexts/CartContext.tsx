@@ -82,7 +82,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     
     setCart((prevCart) =>
       prevCart.map((item) =>
-        item.id === item.id ? { ...item, quantity } : item
+        item.id === id ? { ...item, quantity } : item
       )
     );
   };

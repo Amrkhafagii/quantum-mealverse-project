@@ -14,21 +14,21 @@ export const OrderSummary = () => {
       
       <div className="space-y-4 mb-6">
         {items.map((item) => (
-          <div key={item.meal.id} className="flex gap-2 border-b border-quantum-cyan/20 pb-2">
+          <div key={item.id} className="flex gap-2 border-b border-quantum-cyan/20 pb-2">
             <div className="w-16 h-16">
               <img 
-                src={item.meal.image_url || `https://picsum.photos/seed/${item.meal.id}/300/200`} 
-                alt={item.meal.name}
+                src={item.image_url || `https://picsum.photos/seed/${item.id}/300/200`} 
+                alt={item.name}
                 className="w-full h-full object-cover rounded"
               />
             </div>
             <div className="flex-1">
               <div className="flex justify-between">
-                <h3 className="font-semibold">{item.meal.name}</h3>
-                <span>{item.quantity} x {(item.meal.price * 50).toFixed(2)} EGP</span>
+                <h3 className="font-semibold">{item.name}</h3>
+                <span>{item.quantity} x {(item.price * 50).toFixed(2)} EGP</span>
               </div>
               <p className="text-sm text-gray-400">
-                {item.meal.calories} kcal
+                {item.calories} kcal
               </p>
             </div>
           </div>

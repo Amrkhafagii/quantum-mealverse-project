@@ -1,235 +1,246 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { BackgroundGeolocation, getBackgroundWatcherOptions } from '@/utils/backgroundGeolocation';
 import { BatteryOptimization } from '@/utils/batteryOptimization';
 import { AndroidLocationOptimizer } from '@/utils/androidLocationOptimizer';
-import { DeliveryLocation } from '@/types/location';
-import { toast } from '@/components/ui/use-toast';
+import { useLocationPermission } from './useLocationPermission';
 
-interface AdaptiveTrackingOptions {
-  onLocationUpdate?: (location: DeliveryLocation) => void;
-  distanceToDestination?: number;
-  initialInterval?: number;
-  enableMotionDetection?: boolean;
-  enableAdaptiveSampling?: boolean;
-  batteryAware?: boolean;
+interface LocationSettings {
+  desiredAccuracy: 'high' | 'medium' | 'low';
+  updateInterval: number; // milliseconds
+  distanceFilter: number; // meters
+  isBackgroundEnabled: boolean;
+  isMovementDetectionEnabled: boolean;
 }
 
-export function useAdaptiveLocationTracking({
-  onLocationUpdate,
-  distanceToDestination,
-  initialInterval = 30000,
-  enableMotionDetection = true,
-  enableAdaptiveSampling = true,
-  batteryAware = true,
-}: AdaptiveTrackingOptions = {}) {
+interface AdaptiveLocationOptions {
+  initialSettings?: Partial<LocationSettings>;
+  onLocationUpdate?: (location: GeolocationPosition) => void;
+  onError?: (error: GeolocationPositionError) => void;
+}
+
+export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {}) => {
+  const { permissionStatus, backgroundPermissionStatus } = useLocationPermission();
   const [isTracking, setIsTracking] = useState(false);
-  const [watcherId, setWatcherId] = useState<string | null>(null);
-  const [currentInterval, setCurrentInterval] = useState(initialInterval);
-  const [isMoving, setIsMoving] = useState(true);
-  const [speed, setSpeed] = useState(0);
-  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
-  const [isLowPowerMode, setIsLowPowerMode] = useState(false);
-  const [lastLocationTimestamp, setLastLocationTimestamp] = useState<number | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<GeolocationPosition | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
+  const [settings, setSettings] = useState<LocationSettings>({
+    desiredAccuracy: 'medium',
+    updateInterval: 10000, // 10 seconds
+    distanceFilter: 10, // 10 meters
+    isBackgroundEnabled: false,
+    isMovementDetectionEnabled: true,
+    ...options.initialSettings
+  });
 
-  // Monitor battery status
+  // Refs to store watch IDs and previous locations
+  const watchIdRef = useRef<number | null>(null);
+  const previousLocationsRef = useRef<GeolocationPosition[]>([]);
+  const batteryOptimizationRef = useRef<BatteryOptimization | null>(null);
+
+  // Initialize battery optimization on mount
   useEffect(() => {
-    if (!batteryAware) return;
+    batteryOptimizationRef.current = new BatteryOptimization();
     
-    const checkBattery = async () => {
-      const level = await BatteryOptimization.getBatteryLevel();
-      const lowPower = await BatteryOptimization.isLowPowerModeEnabled();
-      
-      setBatteryLevel(level);
-      setIsLowPowerMode(lowPower);
+    return () => {
+      // Clean up any battery monitoring
+      if (batteryOptimizationRef.current) {
+        // Any cleanup needed
+      }
     };
-    
-    // Check immediately and then periodically
-    checkBattery();
-    const interval = setInterval(checkBattery, 60000); // Check every minute
-    
-    return () => clearInterval(interval);
-  }, [batteryAware]);
+  }, []);
 
-  // Update tracking parameters when relevant factors change
+  // Effect to handle permission changes
   useEffect(() => {
-    if (!isTracking || !enableAdaptiveSampling) return;
-    
-    const updateTrackingParameters = async () => {
-      // Only update if we have a watcher ID
-      if (watcherId) {
-        await stopTracking();
-        await startTracking();
+    if (permissionStatus === 'granted') {
+      // We have foreground permission, check if we need background
+      if (settings.isBackgroundEnabled && backgroundPermissionStatus !== 'granted') {
+        console.log('Background location permission needed for full functionality');
+      }
+    }
+  }, [permissionStatus, backgroundPermissionStatus, settings.isBackgroundEnabled]);
+
+  // Effect to adjust settings based on battery status
+  useEffect(() => {
+    const checkBatteryAndAdjustSettings = async () => {
+      const batteryLevel = await BatteryOptimization.getBatteryLevel();
+      const isLowPower = await BatteryOptimization.isLowPowerModeEnabled();
+
+      // Adjust settings based on battery status
+      if (batteryLevel < 20 || isLowPower) {
+        setSettings(prev => ({
+          ...prev,
+          updateInterval: Math.max(prev.updateInterval, 30000), // At least 30 seconds
+          desiredAccuracy: 'low'
+        }));
       }
     };
     
-    // Don't call too frequently - only when important factors change
-    updateTrackingParameters();
-  }, [distanceToDestination, isMoving, isLowPowerMode, enableAdaptiveSampling]);
+    // Check battery status when tracking starts and periodically
+    if (isTracking) {
+      checkBatteryAndAdjustSettings();
+      
+      const intervalId = setInterval(checkBatteryAndAdjustSettings, 60000); // Check every minute
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [isTracking]);
 
-  // Start tracking with adaptive parameters
-  const startTracking = useCallback(async () => {
-    if (!Capacitor.isNativePlatform()) {
-      console.warn("Adaptive tracking is only supported on native platforms");
+  // Function to detect if user is moving
+  const detectMovement = (position: GeolocationPosition) => {
+    const locations = previousLocationsRef.current;
+    
+    // Add current location to history, keeping last 5
+    locations.push(position);
+    if (locations.length > 5) {
+      locations.shift();
+    }
+    
+    // Need at least 3 locations to detect movement
+    if (locations.length < 3) {
       return false;
     }
+    
+    // Calculate if there's significant movement
+    let isSignificantMovement = false;
+    const latest = locations[locations.length - 1];
+    const oldest = locations[0];
+    
+    // Simple distance calculation (could be enhanced with haversine formula)
+    const latDiff = Math.abs(latest.coords.latitude - oldest.coords.latitude);
+    const lngDiff = Math.abs(latest.coords.longitude - oldest.coords.longitude);
+    
+    // Rough approximation - 0.0001 degrees is about 10 meters
+    isSignificantMovement = (latDiff > 0.0001 || lngDiff > 0.0001);
+    
+    return isSignificantMovement;
+  };
 
+  // Start location tracking
+  const startTracking = async () => {
+    if (!Capacitor.isPluginAvailable('Geolocation')) {
+      setError('Geolocation is not available');
+      return;
+    }
+    
+    if (permissionStatus !== 'granted') {
+      setError('Location permission not granted');
+      return;
+    }
+    
     try {
-      // Get base options
-      const baseOptions = getBackgroundWatcherOptions();
+      // Stop any existing tracking
+      stopTracking();
       
-      // Apply battery optimizations
-      let optimizedOptions = { ...baseOptions };
+      // Get optimal interval based on current conditions
+      const interval = await BatteryOptimization.getOptimalUpdateInterval();
       
-      if (enableAdaptiveSampling) {
-        // Calculate optimal interval and settings based on battery, motion, etc.
-        const interval = await BatteryOptimization.getOptimalUpdateInterval(
-          initialInterval,
-          isMoving,
-          distanceToDestination
-        );
-        
-        setCurrentInterval(interval);
-        
-        // If on Android, apply platform-specific optimizations
-        if (Capacitor.getPlatform().toLowerCase().includes('android')) {
-          const androidOptions = await AndroidLocationOptimizer.getLocationRequestOptions({
-            isMoving,
-            distanceToDestination,
-            speedKmh: speed,
-            baseInterval: initialInterval
-          });
-          
-          if (androidOptions) {
-            optimizedOptions = { 
-              ...optimizedOptions,
-              ...androidOptions
-            };
-          }
-        }
+      // Update settings with optimized values
+      setSettings(prev => ({
+        ...prev,
+        updateInterval: interval
+      }));
+      
+      // Configure platform-specific optimizations
+      if (Capacitor.getPlatform() === 'android') {
+        await configureAndroidTracking();
       }
       
-      // Start location tracking with optimized options
-      const watcher = await BackgroundGeolocation.addWatcher(
-        optimizedOptions,
-        (position, err) => {
-          if (err) {
-            console.error('Location error:', err);
-            return;
-          }
-          
-          if (position) {
-            // Extract movement data if available
-            if (enableMotionDetection) {
-              const newIsMoving = typeof position.is_moving !== 'undefined' 
-                ? position.is_moving 
-                : position.speed > 0;
-                
-              setIsMoving(newIsMoving);
-              setSpeed(position.speed || 0);
-            }
-            
-            const locationData: DeliveryLocation = {
-              latitude: position.latitude,
-              longitude: position.longitude,
-              accuracy: position.accuracy,
-              timestamp: Date.now(),
-              speed: position.speed || 0,
-              isMoving: isMoving
-            };
-            
-            setLastLocationTimestamp(Date.now());
-            
-            if (onLocationUpdate) {
-              onLocationUpdate(locationData);
-            }
-          }
+      // Start watching position
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        handlePositionUpdate,
+        handlePositionError,
+        {
+          enableHighAccuracy: settings.desiredAccuracy === 'high',
+          timeout: 30000,
+          maximumAge: settings.updateInterval / 2
         }
       );
       
-      // Handle the different possible return types from the plugin
-      if (typeof watcher === 'string') {
-        setWatcherId(watcher);
-      } else if (watcher && typeof watcher === 'object' && 'id' in watcher) {
-        setWatcherId(watcher.id);
-      } else {
-        console.error('Unexpected return type from addWatcher:', watcher);
-        return false;
-      }
-      
       setIsTracking(true);
-      
-      // Show toast about tracking mode
-      const isLowBattery = await BatteryOptimization.isLowBatteryState();
-      const statusMessage = isLowBattery 
-        ? 'Started location tracking in battery saving mode' 
-        : isLowPowerMode 
-          ? 'Started location tracking in power-efficient mode'
-          : 'Started location tracking';
-          
-      toast({
-        title: "Location Tracking Active",
-        description: statusMessage,
-      });
-      
-      return true;
-    } catch (err) {
-      console.error('Error starting adaptive location tracking', err);
-      toast({
-        title: "Location tracking failed",
-        description: "Could not start tracking your location. Please check your settings.",
-        variant: "destructive"
-      });
-      return false;
+    } catch (err: any) {
+      setError(err.message || 'Failed to start location tracking');
     }
-  }, [
-    initialInterval,
-    onLocationUpdate,
-    isMoving,
-    speed,
-    distanceToDestination,
-    enableMotionDetection,
-    enableAdaptiveSampling,
-    isLowPowerMode
-  ]);
+  };
 
-  // Stop tracking
-  const stopTracking = useCallback(async () => {
-    if (!watcherId) return true;
-
+  // Configure Android-specific tracking optimizations
+  const configureAndroidTracking = async () => {
+    if (Capacitor.getPlatform() !== 'android') return;
+    
     try {
-      await BackgroundGeolocation.removeWatcher({
-        id: watcherId
+      const options = await AndroidLocationOptimizer.getLocationRequestOptions({
+        isMoving,
+        baseInterval: settings.updateInterval
       });
-      setWatcherId(null);
-      setIsTracking(false);
-      return true;
+      
+      // This would be implemented with a Capacitor plugin
+      console.log('Configured Android tracking with options:', options);
     } catch (err) {
-      console.error('Error stopping location tracking', err);
-      return false;
+      console.error('Error configuring Android tracking:', err);
     }
-  }, [watcherId]);
+  };
 
-  // Force an immediate location update
-  const forceLocationUpdate = useCallback(async () => {
-    // If already tracking, just restart to get a fresh position
-    if (isTracking) {
-      await stopTracking();
+  // Handle position updates
+  const handlePositionUpdate = (position: GeolocationPosition) => {
+    setCurrentLocation(position);
+    setError(null);
+    
+    // Detect movement if enabled
+    if (settings.isMovementDetectionEnabled) {
+      const moving = detectMovement(position);
+      if (moving !== isMoving) {
+        setIsMoving(moving);
+      }
     }
-    return await startTracking();
-  }, [isTracking, stopTracking, startTracking]);
+    
+    // Call the callback if provided
+    if (options.onLocationUpdate) {
+      options.onLocationUpdate(position);
+    }
+  };
+
+  // Handle position errors
+  const handlePositionError = (error: GeolocationPositionError) => {
+    setError(`Location error: ${error.message}`);
+    
+    if (options.onError) {
+      options.onError(error);
+    }
+  };
+
+  // Stop location tracking
+  const stopTracking = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsTracking(false);
+  };
+
+  // Update tracking settings
+  const updateSettings = (newSettings: Partial<LocationSettings>) => {
+    setSettings(prev => ({
+      ...prev,
+      ...newSettings
+    }));
+    
+    // Restart tracking if already tracking to apply new settings
+    if (isTracking) {
+      stopTracking();
+      startTracking();
+    }
+  };
 
   return {
-    isTracking,
     startTracking,
     stopTracking,
-    forceLocationUpdate,
-    currentInterval,
+    updateSettings,
+    isTracking,
+    currentLocation,
+    error,
     isMoving,
-    speed,
-    batteryLevel,
-    isLowPowerMode,
-    lastLocationTimestamp
+    settings,
+    permissionStatus,
+    backgroundPermissionStatus
   };
-}
+};

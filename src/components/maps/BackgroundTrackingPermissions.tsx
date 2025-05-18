@@ -24,10 +24,10 @@ export const BackgroundTrackingPermissions: React.FC = () => {
     // Only check permissions if we're on a mobile device
     if (Platform.isNative()) {
       checkLocationPermissions();
-      const permissionStatus = permissionStatus === "granted" 
+      const hasPermission = permissionStatus === "granted" 
         && backgroundPermissionStatus === "granted";
       
-      setShowAlert(!permissionStatus);
+      setShowAlert(!hasPermission);
     }
   }, [permissionStatus, backgroundPermissionStatus, checkLocationPermissions]);
   

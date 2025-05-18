@@ -24,7 +24,7 @@ const Cart = () => {
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
-      <Navbar />
+      <Navbar toggleDarkMode={() => {}} isDarkMode={false} />
       
       <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
         <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Your Cart</h1>
@@ -45,25 +45,25 @@ const Cart = () => {
               <Card className="holographic-card p-4">
                 <div className="space-y-4">
                   {items.map((item) => (
-                    <div key={item.meal.id} className="flex flex-col sm:flex-row gap-4 p-4 border-b border-quantum-cyan/20">
+                    <div key={item.id} className="flex flex-col sm:flex-row gap-4 p-4 border-b border-quantum-cyan/20">
                       <div className="w-full sm:w-24 h-24">
                         <img 
-                          src={item.meal.image_url || `https://picsum.photos/seed/${item.meal.id}/300/200`} 
-                          alt={item.meal.name}
+                          src={item.image_url || `https://picsum.photos/seed/${item.id}/300/200`} 
+                          alt={item.name}
                           className="w-full h-full object-cover rounded"
                         />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-quantum-cyan">{item.meal.name}</h3>
-                        <p className="text-sm text-gray-300 line-clamp-1">{item.meal.description}</p>
+                        <h3 className="text-lg font-bold text-quantum-cyan">{item.name}</h3>
+                        <p className="text-sm text-gray-300 line-clamp-1">{item.description}</p>
                         <div className="flex justify-between items-center mt-2">
-                          <span className="text-galaxy-purple">{displayPrice(item.meal.price)}</span>
+                          <span className="text-galaxy-purple">{displayPrice(item.price)}</span>
                           <div className="flex items-center gap-2">
                             <Button 
                               variant="outline" 
                               size="icon" 
                               className="h-8 w-8 rounded-full" 
-                              onClick={() => updateQuantity(item.meal.id, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -72,7 +72,7 @@ const Cart = () => {
                               variant="outline" 
                               size="icon" 
                               className="h-8 w-8 rounded-full" 
-                              onClick={() => updateQuantity(item.meal.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -80,7 +80,7 @@ const Cart = () => {
                               variant="ghost"
                               size="icon"
                               className="text-red-500 hover:text-red-700"
-                              onClick={() => removeFromCart(item.meal.id)}
+                              onClick={() => removeFromCart(item.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

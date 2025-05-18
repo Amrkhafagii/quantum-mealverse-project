@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export type User = {
@@ -7,6 +6,7 @@ export type User = {
   email: string | null;
   photoURL: string | null;
   user_metadata?: Record<string, any>;
+  created_at?: string;
 };
 
 export type AuthContextType = {
