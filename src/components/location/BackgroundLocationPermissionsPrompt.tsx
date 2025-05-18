@@ -50,7 +50,7 @@ export const BackgroundLocationPermissionsPrompt = () => {
   // Don't show anything if not on Android or if we don't need permissions
   if (!Platform.isAndroid() || 
       (permissionStatus === 'granted' && backgroundPermissionStatus === 'granted') || 
-      (!showEducationalUI && backgroundPermissionStatus !== 'prompt')) {
+      (!showEducationalUI && backgroundPermissionStatus === 'denied')) {
     return null;
   }
   
