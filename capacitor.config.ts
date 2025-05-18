@@ -1,4 +1,3 @@
-
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -102,6 +101,17 @@ const config: CapacitorConfig = {
         avoidHighways: false,
         avoidTolls: false,
         avoidFerries: true
+      }
+    },
+    // Add QR Scanner configuration
+    QrScanner: {
+      // iOS-specific configuration
+      ios: {
+        // No specific options needed for iOS scanner
+      },
+      // Android-specific configuration
+      android: {
+        scannerActivity: "com.lovable.quantummealverse.QrScannerActivity",
       }
     }
   }

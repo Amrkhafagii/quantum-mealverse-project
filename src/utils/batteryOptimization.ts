@@ -28,6 +28,7 @@ export class BatteryOptimization {
   static async isLowPowerModeEnabled(): Promise<boolean> {
     try {
       const powerInfo = await Device.getBatteryInfo();
+      // Using the correct property name based on Capacitor Device API
       return powerInfo.isLowPowerMode || false;
     } catch (err) {
       console.error('Error checking low power mode:', err);
