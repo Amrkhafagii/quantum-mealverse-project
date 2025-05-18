@@ -108,7 +108,7 @@ export const BackgroundLocationPermissionsPrompt = () => {
         </div>
       </CardContent>
       <CardFooter className="flex justify-end gap-3 pt-2">
-        {/* Fix the condition check here */}
+        {/* Fix the type comparison here */}
         {(permissionStatus !== 'granted' || backgroundPermissionStatus !== 'granted') && (
           <Button 
             onClick={handleRequestPermission}
