@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-interface BiometricLoginButtonProps {
+export interface BiometricLoginButtonProps {
   onSuccess?: () => void;
 }
 
@@ -65,6 +65,8 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
       return 'Sign in with Face ID';
     } else if (biometryType === 'touchId' || biometryType === 'fingerprint') {
       return 'Sign in with Touch ID';
+    } else if (biometryType === 'webauthn') {
+      return 'Sign in with WebAuthn';
     }
     return 'Sign in with Biometrics';
   };

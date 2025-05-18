@@ -1,127 +1,116 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useScreenDimensions } from '../hooks/useScreenDimensions';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from '@/utils/platform';
-import { useTheme } from '@/components/theme-provider';
 
-interface ResponsiveContextType {
+export type ScreenSizeType = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
+export interface ResponsiveContextType {
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
   isPortrait: boolean;
-  isLandscape: boolean;
-  isPadWidth: boolean;
-  screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  screenSize: ScreenSizeType;
   isPlatformIOS: boolean;
   isPlatformAndroid: boolean;
   isPlatformWeb: boolean;
-  safeAreaTop: number;
-  safeAreaBottom: number;
-  safeAreaLeft: number;
-  safeAreaRight: number;
-  isFoldable: boolean;
   isDarkMode: boolean;
-  isReducedMotion: boolean;
+  screenWidth: number;
+  screenHeight: number;
+  // Android-specific responsive types
+  androidScreenSize: 'small' | 'normal' | 'large' | 'xlarge';
 }
 
-const ResponsiveContext = createContext<ResponsiveContextType>({
+const defaultContext: ResponsiveContextType = {
   isMobile: false,
   isTablet: false,
   isDesktop: true,
   isPortrait: true,
-  isLandscape: false,
-  isPadWidth: false,
   screenSize: 'lg',
   isPlatformIOS: false,
   isPlatformAndroid: false,
   isPlatformWeb: true,
-  safeAreaTop: 0,
-  safeAreaBottom: 0,
-  safeAreaLeft: 0,
-  safeAreaRight: 0,
-  isFoldable: false,
   isDarkMode: false,
-  isReducedMotion: false,
-});
+  screenWidth: 0,
+  screenHeight: 0,
+  androidScreenSize: 'normal',
+};
+
+const ResponsiveContext = createContext<ResponsiveContextType>(defaultContext);
 
 export const useResponsive = () => useContext(ResponsiveContext);
 
 interface ResponsiveProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children }) => {
-  const dimensions = useScreenDimensions();
-  const { theme } = useTheme();
-  const [isReducedMotion, setIsReducedMotion] = useState(false);
-  
-  // Get safe area values - These would ideally come from native APIs
-  const [safeArea, setSafeArea] = useState({
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  });
-  
-  useEffect(() => {
-    // Check for reduced motion preference
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setIsReducedMotion(mediaQuery.matches);
-    
-    const handleReducedMotionChange = (event: MediaQueryListEvent) => {
-      setIsReducedMotion(event.matches);
-    };
-    
-    mediaQuery.addEventListener('change', handleReducedMotionChange);
-    
-    return () => {
-      mediaQuery.removeEventListener('change', handleReducedMotionChange);
-    };
-  }, []);
-  
-  useEffect(() => {
-    // For native platforms, we would use the actual safe area API
-    // This is a simple approximation for iOS-like devices
-    if (Platform.isIOS()) {
-      setSafeArea({
-        top: dimensions.isLandscape ? 0 : 47, // Approximate status bar height
-        bottom: dimensions.isLandscape ? 21 : 34, // Approximate home indicator height
-        left: dimensions.isLandscape ? 44 : 0, // Only in landscape
-        right: dimensions.isLandscape ? 44 : 0, // Only in landscape
-      });
-    } else {
-      // Android or other platforms might have different safe areas
-      setSafeArea({
-        top: 24, // Approximate status bar height
-        bottom: 0,
-        left: 0,
-        right: 0,
-      });
-    }
-  }, [dimensions.isLandscape]);
-  
-  const value = {
-    isMobile: dimensions.deviceType === 'mobile',
-    isTablet: dimensions.deviceType === 'tablet',
-    isDesktop: dimensions.deviceType === 'desktop',
-    isPortrait: dimensions.isPortrait,
-    isLandscape: dimensions.isLandscape,
-    isPadWidth: dimensions.width >= 768,
-    screenSize: dimensions.screenSize,
+  const [state, setState] = useState<ResponsiveContextType>({
+    ...defaultContext,
     isPlatformIOS: Platform.isIOS(),
     isPlatformAndroid: Platform.isAndroid(),
     isPlatformWeb: Platform.isWeb(),
-    safeAreaTop: safeArea.top,
-    safeAreaBottom: safeArea.bottom,
-    safeAreaLeft: safeArea.left,
-    safeAreaRight: safeArea.right,
-    isFoldable: dimensions.foldable,
-    isDarkMode: theme === 'dark',
-    isReducedMotion,
-  };
-  
+    screenWidth: window.innerWidth,
+    screenHeight: window.innerHeight,
+  });
+
+  // Update responsive state on mount and resize
+  useEffect(() => {
+    const updateResponsiveState = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isPortrait = height > width;
+      
+      // Determine screenSize
+      let screenSize: ScreenSizeType;
+      if (width < 640) screenSize = 'xs';
+      else if (width < 768) screenSize = 'sm';
+      else if (width < 1024) screenSize = 'md';
+      else if (width < 1280) screenSize = 'lg';
+      else if (width < 1536) screenSize = 'xl';
+      else screenSize = '2xl';
+      
+      // Android-style screen sizes
+      let androidScreenSize: 'small' | 'normal' | 'large' | 'xlarge';
+      if (width < 480) androidScreenSize = 'small';
+      else if (width < 840) androidScreenSize = 'normal';
+      else if (width < 1280) androidScreenSize = 'large';
+      else androidScreenSize = 'xlarge';
+      
+      // Update the state
+      setState({
+        isMobile: width < 768,
+        isTablet: width >= 768 && width < 1024,
+        isDesktop: width >= 1024,
+        isPortrait,
+        screenSize,
+        isPlatformIOS: Platform.isIOS(),
+        isPlatformAndroid: Platform.isAndroid(),
+        isPlatformWeb: Platform.isWeb(),
+        isDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+        screenWidth: width,
+        screenHeight: height,
+        androidScreenSize,
+      });
+    };
+    
+    // Initial update
+    updateResponsiveState();
+    
+    // Listen for resize events
+    window.addEventListener('resize', updateResponsiveState);
+    
+    // Listen for dark mode changes
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    darkModeMediaQuery.addEventListener('change', updateResponsiveState);
+    
+    return () => {
+      window.removeEventListener('resize', updateResponsiveState);
+      darkModeMediaQuery.removeEventListener('change', updateResponsiveState);
+    };
+  }, []);
+
   return (
-    <ResponsiveContext.Provider value={value}>
+    <ResponsiveContext.Provider value={state}>
       {children}
     </ResponsiveContext.Provider>
   );

@@ -1,95 +1,84 @@
-import { useEffect, useState } from 'react';
+
+import React from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
+import { MapPin, WifiOff, Clock, Battery, BatteryLow } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Wifi, WifiOff } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LocationStatusIndicatorProps {
-  showText?: boolean;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  colorVariant?: string;
-  showTooltip?: boolean;
+  showBatteryStatus?: boolean;
 }
 
-export function LocationStatusIndicator({ 
-  showText = false, 
-  className, 
+export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({
+  className,
   size = 'md',
-  colorVariant,
-  showTooltip = true
-}: LocationStatusIndicatorProps) {
+  showBatteryStatus = true
+}) => {
   const { isOnline, connectionType } = useConnectionStatus();
-  const [showReconnecting, setShowReconnecting] = useState(false);
+  const { isTracking, freshness, isBatteryLow, batteryLevel } = useDeliveryLocationService();
   
-  // When connection is restored, briefly show a reconnected state
-  useEffect(() => {
-    if (isOnline) {
-      setShowReconnecting(true);
-      const timer = setTimeout(() => {
-        setShowReconnecting(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isOnline]);
+  const sizeClasses = {
+    sm: 'h-6 text-xs',
+    md: 'h-8 text-sm',
+    lg: 'h-10 text-base'
+  };
   
-  // Determine icon size based on size prop
   const iconSize = {
-    sm: 14,
+    sm: 12,
     md: 16,
     lg: 20
-  }[size];
-  
-  // Determine indicator classnames based on connection state and colorVariant
-  const indicatorClass = cn(
-    "flex items-center gap-1.5 transition-colors duration-300",
-    colorVariant === 'navbar' 
-      ? "text-white/80" 
-      : (showReconnecting ? "text-green-500" : isOnline ? "text-green-500" : "text-amber-500"),
-    className
-  );
-  
-  const connectionText = showReconnecting
-    ? "Reconnected"
-    : isOnline 
-      ? connectionType === 'wifi' ? "Online (WiFi)" : "Online" 
-      : "Offline";
-  
-  const content = (
-    <div className={indicatorClass}>
-      {isOnline ? (
-        <Wifi size={iconSize} className="animate-pulse" />
+  };
+
+  return (
+    <div className={cn(
+      'flex items-center gap-2 px-3 rounded-full bg-background/80 backdrop-blur-sm border',
+      sizeClasses[size],
+      !isOnline ? 'border-red-500' : isTracking ? 'border-green-500' : 'border-yellow-500',
+      className
+    )}>
+      {!isOnline ? (
+        <>
+          <WifiOff size={iconSize[size]} className="text-red-500" />
+          <span className="text-red-500 font-medium">Offline</span>
+        </>
+      ) : !isTracking ? (
+        <>
+          <MapPin size={iconSize[size]} className="text-yellow-500" />
+          <span className="text-yellow-500 font-medium">Location Off</span>
+        </>
+      ) : freshness === 'stale' ? (
+        <>
+          <Clock size={iconSize[size]} className="text-yellow-500" />
+          <span className="text-yellow-500 font-medium">Stale</span>
+        </>
       ) : (
-        <WifiOff size={iconSize} className="animate-pulse" />
+        <>
+          <MapPin size={iconSize[size]} className="text-green-500" />
+          <span className="text-green-500 font-medium">
+            {connectionType ? `${connectionType}` : 'Connected'}
+          </span>
+        </>
       )}
-      {showText && <span className="text-sm">{connectionText}</span>}
+      
+      {showBatteryStatus && batteryLevel !== null && (
+        <div className="border-l pl-2 ml-2 flex items-center gap-1">
+          {isBatteryLow ? (
+            <BatteryLow size={iconSize[size]} className="text-red-500" />
+          ) : (
+            <Battery size={iconSize[size]} className="text-green-500" />
+          )}
+          <span className={cn(
+            "font-medium",
+            isBatteryLow ? "text-red-500" : "text-green-500"
+          )}>
+            {batteryLevel}%
+          </span>
+        </div>
+      )}
     </div>
   );
-  
-  // If tooltip is disabled, just return the content
-  if (!showTooltip) {
-    return content;
-  }
-  
-  // Otherwise wrap in tooltip
-  return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          {content}
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>
-            {connectionText}
-            {isOnline && connectionType && ` (${connectionType})`}
-          </p>
-          {!isOnline && (
-            <p className="text-xs text-amber-400">Some features may be limited</p>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
+};
 
 export default LocationStatusIndicator;

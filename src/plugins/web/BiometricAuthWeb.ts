@@ -4,21 +4,25 @@ import type { BiometricPluginInterface } from '../BiometricAuthPlugin';
 
 export class BiometricAuthWeb extends WebPlugin implements BiometricPluginInterface {
   async isAvailable(): Promise<{ available: boolean, biometryType: string }> {
-    // Web browsers don't have native biometrics
-    // In a real app, we could check for WebAuthn support
+    // Check for WebAuthn support in modern browsers
+    const webAuthnSupported = window.PublicKeyCredential !== undefined;
+    
     return {
-      available: false,
-      biometryType: 'none'
+      available: webAuthnSupported,
+      biometryType: webAuthnSupported ? 'webauthn' : 'none'
     };
   }
 
   async authenticate(options: { reason: string, title: string }): Promise<{ authenticated: boolean }> {
-    console.log('Biometric authentication not available in web browser');
+    console.log('Attempting WebAuthn authentication in web browser');
+    
+    // For web implementation, we could implement WebAuthn here
+    // For now, we'll return false as this needs a more complex implementation
     return { authenticated: false };
   }
 
   async setupBiometricLogin(options: { userId: string, token: string }): Promise<{ success: boolean }> {
-    console.log('Biometric setup not available in web browser');
+    console.log('WebAuthn setup not implemented in web browser yet');
     return { success: false };
   }
 }

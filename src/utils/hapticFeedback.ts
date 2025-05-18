@@ -1,129 +1,142 @@
 
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { Platform } from './platform';
-import { enhancedHaptics } from './enhancedHapticFeedback';
+import { Capacitor } from '@capacitor/core';
 
-/**
- * Utility for providing haptic feedback on mobile devices with enhanced patterns
- */
-export const hapticFeedback = {
-  /**
-   * Trigger light impact haptic feedback
-   */
-  light: async () => {
-    if (Platform.isNative()) {
+// Define a simple interface for haptic feedback
+interface HapticFeedback {
+  impact: (style?: 'light' | 'medium' | 'heavy') => void;
+  notification: (type?: 'success' | 'warning' | 'error') => void;
+  selection: () => void;
+  vibrate: (duration?: number) => void;
+  success: () => void;
+  warning: () => void;
+  error: () => void;
+}
+
+class NativeHapticFeedback implements HapticFeedback {
+  private haptics: any;
+
+  constructor() {
+    // Lazily load the haptics API to avoid issues in web environments
+    this.initHaptics();
+  }
+
+  private async initHaptics() {
+    if (Capacitor.isNativePlatform()) {
       try {
-        await Haptics.impact({ style: ImpactStyle.Light });
-      } catch (error) {
-        console.error('Haptic feedback error:', error);
+        const { Haptics } = await import('@capacitor/haptics');
+        this.haptics = Haptics;
+      } catch (err) {
+        console.log('Haptics not available:', err);
       }
-    }
-  },
-
-  /**
-   * Trigger medium impact haptic feedback
-   */
-  medium: async () => {
-    if (Platform.isNative()) {
-      try {
-        await Haptics.impact({ style: ImpactStyle.Medium });
-      } catch (error) {
-        console.error('Haptic feedback error:', error);
-      }
-    }
-  },
-
-  /**
-   * Trigger heavy impact haptic feedback
-   */
-  heavy: async () => {
-    if (Platform.isNative()) {
-      try {
-        await Haptics.impact({ style: ImpactStyle.Heavy });
-      } catch (error) {
-        console.error('Haptic feedback error:', error);
-      }
-    }
-  },
-
-  /**
-   * Trigger vibration/notification haptic feedback
-   */
-  notification: async () => {
-    if (Platform.isNative()) {
-      try {
-        await Haptics.notification();
-      } catch (error) {
-        console.error('Haptic notification error:', error);
-      }
-    }
-  },
-
-  /**
-   * Trigger success haptic feedback pattern
-   * Two-phase positive feedback
-   */
-  success: enhancedHaptics.success,
-
-  /**
-   * Trigger error haptic feedback pattern
-   * Three strong pulses to indicate error
-   */
-  error: enhancedHaptics.error,
-  
-  /**
-   * Trigger warning haptic feedback pattern
-   */
-  warning: enhancedHaptics.warning,
-  
-  /**
-   * Trigger confirmation haptic feedback
-   */
-  confirmation: enhancedHaptics.confirmation,
-  
-  /**
-   * Trigger selection change haptic feedback
-   */
-  selection: enhancedHaptics.selection,
-  
-  /**
-   * Trigger long press activation haptic feedback
-   */
-  longPress: enhancedHaptics.longPress,
-
-  /**
-   * Trigger contextual haptic feedback based on action type
-   * @param context The context for the haptic feedback
-   */
-  contextual: async (context: 'success' | 'error' | 'warning' | 'info' | 'selection' | 'confirmation') => {
-    switch (context) {
-      case 'success':
-        await enhancedHaptics.success();
-        break;
-      case 'error':
-        await enhancedHaptics.error();
-        break;
-      case 'warning':
-        await enhancedHaptics.warning();
-        break;
-      case 'info':
-        await hapticFeedback.light();
-        break;
-      case 'selection':
-        await enhancedHaptics.selection();
-        break;
-      case 'confirmation':
-        await enhancedHaptics.confirmation();
-        break;
-      default:
-        await hapticFeedback.medium();
     }
   }
-};
 
-/**
- * Hook to use haptic feedback in components
- */
-export const useHapticFeedback = () => {
-  return hapticFeedback;
-};
+  impact(style: 'light' | 'medium' | 'heavy' = 'medium') {
+    if (!this.haptics) return;
+    
+    try {
+      this.haptics.impact({
+        style
+      });
+    } catch (err) {
+      console.error('Error triggering haptic impact:', err);
+      // Fallback to vibration
+      this.vibrate(10);
+    }
+  }
+
+  notification(type: 'success' | 'warning' | 'error' = 'success') {
+    if (!this.haptics) return;
+    
+    try {
+      this.haptics.notification({
+        type
+      });
+    } catch (err) {
+      console.error('Error triggering haptic notification:', err);
+      // Fallback to vibration
+      this.vibrate(type === 'error' ? 100 : 20);
+    }
+  }
+
+  selection() {
+    if (!this.haptics) return;
+    
+    try {
+      this.haptics.selectionStart();
+      setTimeout(() => {
+        this.haptics.selectionChanged();
+        setTimeout(() => {
+          this.haptics.selectionEnd();
+        }, 10);
+      }, 10);
+    } catch (err) {
+      console.error('Error triggering haptic selection:', err);
+      // Fallback to vibration
+      this.vibrate(5);
+    }
+  }
+
+  vibrate(duration: number = 20) {
+    if (!this.haptics) return;
+    
+    try {
+      this.haptics.vibrate({ duration });
+    } catch (err) {
+      console.error('Error triggering vibration:', err);
+      // Try using the navigator.vibrate API as fallback
+      if (navigator && navigator.vibrate) {
+        navigator.vibrate(duration);
+      }
+    }
+  }
+
+  success() {
+    this.notification('success');
+  }
+
+  warning() {
+    this.notification('warning');
+  }
+
+  error() {
+    this.notification('error');
+  }
+}
+
+// Web fallback using navigator.vibrate
+class WebHapticFeedback implements HapticFeedback {
+  impact() {
+    this.vibrate(10);
+  }
+
+  notification(type: 'success' | 'warning' | 'error' = 'success') {
+    this.vibrate(type === 'error' ? 100 : type === 'warning' ? 50 : 20);
+  }
+
+  selection() {
+    this.vibrate(5);
+  }
+
+  vibrate(duration: number = 20) {
+    if (navigator && navigator.vibrate) {
+      navigator.vibrate(duration);
+    }
+  }
+
+  success() {
+    this.vibrate(20);
+  }
+
+  warning() {
+    this.vibrate(50);
+  }
+
+  error() {
+    this.vibrate(100);
+  }
+}
+
+// Create and export the appropriate implementation based on platform
+export const hapticFeedback: HapticFeedback = 
+  Capacitor.isNativePlatform() ? new NativeHapticFeedback() : new WebHapticFeedback();

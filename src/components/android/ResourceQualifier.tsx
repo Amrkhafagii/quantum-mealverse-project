@@ -32,32 +32,21 @@ export const ResourceQualifier: React.FC<ResourceQualifierProps> = ({
     isMobile, 
     isTablet, 
     isPortrait, 
-    screenSize: responsiveScreenSize,
+    androidScreenSize,
     isDarkMode,
     isPlatformAndroid
   } = useResponsive();
   
-  // Map our responsive sizes to Android screen sizes
-  const getAndroidScreenSize = (): ScreenSize => {
-    if (isMobile) return 'normal';
-    if (isTablet) {
-      if (responsiveScreenSize === 'lg') return 'large';
-      if (responsiveScreenSize === 'xl' || responsiveScreenSize === '2xl') return 'xlarge';
-      return 'large';
-    }
-    return 'xlarge';
-  };
-  
   // Map our responsive sizes to Android min width qualifiers
   const getAndroidMinWidth = (): MinWidth | null => {
-    if (responsiveScreenSize === 'md') return 'sw600dp';
-    if (responsiveScreenSize === 'lg' || responsiveScreenSize === 'xl' || responsiveScreenSize === '2xl') return 'sw720dp';
+    if (isTablet) return 'sw600dp';
+    if (!isMobile) return 'sw720dp';
     return null;
   };
   
   // Check if the component should be rendered based on the qualifiers
   const shouldRender = (): boolean => {
-    const currentScreenSize = getAndroidScreenSize();
+    const currentScreenSize = androidScreenSize;
     const currentMinWidth = getAndroidMinWidth();
     const currentOrientation = isPortrait ? 'port' : 'land';
     

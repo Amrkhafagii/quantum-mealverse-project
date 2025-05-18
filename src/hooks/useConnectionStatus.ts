@@ -5,9 +5,17 @@ import { toast } from '@/components/ui/use-toast';
 import { hapticFeedback } from '@/utils/hapticFeedback';
 import { Platform } from '@/utils/platform';
 
-export const useConnectionStatus = () => {
+export interface ConnectionStatus {
+  isOnline: boolean;
+  connectionType: string | null;
+  wasOffline: boolean;
+  resetWasOffline: () => void;
+}
+
+export const useConnectionStatus = (): ConnectionStatus => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [connectionType, setConnectionType] = useState<string | null>(null);
+  const [wasOffline, setWasOffline] = useState(false);
   const isMobile = Platform.isNative();
   
   useEffect(() => {
@@ -36,6 +44,8 @@ export const useConnectionStatus = () => {
     // Set up browser online/offline event listeners as a fallback
     const handleOnline = () => {
       setIsOnline(true);
+      // Note: we've gone offline and back online
+      setWasOffline(true);
       // Provide haptic feedback on mobile
       if (isMobile) hapticFeedback.success();
       
@@ -79,6 +89,9 @@ export const useConnectionStatus = () => {
               variant: "destructive"
             });
           } else {
+            // If we're coming back online, track this
+            setWasOffline(true);
+            
             if (isMobile) hapticFeedback.success();
             
             toast({
@@ -106,8 +119,12 @@ export const useConnectionStatus = () => {
     };
   }, [isMobile]);
   
+  const resetWasOffline = () => setWasOffline(false);
+  
   return {
     isOnline,
     connectionType,
+    wasOffline,
+    resetWasOffline
   };
 };

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useQrScanner } from '@/hooks/useQrScanner';
 import { Button } from '@/components/ui/button';
 import { Camera, Loader2, QrCode } from 'lucide-react';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { Platform } from '@/utils/platform';
 import { useToast } from '@/components/ui/use-toast';
 
