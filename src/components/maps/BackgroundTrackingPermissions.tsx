@@ -13,23 +13,21 @@ export const BackgroundTrackingPermissions: React.FC = () => {
     permissionStatus,
     backgroundPermissionStatus,
     requestPermission,
-    requestBackgroundPermission,
-    checkLocationPermissions
+    requestBackgroundPermission
   } = useLocationPermission();
   
   const { isMobile, isPlatformIOS, isPlatformAndroid } = useResponsive();
   const [showAlert, setShowAlert] = useState(false);
   
   useEffect(() => {
-    // Only check permissions if we're on a mobile device
+    // Check permissions if we're on a mobile device
     if (Platform.isNative()) {
-      checkLocationPermissions();
       const hasPermission = permissionStatus === "granted" 
         && backgroundPermissionStatus === "granted";
       
       setShowAlert(!hasPermission);
     }
-  }, [permissionStatus, backgroundPermissionStatus, checkLocationPermissions]);
+  }, [permissionStatus, backgroundPermissionStatus]);
   
   const handleRequestPermission = async () => {
     try {
@@ -42,9 +40,6 @@ export const BackgroundTrackingPermissions: React.FC = () => {
       if (backgroundPermissionStatus !== "granted") {
         await requestBackgroundPermission();
       }
-      
-      // Check permissions again
-      await checkLocationPermissions();
     } catch (err) {
       console.error("Error requesting permissions:", err);
     }

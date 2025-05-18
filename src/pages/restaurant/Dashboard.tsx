@@ -9,10 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Dashboard = () => {
-  const { isRestaurantOwner, loading, user } = useRestaurantAuth();
+  const { isRestaurantOwner, isLoading, user } = useRestaurantAuth();
   const [activeTab, setActiveTab] = React.useState('overview');
 
-  if (loading) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
