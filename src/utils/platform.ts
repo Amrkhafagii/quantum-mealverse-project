@@ -19,6 +19,19 @@ export class Platform {
     return this.isNative && this._getPlatformName() === 'android';
   }
 
+  // Fix: Don't use function call syntax for boolean properties
+  static isNative(): boolean {
+    return !this.isWeb;
+  }
+
+  static isIOS(): boolean {
+    return this.isNative && this._getPlatformName() === 'ios';
+  }
+
+  static isAndroid(): boolean {
+    return this.isNative && this._getPlatformName() === 'android';
+  }
+
   // Add new utility method to check Android version
   static getAndroidVersion(): number | null {
     if (!this.isAndroid) return null;

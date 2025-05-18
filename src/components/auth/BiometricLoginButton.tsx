@@ -82,14 +82,15 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({
       onClick={handleBiometricAuth}
       disabled={isLoading || !isAvailable}
       className={`${className} flex items-center justify-center gap-2`}
+      aria-label={`Sign in with ${biometricType === 'faceId' ? 'Face ID' : biometricType === 'touchId' ? 'Touch ID' : 'Biometrics'}`}
     >
-      <BiometricIcon className="h-5 w-5" />
+      <BiometricIcon className="h-5 w-5" aria-hidden="true" />
       <span>
-        {Platform.isIOS && biometricType === 'faceId'
+        {Platform.isIOS() && biometricType === 'faceId'
           ? 'Sign in with Face ID'
-          : Platform.isIOS && biometricType === 'touchId'
+          : Platform.isIOS() && biometricType === 'touchId'
           ? 'Sign in with Touch ID'
-          : Platform.isAndroid
+          : Platform.isAndroid()
           ? 'Sign in with Biometrics'
           : 'Use Biometric Login'}
       </span>
