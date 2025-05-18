@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useLocationPermissions } from '@/hooks/useLocationPermissions';
+import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { MapPin, Battery } from 'lucide-react';
@@ -10,12 +10,12 @@ import { Platform } from '@/utils/platform';
 
 export const BackgroundTrackingPermissions: React.FC = () => {
   const { 
-    locationPermissionState, 
-    backgroundLocationPermissionState,
-    requestLocationPermission, 
-    requestBackgroundLocationPermission,
-    checkPermissions
-  } = useLocationPermissions();
+    permissionStatus,
+    backgroundPermissionStatus,
+    requestPermission,
+    requestBackgroundPermission,
+    checkLocationPermissions
+  } = useLocationPermission();
   
   const { isMobile, isPlatformIOS, isPlatformAndroid } = useResponsive();
   const [showAlert, setShowAlert] = useState(false);
@@ -23,28 +23,28 @@ export const BackgroundTrackingPermissions: React.FC = () => {
   useEffect(() => {
     // Only check permissions if we're on a mobile device
     if (Platform.isNative()) {
-      checkPermissions();
-      const permissionStatus = locationPermissionState === "granted" 
-        && backgroundLocationPermissionState === "granted";
+      checkLocationPermissions();
+      const permissionStatus = permissionStatus === "granted" 
+        && backgroundPermissionStatus === "granted";
       
       setShowAlert(!permissionStatus);
     }
-  }, [locationPermissionState, backgroundLocationPermissionState, checkPermissions]);
+  }, [permissionStatus, backgroundPermissionStatus, checkLocationPermissions]);
   
   const handleRequestPermission = async () => {
     try {
       // First request regular location permission if not granted
-      if (locationPermissionState !== "granted") {
-        await requestLocationPermission();
+      if (permissionStatus !== "granted") {
+        await requestPermission();
       }
       
       // Then request background location if regular is granted
-      if (backgroundLocationPermissionState !== "granted") {
-        await requestBackgroundLocationPermission();
+      if (backgroundPermissionStatus !== "granted") {
+        await requestBackgroundPermission();
       }
       
       // Check permissions again
-      await checkPermissions();
+      await checkLocationPermissions();
     } catch (err) {
       console.error("Error requesting permissions:", err);
     }
@@ -66,7 +66,7 @@ export const BackgroundTrackingPermissions: React.FC = () => {
           <div className="mb-2">
             For the best experience, please enable location permissions.
           </div>
-          {isPlatformAndroid && locationPermissionState !== "granted" && (
+          {isPlatformAndroid && permissionStatus !== "granted" && (
             <div className="mb-1 text-xs opacity-75">
               * Background location helps with order tracking features.
             </div>

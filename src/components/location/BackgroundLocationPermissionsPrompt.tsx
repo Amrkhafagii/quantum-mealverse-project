@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { MapPin, MapPinOff, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -108,7 +107,6 @@ export const BackgroundLocationPermissionsPrompt = () => {
         </div>
       </CardContent>
       <CardFooter className="flex justify-end gap-3 pt-2">
-        {/* Fix the type comparison here */}
         {(permissionStatus !== 'granted' || backgroundPermissionStatus !== 'granted') && (
           <Button 
             onClick={handleRequestPermission}

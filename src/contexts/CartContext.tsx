@@ -6,11 +6,25 @@ export type CartItem = {
   name: string;
   price: number;
   quantity: number;
+  description?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  is_active?: boolean;
+  restaurant_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  image_url?: string;
+  dietary_tags?: string[];
 };
 
 export type CartContextType = {
   cart: CartItem[];
+  items: CartItem[];
+  totalAmount: number;
   addToCart: (item: CartItem) => void;
+  addItem: (item: CartItem) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -18,7 +32,10 @@ export type CartContextType = {
 
 const CartContext = createContext<CartContextType>({
   cart: [],
+  items: [],
+  totalAmount: 0,
   addToCart: () => {},
+  addItem: () => {},
   removeFromCart: () => {},
   updateQuantity: () => {},
   clearCart: () => {},
@@ -32,6 +49,9 @@ type CartProviderProps = {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  
+  // Calculate total amount from cart items
+  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const addToCart = (item: CartItem) => {
     setCart((prevCart) => {
@@ -47,6 +67,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     });
   };
 
+  // Alias for addToCart for better readability
+  const addItem = addToCart;
+
   const removeFromCart = (id: string) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
@@ -59,7 +82,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     
     setCart((prevCart) =>
       prevCart.map((item) =>
-        item.id === id ? { ...item, quantity } : item
+        item.id === item.id ? { ...item, quantity } : item
       )
     );
   };
@@ -70,7 +93,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}
+      value={{ 
+        cart, 
+        items: cart, // alias for items for compatibility
+        totalAmount,
+        addToCart, 
+        addItem, // add the alias
+        removeFromCart, 
+        updateQuantity, 
+        clearCart 
+      }}
     >
       {children}
     </CartContext.Provider>

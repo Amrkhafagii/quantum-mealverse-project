@@ -19,6 +19,19 @@ export class Platform {
     return !this.isNative();
   }
   
+  static isTablet(): boolean {
+    // Simple heuristic for tablet detection
+    if (this.isNative()) {
+      // For native, we'll need to implement platform-specific logic in future
+      // For now, assume it's not a tablet
+      return false;
+    } else {
+      // For web: use screen dimensions as a heuristic
+      const minTabletWidth = 768; // Common breakpoint for tablets
+      return window.innerWidth >= minTabletWidth && !this.isMobileBrowser();
+    }
+  }
+  
   static async getAndroidVersion(): Promise<number> {
     if (!this.isAndroid()) {
       return 0;
