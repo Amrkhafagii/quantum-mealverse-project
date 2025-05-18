@@ -27,7 +27,8 @@ export class BadgeService {
       try {
         // On native platforms, set the badge count
         if (Platform.isIOS()) {
-          // On iOS, we can use the badge property of scheduleNotification
+          // On iOS, we can use the notifications to set badge count
+          // Note: badge is set via extra options, not directly on notification schema
           await LocalNotifications.schedule({
             notifications: [{
               id: 1,
@@ -36,7 +37,8 @@ export class BadgeService {
               schedule: { at: new Date(Date.now() + 1000) },
               sound: null,
               smallIcon: 'ic_notification',
-              badge: validCount
+              // Badge count is handled by iOS automatically from this property
+              extra: { badge: validCount }
             }]
           });
         } else if (Platform.isAndroid()) {

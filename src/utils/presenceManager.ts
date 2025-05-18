@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePresenceState } from '@supabase/supabase-js';
 import { Platform } from '@/utils/platform';
 
 interface PresenceUser {
@@ -44,19 +43,74 @@ class PresenceManager {
     // Set up event handlers
     this.channel
       .on('presence', { event: 'sync' }, () => {
-        const state = this.channel!.presenceState();
-        if (options.onSync) {
-          options.onSync(state as Record<string, PresenceUser[]>);
+        if (!this.channel || !this.options) return;
+        
+        const rawState = this.channel.presenceState();
+        
+        // Convert from Supabase presence format to our format
+        const typedState: Record<string, PresenceUser[]> = {};
+        
+        Object.keys(rawState).forEach(key => {
+          const presences = rawState[key];
+          if (presences && Array.isArray(presences)) {
+            // Convert each presence to our expected type
+            typedState[key] = presences.map(rawPresence => {
+              // Cast to any first, then extract the properties we need
+              const presenceData = rawPresence as any;
+              
+              const typedPresence: PresenceUser = {
+                user_id: presenceData.user_id || this.options!.userId,
+                status: presenceData.status || 'online',
+                timestamp: presenceData.timestamp || Date.now(),
+                platform: presenceData.platform || Platform.getPlatformName(),
+                metadata: presenceData.metadata
+              };
+              
+              return typedPresence;
+            });
+          }
+        });
+        
+        if (this.options.onSync) {
+          this.options.onSync(typedState);
         }
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        if (options.onJoin) {
-          options.onJoin(key, newPresences[0] as PresenceUser);
+        if (!this.options || !newPresences || newPresences.length === 0) return;
+
+        // Convert from Supabase presence format to our format
+        const rawPresence = newPresences[0] as any;
+        
+        // Create our typed version of the presence data
+        const typedPresence: PresenceUser = {
+          user_id: rawPresence.user_id || this.options.userId,
+          status: rawPresence.status || 'online',
+          timestamp: rawPresence.timestamp || Date.now(),
+          platform: rawPresence.platform || Platform.getPlatformName(),
+          metadata: rawPresence.metadata
+        };
+        
+        if (this.options.onJoin) {
+          this.options.onJoin(key, typedPresence);
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        if (options.onLeave) {
-          options.onLeave(key, leftPresences[0] as PresenceUser);
+        if (!this.options || !leftPresences || leftPresences.length === 0) return;
+        
+        // Convert from Supabase presence format to our format
+        const rawPresence = leftPresences[0] as any;
+        
+        // Create our typed version of the presence data
+        const typedPresence: PresenceUser = {
+          user_id: rawPresence.user_id || this.options.userId,
+          status: rawPresence.status || 'offline',
+          timestamp: rawPresence.timestamp || Date.now(),
+          platform: rawPresence.platform || Platform.getPlatformName(),
+          metadata: rawPresence.metadata
+        };
+        
+        if (this.options.onLeave) {
+          this.options.onLeave(key, typedPresence);
         }
       });
     

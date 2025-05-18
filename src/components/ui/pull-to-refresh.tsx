@@ -1,163 +1,119 @@
 
-import * as React from 'react';
-import { ArrowDownIcon, CheckCircleIcon, LoaderCircleIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Platform } from '@/utils/platform';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import React, { useState, useRef, useEffect, ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
 
-interface PullToRefreshProps {
-  onRefresh: () => Promise<any>;
-  children: React.ReactNode;
-  className?: string;
-  pullDownThreshold?: number;
-  maxPullDownDistance?: number;
-  contentsProps?: React.HTMLAttributes<HTMLDivElement>;
-  containerProps?: React.HTMLAttributes<HTMLDivElement>;
+export interface PullToRefreshProps {
+  onRefresh: () => Promise<void>;
+  children: ReactNode;
+  threshold?: number;
+  disabled?: boolean;
+  isRefreshing?: boolean;
 }
 
-export const PullToRefresh = ({
-  onRefresh,
-  children,
-  className,
-  pullDownThreshold = 80,
-  maxPullDownDistance = 120,
-  contentsProps,
-  containerProps,
-}: PullToRefreshProps) => {
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [pullDistance, setPullDistance] = React.useState(0);
-  const [startY, setStartY] = React.useState(0);
-  const [status, setStatus] = React.useState<'pull' | 'release' | 'refreshing' | 'done'>('pull');
-  const { isOnline } = useConnectionStatus();
-  
-  // Don't use pull to refresh on desktop browsers
-  const isMobile = Platform.isMobileBrowser() || Platform.isNative();
-  
-  const handleStart = (clientY: number) => {
-    if (refreshing) return;
-    setStartY(clientY);
-  };
+export const PullToRefresh: React.FC<PullToRefreshProps> = ({ 
+  onRefresh, 
+  children, 
+  threshold = 80,
+  disabled = false,
+  isRefreshing = false
+}) => {
+  const [isFetching, setIsFetching] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [pullDistance, setPullDistance] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMove = (clientY: number) => {
-    if (refreshing || !isMobile) return;
-    const container = document.scrollingElement || document.documentElement;
-    
-    // Only activate when at the top of the page
-    if (container.scrollTop > 0) return;
-    
-    const distance = Math.max(0, Math.min(clientY - startY, maxPullDownDistance));
-    setPullDistance(distance);
-    setStatus(distance > pullDownThreshold ? 'release' : 'pull');
-  };
-
-  const handleEnd = async () => {
-    if (refreshing || !isMobile) return;
-    
-    if (pullDistance > pullDownThreshold && isOnline) {
-      setStatus('refreshing');
-      setRefreshing(true);
-      try {
-        await onRefresh();
-        setStatus('done');
-        setTimeout(() => {
-          setPullDistance(0);
-          setRefreshing(false);
-          setStatus('pull');
-        }, 1000);
-      } catch (error) {
-        console.error('Refresh failed:', error);
-        setPullDistance(0);
-        setRefreshing(false);
-        setStatus('pull');
-      }
-    } else {
+  // Handle externally controlled refreshing state
+  useEffect(() => {
+    if (isRefreshing) {
+      setIsFetching(true);
+    } else if (isRefreshing === false) {
+      setIsFetching(false);
       setPullDistance(0);
     }
-  };
+  }, [isRefreshing]);
 
-  React.useEffect(() => {
-    if (!isMobile) return;
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (disabled || isFetching) return;
     
-    const handleTouchStart = (e: TouchEvent) => handleStart(e.touches[0].clientY);
-    const handleTouchMove = (e: TouchEvent) => handleMove(e.touches[0].clientY);
-    const handleTouchEnd = () => handleEnd();
-    
-    document.addEventListener('touchstart', handleTouchStart);
-    document.addEventListener('touchmove', handleTouchMove);
-    document.addEventListener('touchend', handleTouchEnd);
-    
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [refreshing, startY, pullDistance, pullDownThreshold, isOnline, isMobile]);
-
-  const getIcon = () => {
-    switch (status) {
-      case 'pull':
-        return <ArrowDownIcon className="animate-bounce h-5 w-5" />;
-      case 'release':
-        return <ArrowDownIcon className="h-5 w-5 transform rotate-180" />;
-      case 'refreshing':
-        return <LoaderCircleIcon className="animate-spin h-5 w-5" />;
-      case 'done':
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      default:
-        return null;
+    // Only activate pull if we're at the top of the scroll
+    if (window.scrollY === 0) {
+      setStartY(e.touches[0].clientY);
     }
   };
 
-  const getMessage = () => {
-    switch (status) {
-      case 'pull':
-        return 'Pull down to refresh';
-      case 'release':
-        return 'Release to refresh';
-      case 'refreshing':
-        return 'Refreshing...';
-      case 'done':
-        return 'Updated!';
-      default:
-        return '';
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (disabled || !startY || isFetching) return;
+    
+    // Calculate pull distance
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+    
+    // Only allow pulling down
+    if (diff > 0) {
+      // Apply resistance to make the pull feel more natural
+      const resistance = 0.4;
+      const newDistance = Math.min(diff * resistance, threshold * 1.5);
+      
+      setPullDistance(newDistance);
+      
+      // Prevent normal scrolling
+      if (window.scrollY === 0) {
+        e.preventDefault();
+      }
     }
+  };
+
+  const handleTouchEnd = async () => {
+    if (disabled || !startY || isFetching) return;
+    
+    // If pulled past threshold, trigger refresh
+    if (pullDistance > threshold) {
+      try {
+        setIsFetching(true);
+        await onRefresh();
+      } catch (error) {
+        console.error('Error during refresh:', error);
+      } finally {
+        setIsFetching(false);
+      }
+    }
+    
+    // Reset
+    setStartY(0);
+    setPullDistance(0);
   };
 
   return (
     <div
-      {...containerProps}
-      className={cn('overflow-hidden', containerProps?.className)}
+      ref={containerRef}
+      className="relative"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      {isMobile && (
-        <div
-          className={cn(
-            'flex flex-col items-center justify-center transition-transform duration-300',
-            pullDistance > 0 && !refreshing ? 'transition-none' : '',
-          )}
-          style={{
-            transform: `translateY(${pullDistance}px)`,
-            minHeight: '30px',
-            marginTop: '-30px',
-          }}
-        >
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {getIcon()}
-            <span>{getMessage()}</span>
-          </div>
-        </div>
-      )}
-      
+      {/* Loading indicator */}
       <div
-        {...contentsProps}
-        className={cn(
-          'transition-transform duration-300',
-          pullDistance > 0 && !refreshing ? 'transition-none' : '',
-          className,
-          contentsProps?.className
-        )}
+        className="absolute left-0 right-0 flex justify-center items-center transition-transform duration-300 z-10"
+        style={{
+          transform: `translateY(${pullDistance - 40}px)`,
+          opacity: Math.min(pullDistance / threshold, 1),
+        }}
+      >
+        <div className="bg-background shadow-md rounded-full p-2 border border-border">
+          <Loader2
+            className={`h-5 w-5 text-primary ${isFetching ? 'animate-spin' : ''}`}
+            style={{
+              transform: !isFetching ? `rotate(${(pullDistance / threshold) * 360}deg)` : 'none',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Content with pull effect */}
+      <div
         style={{
           transform: `translateY(${pullDistance}px)`,
-          ...contentsProps?.style,
+          transition: pullDistance ? 'none' : 'transform 0.2s ease-out',
         }}
       >
         {children}

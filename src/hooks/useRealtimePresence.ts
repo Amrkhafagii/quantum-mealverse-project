@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Platform } from '@/utils/platform';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePresenceState } from '@supabase/supabase-js';
 
 interface PresenceState {
   user_id: string;
@@ -64,24 +64,61 @@ export function useRealtimePresence(options: {
     const channel = supabase.channel(`${channelName}:${user.id}`)
       .on('presence', { event: 'sync' }, () => {
         // Get current state of all users in the channel
-        const state = channel.presenceState();
+        const presenceState = channel.presenceState();
         const newState: Record<string, PresenceState> = {};
         
         // Process all users' presence data
-        Object.keys(state).forEach(key => {
-          const userPresence = state[key][0] as PresenceState;
-          newState[userPresence.user_id] = userPresence;
+        Object.keys(presenceState).forEach(key => {
+          // Handle type safety by checking structure
+          const presences = presenceState[key];
+          if (presences && presences.length > 0) {
+            // Cast as any first, then validate presence shape
+            const rawPresence = presences[0] as any;
+            
+            // Check if this has the expected shape
+            if (rawPresence && 
+                typeof rawPresence.user_id === 'string' &&
+                typeof rawPresence.timestamp === 'number' && 
+                typeof rawPresence.status === 'string' &&
+                typeof rawPresence.platform === 'string') {
+                
+              // Convert to our expected type
+              const typedPresence: PresenceState = {
+                user_id: rawPresence.user_id,
+                timestamp: rawPresence.timestamp,
+                status: rawPresence.status as 'online' | 'away' | 'offline',
+                platform: rawPresence.platform,
+                location: rawPresence.location
+              };
+              
+              newState[typedPresence.user_id] = typedPresence;
+            }
+          }
         });
         
         setOnlineUsers(newState);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        const presence = newPresences[0] as PresenceState;
-        console.log('User joined:', presence.user_id, 'on', presence.platform);
+        // Handle type safety for join events
+        if (newPresences && newPresences.length > 0) {
+          const rawPresence = newPresences[0] as any;
+          
+          // Only log if it has user_id and platform
+          if (rawPresence && rawPresence.user_id && rawPresence.platform) {
+            console.log('User joined:', rawPresence.user_id, 'on', rawPresence.platform);
+          }
+        }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        const presence = leftPresences[0] as PresenceState;
-        console.log('User left:', presence.user_id, 'from', presence.platform);
+        // Handle type safety for leave events
+        if (leftPresences && leftPresences.length > 0) {
+          const rawPresence = leftPresences[0] as any;
+          
+          // Only log if it has user_id and platform
+          if (rawPresence && rawPresence.user_id && rawPresence.platform) {
+            console.log('User left:', rawPresence.user_id, 'from', rawPresence.platform);
+          }
+        }
       });
     
     // Track presence
