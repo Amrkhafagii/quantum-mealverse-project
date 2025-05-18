@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import LocationPermissionsPrompt from './location/LocationPermissionsPrompt';
+import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton';
+import { Platform } from '@/utils/platform';
 
 interface AuthFormProps {
   isRegister?: boolean;
@@ -332,6 +334,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
       >
         {loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Sign Up'}
       </Button>
+      
+      {mode === 'login' && Platform.isNative() && (
+        <BiometricLoginButton onSuccess={() => setShowLocationPrompt(true)} />
+      )}
 
       <p className="text-center text-sm">
         {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
