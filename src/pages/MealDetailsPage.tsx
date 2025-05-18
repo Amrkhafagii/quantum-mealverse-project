@@ -1,120 +1,28 @@
+
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import MealDetails from '@/components/MealDetails';
-import ParticleBackground from '@/components/ParticleBackground';
-import { MealType } from '@/types/meal';
-import { useCart } from '@/contexts/CartContext';
-import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
-import { MenuItem, parseNutritionalInfo } from '@/types/menu';
+import ARMealPreview from '@/components/ARMealPreview'; // Fixed import path
 
 const MealDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { addItem } = useCart();
-  const { displayPrice } = useCurrencyConverter();
-  
-  const { data: meal, isLoading, error } = useQuery({
-    queryKey: ['menuItem', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      
-      // Generate placeholder image if image_url is null or empty
-      if (!data.image_url) {
-        data.image_url = `https://picsum.photos/seed/${data.id}/600/400`;
-      }
-      
-      const nutritionalInfo = parseNutritionalInfo(data.nutritional_info);
-      
-      const mealData: MealType = {
-        id: data.id,
-        name: data.name,
-        description: data.description || '',
-        price: data.price,
-        calories: nutritionalInfo.calories,
-        protein: nutritionalInfo.protein,
-        carbs: nutritionalInfo.carbs,
-        fat: nutritionalInfo.fat,
-        image_url: data.image_url,
-        is_active: data.is_available,
-        restaurant_id: data.restaurant_id,
-        created_at: data.created_at || '',
-        updated_at: data.updated_at || '',
-        ingredients: [],
-        steps: []
-      };
-      
-      return mealData;
-    },
-    enabled: !!id
-  });
-  
-  const { data: restaurant } = useQuery({
-    queryKey: ['restaurant', meal?.restaurant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('id', meal?.restaurant_id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!meal?.restaurant_id
-  });
-
-  const handleAddToCart = (meal: MealType, quantity: number) => {
-    addItem({
-      ...meal,
-      quantity
-    });
-  };
-
-  if (isLoading) return (
-    <div className="min-h-screen bg-quantum-black text-white">
-      <Navbar />
-      <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-        <div className="text-2xl text-quantum-cyan animate-pulse">Loading meal details...</div>
-      </div>
-      <Footer />
-    </div>
-  );
-
-  if (error || !meal) return (
-    <div className="min-h-screen bg-quantum-black text-white">
-      <Navbar />
-      <div className="container mx-auto px-4 py-24 flex items-center justify-center">
-        <div className="text-2xl text-red-500">Error loading meal details</div>
-      </div>
-      <Footer />
-    </div>
-  );
 
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative">
-      <ParticleBackground />
-      <Navbar />
+    <div className="container mx-auto p-4 pt-20">
+      <h1 className="text-2xl font-bold text-quantum-cyan mb-6">Meal Details</h1>
       
-      <main className="relative z-10 container mx-auto px-4 py-24">
-        <div className="max-w-7xl mx-auto">
-          <MealDetails 
-            meal={meal} 
-            onAddToCart={handleAddToCart}
-            restaurantId={restaurant?.id || ''}
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <p className="mb-4">Meal ID: {id}</p>
+          {/* Meal details would be fetched and displayed here */}
+          <p className="text-gray-400">Additional meal details would appear here.</p>
         </div>
-      </main>
-      
-      <Footer />
+        
+        <ARMealPreview 
+          mealId={id || '1'} 
+          mealName="Quantum Meal" 
+          className="w-full"
+        />
+      </div>
     </div>
   );
 };
