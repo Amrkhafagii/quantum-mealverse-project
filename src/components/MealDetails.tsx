@@ -62,7 +62,7 @@ export const MealDetails: React.FC<MealDetailsProps> = ({
             <div className="flex items-center mt-1.5 space-x-2">
               {rating > 0 && (
                 <>
-                  <StarRating rating={rating} readOnly /> {/* Fixed prop name to match the component */}
+                  <StarRating rating={rating} /> {/* Removed readOnly prop to match component definition */}
                   <span className="text-sm text-gray-400">({reviewCount})</span>
                 </>
               )}
