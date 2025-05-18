@@ -1,138 +1,62 @@
 
-import React, { createContext, useState, useEffect } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { userTypeService } from '@/services/supabaseClient';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-interface UserType {
-  type: 'customer' | 'restaurant' | 'delivery';
-}
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  userType: string | null;
-  loading: boolean;
-  logout: () => Promise<boolean>;
-  getUserType: () => Promise<string | null>;
-}
-
-const defaultContext: AuthContextType = {
-  user: null,
-  session: null,
-  userType: null,
-  loading: true,
-  logout: async () => false,
-  getUserType: async () => null,
+type User = {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
 };
 
-export const AuthContext = createContext<AuthContextType>(defaultContext);
+type AuthContextType = {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  signup: (email: string, password: string, displayName: string) => Promise<void>;
+};
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  login: async () => {},
+  logout: async () => {},
+  signup: async () => {},
+});
+
+export const useAuth = () => useContext(AuthContext);
+
+type AuthProviderProps = {
+  children: ReactNode;
+};
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Function to get user type from either metadata or database
-  const getUserType = async (): Promise<string | null> => {
-    // Skip if no user
-    if (!user) return null;
-    
-    // First check metadata
-    const metadataType = user.user_metadata?.user_type;
-    if (metadataType) return metadataType;
-    
-    // If not in metadata, check our user_types table
-    try {
-      const type = await userTypeService.getUserType(user.id);
-      if (type) {
-        return type;
-      }
-    } catch (error) {
-      console.error('Error fetching user type:', error);
-    }
-    
-    // Default to customer if not found
-    return 'customer';
+  const login = async (email: string, password: string) => {
+    // Mock login for now
+    setUser({
+      id: '1',
+      displayName: 'Test User',
+      email,
+      photoURL: null,
+    });
   };
 
-  // Load user type whenever user changes
-  useEffect(() => {
-    const loadUserType = async () => {
-      if (user) {
-        const type = await getUserType();
-        setUserType(type);
-      } else {
-        setUserType(null);
-      }
-    };
-    
-    loadUserType();
-  }, [user]);
-
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.email);
-        setUser(session?.user ?? null);
-        setSession(session);
-        
-        // Get user type when auth state changes
-        if (session?.user) {
-          const type = await getUserType();
-          setUserType(type);
-        } else {
-          setUserType(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setSession(session);
-      
-      // Get user type on initial load
-      if (session?.user) {
-        const type = await getUserType();
-        setUserType(type);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const logout = async () => {
-    try {
-      console.log("Logging out user:", user?.email);
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Error during signOut:", error);
-        throw error;
-      }
-      
-      // Clear user and session state immediately for better UX
-      setUser(null);
-      setSession(null);
-      setUserType(null);
-      
-      console.log("Logout successful");
-      return true;
-    } catch (error) {
-      console.error('Error logging out:', error);
-      return false;
-    }
+    setUser(null);
+  };
+
+  const signup = async (email: string, password: string, displayName: string) => {
+    // Mock signup
+    setUser({
+      id: '1',
+      displayName,
+      email,
+      photoURL: null,
+    });
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userType, loading, logout, getUserType }}>
+    <AuthContext.Provider value={{ user, login, logout, signup }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,12 +1,14 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCart } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Switch } from "@/components/ui/switch"
-import { useTheme } from "@/components/theme-provider"
+import { ShoppingCart, Menu, X } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/components/theme-provider";
 import { MoonIcon, SunIcon } from '@radix-ui/react-icons';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +16,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
-const Navbar = () => {
+interface NavbarProps {
+  toggleDarkMode: () => void;
+  isDarkMode: boolean;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ toggleDarkMode, isDarkMode }) => {
   const { user, logout } = useAuth();
   const { cart } = useCart();
   const { setTheme, theme } = useTheme();
+  const { isMobile, isTablet } = useResponsive();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleLogout = async () => {
     try {
@@ -28,66 +38,70 @@ const Navbar = () => {
       console.error("Logout failed:", error);
     }
   };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
   
   return (
-    <nav className="bg-white shadow-sm dark:bg-gray-800">
+    <nav className="bg-white shadow-sm dark:bg-gray-800 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex">
+          <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-xl font-bold text-gray-900 dark:text-white">
                 Quantum Mealverse
               </Link>
             </div>
-            
-            
           </div>
           
-          <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-            <Link
-              to="/"
-              className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-            >
-              Home
-            </Link>
-            
-            <Link
-              to="/about"
-              className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-            >
-              About
-            </Link>
-            
-            <Link
-              to="/menu"
-              className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-            >
-              Menu
-            </Link>
-            
-            <Link
-              to="/contact"
-              className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-            >
-              Contact
-            </Link>
-            
-            <Link
-              to="/qr-scanner"
-              className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-            >
-              QR Scanner
-            </Link>
-            
-            {user && (
+          {!isMobile && (
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
-                to="/dashboard"
+                to="/"
                 className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
               >
-                Dashboard
+                Home
               </Link>
-            )}
-          </div>
+              
+              <Link
+                to="/about"
+                className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                About
+              </Link>
+              
+              <Link
+                to="/menu"
+                className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Menu
+              </Link>
+              
+              <Link
+                to="/contact"
+                className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Contact
+              </Link>
+              
+              <Link
+                to="/qr-scanner"
+                className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                QR Scanner
+              </Link>
+              
+              {user && (
+                <Link
+                  to="/dashboard"
+                  className="border-transparent text-gray-900 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                >
+                  Dashboard
+                </Link>
+              )}
+            </div>
+          )}
           
           <div className="flex items-center">
             <Link to="/cart" className="mr-4 relative">
@@ -103,11 +117,29 @@ const Navbar = () => {
               checked={theme === 'dark'}
               onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
             >
-              {theme === 'light' ? <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" /> : <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />}
+              {theme === 'light' ? 
+                <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" /> : 
+                <MoonIcon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              }
               <span className="sr-only">Toggle dark mode</span>
             </Switch>
             
-            {user ? (
+            {isMobile && (
+              <Button
+                variant="ghost"
+                className="ml-2 p-2"
+                onClick={toggleMobileMenu}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </Button>
+            )}
+            
+            {!isMobile && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger>
                   <Avatar className="ml-4">
@@ -124,7 +156,7 @@ const Navbar = () => {
                   <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
+            ) : !isMobile && (
               <>
                 <Link
                   to="/login"
@@ -144,58 +176,82 @@ const Navbar = () => {
         </div>
       </div>
       
-      <div className="sm:hidden" id="mobile-menu">
-        <div className="px-2 pt-2 pb-3 space-y-1">
-          <Link
-            to="/"
-            className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white block px-3 py-2 rounded-md text-base font-medium"
-          >
-            Home
-          </Link>
-          <Link
-            to="/about"
-            className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-          >
-            About
-          </Link>
-          <Link
-            to="/menu"
-            className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-          >
-            Menu
-          </Link>
-          <Link
-            to="/contact"
-            className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
-          >
-            Contact
-          </Link>
-          {user && (
+      {isMobile && mobileMenuOpen && (
+        <div className="sm:hidden" id="mobile-menu">
+          <div className="px-2 pt-2 pb-3 space-y-1">
             <Link
-              to="/dashboard"
-              className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+              to="/"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white block px-3 py-2 rounded-md text-base font-medium"
+              onClick={() => setMobileMenuOpen(false)}
             >
-              Dashboard
+              Home
             </Link>
-          )}
-          {!user && (
-            <>
+            <Link
+              to="/about"
+              className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              About
+            </Link>
+            <Link
+              to="/menu"
+              className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Menu
+            </Link>
+            <Link
+              to="/contact"
+              className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contact
+            </Link>
+            <Link
+              to="/qr-scanner"
+              className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              QR Scanner
+            </Link>
+            {user && (
               <Link
-                to="/login"
+                to="/dashboard"
                 className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setMobileMenuOpen(false)}
               >
-                Login
+                Dashboard
               </Link>
-              <Link
-                to="/register"
+            )}
+            {!user && (
+              <>
+                <Link
+                  to="/login"
+                  className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Register
+                </Link>
+              </>
+            )}
+            {user && (
+              <div 
                 className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+                onClick={handleLogout}
               >
-                Register
-              </Link>
-            </>
-          )}
+                Logout
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 };

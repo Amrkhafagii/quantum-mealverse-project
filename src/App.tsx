@@ -1,10 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
-  Route,
-  Link,
-  useLocation
+  Route
 } from "react-router-dom";
 import './App.css';
 import Navbar from './components/Navbar';
@@ -14,14 +13,16 @@ import Contact from './pages/Contact';
 import MapView from './components/maps/MapView';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/components/theme-provider';
 import { BackgroundTrackingPermissions } from '@/components/maps/BackgroundTrackingPermissions';
 import QrScannerDemo from './pages/QrScannerDemo';
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { ResponsiveProvider } from './contexts/ResponsiveContext';
 
-function App() {
+function AppContent() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { theme, setTheme } = useTheme();
-  const location = useLocation();
 
   useEffect(() => {
     setIsDarkMode(theme === 'dark');
@@ -35,29 +36,41 @@ function App() {
   
   return (
     <div className="App">
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <Router location={location} key={location.pathname}>
-          <Navbar toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
-          
-          <BackgroundTrackingPermissions />
-          
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/map" element={<MapView />} />
-            <Route path="/qr-scanner" element={<QrScannerDemo />} />
-          </Routes>
-          
-          <Toaster />
-        </Router>
-      </ThemeProvider>
+      <Navbar toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+      
+      <BackgroundTrackingPermissions />
+      
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/map" element={<MapView />} />
+        <Route path="/qr-scanner" element={<QrScannerDemo />} />
+      </Routes>
+      
+      <Toaster />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <AuthProvider>
+        <CartProvider>
+          <ResponsiveProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </ResponsiveProvider>
+        </CartProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

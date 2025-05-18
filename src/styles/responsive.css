@@ -1,0 +1,98 @@
+
+/* Responsive utilities */
+
+/* Device-specific classes */
+.ios-specific {
+  /* iOS-specific styles */
+}
+
+.android-specific {
+  /* Android-specific styles */
+}
+
+/* Safe area utilities for iOS */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Touch feedback for mobile devices */
+.touch-feedback {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  cursor: pointer;
+}
+
+.touch-feedback:active {
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+/* Foldable device optimization */
+@media (min-width: 768px) and (max-width: 900px) {
+  .foldable-layout {
+    display: flex;
+  }
+  
+  .foldable-panel {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Adaptive font sizes */
+.dynamic-text {
+  /* Base font scale for all devices */
+  font-size: 16px;
+}
+
+@media (max-width: 375px) {
+  /* Small phones */
+  .dynamic-text {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  /* Tablets and larger */
+  .dynamic-text {
+    font-size: 18px;
+  }
+}
+
+/* Reduced motion preference support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Landscape orientation optimizations */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .compact-for-landscape {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  .hidden-for-landscape {
+    display: none !important;
+  }
+}

@@ -1,136 +1,94 @@
 
-import React, { useEffect, useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { MapPin, Settings } from "lucide-react";
-import { useLocationPermission } from "@/hooks/useLocationPermission";
-import { Platform } from "@/utils/platform";
+import React, { useState, useEffect } from 'react';
+import { useLocationPermissions } from '@/hooks/useLocationPermissions';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { MapPin, Battery } from 'lucide-react';
+import { useResponsive } from '@/contexts/ResponsiveContext';
+import ResponsiveContainer from '@/components/ui/responsive-container';
+import { Platform } from '@/utils/platform';
 
-export const BackgroundTrackingPermissions = () => {
-  const [showDialog, setShowDialog] = useState(false);
-  const [androidVersion, setAndroidVersion] = useState<number>(0);
-  const {
-    permissionStatus,
-    backgroundPermissionStatus,
-    requestPermission,
-    requestBackgroundPermission,
-    isRequesting
-  } = useLocationPermission();
-
-  // Get Android version when component mounts
+export const BackgroundTrackingPermissions: React.FC = () => {
+  const { 
+    locationPermissionState, 
+    backgroundLocationPermissionState,
+    requestLocationPermission, 
+    requestBackgroundLocationPermission,
+    checkPermissions
+  } = useLocationPermissions();
+  
+  const { isMobile, isPlatformIOS, isPlatformAndroid } = useResponsive();
+  const [showAlert, setShowAlert] = useState(false);
+  
   useEffect(() => {
-    const getVersion = async () => {
-      if (Platform.isAndroid()) {
-        const version = await Platform.getAndroidVersion();
-        setAndroidVersion(version);
+    // Only check permissions if we're on a mobile device
+    if (Platform.isNative()) {
+      checkPermissions();
+      const permissionStatus = locationPermissionState === "granted" 
+        && backgroundLocationPermissionState === "granted";
+      
+      setShowAlert(!permissionStatus);
+    }
+  }, [locationPermissionState, backgroundLocationPermissionState, checkPermissions]);
+  
+  const handleRequestPermission = async () => {
+    try {
+      // First request regular location permission if not granted
+      if (locationPermissionState !== "granted") {
+        await requestLocationPermission();
       }
-    };
-
-    getVersion();
-  }, []);
-
-  // Only show for Android devices that need background permission
-  const needsBackgroundPermission = Platform.isAndroid() && 
-    (androidVersion >= 10) && 
-    permissionStatus === 'granted' && 
-    backgroundPermissionStatus !== 'granted';
-    
-  if (!needsBackgroundPermission) {
+      
+      // Then request background location if regular is granted
+      if (backgroundLocationPermissionState !== "granted") {
+        await requestBackgroundLocationPermission();
+      }
+      
+      // Check permissions again
+      await checkPermissions();
+    } catch (err) {
+      console.error("Error requesting permissions:", err);
+    }
+  };
+  
+  // Don't show anything if not on a mobile device
+  if (!Platform.isNative() || !showAlert) {
     return null;
   }
-
-  const handleRequestPermission = async () => {
-    if (permissionStatus !== 'granted') {
-      const granted = await requestPermission();
-      if (!granted) {
-        toast({ 
-          title: "Permission denied", 
-          description: "Location permission is required for delivery tracking",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    if (backgroundPermissionStatus !== 'granted') {
-      const granted = await requestBackgroundPermission();
-      if (granted) {
-        toast({ 
-          title: "Permission granted", 
-          description: "Background location is now enabled",
-          variant: "default"
-        });
-      } else {
-        toast({ 
-          title: "Permission denied", 
-          description: "Background location is required for delivery tracking",
-          variant: "destructive"
-        });
-      }
-    }
-    
-    setShowDialog(false);
-  };
-
+  
   return (
-    <>
-      <Alert className="mb-4 border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950">
-        <MapPin className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-        <AlertTitle className="text-yellow-800 dark:text-yellow-300">Background location required</AlertTitle>
-        <AlertDescription className="text-yellow-700 dark:text-yellow-400 text-sm">
-          To track deliveries properly, this app needs permission to access your location in the background.
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2 border-yellow-300 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900"
-            onClick={() => setShowDialog(true)}
+    <ResponsiveContainer respectSafeArea maxWidth="lg">
+      <Alert className={`mb-4 ${isMobile ? 'mt-2' : 'mt-4'} border-amber-500`}>
+        <MapPin className="h-5 w-5 text-amber-500" />
+        <AlertTitle className="text-amber-500">
+          Location permissions needed
+        </AlertTitle>
+        <AlertDescription className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="mb-2">
+            For the best experience, please enable location permissions.
+          </div>
+          {isPlatformAndroid && locationPermissionState !== "granted" && (
+            <div className="mb-1 text-xs opacity-75">
+              * Background location helps with order tracking features.
+            </div>
+          )}
+          {isPlatformIOS && (
+            <div className="mb-1 text-xs opacity-75">
+              <div className="flex items-center gap-1">
+                <Battery size={12} />
+                <span>We optimize location usage to preserve battery life.</span>
+              </div>
+            </div>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-2 border-amber-500 text-amber-700 hover:bg-amber-50"
+            onClick={handleRequestPermission}
           >
-            Enable background location
+            Enable Location
           </Button>
         </AlertDescription>
       </Alert>
-
-      <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Background Location Permission</AlertDialogTitle>
-            <AlertDialogDescription>
-              For delivery tracking to work properly, the app needs permission to access your location even when the app is not in use.
-              
-              <div className="mt-4 space-y-2">
-                <p className="font-medium text-sm">This permission is needed to:</p>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  <li>Track delivery progress in real-time</li>
-                  <li>Calculate accurate delivery times</li>
-                  <li>Optimize delivery routes</li>
-                  <li>Notify you when deliveries are nearby</li>
-                </ul>
-              </div>
-              
-              <div className="mt-4 text-sm">
-                Your location data is only used during active deliveries and is not stored permanently.
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Later</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRequestPermission} disabled={isRequesting}>
-              {isRequesting ? "Requesting..." : "Grant Permission"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </ResponsiveContainer>
   );
 };
