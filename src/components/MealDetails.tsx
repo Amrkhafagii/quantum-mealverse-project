@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MealType } from '@/types/meal';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
+import { ARMealPreview } from '@/components/ui/ARMealPreview';
 
 interface MealDetailsProps {
   meal: MealType;
@@ -204,6 +204,11 @@ const MealDetails: React.FC<MealDetailsProps> = ({
       </div>
 
       <div className="mt-12">
+        <ARMealPreview
+          mealId={meal.id}
+          mealName={meal.name}
+          className="w-full mt-8"
+        />
         <MealReviews 
           mealId={meal.id || ''} 
           restaurantId={restaurantId || ''}

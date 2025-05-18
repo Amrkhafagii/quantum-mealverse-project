@@ -113,6 +113,24 @@ const config: CapacitorConfig = {
       android: {
         scannerActivity: "com.lovable.quantummealverse.QrScannerActivity",
       }
+    },
+    // Add AR Preview plugin configuration
+    ARPreviewPlugin: {
+      ios: {
+        // iOS-specific AR configuration
+        allowsCameraAccess: true,
+        usesLiDAR: true,
+        detectionImages: [
+          "meal_anchor_1",
+          "meal_anchor_2"
+        ]
+      },
+      android: {
+        // Android-specific AR configuration
+        installIfNeeded: true,
+        defaultLightEstimation: true,
+        cameraPermissionText: "Camera access is required for AR features"
+      }
     }
   }
 };
