@@ -1,80 +1,50 @@
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { cn } from '@/lib/utils';
 import { Wifi, WifiOff } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ConnectionStateIndicatorProps {
   showText?: boolean;
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
 }
 
-export function ConnectionStateIndicator({ 
-  showText = false, 
-  className, 
-  size = 'md' 
-}: ConnectionStateIndicatorProps) {
-  const { isOnline, connectionType } = useConnectionStatus();
-  const [showReconnecting, setShowReconnecting] = useState(false);
+export const ConnectionStateIndicator: React.FC<ConnectionStateIndicatorProps> = ({
+  showText = false,
+  className = '',
+}) => {
+  const { isOnline } = useConnectionStatus();
+  const [isVisible, setIsVisible] = useState(false);
   
-  // When connection is restored, briefly show a reconnected state
+  // Only show the indicator after a short delay to avoid flashing
   useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isOnline) {
+        setIsVisible(true);
+      }
+    }, 2000);
+    
     if (isOnline) {
-      setShowReconnecting(true);
-      const timer = setTimeout(() => {
-        setShowReconnecting(false);
-      }, 2000);
-      return () => clearTimeout(timer);
+      setIsVisible(false);
     }
+    
+    return () => clearTimeout(timer);
   }, [isOnline]);
   
-  // Determine icon size based on size prop
-  const iconSize = {
-    sm: 14,
-    md: 16,
-    lg: 20
-  }[size];
-  
-  // Determine indicator classnames based on connection state
-  const indicatorClass = cn(
-    "flex items-center gap-1.5 transition-colors duration-300",
-    showReconnecting ? "text-green-500" : isOnline ? "text-green-500" : "text-amber-500",
-    className
-  );
-  
-  const connectionText = showReconnecting
-    ? "Reconnected"
-    : isOnline 
-      ? connectionType === 'wifi' ? "Online (WiFi)" : "Online" 
-      : "Offline";
+  if (isOnline && !showText) return null;
   
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div className={indicatorClass}>
-            {isOnline ? (
-              <Wifi size={iconSize} className="animate-pulse" />
-            ) : (
-              <WifiOff size={iconSize} className="animate-pulse" />
-            )}
-            {showText && <span className="text-sm">{connectionText}</span>}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>
-            {connectionText}
-            {isOnline && connectionType && ` (${connectionType})`}
-          </p>
-          {!isOnline && (
-            <p className="text-xs text-amber-400">Some features may be limited</p>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className={`flex items-center ${className} ${isVisible || isOnline ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
+      {isOnline ? (
+        <>
+          <Wifi className="h-4 w-4 text-green-500" />
+          {showText && <span className="ml-1 text-sm text-green-500">Online</span>}
+        </>
+      ) : (
+        <>
+          <WifiOff className="h-4 w-4 text-red-500" />
+          {showText && <span className="ml-1 text-sm text-red-500">Offline</span>}
+        </>
+      )}
+    </div>
   );
-}
-
-export default ConnectionStateIndicator;
+};

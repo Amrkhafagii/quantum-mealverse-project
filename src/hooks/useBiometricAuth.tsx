@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BiometricAuth } from '@/plugins/BiometricAuthPlugin';
 import { useToast } from '@/components/ui/use-toast';
 import { Platform } from '@/utils/platform';

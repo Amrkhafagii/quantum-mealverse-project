@@ -1,64 +1,34 @@
 
-import { Capacitor } from '@capacitor/core';
-import { Device } from '@capacitor/device';
-
+/**
+ * Platform detection utility for cross-platform code
+ */
 export class Platform {
-  static isNative(): boolean {
-    return Capacitor.isNativePlatform();
+  static get isWeb(): boolean {
+    return typeof window !== 'undefined' && typeof document !== 'undefined';
   }
 
-  static isAndroid(): boolean {
-    return Capacitor.getPlatform() === 'android';
+  static get isNative(): boolean {
+    return !this.isWeb;
   }
 
-  static isIOS(): boolean {
-    return Capacitor.getPlatform() === 'ios';
+  static get isIOS(): boolean {
+    return this.isNative && this._getPlatformName() === 'ios';
   }
 
-  static isWeb(): boolean {
-    return !this.isNative();
+  static get isAndroid(): boolean {
+    return this.isNative && this._getPlatformName() === 'android';
   }
-  
-  static isTablet(): boolean {
-    // Simple heuristic for tablet detection
-    if (this.isNative()) {
-      // For native, we'll need to implement platform-specific logic in future
-      // For now, assume it's not a tablet
-      return false;
-    } else {
-      // For web: use screen dimensions as a heuristic
-      const minTabletWidth = 768; // Common breakpoint for tablets
-      return window.innerWidth >= minTabletWidth && !this.isMobileBrowser();
-    }
-  }
-  
-  static async getAndroidVersion(): Promise<number> {
-    if (!this.isAndroid()) {
-      return 0;
-    }
-    
+
+  private static _getPlatformName(): string {
     try {
-      const info = await Device.getInfo();
-      const versionString = info.osVersion || '';
-      const majorVersion = parseInt(versionString.split('.')[0]);
-      return isNaN(majorVersion) ? 0 : majorVersion;
-    } catch (err) {
-      console.error('Error getting Android version', err);
-      return 0;
+      // For React Native environments
+      if (!this.isWeb) {
+        const { Platform } = require('react-native');
+        return Platform.OS.toLowerCase();
+      }
+    } catch (e) {
+      // Ignore errors when React Native is not available
     }
-  }
-  
-  static isMobileBrowser(): boolean {
-    if (this.isNative()) return false;
-    
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-  }
-  
-  static getPlatformName(): string {
-    if (this.isIOS()) return 'ios';
-    if (this.isAndroid()) return 'android';
-    if (this.isMobileBrowser()) return 'mobile-web';
     return 'web';
   }
 }

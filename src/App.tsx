@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -19,6 +20,11 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { ResponsiveProvider } from './contexts/ResponsiveContext';
 import ARViewPage from './pages/ARViewPage';
+import { QueryProvider } from './providers/QueryProvider';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Checkout from './pages/Checkout';
+import Cart from './pages/Cart';
 
 function AppContent() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -46,8 +52,11 @@ function AppContent() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/map" element={<MapView />} />
         <Route path="/qr-scanner" element={<QrScannerDemo />} />
-        {/* Add the AR View route */}
         <Route path="/ar-view/:id" element={<ARViewPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/cart" element={<Cart />} />
       </Routes>
       
       <Toaster />
@@ -63,15 +72,17 @@ function App() {
       enableSystem
       disableTransitionOnChange
     >
-      <AuthProvider>
-        <CartProvider>
-          <ResponsiveProvider>
-            <Router>
-              <AppContent />
-            </Router>
-          </ResponsiveProvider>
-        </CartProvider>
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <CartProvider>
+            <ResponsiveProvider>
+              <Router>
+                <AppContent />
+              </Router>
+            </ResponsiveProvider>
+          </CartProvider>
+        </AuthProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }

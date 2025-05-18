@@ -1,56 +1,26 @@
 
 import React from 'react';
 import { Platform } from '@/utils/platform';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SafeAreaViewProps {
   children: React.ReactNode;
   className?: string;
-  disableTop?: boolean;
-  disableBottom?: boolean;
-  disableSides?: boolean;
-  as?: React.ElementType;
 }
 
-const SafeAreaView: React.FC<SafeAreaViewProps> = ({
-  children,
-  className = '',
-  disableTop = false,
-  disableBottom = false,
-  disableSides = false,
-  as: Component = 'div'
-}) => {
-  const isMobile = useIsMobile();
-  
-  let safeAreaClasses = className;
-  
-  if (isMobile) {
-    // Add safe area classes based on platform
-    if (!disableTop) {
-      safeAreaClasses += ' pt-safe';
-    }
-    
-    if (!disableBottom) {
-      safeAreaClasses += ' pb-safe';
-    }
-    
-    if (!disableSides) {
-      safeAreaClasses += ' px-safe';
-    }
-    
-    // Add platform-specific classes
-    if (Platform.isIOS()) {
-      safeAreaClasses += ' ios-specific';
-    } else if (Platform.isAndroid()) {
-      safeAreaClasses += ' android-specific';
-    }
+const SafeAreaView: React.FC<SafeAreaViewProps> = ({ children, className = '' }) => {
+  // On web, we just render a div with the safe-area-inset CSS variables
+  if (Platform.isWeb) {
+    return (
+      <div className={`${className} pt-safe pb-safe pl-safe pr-safe`}>
+        {children}
+      </div>
+    );
   }
-  
-  return (
-    <Component className={safeAreaClasses.trim()}>
-      {children}
-    </Component>
-  );
+
+  // On native, we would use the React Native SafeAreaView
+  // For this migration phase, we'll just render the children
+  // This would be replaced with the actual SafeAreaView in a real implementation
+  return <>{children}</>;
 };
 
 export default SafeAreaView;

@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ShoppingCart } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useResponsive } from '@/contexts/ResponsiveContext';
+import NavbarAuthLinks from './NavbarAuthLinks';
+import { Badge } from '@/components/ui/badge';
 
 // Import the refactored components
 import NavLinks from './navbar/NavLinks';
@@ -13,7 +15,6 @@ import NavbarUser from './navbar/NavbarUser';
 import NavbarMobileMenu from './navbar/NavbarMobileMenu';
 import NavbarCart from './navbar/NavbarCart';
 import NavbarThemeToggle from './navbar/NavbarThemeToggle';
-import NavbarAuthLinks from './navbar/NavbarAuthLinks';
 
 interface NavbarProps {
   toggleDarkMode?: () => void;
@@ -52,7 +53,7 @@ const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-xl font-bold text-gray-900 dark:text-white">
-                Quantum Mealverse
+                HealthAndFix
               </Link>
             </div>
           </div>
@@ -64,7 +65,14 @@ const Navbar: React.FC<NavbarProps> = ({
           )}
           
           <div className="flex items-center">
-            <NavbarCart cartCount={cart.length} />
+            <Link to="/cart" className="mr-4 relative">
+              <ShoppingCart className="h-6 w-6" />
+              {cart.length > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
+                  {cart.length}
+                </Badge>
+              )}
+            </Link>
             
             <NavbarThemeToggle />
             
