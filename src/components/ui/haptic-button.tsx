@@ -16,7 +16,31 @@ export const HapticButton = React.forwardRef<HTMLButtonElement, HapticButtonProp
       // Apply haptic feedback
       if (hapticEffect) {
         // Use the specific effect if provided
-        await hapticFeedback[hapticEffect]?.();
+        switch (hapticEffect) {
+          case 'light':
+            await hapticFeedback.light();
+            break;
+          case 'medium':
+            await hapticFeedback.medium();
+            break;
+          case 'heavy':
+            await hapticFeedback.heavy();
+            break;
+          case 'success':
+            await hapticFeedback.success();
+            break;
+          case 'error':
+            await hapticFeedback.error();
+            break;
+          case 'warning':
+            await hapticFeedback.warning();
+            break;
+          case 'selection':
+            await hapticFeedback.selection();
+            break;
+          default:
+            await hapticFeedback.medium();
+        }
       } else if (context) {
         // Use contextual haptic feedback if context is provided
         await hapticFeedback.contextual(context);

@@ -3,13 +3,17 @@ import { Capacitor } from '@capacitor/core';
 
 // Define a simple interface for haptic feedback
 interface HapticFeedback {
-  impact: (style?: 'light' | 'medium' | 'heavy') => void;
-  notification: (type?: 'success' | 'warning' | 'error') => void;
-  selection: () => void;
-  vibrate: (duration?: number) => void;
-  success: () => void;
-  warning: () => void;
-  error: () => void;
+  impact: (style?: 'light' | 'medium' | 'heavy') => Promise<void>;
+  notification: (type?: 'success' | 'warning' | 'error') => Promise<void>;
+  selection: () => Promise<void>;
+  vibrate: (duration?: number) => Promise<void>;
+  success: () => Promise<void>;
+  warning: () => Promise<void>;
+  error: () => Promise<void>;
+  light: () => Promise<void>;
+  medium: () => Promise<void>;
+  heavy: () => Promise<void>;
+  contextual: (context: 'success' | 'error' | 'warning' | 'info' | 'selection' | 'confirmation') => Promise<void>;
 }
 
 class NativeHapticFeedback implements HapticFeedback {
@@ -31,57 +35,61 @@ class NativeHapticFeedback implements HapticFeedback {
     }
   }
 
-  impact(style: 'light' | 'medium' | 'heavy' = 'medium') {
+  async impact(style: 'light' | 'medium' | 'heavy' = 'medium'): Promise<void> {
     if (!this.haptics) return;
     
     try {
-      this.haptics.impact({
-        style
-      });
+      await this.haptics.impact({ style });
     } catch (err) {
       console.error('Error triggering haptic impact:', err);
       // Fallback to vibration
-      this.vibrate(10);
+      await this.vibrate(10);
     }
   }
 
-  notification(type: 'success' | 'warning' | 'error' = 'success') {
+  async notification(type: 'success' | 'warning' | 'error' = 'success'): Promise<void> {
     if (!this.haptics) return;
     
     try {
-      this.haptics.notification({
-        type
-      });
+      await this.haptics.notification({ type });
     } catch (err) {
       console.error('Error triggering haptic notification:', err);
       // Fallback to vibration
-      this.vibrate(type === 'error' ? 100 : 20);
+      await this.vibrate(type === 'error' ? 100 : 20);
     }
   }
 
-  selection() {
+  async selection(): Promise<void> {
     if (!this.haptics) return;
     
     try {
-      this.haptics.selectionStart();
-      setTimeout(() => {
-        this.haptics.selectionChanged();
-        setTimeout(() => {
-          this.haptics.selectionEnd();
-        }, 10);
+      await this.haptics.selectionStart();
+      setTimeout(async () => {
+        try {
+          await this.haptics.selectionChanged();
+          setTimeout(async () => {
+            try {
+              await this.haptics.selectionEnd();
+            } catch (err) {
+              console.error('Error ending haptic selection:', err);
+            }
+          }, 10);
+        } catch (err) {
+          console.error('Error changing haptic selection:', err);
+        }
       }, 10);
     } catch (err) {
       console.error('Error triggering haptic selection:', err);
       // Fallback to vibration
-      this.vibrate(5);
+      await this.vibrate(5);
     }
   }
 
-  vibrate(duration: number = 20) {
+  async vibrate(duration: number = 20): Promise<void> {
     if (!this.haptics) return;
     
     try {
-      this.haptics.vibrate({ duration });
+      await this.haptics.vibrate({ duration });
     } catch (err) {
       console.error('Error triggering vibration:', err);
       // Try using the navigator.vibrate API as fallback
@@ -91,49 +99,119 @@ class NativeHapticFeedback implements HapticFeedback {
     }
   }
 
-  success() {
-    this.notification('success');
+  async success(): Promise<void> {
+    await this.notification('success');
   }
 
-  warning() {
-    this.notification('warning');
+  async warning(): Promise<void> {
+    await this.notification('warning');
   }
 
-  error() {
-    this.notification('error');
+  async error(): Promise<void> {
+    await this.notification('error');
+  }
+
+  async light(): Promise<void> {
+    await this.impact('light');
+  }
+
+  async medium(): Promise<void> {
+    await this.impact('medium');
+  }
+
+  async heavy(): Promise<void> {
+    await this.impact('heavy');
+  }
+
+  async contextual(context: 'success' | 'error' | 'warning' | 'info' | 'selection' | 'confirmation'): Promise<void> {
+    switch (context) {
+      case 'success':
+        await this.success();
+        break;
+      case 'error':
+        await this.error();
+        break;
+      case 'warning':
+        await this.warning();
+        break;
+      case 'info':
+        await this.light();
+        break;
+      case 'selection':
+        await this.selection();
+        break;
+      case 'confirmation':
+        await this.medium();
+        break;
+    }
   }
 }
 
 // Web fallback using navigator.vibrate
 class WebHapticFeedback implements HapticFeedback {
-  impact() {
-    this.vibrate(10);
+  async impact(): Promise<void> {
+    await this.vibrate(10);
   }
 
-  notification(type: 'success' | 'warning' | 'error' = 'success') {
-    this.vibrate(type === 'error' ? 100 : type === 'warning' ? 50 : 20);
+  async notification(type: 'success' | 'warning' | 'error' = 'success'): Promise<void> {
+    await this.vibrate(type === 'error' ? 100 : type === 'warning' ? 50 : 20);
   }
 
-  selection() {
-    this.vibrate(5);
+  async selection(): Promise<void> {
+    await this.vibrate(5);
   }
 
-  vibrate(duration: number = 20) {
+  async vibrate(duration: number = 20): Promise<void> {
     if (navigator && navigator.vibrate) {
       navigator.vibrate(duration);
     }
   }
 
-  success() {
-    this.vibrate(20);
+  async success(): Promise<void> {
+    await this.vibrate(20);
   }
 
-  warning() {
-    this.vibrate(50);
+  async warning(): Promise<void> {
+    await this.vibrate(50);
   }
 
-  error() {
-    this.vibrate(100);
+  async error(): Promise<void> {
+    await this.vibrate(100);
+  }
+
+  async light(): Promise<void> {
+    await this.vibrate(5);
+  }
+
+  async medium(): Promise<void> {
+    await this.vibrate(15);
+  }
+
+  async heavy(): Promise<void> {
+    await this.vibrate(25);
+  }
+
+  async contextual(context: 'success' | 'error' | 'warning' | 'info' | 'selection' | 'confirmation'): Promise<void> {
+    switch (context) {
+      case 'success':
+        await this.success();
+        break;
+      case 'error':
+        await this.error();
+        break;
+      case 'warning':
+        await this.warning();
+        break;
+      case 'info':
+        await this.light();
+        break;
+      case 'selection':
+        await this.selection();
+        break;
+      case 'confirmation':
+        await this.medium();
+        break;
+    }
   }
 }
 

@@ -1,130 +1,101 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Network } from '@capacitor/network';
-import { toast } from '@/components/ui/use-toast';
-import { hapticFeedback } from '@/utils/hapticFeedback';
 import { Platform } from '@/utils/platform';
 
-export interface ConnectionStatus {
+interface ConnectionStatusResult {
   isOnline: boolean;
   connectionType: string | null;
   wasOffline: boolean;
   resetWasOffline: () => void;
 }
 
-export const useConnectionStatus = (): ConnectionStatus => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+export function useConnectionStatus(): ConnectionStatusResult {
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [connectionType, setConnectionType] = useState<string | null>(null);
-  const [wasOffline, setWasOffline] = useState(false);
-  const isMobile = Platform.isNative();
+  const [wasOffline, setWasOffline] = useState<boolean>(false);
   
+  const resetWasOffline = useCallback(() => {
+    setWasOffline(false);
+  }, []);
+
   useEffect(() => {
-    // Initial network status check
-    const checkNetworkStatus = async () => {
+    let networkListener: any;
+    
+    // Initialize connection status
+    const getNetworkStatus = async () => {
       try {
-        // First set from navigator.onLine as a fallback
-        setIsOnline(navigator.onLine);
-        
-        // Then try to use Capacitor if available
-        try {
+        if (Platform.isNative()) {
+          // For native (iOS/Android) using Capacitor Network plugin
           const status = await Network.getStatus();
           setIsOnline(status.connected);
           setConnectionType(status.connectionType);
-        } catch (capacitorError) {
-          console.log('Capacitor Network API not available, using browser API');
-          // Continue with navigator.onLine
-        }
-      } catch (error) {
-        console.error('Error checking network status:', error);
-      }
-    };
-    
-    checkNetworkStatus();
-    
-    // Set up browser online/offline event listeners as a fallback
-    const handleOnline = () => {
-      setIsOnline(true);
-      // Note: we've gone offline and back online
-      setWasOffline(true);
-      // Provide haptic feedback on mobile
-      if (isMobile) hapticFeedback.success();
-      
-      toast({
-        title: "Back online",
-        description: "Your connection has been restored",
-        variant: "default"
-      });
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      // Provide haptic feedback on mobile
-      if (isMobile) hapticFeedback.error();
-      
-      toast({
-        title: "You are offline",
-        description: "Some features may be limited until connection is restored",
-        variant: "destructive"
-      });
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Set up listeners for network status changes with Capacitor if available
-    let networkListener: any = null;
-    
-    const setupNetworkListener = async () => {
-      try {
-        networkListener = await Network.addListener('networkStatusChange', status => {
-          setIsOnline(status.connected);
-          setConnectionType(status.connectionType);
           
-          if (!status.connected) {
-            if (isMobile) hapticFeedback.error();
+          // Set up Capacitor network status listener
+          networkListener = Network.addListener('networkStatusChange', (status) => {
+            const wasOfflineBefore = !isOnline;
+            setIsOnline(status.connected);
+            setConnectionType(status.connectionType);
             
-            toast({
-              title: "You are offline",
-              description: "Some features may be limited until connection is restored",
-              variant: "destructive"
-            });
-          } else {
-            // If we're coming back online, track this
-            setWasOffline(true);
+            if (wasOfflineBefore && status.connected) {
+              setWasOffline(true);
+            }
+          });
+        } else {
+          // For web browsers
+          setIsOnline(navigator.onLine);
+          
+          // Try to detect connection type using Network Information API
+          if ('connection' in navigator) {
+            const connection = (navigator as any).connection;
+            setConnectionType(connection?.effectiveType || connection?.type || null);
             
-            if (isMobile) hapticFeedback.success();
-            
-            toast({
-              title: "Back online",
-              description: `Connected via ${status.connectionType}`,
-              variant: "default"
+            // Listen for changes to connection type
+            connection?.addEventListener('change', () => {
+              setConnectionType(connection?.effectiveType || connection?.type || null);
             });
           }
-        });
+          
+          // Listen for online/offline events
+          const handleOnline = () => {
+            if (!isOnline) {
+              setWasOffline(true);
+            }
+            setIsOnline(true);
+          };
+          
+          const handleOffline = () => {
+            setIsOnline(false);
+          };
+          
+          window.addEventListener('online', handleOnline);
+          window.addEventListener('offline', handleOffline);
+          
+          return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            
+            if ('connection' in navigator) {
+              const connection = (navigator as any).connection;
+              connection?.removeEventListener('change', () => {});
+            }
+          };
+        }
       } catch (error) {
-        console.error('Error setting up Capacitor network listener:', error);
-        // Continue with browser events
+        console.error("Error getting network status:", error);
+        // Fallback to browser navigator.onLine
+        setIsOnline(navigator.onLine);
       }
     };
     
-    setupNetworkListener();
+    getNetworkStatus();
     
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      
       if (networkListener) {
         networkListener.remove();
       }
     };
-  }, [isMobile]);
-  
-  const resetWasOffline = () => setWasOffline(false);
-  
-  return {
-    isOnline,
-    connectionType,
-    wasOffline,
-    resetWasOffline
-  };
-};
+  }, [isOnline]);
+
+  return { isOnline, connectionType, wasOffline, resetWasOffline };
+}
