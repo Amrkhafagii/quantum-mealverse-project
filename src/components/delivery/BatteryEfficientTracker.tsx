@@ -56,11 +56,11 @@ const BatteryEfficientTracker: React.FC<BatteryEfficientTrackerProps> = ({
     lastLocationTimestamp
   } = useAdaptiveLocationTracking({
     onLocationUpdate,
-    distanceToDestination: destination ? calculateDistance(destination) : undefined,
     enableMotionDetection: true,
     enableAdaptiveSampling: true,
     batteryAware: true,
     initialInterval: lowPowerMode ? 60000 : 30000,
+    distanceToDestination: destination ? calculateDistance(destination) : undefined,
   });
 
   // Start tracking when component mounts
@@ -122,9 +122,11 @@ const BatteryEfficientTracker: React.FC<BatteryEfficientTrackerProps> = ({
     
     // Restart tracking with new power settings
     if (isTracking) {
-      stopTracking().then(() => {
+      stopTracking();
+      // Use setTimeout to ensure stopTracking has completed
+      setTimeout(() => {
         startTracking();
-      });
+      }, 0);
     }
     
     toast.info(checked 
@@ -145,8 +147,8 @@ const BatteryEfficientTracker: React.FC<BatteryEfficientTrackerProps> = ({
   const renderBatteryIcon = () => {
     if (batteryLevel === null) return <Battery className="h-4 w-4" />;
     
-    if (batteryLevel <= 0.2) return <BatteryLow className="h-4 w-4 text-red-500" />;
-    if (batteryLevel <= 0.6) return <BatteryMedium className="h-4 w-4 text-yellow-500" />;
+    if (batteryLevel <= 20) return <BatteryLow className="h-4 w-4 text-red-500" />;
+    if (batteryLevel <= 60) return <BatteryMedium className="h-4 w-4 text-yellow-500" />;
     return <BatteryFull className="h-4 w-4 text-green-500" />;
   };
 
@@ -192,8 +194,8 @@ const BatteryEfficientTracker: React.FC<BatteryEfficientTrackerProps> = ({
             {batteryLevel !== null && (
               <div className="flex items-center space-x-2">
                 {renderBatteryIcon()}
-                <Progress value={batteryLevel * 100} className="h-2 w-20" />
-                <span className="text-xs">{Math.round(batteryLevel * 100)}%</span>
+                <Progress value={batteryLevel} className="h-2 w-20" />
+                <span className="text-xs">{Math.round(batteryLevel)}%</span>
               </div>
             )}
           </div>
@@ -217,7 +219,7 @@ const BatteryEfficientTracker: React.FC<BatteryEfficientTrackerProps> = ({
         
         <div className="flex items-center justify-between pt-2 border-t">
           <div className="flex items-center space-x-2">
-            {batteryLevel !== null && batteryLevel <= 0.15 && (
+            {batteryLevel !== null && batteryLevel <= 15 && (
               <Badge variant="destructive" className="flex gap-1 items-center">
                 <AlertTriangle className="h-3 w-3" />
                 Low Battery Mode

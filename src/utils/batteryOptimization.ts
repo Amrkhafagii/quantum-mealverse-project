@@ -103,7 +103,7 @@ export class BatteryOptimization {
     return {...this.batteryState};
   }
 
-  // Static methods for battery optimization 
+  // Static methods for battery optimization
   static async getBatteryLevel(): Promise<number> {
     try {
       const info = await Device.getBatteryInfo();
@@ -123,16 +123,6 @@ export class BatteryOptimization {
     } catch (error) {
       console.error('Error checking low power mode:', error);
       return false;
-    }
-  }
-
-  static async getOptimalUpdateInterval(): Promise<number> {
-    try {
-      const info = await Device.getBatteryInfo();
-      return info.batteryLevel < 0.2 ? 30000 : 10000; // 30 seconds if battery low, 10 seconds otherwise
-    } catch (error) {
-      console.error('Error getting optimal update interval:', error);
-      return 10000; // Default to 10 seconds
     }
   }
 

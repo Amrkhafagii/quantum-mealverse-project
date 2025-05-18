@@ -16,6 +16,7 @@ export const useRestaurantAuth = () => {
   const { user, loading, logout } = useAuth(); // Now properly typed
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRestaurantOwner, setIsRestaurantOwner] = useState(false);
 
   useEffect(() => {
     const fetchRestaurant = async () => {
@@ -36,6 +37,9 @@ export const useRestaurantAuth = () => {
         };
         
         setRestaurant(mockRestaurant);
+        
+        // Check if user is restaurant owner
+        setIsRestaurantOwner(mockRestaurant.owner_id === user.id);
       } catch (error) {
         console.error('Error fetching restaurant:', error);
       } finally {
@@ -50,6 +54,7 @@ export const useRestaurantAuth = () => {
     user,
     restaurant,
     isLoading: loading || isLoading,
+    isRestaurantOwner,
     logout
   };
 };

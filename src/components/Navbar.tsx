@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,11 +19,14 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
-  toggleDarkMode: () => void;
-  isDarkMode: boolean;
+  toggleDarkMode?: () => void;
+  isDarkMode?: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ toggleDarkMode, isDarkMode }) => {
+const Navbar: React.FC<NavbarProps> = ({ 
+  toggleDarkMode = () => {}, 
+  isDarkMode = false 
+}) => {
   const { user, logout } = useAuth();
   const { cart } = useCart();
   const { setTheme, theme } = useTheme();

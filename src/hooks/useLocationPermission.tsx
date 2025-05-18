@@ -1,63 +1,62 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { Geolocation } from '@capacitor/geolocation';
+import { Platform } from '@/utils/platform';
+import LocationPermissions from '@/plugins/LocationPermissionsPlugin';
 
-export type PermissionState = 'prompt' | 'denied' | 'granted';
+export type LocationPermissionState = 'granted' | 'denied' | 'prompt';
 
-export const useLocationPermission = () => {
-  const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
-  const [backgroundPermissionStatus, setBackgroundPermissionStatus] = useState<PermissionState>('prompt');
+export interface LocationPermissionHookResponse {
+  permissionStatus: LocationPermissionState;
+  backgroundPermissionStatus: LocationPermissionState;
+  requestPermission: () => Promise<boolean>;
+  requestBackgroundPermission: () => Promise<boolean>;
+  checkLocationPermissions: () => Promise<void>;
+  isRequesting: boolean;
+  hasEducationalUiBeenShown: boolean;
+}
+
+export const useLocationPermission = (): LocationPermissionHookResponse => {
+  const [permissionStatus, setPermissionStatus] = useState<LocationPermissionState>('prompt');
+  const [backgroundPermissionStatus, setBackgroundPermissionStatus] = useState<LocationPermissionState>('prompt');
   const [isRequesting, setIsRequesting] = useState(false);
   const [hasEducationalUiBeenShown, setHasEducationalUiBeenShown] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const [isLocationStale, setIsLocationStale] = useState(false);
-  
-  // Check permissions on component mount
+
+  // Check location permissions on mount
+  const checkLocationPermissions = useCallback(async () => {
+    try {
+      if (Platform.isNative()) {
+        const status = await LocationPermissions.checkPermissionStatus();
+        setPermissionStatus(status.location);
+        setBackgroundPermissionStatus(status.backgroundLocation);
+      } else {
+        // For web, just simulate permission status
+        setPermissionStatus('granted');
+        setBackgroundPermissionStatus('granted');
+      }
+    } catch (error) {
+      console.error("Error checking location permissions:", error);
+    }
+  }, []);
+
   useEffect(() => {
     checkLocationPermissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [checkLocationPermissions]);
 
-  // Check current permission status
-  const checkLocationPermissions = useCallback(async () => {
-    if (!Capacitor.isNativePlatform()) {
-      setPermissionStatus('granted');
-      setBackgroundPermissionStatus('granted');
-      setHasInitialized(true);
-      return;
-    }
-
+  // Request standard location permission
+  const requestPermission = useCallback(async () => {
+    setIsRequesting(true);
     try {
-      const status = await Geolocation.checkPermissions();
-      setPermissionStatus(status.location || 'prompt');
-      setBackgroundPermissionStatus(status.coarseLocation || 'prompt');
-      setHasInitialized(true);
-    } catch (error) {
-      console.error('Error checking location permissions', error);
-      setHasInitialized(true);
-    }
-  }, []);
-
-  // Request regular location permission
-  const requestPermission = useCallback(async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform()) {
-      return true;
-    }
-
-    try {
-      setIsRequesting(true);
-      const status = await Geolocation.requestPermissions();
-      setPermissionStatus(status.location || 'prompt');
-      
-      // Update status of background location too if it's changed
-      if (status.coarseLocation) {
-        setBackgroundPermissionStatus(status.coarseLocation);
+      if (Platform.isNative()) {
+        const result = await LocationPermissions.requestLocationPermission({ includeBackground: false });
+        setPermissionStatus(result.location);
+        return result.location === 'granted';
+      } else {
+        // For web, simulate success
+        setPermissionStatus('granted');
+        return true;
       }
-      
-      return status.location === 'granted';
     } catch (error) {
-      console.error('Error requesting location permission', error);
+      console.error("Error requesting location permission:", error);
       return false;
     } finally {
       setIsRequesting(false);
@@ -65,36 +64,32 @@ export const useLocationPermission = () => {
   }, []);
 
   // Request background location permission
-  const requestBackgroundPermission = useCallback(async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform()) {
-      return true;
-    }
-
-    // Background location requires foreground location to be granted first
+  const requestBackgroundPermission = useCallback(async () => {
     if (permissionStatus !== 'granted') {
-      const granted = await requestPermission();
-      if (!granted) return false;
+      console.error("Cannot request background permission without foreground permission");
+      return false;
     }
 
+    setIsRequesting(true);
+    setHasEducationalUiBeenShown(true);
+    
     try {
-      setIsRequesting(true);
-      setHasEducationalUiBeenShown(true); // Mark that we've shown the UI
-      
-      // This would be a platform-specific call in real implementation
-      // For now, we'll simulate it with a regular permission request
-      const status = await Geolocation.requestPermissions({
-        permissions: ['location', 'coarseLocation']
-      });
-      
-      setBackgroundPermissionStatus(status.coarseLocation || 'prompt');
-      return status.coarseLocation === 'granted';
+      if (Platform.isNative()) {
+        const result = await LocationPermissions.requestLocationPermission({ includeBackground: true });
+        setBackgroundPermissionStatus(result.backgroundLocation);
+        return result.backgroundLocation === 'granted';
+      } else {
+        // For web, simulate success
+        setBackgroundPermissionStatus('granted');
+        return true;
+      }
     } catch (error) {
-      console.error('Error requesting background location permission', error);
+      console.error("Error requesting background location permission:", error);
       return false;
     } finally {
       setIsRequesting(false);
     }
-  }, [permissionStatus, requestPermission]);
+  }, [permissionStatus]);
 
   return {
     permissionStatus,
@@ -103,8 +98,6 @@ export const useLocationPermission = () => {
     requestBackgroundPermission,
     checkLocationPermissions,
     isRequesting,
-    hasEducationalUiBeenShown,
-    hasInitialized,
-    isLocationStale
+    hasEducationalUiBeenShown
   };
 };
