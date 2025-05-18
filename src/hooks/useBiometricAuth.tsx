@@ -1,51 +1,42 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BiometricAuth } from '@/plugins/BiometricAuthPlugin';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { Platform } from '@/utils/platform';
 
-export const useBiometricAuth = () => {
+export function useBiometricAuth() {
   const [isAvailable, setIsAvailable] = useState(false);
   const [biometryType, setBiometryType] = useState<string>('none');
   const [isBiometricSetup, setIsBiometricSetup] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
   
-  // Check if biometric auth is available
+  // Check if biometric authentication is available
   useEffect(() => {
-    const checkBiometricAvailability = async () => {
+    const checkAvailability = async () => {
       try {
-        // Only check on native platforms
-        if (!Platform.isNative()) {
-          setIsAvailable(false);
-          return;
-        }
-        
         const result = await BiometricAuth.isAvailable();
         setIsAvailable(result.available);
         setBiometryType(result.biometryType);
         
-        // Check if the current user has set up biometric login
-        if (result.available && user) {
-          const hasSetup = localStorage.getItem(`biometric_setup_${user.id}`);
-          setIsBiometricSetup(hasSetup === 'true');
-        }
+        // Check if biometric login has been set up
+        const userId = localStorage.getItem('biometric_user_id');
+        setIsBiometricSetup(!!userId);
       } catch (error) {
         console.error('Error checking biometric availability:', error);
         setIsAvailable(false);
+        setBiometryType('none');
       }
     };
     
-    checkBiometricAvailability();
-  }, [user]);
+    checkAvailability();
+  }, []);
   
-  // Function to authenticate using biometrics
-  const authenticateWithBiometrics = useCallback(async (reason: string = "Verify your identity") => {
+  // Authenticate with biometrics
+  const authenticateWithBiometrics = async (reason: string): Promise<boolean> => {
     if (!isAvailable) {
       toast({
-        title: "Biometric authentication unavailable",
-        description: "Your device doesn't support biometric authentication",
+        title: "Biometrics unavailable",
+        description: "Your device doesn't support biometric authentication.",
         variant: "destructive"
       });
       return false;
@@ -54,98 +45,72 @@ export const useBiometricAuth = () => {
     try {
       const result = await BiometricAuth.authenticate({
         reason,
-        title: "Authentication Required"
+        title: "Authenticate with Biometrics"
       });
       
       return result.authenticated;
-    } catch (error: any) {
-      // Don't show an error for user cancellation
-      if (error.message !== 'User canceled') {
-        toast({
-          title: "Authentication failed",
-          description: error.message || "Could not authenticate with biometrics",
-          variant: "destructive"
-        });
-      }
-      return false;
-    }
-  }, [isAvailable, toast]);
-  
-  // Function to set up biometric login for a user
-  const setupBiometricLogin = useCallback(async () => {
-    if (!isAvailable || !user) {
+    } catch (error) {
+      console.error('Biometric authentication error:', error);
       toast({
-        title: "Setup failed",
-        description: "Biometric authentication is not available or you're not logged in",
+        title: "Authentication failed",
+        description: "Biometric authentication failed. Please try again.",
         variant: "destructive"
       });
       return false;
     }
+  };
+  
+  // Set up biometric login
+  const setupBiometricLogin = async () => {
+    if (!isAvailable) {
+      toast({
+        title: "Biometrics unavailable",
+        description: "Your device doesn't support biometric authentication.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
-      // First authenticate to confirm identity
-      const authenticated = await authenticateWithBiometrics("Set up biometric login");
-      
-      if (!authenticated) {
-        return false;
-      }
-      
-      // Store the user's authentication token securely
-      const token = localStorage.getItem('quantum_mealverse_token') || 'fake_token';
+      // In a real implementation, we would store a secure token here
+      // For this demo, we'll just store a user ID
+      const mockUserId = "user123";
+      const mockToken = "secure_token_would_go_here";
       
       const result = await BiometricAuth.setupBiometricLogin({
-        userId: user.id,
-        token
+        userId: mockUserId,
+        token: mockToken
       });
       
       if (result.success) {
-        // Mark as set up in local storage for UI state
-        localStorage.setItem(`biometric_setup_${user.id}`, 'true');
+        localStorage.setItem('biometric_user_id', mockUserId);
         setIsBiometricSetup(true);
         
         toast({
           title: "Biometric login enabled",
-          description: `You can now sign in using ${biometryType === 'faceId' ? 'Face ID' : 'Touch ID'}`
+          description: `You can now use ${biometryType === 'faceId' ? 'Face ID' : 'Touch ID'} to sign in.`
         });
-        
-        return true;
       }
-      
-      return false;
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error setting up biometric login:', error);
       toast({
         title: "Setup failed",
-        description: error.message || "Could not set up biometric authentication",
+        description: "Could not set up biometric login. Please try again.",
         variant: "destructive"
       });
-      return false;
     }
-  }, [isAvailable, user, toast, authenticateWithBiometrics, biometryType]);
+  };
   
-  // Function to disable biometric login
-  const disableBiometricLogin = useCallback(async () => {
-    if (!user) return false;
+  // Disable biometric login
+  const disableBiometricLogin = () => {
+    localStorage.removeItem('biometric_user_id');
+    setIsBiometricSetup(false);
     
-    try {
-      // In a real implementation, we would revoke the token on the server
-      localStorage.removeItem(`biometric_setup_${user.id}`);
-      setIsBiometricSetup(false);
-      
-      toast({
-        title: "Biometric login disabled",
-        description: "You've successfully disabled biometric login"
-      });
-      
-      return true;
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Could not disable biometric login",
-        variant: "destructive"
-      });
-      return false;
-    }
-  }, [user, toast]);
+    toast({
+      title: "Biometric login disabled",
+      description: "Biometric authentication has been disabled."
+    });
+  };
   
   return {
     isAvailable,
@@ -155,4 +120,4 @@ export const useBiometricAuth = () => {
     setupBiometricLogin,
     disableBiometricLogin
   };
-};
+}
