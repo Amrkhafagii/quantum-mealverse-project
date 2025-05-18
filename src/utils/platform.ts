@@ -19,12 +19,26 @@ export class Platform {
     return this.isNative && this._getPlatformName() === 'android';
   }
 
+  // Add new utility method to check Android version
+  static getAndroidVersion(): number | null {
+    if (!this.isAndroid) return null;
+    
+    try {
+      const { Device } = require('@capacitor/device');
+      const info = Device.getInfo();
+      return info?.androidSDKVersion || null;
+    } catch (e) {
+      console.error('Error getting Android version:', e);
+      return null;
+    }
+  }
+
   private static _getPlatformName(): string {
     try {
       // For React Native environments
       if (!this.isWeb) {
-        const { Platform } = require('react-native');
-        return Platform.OS.toLowerCase();
+        const { Capacitor } = require('@capacitor/core');
+        return Capacitor.getPlatform().toLowerCase();
       }
     } catch (e) {
       // Ignore errors when React Native is not available
