@@ -9,14 +9,18 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from 'lucide-react';
 
-const Auth = () => {
+interface AuthProps {
+  mode?: 'login' | 'signup';
+}
+
+const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
   
   // Get any state passed from navigation
   const { state } = location;
-  const mode = state?.mode || 'login';
+  const mode = propMode || state?.mode || 'login';
   const returnTo = state?.returnTo || '/';
 
   // If user is already logged in, redirect appropriately

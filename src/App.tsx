@@ -43,7 +43,8 @@ function App() {
                               {/* Auth routes with mode parameters */}
                               <Route path="/auth" element={<Auth />} />
                               <Route path="/login" element={<Auth />} />
-                              <Route path="/register" element={<Auth state={{ mode: 'signup' }} />} />
+                              {/* Fix: Pass the signup mode directly to the Auth component */}
+                              <Route path="/register" element={<Auth mode="signup" />} />
                               
                               {/* Demo routes handled at App level */}
                               <Route path="/platform-ui" element={<PlatformUIDemo />} />
