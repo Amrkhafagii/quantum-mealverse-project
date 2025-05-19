@@ -32,19 +32,27 @@ const NavLinks: React.FC<NavLinksProps> = ({ isMobile, user, closeMenu = () => {
       </Link>
       
       <Link
-        to="/menu"
+        to="/customer"
         className={linkClasses}
         onClick={closeMenu}
       >
-        Menu
+        Order Food
       </Link>
       
       <Link
-        to="/contact"
+        to="/fitness"
         className={linkClasses}
         onClick={closeMenu}
       >
-        Contact
+        Fitness
+      </Link>
+      
+      <Link
+        to="/orders"
+        className={linkClasses}
+        onClick={closeMenu}
+      >
+        My Orders
       </Link>
       
       <Link
@@ -56,13 +64,35 @@ const NavLinks: React.FC<NavLinksProps> = ({ isMobile, user, closeMenu = () => {
       </Link>
       
       {user && (
-        <Link
-          to="/dashboard"
-          className={linkClasses}
-          onClick={closeMenu}
-        >
-          Dashboard
-        </Link>
+        <>
+          <Link
+            to="/dashboard"
+            className={linkClasses}
+            onClick={closeMenu}
+          >
+            Dashboard
+          </Link>
+          
+          {user.isRestaurantOwner && (
+            <Link
+              to="/restaurant/dashboard"
+              className={linkClasses}
+              onClick={closeMenu}
+            >
+              Restaurant
+            </Link>
+          )}
+          
+          {user.isDeliveryDriver && (
+            <Link
+              to="/delivery/dashboard"
+              className={linkClasses}
+              onClick={closeMenu}
+            >
+              Delivery
+            </Link>
+          )}
+        </>
       )}
     </>
   );
