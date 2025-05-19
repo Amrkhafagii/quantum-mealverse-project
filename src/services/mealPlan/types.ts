@@ -23,3 +23,10 @@ export interface TDEEResult {
   activityLevel?: string;
   [key: string]: any;
 }
+
+// This is a local extension to ensure our services have the right type definition
+// without modifying the base type in fitness types
+export interface SavedMealPlanExtended extends SavedMealPlan {
+  is_active: boolean;
+  expires_at?: string;
+}

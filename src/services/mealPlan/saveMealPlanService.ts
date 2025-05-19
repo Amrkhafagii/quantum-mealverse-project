@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
 import { MealPlan } from '@/types/food';
 import { Json } from '@/types/database';
+import { SavedMealPlanExtended } from './types';
 
 /**
  * Fetches all saved meal plans for a user
@@ -114,7 +115,7 @@ export const deleteSavedMealPlan = async (planId: string, userId: string): Promi
 export const updateSavedMealPlan = async (
   planId: string,
   userId: string,
-  updates: Partial<SavedMealPlan>
+  updates: Partial<SavedMealPlanExtended>
 ): Promise<{
   data: SavedMealPlan | null;
   error: any;
