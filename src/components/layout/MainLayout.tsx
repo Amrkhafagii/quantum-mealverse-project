@@ -9,17 +9,19 @@ const MainLayout: React.FC = () => {
   const { isMobile } = useResponsive();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Accessibility skip link */}
-      <SkipLink targetId="main-content" />
-      
-      <div id="main-content" className="flex-1">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* Other routes will be added here */}
-        </Routes>
+    <NetworkStatusProvider>
+      <div className="min-h-screen flex flex-col">
+        {/* Accessibility skip link */}
+        <SkipLink targetId="main-content" />
+        
+        <div id="main-content" className="flex-1">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* Other routes will be added here */}
+          </Routes>
+        </div>
       </div>
-    </div>
+    </NetworkStatusProvider>
   );
 };
 

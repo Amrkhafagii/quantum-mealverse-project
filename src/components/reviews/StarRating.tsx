@@ -1,94 +1,73 @@
 
 import React from 'react';
 import { Star, StarHalf } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
-interface StarRatingProps {
-  rating: number;
-  maxRating?: number;
+export interface StarRatingProps {
+  rating?: number;
+  readOnly?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  showNumber?: boolean;
-  interactive?: boolean;
-  onRatingChange?: (rating: number) => void;
+  onChange?: (rating: number) => void;
   className?: string;
 }
 
 export const StarRating: React.FC<StarRatingProps> = ({
-  rating,
-  maxRating = 5,
+  rating = 0,
+  readOnly = false,
   size = 'md',
-  showNumber = false,
-  interactive = false,
-  onRatingChange,
-  className
+  onChange,
+  className = '',
 }) => {
-  const [hoverRating, setHoverRating] = React.useState(0);
-  
-  const sizes = {
-    sm: 'w-3 h-3',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6'
-  };
-  
-  const starSize = sizes[size];
-  
-  const handleClick = (selectedRating: number) => {
-    if (interactive && onRatingChange) {
-      onRatingChange(selectedRating);
-    }
+  const handleStarClick = (selectedRating: number) => {
+    if (readOnly) return;
+    onChange?.(selectedRating);
   };
 
+  // Size mapping
+  const sizeMap = {
+    sm: 'w-3 h-3',
+    md: 'w-4 h-4',
+    lg: 'w-5 h-5',
+  };
+
+  // Convert to array of 5 stars
   const renderStars = () => {
-    const stars = [];
-    const activeRating = hoverRating > 0 ? hoverRating : rating;
-    
-    for (let i = 1; i <= maxRating; i++) {
-      const difference = activeRating - i + 1;
-      
-      if (difference >= 1) {
-        stars.push(
-          <Star 
+    return Array.from({ length: 5 }, (_, i) => {
+      // Full star
+      if (i < Math.floor(rating)) {
+        return (
+          <Star
             key={i}
-            className={cn(starSize, "fill-yellow-400 text-yellow-400")}
-            onClick={() => handleClick(i)}
-            onMouseEnter={() => interactive && setHoverRating(i)}
-            onMouseLeave={() => interactive && setHoverRating(0)}
+            className={`${sizeMap[size]} fill-yellow-400 text-yellow-400`}
+            onClick={() => handleStarClick(i + 1)}
           />
         );
-      } else if (difference > 0 && difference < 1) {
-        stars.push(
-          <StarHalf 
+      } 
+      // Half star
+      else if (i < Math.ceil(rating) && !Number.isInteger(rating)) {
+        return (
+          <StarHalf
             key={i}
-            className={cn(starSize, "fill-yellow-400 text-yellow-400")}
-            onClick={() => handleClick(i)}
-            onMouseEnter={() => interactive && setHoverRating(i)}
-            onMouseLeave={() => interactive && setHoverRating(0)}
+            className={`${sizeMap[size]} fill-yellow-400 text-yellow-400`}
+            onClick={() => handleStarClick(i + 1)}
           />
         );
-      } else {
-        stars.push(
-          <Star 
+      } 
+      // Empty star
+      else {
+        return (
+          <Star
             key={i}
-            className={cn(starSize, "text-gray-300")}
-            onClick={() => handleClick(i)}
-            onMouseEnter={() => interactive && setHoverRating(i)}
-            onMouseLeave={() => interactive && setHoverRating(0)}
+            className={`${sizeMap[size]} text-gray-400`}
+            onClick={() => handleStarClick(i + 1)}
           />
         );
       }
-    }
-    
-    return stars;
+    });
   };
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div className={`flex items-center ${className} ${!readOnly ? 'cursor-pointer' : ''}`}>
       {renderStars()}
-      {showNumber && (
-        <span className="ml-1 text-sm font-medium">
-          {rating.toFixed(1)}
-        </span>
-      )}
     </div>
   );
 };

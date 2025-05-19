@@ -1,147 +1,117 @@
 
-import { Order } from '@/types/order';
+import { Preferences } from '@capacitor/preferences';
+import { Platform } from './platform';
 
-// Type definitions for offline storage
-export interface PendingAction {
-  id: string;
-  type: string;
-  payload: any;
-  timestamp: number;
-  retryCount?: number;
+// Interface for offline storage
+export interface OfflineStorage {
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T): Promise<void>;
+  remove(key: string): Promise<void>;
+  keys(): Promise<string[]>;
+  clear(): Promise<void>;
 }
 
-export interface OfflineStorageState {
-  activeOrders: Record<string, { data: Order; timestamp: number }>;
-  pendingActions: PendingAction[];
+// Web implementation using localStorage
+class WebStorage implements OfflineStorage {
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      console.error('Error getting item from web storage:', error);
+      return null;
+    }
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error setting item in web storage:', error);
+    }
+  }
+
+  async remove(key: string): Promise<void> {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error('Error removing item from web storage:', error);
+    }
+  }
+
+  async keys(): Promise<string[]> {
+    try {
+      return Object.keys(localStorage);
+    } catch (error) {
+      console.error('Error getting keys from web storage:', error);
+      return [];
+    }
+  }
+
+  async clear(): Promise<void> {
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error('Error clearing web storage:', error);
+    }
+  }
 }
 
-// Constants
-const STORAGE_KEY = 'offline_storage_state';
-const MAX_RETRY_COUNT = 3;
-
-// Initialize offline storage
-const initializeStorage = (): OfflineStorageState => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored) as OfflineStorageState;
+// Native implementation using Capacitor Preferences
+class NativeStorage implements OfflineStorage {
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const { value } = await Preferences.get({ key });
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      console.error('Error getting item from native storage:', error);
+      return null;
     }
-  } catch (error) {
-    console.error('Error initializing offline storage:', error);
   }
 
-  return {
-    activeOrders: {},
-    pendingActions: [],
-  };
-};
-
-// Save the offline state
-const saveOfflineState = (state: OfflineStorageState): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('Error saving offline state:', error);
-  }
-};
-
-// Get the current offline state
-export const getOfflineState = (): OfflineStorageState => {
-  return initializeStorage();
-};
-
-// Store active orders for offline access
-export const storeActiveOrder = (order: Order): void => {
-  if (!order.id) return;
-
-  const state = getOfflineState();
-  state.activeOrders[order.id] = {
-    data: order,
-    timestamp: Date.now(),
-  };
-  saveOfflineState(state);
-};
-
-// Retrieve active orders from offline storage
-export const getActiveOrders = (): Order[] => {
-  const state = getOfflineState();
-  return Object.values(state.activeOrders).map(item => item.data);
-};
-
-// Get a specific active order
-export const getActiveOrder = (orderId: string): Order | null => {
-  const state = getOfflineState();
-  return state.activeOrders[orderId]?.data || null;
-};
-
-// Clear old orders (older than 24 hours)
-export const clearOldOrders = (): void => {
-  const state = getOfflineState();
-  const now = Date.now();
-  const oneDayMs = 24 * 60 * 60 * 1000;
-  
-  Object.entries(state.activeOrders).forEach(([id, entry]) => {
-    if (now - entry.timestamp > oneDayMs) {
-      delete state.activeOrders[id];
+  async set<T>(key: string, value: T): Promise<void> {
+    try {
+      await Preferences.set({
+        key,
+        value: JSON.stringify(value),
+      });
+    } catch (error) {
+      console.error('Error setting item in native storage:', error);
     }
-  });
-  
-  saveOfflineState(state);
-};
-
-// Add an action to the pending queue
-export const queueOfflineAction = (action: Omit<PendingAction, 'id' | 'timestamp' | 'retryCount'>): void => {
-  const state = getOfflineState();
-  
-  const newAction: PendingAction = {
-    ...action,
-    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    timestamp: Date.now(),
-    retryCount: 0
-  };
-  
-  state.pendingActions.push(newAction);
-  saveOfflineState(state);
-};
-
-// Get all pending actions
-export const getPendingActions = (): PendingAction[] => {
-  return getOfflineState().pendingActions;
-};
-
-// Remove a pending action by ID
-export const removePendingAction = (actionId: string): void => {
-  const state = getOfflineState();
-  state.pendingActions = state.pendingActions.filter(action => action.id !== actionId);
-  saveOfflineState(state);
-};
-
-// Increment retry count for a pending action
-export const incrementRetryCount = (actionId: string): void => {
-  const state = getOfflineState();
-  const action = state.pendingActions.find(action => action.id === actionId);
-  
-  if (action) {
-    action.retryCount = (action.retryCount || 0) + 1;
-    saveOfflineState(state);
   }
+
+  async remove(key: string): Promise<void> {
+    try {
+      await Preferences.remove({ key });
+    } catch (error) {
+      console.error('Error removing item from native storage:', error);
+    }
+  }
+
+  async keys(): Promise<string[]> {
+    try {
+      const { keys } = await Preferences.keys();
+      return keys;
+    } catch (error) {
+      console.error('Error getting keys from native storage:', error);
+      return [];
+    }
+  }
+
+  async clear(): Promise<void> {
+    try {
+      await Preferences.clear();
+    } catch (error) {
+      console.error('Error clearing native storage:', error);
+    }
+  }
+}
+
+// Factory function to create the appropriate storage implementation
+export const createOfflineStorage = (): OfflineStorage => {
+  return Platform.isNative() ? new NativeStorage() : new WebStorage();
 };
 
-// Check if an action has exceeded retry limit
-export const hasExceededRetryLimit = (actionId: string): boolean => {
-  const state = getOfflineState();
-  const action = state.pendingActions.find(action => action.id === actionId);
-  return action ? (action.retryCount || 0) >= MAX_RETRY_COUNT : false;
-};
-
-// Clear all pending actions
-export const clearAllPendingActions = (): void => {
-  const state = getOfflineState();
-  state.pendingActions = [];
-  saveOfflineState(state);
-};
-
-// Clear everything from storage
-export const clearOfflineStorage = (): void => {
-  localStorage.removeItem(STORAGE_KEY);
-};
+// Singleton instance
+const offlineStorage = createOfflineStorage();
+export default offlineStorage;

@@ -4,17 +4,20 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { MapPin, WifiOff, Clock, Battery, BatteryLow } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LocationStatusIndicatorProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showBatteryStatus?: boolean;
+  showTooltip?: boolean;
 }
 
 export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({
   className,
   size = 'md',
-  showBatteryStatus = true
+  showBatteryStatus = true,
+  showTooltip = false
 }) => {
   const { isOnline, connectionType } = useConnectionStatus();
   const { isTracking, freshness, isBatteryLow, batteryLevel } = useDeliveryLocationService();
@@ -31,7 +34,7 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
     lg: 20
   };
 
-  return (
+  const statusIndicator = (
     <div className={cn(
       'flex items-center gap-2 px-3 rounded-full bg-background/80 backdrop-blur-sm border',
       sizeClasses[size],
@@ -79,6 +82,31 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
       )}
     </div>
   );
+
+  if (showTooltip) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {statusIndicator}
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {!isOnline 
+                ? "Device is currently offline" 
+                : !isTracking 
+                ? "Location tracking is disabled" 
+                : freshness === 'stale' 
+                ? "Location data may be outdated" 
+                : "Location tracking is active"}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return statusIndicator;
 };
 
 export default LocationStatusIndicator;

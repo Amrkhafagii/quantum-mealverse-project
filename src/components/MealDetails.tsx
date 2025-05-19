@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { StarRating } from './reviews/StarRating';
 import { PlusCircle, ChevronDown, Clock, Utensils, Info, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ARMealPreview } from './ARMealPreview'; // Fixed import path
+import ARMealPreview from './ARMealPreview'; // Fixed import
 
 const MacroNutrient = ({ name, value, percentage, color }: { name: string, value: string, percentage: number, color: string }) => (
   <div className="space-y-1">
@@ -62,7 +62,7 @@ export const MealDetails: React.FC<MealDetailsProps> = ({
             <div className="flex items-center mt-1.5 space-x-2">
               {rating > 0 && (
                 <>
-                  <StarRating value={rating} readOnly />
+                  <StarRating rating={rating} readOnly />
                   <span className="text-sm text-gray-400">({reviewCount})</span>
                 </>
               )}
