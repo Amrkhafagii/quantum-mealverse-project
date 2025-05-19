@@ -58,16 +58,17 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     if (!hasInitialized) return;
 
     const cachedLocationString = localStorage.getItem('userLocation');
-    const storedPermission = localStorage.getItem('locationPermission');
     
-    // If we're on a delivery page or forcePrompt is true, always show prompt if permission isn't granted
-    const shouldShowPrompt = forcePrompt || 
-                             isDeliveryUser || 
-                             !storedPermission || 
-                             storedPermission !== 'granted' || 
-                             !cachedLocationString;
+    // Determine whether to show the prompt based on:
+    // 1. If forcePrompt is true, we show it unless permission is already granted
+    // 2. If we're a delivery user, we always need location permission
+    // 3. If we've already shown the prompt before (tracked in hasShownInitialPrompt)
+    // 4. If we already have permission granted (from permission state)
+    const shouldShowPrompt = (forcePrompt && permissionStatus !== 'granted') || 
+                             (isDeliveryUser && permissionStatus !== 'granted') ||
+                             (!hasShownInitialPrompt && permissionStatus !== 'granted');
     
-    setShowPermissionPrompt(shouldShowPrompt && !hasShownInitialPrompt);
+    setShowPermissionPrompt(shouldShowPrompt);
     
     // If we have cached location, use it immediately
     if (cachedLocationString && !location) {
@@ -91,7 +92,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     }
     
     setInitialCheckDone(true);
-  }, [hasInitialized, location, hasShownInitialPrompt, isDeliveryUser, forcePrompt, onLocationUpdate]);
+  }, [hasInitialized, location, hasShownInitialPrompt, isDeliveryUser, forcePrompt, onLocationUpdate, permissionStatus]);
 
   // Update location cache when location changes
   useEffect(() => {
@@ -164,6 +165,11 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         toast.success("Location enabled!", {
           description: "Now we can show you nearby options"
         });
+        
+        // Hide permission prompt immediately after successful location access
+        if (result) {
+          setShowPermissionPrompt(false);
+        }
       }
     } catch (error) {
       console.error('Error requesting location:', error);
@@ -173,10 +179,6 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     } finally {
       setTimeout(() => {
         setIsLoading(false);
-        // Hide permission prompt after successful location access
-        if (permissionStatus === 'granted') {
-          setShowPermissionPrompt(false);
-        }
       }, 1000);
     }
   };

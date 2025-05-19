@@ -1,7 +1,9 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { Platform } from '@/utils/platform';
 import LocationPermissions from '@/plugins/LocationPermissionsPlugin';
+import { useStorage } from '@/hooks/useStorage';
 
 export type LocationPermissionState = 'prompt' | 'granted' | 'denied';
 
@@ -24,7 +26,35 @@ export interface LocationPermissionHookResponse {
   hasShownInitialPrompt: boolean;
 }
 
+// Local storage keys
+const LOCATION_PERMISSION_KEY = 'location_permission_status';
+const BACKGROUND_PERMISSION_KEY = 'background_permission_status';
+const EDUCATIONAL_UI_SHOWN_KEY = 'location_educational_ui_shown';
+const INITIAL_PROMPT_SHOWN_KEY = 'location_initial_prompt_shown';
+
 export function useLocationPermission(): LocationPermissionHookResponse {
+  // Use storage hook for persistent data
+  const { value: storedPermission, setValue: setStoredPermission } = useStorage<LocationPermissionState>(
+    LOCATION_PERMISSION_KEY, 
+    'prompt'
+  );
+  
+  const { value: storedBackgroundPermission, setValue: setStoredBackgroundPermission } = useStorage<LocationPermissionState>(
+    BACKGROUND_PERMISSION_KEY, 
+    'prompt'
+  );
+  
+  const { value: storedEducationalUiShown, setValue: setStoredEducationalUiShown } = useStorage<boolean>(
+    EDUCATIONAL_UI_SHOWN_KEY, 
+    false
+  );
+  
+  const { value: storedInitialPromptShown, setValue: setStoredInitialPromptShown } = useStorage<boolean>(
+    INITIAL_PROMPT_SHOWN_KEY, 
+    false
+  );
+
+  // Define state variables with default values from storage
   const [permissionStatus, setPermissionStatus] = useState<LocationPermissionState>('prompt');
   const [backgroundPermissionStatus, setBackgroundPermissionStatus] = useState<LocationPermissionState>('prompt');
   const [isRequesting, setIsRequesting] = useState(false);
@@ -35,6 +65,25 @@ export function useLocationPermission(): LocationPermissionHookResponse {
   const [isTracking, setIsTracking] = useState(false);
   const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
   const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState(false);
+
+  // Initialize state from storage values when available
+  useEffect(() => {
+    if (storedPermission !== null && storedPermission !== undefined) {
+      setPermissionStatus(storedPermission);
+    }
+    
+    if (storedBackgroundPermission !== null && storedBackgroundPermission !== undefined) {
+      setBackgroundPermissionStatus(storedBackgroundPermission);
+    }
+    
+    if (storedEducationalUiShown !== null && storedEducationalUiShown !== undefined) {
+      setHasEducationalUiBeenShown(storedEducationalUiShown);
+    }
+    
+    if (storedInitialPromptShown !== null && storedInitialPromptShown !== undefined) {
+      setHasShownInitialPrompt(storedInitialPromptShown);
+    }
+  }, [storedPermission, storedBackgroundPermission, storedEducationalUiShown, storedInitialPromptShown]);
 
   // Check permissions on component mount
   useEffect(() => {
@@ -51,28 +100,37 @@ export function useLocationPermission(): LocationPermissionHookResponse {
         // Use custom plugin for checking both permissions
         const permissionStatus = await LocationPermissions.checkPermissionStatus();
         
+        // Update both state and storage
         setPermissionStatus(permissionStatus.location as LocationPermissionState);
         setBackgroundPermissionStatus(permissionStatus.backgroundLocation as LocationPermissionState);
+        setStoredPermission(permissionStatus.location as LocationPermissionState);
+        setStoredBackgroundPermission(permissionStatus.backgroundLocation as LocationPermissionState);
       } catch (error) {
         console.error('Error checking location permissions:', error);
         
         // Fallback to standard Capacitor Geolocation for foreground permission
         try {
           const status = await Geolocation.checkPermissions();
-          setPermissionStatus(status.location as LocationPermissionState);
+          const permState = status.location as LocationPermissionState;
+          setPermissionStatus(permState);
+          setStoredPermission(permState);
         } catch (fallbackError) {
           console.error('Fallback permission check failed:', fallbackError);
           setPermissionStatus('denied');
+          setStoredPermission('denied');
         }
       }
     } else {
       try {
         // Web permission check
         const status = await Geolocation.checkPermissions();
-        setPermissionStatus(status.location as LocationPermissionState);
+        const permState = status.location as LocationPermissionState;
+        setPermissionStatus(permState);
+        setStoredPermission(permState);
       } catch (error) {
         console.error('Error checking web location permission:', error);
         setPermissionStatus('denied');
+        setStoredPermission('denied');
       }
     }
   };
@@ -101,6 +159,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
   const requestPermission = async (): Promise<boolean> => {
     setIsRequesting(true);
     setHasShownInitialPrompt(true);
+    setStoredInitialPromptShown(true);
     
     try {
       if (Platform.isNative()) {
@@ -109,8 +168,14 @@ export function useLocationPermission(): LocationPermissionHookResponse {
           includeBackground: false
         });
         
-        setPermissionStatus(result.location as LocationPermissionState);
-        setBackgroundPermissionStatus(result.backgroundLocation as LocationPermissionState);
+        // Update both state and storage
+        const locationState = result.location as LocationPermissionState;
+        const backgroundState = result.backgroundLocation as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setBackgroundPermissionStatus(backgroundState);
+        setStoredPermission(locationState);
+        setStoredBackgroundPermission(backgroundState);
         
         // If permission is granted, get location
         if (result.location === 'granted') {
@@ -121,7 +186,10 @@ export function useLocationPermission(): LocationPermissionHookResponse {
       } else {
         // Web permission request
         const result = await Geolocation.requestPermissions();
-        setPermissionStatus(result.location as LocationPermissionState);
+        const locationState = result.location as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setStoredPermission(locationState);
         
         // If permission is granted, get location
         if (result.location === 'granted') {
@@ -158,8 +226,14 @@ export function useLocationPermission(): LocationPermissionHookResponse {
         includeBackground: true
       });
       
-      setPermissionStatus(result.location as LocationPermissionState);
-      setBackgroundPermissionStatus(result.backgroundLocation as LocationPermissionState);
+      // Update both state and storage
+      const locationState = result.location as LocationPermissionState;
+      const backgroundState = result.backgroundLocation as LocationPermissionState;
+      
+      setPermissionStatus(locationState);
+      setBackgroundPermissionStatus(backgroundState);
+      setStoredPermission(locationState);
+      setStoredBackgroundPermission(backgroundState);
       
       return result.backgroundLocation === 'granted';
     } catch (error) {
@@ -193,6 +267,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
   // Show educational UI explaining why background location is needed
   const showEducationalUi = () => {
     setHasEducationalUiBeenShown(true);
+    setStoredEducationalUiShown(true);
   };
   
   // Toggle location tracking
