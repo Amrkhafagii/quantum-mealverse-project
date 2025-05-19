@@ -24,11 +24,9 @@ export interface TDEEResult {
   [key: string]: any;
 }
 
-// This is a local extension to ensure our services have the right type definition
-// without modifying the base type in fitness types
+// This extended type is now aligned with the updated SavedMealPlan interface
 export interface SavedMealPlanExtended extends SavedMealPlan {
-  is_active: boolean;
-  expires_at?: string;
+  // No additional fields needed as all fields are now in SavedMealPlan
 }
 
 // New nutrition-focused types

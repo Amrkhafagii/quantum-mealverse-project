@@ -1,6 +1,6 @@
 
 export interface SavedMealPlan {
-  id: string;
+  id?: string;
   user_id: string;
   name: string;
   meal_plan: any;
@@ -11,7 +11,7 @@ export interface SavedMealPlan {
 }
 
 export interface SavedMealPlanWithExpiry extends SavedMealPlan {
-  // No additional fields needed as we've moved is_active to the base interface
+  // No additional fields needed as is_active is now in the base interface
 }
 
 export interface DailyQuest {
