@@ -1,4 +1,3 @@
-
 // Fix the import path for useAuth
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth'; // Fixed import path
 import { MealPlan } from '@/types/food';
+import { saveMealPlan } from '@/services/mealPlan'; // Updated import
 
 interface MealPlanDisplayProps {
   mealPlan: MealPlan;
