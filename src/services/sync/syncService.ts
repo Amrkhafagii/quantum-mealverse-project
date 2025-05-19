@@ -1,7 +1,8 @@
 
-import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit, cancelOrderWithOfflineSupport } from '@/utils/offlineStorage';
+import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit } from '@/utils/offlineStorage/actionsService';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { toast } from 'sonner';
+import { cancelOrderWithOfflineSupport } from '@/utils/offlineStorage/index';
 
 // Mock API function - in a real app, you'd have actual API calls here
 const processAction = async (action: any) => {

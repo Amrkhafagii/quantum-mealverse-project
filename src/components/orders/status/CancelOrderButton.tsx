@@ -1,11 +1,12 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { queueOfflineAction } from '@/utils/offlineStorage';
-import { cancelOrderWithOfflineSupport } from '@/utils/offlineStorage';
+import { queueOfflineAction } from '@/utils/offlineStorage/actionsService';
+import { cancelOrderWithOfflineSupport } from '@/utils/offlineStorage/index';
 
 interface CancelOrderButtonProps {
   orderId: string;
@@ -17,8 +18,8 @@ const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ orderId, onCancel
   const queryClient = useQueryClient();
   const { isOnline } = useConnectionStatus();
   
-  const { mutate: cancelOrder, isLoading } = useMutation(
-    async () => {
+  const { mutate: cancelOrder, isPending: isLoading } = useMutation({
+    mutationFn: async () => {
       if (isOnline) {
         // Online: Call Supabase function to cancel the order
         const { error } = await supabase
@@ -45,32 +46,30 @@ const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ orderId, onCancel
         return true;
       }
     },
-    {
-      onSuccess: async () => {
-        toast({
-          title: "Order Cancelled",
-          description: "Your order has been successfully cancelled.",
-        });
-        
-        // Invalidate and refetch queries
-        await queryClient.invalidateQueries(['active-orders']);
-        await queryClient.invalidateQueries(['past-orders']);
-        await queryClient.invalidateQueries(['order-details', orderId]);
-        
-        // Execute callback if provided
-        if (onCancelSuccess) {
-          onCancelSuccess();
-        }
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to cancel order. Please try again.",
-          variant: "destructive",
-        });
-      },
-    }
-  );
+    onSuccess: async () => {
+      toast({
+        title: "Order Cancelled",
+        description: "Your order has been successfully cancelled.",
+      });
+      
+      // Invalidate and refetch queries
+      await queryClient.invalidateQueries({ queryKey: ['active-orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['past-orders'] });
+      await queryClient.invalidateQueries({ queryKey: ['order-details', orderId] });
+      
+      // Execute callback if provided
+      if (onCancelSuccess) {
+        onCancelSuccess();
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel order. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
   
   return (
     <Button 
