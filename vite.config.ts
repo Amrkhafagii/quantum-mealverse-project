@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -19,4 +20,21 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: [
+        // Mark Capacitor packages as external dependencies
+        '@capacitor/core',
+        '@capacitor/preferences',
+        '@capacitor/app',
+        '@capacitor/device',
+        '@capacitor/haptics',
+        '@capacitor/network',
+        '@capacitor/status-bar',
+        '@capacitor/geolocation',
+        '@capacitor/local-notifications',
+        '@capacitor/push-notifications'
+      ]
+    }
+  }
 }));
