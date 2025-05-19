@@ -30,3 +30,36 @@ export interface SavedMealPlanExtended extends SavedMealPlan {
   is_active: boolean;
   expires_at?: string;
 }
+
+// New nutrition-focused types
+export interface NutrientConversion {
+  factor: number;
+  description: string;
+}
+
+export interface CookingConversion {
+  raw_to_cooked: {
+    [foodType: string]: {
+      [method: string]: number;
+    };
+  };
+  cooked_to_raw: {
+    [foodType: string]: {
+      [method: string]: number;
+    };
+  };
+}
+
+export interface MealNutrientTargets {
+  name: string;
+  targetProtein: number;
+  targetCarbs: number;
+  targetFat: number;
+  targetCalories: number;
+}
+
+export interface UnitConversion {
+  fromUnit: string;
+  toUnit: string;
+  factor: number;
+}

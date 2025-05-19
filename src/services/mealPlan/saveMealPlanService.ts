@@ -64,7 +64,7 @@ export const saveMealPlan = async (
   error: any;
 }> => {
   try {
-    const mealPlanData: Partial<SavedMealPlanExtended> = {
+    const mealPlanData = {
       user_id: userId,
       name,
       meal_plan: mealPlan as unknown as Json,
@@ -151,7 +151,7 @@ export const extendMealPlanExpiration = async (
   error: any;
 }> => {
   try {
-    const updateData: Partial<SavedMealPlanExtended> = {
+    const updateData = {
       is_active: true
     };
 
@@ -190,7 +190,7 @@ export const renewMealPlan = async (planId: string): Promise<{
   error?: string;
 }> => {
   try {
-    const updateData: Partial<SavedMealPlanExtended> = {
+    const updateData = {
       is_active: true
     };
 
