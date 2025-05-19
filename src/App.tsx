@@ -18,6 +18,7 @@ import AdaptiveFormDemo from './pages/AdaptiveFormDemo';
 import PlatformLayoutDemo from './pages/PlatformLayoutDemo';
 import { PageTransition } from "./components/layout/PageTransition";
 import { AnimatePresence } from "framer-motion";
+import { RequestQueueProvider } from "./components/network/RequestQueue";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -32,21 +33,23 @@ function App() {
               <MapViewProvider>
                 <DeliveryMapProvider>
                   <NetworkStatusProvider>
-                    <BackgroundSyncManager>
-                      <BrowserRouter>
-                        <AnimatePresence mode="wait">
-                          <Routes>
-                            <Route path="/auth" element={<Auth />} />
-                            <Route path="/platform-ui" element={<PlatformUIDemo />} />
-                            <Route path="/storage-demo" element={<StorageDemoPage />} />
-                            <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />
-                            <Route path="/platform-layout" element={<PlatformLayoutDemo />} />
-                            <Route path="*" element={<MainLayout />} />
-                          </Routes>
-                        </AnimatePresence>
-                        <Toaster />
-                      </BrowserRouter>
-                    </BackgroundSyncManager>
+                    <RequestQueueProvider>
+                      <BackgroundSyncManager>
+                        <BrowserRouter>
+                          <AnimatePresence mode="wait">
+                            <Routes>
+                              <Route path="/auth" element={<Auth />} />
+                              <Route path="/platform-ui" element={<PlatformUIDemo />} />
+                              <Route path="/storage-demo" element={<StorageDemoPage />} />
+                              <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />
+                              <Route path="/platform-layout" element={<PlatformLayoutDemo />} />
+                              <Route path="*" element={<MainLayout />} />
+                            </Routes>
+                          </AnimatePresence>
+                          <Toaster />
+                        </BrowserRouter>
+                      </BackgroundSyncManager>
+                    </RequestQueueProvider>
                   </NetworkStatusProvider>
                 </DeliveryMapProvider>
               </MapViewProvider>

@@ -1,218 +1,193 @@
 
-import React from 'react';
-import { z } from 'zod';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { AdaptiveForm } from '@/components/forms/AdaptiveForm';
+import { z } from 'zod';
 import { Platform } from '@/utils/platform';
 import { useResponsive } from '@/contexts/ResponsiveContext';
-import { cn } from '@/lib/utils';
-import { AdaptiveForm } from '@/components/ui/adaptive-form';
-import { 
-  AdaptiveInputField, 
-  AdaptiveTextAreaField,
-  AdaptiveSelectField,
-  AdaptiveCheckboxField
-} from '@/components/ui/adaptive-form-fields';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { hapticFeedback } from '@/utils/hapticFeedback';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Check, AlertTriangle } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
-const profileFormSchema = z.object({
-  username: z
-    .string()
-    .min(2, { message: "Username must be at least 2 characters." })
-    .max(30, { message: "Username cannot be longer than 30 characters." }),
-  email: z
-    .string()
-    .email({ message: "Please enter a valid email address." }),
-  bio: z
-    .string()
-    .max(500, { message: "Bio cannot be longer than 500 characters." })
-    .optional(),
-  country: z
-    .string()
-    .min(1, { message: "Please select a country." }),
-  receiveNotifications: z
-    .boolean()
-    .default(false),
+// Form validation schema
+const profileSchema = z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  bio: z.string().optional(),
+  country: z.string().min(1, 'Please select your country'),
+  receiveNotifications: z.boolean().default(true),
 });
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
-
-const countries = [
-  { value: "us", label: "United States" },
-  { value: "ca", label: "Canada" },
-  { value: "gb", label: "United Kingdom" },
-  { value: "fr", label: "France" },
-  { value: "de", label: "Germany" },
-  { value: "jp", label: "Japan" },
-  { value: "au", label: "Australia" },
-];
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const AdaptiveFormDemo = () => {
   const { toast } = useToast();
+  const { theme } = useTheme();
   const { isPlatformIOS, isPlatformAndroid } = useResponsive();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
-  const defaultValues: Partial<ProfileFormValues> = {
-    username: "",
-    email: "",
-    bio: "",
-    country: "",
-    receiveNotifications: false,
+  const [useNative, setUseNative] = useState(Platform.isNative());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formResult, setFormResult] = useState<ProfileFormValues | null>(null);
+
+  const defaultValues: ProfileFormValues = {
+    username: '',
+    email: '',
+    bio: '',
+    country: '',
+    receiveNotifications: true,
   };
 
-  async function onSubmit(data: ProfileFormValues) {
+  const handleSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
     
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    console.log("Form submitted:", data);
-    
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    });
-    
+    setFormResult(data);
     setIsSubmitting(false);
     
-    // Platform-specific success feedback
-    if (Platform.isNative()) {
-      hapticFeedback.success();
-    }
-  }
-
-  const getPlatformHeaderStyles = () => {
-    if (isPlatformIOS) {
-      return {
-        title: "text-2xl font-semibold text-center text-blue-500",
-        description: "text-center text-gray-500"
-      };
-    }
-    
-    if (isPlatformAndroid) {
-      return {
-        title: "text-xl font-medium text-primary",
-        description: "text-gray-600 text-sm"
-      };
-    }
-    
-    return {
-      title: "text-2xl font-semibold",
-      description: "text-muted-foreground"
-    };
+    toast({
+      title: "Profile Updated",
+      description: "Your profile has been successfully updated."
+    });
   };
-  
-  const headerStyles = getPlatformHeaderStyles();
+
+  const countryOptions = [
+    { value: 'us', label: 'United States' },
+    { value: 'ca', label: 'Canada' },
+    { value: 'uk', label: 'United Kingdom' },
+    { value: 'au', label: 'Australia' },
+    { value: 'de', label: 'Germany' },
+    { value: 'fr', label: 'France' },
+    { value: 'jp', label: 'Japan' },
+  ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className={cn(
-        isPlatformIOS ? "rounded-xl shadow-lg" : "",
-        isPlatformAndroid ? "rounded-md shadow" : ""
-      )}>
-        <CardHeader>
-          <CardTitle className={headerStyles.title}>
-            {isPlatformIOS ? "iOS-Style Profile" : 
-             isPlatformAndroid ? "Android Profile" : 
-             "Edit Your Profile"}
-          </CardTitle>
-          <CardDescription className={headerStyles.description}>
-            Update your profile information using our adaptive form components.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AdaptiveForm
-            schema={profileFormSchema}
-            onSubmit={onSubmit}
-            defaultValues={defaultValues}
-            submitText={isSubmitting ? "Updating..." : "Update Profile"}
-            showReset={true}
-            resetText="Cancel"
-            loading={isSubmitting}
-          >
-            <div className="space-y-4">
-              <AdaptiveInputField
+    <div className="container max-w-4xl py-8">
+      <h1 className="text-3xl font-bold mb-6">Adaptive Form Demo</h1>
+      
+      {Platform.isNative() && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="use-native">Use Native Form Controls</Label>
+                <p className="text-sm text-muted-foreground">
+                  Toggle between web and native form controls
+                </p>
+              </div>
+              <Switch 
+                id="use-native" 
+                checked={useNative} 
+                onCheckedChange={setUseNative}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Edit Profile</CardTitle>
+            <CardDescription>
+              Update your profile information
+              {isPlatformIOS && " with iOS-styled form controls"}
+              {isPlatformAndroid && " with Material Design form controls"}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            <AdaptiveForm
+              schema={profileSchema}
+              defaultValues={defaultValues}
+              onSubmit={handleSubmit}
+              useNativeControls={useNative}
+              submitText="Update Profile"
+              isSubmitting={isSubmitting} // Remove this prop since it's not defined in the component
+            >
+              <AdaptiveForm.Field
                 name="username"
                 label="Username"
-                placeholder="Enter your username"
-                required
+                placeholder="Enter username"
+                autoComplete="username"
               />
               
-              <AdaptiveInputField
+              <AdaptiveForm.Field
                 name="email"
-                label="Email"
+                label="Email Address"
+                placeholder="your@email.com"
                 type="email"
-                placeholder="Enter your email"
-                required
                 autoComplete="email"
               />
               
-              <AdaptiveTextAreaField
+              <AdaptiveForm.Field
                 name="bio"
                 label="Bio"
                 placeholder="Tell us about yourself"
-                rows={4}
+                multiline
+                rows={3}
               />
               
-              <AdaptiveSelectField
+              <AdaptiveForm.Field
                 name="country"
                 label="Country"
+                type="select"
                 placeholder="Select your country"
-                options={countries}
-                required
+                options={countryOptions}
               />
               
-              <AdaptiveCheckboxField
+              <AdaptiveForm.Field
                 name="receiveNotifications"
-                label="Receive notifications"
-                description="We'll send you updates about your account activity."
+                label="Receive Notifications"
+                type="switch"
               />
-            </div>
-          </AdaptiveForm>
+            </AdaptiveForm>
+          </CardContent>
+        </Card>
+        
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Form Result</CardTitle>
+            <CardDescription>
+              This shows the data submitted by the form
+            </CardDescription>
+          </CardHeader>
           
-          <div className="mt-8 p-4 border rounded-lg bg-gray-50">
-            <h3 className="font-medium mb-2">Current Platform</h3>
-            <p>
-              <strong>Detected platform: </strong> 
-              {isPlatformIOS ? "iOS" : 
-               isPlatformAndroid ? "Android" : 
-               "Web"}
+          <CardContent>
+            {formResult ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-green-500 dark:text-green-400">
+                  <Check size={18} />
+                  <span>Form submitted successfully</span>
+                </div>
+                
+                <div className="rounded-md bg-muted p-4 font-mono text-sm">
+                  <pre className="whitespace-pre-wrap break-all">
+                    {JSON.stringify(formResult, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <Alert variant="default" className="bg-muted">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <AlertDescription>
+                  No data submitted yet. Fill out the form and click submit.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+          
+          <CardFooter className="flex justify-between border-t bg-muted/50 px-6 py-3">
+            <p className="text-xs text-muted-foreground">
+              Form adapts to {isPlatformIOS ? 'iOS' : isPlatformAndroid ? 'Android' : 'Web'} platform
             </p>
-            <div className="mt-4 flex gap-2">
-              <Button 
-                variant={isPlatformIOS ? "default" : "outline"}
-                className={isPlatformIOS ? "bg-blue-500 text-white" : ""}
-                onClick={() => toast({
-                  title: "iOS Experience",
-                  description: "Currently showing iOS-style form components"
-                })}
-              >
-                iOS Style
-              </Button>
-              <Button 
-                variant={isPlatformAndroid ? "default" : "outline"}
-                className={isPlatformAndroid ? "bg-primary text-white" : ""}
-                onClick={() => toast({
-                  title: "Android Experience",
-                  description: "Currently showing Android-style form components"
-                })}
-              >
-                Android Style
-              </Button>
-              <Button 
-                variant={!isPlatformIOS && !isPlatformAndroid ? "default" : "outline"}
-                onClick={() => toast({
-                  title: "Web Experience",
-                  description: "Currently showing web-style form components"
-                })}
-              >
-                Web Style
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };

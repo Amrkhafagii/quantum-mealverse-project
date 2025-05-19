@@ -12,19 +12,21 @@ import { OrderTimer } from './status/OrderTimer';
 interface OrderStatusDisplayProps {
   status: OrderStatus;
   orderId: string;
-  estimatedTime?: number;
+  estimatedTime?: string | Date;
+  order?: any; // Add order prop to fix the error
 }
 
 const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   status,
   orderId,
-  estimatedTime
+  estimatedTime,
+  order // Added order prop
 }) => {
   return (
     <div className="order-status-display p-4">
-      <OrderStatusMessage status={status} />
+      <OrderStatusMessage status={status} order={order} />
       
-      <OrderStatusTimeline status={status} />
+      <OrderStatusTimeline status={status} orderId={orderId} />
       
       {estimatedTime && status !== 'completed' && status !== 'cancelled' && (
         <OrderTimer estimatedTime={estimatedTime} />

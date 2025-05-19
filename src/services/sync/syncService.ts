@@ -154,7 +154,7 @@ async function processInsertOperation(operation: SyncOperation): Promise<void> {
   const { table, data } = operation;
   
   // If we have an optimistic id, we need to remove it before inserting
-  const { optimisticId, ...insertData } = data;
+  const { optimisticId, ...insertData } = data || {};
   
   // Handle tables with updated_at or last_modified columns
   const tableHasTimestamps = ['orders', 'user_preferences'].includes(table);
@@ -182,7 +182,7 @@ async function processInsertOperation(operation: SyncOperation): Promise<void> {
       // Handle collections vs single objects
       if (Array.isArray(localData)) {
         const updatedItems = localData.map(item => 
-          item.optimisticId === optimisticId ? { ...result[0] } : item
+          (item.optimisticId && item.optimisticId === optimisticId) ? { ...result[0] } : item
         );
         await syncStorage.setItem(operation.localStorageKey, updatedItems);
       } else {
@@ -279,4 +279,16 @@ export async function getSyncStatus(): Promise<{
     lastSync: queue.lastSync,
     hasFailedOperations: failedOperations.length > 0
   };
+}
+
+/**
+ * Main entry point for syncing pending actions
+ */
+export async function syncPendingActions(): Promise<boolean> {
+  // Create a dummy network status as online
+  const networkStatus: NetworkStatus = {
+    isOnline: true
+  };
+  
+  return processSync(networkStatus);
 }

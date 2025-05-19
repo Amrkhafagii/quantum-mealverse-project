@@ -52,11 +52,13 @@ export function setupBackgroundSyncListeners(onSyncStarted: () => void, onSyncCo
     
     if (event.detail?.type === 'SYNC') {
       // Perform the actual sync operation here
-      syncPendingActions().then(() => {
-        console.log('Background sync completed');
-        onSyncCompleted();
-      }).catch(error => {
-        console.error('Background sync failed:', error);
+      import('@/services/sync/syncService').then(({ syncPendingActions }) => {
+        syncPendingActions().then(() => {
+          console.log('Background sync completed');
+          onSyncCompleted();
+        }).catch(error => {
+          console.error('Background sync failed:', error);
+        });
       });
     }
   });

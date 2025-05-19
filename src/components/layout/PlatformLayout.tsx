@@ -1,213 +1,224 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
-import { cn } from '@/lib/utils';
 import { Platform } from '@/utils/platform';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlatformTabBar } from '@/components/ui/platform-tab-bar';
-
-type LayoutType = 'stack' | 'split' | 'tabs' | 'tabBar';
-
-interface LayoutSection {
-  id: string;
-  title: string;
-  content: React.ReactNode;
-  icon?: React.ReactNode;
-}
+import { Smartphone, Tablet, MonitorSmartphone } from 'lucide-react';
 
 interface PlatformLayoutProps {
-  sections: LayoutSection[];
+  children: React.ReactNode;
+  headerContent?: React.ReactNode;
+  footerContent?: React.ReactNode;
+  sidebarContent?: React.ReactNode;
+  bottomTabItems?: Array<{
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+  }>;
+  activeTabId?: string;
+  onTabChange?: (tabId: string) => void;
   className?: string;
-  defaultActive?: string;
-  layoutType?: LayoutType | 'auto';
-  sidebar?: React.ReactNode;
-  header?: React.ReactNode;
-  footer?: React.ReactNode;
-  onSectionChange?: (sectionId: string) => void;
 }
 
-/**
- * A layout component that adapts based on platform and screen size
- */
 export const PlatformLayout: React.FC<PlatformLayoutProps> = ({
-  sections,
+  children,
+  headerContent,
+  footerContent,
+  sidebarContent,
+  bottomTabItems,
+  activeTabId,
+  onTabChange,
   className = '',
-  defaultActive,
-  layoutType = 'auto',
-  sidebar,
-  header,
-  footer,
-  onSectionChange,
 }) => {
   const { 
-    isMobile, 
-    isTablet, 
-    isDesktop, 
-    isLandscape, 
-    isPlatformIOS,
-    isPlatformAndroid
+    isPlatformIOS, 
+    isPlatformAndroid, 
+    isPlatformWeb,
+    isDesktop,
+    isTablet,
+    isMobile 
   } = useResponsive();
-  
-  // Determine the current layout type based on device and orientation
-  const determineLayoutType = (): LayoutType => {
-    if (layoutType !== 'auto') return layoutType;
-    
-    // Mobile in portrait - use tab bar for iOS, stack for Android
-    if (isMobile && !isLandscape) {
-      return isPlatformIOS ? 'tabBar' : 'tabs';
-    }
-    
-    // Mobile in landscape or tablet - use split view
-    if ((isMobile && isLandscape) || isTablet) {
-      return 'split';
-    }
-    
-    // Desktop - use sidebar + content layout
-    return 'split';
-  };
-  
-  const currentLayout = determineLayoutType();
-  const [activeSection, setActiveSection] = useState<string>(
-    defaultActive || (sections.length > 0 ? sections[0].id : '')
-  );
-  
-  // Handle section change
-  const handleSectionChange = (sectionId: string) => {
-    setActiveSection(sectionId);
-    if (onSectionChange) {
-      onSectionChange(sectionId);
-    }
-  };
-  
-  // Update if default changes
-  useEffect(() => {
-    if (defaultActive) {
-      setActiveSection(defaultActive);
-    }
-  }, [defaultActive]);
 
-  // Render appropriate layout based on the determined type
-  const renderLayout = () => {
-    switch (currentLayout) {
-      case 'stack':
-        return (
-          <div className="flex flex-col w-full h-full">
-            {sections.map(section => (
-              <div 
-                key={section.id} 
-                className={`${activeSection === section.id ? 'block' : 'hidden'}`}
-              >
-                {section.content}
-              </div>
-            ))}
-          </div>
-        );
-        
-      case 'split':
-        return (
-          <div className="flex flex-row h-full">
-            <div className={`shrink-0 ${sidebar ? '' : 'border-r dark:border-gray-800'}`} style={{ width: '250px' }}>
-              {sidebar || (
-                <div className="p-2">
-                  <ul className="space-y-1">
-                    {sections.map(section => (
-                      <li key={section.id}>
-                        <button
-                          className={`w-full text-left px-4 py-2 rounded-md transition-colors ${
-                            activeSection === section.id 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'hover:bg-muted'
-                          }`}
-                          onClick={() => handleSectionChange(section.id)}
-                        >
-                          <div className="flex items-center gap-2">
-                            {section.icon}
-                            <span>{section.title}</span>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            <div className="flex-1 overflow-auto">
-              {sections.map(section => (
-                <div 
-                  key={section.id} 
-                  className={`${activeSection === section.id ? 'block' : 'hidden'} h-full`}
-                >
-                  {section.content}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-        
-      case 'tabs':
-        return (
-          <Tabs 
-            value={activeSection} 
-            onValueChange={handleSectionChange}
-            className="w-full"
-          >
-            <TabsList className="grid grid-cols-4">
-              {sections.map(section => (
-                <TabsTrigger key={section.id} value={section.id}>
-                  <div className="flex flex-col items-center gap-1">
-                    {section.icon}
-                    <span>{section.title}</span>
-                  </div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {sections.map(section => (
-              <TabsContent key={section.id} value={section.id}>
-                {section.content}
-              </TabsContent>
-            ))}
-          </Tabs>
-        );
-        
-      case 'tabBar':
-        return (
-          <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-auto">
-              {sections.map(section => (
-                <div 
-                  key={section.id} 
-                  className={`${activeSection === section.id ? 'block' : 'hidden'} h-full`}
-                >
-                  {section.content}
-                </div>
-              ))}
-            </div>
-            <PlatformTabBar 
-              items={sections.map(section => ({
-                id: section.id,
-                label: section.title,
-                icon: section.icon,
-              }))} 
-              activeItemId={activeSection}
-              onItemClick={handleSectionChange}
-            />
-          </div>
-        );
-        
-      default:
-        return null;
+  // Determine which platform UI pattern to use
+  const renderContent = () => {
+    if (isPlatformIOS || isPlatformAndroid) {
+      return renderMobileLayout();
+    } else if (isTablet) {
+      return renderTabletLayout();
+    } else {
+      return renderDesktopLayout();
     }
   };
 
-  return (
-    <div className={cn('flex flex-col w-full h-full', className)}>
-      {header && <div className="flex-shrink-0">{header}</div>}
-      <div className="flex-1 overflow-auto">
-        {renderLayout()}
+  // Mobile layout with bottom tabs or basic layout
+  const renderMobileLayout = () => {
+    const safeAreaClass = isPlatformIOS ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-4';
+    
+    return (
+      <div className={`flex flex-col min-h-screen ${className}`}>
+        {/* Mobile Header */}
+        {headerContent && (
+          <header className={`sticky top-0 z-10 bg-background ${isPlatformIOS ? 'pt-[env(safe-area-inset-top)]' : 'pt-2'}`}>
+            {headerContent}
+          </header>
+        )}
+        
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+        
+        {/* Mobile Footer or Tab Bar */}
+        {(bottomTabItems && bottomTabItems.length > 0) ? (
+          <PlatformTabBar 
+            activeItemId={activeTabId || bottomTabItems[0].id} 
+            onItemClick={onTabChange || (() => {})} 
+            bottomTabItems={bottomTabItems}
+            isPlatformIOS={isPlatformIOS}
+          />
+        ) : footerContent ? (
+          <footer className={`bg-background ${safeAreaClass}`}>
+            {footerContent}
+          </footer>
+        ) : null}
       </div>
-      {footer && currentLayout !== 'tabBar' && (
-        <div className="flex-shrink-0">{footer}</div>
-      )}
+    );
+  };
+
+  // Tablet layout with sidebar
+  const renderTabletLayout = () => {
+    return (
+      <div className={`flex min-h-screen ${className}`}>
+        {/* Sidebar */}
+        {sidebarContent && (
+          <aside className="w-64 border-r border-border bg-muted/10">
+            {sidebarContent}
+          </aside>
+        )}
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          {headerContent && (
+            <header className="sticky top-0 z-10 bg-background">
+              {headerContent}
+            </header>
+          )}
+          
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+          
+          {/* Footer */}
+          {footerContent && (
+            <footer className="bg-background">
+              {footerContent}
+            </footer>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Desktop layout with sidebar and fixed width
+  const renderDesktopLayout = () => {
+    return (
+      <div className={`flex justify-center ${className}`}>
+        <div className="flex min-h-screen max-w-7xl w-full">
+          {/* Sidebar */}
+          {sidebarContent && (
+            <aside className="w-64 border-r border-border bg-muted/10">
+              {sidebarContent}
+            </aside>
+          )}
+          
+          <div className="flex-1 flex flex-col">
+            {/* Header */}
+            {headerContent && (
+              <header className="sticky top-0 z-10 bg-background">
+                {headerContent}
+              </header>
+            )}
+            
+            {/* Main Content */}
+            <main className="flex-1">
+              {children}
+            </main>
+            
+            {/* Footer */}
+            {footerContent && (
+              <footer className="bg-background">
+                {footerContent}
+              </footer>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return renderContent();
+};
+
+// Platform-specific tab bar component
+interface PlatformTabBarProps {
+  activeItemId: string;
+  onItemClick: (itemId: string) => void;
+  bottomTabItems: Array<{
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+  }>;
+  isPlatformIOS: boolean;
+}
+
+const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
+  activeItemId,
+  onItemClick,
+  bottomTabItems,
+  isPlatformIOS
+}) => {
+  const safeAreaClass = isPlatformIOS ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-1';
+  
+  // iOS style tab bar vs Material style
+  return (
+    <div className={`sticky bottom-0 border-t border-border bg-background ${safeAreaClass}`}>
+      <div className="flex items-center justify-around">
+        {bottomTabItems.map((item) => {
+          const isActive = item.id === activeItemId;
+          
+          // iOS style: icon above label
+          if (isPlatformIOS) {
+            return (
+              <button
+                key={item.id}
+                className={`flex flex-col items-center justify-center py-2 px-4 ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                }`}
+                onClick={() => onItemClick(item.id)}
+              >
+                <div className="mb-1">{item.icon}</div>
+                <span className="text-xs">{item.label}</span>
+              </button>
+            );
+          }
+          
+          // Android style: icon with label side by side when active
+          return (
+            <button
+              key={item.id}
+              className={`flex items-center justify-center py-3 px-4 ${
+                isActive
+                  ? 'text-primary bg-primary/10 rounded-full'
+                  : 'text-muted-foreground'
+              }`}
+              onClick={() => onItemClick(item.id)}
+            >
+              <div className="mr-2">{item.icon}</div>
+              {isActive && <span className="text-xs">{item.label}</span>}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
