@@ -13,6 +13,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import PlatformUIDemo from "@/pages/PlatformUIDemo";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import StorageDemoPage from './pages/StorageDemo';
+import AdaptiveFormDemo from './pages/AdaptiveFormDemo';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ function App() {
                         <Route path="/auth" element={<Auth />} />
                         <Route path="/platform-ui" element={<PlatformUIDemo />} />
                         <Route path="/storage-demo" element={<StorageDemoPage />} />
+                        <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />
                         <Route path="*" element={<MainLayout />} />
                       </Routes>
                       <Toaster />

@@ -24,7 +24,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
     <div className="order-status-display p-4">
       <OrderStatusMessage status={status} order={order} />
       
-      <OrderStatusTimeline orderId={order.id} />
+      <OrderStatusTimeline orderId={order.id} status={status} />
       
       {estimatedTime && status !== 'completed' && status !== 'cancelled' && (
         <OrderTimer estimatedTime={estimatedTime} />
