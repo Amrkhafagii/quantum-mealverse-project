@@ -1,20 +1,21 @@
 
 import { useState, useEffect } from 'react';
-import { getPendingActions } from '@/utils/offlineStorage/actionsService';
-import { syncPendingActions } from '@/utils/offlineStorage/index';
+import { useSyncManager } from '@/services/sync/syncManager';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { Platform } from '@/utils/platform';
 
 export const useOrdersSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingActionsCount, setPendingActionsCount] = useState(0);
   const { isOnline } = useConnectionStatus();
+  const { getPendingActionsCount, manualSync, scheduleBackgroundSync } = useSyncManager();
   
   // Update pending actions count
   useEffect(() => {
     const checkPendingActions = async () => {
       try {
-        const pendingActions = await getPendingActions();
-        setPendingActionsCount(pendingActions.length);
+        const count = await getPendingActionsCount();
+        setPendingActionsCount(count);
       } catch (error) {
         console.error("Error checking pending actions:", error);
         setPendingActionsCount(0);
@@ -27,34 +28,36 @@ export const useOrdersSync = () => {
     }, 5000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [getPendingActionsCount]);
   
   // Sync pending actions when coming back online
   useEffect(() => {
-    if (isOnline) {
+    if (isOnline && pendingActionsCount > 0) {
       const performSync = async () => {
-        await syncPendingActions();
-        // Update pending actions count after sync
-        try {
-          const pendingActions = await getPendingActions();
-          setPendingActionsCount(pendingActions.length);
-        } catch (error) {
-          console.error("Error getting pending actions:", error);
-          setPendingActionsCount(0);
-        }
+        await handleSync();
       };
       
       performSync();
     }
-  }, [isOnline]);
+  }, [isOnline, pendingActionsCount]);
+  
+  // For native platforms, schedule background sync
+  useEffect(() => {
+    if (Platform.isNative()) {
+      scheduleBackgroundSync(false);
+    }
+  }, [scheduleBackgroundSync]);
   
   const handleSync = async () => {
+    if (!isOnline) return;
+    
     setIsSyncing(true);
-    await syncPendingActions();
+    await manualSync();
+    
     // Update pending actions count after sync
     try {
-      const pendingActions = await getPendingActions();
-      setPendingActionsCount(pendingActions.length);
+      const count = await getPendingActionsCount();
+      setPendingActionsCount(count);
     } catch (error) {
       console.error("Error getting pending actions count:", error);
       setPendingActionsCount(0);

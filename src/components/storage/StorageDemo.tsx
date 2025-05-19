@@ -1,205 +1,263 @@
 
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useStorage, useStorageMigration } from '@/hooks/useStorage';
-import { storageManager } from '@/services/storage/StorageManager';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from '@/components/ui/badge';
+import { SyncStatusIndicator } from '@/components/sync/SyncStatusIndicator';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { Platform } from '@/utils/platform';
+import { useToast } from '@/hooks/use-toast';
+import { useSyncManager } from '@/services/sync/syncManager';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InfoIcon, Download, Upload, Trash2, RefreshCw } from 'lucide-react';
 
-export const StorageDemo = () => {
-  const [key, setKey] = useState('demo_key');
+export function StorageDemo() {
+  const [key, setKey] = useState('test-key');
   const [inputValue, setInputValue] = useState('');
-  const { value, setValue, removeValue, isLoading, error, storageType } = useStorage<string>(key, '');
-  const [allKeys, setAllKeys] = useState<string[]>([]);
-  const [importText, setImportText] = useState('');
-  const [exportText, setExportText] = useState('');
+  const { value, setValue, removeValue, isLoading, storageType } = useStorage(key, '');
   const { exportStorageData, importStorageData, isExporting, isImporting } = useStorageMigration();
-
-  // Load all keys
+  const [exportedData, setExportedData] = useState('');
+  const [importData, setImportData] = useState('');
+  const { isOnline } = useConnectionStatus();
+  const { toast } = useToast();
+  const { clearAllPendingActions, getLastSyncTimestamp } = useSyncManager();
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  
+  // Get the last sync time on component mount
   useEffect(() => {
-    const loadKeys = async () => {
-      const keys = await storageManager.keys();
-      setAllKeys(keys);
+    const updateLastSyncTime = async () => {
+      const timestamp = await getLastSyncTimestamp();
+      if (timestamp) {
+        setLastSyncTime(new Date(timestamp).toLocaleString());
+      }
     };
-    loadKeys();
-  }, [value]);
+    
+    updateLastSyncTime();
+  }, [getLastSyncTimestamp]);
 
-  const handleSave = async () => {
-    await setValue(inputValue);
-    setInputValue('');
-    updateKeysList();
-  };
-
-  const handleRemove = async () => {
-    await removeValue();
-    updateKeysList();
-  };
-
-  const updateKeysList = async () => {
-    const keys = await storageManager.keys();
-    setAllKeys(keys);
-  };
-
-  const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to clear all storage data?')) {
-      await storageManager.clear();
-      updateKeysList();
+  const handleSetValue = () => {
+    if (inputValue) {
+      setValue(inputValue);
+      setInputValue('');
+      toast({
+        title: "Value saved",
+        description: `Saved value to "${key}"`,
+      });
     }
+  };
+
+  const handleRemoveValue = () => {
+    removeValue();
+    toast({
+      title: "Value removed",
+      description: `Removed value for "${key}"`,
+    });
   };
 
   const handleExport = async () => {
     const data = await exportStorageData();
     if (data) {
-      setExportText(data);
+      setExportedData(data);
+      toast({
+        title: "Data exported",
+        description: "All storage data exported successfully",
+      });
+    } else {
+      toast({
+        title: "Export failed",
+        description: "Could not export storage data",
+        variant: "destructive"
+      });
     }
   };
 
   const handleImport = async () => {
-    if (!importText) return;
     try {
-      const success = await importStorageData(importText);
+      if (!importData) {
+        toast({
+          title: "No data to import",
+          description: "Please paste data to import",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const success = await importStorageData(importData);
       if (success) {
-        alert('Data imported successfully');
-        updateKeysList();
-        setImportText('');
+        setImportData('');
+        toast({
+          title: "Data imported",
+          description: "Storage data imported successfully",
+        });
+      } else {
+        throw new Error("Import failed");
       }
     } catch (error) {
-      alert(`Import failed: ${error}`);
+      toast({
+        title: "Import failed",
+        description: "Could not import storage data. Is it valid?",
+        variant: "destructive"
+      });
     }
   };
 
+  const handleClearPendingActions = async () => {
+    await clearAllPendingActions();
+    toast({
+      title: "Pending actions cleared",
+      description: "All pending offline actions have been removed",
+    });
+  };
+
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Storage Manager Demo</h1>
-      <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-md">
-        <p className="text-sm">
-          Current Storage Implementation: <strong>{storageType}</strong>
-        </p>
+    <div className="container px-4 py-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Storage Demo</h1>
+        <SyncStatusIndicator showLabel={true} />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Alert>
+        <InfoIcon className="h-4 w-4" />
+        <AlertTitle>Storage Information</AlertTitle>
+        <AlertDescription>
+          Currently using: <Badge variant="outline">{storageType}</Badge>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Platform: {Platform.isNative() ? 'Native App' : 'Web Browser'}
+            {' · '}
+            Network: {isOnline ? 'Online' : 'Offline'}
+          </p>
+          {lastSyncTime && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Last sync: {lastSyncTime}
+            </p>
+          )}
+        </AlertDescription>
+      </Alert>
+      
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Storage Operations</CardTitle>
+            <CardTitle>Test Storage</CardTitle>
             <CardDescription>Test basic storage operations</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="key">Storage Key</Label>
-                <Input 
-                  id="key" 
-                  value={key} 
-                  onChange={e => setKey(e.target.value)}
-                  placeholder="Enter key name"
-                />
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Storage key"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Value to store"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+              />
+              <Button onClick={handleSetValue}>Save</Button>
+            </div>
+            <div>
+              <p className="text-sm mb-2">Current value:</p>
+              <div className="p-2 border rounded-md bg-muted">
+                {isLoading ? 'Loading...' : value === null ? 'null' : String(value)}
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="value">Value to Store</Label>
-                <Input 
-                  id="value" 
-                  value={inputValue} 
-                  onChange={e => setInputValue(e.target.value)}
-                  placeholder="Enter value to store"
-                />
-              </div>
-              
-              <div className="pt-2">
-                <Label>Current Stored Value:</Label>
-                <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1 min-h-[40px]">
-                  {isLoading ? 'Loading...' : value || '[empty]'}
-                </div>
-              </div>
-              
-              {error && (
-                <div className="text-red-500 text-sm mt-2">
-                  Error: {error.message}
-                </div>
-              )}
+              <Button 
+                onClick={handleRemoveValue} 
+                variant="destructive" 
+                size="sm"
+                className="mt-2"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove
+              </Button>
             </div>
           </CardContent>
-          <CardFooter className="flex gap-2">
-            <Button onClick={handleSave}>Save Value</Button>
-            <Button variant="outline" onClick={handleRemove}>Remove Value</Button>
-          </CardFooter>
         </Card>
         
         <Card>
           <CardHeader>
-            <CardTitle>Storage Keys</CardTitle>
-            <CardDescription>Currently stored keys</CardDescription>
+            <CardTitle>Sync Options</CardTitle>
+            <CardDescription>Manage offline sync and data migration</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="max-h-[200px] overflow-y-auto border rounded">
-              {allKeys.length > 0 ? (
-                <ul className="divide-y">
-                  {allKeys.map((k, i) => (
-                    <li key={i} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
-                      {k}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="p-4 text-center text-gray-500">No keys stored</div>
-              )}
-            </div>
+            <Tabs defaultValue="migration">
+              <TabsList className="mb-4">
+                <TabsTrigger value="migration">Data Migration</TabsTrigger>
+                <TabsTrigger value="sync">Sync Management</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="migration" className="space-y-4">
+                <div>
+                  <Button 
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="mb-2"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? 'Exporting...' : 'Export Data'}
+                  </Button>
+                  <Textarea 
+                    placeholder="Exported data will appear here"
+                    value={exportedData}
+                    className="h-[100px]"
+                    readOnly
+                  />
+                </div>
+                
+                <div>
+                  <Button 
+                    onClick={handleImport}
+                    disabled={isImporting || !importData}
+                    className="mb-2"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isImporting ? 'Importing...' : 'Import Data'}
+                  </Button>
+                  <Textarea 
+                    placeholder="Paste exported data here to import"
+                    value={importData}
+                    onChange={(e) => setImportData(e.target.value)}
+                    className="h-[100px]"
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="sync" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Button 
+                    onClick={handleClearPendingActions}
+                    variant="outline"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear Pending Actions
+                  </Button>
+                  
+                  <Button>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Force Sync Now
+                  </Button>
+                </div>
+                
+                {Platform.isNative() && (
+                  <div className="mt-4 p-4 border rounded-md">
+                    <h3 className="font-medium mb-2">Native Background Sync</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Background sync is enabled for this app. Your data will sync automatically.
+                    </p>
+                    {lastSyncTime && (
+                      <p className="text-xs">Last background sync: {lastSyncTime}</p>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
-          <CardFooter>
-            <Button variant="destructive" onClick={handleClearAll}>
-              Clear All Storage
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-      
-      <Separator />
-      
-      <h2 className="text-xl font-semibold">Storage Migration Utils</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Export Data</CardTitle>
-            <CardDescription>Export all storage data</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea 
-              value={exportText} 
-              readOnly 
-              className="h-[200px]" 
-              placeholder="Exported data will appear here"
-            />
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleExport} disabled={isExporting}>
-              {isExporting ? 'Exporting...' : 'Export All Data'}
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Import Data</CardTitle>
-            <CardDescription>Import storage data (will merge with existing)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea 
-              value={importText} 
-              onChange={e => setImportText(e.target.value)}
-              className="h-[200px]"
-              placeholder="Paste exported data here"
-            />
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleImport} disabled={isImporting || !importText}>
-              {isImporting ? 'Importing...' : 'Import Data'}
-            </Button>
-          </CardFooter>
         </Card>
       </div>
     </div>
   );
-};
+}

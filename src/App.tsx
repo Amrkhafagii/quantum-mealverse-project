@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Auth from "@/pages/Auth";
@@ -7,6 +8,7 @@ import { GoogleMapsProvider } from "@/contexts/GoogleMapsContext";
 import { DeliveryMapProvider } from "@/contexts/DeliveryMapContext";
 import { ResponsiveProvider } from "@/contexts/ResponsiveContext";
 import { NetworkStatusProvider } from "@/components/providers/NetworkStatusProvider";
+import { BackgroundSyncManager } from "@/components/sync/BackgroundSyncManager";
 import MainLayout from "@/components/layout/MainLayout";
 import PlatformUIDemo from "@/pages/PlatformUIDemo";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -24,15 +26,17 @@ function App() {
             <GoogleMapsProvider>
               <DeliveryMapProvider>
                 <NetworkStatusProvider>
-                  <BrowserRouter>
-                    <Routes>
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/platform-ui" element={<PlatformUIDemo />} />
-                      <Route path="/storage-demo" element={<StorageDemoPage />} />
-                      <Route path="*" element={<MainLayout />} />
-                    </Routes>
-                    <Toaster />
-                  </BrowserRouter>
+                  <BackgroundSyncManager>
+                    <BrowserRouter>
+                      <Routes>
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/platform-ui" element={<PlatformUIDemo />} />
+                        <Route path="/storage-demo" element={<StorageDemoPage />} />
+                        <Route path="*" element={<MainLayout />} />
+                      </Routes>
+                      <Toaster />
+                    </BrowserRouter>
+                  </BackgroundSyncManager>
                 </NetworkStatusProvider>
               </DeliveryMapProvider>
             </GoogleMapsProvider>

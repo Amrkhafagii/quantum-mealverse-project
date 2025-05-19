@@ -1,11 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 
-interface OrderTimerProps {
+export interface OrderTimerProps {
   estimatedTime: number;
+  updatedAt?: string;
+  expiresAt?: string;
+  orderId?: string;
+  onTimerExpire?: () => void;
 }
 
-export const OrderTimer: React.FC<OrderTimerProps> = ({ estimatedTime }) => {
+export const OrderTimer: React.FC<OrderTimerProps> = ({ 
+  estimatedTime, 
+  updatedAt,
+  expiresAt,
+  orderId,
+  onTimerExpire 
+}) => {
   const [timeRemaining, setTimeRemaining] = useState(estimatedTime);
 
   useEffect(() => {
@@ -13,6 +23,9 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({ estimatedTime }) => {
       setTimeRemaining(prev => {
         if (prev <= 0) {
           clearInterval(timer);
+          if (onTimerExpire) {
+            onTimerExpire();
+          }
           return 0;
         }
         return prev - 1;
@@ -20,7 +33,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({ estimatedTime }) => {
     }, 60000); // Update every minute
     
     return () => clearInterval(timer);
-  }, []);
+  }, [onTimerExpire]);
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
