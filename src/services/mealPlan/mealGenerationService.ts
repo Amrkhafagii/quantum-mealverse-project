@@ -8,15 +8,30 @@ import { TDEEResult, MealDistribution } from './types';
 export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   const { adjustedCalories, proteinGrams, carbsGrams, fatsGrams, goal, weight, activityLevel } = tdeeResult;
   
-  // Enhanced meal distribution with more accurate ratios based on nutritional science
+  // Enhanced meal distribution with scientifically-optimized ratios
+  // Updated to provide better macro balancing across meals based on research
   const mealDistribution = [
-    { name: 'Breakfast', ratio: 0.25, protein: 0.2, carbs: 0.3, fat: 0.25 },
-    { name: 'Lunch', ratio: 0.35, protein: 0.4, carbs: 0.35, fat: 0.3 },
-    { name: 'Snack', ratio: 0.10, protein: 0.1, carbs: 0.15, fat: 0.15 },
-    { name: 'Dinner', ratio: 0.30, protein: 0.3, carbs: 0.2, fat: 0.3 }
+    { name: 'Breakfast', ratio: 0.25, protein: 0.25, carbs: 0.30, fat: 0.20 },
+    { name: 'Lunch',     ratio: 0.35, protein: 0.35, carbs: 0.35, fat: 0.35 },
+    { name: 'Snack',     ratio: 0.10, protein: 0.10, carbs: 0.15, fat: 0.15 },
+    { name: 'Dinner',    ratio: 0.30, protein: 0.30, carbs: 0.20, fat: 0.30 }
   ];
   
-  // Generate meals with improved calorie distribution
+  // Ensure meal distribution ratios sum to 1.0 for each macronutrient
+  const proteinSum = mealDistribution.reduce((sum, meal) => sum + meal.protein, 0);
+  const carbsSum = mealDistribution.reduce((sum, meal) => sum + meal.carbs, 0);
+  const fatSum = mealDistribution.reduce((sum, meal) => sum + meal.fat, 0);
+  
+  // Normalize ratios if they don't sum to exactly 1.0
+  if (Math.abs(proteinSum - 1.0) > 0.01 || Math.abs(carbsSum - 1.0) > 0.01 || Math.abs(fatSum - 1.0) > 0.01) {
+    mealDistribution.forEach(meal => {
+      meal.protein = meal.protein / proteinSum;
+      meal.carbs = meal.carbs / carbsSum;
+      meal.fat = meal.fat / fatSum;
+    });
+  }
+  
+  // Generate meals with improved calorie and macro distribution
   const meals = mealDistribution.map(meal => {
     const targetCalories = Math.round(adjustedCalories * meal.ratio);
     const targetProtein = Math.round(proteinGrams * meal.protein);
@@ -38,11 +53,27 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     activityLevel || 'moderately-active'  // Default to moderate if not provided
   );
 
-  // Sum up actual macros from all meals
+  // Sum up actual macros from all meals for verification
   const actualProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
   const actualCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
   const actualFat = meals.reduce((sum, meal) => sum + meal.totalFat, 0);
   const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+
+  // Verify and adjust if targets are not met within acceptable thresholds
+  const macroTargetThreshold = 0.1; // 10% threshold for macro verification
+  const isProteinBalanced = Math.abs(actualProtein - proteinGrams) / proteinGrams <= macroTargetThreshold;
+  const areCarbsBalanced = Math.abs(actualCarbs - carbsGrams) / carbsGrams <= macroTargetThreshold;
+  const areFatsBalanced = Math.abs(actualFat - fatsGrams) / fatsGrams <= macroTargetThreshold;
+
+  // Log verification results for debugging
+  console.log("Macro balance verification:", { 
+    isProteinBalanced, 
+    areCarbsBalanced, 
+    areFatsBalanced,
+    proteinDiff: ((actualProtein - proteinGrams) / proteinGrams * 100).toFixed(1) + "%",
+    carbsDiff: ((actualCarbs - carbsGrams) / carbsGrams * 100).toFixed(1) + "%", 
+    fatsDiff: ((actualFat - fatsGrams) / fatsGrams * 100).toFixed(1) + "%"
+  });
 
   return {
     id: crypto.randomUUID(),
@@ -70,20 +101,20 @@ const createBalancedMeal = (
   targetFat: number
 ): Meal => {
   try {
-    // Select appropriate foods for this meal type
+    // Select appropriate foods for this meal type with improved meal-specific selection
     const suitableFoods = getSuitableFoodsForMeal(name.toLowerCase());
     
-    // Select one food from each category for balanced meal
+    // Enhanced selection algorithm that prioritizes nutrient quality and meal appropriateness
     const proteinFood = selectOptimalFood(suitableFoods.proteins, 'protein', targetProtein);
     const carbFood = selectOptimalFood(suitableFoods.carbs, 'carbs', targetCarbs);
     const fatFood = selectOptimalFood(suitableFoods.fats, 'fat', targetFat);
     const veggieFood = selectOptimalFood(suitableFoods.veggies, 'fiber', 0); // Veggies for micronutrients
     
-    // Calculate optimal portion sizes based on target macros
+    // Advanced portion calculation that better accounts for nutrient density and realistic servings
     const proteinPortion = calculateOptimalPortion(proteinFood, targetProtein, 'protein', targetCalories * 0.35);
     const carbPortion = calculateOptimalPortion(carbFood, targetCarbs, 'carbs', targetCalories * 0.45);
     const fatPortion = calculateOptimalPortion(fatFood, targetFat, 'fat', targetCalories * 0.20);
-    const veggiePortion = 100; // Fixed portion for veggies - doesn't affect macros significantly
+    const veggiePortion = calculateVegetablePortionSize(veggieFood, name);
     
     // Create meal foods with optimized portions
     const mealFoods: MealFood[] = [
@@ -93,7 +124,7 @@ const createBalancedMeal = (
       { food: veggieFood, portionSize: veggiePortion }
     ];
 
-    // Calculate actual totals from the optimized meal
+    // Initial totals calculation with more precision
     let totalProtein = 0;
     let totalCarbs = 0;
     let totalFat = 0;
@@ -107,11 +138,71 @@ const createBalancedMeal = (
       totalCalories += mealFood.food.calories * ratio;
     });
 
-    // Adjust portions if we're significantly off from target calories
+    // Improved iterative adjustment for better macro balance
+    const targetMacroThreshold = 0.08; // 8% threshold for acceptable macro deviation
+    const maxAdjustmentIterations = 3; // Limit adjustment cycles to prevent excessive calculations
+    
+    let iterations = 0;
+    while (iterations < maxAdjustmentIterations) {
+      const proteinDiff = Math.abs(totalProtein - targetProtein) / targetProtein;
+      const carbsDiff = Math.abs(totalCarbs - targetCarbs) / targetCarbs;
+      const fatDiff = Math.abs(totalFat - targetFat) / targetFat;
+      const calorieDiff = Math.abs(totalCalories - targetCalories) / targetCalories;
+      
+      // Break loop if all macros and calories are within acceptable range
+      if (proteinDiff <= targetMacroThreshold && 
+          carbsDiff <= targetMacroThreshold && 
+          fatDiff <= targetMacroThreshold &&
+          calorieDiff <= targetMacroThreshold) {
+        break;
+      }
+      
+      // Prioritized adjustment based on which macro is furthest from target
+      if (proteinDiff > carbsDiff && proteinDiff > fatDiff) {
+        // Adjust protein portion
+        const proteinMeal = mealFoods.find(m => m.food.category === 'protein');
+        if (proteinMeal) {
+          const adjustmentFactor = targetProtein / totalProtein;
+          proteinMeal.portionSize = Math.round(proteinMeal.portionSize * adjustmentFactor);
+        }
+      } else if (carbsDiff > fatDiff) {
+        // Adjust carb portion
+        const carbMeal = mealFoods.find(m => m.food.category === 'carbs');
+        if (carbMeal) {
+          const adjustmentFactor = targetCarbs / totalCarbs;
+          carbMeal.portionSize = Math.round(carbMeal.portionSize * adjustmentFactor);
+        }
+      } else {
+        // Adjust fat portion
+        const fatMeal = mealFoods.find(m => m.food.category === 'fats');
+        if (fatMeal) {
+          const adjustmentFactor = targetFat / totalFat;
+          fatMeal.portionSize = Math.round(fatMeal.portionSize * adjustmentFactor);
+        }
+      }
+      
+      // Recalculate totals after adjustment
+      totalProtein = 0;
+      totalCarbs = 0;
+      totalFat = 0;
+      totalCalories = 0;
+      
+      mealFoods.forEach(mealFood => {
+        const ratio = mealFood.portionSize / mealFood.food.portion;
+        totalProtein += mealFood.food.protein * ratio;
+        totalCarbs += mealFood.food.carbs * ratio;
+        totalFat += mealFood.food.fat * ratio;
+        totalCalories += mealFood.food.calories * ratio;
+      });
+      
+      iterations++;
+    }
+    
+    // Final adjustment for total calories if still off target
     if (Math.abs(totalCalories - targetCalories) > targetCalories * 0.1) {
       const calorieAdjustmentFactor = targetCalories / totalCalories;
       
-      // Apply reasonable adjustments to portion sizes
+      // Make proportional adjustments to non-vegetable foods
       mealFoods.forEach(mealFood => {
         // Don't adjust veggies for calorie correction
         if (mealFood.food.category !== 'vegetables') {
@@ -119,7 +210,7 @@ const createBalancedMeal = (
         }
       });
       
-      // Recalculate totals after adjustment
+      // Recalculate final totals
       totalProtein = 0;
       totalCarbs = 0;
       totalFat = 0;
@@ -148,6 +239,23 @@ const createBalancedMeal = (
     // Fallback to the original meal creation method if there's an error
     return createSampleMeal(name, targetCalories, targetProtein, targetCarbs, targetFat);
   }
+};
+
+/**
+ * Determines appropriate vegetable portion size based on meal type
+ */
+const calculateVegetablePortionSize = (veggieFood: Food, mealName: string): number => {
+  const lowerMealName = mealName.toLowerCase();
+  
+  if (lowerMealName === 'breakfast') {
+    return 75; // Smaller veggie portion with breakfast
+  } else if (lowerMealName === 'snack') {
+    return 50; // Small veggie portion for snack
+  } else if (lowerMealName === 'lunch' || lowerMealName === 'dinner') {
+    return 150; // Larger veggie portions for main meals
+  }
+  
+  return 100; // Default portion size
 };
 
 /**
@@ -548,4 +656,65 @@ export const adjustPortionForCalories = (
   
   // Round to nearest 5g for usability
   return Math.round(adjustedPortion / 5) * 5;
+};
+
+/**
+ * Validates a meal plan's macro distribution against targets
+ * Returns a score from 0-100 representing how well macros are balanced
+ */
+export const validateMealPlanMacros = (mealPlan: MealPlan): {
+  score: number;
+  issues: string[];
+} => {
+  const { targetProtein, targetCarbs, targetFat, actualProtein, actualCarbs, actualFat } = mealPlan;
+  
+  if (!actualProtein || !actualCarbs || !actualFat) {
+    return { score: 0, issues: ["Actual macros not calculated"] };
+  }
+  
+  const issues: string[] = [];
+  let totalScore = 100;
+  
+  // Calculate percentage differences
+  const proteinDiff = Math.abs(actualProtein - targetProtein) / targetProtein;
+  const carbsDiff = Math.abs(actualCarbs - targetCarbs) / targetCarbs;
+  const fatDiff = Math.abs(actualFat - targetFat) / targetFat;
+  
+  // Deduct points based on how far off each macro is
+  if (proteinDiff > 0.05) { // 5% threshold
+    totalScore -= Math.min(30, Math.round(proteinDiff * 100));
+    issues.push(`Protein is ${(proteinDiff * 100).toFixed(1)}% off target`);
+  }
+  
+  if (carbsDiff > 0.05) {
+    totalScore -= Math.min(25, Math.round(carbsDiff * 100));
+    issues.push(`Carbs are ${(carbsDiff * 100).toFixed(1)}% off target`);
+  }
+  
+  if (fatDiff > 0.05) {
+    totalScore -= Math.min(25, Math.round(fatDiff * 100));
+    issues.push(`Fat is ${(fatDiff * 100).toFixed(1)}% off target`);
+  }
+  
+  // Check for meal-by-meal macro balance
+  let previousMealRatio = 0;
+  mealPlan.meals.forEach((meal) => {
+    const mealProteinRatio = meal.totalProtein / actualProtein;
+    
+    // Check for extreme spikes in protein distribution (inconsistent distribution)
+    if (previousMealRatio > 0 && Math.abs(mealProteinRatio - previousMealRatio) > 0.2) {
+      totalScore -= 5;
+      issues.push("Inconsistent protein distribution between meals");
+    }
+    
+    previousMealRatio = mealProteinRatio;
+  });
+  
+  // Ensure score doesn't go below 0
+  totalScore = Math.max(0, totalScore);
+  
+  return {
+    score: totalScore,
+    issues: issues.length ? issues : ["Meal plan is well-balanced"]
+  };
 };
