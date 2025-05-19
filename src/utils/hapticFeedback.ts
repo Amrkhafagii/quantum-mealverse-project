@@ -2,6 +2,8 @@
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Platform } from './platform';
 
+type HapticFeedbackType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' | 'selection' | 'action' | 'info' | 'confirmation';
+
 /**
  * Cross-platform haptic feedback utility for providing tactile feedback
  * with fallbacks for web platforms.
@@ -73,6 +75,27 @@ export const hapticFeedback = {
   },
   
   /**
+   * Info notification, alias for light impact
+   */
+  info: async () => {
+    return hapticFeedback.light();
+  },
+  
+  /**
+   * Confirmation notification, alias for medium impact
+   */
+  confirmation: async () => {
+    return hapticFeedback.medium();
+  },
+  
+  /**
+   * Default action feedback, alias for medium impact
+   */
+  action: async () => {
+    return hapticFeedback.medium();
+  },
+  
+  /**
    * Vibration pattern fallback for non-native platforms that support vibration API
    * @param pattern - Vibration pattern in milliseconds
    */
@@ -86,7 +109,7 @@ export const hapticFeedback = {
    * Contextual haptic feedback based on action type
    * @param type - The type of action
    */
-  contextual: async (type: 'success' | 'error' | 'warning' | 'selection' | 'action' | 'light' | 'medium' | 'heavy') => {
+  contextual: async (type: HapticFeedbackType) => {
     switch (type) {
       case 'success':
         return hapticFeedback.success();
@@ -102,6 +125,10 @@ export const hapticFeedback = {
         return hapticFeedback.medium();
       case 'heavy':
         return hapticFeedback.heavy();
+      case 'info':
+        return hapticFeedback.info();
+      case 'confirmation':
+        return hapticFeedback.confirmation();
       case 'action':
       default:
         return hapticFeedback.medium();
@@ -128,3 +155,5 @@ export const hapticFeedback = {
     }
   }
 };
+
+export type { HapticFeedbackType };

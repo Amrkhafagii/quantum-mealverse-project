@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MapOff, MapPin, RefreshCw } from 'lucide-react';
+import { MapPin, RefreshCw, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -30,7 +30,7 @@ export const OfflineMapFallback: React.FC<OfflineMapFallbackProps> = ({
   return (
     <Card className={`bg-slate-800/30 border-slate-700/50 ${className}`}>
       <CardContent className="p-6 flex flex-col items-center justify-center text-center min-h-[250px]">
-        <MapOff className="h-12 w-12 text-gray-400 mb-4" />
+        <Map className="h-12 w-12 text-gray-400 mb-4" />
         <h3 className="text-lg font-semibold text-gray-200 mb-1">{title}</h3>
         <p className="text-gray-400 mb-4 max-w-xs">{description}</p>
         

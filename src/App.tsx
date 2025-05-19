@@ -15,6 +15,9 @@ import PlatformUIDemo from "@/pages/PlatformUIDemo";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import StorageDemoPage from './pages/StorageDemo';
 import AdaptiveFormDemo from './pages/AdaptiveFormDemo';
+import PlatformLayoutDemo from './pages/PlatformLayoutDemo';
+import { PageTransition } from "./components/layout/PageTransition";
+import { AnimatePresence } from "framer-motion";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -31,13 +34,16 @@ function App() {
                   <NetworkStatusProvider>
                     <BackgroundSyncManager>
                       <BrowserRouter>
-                        <Routes>
-                          <Route path="/auth" element={<Auth />} />
-                          <Route path="/platform-ui" element={<PlatformUIDemo />} />
-                          <Route path="/storage-demo" element={<StorageDemoPage />} />
-                          <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />
-                          <Route path="*" element={<MainLayout />} />
-                        </Routes>
+                        <AnimatePresence mode="wait">
+                          <Routes>
+                            <Route path="/auth" element={<Auth />} />
+                            <Route path="/platform-ui" element={<PlatformUIDemo />} />
+                            <Route path="/storage-demo" element={<StorageDemoPage />} />
+                            <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />
+                            <Route path="/platform-layout" element={<PlatformLayoutDemo />} />
+                            <Route path="*" element={<MainLayout />} />
+                          </Routes>
+                        </AnimatePresence>
                         <Toaster />
                       </BrowserRouter>
                     </BackgroundSyncManager>

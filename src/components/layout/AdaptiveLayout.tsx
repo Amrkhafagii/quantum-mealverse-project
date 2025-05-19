@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
+import { PlatformContainer } from './PlatformContainer';
 
 interface AdaptiveLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface AdaptiveLayoutProps {
   sidebarWidth?: string;
   splitLayout?: boolean;
   foldableAware?: boolean;
+  containerVariant?: 'default' | 'elevated' | 'outlined';
 }
 
 export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
@@ -21,6 +23,7 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
   sidebarWidth = '300px',
   splitLayout = false,
   foldableAware = true,
+  containerVariant = 'default'
 }) => {
   const { 
     isMobile, 
@@ -43,14 +46,17 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
   // Simple mobile view - single column layout
   if (isMobile && !isLandscape) {
     return (
-      <div className={cn('flex flex-col w-full', className)}>
+      <PlatformContainer 
+        variant={containerVariant} 
+        className={cn('flex flex-col w-full', className)}
+      >
         {children}
         {sidebarContent && (
           <div className="mt-4 border-t pt-4">
             {sidebarContent}
           </div>
         )}
-      </div>
+      </PlatformContainer>
     );
   }
   
@@ -69,7 +75,10 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
     // For tablets and landscape mobile with sidebar content
     if (sidebarContent) {
       return (
-        <div className={cn('flex w-full', className)}>
+        <PlatformContainer 
+          variant={containerVariant} 
+          className={cn('flex w-full', className)}
+        >
           {sidebarPosition === 'left' && (
             <div 
               className="shrink-0 border-r dark:border-gray-800" 
@@ -91,21 +100,24 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
               {sidebarContent}
             </div>
           )}
-        </div>
+        </PlatformContainer>
       );
     }
     
     // If we have no sidebar content, but split layout is requested (e.g. for foldable devices)
     if (splitLayout && isFoldable) {
       return (
-        <div className={cn('grid grid-cols-2 gap-4', className)}>
+        <PlatformContainer 
+          variant={containerVariant} 
+          className={cn('grid grid-cols-2 gap-4', className)}
+        >
           <div className="col-span-1">
             {React.Children.toArray(children)[0]}
           </div>
           <div className="col-span-1">
             {React.Children.toArray(children).slice(1)}
           </div>
-        </div>
+        </PlatformContainer>
       );
     }
   }
@@ -113,7 +125,10 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
   // Default layout (desktop or no special cases)
   if (sidebarContent) {
     return (
-      <div className={cn('flex', className)}>
+      <PlatformContainer 
+        variant={containerVariant} 
+        className={cn('flex', className)}
+      >
         {sidebarPosition === 'left' && (
           <div 
             className="shrink-0 border-r dark:border-gray-800" 
@@ -135,12 +150,19 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
             {sidebarContent}
           </div>
         )}
-      </div>
+      </PlatformContainer>
     );
   }
   
   // Just return children if no special layout is needed
-  return <div className={className}>{children}</div>;
+  return (
+    <PlatformContainer 
+      variant={containerVariant} 
+      className={className}
+    >
+      {children}
+    </PlatformContainer>
+  );
 };
 
 export default AdaptiveLayout;
