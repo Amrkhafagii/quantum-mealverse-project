@@ -11,6 +11,7 @@ import Customer from "@/pages/Customer";
 import Restaurant from "@/pages/Restaurant";
 import Orders from "@/pages/Orders";
 import Fitness from "@/pages/Fitness";
+import Nutrition from "@/pages/Nutrition";
 import PageTransition from "@/components/layout/PageTransition";
 import { NetworkPredictiveMonitor } from "@/components/network/NetworkPredictiveMonitor";
 
@@ -46,6 +47,7 @@ const MainLayout: React.FC = () => {
                 <Route path="/restaurant/:id" element={<Restaurant />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/fitness" element={<Fitness />} />
+                <Route path="/nutrition" element={<Nutrition />} />
                 
                 {/* Restaurant Admin Routes */}
                 <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
