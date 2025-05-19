@@ -141,24 +141,24 @@ export const syncPendingActions = async (): Promise<boolean> => {
 const processOperation = async (operation: SyncOperation): Promise<void> => {
   switch (operation.type) {
     case 'insert':
-      // Fix: Use type assertion on the entire from() call
-      await (supabase.from(operation.table) as any).insert(operation.data);
+      // Cast using "as unknown as" pattern to bypass TypeScript type checking
+      await ((supabase.from as (table: string) => any)(operation.table)).insert(operation.data);
       break;
       
     case 'update':
       if (!operation.filters) {
         throw new Error('Update operation requires filters');
       }
-      // Fix: Use type assertion on the entire from() call
-      await (supabase.from(operation.table) as any).update(operation.data).match(operation.filters);
+      // Cast using "as unknown as" pattern to bypass TypeScript type checking
+      await ((supabase.from as (table: string) => any)(operation.table)).update(operation.data).match(operation.filters);
       break;
       
     case 'delete':
       if (!operation.filters) {
         throw new Error('Delete operation requires filters');
       }
-      // Fix: Use type assertion on the entire from() call
-      await (supabase.from(operation.table) as any).delete().match(operation.filters);
+      // Cast using "as unknown as" pattern to bypass TypeScript type checking
+      await ((supabase.from as (table: string) => any)(operation.table)).delete().match(operation.filters);
       break;
       
     default:
