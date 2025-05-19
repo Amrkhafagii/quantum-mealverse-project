@@ -26,6 +26,7 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
   // If user is already logged in, redirect appropriately
   useEffect(() => {
     if (user && !loading) {
+      console.log("Auth: User is logged in, redirecting", { user, returnTo });
       // Check if the user is a delivery person
       const userType = user.user_metadata?.user_type;
       

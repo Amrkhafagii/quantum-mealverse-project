@@ -6,23 +6,21 @@ import './index.css'
 import { Toaster } from '@/components/ui/toaster'
 import { MapViewProvider } from './contexts/MapViewContext'
 import { ThemeProvider } from './components/theme-provider'
-import { AuthProvider } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
 import { ResponsiveProvider } from './contexts/ResponsiveContext'
+// Remove the AuthProvider from here since it's already in App.tsx
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AuthProvider>
-        <CartProvider>
-          <ResponsiveProvider>
-            <MapViewProvider>
-              <App />
-              <Toaster />
-            </MapViewProvider>
-          </ResponsiveProvider>
-        </CartProvider>
-      </AuthProvider>
+      <CartProvider>
+        <ResponsiveProvider>
+          <MapViewProvider>
+            <App />
+            <Toaster />
+          </MapViewProvider>
+        </ResponsiveProvider>
+      </CartProvider>
     </ThemeProvider>
   </React.StrictMode>,
 )

@@ -1,68 +1,104 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-export type User = {
-  id: string;
-  displayName: string | null;
-  email: string | null;
-  photoURL: string | null;
-  user_metadata?: Record<string, any>;
-  created_at?: string;
+import React, { createContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+
+export type UserWithMetadata = User & {
+  user_metadata?: {
+    user_type?: string;
+  };
 };
 
 export type AuthContextType = {
-  user: User | null;
+  user: UserWithMetadata | null;
+  session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<boolean>;
-  signup: (email: string, password: string, displayName: string) => Promise<void>;
+  signup: (email: string, password: string, metadata: Record<string, any>) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
+  session: null,
   loading: true,
   login: async () => {},
   logout: async () => false,
   signup: async () => {},
 });
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => React.useContext(AuthContext);
 
 type AuthProviderProps = {
   children: ReactNode;
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserWithMetadata | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Simulate checking for a stored session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('quantum_mealverse_user');
-    if (storedUser) {
+    // Get initial session
+    const getInitialSession = async () => {
+      setLoading(true);
       try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse stored user', e);
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error.message);
+        } else {
+          setSession(data.session);
+          setUser(data.session?.user as UserWithMetadata || null);
+        }
+      } catch (error) {
+        console.error('Unexpected error during getSession:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log('Auth state changed:', event);
+        setSession(newSession);
+        setUser(newSession?.user as UserWithMetadata || null);
+        setLoading(false);
+      }
+    );
+
+    // Cleanup subscription
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Mock login for now
-      const mockUser = {
-        id: '1',
-        displayName: 'Test User',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        photoURL: null,
-        user_metadata: { user_type: 'customer' }
-      };
+        password,
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('quantum_mealverse_user', JSON.stringify(mockUser));
-    } catch (error) {
+      if (error) {
+        toast.error("Login failed", {
+          description: error.message
+        });
+        throw error;
+      }
+      
+      // Successfully logged in
+      setSession(data.session);
+      setUser(data.user as UserWithMetadata);
+      toast.success("Login successful", {
+        description: "Welcome back!"
+      });
+      
+    } catch (error: any) {
       console.error('Login error:', error);
       throw error;
     } finally {
@@ -73,10 +109,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<boolean> => {
     setLoading(true);
     try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        toast.error("Sign out failed", {
+          description: error.message
+        });
+        return false;
+      }
+      
       setUser(null);
-      localStorage.removeItem('quantum_mealverse_user');
+      setSession(null);
+      toast.success("Signed out successfully");
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Logout error:', error);
       return false;
     } finally {
@@ -84,21 +130,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signup = async (email: string, password: string, displayName: string) => {
+  const signup = async (email: string, password: string, metadata: Record<string, any> = {}) => {
     setLoading(true);
     try {
-      // Mock signup
-      const mockUser = {
-        id: '1',
-        displayName,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        photoURL: null,
-        user_metadata: { user_type: 'customer' }
-      };
+        password,
+        options: {
+          data: metadata
+        }
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('quantum_mealverse_user', JSON.stringify(mockUser));
-    } catch (error) {
+      if (error) {
+        toast.error("Signup failed", {
+          description: error.message
+        });
+        throw error;
+      }
+      
+      if (data?.user) {
+        toast.success("Signup successful", {
+          description: "Please check your email for verification instructions."
+        });
+      }
+    } catch (error: any) {
       console.error('Signup error:', error);
       throw error;
     } finally {
@@ -107,7 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, signup }}>
+    <AuthContext.Provider value={{ user, session, loading, login, logout, signup }}>
       {children}
     </AuthContext.Provider>
   );

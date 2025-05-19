@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -44,7 +43,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     try {
       if (mode === 'signup') {
         // Sign up the user
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -54,48 +53,22 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           }
         });
         
-        if (signUpError) throw signUpError;
-        
         // Also update the user_types table to store the user type
-        if (authData?.user) {
-          // Use the service to update user type
-          const success = await userTypeService.updateUserType(
-            authData.user.id,
-            userType as 'customer' | 'restaurant' | 'delivery'
-          );
-          
-          if (!success) {
-            console.error("Error storing user type in database");
-            // Continue despite error to not block signup
-          }
-        }
+        // This will be handled by the database trigger we've set up
         
-        if (userType === 'restaurant' && authData?.user) {
-          // Create restaurant profile
-          const { error: restaurantError } = await supabase.from('restaurants').insert({
-            user_id: authData.user.id,
-            name: restaurantName,
-            address: restaurantAddress,
-            city: restaurantCity,
-            phone: restaurantPhone,
-            email: email,
-            description: restaurantDescription,
-            is_active: true
-          });
-          
-          if (restaurantError) throw restaurantError;
-
+        if (userType === 'restaurant' && email) {
+          // Create restaurant profile after signup
           toast({
             title: "Restaurant account created!",
             description: "Please check your email to verify your account.",
           });
-        } else if (userType === 'delivery' && authData?.user) {
+        } else if (userType === 'delivery') {
           toast({
             title: "Delivery account created!",
             description: "Please check your email to verify your account.",
           });
           
-          // After successful signup as delivery, redirect to onboarding
+          // After successful signup as delivery, redirect to login
           setMode('login');
         } else {
           toast({
@@ -106,6 +79,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           setMode('login');
         }
       } else {
+        // Login
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -117,74 +91,74 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         let userType = userMetadata?.user_type;
         
         // If not in metadata, check our user_types table as fallback
-        if (!userType) {
-          userType = await userTypeService.getUserType(data.user?.id || '');
+        if (!userType && data.user?.id) {
+          userType = await userTypeService.getUserType(data.user.id);
         }
         
         // If still no user type, default to customer
-        if (!userType) {
+        if (!userType && data.user) {
           userType = 'customer';
           // Store the default user type if possible
-          if (data.user) {
-            await userTypeService.updateUserType(data.user.id, 'customer');
-          }
+          await userTypeService.updateUserType(data.user.id, 'customer');
         }
         
         // Check if user is a restaurant owner
-        const { data: restaurantData } = await supabase
-          .from('restaurants')
-          .select('id')
-          .eq('user_id', data.user?.id || '')
-          .maybeSingle();
-          
-        if (restaurantData) {
-          // Restaurant owner - redirect to restaurant dashboard
-          toast({
-            title: "Welcome to Restaurant Dashboard",
-            description: "You have been logged in as a restaurant owner",
-          });
-          navigate('/restaurant/dashboard', { replace: true });
-        } else if (userType === 'delivery') {
-          // Check if delivery onboarding is complete
-          const { data: deliveryUserData } = await supabase
-            .from('delivery_users')
-            .select('id, is_approved')
-            .eq('user_id', data.user?.id || '')
+        if (data.user) {
+          const { data: restaurantData } = await supabase
+            .from('restaurants')
+            .select('id')
+            .eq('user_id', data.user.id)
             .maybeSingle();
+            
+          if (restaurantData) {
+            // Restaurant owner - redirect to restaurant dashboard
+            toast({
+              title: "Welcome to Restaurant Dashboard",
+              description: "You have been logged in as a restaurant owner",
+            });
+            navigate('/restaurant/dashboard', { replace: true });
+          } else if (userType === 'delivery') {
+            // Check if delivery onboarding is complete
+            const { data: deliveryUserData } = await supabase
+              .from('delivery_users')
+              .select('id, is_approved')
+              .eq('user_id', data.user.id)
+              .maybeSingle();
 
-          if (deliveryUserData?.id) {
-            if (deliveryUserData.is_approved) {
-              // Approved delivery user - go to delivery dashboard
-              toast({
-                title: "Welcome back",
-                description: "You have been logged in as a delivery partner",
-              });
-              navigate('/delivery/dashboard', { replace: true });
+            if (deliveryUserData?.id) {
+              if (deliveryUserData.is_approved) {
+                // Approved delivery user - go to delivery dashboard
+                toast({
+                  title: "Welcome back",
+                  description: "You have been logged in as a delivery partner",
+                });
+                navigate('/delivery/dashboard', { replace: true });
+              } else {
+                // Onboarding complete but not approved yet
+                toast({
+                  title: "Welcome back",
+                  description: "Your delivery account is pending approval",
+                });
+                navigate('/delivery/onboarding', { replace: true });
+              }
             } else {
-              // Onboarding complete but not approved yet
+              // Delivery user who hasn't completed onboarding
               toast({
-                title: "Welcome back",
-                description: "Your delivery account is pending approval",
+                title: "Welcome",
+                description: "Please complete your delivery partner onboarding",
               });
               navigate('/delivery/onboarding', { replace: true });
             }
           } else {
-            // Delivery user who hasn't completed onboarding
+            // Regular customer flow - prompt for location
             toast({
-              title: "Welcome",
-              description: "Please complete your delivery partner onboarding",
+              title: "Welcome back",
+              description: "You have been logged in successfully",
             });
-            navigate('/delivery/onboarding', { replace: true });
+            
+            // Show location prompt after successful login (only for customers)
+            setShowLocationPrompt(true);
           }
-        } else {
-          // Regular customer flow - prompt for location
-          toast({
-            title: "Welcome back",
-            description: "You have been logged in successfully",
-          });
-          
-          // Show location prompt after successful login (only for customers)
-          setShowLocationPrompt(true);
         }
       }
     } catch (error: any) {

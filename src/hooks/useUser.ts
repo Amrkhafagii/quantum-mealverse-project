@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+// This hook is now a legacy wrapper around supabase.auth.getUser and onAuthStateChange
+// We should eventually refactor code to use useAuth() instead
 export function useUser() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
