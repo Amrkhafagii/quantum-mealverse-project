@@ -4,6 +4,7 @@ import { Star, StarHalf } from 'lucide-react';
 
 export interface StarRatingProps {
   rating?: number;
+  value?: number; // Added value prop as alternative to rating
   readOnly?: boolean;
   size?: 'sm' | 'md' | 'lg';
   onChange?: (rating: number) => void;
@@ -15,6 +16,7 @@ export interface StarRatingProps {
 
 export const StarRating: React.FC<StarRatingProps> = ({
   rating = 0,
+  value, // Added value prop
   readOnly = false,
   size = 'md',
   onChange,
@@ -23,6 +25,9 @@ export const StarRating: React.FC<StarRatingProps> = ({
   interactive = false,
   showNumber = false,
 }) => {
+  // Use value prop if provided, otherwise use rating
+  const actualRating = value !== undefined ? value : rating;
+  
   const handleStarClick = (selectedRating: number) => {
     if (readOnly) return;
     
@@ -46,7 +51,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
   const renderStars = () => {
     return Array.from({ length: 5 }, (_, i) => {
       // Full star
-      if (i < Math.floor(rating)) {
+      if (i < Math.floor(actualRating)) {
         return (
           <Star
             key={i}
@@ -56,7 +61,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
         );
       } 
       // Half star
-      else if (i < Math.ceil(rating) && !Number.isInteger(rating)) {
+      else if (i < Math.ceil(actualRating) && !Number.isInteger(actualRating)) {
         return (
           <StarHalf
             key={i}
@@ -83,7 +88,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
       {renderStars()}
       {showNumber && (
         <span className="ml-2 text-sm font-medium">
-          {rating.toFixed(1)}
+          {actualRating.toFixed(1)}
         </span>
       )}
     </div>

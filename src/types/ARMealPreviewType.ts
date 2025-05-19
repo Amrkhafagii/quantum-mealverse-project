@@ -1,7 +1,10 @@
 
 export interface ARMealPreviewProps {
   mealName: string;
-  // Add other props as needed based on how ARMealPreview is used
+  mealId?: string;
+  className?: string;
+  modelName?: string;
+  rating?: number;
 }
 
 // Re-export to help with imports

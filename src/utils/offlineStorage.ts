@@ -1,4 +1,3 @@
-
 import { Preferences } from '@capacitor/preferences';
 import { Platform } from './platform';
 
@@ -69,7 +68,7 @@ class WebStorage implements OfflineStorage {
   async get<T>(key: string): Promise<T | null> {
     try {
       const db = await this.getDatabase();
-      return new Promise((resolve, reject) => {
+      return new Promise<T | null>((resolve, reject) => {
         const transaction = db.transaction(this.storeName, 'readonly');
         const store = transaction.objectStore(this.storeName);
         const request = store.get(key);
@@ -99,7 +98,7 @@ class WebStorage implements OfflineStorage {
   async set<T>(key: string, value: T): Promise<void> {
     try {
       const db = await this.getDatabase();
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(this.storeName, 'readwrite');
         const store = transaction.objectStore(this.storeName);
         const request = store.put(value, key);
@@ -118,10 +117,10 @@ class WebStorage implements OfflineStorage {
       // Fall back to localStorage as a backup
       try {
         localStorage.setItem(key, JSON.stringify(value));
-        resolve();
+        return Promise.resolve();
       } catch (fallbackError) {
         console.error('Error using localStorage fallback:', fallbackError);
-        reject(fallbackError);
+        return Promise.reject(fallbackError);
       }
     }
   }
@@ -129,7 +128,7 @@ class WebStorage implements OfflineStorage {
   async remove(key: string): Promise<void> {
     try {
       const db = await this.getDatabase();
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(this.storeName, 'readwrite');
         const store = transaction.objectStore(this.storeName);
         const request = store.delete(key);
@@ -148,10 +147,10 @@ class WebStorage implements OfflineStorage {
       // Fall back to localStorage as a backup
       try {
         localStorage.removeItem(key);
-        resolve();
+        return Promise.resolve();
       } catch (fallbackError) {
         console.error('Error using localStorage fallback:', fallbackError);
-        reject(fallbackError);
+        return Promise.reject(fallbackError);
       }
     }
   }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -32,15 +31,20 @@ const Orders = () => {
   
   // Update pending actions count
   useEffect(() => {
-    const checkPendingActions = () => {
-      import('@/utils/offlineStorage').then(({ getPendingActions }) => {
-        const pendingActions = getPendingActions();
+    const checkPendingActions = async () => {
+      try {
+        const pendingActions = await getPendingActions();
         setPendingActionsCount(pendingActions.length);
-      });
+      } catch (error) {
+        console.error("Error checking pending actions:", error);
+        setPendingActionsCount(0);
+      }
     };
     
     checkPendingActions();
-    const intervalId = setInterval(checkPendingActions, 5000);
+    const intervalId = setInterval(() => {
+      checkPendingActions();
+    }, 5000);
     
     return () => clearInterval(intervalId);
   }, []);
@@ -48,13 +52,19 @@ const Orders = () => {
   // Sync pending actions when coming back online
   useEffect(() => {
     if (isOnline) {
-      syncPendingActions().then(() => {
+      const performSync = async () => {
+        await syncPendingActions();
         // Update pending actions count after sync
-        import('@/utils/offlineStorage').then(({ getPendingActions }) => {
-          const pendingActions = getPendingActions();
+        try {
+          const pendingActions = await getPendingActions();
           setPendingActionsCount(pendingActions.length);
-        });
-      });
+        } catch (error) {
+          console.error("Error getting pending actions:", error);
+          setPendingActionsCount(0);
+        }
+      };
+      
+      performSync();
     }
   }, [isOnline]);
   
@@ -80,10 +90,15 @@ const Orders = () => {
       
       if (!isOnline) {
         // When offline, use cached orders
-        const cachedOrders = getActiveOrders();
-        return cachedOrders.filter(order => 
-          !['delivered', 'cancelled', 'rejected'].includes(order.status)
-        );
+        try {
+          const cachedOrders = await getActiveOrders();
+          return cachedOrders.filter(order => 
+            !['delivered', 'cancelled', 'rejected'].includes(order.status)
+          );
+        } catch (error) {
+          console.error("Error filtering cached orders:", error);
+          return [];
+        }
       }
       
       try {
@@ -116,10 +131,15 @@ const Orders = () => {
         console.error('Error in active orders query:', error);
         
         // If online fetch failed, try to use cached data
-        const cachedOrders = getActiveOrders();
-        return cachedOrders.filter(order => 
-          !['delivered', 'cancelled', 'rejected'].includes(order.status)
-        );
+        try {
+          const cachedOrders = await getActiveOrders();
+          return cachedOrders.filter(order => 
+            !['delivered', 'cancelled', 'rejected'].includes(order.status)
+          );
+        } catch (cacheError) {
+          console.error("Error retrieving from cache:", cacheError);
+          return [];
+        }
       }
     },
     enabled: !!session?.user?.id,
@@ -134,10 +154,15 @@ const Orders = () => {
       
       if (!isOnline) {
         // When offline, use cached orders for past orders
-        const cachedOrders = getActiveOrders();
-        return cachedOrders.filter(order => 
-          ['delivered', 'cancelled', 'rejected'].includes(order.status)
-        ).slice(0, 5);
+        try {
+          const cachedOrders = await getActiveOrders();
+          return cachedOrders.filter(order => 
+            ['delivered', 'cancelled', 'rejected'].includes(order.status)
+          ).slice(0, 5);
+        } catch (error) {
+          console.error("Error filtering past orders from cache:", error);
+          return [];
+        }
       }
       
       try {
@@ -165,10 +190,15 @@ const Orders = () => {
         console.error('Error fetching past orders:', error);
         
         // If online fetch failed, use cached data
-        const cachedOrders = getActiveOrders();
-        return cachedOrders.filter(order => 
-          ['delivered', 'cancelled', 'rejected'].includes(order.status)
-        ).slice(0, 5);
+        try {
+          const cachedOrders = await getActiveOrders();
+          return cachedOrders.filter(order => 
+            ['delivered', 'cancelled', 'rejected'].includes(order.status)
+          ).slice(0, 5);
+        } catch (cacheError) {
+          console.error("Error retrieving past orders from cache:", cacheError);
+          return [];
+        }
       }
     },
     enabled: !!session?.user?.id,
@@ -182,10 +212,13 @@ const Orders = () => {
       await refetch();
     }
     // Update pending actions count after sync
-    import('@/utils/offlineStorage').then(({ getPendingActions }) => {
-      const pendingActions = getPendingActions();
+    try {
+      const pendingActions = await getPendingActions();
       setPendingActionsCount(pendingActions.length);
-    });
+    } catch (error) {
+      console.error("Error getting pending actions count:", error);
+      setPendingActionsCount(0);
+    }
     setTimeout(() => setIsSyncing(false), 1000);
   };
 
