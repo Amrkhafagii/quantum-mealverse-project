@@ -68,12 +68,13 @@ export const NetworkAwareContainer: React.FC<NetworkAwareContainerProps> = ({
       
       {!isOnline && showOfflineMessage && (
         <div className={`
-          fixed bottom-0 left-0 right-0 z-50 
+          fixed bottom-0 left-0 right-0 z-40 
           p-2 bg-${theme === 'dark' ? 'red-950/90' : 'red-50/90'} 
           border-t border-${theme === 'dark' ? 'red-800' : 'red-200'}
           backdrop-blur-sm
           flex items-center justify-center gap-2
           text-${theme === 'dark' ? 'red-200' : 'red-800'}
+          pointer-events-auto
         `}>
           <WifiOff className="h-4 w-4" />
           <span className="text-sm font-medium">You're offline. Some features may be limited.</span>
@@ -82,12 +83,13 @@ export const NetworkAwareContainer: React.FC<NetworkAwareContainerProps> = ({
       
       {showReconnectedMessage && (
         <div className={`
-          fixed bottom-0 left-0 right-0 z-50 
+          fixed bottom-0 left-0 right-0 z-40 
           p-2 bg-${theme === 'dark' ? 'green-950/90' : 'green-50/90'} 
           border-t border-${theme === 'dark' ? 'green-800' : 'green-200'}
           backdrop-blur-sm
           flex items-center justify-center gap-2
           text-${theme === 'dark' ? 'green-200' : 'green-800'}
+          pointer-events-auto
         `}>
           <Wifi className="h-4 w-4" />
           <span className="text-sm font-medium">You're back online!</span>

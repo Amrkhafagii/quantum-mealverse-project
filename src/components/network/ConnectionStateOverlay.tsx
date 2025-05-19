@@ -94,10 +94,10 @@ export function ConnectionStateOverlay({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: position === 'top' ? -20 : 20 }}
           transition={{ duration: 0.3 }}
-          className={`fixed ${positionStyles[position]} z-50 pointer-events-auto`}
+          className={`fixed ${positionStyles[position]} z-40 pointer-events-none`}
           onClick={handleDismiss}
         >
-          <div className={`${color} text-white rounded-full shadow-md px-3 py-1 flex items-center m-2`}>
+          <div className={`${color} text-white rounded-full shadow-md px-3 py-1 flex items-center m-2 pointer-events-auto`}>
             {icon}
             <span className="ml-2 text-sm font-medium">{message}</span>
             {latency && quality !== 'unknown' && (

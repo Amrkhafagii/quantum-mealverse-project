@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
@@ -119,16 +118,15 @@ export function NetworkPredictiveMonitor({
     return () => clearInterval(interval);
   }, [enablePredictions, checkForPotentialIssues, pollIntervalMs]);
   
-  // Return children with potential warning
+  // Return children with no blocking overlay
   return (
     <>
       {children}
       
-      {/* Predictive warning indicator could be added here if needed */}
+      {/* We don't render any visible UI here, just keep track of state */}
       {predictionActive && possibleDisconnection && (
-        <div className="hidden">
-          {/* Hidden element just to track state */}
-          <WifiOff className="h-0 w-0" />
+        <div className="sr-only" aria-hidden="true">
+          Connection warning active
         </div>
       )}
     </>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
@@ -88,9 +89,9 @@ export const NetworkStateIndicator: React.FC<NetworkStateIndicatorProps> = ({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: position === 'top' ? -20 : 20 }}
           transition={{ duration: 0.3 }}
-          className={`fixed ${position === 'top' ? 'top-safe' : 'bottom-safe'} left-0 right-0 mx-auto z-50 flex justify-center pointer-events-none`}
+          className={`fixed ${position === 'top' ? 'top-safe' : 'bottom-safe'} left-0 right-0 mx-auto z-40 flex justify-center pointer-events-none`}
         >
-          <div className={`${getBackgroundColor()} text-white rounded-full shadow-lg flex items-center ${variant === 'slim' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1'}`}>
+          <div className={`${getBackgroundColor()} text-white rounded-full shadow-lg flex items-center ${variant === 'slim' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1'} pointer-events-auto`}>
             {getIcon()}
             <span className="ml-1">{getMessage()}</span>
             {showQuality && quality !== 'unknown' && variant !== 'slim' && (
