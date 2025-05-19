@@ -1,124 +1,37 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { OrderStatusBadge } from './OrderStatusBadge';
-import { OrderStatusMessage } from './OrderStatusMessage';
+import { OrderStatus } from '@/types/order';
+import OrderStatusMessage from './status/OrderStatusMessage';
+import OrderStatusTimeline from './OrderStatusTimeline';
 import CancelOrderButton from './status/CancelOrderButton';
-import { OrderTimer } from '@/components/orders/status/OrderTimer';
-import { Order } from '@/types/order';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-import { fixOrderStatus } from '@/utils/orderStatusFix';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { Platform } from '@/utils/platform';
-import { hapticFeedback } from '@/utils/hapticFeedback';
+import OrderTimer from './status/OrderTimer';
 
 interface OrderStatusDisplayProps {
-  order: Order;
-  assignmentStatus?: any;
-  onOrderUpdate?: () => void;
-  showCancelButton?: boolean;
+  status: OrderStatus;
+  orderId: string;
+  estimatedTime?: number;
 }
 
-export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
-  order,
-  assignmentStatus,
-  onOrderUpdate,
-  showCancelButton = true
+const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
+  status,
+  orderId,
+  estimatedTime
 }) => {
-  const [isFixing, setIsFixing] = React.useState(false);
-  const { isOnline } = useConnectionStatus();
-  const isMobile = Platform.isNative();
-  
-  // Calculate if the order is in a state where it can be cancelled
-  const canBeCancelled = ['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(order.status);
-
-  // Handle refreshing the order status
-  const handleRefreshStatus = async () => {
-    if (!order.id || !isOnline) return;
-    
-    setIsFixing(true);
-    
-    // Provide haptic feedback on mobile
-    if (isMobile) {
-      hapticFeedback.medium();
-    }
-    
-    try {
-      await fixOrderStatus(order.id);
-      if (onOrderUpdate) {
-        onOrderUpdate();
-      }
-      
-      // Success feedback on mobile
-      if (isMobile) {
-        hapticFeedback.success();
-      }
-    } catch (error) {
-      console.error('Error refreshing order status:', error);
-      
-      // Error feedback on mobile
-      if (isMobile) {
-        hapticFeedback.error();
-      }
-    } finally {
-      setIsFixing(false);
-    }
-  };
-  
   return (
-    <Card className={`bg-quantum-black/30 border-quantum-cyan/20 ${isMobile ? 'rounded-lg shadow-lg' : ''}`}>
-      <CardContent className={`${isMobile ? 'p-3' : 'p-4'}`}>
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-          <div className="space-y-2 mb-4 md:mb-0">
-            <div className="flex items-center gap-3">
-              <h3 className="font-medium">Status:</h3>
-              <OrderStatusBadge status={order.status} />
-              
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="ml-2 h-6 w-6 p-0" 
-                onClick={handleRefreshStatus}
-                disabled={isFixing || !isOnline}
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isFixing ? 'animate-spin' : ''}`} />
-                <span className="sr-only">Refresh status</span>
-              </Button>
-            </div>
-            
-            <OrderStatusMessage
-              status={order.status}
-              restaurant={order.restaurant}
-              assignmentStatus={assignmentStatus}
-              order={order}
-            />
-            
-            {['restaurant_assigned', 'accepted', 'preparing'].includes(order.status) && (
-              <OrderTimer 
-                updatedAt={order.updated_at || order.created_at || ''}
-              />
-            )}
-            
-            {!isOnline && (
-              <div className="text-amber-500 text-xs flex items-center mt-2">
-                <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
-                Currently offline - some features limited
-              </div>
-            )}
-          </div>
-          
-          {showCancelButton && canBeCancelled && isOnline && (
-            <CancelOrderButton 
-              orderId={order.id!} 
-              onCancelSuccess={() => {
-                if (onOrderUpdate) onOrderUpdate();
-                if (isMobile) hapticFeedback.heavy();
-              }}
-            />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="order-status-display p-4">
+      <OrderStatusMessage status={status} />
+      
+      <OrderStatusTimeline status={status} />
+      
+      {estimatedTime && status !== 'completed' && status !== 'cancelled' && (
+        <OrderTimer estimatedTime={estimatedTime} />
+      )}
+      
+      {(status === 'pending' || status === 'confirmed') && (
+        <CancelOrderButton orderId={orderId} />
+      )}
+    </div>
   );
 };
+
+export default OrderStatusDisplay;

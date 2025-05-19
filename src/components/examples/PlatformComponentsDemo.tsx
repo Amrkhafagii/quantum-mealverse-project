@@ -1,267 +1,338 @@
 
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Settings, Home, MessageSquare, Calendar, Check } from 'lucide-react';
-import { MobileContainer } from '@/components/mobile/MobileContainer';
-
-import {
-  PlatformForm,
-  PlatformInput,
-  PlatformList,
-  PlatformListItem,
-  PlatformModal,
-  PlatformTabBar,
-  PlatformButton
-} from '@/components/ui/platform-components';
-
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  PlatformForm, 
+  PlatformInput, 
+  PlatformList, 
+  PlatformListItem, 
+  PlatformModal, 
+  PlatformTabBar, 
+  PlatformButton 
+} from '@/components/ui/platform-components';
+import * as z from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Check, ChevronRight, Home, MessageCircle, Settings, User, MapPin } from 'lucide-react';
+import { hapticFeedback } from '@/utils/hapticFeedback';
 import { useResponsive } from '@/contexts/ResponsiveContext';
+import { AdaptiveCard } from '@/components/ui/adaptive-card';
+import { PlatformAwareDialog } from '@/components/ui/platform-aware-dialog';
+import { AdaptiveScrollArea } from '@/components/ui/adaptive-scroll-area';
 
-export function PlatformComponentsDemo() {
+// Demo schema for the form
+const formSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email'),
+  phone: z.string().optional(),
+  message: z.string().min(10, 'Message must be at least 10 characters')
+});
+
+// Sample data for the list
+const sampleItems = [
+  { id: '1', title: 'First item', subtitle: 'Description for first item', icon: Home },
+  { id: '2', title: 'Second item', subtitle: 'Description for second item', icon: MessageCircle },
+  { id: '3', title: 'Third item', subtitle: 'Description for third item', icon: User },
+  { id: '4', title: 'Fourth item', subtitle: 'Description for fourth item', icon: Settings },
+  { id: '5', title: 'Fifth item', subtitle: 'Description for fifth item', icon: MapPin },
+];
+
+// Sample tabs for the TabBar
+const sampleTabs = [
+  { id: 'home', label: 'Home', icon: Home, content: <div className="p-4">Home Tab Content</div> },
+  { id: 'messages', label: 'Messages', icon: MessageCircle, content: <div className="p-4">Messages Tab Content</div>, badgeCount: 3 },
+  { id: 'profile', label: 'Profile', icon: User, content: <div className="p-4">Profile Tab Content</div> },
+  { id: 'settings', label: 'Settings', icon: Settings, content: <div className="p-4">Settings Tab Content</div> },
+];
+
+const PlatformComponentsDemo = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedTabKey, setSelectedTabKey] = useState('home');
   const { isPlatformIOS, isPlatformAndroid } = useResponsive();
-  const [activeTab, setActiveTab] = useState('form');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [listItems, setListItems] = useState([
-    { id: '1', title: 'Item 1', description: 'Description for item 1' },
-    { id: '2', title: 'Item 2', description: 'Description for item 2' },
-    { id: '3', title: 'Item 3', description: 'Description for item 3' }
-  ]);
   
-  // Form schema for validation
-  const formSchema = z.object({
-    name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-    email: z.string().email({ message: 'Please enter a valid email' }),
-  });
-  
+  const platformText = isPlatformIOS ? 'iOS' : isPlatformAndroid ? 'Android' : 'Web';
+
   const form = useForm({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      email: ''
+      email: '',
+      phone: '',
+      message: ''
     }
   });
-  
-  const onSubmitForm = (data: any) => {
+
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
     console.log('Form submitted:', data);
-    alert(`Form submitted: ${JSON.stringify(data, null, 2)}`);
+    hapticFeedback.success();
+    alert(JSON.stringify(data, null, 2));
+  };
+
+  const handleItemClick = (id: string) => {
+    console.log(`Item ${id} clicked`);
+    hapticFeedback.selection();
   };
   
-  // Tabs for the TabBar demo
-  const tabs = [
-    { 
-      id: 'home', 
-      label: 'Home', 
-      icon: Home,
-      content: (
-        <div className="p-4 h-40 flex items-center justify-center">
-          <p>Home Content</p>
-        </div>
-      ) 
-    },
-    { 
-      id: 'messages', 
-      label: 'Messages', 
-      icon: MessageSquare,
-      badgeCount: 3,
-      content: (
-        <div className="p-4 h-40 flex items-center justify-center">
-          <p>Messages Content</p>
-        </div>
-      ) 
-    },
-    { 
-      id: 'calendar', 
-      label: 'Calendar', 
-      icon: Calendar,
-      content: (
-        <div className="p-4 h-40 flex items-center justify-center">
-          <p>Calendar Content</p>
-        </div>
-      ) 
-    },
-    { 
-      id: 'settings', 
-      label: 'Settings', 
-      icon: Settings,
-      content: (
-        <div className="p-4 h-40 flex items-center justify-center">
-          <p>Settings Content</p>
-        </div>
-      ) 
-    }
-  ];
-  
-  // Add a new list item
-  const addListItem = () => {
-    const newItem = {
-      id: Math.random().toString(36).substring(7),
-      title: `Item ${listItems.length + 1}`,
-      description: `Description for item ${listItems.length + 1}`
-    };
-    setListItems([...listItems, newItem]);
-  };
-  
-  // Remove a list item
-  const removeListItem = (id: string) => {
-    setListItems(listItems.filter(item => item.id !== id));
-  };
-  
-  // Refresh list handler
-  const handleRefresh = async () => {
-    return new Promise<void>((resolve) => {
-      setTimeout(() => {
-        // Reset the list
-        setListItems([
-          { id: '1', title: 'Refreshed Item 1', description: 'Description for refreshed item 1' },
-          { id: '2', title: 'Refreshed Item 2', description: 'Description for refreshed item 2' },
-        ]);
-        resolve();
-      }, 1500);
-    });
+  const handleTabChange = (value: string) => {
+    setSelectedTabKey(value);
   };
 
   return (
-    <MobileContainer fullHeight>
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Platform UI Components</CardTitle>
-          <CardDescription>
-            Adaptive components that follow platform-specific design patterns
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 mb-4">
-              <TabsTrigger value="form">Form</TabsTrigger>
-              <TabsTrigger value="list">List</TabsTrigger>
-              <TabsTrigger value="modal">Modal</TabsTrigger>
-              <TabsTrigger value="tabs">Tabs</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="form" className="space-y-4">
-              <h3 className="text-lg font-medium">Platform Form</h3>
-              <p className="text-sm text-muted-foreground">Forms with platform-specific styling and validation</p>
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold mb-6">Platform UI Components</h1>
+      <p className="text-lg mb-8">
+        Adaptive components that match the look and feel of {platformText} platforms.
+      </p>
+      
+      <Tabs defaultValue="form" className="w-full">
+        <TabsList className="mb-6 grid grid-cols-5 w-full">
+          <TabsTrigger value="form">Form</TabsTrigger>
+          <TabsTrigger value="list">List</TabsTrigger>
+          <TabsTrigger value="modal">Modal</TabsTrigger>
+          <TabsTrigger value="tabs">Tabs</TabsTrigger>
+          <TabsTrigger value="enhanced">Enhanced</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="form" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Form</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PlatformForm
+                onSubmit={onSubmit}
+                schema={formSchema}
+                submitText="Submit Form"
+                resetText="Clear Form"
+                showReset={true}
+              >
+                <PlatformInput 
+                  name="name" 
+                  control={form.control} 
+                  label="Name" 
+                  placeholder="Your name"
+                />
+                <PlatformInput 
+                  name="email" 
+                  control={form.control} 
+                  label="Email" 
+                  placeholder="your.email@example.com"
+                />
+                <PlatformInput 
+                  name="phone" 
+                  control={form.control} 
+                  label="Phone (optional)" 
+                  placeholder="Your phone number"
+                />
+                <PlatformInput 
+                  name="message" 
+                  control={form.control} 
+                  label="Message" 
+                  placeholder="Your message here"
+                  description="Tell us what you need help with"
+                />
+              </PlatformForm>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="list" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform List</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PlatformList className="h-[400px]">
+                {sampleItems.map((item) => (
+                  <PlatformListItem 
+                    key={item.id}
+                    onClick={() => handleItemClick(item.id)}
+                    leading={<item.icon className="text-primary" />}
+                    trailing={<ChevronRight className="text-muted-foreground" />}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.title}</span>
+                      <span className="text-sm text-muted-foreground">{item.subtitle}</span>
+                    </div>
+                  </PlatformListItem>
+                ))}
+              </PlatformList>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="modal" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Modal</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-6">
+              <Button onClick={() => setIsModalOpen(true)}>
+                Open Platform Modal
+              </Button>
               
-              <div className="border rounded-md p-4 mt-4">
-                <PlatformForm
-                  schema={formSchema}
-                  onSubmit={onSubmitForm}
-                  submitText={isPlatformIOS ? "Submit Form" : "Submit"}
-                  showReset
-                >
-                  <PlatformInput
-                    name="name"
-                    control={form.control}
-                    label="Full Name"
-                    placeholder="Enter your name"
-                  />
-                  <PlatformInput
-                    name="email"
-                    control={form.control}
-                    label="Email Address"
-                    placeholder="Enter your email"
-                    type="email"
-                  />
-                </PlatformForm>
+              <PlatformModal
+                title="Platform Modal Example"
+                description="This modal adapts to iOS, Android or Web platforms automatically."
+                open={isModalOpen}
+                onOpenChange={setIsModalOpen}
+                confirmText="Confirm"
+                cancelText="Cancel"
+                onConfirm={() => {
+                  console.log('Confirmed');
+                  setIsModalOpen(false);
+                }}
+                onCancel={() => {
+                  console.log('Cancelled');
+                  setIsModalOpen(false);
+                }}
+              >
+                <div className="py-4">
+                  <p>This is the content of the modal. It can contain anything you want.</p>
+                </div>
+              </PlatformModal>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(true)}
+                className="mt-4"
+              >
+                Open Platform Dialog
+              </Button>
+              
+              <PlatformAwareDialog
+                title="Platform Dialog"
+                description="This dialog adapts to the current platform"
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                onConfirm={() => {
+                  console.log('Dialog confirmed');
+                  setIsDialogOpen(false);
+                }}
+              >
+                <p>This demonstrates our new PlatformAwareDialog component.</p>
+              </PlatformAwareDialog>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="tabs" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Tab Bar</CardTitle>
+            </CardHeader>
+            <CardContent className="pb-0">
+              <div className="h-[400px] border rounded-lg overflow-hidden">
+                <PlatformTabBar 
+                  tabs={sampleTabs}
+                  value={selectedTabKey}
+                  onChange={handleTabChange}
+                  position="bottom"
+                />
               </div>
-            </TabsContent>
-            
-            <TabsContent value="list" className="space-y-4">
-              <h3 className="text-lg font-medium">Platform List</h3>
-              <p className="text-sm text-muted-foreground">Lists with platform-specific styling and interactions</p>
-              
-              <div className="border rounded-md mt-4">
-                <PlatformList
-                  scrollable
-                  maxHeight="200px"
-                  pullToRefresh
-                  onRefresh={handleRefresh}
-                >
-                  {listItems.map(item => (
-                    <PlatformListItem
-                      key={item.id}
-                      leading={<div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center"><User size={16} /></div>}
-                      trailing={
-                        <PlatformButton 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => removeListItem(item.id)}
-                          className="h-7 w-7 p-0" 
-                          aria-label="Remove item"
-                        >
-                          <Check size={16} />
-                        </PlatformButton>
-                      }
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="enhanced" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Enhanced Components</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Enhanced Haptic Button</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      className="haptic-enabled"
+                      onClick={() => hapticFeedback.light()}
                     >
-                      <div>
-                        <p className="font-medium">{item.title}</p>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      </div>
-                    </PlatformListItem>
-                  ))}
-                </PlatformList>
-              </div>
-              
-              <div className="flex justify-center mt-4">
-                <Button onClick={addListItem}>Add Item</Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="modal" className="space-y-4">
-              <h3 className="text-lg font-medium">Platform Modal</h3>
-              <p className="text-sm text-muted-foreground">Modals with platform-specific styling and animations</p>
-              
-              <div className="border rounded-md p-4 mt-4 flex flex-col items-center justify-center">
-                <Button onClick={() => setModalOpen(true)}>Open Modal</Button>
-                
-                <PlatformModal
-                  open={modalOpen}
-                  onOpenChange={setModalOpen}
-                  title="Platform Modal Example"
-                  description="This modal adapts to the current platform's design language"
-                  onConfirm={() => setModalOpen(false)}
-                  onCancel={() => setModalOpen(false)}
-                >
-                  <div className="py-4">
-                    <p>Modal content goes here. This modal's appearance and behavior changes based on the platform.</p>
+                      Light
+                    </Button>
+                    <Button 
+                      className="haptic-enabled"
+                      onClick={() => hapticFeedback.medium()}
+                    >
+                      Medium
+                    </Button>
+                    <Button 
+                      className="haptic-enabled"
+                      onClick={() => hapticFeedback.heavy()}
+                    >
+                      Heavy
+                    </Button>
+                    <Button 
+                      className="haptic-enabled"
+                      onClick={() => hapticFeedback.success()}
+                      variant="default"
+                    >
+                      Success
+                    </Button>
+                    <Button 
+                      className="haptic-enabled"
+                      onClick={() => hapticFeedback.error()}
+                      variant="destructive"
+                    >
+                      Error
+                    </Button>
+                    <Button 
+                      className="haptic-enabled"
+                      onClick={() => hapticFeedback.warning()}
+                      variant="outline"
+                    >
+                      Warning
+                    </Button>
                   </div>
-                </PlatformModal>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="tabs" className="space-y-4">
-              <h3 className="text-lg font-medium">Platform Tab Bar</h3>
-              <p className="text-sm text-muted-foreground">Tab navigation with platform-specific styling</p>
-              
-              <div className="border rounded-md mt-4">
-                <div className="h-64">
-                  <PlatformTabBar
-                    tabs={tabs}
-                    position="top"
-                    variant={isPlatformIOS ? "segmented" : "default"}
-                  />
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Adaptive Card</h3>
+                  <AdaptiveCard 
+                    title="Platform Card"
+                    description="This card adapts to the current platform style."
+                    footer={
+                      <Button size="sm" className="w-full">
+                        <Check className="mr-1 h-4 w-4" /> Action
+                      </Button>
+                    }
+                  >
+                    <p>Content goes here</p>
+                  </AdaptiveCard>
                 </div>
                 
-                <div className="h-64 mt-6">
-                  <PlatformTabBar
-                    tabs={tabs}
-                    position="bottom"
-                  />
+                <div className="space-y-4 md:col-span-2">
+                  <h3 className="text-lg font-medium">Adaptive Scroll Area</h3>
+                  <AdaptiveScrollArea className="h-[200px] border rounded-md p-4">
+                    {Array(20).fill(0).map((_, i) => (
+                      <p key={i} className="mb-4">Scrollable content item {i + 1}</p>
+                    ))}
+                  </AdaptiveScrollArea>
+                </div>
+                
+                <div className="space-y-4 md:col-span-2">
+                  <h3 className="text-lg font-medium">Platform Button Examples</h3>
+                  <div className="flex flex-wrap gap-4">
+                    <PlatformButton>Default</PlatformButton>
+                    <PlatformButton variant="outline">Outline</PlatformButton>
+                    <PlatformButton variant="destructive">Destructive</PlatformButton>
+                    <PlatformButton variant="secondary">Secondary</PlatformButton>
+                    <PlatformButton hapticFeedbackType="success" variant="default">
+                      With Success Feedback
+                    </PlatformButton>
+                  </div>
                 </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <p className="text-sm text-muted-foreground">
-            Current Platform: {isPlatformIOS ? 'iOS' : isPlatformAndroid ? 'Android' : 'Web'}
-          </p>
-        </CardFooter>
-      </Card>
-    </MobileContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
-}
+};
 
 export default PlatformComponentsDemo;

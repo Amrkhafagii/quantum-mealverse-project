@@ -1,131 +1,92 @@
 
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Star, StarHalf } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import ARMealPreview from '@/components/ARMealPreview';
-import { MealType } from '@/types/meal';
+import React, { useEffect, useState } from 'react';
+import supabase from '@/services/supabaseClient';
+import { Meal as MealType } from '@/types/meal';
 
-interface MealDetailsProps {
-  id?: string;
-}
+const MealDetails: React.FC<{ id: string }> = ({ id }) => {
+  const [meal, setMeal] = useState<MealType | null>(null);
+  const [loading, setLoading] = useState(true);
 
-const MealDetails = ({ id: propId }: MealDetailsProps) => {
-  const { id: routeId } = useParams();
-  const id = propId || routeId;
+  useEffect(() => {
+    const fetchMeal = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('menu_items')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-  const { data: meal, isLoading, isError, error } = useQuery<MealType>({
-    queryKey: ['meal', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('id', id)
-        .single();
+        if (error) {
+          console.error('Error fetching meal:', error);
+          return;
+        }
 
-      if (error) {
-        throw new Error(error.message);
+        // Convert the database object to MealType
+        if (data) {
+          // Parse nutritional_info if it's a string
+          const nutritionalInfo = typeof data.nutritional_info === 'string' 
+            ? JSON.parse(data.nutritional_info) 
+            : data.nutritional_info;
+          
+          const mealData: MealType = {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            image_url: data.image_url,
+            price: data.price,
+            category: data.category,
+            ingredients: data.ingredients || [],
+            steps: data.steps || [],
+            preparation_time: data.preparation_time || 0,
+            restaurant_id: data.restaurant_id,
+            is_available: data.is_available || true,
+            is_active: true, // Default to true if not available in data
+            nutritional_info: {
+              calories: nutritionalInfo?.calories || 0,
+              protein: nutritionalInfo?.protein || 0, 
+              carbs: nutritionalInfo?.carbs || 0,
+              fat: nutritionalInfo?.fat || 0
+            },
+            created_at: data.created_at,
+            updated_at: data.updated_at
+          };
+          
+          setMeal(mealData);
+        }
+      } catch (error) {
+        console.error('Error in meal fetch:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // Convert the data to match MealType format
-      const mealData: MealType = {
-        id: data.id,
-        name: data.name,
-        description: data.description || '',
-        price: data.price,
-        calories: data.nutritional_info?.calories || 0,
-        protein: data.nutritional_info?.protein || 0,
-        carbs: data.nutritional_info?.carbs || 0,
-        fat: data.nutritional_info?.fat || 0,
-        image_url: data.image_url,
-        is_active: data.is_available || true,
-        restaurant_id: data.restaurant_id,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        ingredients: data.ingredients || [],
-        steps: data.steps || [],
-        nutritional_info: data.nutritional_info
-      };
+    if (id) {
+      fetchMeal();
+    }
+  }, [id]);
 
-      return mealData;
-    },
-    enabled: !!id,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4">
-        <Skeleton className="h-8 w-48 mb-2" />
-        <Skeleton className="h-4 w-64 mb-4" />
-        <Skeleton className="h-64 w-full rounded-md mb-4" />
-        <Skeleton className="h-4 w-48 mb-2" />
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-4 w-56" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return <div className="container mx-auto p-4 text-red-500">Error: {error.message}</div>;
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   if (!meal) {
-    return <div className="container mx-auto p-4">Meal not found</div>;
+    return <div>Meal not found</div>;
   }
 
-  const renderRating = () => {
-    const rating = meal.nutritional_info?.health_score || 0;
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      if (i <= Math.floor(rating)) {
-        stars.push(<Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
-      } else if (i === Math.ceil(rating) && !Number.isInteger(rating)) {
-        stars.push(<StarHalf key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
-      } else {
-        stars.push(<Star key={i} className="h-4 w-4 text-gray-400" />);
-      }
-    }
-    return stars;
-  };
-  
-  // Fix the AR preview prop issue by ensuring mealName is passed
-  const renderARPreview = () => {
-    return (
-      <div className="mt-4">
-        <ARMealPreview 
-          mealName={meal?.name || 'Unknown Meal'} 
-          modelName="Standard3D" 
-        />
-      </div>
-    );
-  };
-
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-semibold mb-2">{meal.name}</h1>
-      <div className="flex items-center mb-4">
-        {renderRating()}
-        <Badge className="ml-2">
-          {meal.nutritional_info?.health_score?.toFixed(1) || "N/A"}
-        </Badge>
-        <span className="text-gray-500 ml-1">
-          ({meal.nutritional_info?.calories || 0} calories)
-        </span>
-      </div>
-      <img 
-        src={meal.image_url || '/placeholder.svg'} 
-        alt={meal.name} 
-        className="w-full h-64 object-cover rounded-md mb-4" 
-      />
-      <p className="text-gray-700">{meal.description}</p>
-      <div className="mt-4">
-        <span className="text-xl font-semibold">Price:</span>
-        <span className="ml-2">${meal.price.toFixed(2)}</span>
-      </div>
-      {renderARPreview()}
+    <div>
+      <h1>{meal.name}</h1>
+      <p>{meal.description}</p>
+      <p>${meal.price.toFixed(2)}</p>
+      {meal.image_url && <img src={meal.image_url} alt={meal.name} />}
+      
+      <h2>Nutritional Information</h2>
+      <ul>
+        <li>Calories: {meal.nutritional_info.calories}</li>
+        <li>Protein: {meal.nutritional_info.protein}g</li>
+        <li>Carbs: {meal.nutritional_info.carbs}g</li>
+        <li>Fat: {meal.nutritional_info.fat}g</li>
+      </ul>
     </div>
   );
 };

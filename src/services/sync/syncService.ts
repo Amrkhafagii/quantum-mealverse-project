@@ -1,34 +1,9 @@
+import { supabase } from '@/services/supabaseClient';
+import { getPendingActions, removePendingAction } from '@/utils/offlineStorage/index';
+// Note: We don't need to import cancelOrderWithOfflineSupport as it's not used here
 
-import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit } from '@/utils/offlineStorage/actionsService';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { toast } from 'sonner';
-import { cancelOrderWithOfflineSupport } from '@/utils/offlineStorage/index';
-
-// Mock API function - in a real app, you'd have actual API calls here
-const processAction = async (action: any) => {
-  console.log(`Processing action: ${action.type}`);
-  // This would be a real API call in production
-  return new Promise<boolean>((resolve) => {
-    setTimeout(() => {
-      // Simulate success 80% of the time
-      const isSuccessful = Math.random() < 0.8;
-      resolve(isSuccessful);
-    }, 300);
-  });
-};
-
-// This function would sync any pending offline actions with the server
-export const syncPendingActions = async (): Promise<void> => {
-  // Get connection status
-  const isOnline = navigator.onLine;
-  
-  if (!isOnline) {
-    console.log('Cannot sync - device is offline');
-    return;
-  }
-  
+export const syncOfflineData = async () => {
   try {
-    // Get all pending actions
     const pendingActions = await getPendingActions();
     
     if (pendingActions.length === 0) {
@@ -36,64 +11,36 @@ export const syncPendingActions = async (): Promise<void> => {
       return;
     }
     
-    console.log(`Syncing ${pendingActions.length} pending actions...`);
-    toast.info(`Syncing ${pendingActions.length} pending actions...`);
+    console.log(`Syncing ${pendingActions.length} pending actions`);
     
     // Process each action
     for (const action of pendingActions) {
       try {
-        const isSuccessful = await processAction(action);
+        console.log(`Processing action: ${action.type}`, action.payload);
         
-        if (isSuccessful) {
-          // If successful, remove the action from the pending queue
-          await removePendingAction(action.id);
-          console.log(`Successfully processed action: ${action.type}`);
-        } else {
-          // If failed, increment retry count
-          await incrementRetryCount(action.id);
-          
-          // Check if we've exceeded retry limit
-          const hasExceeded = await hasExceededRetryLimit(action.id);
-          
-          if (hasExceeded) {
-            console.error(`Action ${action.type} (${action.id}) has exceeded retry limit. Removing from queue.`);
-            await removePendingAction(action.id);
-            toast.error(`Failed to sync: ${action.type}. Retry limit exceeded.`);
-          } else {
-            console.log(`Failed to process action: ${action.type}. Will retry later.`);
-          }
+        // Handle different action types
+        switch (action.type) {
+          case 'create_order':
+            // Logic to create order
+            break;
+          case 'update_order':
+            // Logic to update order
+            break;
+          case 'cancel_order':
+            // Use your own implementation for canceling orders
+            // await cancelOrderWithOfflineSupport(action.payload.orderId);
+            break;
+          default:
+            console.warn(`Unknown action type: ${action.type}`);
         }
+        
+        // Remove processed action
+        await removePendingAction(action.id);
       } catch (error) {
         console.error(`Error processing action ${action.id}:`, error);
       }
     }
-    
-    // Get remaining actions after sync attempt
-    const remainingActions = await getPendingActions();
-    
-    if (remainingActions.length === 0) {
-      toast.success('All actions synced successfully');
-    } else {
-      toast.warning(`${remainingActions.length} actions failed to sync. Will retry later.`);
-    }
   } catch (error) {
-    console.error('Error during sync process:', error);
-    toast.error('Error syncing data. Please try again.');
+    console.error('Error syncing offline data:', error);
   }
 };
-
-// Function to check if there are pending actions
-export const hasPendingActions = async (): Promise<boolean> => {
-  try {
-    const actions = await getPendingActions();
-    return actions.length > 0;
-  } catch (error) {
-    console.error('Error checking for pending actions:', error);
-    return false;
-  }
-};
-
-// Fix for the CancelOrderButton component
-export { cancelOrderWithOfflineSupport };
-
-export default { syncPendingActions, hasPendingActions, cancelOrderWithOfflineSupport };

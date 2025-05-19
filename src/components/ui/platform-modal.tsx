@@ -123,16 +123,28 @@ export function PlatformModal({
     
     return "";
   };
+
+  // Get overlay background styles based on platform
+  const getOverlayStyle = () => {
+    if (isPlatformIOS) {
+      return "bg-black/30 backdrop-blur-sm";
+    }
+    
+    if (isPlatformAndroid) {
+      return "bg-black/40";
+    }
+    
+    return "";
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={cn(getModalContentClasses(), contentClassName)} 
-        overlayClassName={cn(
-          isPlatformIOS ? "bg-black/30 backdrop-blur-sm" : 
-          isPlatformAndroid ? "bg-black/40" : 
-          ""
-        )}
+        className={cn(getModalContentClasses(), contentClassName)}
+        // Note: We're using style for backdrop since overlayClassName isn't supported
+        style={{
+          "--overlay-bg": isPlatformIOS ? "rgba(0,0,0,0.3)" : isPlatformAndroid ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.8)"
+        } as React.CSSProperties}
       >
         {showCloseButton && (
           <button
