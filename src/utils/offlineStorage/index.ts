@@ -1,79 +1,125 @@
 
 import offlineStorage from './factory';
-import { getPendingActions, queueOfflineAction, removePendingAction, clearAllPendingActions } from './actionsService';
-import { getActiveOrders, storeActiveOrder, getActiveOrder } from './ordersService';
-import { supabase } from '@/integrations/supabase/client';
+import { STORAGE_KEYS, OfflineAction } from './types';
+import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit, clearAllPendingActions } from './actionsService';
+
+// Export the action service functions
+export { 
+  getPendingActions, 
+  removePendingAction, 
+  incrementRetryCount, 
+  hasExceededRetryLimit,
+  clearAllPendingActions
+};
 
 /**
- * Sync all pending actions with the server
+ * Process all pending offline actions
  */
 export const syncPendingActions = async (): Promise<void> => {
   try {
     const pendingActions = await getPendingActions();
-    
     if (pendingActions.length === 0) {
+      console.log('No pending actions to sync');
       return;
     }
     
-    console.log(`Syncing ${pendingActions.length} pending actions...`);
+    console.log(`Processing ${pendingActions.length} pending actions`);
     
+    // Process each action sequentially
     for (const action of pendingActions) {
       try {
-        if (action.type === 'cancel_order') {
-          // Process order cancellation
-          const { orderId } = action.payload;
-          const { error } = await supabase
-            .from('orders')
-            .update({ status: 'cancelled' })
-            .eq('id', orderId);
-          
-          if (error) {
-            console.error("Error syncing cancel order action:", error);
-            continue;
-          }
-          
-          // Remove action after successful processing
-          await removePendingAction(action.id);
+        // Process based on action type - this would be implemented based on your specific needs
+        console.log(`Processing action: ${action.type}`, action);
+        
+        // Here you would implement the logic to process each action type
+        // For example:
+        /*
+        switch (action.type) {
+          case 'create_order':
+            await processCreateOrder(action.payload);
+            break;
+          case 'update_order':
+            await processUpdateOrder(action.payload);
+            break;
+          // Handle other action types
         }
+        */
         
-        // Add other action type handlers here in the future
-        
+        // If successful, remove the action
+        await removePendingAction(action.id);
       } catch (error) {
         console.error(`Error processing action ${action.id}:`, error);
+        
+        // Increment retry count
+        await incrementRetryCount(action.id);
+        
+        // Check if we've exceeded retry limit
+        if (await hasExceededRetryLimit(action.id)) {
+          console.warn(`Action ${action.id} exceeded retry limit, removing`);
+          await removePendingAction(action.id);
+        }
       }
     }
     
-    console.log("Sync completed");
+    console.log('Finished processing pending actions');
   } catch (error) {
-    console.error("Error syncing pending actions:", error);
+    console.error('Error syncing pending actions:', error);
     throw error;
   }
 };
 
 /**
- * Cancel an order with offline support
- * Used for optimistic UI updates when offline
+ * Generic function to get data from offline storage
+ * @param key Storage key
+ * @returns The stored data, or null if not found
  */
-export const cancelOrderWithOfflineSupport = async (orderId: string): Promise<void> => {
+export async function getOfflineData<T>(key: string): Promise<T | null> {
   try {
-    // Update the local active order cache
-    const order = await getActiveOrder(orderId);
-    if (order) {
-      order.status = 'cancelled';
-      await storeActiveOrder(order);
-    }
+    const data = await offlineStorage.get<T>(key);
+    return data;
   } catch (error) {
-    console.error("Error updating local order state:", error);
+    console.error(`Error getting offline data for key ${key}:`, error);
+    return null;
   }
-};
+}
 
-export { 
-  offlineStorage as default,
-  getPendingActions,
-  queueOfflineAction,
-  removePendingAction,
-  clearAllPendingActions,
-  getActiveOrders,
-  storeActiveOrder,
-  getActiveOrder
-};
+/**
+ * Generic function to save data to offline storage
+ * @param key Storage key
+ * @param data Data to store
+ */
+export async function saveOfflineData<T>(key: string, data: T): Promise<void> {
+  try {
+    await offlineStorage.set(key, data);
+  } catch (error) {
+    console.error(`Error saving offline data for key ${key}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Remove data from offline storage
+ * @param key Storage key
+ */
+export async function removeOfflineData(key: string): Promise<void> {
+  try {
+    await offlineStorage.remove(key);
+  } catch (error) {
+    console.error(`Error removing offline data for key ${key}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Clear all data from offline storage
+ */
+export async function clearOfflineData(): Promise<void> {
+  try {
+    await offlineStorage.clear();
+  } catch (error) {
+    console.error('Error clearing offline data:', error);
+    throw error;
+  }
+}
+
+export default offlineStorage;
