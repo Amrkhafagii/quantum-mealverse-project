@@ -2,8 +2,8 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { OrderStatusMessage } from './OrderStatusMessage';
-import { CancelOrderButton } from './status/CancelOrderButton';
-import { OrderTimer } from './status/OrderTimer';
+import CancelOrderButton from './status/CancelOrderButton';
+import { OrderTimer } from './OrderTimer';
 import { Order } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -110,7 +110,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
           {showCancelButton && canBeCancelled && isOnline && (
             <CancelOrderButton 
               orderId={order.id!} 
-              onCancelOrder={() => {
+              onCancelSuccess={() => {
                 if (onOrderUpdate) onOrderUpdate();
                 if (isMobile) hapticFeedback.heavy();
               }}

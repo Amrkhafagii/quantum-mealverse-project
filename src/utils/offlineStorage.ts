@@ -1,3 +1,4 @@
+
 import { Preferences } from '@capacitor/preferences';
 import { Platform } from './platform';
 
@@ -158,7 +159,7 @@ class WebStorage implements OfflineStorage {
   async keys(): Promise<string[]> {
     try {
       const db = await this.getDatabase();
-      return new Promise((resolve, reject) => {
+      return new Promise<string[]>((resolve, reject) => {
         const transaction = db.transaction(this.storeName, 'readonly');
         const store = transaction.objectStore(this.storeName);
         const request = store.getAllKeys();
@@ -187,7 +188,7 @@ class WebStorage implements OfflineStorage {
   async clear(): Promise<void> {
     try {
       const db = await this.getDatabase();
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(this.storeName, 'readwrite');
         const store = transaction.objectStore(this.storeName);
         const request = store.clear();
@@ -206,10 +207,10 @@ class WebStorage implements OfflineStorage {
       // Fall back to localStorage as a backup
       try {
         localStorage.clear();
-        resolve();
+        return Promise.resolve();
       } catch (fallbackError) {
         console.error('Error using localStorage fallback:', fallbackError);
-        reject(fallbackError);
+        return Promise.reject(fallbackError);
       }
     }
   }

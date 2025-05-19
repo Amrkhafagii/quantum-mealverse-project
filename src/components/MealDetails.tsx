@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,26 +6,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { Star, StarHalf } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import ARMealPreview, { ARMealPreviewProps } from '@/components/ARMealPreview';
+import ARMealPreview from '@/components/ARMealPreview';
+import { MealType } from '@/types/meal';
 
-interface Meal {
-  id: string;
-  name: string;
-  description: string;
-  image_url: string;
-  price: number;
-  rating: number;
-  review_count: number;
+interface MealDetailsProps {
+  id?: string;
 }
 
-const MealDetails = () => {
-  const { id } = useParams();
+const MealDetails = ({ id: propId }: MealDetailsProps) => {
+  const { id: routeId } = useParams();
+  const id = propId || routeId;
 
-  const { data: meal, isLoading, isError, error } = useQuery<Meal, Error>({
+  const { data: meal, isLoading, isError, error } = useQuery<MealType>({
     queryKey: ['meal', id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('meals')
+        .from('menu_items')
         .select('*')
         .eq('id', id)
         .single();
@@ -33,7 +30,7 @@ const MealDetails = () => {
         throw new Error(error.message);
       }
 
-      return data as Meal;
+      return data as MealType;
     },
     enabled: !!id,
   });
@@ -60,11 +57,12 @@ const MealDetails = () => {
   }
 
   const renderRating = () => {
+    const rating = meal.nutritional_info?.health_score || 0;
     const stars = [];
     for (let i = 1; i <= 5; i++) {
-      if (i <= Math.floor(meal.rating)) {
+      if (i <= Math.floor(rating)) {
         stars.push(<Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
-      } else if (i === Math.ceil(meal.rating) && !Number.isInteger(meal.rating)) {
+      } else if (i === Math.ceil(rating) && !Number.isInteger(rating)) {
         stars.push(<StarHalf key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
       } else {
         stars.push(<Star key={i} className="h-4 w-4 text-gray-400" />);
@@ -90,10 +88,18 @@ const MealDetails = () => {
       <h1 className="text-2xl font-semibold mb-2">{meal.name}</h1>
       <div className="flex items-center mb-4">
         {renderRating()}
-        <Badge className="ml-2">{meal.rating.toFixed(1)}</Badge>
-        <span className="text-gray-500 ml-1">({meal.review_count} reviews)</span>
+        <Badge className="ml-2">
+          {meal.nutritional_info?.health_score?.toFixed(1) || "N/A"}
+        </Badge>
+        <span className="text-gray-500 ml-1">
+          ({meal.nutritional_info?.calories || 0} calories)
+        </span>
       </div>
-      <img src={meal.image_url} alt={meal.name} className="w-full h-64 object-cover rounded-md mb-4" />
+      <img 
+        src={meal.image_url || '/placeholder.svg'} 
+        alt={meal.name} 
+        className="w-full h-64 object-cover rounded-md mb-4" 
+      />
       <p className="text-gray-700">{meal.description}</p>
       <div className="mt-4">
         <span className="text-xl font-semibold">Price:</span>

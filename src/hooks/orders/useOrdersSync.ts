@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { syncPendingActions, getPendingActions } from '@/utils/offlineStorage';
+import { getPendingActions } from '@/utils/offlineStorage/actionsService';
+import { syncPendingActions } from '@/utils/offlineStorage/index';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 
 export const useOrdersSync = () => {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -62,6 +64,3 @@ export const useOrdersSync = () => {
   
   return { pendingActionsCount, handleSync, isSyncing };
 };
-
-// Make sure to include this import at the top
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
