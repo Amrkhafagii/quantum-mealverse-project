@@ -36,32 +36,6 @@ const RestaurantMapView = React.lazy(() =>
 
 type SortOption = 'price-asc' | 'price-desc' | 'rating-desc' | 'calories-asc';
 
-export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
-  onLocationUpdate,
-  loadingContent,
-  showLoadingState,
-  autoNavigateToMenu,
-  forcePrompt
-}) => {
-  const [loading, setLoading] = useState(showLoadingState);
-
-  useEffect(() => {
-    if (showLoadingState) {
-      setLoading(true);
-    }
-  }, [showLoadingState]);
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-quantum-darkBlue/30 rounded-lg p-6">
-      {loading ? (
-        <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan mb-4" />
-      ) : (
-        loadingContent
-      )}
-    </div>
-  );
-};
-
 const Customer = () => {
   const { location, permissionStatus, requestPermission } = useLocationPermission();
   const [isMapView, setIsMapView] = useState(false);
