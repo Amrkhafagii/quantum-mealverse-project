@@ -2,13 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Droplets, Plus, Minus } from 'lucide-react';
+import { Droplets, Plus, Minus, GlassWater } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 
 interface WaterIntakeTrackerProps {
   targetIntake: number;
   currentIntake?: number;
+  onIntakeChange?: (newIntake: number) => void;
+  mini?: boolean;
 }
 
 const GLASS_SIZE = 250; // ml per glass
@@ -16,7 +18,9 @@ const RECOMMENDED_DAILY = 2500; // ml for average adult
 
 const WaterIntakeTracker: React.FC<WaterIntakeTrackerProps> = ({
   targetIntake = RECOMMENDED_DAILY,
-  currentIntake: initialIntake = 0
+  currentIntake: initialIntake = 0,
+  onIntakeChange,
+  mini = false
 }) => {
   const { toast } = useToast();
   const [currentIntake, setCurrentIntake] = useState(initialIntake);
@@ -35,7 +39,12 @@ const WaterIntakeTracker: React.FC<WaterIntakeTrackerProps> = ({
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     localStorage.setItem(`water_intake_${today}`, currentIntake.toString());
-  }, [currentIntake]);
+    
+    // Notify parent component if callback provided
+    if (onIntakeChange) {
+      onIntakeChange(currentIntake);
+    }
+  }, [currentIntake, onIntakeChange]);
   
   const percentage = Math.min(100, Math.round((currentIntake / targetIntake) * 100));
   
@@ -53,6 +62,28 @@ const WaterIntakeTracker: React.FC<WaterIntakeTrackerProps> = ({
 
   const glassesCount = Math.floor(currentIntake / GLASS_SIZE);
   const remainingGlasses = Math.ceil((targetIntake - currentIntake) / GLASS_SIZE);
+  const totalGlasses = Math.ceil(targetIntake / GLASS_SIZE);
+  
+  if (mini) {
+    return (
+      <div className="relative">
+        <Card className="bg-quantum-darkBlue/50 border-blue-500/20 overflow-hidden">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Droplets className="h-4 w-4 text-blue-400" />
+                <span className="text-sm font-medium text-blue-400">{percentage}%</span>
+              </div>
+              <div className="text-xs text-gray-400">
+                {glassesCount}/{totalGlasses} glasses
+              </div>
+            </div>
+            <Progress value={percentage} className="h-1.5 bg-blue-900/60 mt-1" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className="relative">
@@ -81,9 +112,9 @@ const WaterIntakeTracker: React.FC<WaterIntakeTrackerProps> = ({
               <Minus className="h-3 w-3" />
             </Button>
             
-            <div className="text-center">
+            <div className="flex items-center">
+              <GlassWater className="h-4 w-4 mr-1 text-blue-400" />
               <span className="text-xs text-gray-400">{glassesCount} glasses</span>
-              <span className="text-sm font-medium block">{percentage}%</span>
             </div>
             
             <Button

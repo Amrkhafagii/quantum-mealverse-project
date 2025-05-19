@@ -1,28 +1,38 @@
 
+import { HydrationData } from './index';
 
 export interface SavedMealPlan {
-  id?: string;
+  id: string;
   user_id: string;
   name: string;
-  meal_plan: any;
-  expires_at?: string; // Optional as not all meal plans may have an expiry
-  is_active: boolean;
-  date_created?: string;
+  date_created: string;
+  expiration_date?: string;
+  meal_plan: any; // This contains the full meal plan data
   tdee_id?: string;
+  hydration_data?: HydrationData;
 }
 
-export interface SavedMealPlanWithExpiry extends SavedMealPlan {
-  // No additional fields needed as is_active is now in the base interface
-}
-
-export interface DailyQuest {
+export interface NutritionGoal {
   id: string;
-  title: string;
-  description: string;
-  points: number;
-  type: string;
-  requirements: any;
-  completed: boolean;
-  deadline?: string;
+  user_id: string;
+  protein_target: number;
+  carbs_target: number;
+  fat_target: number;
+  calorie_target: number;
+  hydration_target: number;
+  created_at: string;
+  updated_at: string;
 }
 
+export interface DailyNutritionLog {
+  id: string;
+  user_id: string;
+  date: string;
+  meals: any[];
+  water_intake: number;
+  calories_consumed: number;
+  protein_consumed: number;
+  carbs_consumed: number;
+  fat_consumed: number;
+  notes?: string;
+}

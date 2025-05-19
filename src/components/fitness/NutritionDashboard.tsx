@@ -30,6 +30,15 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   
   const isProteinSufficient = (mealPlan.actualProtein || 0) >= mealPlan.targetProtein * 0.95;
 
+  // Load water intake from localStorage on mount
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const savedIntake = localStorage.getItem(`water_intake_${today}`);
+    if (savedIntake) {
+      setWaterIntake(parseInt(savedIntake));
+    }
+  }, []);
+
   // Distribution percentages for each meal
   const mealDistribution = [
     { name: 'Breakfast', protein: 0.25, carbs: 0.25, fat: 0.25 },
@@ -120,6 +129,11 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     }
   };
 
+  const handleWaterIntakeChange = (newIntake: number) => {
+    setWaterIntake(newIntake);
+    // You can add more logic here if needed to update other parts of the app
+  };
+
   return (
     <div className="space-y-6">
       {/* Nutritional Overview Header using MacroSummary component */}
@@ -141,6 +155,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
             setIsAutoOptimizeProtein={setIsAutoOptimizeProtein}
             hydrationTarget={mealPlan.hydrationTarget || calculateRecommendedWaterIntake()}
             waterIntake={waterIntake}
+            onWaterIntakeChange={handleWaterIntakeChange}
           />
         </div>
       </div>

@@ -8,3 +8,11 @@ export * from './profile';
 export * from './workouts';
 export * from './logs';
 export * from './schedules';
+
+// Additional types related to hydration tracking
+export interface HydrationData {
+  targetIntake: number;
+  currentIntake: number;
+  lastUpdated: string;
+  glassSize: number;
+}

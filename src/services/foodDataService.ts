@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 /**
@@ -269,32 +268,43 @@ export class FoodDataService {
    * Calculate water intake recommendation based on weight and activity level
    */
   calculateWaterIntake(weightKg: number, activityLevel: string): number {
-    // Base recommendation: 35ml per kg of body weight
-    let baseIntake = weightKg * 35;
+    // Enhanced formula based on weight, activity level, and environmental factors
+    let baseIntake = weightKg * 35; // Base: 35ml per kg of body weight
     
-    // Adjust based on activity level
+    // Adjust based on activity level with more precise calculations
     switch (activityLevel) {
       case 'sedentary':
-        baseIntake *= 0.9;
+        baseIntake *= 0.9; // Less active individuals need less hydration
         break;
       case 'lightly-active':
-        baseIntake *= 1.0;
+        baseIntake *= 1.0; // Default adjustment
         break;
       case 'moderately-active':
-        baseIntake *= 1.1;
+        baseIntake *= 1.1; // Moderate exercise increases fluid needs
         break;
       case 'very-active':
-        baseIntake *= 1.2;
+        baseIntake *= 1.25; // Intense activity requires significantly more hydration
         break;
       case 'extremely-active':
-        baseIntake *= 1.3;
+        baseIntake *= 1.4; // Athletes and very active individuals need even more
         break;
       default:
         // Default to moderate activity if not specified
         baseIntake *= 1.0;
     }
     
-    // Round to nearest 10ml
+    // Environmental adjustment - this could be enhanced further with actual temperature data
+    const currentDate = new Date();
+    const month = currentDate.getMonth(); // 0-11
+    
+    // Rough seasonal adjustment (northern hemisphere assumption)
+    if (month >= 4 && month <= 8) { // Summer months (May-September)
+      baseIntake *= 1.1; // Increase water intake in warmer months
+    } else if (month === 11 || month <= 1) { // Winter months (December-February)
+      baseIntake *= 0.95; // Slightly decrease in colder months
+    }
+    
+    // Round to nearest 10ml for easy measurement
     return Math.round(baseIntake / 10) * 10;
   }
   
@@ -303,7 +313,7 @@ export class FoodDataService {
    */
   calculateWaterGlasses(waterIntakeML: number): number {
     const ML_PER_GLASS = 240; // 8oz = ~240ml
-    return Math.round(waterIntakeML / ML_PER_GLASS);
+    return Math.ceil(waterIntakeML / ML_PER_GLASS); // Round up to ensure adequate hydration
   }
   
   /**
