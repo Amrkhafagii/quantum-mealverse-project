@@ -64,7 +64,7 @@ export const saveMealPlan = async (
   error: any;
 }> => {
   try {
-    const mealPlanData = {
+    const mealPlanData: SavedMealPlan = {
       user_id: userId,
       name,
       meal_plan: mealPlan as unknown as Json,
@@ -117,7 +117,7 @@ export const deleteSavedMealPlan = async (planId: string, userId: string): Promi
 export const updateSavedMealPlan = async (
   planId: string,
   userId: string,
-  updates: Partial<SavedMealPlanExtended>
+  updates: Partial<SavedMealPlan>
 ): Promise<{
   data: SavedMealPlan | null;
   error: any;
@@ -151,7 +151,7 @@ export const extendMealPlanExpiration = async (
   error: any;
 }> => {
   try {
-    const updateData = {
+    const updateData: Partial<SavedMealPlan> = {
       is_active: true
     };
 
@@ -190,7 +190,7 @@ export const renewMealPlan = async (planId: string): Promise<{
   error?: string;
 }> => {
   try {
-    const updateData = {
+    const updateData: Partial<SavedMealPlan> = {
       is_active: true
     };
 

@@ -1,3 +1,4 @@
+
 // User profile types
 export interface UserProfile {
   id: string;
@@ -178,3 +179,4 @@ export interface SavedMealPlan {
   is_active?: boolean;
   expires_at?: string;
 }
+
