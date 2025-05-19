@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -12,7 +11,7 @@ import { motion } from 'framer-motion';
 import TDEECalculator from '@/components/fitness/TDEECalculator';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { generateMealPlan } from '@/services/mealPlanService';
+import { generateMealPlan } from '@/services/mealPlan/mealGenerationService';
 import { MealPlan } from '@/types/food';
 import NutritionDashboard from '@/components/fitness/NutritionDashboard';
 import { supabase } from '@/services/supabaseClient';

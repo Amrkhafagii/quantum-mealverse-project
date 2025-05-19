@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { TDEEResult } from '@/components/fitness/TDEECalculator'; 
 import { MealPlan } from '@/types/food';
-import { shuffleMeal } from '@/services/mealPlanService';
+import { shuffleMeal } from '@/services/mealPlan/mealGenerationService';
 import { toast } from 'sonner';
 
 // Import the newly created components
