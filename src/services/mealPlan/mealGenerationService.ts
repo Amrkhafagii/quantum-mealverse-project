@@ -60,7 +60,13 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   const actualProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
   const actualCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
   const actualFat = meals.reduce((sum, meal) => sum + meal.totalFat, 0);
-  const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+  
+  // Calculate calories based on macros using the standard conversion factors
+  // Protein: 4 cal/g, Carbs: 4 cal/g, Fat: 9 cal/g
+  const calculatedCalories = Math.round((actualProtein * 4) + (actualCarbs * 4) + (actualFat * 9));
+  
+  // Use the calculated calories as our total to ensure consistency
+  const totalCalories = calculatedCalories;
 
   // Verify and adjust if targets are not met within acceptable thresholds
   const macroTargetThreshold = 0.1; // 10% threshold for macro verification
@@ -75,13 +81,15 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     areFatsBalanced,
     proteinDiff: ((actualProtein - proteinGrams) / proteinGrams * 100).toFixed(1) + "%",
     carbsDiff: ((actualCarbs - carbsGrams) / carbsGrams * 100).toFixed(1) + "%", 
-    fatsDiff: ((actualFat - fatsGrams) / fatsGrams * 100).toFixed(1) + "%"
+    fatsDiff: ((actualFat - fatsGrams) / fatsGrams * 100).toFixed(1) + "%",
+    calculatedCalories,
+    sumOfMealCalories: meals.reduce((sum, meal) => sum + meal.totalCalories, 0)
   });
 
   return {
     id: crypto.randomUUID(),
     goal,
-    totalCalories: Math.round(totalCalories),
+    totalCalories,
     targetProtein: proteinGrams,
     targetCarbs: carbsGrams,
     targetFat: fatsGrams,

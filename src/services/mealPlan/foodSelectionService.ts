@@ -1,6 +1,6 @@
-
 import { Food, FoodCategory, CookingState } from '@/types/food';
 import { foodDataService } from '../foodDataService';
+import { foodDatabase } from '../../data/foodDatabase';
 
 /**
  * Gets suitable foods for each meal type (breakfast, lunch, dinner, snack)
@@ -11,9 +11,6 @@ export const getSuitableFoodsForMeal = (mealType: string): {
   fats: Food[],
   veggies: Food[]
 } => {
-  // Import food database directly to avoid circular dependencies
-  const { foodDatabase } = require('../../data/foodDatabase');
-  
   // Filter foods suitable for this meal type
   const suitableFoods = foodDatabase.filter(food => 
     food.mealSuitability?.includes(mealType) || !food.mealSuitability

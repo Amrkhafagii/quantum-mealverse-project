@@ -44,6 +44,17 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, className }
       </Card>
     );
   }
+  
+  // Calculate the total calories based on macros for verification
+  const totalProtein = extendedMealPlan.total_protein || extendedMealPlan.actualProtein || 0;
+  const totalCarbs = extendedMealPlan.total_carbs || extendedMealPlan.actualCarbs || 0;
+  const totalFat = extendedMealPlan.total_fat || extendedMealPlan.actualFat || 0;
+  
+  // Use the standard conversion factors: 4 cal/g for protein and carbs, 9 cal/g for fat
+  const calculatedCalories = Math.round((totalProtein * 4) + (totalCarbs * 4) + (totalFat * 9));
+  
+  // Use calculated calories if available, otherwise fall back to the stored value
+  const displayCalories = calculatedCalories || extendedMealPlan.total_calories || extendedMealPlan.totalCalories || 0;
 
   return (
     <Card className={`bg-quantum-darkBlue/30 border-quantum-cyan/20 ${className}`}>
@@ -88,20 +99,20 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, className }
         <div className="flex justify-between items-center mt-4 pt-4 border-t border-quantum-cyan/20">
           <div>
             <p className="text-sm text-gray-400">Daily Totals</p>
-            <p className="font-bold text-lg">{extendedMealPlan.total_calories || extendedMealPlan.totalCalories || 0} calories</p>
+            <p className="font-bold text-lg">{displayCalories} calories</p>
           </div>
           <div className="flex gap-4 text-center">
             <div>
               <p className="text-xs text-gray-400">Protein</p>
-              <p className="font-medium">{extendedMealPlan.total_protein || 0}g</p>
+              <p className="font-medium">{totalProtein}g</p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Carbs</p>
-              <p className="font-medium">{extendedMealPlan.total_carbs || 0}g</p>
+              <p className="font-medium">{totalCarbs}g</p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Fat</p>
-              <p className="font-medium">{extendedMealPlan.total_fat || 0}g</p>
+              <p className="font-medium">{totalFat}g</p>
             </div>
           </div>
         </div>

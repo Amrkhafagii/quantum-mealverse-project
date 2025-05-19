@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { TDEEResult } from '@/components/fitness/TDEECalculator'; 
@@ -100,18 +99,20 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     updatedMeals[index] = newMeal;
     
     // Recalculate actual totals
-    const totalCalories = updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
     const actualProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
     const actualCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
     const actualFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
     
+    // Calculate calories based on macronutrients using the standard conversion factors
+    const calculatedCalories = Math.round((actualProtein * 4) + (actualCarbs * 4) + (actualFat * 9));
+    
     const updatedMealPlan = {
       ...mealPlan,
       meals: updatedMeals,
-      totalCalories,
-      actualProtein,
-      actualCarbs,
-      actualFat
+      totalCalories: calculatedCalories,
+      actualProtein: Math.round(actualProtein),
+      actualCarbs: Math.round(actualCarbs),
+      actualFat: Math.round(actualFat)
     };
     
     onUpdateMealPlan(updatedMealPlan);
@@ -131,7 +132,9 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
 
   const handleWaterIntakeChange = (newIntake: number) => {
     setWaterIntake(newIntake);
-    // You can add more logic here if needed to update other parts of the app
+    // Save to localStorage for persistence
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem(`water_intake_${today}`, newIntake.toString());
   };
 
   return (
