@@ -8,44 +8,29 @@ import { TDEEResult, MealDistribution } from './types';
 export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   const { adjustedCalories, proteinGrams, carbsGrams, fatsGrams, goal, weight, activityLevel } = tdeeResult;
   
-  // Distribution of calories across meals
-  const breakfastRatio = 0.25;
-  const lunchRatio = 0.35;
-  const snackRatio = 0.15;
-  const dinnerRatio = 0.25;
+  // Enhanced meal distribution with more accurate ratios based on nutritional science
+  const mealDistribution = [
+    { name: 'Breakfast', ratio: 0.25, protein: 0.2, carbs: 0.3, fat: 0.25 },
+    { name: 'Lunch', ratio: 0.35, protein: 0.4, carbs: 0.35, fat: 0.3 },
+    { name: 'Snack', ratio: 0.10, protein: 0.1, carbs: 0.15, fat: 0.15 },
+    { name: 'Dinner', ratio: 0.30, protein: 0.3, carbs: 0.2, fat: 0.3 }
+  ];
   
-  // Generate meals with accurate nutrition data
-  const breakfast = createAccurateMeal(
-    'Breakfast',
-    Math.round(adjustedCalories * breakfastRatio),
-    Math.round(proteinGrams * breakfastRatio),
-    Math.round(carbsGrams * breakfastRatio),
-    Math.round(fatsGrams * breakfastRatio)
-  );
-  
-  const lunch = createAccurateMeal(
-    'Lunch',
-    Math.round(adjustedCalories * lunchRatio),
-    Math.round(proteinGrams * lunchRatio),
-    Math.round(carbsGrams * lunchRatio),
-    Math.round(fatsGrams * lunchRatio)
-  );
-  
-  const snack = createAccurateMeal(
-    'Snack',
-    Math.round(adjustedCalories * snackRatio),
-    Math.round(proteinGrams * snackRatio),
-    Math.round(carbsGrams * snackRatio),
-    Math.round(fatsGrams * snackRatio)
-  );
-  
-  const dinner = createAccurateMeal(
-    'Dinner',
-    Math.round(adjustedCalories * dinnerRatio),
-    Math.round(proteinGrams * dinnerRatio),
-    Math.round(carbsGrams * dinnerRatio),
-    Math.round(fatsGrams * dinnerRatio)
-  );
+  // Generate meals with improved calorie distribution
+  const meals = mealDistribution.map(meal => {
+    const targetCalories = Math.round(adjustedCalories * meal.ratio);
+    const targetProtein = Math.round(proteinGrams * meal.protein);
+    const targetCarbs = Math.round(carbsGrams * meal.carbs);
+    const targetFat = Math.round(fatsGrams * meal.fat);
+    
+    return createBalancedMeal(
+      meal.name,
+      targetCalories,
+      targetProtein,
+      targetCarbs,
+      targetFat
+    );
+  });
   
   // Calculate recommended water intake based on weight and activity using the foodDataService
   const hydrationTarget = foodDataService.calculateWaterIntake(
@@ -54,10 +39,10 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
   );
 
   // Sum up actual macros from all meals
-  const actualProtein = breakfast.totalProtein + lunch.totalProtein + snack.totalProtein + dinner.totalProtein;
-  const actualCarbs = breakfast.totalCarbs + lunch.totalCarbs + snack.totalCarbs + dinner.totalCarbs;
-  const actualFat = breakfast.totalFat + lunch.totalFat + snack.totalFat + dinner.totalFat;
-  const totalCalories = breakfast.totalCalories + lunch.totalCalories + snack.totalCalories + dinner.totalCalories;
+  const actualProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+  const actualCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+  const actualFat = meals.reduce((sum, meal) => sum + meal.totalFat, 0);
+  const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
 
   return {
     id: crypto.randomUUID(),
@@ -69,36 +54,213 @@ export const generateMealPlan = (tdeeResult: TDEEResult): MealPlan => {
     actualProtein: Math.round(actualProtein),
     actualCarbs: Math.round(actualCarbs),
     actualFat: Math.round(actualFat),
-    meals: [breakfast, lunch, snack, dinner],
+    meals: meals,
     hydrationTarget
   };
 };
 
 /**
- * Creates a meal with nutrition data from USDA database when possible,
- * falls back to sample data when API isn't available
+ * Creates a balanced meal with optimal nutrition distribution and realistic portion sizes
  */
-const createAccurateMeal = (
+const createBalancedMeal = (
   name: string, 
-  calories: number, 
-  protein: number, 
-  carbs: number, 
-  fat: number
+  targetCalories: number, 
+  targetProtein: number, 
+  targetCarbs: number, 
+  targetFat: number
 ): Meal => {
   try {
-    // In a real implementation, we would make API calls to the USDA database
-    // Since we're keeping the function synchronous for this implementation,
-    // we'll use the sample meal creation with improved accuracy calculations
-    return createSampleMeal(name, calories, protein, carbs, fat);
+    // Select appropriate foods for this meal type
+    const suitableFoods = getSuitableFoodsForMeal(name.toLowerCase());
+    
+    // Select one food from each category for balanced meal
+    const proteinFood = selectOptimalFood(suitableFoods.proteins, 'protein', targetProtein);
+    const carbFood = selectOptimalFood(suitableFoods.carbs, 'carbs', targetCarbs);
+    const fatFood = selectOptimalFood(suitableFoods.fats, 'fat', targetFat);
+    const veggieFood = selectOptimalFood(suitableFoods.veggies, 'fiber', 0); // Veggies for micronutrients
+    
+    // Calculate optimal portion sizes based on target macros
+    const proteinPortion = calculateOptimalPortion(proteinFood, targetProtein, 'protein', targetCalories * 0.35);
+    const carbPortion = calculateOptimalPortion(carbFood, targetCarbs, 'carbs', targetCalories * 0.45);
+    const fatPortion = calculateOptimalPortion(fatFood, targetFat, 'fat', targetCalories * 0.20);
+    const veggiePortion = 100; // Fixed portion for veggies - doesn't affect macros significantly
+    
+    // Create meal foods with optimized portions
+    const mealFoods: MealFood[] = [
+      { food: proteinFood, portionSize: proteinPortion },
+      { food: carbFood, portionSize: carbPortion },
+      { food: fatFood, portionSize: fatPortion },
+      { food: veggieFood, portionSize: veggiePortion }
+    ];
+
+    // Calculate actual totals from the optimized meal
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFat = 0;
+    let totalCalories = 0;
+
+    mealFoods.forEach(mealFood => {
+      const ratio = mealFood.portionSize / mealFood.food.portion;
+      totalProtein += mealFood.food.protein * ratio;
+      totalCarbs += mealFood.food.carbs * ratio;
+      totalFat += mealFood.food.fat * ratio;
+      totalCalories += mealFood.food.calories * ratio;
+    });
+
+    // Adjust portions if we're significantly off from target calories
+    if (Math.abs(totalCalories - targetCalories) > targetCalories * 0.1) {
+      const calorieAdjustmentFactor = targetCalories / totalCalories;
+      
+      // Apply reasonable adjustments to portion sizes
+      mealFoods.forEach(mealFood => {
+        // Don't adjust veggies for calorie correction
+        if (mealFood.food.category !== 'vegetables') {
+          mealFood.portionSize = Math.round(mealFood.portionSize * calorieAdjustmentFactor);
+        }
+      });
+      
+      // Recalculate totals after adjustment
+      totalProtein = 0;
+      totalCarbs = 0;
+      totalFat = 0;
+      totalCalories = 0;
+      
+      mealFoods.forEach(mealFood => {
+        const ratio = mealFood.portionSize / mealFood.food.portion;
+        totalProtein += mealFood.food.protein * ratio;
+        totalCarbs += mealFood.food.carbs * ratio;
+        totalFat += mealFood.food.fat * ratio;
+        totalCalories += mealFood.food.calories * ratio;
+      });
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      name,
+      foods: mealFoods,
+      totalCalories: Math.round(totalCalories),
+      totalProtein: Math.round(totalProtein),
+      totalCarbs: Math.round(totalCarbs),
+      totalFat: Math.round(totalFat)
+    };
   } catch (error) {
-    console.error('Error creating accurate meal:', error);
-    // Fall back to the original meal creation method if there's an error
-    return createSampleMeal(name, calories, protein, carbs, fat);
+    console.error('Error creating balanced meal:', error);
+    // Fallback to the original meal creation method if there's an error
+    return createSampleMeal(name, targetCalories, targetProtein, targetCarbs, targetFat);
   }
 };
 
 /**
- * Shuffle a meal to generate alternatives with accurate nutrition data
+ * Gets suitable foods for each meal type (breakfast, lunch, dinner, snack)
+ */
+const getSuitableFoodsForMeal = (mealType: string): {
+  proteins: Food[],
+  carbs: Food[],
+  fats: Food[],
+  veggies: Food[]
+} => {
+  // Import food database directly to avoid circular dependencies
+  const { foodDatabase } = require('../../data/foodDatabase');
+  
+  // Filter foods suitable for this meal type
+  const suitableFoods = foodDatabase.filter(food => 
+    food.mealSuitability?.includes(mealType) || !food.mealSuitability
+  );
+  
+  // Group by category
+  return {
+    proteins: suitableFoods.filter(food => food.category === 'protein'),
+    carbs: suitableFoods.filter(food => food.category === 'carbs'),
+    fats: suitableFoods.filter(food => food.category === 'fats'),
+    veggies: suitableFoods.filter(food => food.category === 'vegetables')
+  };
+};
+
+/**
+ * Selects optimal food from a category based on target nutrient
+ */
+const selectOptimalFood = (foods: Food[], nutrientType: string, targetAmount: number): Food => {
+  if (!foods || foods.length === 0) {
+    // Use fallback food if no foods are available
+    return createFallbackFood(nutrientType, `${nutrientType} food`) as Food;
+  }
+  
+  // If there's a target amount, try to find foods that have good nutrient density
+  if (targetAmount > 0) {
+    // Sort by nutrient density (amount of target nutrient per calorie)
+    foods.sort((a, b) => {
+      const densityA = a[nutrientType as keyof Food] as number / a.calories;
+      const densityB = b[nutrientType as keyof Food] as number / b.calories;
+      return densityB - densityA; // Higher density first
+    });
+    
+    // Return one of the top 3 options randomly for variety
+    const topOptions = foods.slice(0, Math.min(3, foods.length));
+    return topOptions[Math.floor(Math.random() * topOptions.length)];
+  }
+  
+  // If no target, just return a random food
+  return foods[Math.floor(Math.random() * foods.length)];
+};
+
+/**
+ * Calculate optimal portion size to hit macro targets while maintaining reasonable portions
+ */
+const calculateOptimalPortion = (food: Food, targetGrams: number, nutrientType: string, calorieTarget: number): number => {
+  // Get nutrient content in the food
+  const nutrientPer100g = food[nutrientType as keyof Food] as number;
+  
+  // If the food doesn't have any of this nutrient, return a default portion
+  if (!nutrientPer100g || nutrientPer100g <= 0) {
+    return nutrientType === 'fat' ? 15 : 100;
+  }
+  
+  // Calculate portion needed to hit target nutrient
+  const portionNeededForNutrient = (targetGrams / nutrientPer100g) * 100;
+  
+  // Calculate portion needed to hit calorie target
+  const portionNeededForCalories = (calorieTarget / food.calories) * 100;
+  
+  // Take the average of the two calculations for a balanced approach
+  const calculatedPortion = (portionNeededForNutrient + portionNeededForCalories) / 2;
+  
+  // Apply reasonable limits to portion sizes based on food category
+  const minPortion = getMinPortionSize(food.category);
+  const maxPortion = getMaxPortionSize(food.category);
+  
+  return Math.round(Math.min(Math.max(calculatedPortion, minPortion), maxPortion));
+};
+
+/**
+ * Get minimum reasonable portion size based on food category
+ */
+const getMinPortionSize = (category: string): number => {
+  switch (category) {
+    case 'protein': return 50;  // 50g minimum for protein
+    case 'carbs': return 40;    // 40g minimum for carbs
+    case 'fats': return 10;     // 10g minimum for fats (oils, nuts, etc.)
+    case 'vegetables': return 50; // 50g minimum for vegetables
+    case 'fruits': return 80;   // 80g minimum for fruits
+    default: return 30;
+  }
+};
+
+/**
+ * Get maximum reasonable portion size based on food category
+ */
+const getMaxPortionSize = (category: string): number => {
+  switch (category) {
+    case 'protein': return 250;  // 250g maximum for protein
+    case 'carbs': return 300;    // 300g maximum for carbs
+    case 'fats': return 60;      // 60g maximum for fats
+    case 'vegetables': return 300; // 300g maximum for vegetables
+    case 'fruits': return 200;   // 200g maximum for fruits
+    default: return 200;
+  }
+};
+
+/**
+ * Shuffle a meal to generate alternatives with improved macro distribution
  */
 export const shuffleMeal = (
   meal: Meal,
@@ -106,108 +268,14 @@ export const shuffleMeal = (
   targetCarbs: number,
   targetFat: number
 ): Meal => {
-  // Create a deep copy of the meal
-  const newMeal = JSON.parse(JSON.stringify(meal)) as Meal;
-  
-  try {
-    // In a synchronous implementation, we'll create variation based on the target macros
-    // We'll simulate getting data from the foodDataService
-    
-    // Apply cooking conversion factors where appropriate
-    // For instance, if we're replacing a raw protein with a cooked one
-    const adjustRawToCookedWeight = (food: Food, weight: number): number => {
-      if (food.category === 'protein' && food.cookingState === 'raw') {
-        // Use the utility from foodDataService to convert raw to cooked weight
-        return foodDataService.convertWeight(
-          weight,
-          'protein',
-          'raw',
-          'cooked',
-          'grilled' // Default cooking method
-        );
-      }
-      return weight;
-    };
-
-    // Create accurate variations for each food based on target macros
-    if (newMeal.foods && newMeal.foods.length > 0) {
-      // Calculate how much of each macro we want from each food category
-      const proteinFromProteinFoods = targetProtein * 0.7; // 70% of protein from protein foods
-      const carbsFromCarbFoods = targetCarbs * 0.7; // 70% of carbs from carb foods
-      const fatFromFatFoods = targetFat * 0.7; // 70% of fat from fat foods
-      
-      newMeal.foods = newMeal.foods.map(mealFood => {
-        const { food } = mealFood;
-        let newPortionSize = mealFood.portionSize;
-        
-        // Adjust portion size based on the food category and target macros
-        if (food.category === 'protein') {
-          newPortionSize = calculatePortion(food, proteinFromProteinFoods / newMeal.foods.length, 'protein');
-        } else if (food.category === 'carbs') {
-          newPortionSize = calculatePortion(food, carbsFromCarbFoods / newMeal.foods.length, 'carbs');
-        } else if (food.category === 'fats') {
-          newPortionSize = calculatePortion(food, fatFromFatFoods / newMeal.foods.length, 'fat');
-        }
-        
-        // Apply cooking conversion if needed
-        newPortionSize = adjustRawToCookedWeight(food, newPortionSize);
-        
-        return {
-          ...mealFood,
-          portionSize: Math.round(newPortionSize)
-        };
-      });
-    }
-    
-    // Recalculate meal totals
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFat = 0;
-    let totalCalories = 0;
-    
-    if (newMeal.foods) {
-      newMeal.foods.forEach(mealFood => {
-        const { food, portionSize } = mealFood;
-        const ratio = portionSize / food.portion;
-        
-        totalProtein += food.protein * ratio;
-        totalCarbs += food.carbs * ratio;
-        totalFat += food.fat * ratio;
-        totalCalories += food.calories * ratio;
-      });
-    }
-    
-    newMeal.totalProtein = Math.round(totalProtein);
-    newMeal.totalCarbs = Math.round(totalCarbs);
-    newMeal.totalFat = Math.round(totalFat);
-    newMeal.totalCalories = Math.round(totalCalories);
-    
-    return newMeal;
-  } catch (error) {
-    console.error('Error shuffling meal with nutrition data:', error);
-    
-    // Fallback to the existing implementation
-    const variationFactor = 0.9 + Math.random() * 0.2; // Random factor between 0.9 and 1.1
-    
-    // Adjust total nutrients
-    newMeal.totalProtein = Math.round(targetProtein * variationFactor);
-    newMeal.totalCarbs = Math.round(targetCarbs * variationFactor);
-    newMeal.totalFat = Math.round(targetFat * variationFactor);
-    newMeal.totalCalories = Math.round(
-      (newMeal.totalProtein * 4) + (newMeal.totalCarbs * 4) + (newMeal.totalFat * 9)
-    );
-    
-    // Modify food items with variation
-    if (newMeal.foods && newMeal.foods.length > 0) {
-      newMeal.foods = newMeal.foods.map(food => {
-        const newFood = { ...food };
-        newFood.portionSize = Math.round(food.portionSize * variationFactor);
-        return newFood;
-      });
-    }
-    
-    return newMeal;
-  }
+  // Create a new meal with same target macros but different foods
+  return createBalancedMeal(
+    meal.name,
+    meal.totalCalories,
+    targetProtein,
+    targetCarbs,
+    targetFat
+  );
 };
 
 // Keep the original createSampleMeal as a fallback
@@ -461,9 +529,15 @@ export const adjustPortionForCalories = (
   targetCalories: number,
   currentPortionGrams: number
 ): number => {
-  return foodDataService.adjustPortionForCalories(
-    currentCalories,
-    targetCalories,
-    currentPortionGrams
-  );
+  // If current and target calories are the same, no adjustment needed
+  if (currentCalories === targetCalories) return currentPortionGrams;
+  
+  // Calculate simple ratio for adjustment
+  const ratio = targetCalories / currentCalories;
+  
+  // Apply the ratio to adjust portion size
+  let adjustedPortion = currentPortionGrams * ratio;
+  
+  // Round to nearest 5g for usability
+  return Math.round(adjustedPortion / 5) * 5;
 };
