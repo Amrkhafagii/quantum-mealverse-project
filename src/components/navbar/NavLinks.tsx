@@ -48,6 +48,14 @@ const NavLinks: React.FC<NavLinksProps> = ({ isMobile, user, closeMenu = () => {
       </Link>
       
       <Link
+        to="/nutrition"
+        className={linkClasses}
+        onClick={closeMenu}
+      >
+        Nutrition
+      </Link>
+      
+      <Link
         to="/orders"
         className={linkClasses}
         onClick={closeMenu}
