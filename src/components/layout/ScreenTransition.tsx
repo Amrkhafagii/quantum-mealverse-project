@@ -114,7 +114,7 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
   const { initial, animate, exit } = getAnimations();
   
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={identifier}
         initial={initial}

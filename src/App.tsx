@@ -38,6 +38,7 @@ function App() {
                       <RequestQueueProvider>
                         <BackgroundSyncManager>
                           <BrowserRouter>
+                            {/* No AnimatePresence wrapper to avoid conflict with PageTransition */}
                             <Routes>
                               {/* Auth and Demo routes handled at App level */}
                               <Route path="/auth" element={<Auth />} />
