@@ -1,361 +1,283 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { LoadScript, GoogleMap, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
-import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
-import { useMapView } from '@/contexts/MapViewContext';
-import { Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 
-interface DeliveryGoogleMapProps {
-  driverLocation?: any;
-  customerLocation?: any;
-  restaurantLocation?: any;
-  locations?: any[];
+export interface DeliveryGoogleMapProps {
+  mapId: string;
+  center?: { lat: number; lng: number };
+  zoom?: number;
+  markers?: Array<{
+    latitude: number;
+    longitude: number;
+    title?: string;
+    description?: string;
+    type?: string;
+  }>;
   showRoute?: boolean;
-  lowPerformanceMode?: boolean;
-  isInteractive?: boolean;
+  routeOrigin?: { lat: number; lng: number };
+  routeDestination?: { lat: number; lng: number };
+  height?: string;
+  width?: string;
   className?: string;
-  enableControls?: boolean;
+  lowPerformanceMode?: boolean;
   enableAnimation?: boolean;
-  zoomLevel?: number;
-  mapId?: string;
-  onMapLoad?: () => void;
+  enableControls?: boolean;
+  onLoad?: () => void;
 }
 
-const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
-  driverLocation,
-  customerLocation,
-  restaurantLocation,
-  locations = [],
-  showRoute = true,
-  lowPerformanceMode = false,
-  isInteractive = true,
+// Default map styles
+const mapStyles = {
+  light: [],
+  dark: [
+    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+    {
+      featureType: "administrative.locality",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#d59563" }]
+    },
+    {
+      featureType: "poi",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#d59563" }]
+    },
+    {
+      featureType: "poi.park",
+      elementType: "geometry",
+      stylers: [{ color: "#263c3f" }]
+    },
+    {
+      featureType: "poi.park",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#6b9a76" }]
+    },
+    {
+      featureType: "road",
+      elementType: "geometry",
+      stylers: [{ color: "#38414e" }]
+    },
+    {
+      featureType: "road",
+      elementType: "geometry.stroke",
+      stylers: [{ color: "#212a37" }]
+    },
+    {
+      featureType: "road",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#9ca5b3" }]
+    },
+    {
+      featureType: "road.highway",
+      elementType: "geometry",
+      stylers: [{ color: "#746855" }]
+    },
+    {
+      featureType: "road.highway",
+      elementType: "geometry.stroke",
+      stylers: [{ color: "#1f2835" }]
+    },
+    {
+      featureType: "road.highway",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#f3d19c" }]
+    },
+    {
+      featureType: "transit",
+      elementType: "geometry",
+      stylers: [{ color: "#2f3948" }]
+    },
+    {
+      featureType: "transit.station",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#d59563" }]
+    },
+    {
+      featureType: "water",
+      elementType: "geometry",
+      stylers: [{ color: "#17263c" }]
+    },
+    {
+      featureType: "water",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#515c6d" }]
+    },
+    {
+      featureType: "water",
+      elementType: "labels.text.stroke",
+      stylers: [{ color: "#17263c" }]
+    }
+  ]
+};
+
+const DeliveryGoogleMap = ({
+  mapId,
+  center = { lat: 40.7128, lng: -74.006 },
+  zoom = 12,
+  markers = [],
+  showRoute = false,
+  routeOrigin,
+  routeDestination,
+  height = '300px',
+  width = '100%',
   className = '',
-  enableControls = true,
+  lowPerformanceMode = false,
   enableAnimation = true,
-  zoomLevel = 13,
-  mapId = 'google-map',
-  onMapLoad
-}) => {
-  const { googleMapsApiKey } = useGoogleMaps();
-  const { getSavedPosition, savePosition, recordMapError } = useMapView();
+  enableControls = true,
+  onLoad
+}: DeliveryGoogleMapProps) => {
+  const { theme } = useTheme();
   const { isLowQuality } = useNetworkQuality();
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+  const [isDirectionsLoading, setIsDirectionsLoading] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
   
-  // Get saved position from context
-  const savedPosition = getSavedPosition(mapId);
-  
-  // Options for Google Maps
-  const mapOptions: google.maps.MapOptions = {
-    disableDefaultUI: lowPerformanceMode || !enableControls,
-    zoomControl: enableControls,
-    mapTypeControl: false,
-    streetViewControl: false,
-    fullscreenControl: false,
-    gestureHandling: isInteractive ? 'greedy' : 'none',
-    clickableIcons: isInteractive && !lowPerformanceMode,
-    styles: [
+  // Force low performance mode if network quality is low
+  const useLowPerformanceMode = lowPerformanceMode || isLowQuality;
+
+  // Load Google Maps API
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || "AIzaSyD2Z9Y8F0nTnj0oFjC_tCPpZliosBbKyYc",
+  });
+
+  // Update directions when route props change
+  useEffect(() => {
+    if (!isLoaded || !map || !showRoute || !routeOrigin || !routeDestination) return;
+
+    setIsDirectionsLoading(true);
+    
+    const directionsService = new google.maps.DirectionsService();
+    directionsService.route(
       {
-        featureType: 'poi',
-        stylers: [{ visibility: lowPerformanceMode ? 'off' : 'on' }]
+        origin: routeOrigin,
+        destination: routeDestination,
+        travelMode: google.maps.TravelMode.DRIVING,
+        optimizeWaypoints: !useLowPerformanceMode
       },
-      {
-        featureType: 'transit',
-        stylers: [{ visibility: lowPerformanceMode ? 'off' : 'on' }]
-      }
-    ]
-  };
-  
-  // Handle map load
-  const handleMapLoad = (map: google.maps.Map) => {
-    setMapInstance(map);
-    setIsMapLoaded(true);
-    
-    if (onMapLoad) {
-      onMapLoad();
-    }
-    
-    // Fit bounds to markers after map is loaded
-    fitBoundsToMarkers(map);
-  };
-  
-  // Fit map bounds to include all markers
-  const fitBoundsToMarkers = (map: google.maps.Map) => {
-    const bounds = new google.maps.LatLngBounds();
-    let hasMarkers = false;
-    
-    // Add driver location to bounds
-    if (driverLocation && driverLocation.latitude && driverLocation.longitude) {
-      bounds.extend(new google.maps.LatLng(driverLocation.latitude, driverLocation.longitude));
-      hasMarkers = true;
-    }
-    
-    // Add customer location to bounds
-    if (customerLocation && customerLocation.latitude && customerLocation.longitude) {
-      bounds.extend(new google.maps.LatLng(customerLocation.latitude, customerLocation.longitude));
-      hasMarkers = true;
-    }
-    
-    // Add restaurant location to bounds
-    if (restaurantLocation && restaurantLocation.latitude && restaurantLocation.longitude) {
-      bounds.extend(new google.maps.LatLng(restaurantLocation.latitude, restaurantLocation.longitude));
-      hasMarkers = true;
-    }
-    
-    // Add any additional locations to bounds
-    if (locations && locations.length > 0) {
-      locations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          bounds.extend(new google.maps.LatLng(loc.latitude, loc.longitude));
-          hasMarkers = true;
+      (result, status) => {
+        setIsDirectionsLoading(false);
+        if (status === google.maps.DirectionsStatus.OK) {
+          setDirections(result);
+        } else {
+          console.error(`Error fetching directions: ${status}`);
         }
-      });
-    }
-    
-    // If we have markers, fit bounds
-    if (hasMarkers) {
-      map.fitBounds(bounds, { top: 30, right: 30, bottom: 30, left: 30 });
-      
-      // If only one marker, zoom in closer
-      if ((driverLocation && !customerLocation && !restaurantLocation && locations.length === 0) ||
-          (!driverLocation && customerLocation && !restaurantLocation && locations.length === 0) ||
-          (!driverLocation && !customerLocation && restaurantLocation && locations.length === 0) ||
-          (!driverLocation && !customerLocation && !restaurantLocation && locations.length === 1)) {
-        // Use setTimeout to ensure fitBounds completes first
-        setTimeout(() => {
-          map.setZoom(zoomLevel);
-        }, 100);
       }
-    } else {
-      // If no markers, use saved position or default
-      map.setCenter(savedPosition.center);
-      map.setZoom(savedPosition.zoom);
+    );
+  }, [isLoaded, map, showRoute, routeOrigin, routeDestination, useLowPerformanceMode]);
+
+  // Map options based on performance and theme settings
+  const getMapOptions = useCallback(() => {
+    return {
+      disableDefaultUI: !enableControls,
+      styles: theme === 'dark' ? mapStyles.dark : mapStyles.light,
+      gestureHandling: 'cooperative',
+      zoomControl: enableControls,
+      mapTypeControl: enableControls && !useLowPerformanceMode,
+      streetViewControl: enableControls && !useLowPerformanceMode,
+      fullscreenControl: enableControls && !useLowPerformanceMode,
+      // Reduce animation and visual complexity in low performance mode
+      animatedZoom: enableAnimation && !useLowPerformanceMode,
+      disableDoubleClickZoom: useLowPerformanceMode,
+      clickableIcons: !useLowPerformanceMode,
+      // Reduce map features for better performance
+      ...(!useLowPerformanceMode ? {} : {
+        maxZoom: 16,
+        minZoom: 8,
+        restriction: {
+          latLngBounds: {
+            north: center.lat + 0.3,
+            south: center.lat - 0.3,
+            east: center.lng + 0.3,
+            west: center.lng - 0.3
+          },
+          strictBounds: false
+        }
+      })
+    };
+  }, [theme, enableControls, enableAnimation, useLowPerformanceMode, center]);
+
+  const handleLoad = (mapInstance: google.maps.Map) => {
+    setMap(mapInstance);
+    if (onLoad) onLoad();
+  };
+
+  const handleUnmount = () => {
+    setMap(null);
+  };
+
+  if (!isLoaded) {
+    return (
+      <div 
+        id={mapId}
+        ref={mapRef}
+        style={{ height, width: width || '100%' }}
+        className={`bg-gray-100 dark:bg-gray-800 flex items-center justify-center ${className}`}
+      >
+        <div className="animate-pulse">Loading map...</div>
+      </div>
+    );
+  }
+
+  const getMarkerIcon = (type?: string) => {
+    switch (type) {
+      case 'restaurant':
+        return { url: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png', scaledSize: new google.maps.Size(30, 30) };
+      case 'customer':
+        return { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png', scaledSize: new google.maps.Size(30, 30) };
+      case 'driver':
+        return { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(30, 30) };
+      default:
+        return { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(30, 30) };
     }
   };
 
-  // Calculate directions between points when needed
-  useEffect(() => {
-    // Don't calculate routes in low performance mode
-    if (lowPerformanceMode || !showRoute || !isMapLoaded || isCalculatingRoute) {
-      return;
-    }
-    
-    // Need at least two points to calculate a route
-    const hasDriver = driverLocation && driverLocation.latitude && driverLocation.longitude;
-    const hasRestaurant = restaurantLocation && restaurantLocation.latitude && restaurantLocation.longitude;
-    const hasCustomer = customerLocation && customerLocation.latitude && customerLocation.longitude;
-    
-    if ((hasDriver && hasCustomer) || (hasDriver && hasRestaurant) || (hasRestaurant && hasCustomer)) {
-      setIsCalculatingRoute(true);
-    } else {
-      // Not enough points to calculate route
-      return;
-    }
-    
-    // Determine origin and destination
-    let origin, destination;
-    
-    // Driver to restaurant or customer
-    if (hasDriver) {
-      origin = { 
-        lat: driverLocation.latitude, 
-        lng: driverLocation.longitude 
-      };
-      
-      if (hasRestaurant) {
-        destination = { 
-          lat: restaurantLocation.latitude, 
-          lng: restaurantLocation.longitude 
-        };
-      } else if (hasCustomer) {
-        destination = { 
-          lat: customerLocation.latitude, 
-          lng: customerLocation.longitude 
-        };
-      }
-    }
-    // Restaurant to customer
-    else if (hasRestaurant && hasCustomer) {
-      origin = { 
-        lat: restaurantLocation.latitude, 
-        lng: restaurantLocation.longitude 
-      };
-      destination = { 
-        lat: customerLocation.latitude, 
-        lng: customerLocation.longitude 
-      };
-    }
-    
-    // If we have origin and destination, calculate route
-    if (origin && destination) {
-      const directionsService = new google.maps.DirectionsService();
-      
-      directionsService.route(
-        {
-          origin,
-          destination,
-          travelMode: google.maps.TravelMode.DRIVING,
-          optimizeWaypoints: true,
-        },
-        (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK) {
-            setDirections(result);
-          } else if (status === google.maps.DirectionsStatus.ZERO_RESULTS) {
-            console.warn("Could not find directions");
-          } else {
-            console.error("Directions request failed:", status);
-            recordMapError(mapId, `Route calculation failed: ${status}`);
-          }
-          setIsCalculatingRoute(false);
-        }
-      );
-    }
-  }, [
-    driverLocation, 
-    customerLocation, 
-    restaurantLocation, 
-    lowPerformanceMode, 
-    showRoute, 
-    isMapLoaded, 
-    isCalculatingRoute,
-    mapId,
-    recordMapError
-  ]);
-  
-  // Save position when map moves
-  const handleCenterChanged = () => {
-    if (mapInstance) {
-      const center = mapInstance.getCenter();
-      const zoom = mapInstance.getZoom();
-      
-      if (center && zoom) {
-        savePosition(mapId, {
-          center: { lat: center.lat(), lng: center.lng() },
-          zoom
-        });
-      }
-    }
-  };
-  
-  // Handle map error
-  const handleMapError = () => {
-    recordMapError(mapId, 'Failed to load Google Maps');
-    
-    toast({
-      title: "Map Error",
-      description: "Failed to load the map. Please try again later.",
-      variant: "destructive"
-    });
-  };
-  
   return (
-    <div className={`${className}`}>
-      <LoadScript
-        googleMapsApiKey={googleMapsApiKey}
-        onError={handleMapError}
-        loadingElement={
-          <div className="h-full w-full flex items-center justify-center bg-slate-800">
-            <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
-          </div>
-        }
+    <div 
+      id={mapId} 
+      ref={mapRef}
+      className={`relative ${className}`}
+      style={{ height, width: width || '100%' }}
+    >
+      <GoogleMap
+        mapContainerStyle={{ height: '100%', width: '100%' }}
+        center={center}
+        zoom={zoom}
+        options={getMapOptions()}
+        onLoad={handleLoad}
+        onUnmount={handleUnmount}
       >
-        <GoogleMap
-          mapContainerStyle={{ width: '100%', height: '100%' }}
-          center={savedPosition.center}
-          zoom={savedPosition.zoom}
-          options={mapOptions}
-          onLoad={handleMapLoad}
-          onCenterChanged={handleCenterChanged}
-          onZoomChanged={handleCenterChanged}
-        >
-          {/* Driver marker */}
-          {driverLocation && driverLocation.latitude && driverLocation.longitude && (
-            <Marker
-              position={{
-                lat: driverLocation.latitude,
-                lng: driverLocation.longitude
-              }}
-              icon={{
-                url: '/assets/driver-marker.png',
-                scaledSize: new google.maps.Size(40, 40)
-              }}
-              animation={enableAnimation ? google.maps.Animation.DROP : undefined}
-            />
-          )}
-          
-          {/* Restaurant marker */}
-          {restaurantLocation && restaurantLocation.latitude && restaurantLocation.longitude && (
-            <Marker
-              position={{
-                lat: restaurantLocation.latitude,
-                lng: restaurantLocation.longitude
-              }}
-              icon={{
-                url: '/assets/restaurant-marker.png',
-                scaledSize: new google.maps.Size(36, 36)
-              }}
-              animation={enableAnimation ? google.maps.Animation.DROP : undefined}
-            />
-          )}
-          
-          {/* Customer marker */}
-          {customerLocation && customerLocation.latitude && customerLocation.longitude && (
-            <Marker
-              position={{
-                lat: customerLocation.latitude,
-                lng: customerLocation.longitude
-              }}
-              icon={{
-                url: '/assets/customer-marker.png',
-                scaledSize: new google.maps.Size(36, 36)
-              }}
-              animation={enableAnimation ? google.maps.Animation.DROP : undefined}
-            />
-          )}
-          
-          {/* Additional location markers */}
-          {locations && locations.map((location, index) => (
-            <Marker
-              key={`location-${index}`}
-              position={{
-                lat: location.latitude,
-                lng: location.longitude
-              }}
-              icon={{
-                url: location.type === 'driver' 
-                  ? '/assets/driver-marker.png' 
-                  : (location.type === 'restaurant' 
-                    ? '/assets/restaurant-marker.png' 
-                    : '/assets/customer-marker.png'),
-                scaledSize: new google.maps.Size(32, 32)
-              }}
-              title={location.title}
-              animation={enableAnimation ? google.maps.Animation.DROP : undefined}
-            />
-          ))}
-          
-          {/* Show directions if calculated */}
-          {directions && !lowPerformanceMode && (
-            <DirectionsRenderer
-              directions={directions}
-              options={{
-                suppressMarkers: true,
-                polylineOptions: {
-                  strokeColor: "#6366F1",
-                  strokeWeight: 5,
-                  strokeOpacity: 0.7
-                }
-              }}
-            />
-          )}
-        </GoogleMap>
-      </LoadScript>
+        {/* Render markers */}
+        {markers.map((marker, index) => (
+          <Marker
+            key={`${marker.latitude}-${marker.longitude}-${index}`}
+            position={{ lat: marker.latitude, lng: marker.longitude }}
+            title={marker.title || ''}
+            icon={getMarkerIcon(marker.type)}
+            animation={enableAnimation && !useLowPerformanceMode ? google.maps.Animation.DROP : undefined}
+          />
+        ))}
+        
+        {/* Render directions if available */}
+        {directions && !isDirectionsLoading && (
+          <DirectionsRenderer
+            directions={directions}
+            options={{
+              suppressMarkers: true,
+              polylineOptions: {
+                strokeColor: '#4F46E5',
+                strokeOpacity: 0.8,
+                strokeWeight: 4
+              }
+            }}
+          />
+        )}
+      </GoogleMap>
     </div>
   );
 };
 
-export default DeliveryGoogleMap;
+export default React.memo(DeliveryGoogleMap);

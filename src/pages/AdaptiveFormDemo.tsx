@@ -1,194 +1,144 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { AdaptiveForm } from '@/components/forms/AdaptiveForm';
 import { z } from 'zod';
-import { Platform } from '@/utils/platform';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Check, AlertTriangle } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import AdaptiveForm from '@/components/forms/AdaptiveForm';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { PageTransition } from '@/components/layout/PageTransition';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { NetworkAwareContainer } from '@/components/network/NetworkAwareContainer';
+import { toast } from '@/components/ui/use-toast';
 
-// Form validation schema
-const profileSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  bio: z.string().optional(),
-  country: z.string().min(1, 'Please select your country'),
-  receiveNotifications: z.boolean().default(true),
+// Form schema
+const formSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().min(5, 'Phone number is required'),
+  address: z.string().optional(),
 });
 
-type ProfileFormValues = z.infer<typeof profileSchema>;
-
 const AdaptiveFormDemo = () => {
-  const { toast } = useToast();
-  const { theme } = useTheme();
-  const { isPlatformIOS, isPlatformAndroid } = useResponsive();
-  const [useNative, setUseNative] = useState(Platform.isNative());
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formResult, setFormResult] = useState<ProfileFormValues | null>(null);
+  const { isOnline } = useConnectionStatus();
+  const [submitting, setSubmitting] = useState(false);
 
-  const defaultValues: ProfileFormValues = {
-    username: '',
-    email: '',
-    bio: '',
-    country: '',
-    receiveNotifications: true,
-  };
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+    },
+  });
 
-  const handleSubmit = async (data: ProfileFormValues) => {
-    setIsSubmitting(true);
+  const onSubmit = async (data) => {
+    setSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate API request
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    setFormResult(data);
-    setIsSubmitting(false);
+    console.log('Form submitted:', data);
     
     toast({
-      title: "Profile Updated",
-      description: "Your profile has been successfully updated."
+      title: isOnline ? 'Form submitted' : 'Form saved offline',
+      description: isOnline 
+        ? 'Your information has been submitted successfully.' 
+        : 'Your information will be submitted when you\'re back online.',
     });
+    
+    setSubmitting(false);
+    form.reset();
   };
 
-  const countryOptions = [
-    { value: 'us', label: 'United States' },
-    { value: 'ca', label: 'Canada' },
-    { value: 'uk', label: 'United Kingdom' },
-    { value: 'au', label: 'Australia' },
-    { value: 'de', label: 'Germany' },
-    { value: 'fr', label: 'France' },
-    { value: 'jp', label: 'Japan' },
-  ];
-
   return (
-    <div className="container max-w-4xl py-8">
-      <h1 className="text-3xl font-bold mb-6">Adaptive Form Demo</h1>
-      
-      {Platform.isNative() && (
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="use-native">Use Native Form Controls</Label>
-                <p className="text-sm text-muted-foreground">
-                  Toggle between web and native form controls
-                </p>
-              </div>
-              <Switch 
-                id="use-native" 
-                checked={useNative} 
-                onCheckedChange={setUseNative}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Edit Profile</CardTitle>
-            <CardDescription>
-              Update your profile information
-              {isPlatformIOS && " with iOS-styled form controls"}
-              {isPlatformAndroid && " with Material Design form controls"}
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent>
-            <AdaptiveForm
-              schema={profileSchema}
-              defaultValues={defaultValues}
-              onSubmit={handleSubmit}
-              useNativeControls={useNative}
-              submitText="Update Profile"
-              isSubmitting={isSubmitting} // Remove this prop since it's not defined in the component
-            >
-              <AdaptiveForm.Field
-                name="username"
-                label="Username"
-                placeholder="Enter username"
-                autoComplete="username"
-              />
-              
-              <AdaptiveForm.Field
-                name="email"
-                label="Email Address"
-                placeholder="your@email.com"
-                type="email"
-                autoComplete="email"
-              />
-              
-              <AdaptiveForm.Field
-                name="bio"
-                label="Bio"
-                placeholder="Tell us about yourself"
-                multiline
-                rows={3}
-              />
-              
-              <AdaptiveForm.Field
-                name="country"
-                label="Country"
-                type="select"
-                placeholder="Select your country"
-                options={countryOptions}
-              />
-              
-              <AdaptiveForm.Field
-                name="receiveNotifications"
-                label="Receive Notifications"
-                type="switch"
-              />
-            </AdaptiveForm>
-          </CardContent>
-        </Card>
+    <PageTransition>
+      <div className="container mx-auto p-4 max-w-3xl">
+        <h1 className="text-2xl font-bold mb-6">Adaptive Form Demo</h1>
         
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Form Result</CardTitle>
-            <CardDescription>
-              This shows the data submitted by the form
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent>
-            {formResult ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-green-500 dark:text-green-400">
-                  <Check size={18} />
-                  <span>Form submitted successfully</span>
+        <NetworkAwareContainer>
+          <div className="grid gap-6">
+            <AdaptiveForm onSubmit={form.handleSubmit(onSubmit)} className="w-full">
+              <Form {...form}>
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your email" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your phone number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button type="submit" className="w-full" disabled={submitting}>
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </Button>
                 </div>
-                
-                <div className="rounded-md bg-muted p-4 font-mono text-sm">
-                  <pre className="whitespace-pre-wrap break-all">
-                    {JSON.stringify(formResult, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            ) : (
-              <Alert variant="default" className="bg-muted">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                <AlertDescription>
-                  No data submitted yet. Fill out the form and click submit.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-          
-          <CardFooter className="flex justify-between border-t bg-muted/50 px-6 py-3">
-            <p className="text-xs text-muted-foreground">
-              Form adapts to {isPlatformIOS ? 'iOS' : isPlatformAndroid ? 'Android' : 'Web'} platform
-            </p>
-          </CardFooter>
-        </Card>
+              </Form>
+            </AdaptiveForm>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md text-sm">
+              <h3 className="font-medium mb-2">Adaptive Form Features:</h3>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>Adjusts validation strategy based on connection quality</li>
+                <li>Stores form data locally when offline</li>
+                <li>Automatically submits when connection is restored</li>
+                <li>Visual indicators of current network state</li>
+              </ul>
+            </div>
+          </div>
+        </NetworkAwareContainer>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

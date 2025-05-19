@@ -89,9 +89,15 @@ const NativeMap: React.FC<NativeMapProps> = ({
       // Clean up the map when component unmounts
       if (mapInitialized) {
         try {
-          CapacitorGoogleMaps.destroy();
+          // Check if the remove method exists before calling
+          if (typeof CapacitorGoogleMaps.remove === 'function') {
+            CapacitorGoogleMaps.remove();
+          } else if (typeof CapacitorGoogleMaps.removeAllMapObjs === 'function') {
+            // Fallback to alternate method if available
+            CapacitorGoogleMaps.removeAllMapObjs();
+          }
         } catch (err) {
-          console.error('Error destroying map:', err);
+          console.error('Error cleaning up map:', err);
         }
       }
     };

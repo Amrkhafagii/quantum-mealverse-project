@@ -1,105 +1,67 @@
 
 import React, { useState } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 interface RetryBoundaryProps {
   children: React.ReactNode;
-  onRetry: () => Promise<any> | void;
-  fallback?: React.ReactNode;
+  onRetry?: () => Promise<void> | void;
   retryText?: string;
   errorTitle?: string;
   errorDescription?: string;
-  maxRetries?: number;
-  className?: string;
 }
 
-export const RetryBoundary: React.FC<RetryBoundaryProps> = ({
+const RetryBoundary: React.FC<RetryBoundaryProps> = ({
   children,
   onRetry,
-  fallback,
   retryText = "Retry",
   errorTitle = "Something went wrong",
-  errorDescription = "We couldn't complete your request. Please try again.",
-  maxRetries = 3,
-  className = '',
+  errorDescription = "There was an error loading this content."
 }) => {
-  const [error, setError] = useState<Error | null>(null);
+  const [hasError, setHasError] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const { isOnline } = useConnectionStatus();
   
   const handleRetry = async () => {
-    if (retryCount >= maxRetries) {
-      setError(new Error(`Maximum retry attempts (${maxRetries}) reached.`));
-      return;
-    }
-    
-    if (!isOnline) {
-      setError(new Error('No internet connection. Please check your network.'));
-      return;
-    }
+    if (!onRetry) return;
     
     setIsRetrying(true);
-    
     try {
       await onRetry();
-      setError(null);
-      setRetryCount(0); // Reset count on success
-    } catch (err) {
-      setRetryCount(prev => prev + 1);
-      setError(err as Error);
+      setHasError(false);
+    } catch (error) {
+      console.error('Retry failed:', error);
+      setHasError(true);
     } finally {
       setIsRetrying(false);
     }
   };
   
-  // If there's an error, show the fallback or default error UI
-  if (error) {
-    if (fallback) {
-      return <div className={className}>{fallback}</div>;
-    }
-    
+  if (hasError) {
     return (
-      <Card className={`w-full ${className}`}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <span>{errorTitle}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">{errorDescription}</p>
-          <p className="text-sm text-muted-foreground mb-4">Error: {error.message}</p>
-          
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              {retryCount > 0 ? `Attempts: ${retryCount}/${maxRetries}` : ''}
-            </span>
-            
-            <Button 
-              onClick={handleRetry} 
-              disabled={isRetrying || retryCount >= maxRetries || !isOnline}
-              variant="default"
-              size="sm"
-            >
-              {isRetrying ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Retrying...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  {retryText}
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-md border border-gray-200 dark:border-gray-800 p-6 flex flex-col items-center justify-center text-center space-y-4">
+        <AlertCircle className="h-10 w-10 text-gray-400" />
+        <div>
+          <h3 className="text-lg font-medium mb-1">{errorTitle}</h3>
+          <p className="text-sm text-muted-foreground">{errorDescription}</p>
+        </div>
+        <Button 
+          onClick={handleRetry} 
+          disabled={isRetrying} 
+          className="mt-2"
+        >
+          {isRetrying ? (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              Retrying...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {retryText}
+            </>
+          )}
+        </Button>
+      </div>
     );
   }
   
