@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import type { User } from '@/contexts/AuthContext';
+import type { UserWithMetadata } from '@/contexts/AuthContext';
 
 export type Restaurant = {
   id: string;
