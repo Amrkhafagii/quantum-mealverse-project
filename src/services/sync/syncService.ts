@@ -1,206 +1,282 @@
 
-import { supabase } from '@/services/supabaseClient';
-import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit } from '@/utils/offlineStorage/index';
-import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { SyncQueue, SyncOperation } from '@/types/sync';
+import { NetworkStatus } from '@/types/network';
+import { toast } from '@/hooks/use-toast';
+import { StorageManager } from '@/utils/storage/StorageManager';
 
-// Define backoff strategies for retries
-const getBackoffTime = (retryCount: number): number => {
-  // Exponential backoff: 2^n * 1000ms with a max of 30 minutes
-  return Math.min(Math.pow(2, retryCount) * 1000, 30 * 60 * 1000);
-};
+// Maximum number of retries for a sync operation
+const MAX_RETRIES = 5;
+
+// Base delay for exponential backoff (in milliseconds)
+const BASE_DELAY = 1000;
+
+// Create storage manager instance for sync operations
+const syncStorage = StorageManager.getInstance('sync');
 
 /**
- * Synchronize offline data with the server
- * @param showNotifications Whether to show toast notifications
+ * Get the sync queue from storage
  */
-export const syncOfflineData = async (showNotifications = false): Promise<boolean> => {
-  try {
-    const pendingActions = await getPendingActions();
-    
-    if (pendingActions.length === 0) {
-      console.log('No pending actions to sync');
-      return true;
-    }
-    
-    console.log(`Syncing ${pendingActions.length} pending actions`);
-    
-    if (showNotifications) {
-      toast({
-        title: "Syncing data",
-        description: `Processing ${pendingActions.length} pending ${pendingActions.length === 1 ? 'action' : 'actions'}`,
-      });
-    }
-    
-    let success = true;
-    // Process each action
-    for (const action of pendingActions) {
-      try {
-        console.log(`Processing action: ${action.type}`, action.payload);
-        
-        // Handle different action types
-        switch (action.type) {
-          case 'create_order':
-            await processCreateOrder(action.payload);
-            break;
-          case 'update_order':
-            await processUpdateOrder(action.payload);
-            break;
-          case 'cancel_order':
-            await processCancelOrder(action.payload);
-            break;
-          default:
-            console.warn(`Unknown action type: ${action.type}`);
-            // Skip unknown actions
-            await removePendingAction(action.id);
-            continue;
-        }
-        
-        // Remove processed action
-        await removePendingAction(action.id);
-      } catch (error) {
-        console.error(`Error processing action ${action.id}:`, error);
-        success = false;
-        
-        // Increment retry count
-        await incrementRetryCount(action.id);
-        
-        // Check if we've exceeded retry limit
-        if (await hasExceededRetryLimit(action.id)) {
-          console.warn(`Action ${action.id} exceeded retry limit, removing`);
-          if (showNotifications) {
-            toast({
-              title: "Sync action failed",
-              description: `Action ${action.type} could not be completed after multiple attempts`,
-              variant: "destructive"
-            });
-          }
-          await removePendingAction(action.id);
-        } else {
-          // Schedule a retry with exponential backoff
-          const retryCount = action.retryCount || 0;
-          const backoffTime = getBackoffTime(retryCount);
-          
-          console.log(`Will retry action ${action.id} in ${backoffTime/1000} seconds`);
-          
-          // In a real app, we would use a more robust retry mechanism
-          // This is just a simple implementation for demonstration
-          setTimeout(() => {
-            syncOfflineData();
-          }, backoffTime);
-        }
-      }
-    }
-    
-    if (showNotifications && success) {
-      toast({
-        title: "Sync complete",
-        description: "Your data has been synchronized",
-      });
-    }
-    
-    return success;
-  } catch (error) {
-    console.error('Error syncing offline data:', error);
-    
-    if (showNotifications) {
-      toast({
-        title: "Sync failed",
-        description: "Could not synchronize your data. Will try again later.",
-        variant: "destructive"
-      });
-    }
-    
+export async function getSyncQueue(): Promise<SyncQueue> {
+  const queue = await syncStorage.getItem<SyncQueue>('syncQueue');
+  return queue || { operations: [], lastSync: null };
+}
+
+/**
+ * Save the sync queue to storage
+ */
+export async function saveSyncQueue(queue: SyncQueue): Promise<void> {
+  await syncStorage.setItem('syncQueue', queue);
+}
+
+/**
+ * Add an operation to the sync queue
+ */
+export async function addToSyncQueue(operation: Omit<SyncOperation, 'id' | 'createdAt' | 'retries'>): Promise<SyncQueue> {
+  const queue = await getSyncQueue();
+  
+  const newOperation: SyncOperation = {
+    ...operation,
+    id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    createdAt: new Date().toISOString(),
+    retries: 0
+  };
+  
+  queue.operations.push(newOperation);
+  await saveSyncQueue(queue);
+  
+  return queue;
+}
+
+/**
+ * Remove an operation from the sync queue
+ */
+export async function removeFromSyncQueue(operationId: string): Promise<SyncQueue> {
+  const queue = await getSyncQueue();
+  queue.operations = queue.operations.filter(op => op.id !== operationId);
+  await saveSyncQueue(queue);
+  return queue;
+}
+
+/**
+ * Process sync operations with exponential backoff
+ */
+export async function processSync(networkStatus: NetworkStatus): Promise<boolean> {
+  if (!networkStatus.isOnline) {
+    console.log('Cannot sync: offline');
     return false;
   }
-};
-
-// Implementation for creating orders
-const processCreateOrder = async (payload: any) => {
-  console.log('Creating order from offline queue:', payload);
   
-  // Check for conflicts (e.g., if the order was already created)
-  const { data: existingOrder } = await supabase
-    .from('orders')
-    .select('id')
-    .eq('client_reference_id', payload.client_reference_id)
-    .maybeSingle();
+  const queue = await getSyncQueue();
   
-  if (existingOrder) {
-    console.log('Order already exists, skipping create', existingOrder);
-    return;
+  if (queue.operations.length === 0) {
+    console.log('No operations to sync');
+    return true;
   }
   
-  // Create the order in the database
-  const { data, error } = await supabase
-    .from('orders')
-    .insert(payload)
-    .select()
-    .single();
+  console.log(`Processing ${queue.operations.length} sync operations`);
+  let success = true;
   
-  if (error) {
-    console.error('Error creating order:', error);
-    throw error;
-  }
-  
-  return data;
-};
-
-// Implementation for updating orders
-const processUpdateOrder = async (payload: any) => {
-  console.log('Updating order from offline queue:', payload);
-  
-  // Handle conflicts - check for last_modified timestamp to implement optimistic concurrency control
-  if (payload.last_modified) {
-    const { data: currentOrder } = await supabase
-      .from('orders')
-      .select('last_modified')
-      .eq('id', payload.id)
-      .single();
+  // Process operations in order
+  for (const operation of [...queue.operations]) {
+    // Skip operations that have exceeded max retries
+    if (operation.retries >= MAX_RETRIES) {
+      console.warn(`Sync operation ${operation.id} exceeded max retries:`, operation);
+      toast({
+        title: "Sync operation failed",
+        description: `The operation ${operation.type} could not be completed after multiple attempts.`,
+        variant: "destructive"
+      });
+      
+      // Remove from queue to prevent endless retries
+      await removeFromSyncQueue(operation.id);
+      success = false;
+      continue;
+    }
     
-    if (currentOrder && new Date(currentOrder.last_modified) > new Date(payload.last_modified)) {
-      console.warn('Conflict detected: server has newer version of order', payload.id);
-      // Implement your conflict resolution strategy here
-      // For now, we'll let the server win in case of conflicts
-      throw new Error('Conflict: server has newer version');
+    try {
+      // Different handling based on operation type
+      switch (operation.type) {
+        case 'insert':
+          await processInsertOperation(operation);
+          break;
+          
+        case 'update':
+          await processUpdateOperation(operation);
+          break;
+          
+        case 'delete':
+          await processDeleteOperation(operation);
+          break;
+          
+        default:
+          console.error(`Unknown sync operation type: ${operation.type}`);
+          break;
+      }
+      
+      // If we got here, the operation was successful, so remove it from queue
+      await removeFromSyncQueue(operation.id);
+      
+    } catch (error) {
+      console.error(`Error processing sync operation ${operation.id}:`, error);
+      success = false;
+      
+      // Increment retry count
+      const updatedQueue = await getSyncQueue();
+      const operationIndex = updatedQueue.operations.findIndex(op => op.id === operation.id);
+      
+      if (operationIndex >= 0) {
+        updatedQueue.operations[operationIndex].retries += 1;
+        updatedQueue.operations[operationIndex].lastError = String(error);
+        
+        // Calculate backoff delay
+        const backoffDelay = BASE_DELAY * Math.pow(2, updatedQueue.operations[operationIndex].retries);
+        updatedQueue.operations[operationIndex].nextRetry = new Date(Date.now() + backoffDelay).toISOString();
+        
+        await saveSyncQueue(updatedQueue);
+      }
     }
   }
   
-  // Update the order in the database
-  const { id, ...updateData } = payload;
-  const { data, error } = await supabase
-    .from('orders')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error updating order:', error);
-    throw error;
+  // Update last sync time if any operation was successful
+  if (success) {
+    queue.lastSync = new Date().toISOString();
+    await saveSyncQueue(queue);
   }
   
-  return data;
-};
+  return success;
+}
 
-// Implementation for canceling orders
-const processCancelOrder = async (payload: any) => {
-  console.log('Cancelling order from offline queue:', payload);
+/**
+ * Process an insert operation
+ */
+async function processInsertOperation(operation: SyncOperation): Promise<void> {
+  const { table, data } = operation;
   
-  // Simple implementation - in a real app you might have more complex logic
-  const { data, error } = await supabase
-    .from('orders')
-    .update({ status: 'cancelled' })
-    .eq('id', payload.orderId)
-    .select()
-    .single();
+  // If we have an optimistic id, we need to remove it before inserting
+  const { optimisticId, ...insertData } = data;
   
-  if (error) {
-    console.error('Error cancelling order:', error);
-    throw error;
+  // Handle tables with updated_at or last_modified columns
+  const tableHasTimestamps = ['orders', 'user_preferences'].includes(table);
+  
+  // Add server_timestamp if needed
+  if (tableHasTimestamps) {
+    (insertData as any).updated_at = new Date().toISOString();
   }
   
-  return data;
-};
+  // Perform the insert operation
+  const { data: result, error } = await supabase
+    .from(table)
+    .insert(insertData)
+    .select();
+    
+  if (error) {
+    throw new Error(`Failed to insert into ${table}: ${error.message}`);
+  }
+  
+  // Update local cache with server data if needed
+  if (result && result.length > 0 && operation.localStorageKey) {
+    const localData = await syncStorage.getItem(operation.localStorageKey);
+    
+    if (localData) {
+      // Handle collections vs single objects
+      if (Array.isArray(localData)) {
+        const updatedItems = localData.map(item => 
+          item.optimisticId === optimisticId ? { ...result[0] } : item
+        );
+        await syncStorage.setItem(operation.localStorageKey, updatedItems);
+      } else {
+        await syncStorage.setItem(operation.localStorageKey, result[0]);
+      }
+    }
+  }
+}
 
-// Alias for backward compatibility
-export const syncPendingActions = syncOfflineData;
+/**
+ * Process an update operation
+ */
+async function processUpdateOperation(operation: SyncOperation): Promise<void> {
+  const { table, data, filters } = operation;
+  
+  // Handle tables with updated_at columns
+  const updatedData = { ...data };
+  if (['orders', 'user_preferences'].includes(table)) {
+    updatedData.updated_at = new Date().toISOString();
+  }
+  
+  // Build the query
+  let query = supabase.from(table).update(updatedData);
+  
+  // Apply filters if available
+  if (filters) {
+    Object.keys(filters).forEach(key => {
+      const value = filters[key];
+      query = query.eq(key, value);
+    });
+  }
+  
+  const { error } = await query;
+  
+  if (error) {
+    throw new Error(`Failed to update ${table}: ${error.message}`);
+  }
+}
+
+/**
+ * Process a delete operation
+ */
+async function processDeleteOperation(operation: SyncOperation): Promise<void> {
+  const { table, filters } = operation;
+  
+  if (!filters || Object.keys(filters).length === 0) {
+    throw new Error(`Delete operation requires filters`);
+  }
+  
+  // Build the query
+  let query = supabase.from(table).delete();
+  
+  // Apply filters
+  Object.keys(filters).forEach(key => {
+    const value = filters[key];
+    query = query.eq(key, value);
+  });
+  
+  const { error } = await query;
+  
+  if (error) {
+    throw new Error(`Failed to delete from ${table}: ${error.message}`);
+  }
+}
+
+/**
+ * Check if any operations in the queue are ready for retry
+ */
+export async function getReadyRetries(): Promise<SyncOperation[]> {
+  const queue = await getSyncQueue();
+  const now = new Date();
+  
+  return queue.operations.filter(operation => {
+    if (!operation.nextRetry) return true;
+    const retryTime = new Date(operation.nextRetry);
+    return retryTime <= now;
+  });
+}
+
+/**
+ * Get the sync status
+ */
+export async function getSyncStatus(): Promise<{
+  pendingOperations: number;
+  lastSync: string | null;
+  hasFailedOperations: boolean;
+}> {
+  const queue = await getSyncQueue();
+  
+  const failedOperations = queue.operations.filter(op => op.retries >= MAX_RETRIES);
+  
+  return {
+    pendingOperations: queue.operations.length,
+    lastSync: queue.lastSync,
+    hasFailedOperations: failedOperations.length > 0
+  };
+}

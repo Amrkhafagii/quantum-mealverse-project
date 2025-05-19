@@ -1,158 +1,150 @@
-
-import React, { forwardRef, useId } from 'react';
-import { Form } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { forwardRef, useState, useEffect } from 'react';
+import { useForm, FormProvider, useFormContext, Controller } from 'react-hook-form';
+import { cn } from '@/lib/utils';
 import { Platform } from '@/utils/platform';
 import { useResponsive } from '@/contexts/ResponsiveContext';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useAdaptiveForm } from '@/hooks/useAdaptiveForm';
-import { Loader2 } from 'lucide-react';
-import * as z from 'zod';
+import { hapticFeedback } from '@/utils/hapticFeedback';
+import { AdaptiveFormOptions, useAdaptiveForm } from '@/hooks/useAdaptiveForm';
+import { z } from 'zod';
 
-interface AdaptiveFormProps<TFormSchema extends z.ZodTypeAny> {
-  schema: TFormSchema;
-  onSubmit: (data: z.infer<TFormSchema>) => Promise<void> | void;
-  defaultValues?: Partial<z.infer<TFormSchema>>;
-  children?: React.ReactNode;
-  className?: string;
+interface AdaptiveFormProps extends React.HTMLAttributes<HTMLFormElement> {
+  children: React.ReactNode;
+  schema: z.ZodObject<any>;
+  onSubmit: (data: any) => void;
+  defaultValues?: Record<string, any>;
   submitText?: string;
   resetText?: string;
   showReset?: boolean;
-  loading?: boolean;
-  disabled?: boolean;
-  scrollToErrors?: boolean;
-  preventMultipleSubmits?: boolean;
+  options?: AdaptiveFormOptions;
 }
 
-export const AdaptiveForm = forwardRef<
-  HTMLFormElement,
-  AdaptiveFormProps<any>
->(({
-  schema,
-  onSubmit,
-  defaultValues = {},
+interface AdaptiveInputFieldProps extends React.HTMLAttributes<HTMLInputElement> {
+  name: string;
+  label?: string;
+  description?: string;
+  type?: string;
+}
+
+export const AdaptiveForm = React.forwardRef<HTMLFormElement, AdaptiveFormProps>(({
   children,
   className,
+  onSubmit: onSubmitWrapped,
+  schema,
+  defaultValues = {},
   submitText = "Submit",
   resetText = "Reset",
   showReset = false,
-  loading = false,
-  disabled = false,
-  scrollToErrors = true,
-  preventMultipleSubmits = true,
+  options = {}
 }, ref) => {
-  const formId = useId();
-  const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
-  
-  // Create form with platform-specific validation mode
   const form = useForm({
-    resolver: zodResolver(schema),
+    resolver: undefined,
     defaultValues,
-    mode: isPlatformIOS ? 'onBlur' : isPlatformAndroid ? 'onChange' : 'onSubmit',
+    mode: 'onSubmit',
   });
   
-  const { 
-    isSubmitting,
-    handleSubmit
-  } = useAdaptiveForm(form, { 
-    scrollToErrors,
-    showFeedback: true
-  });
+  const adaptiveForm = useAdaptiveForm(form, options);
+  const { isPlatformIOS, isPlatformAndroid } = adaptiveForm;
+  const formRef = React.useRef<HTMLFormElement>(null);
 
-  // Platform-specific styles
-  const getFormStyles = () => {
-    const baseStyles = "space-y-6";
-    
-    if (isPlatformIOS) {
-      return cn(baseStyles, "ios-form");
-    }
-    
-    if (isPlatformAndroid) {
-      return cn(baseStyles, "android-form");
-    }
-    
-    return baseStyles;
-  };
-  
-  // Platform-specific button styles
-  const getButtonStyles = () => {
-    if (isPlatformIOS) {
-      return "rounded-lg bg-blue-500 hover:bg-blue-600 text-white";
-    }
-    
-    if (isPlatformAndroid) {
-      return "rounded-full bg-primary";
-    }
-    
-    return "";
+  // Fix the type error with the handleSubmit function
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const submitHandler = await adaptiveForm.handleSubmit(onSubmitWrapped);
+    submitHandler(e);
   };
 
-  // Handle form reset with platform-specific feedback
-  const handleReset = () => {
-    form.reset(defaultValues);
-    
+  // Platform detection
+  useEffect(() => {
     if (Platform.isNative()) {
-      // Need to import haptic utility
-      if (isPlatformIOS) {
-        navigator.vibrate && navigator.vibrate(10);
-      } else {
-        navigator.vibrate && navigator.vibrate([10, 30, 10]);
-      }
+      // Native platform adjustments
+    } else {
+      // Web platform adjustments
     }
-  };
+  }, []);
 
   return (
-    <Form {...form}>
-      <form
-        id={formId}
-        ref={ref}
-        onSubmit={handleSubmit(onSubmit)}
-        className={cn(getFormStyles(), className)}
-        noValidate
-      >
-        <div className="form-fields space-y-4">
-          {children}
-        </div>
-
-        <div className={cn(
-          "form-actions flex gap-4 pt-4",
-          isPlatformIOS ? "justify-end" : "justify-start",
-          isPlatformAndroid ? "flex-col-reverse" : "flex-row"
-        )}>
+    <form
+      ref={formRef}
+      className={cn(
+        "space-y-6",
+        className,
+        isPlatformIOS ? "ios-form" : "",
+        isPlatformAndroid ? "android-form" : ""
+      )}
+      onSubmit={onSubmit}
+      noValidate={true}
+    >
+      <FormProvider {...form}>
+        {children}
+        <div className="flex justify-end space-x-2">
           {showReset && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              className={cn(
-                isPlatformIOS ? "px-5 rounded-lg" : "",
-                isPlatformAndroid ? "rounded-full" : ""
-              )}
-              disabled={isSubmitting || loading || disabled}
+            <button
+              type="reset"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              onClick={() => form.reset(defaultValues)}
             >
               {resetText}
-            </Button>
+            </button>
           )}
-
-          <Button
+          <button
             type="submit"
-            className={cn(
-              getButtonStyles(),
-              "relative"
-            )}
-            disabled={(isSubmitting && preventMultipleSubmits) || loading || disabled}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-blue-300 disabled:cursor-not-allowed"
+            disabled={adaptiveForm.isSubmitting}
           >
-            {(isSubmitting || loading) && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
             {submitText}
-          </Button>
+          </button>
         </div>
-      </form>
-    </Form>
+      </FormProvider>
+    </form>
   );
 });
 
 AdaptiveForm.displayName = "AdaptiveForm";
+
+export const AdaptiveInputField = ({
+  name,
+  label,
+  description,
+  ...props
+}: AdaptiveInputFieldProps) => {
+  const { control } = useFormContext();
+
+  return (
+    <div className="space-y-2">
+      {label && (
+        <label
+          htmlFor={name}
+          className="block text-sm font-medium text-gray-700"
+        >
+          {label}
+        </label>
+      )}
+      <Controller
+        name={name}
+        control={control}
+        defaultValue=""
+        render={({ field, fieldState }) => (
+          <>
+            <input
+              id={name}
+              className={cn(
+                "block w-full shadow-sm text-sm border rounded-md py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500",
+                fieldState.invalid
+                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300"
+              )}
+              {...field}
+              {...props}
+            />
+            {fieldState.error && (
+              <p className="text-red-500 text-sm">{fieldState.error.message}</p>
+            )}
+            {description && (
+              <p className="text-gray-500 text-sm">{description}</p>
+            )}
+          </>
+        )}
+      />
+    </div>
+  );
+};

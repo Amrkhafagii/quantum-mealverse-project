@@ -12,7 +12,7 @@ interface OrderStatusDisplayProps {
   onOrderUpdate?: () => void;
 }
 
-export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
+const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
   order,
   assignmentStatus,
   onOrderUpdate

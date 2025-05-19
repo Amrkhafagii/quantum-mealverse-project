@@ -80,5 +80,51 @@ export const hapticFeedback = {
     if ('vibrate' in navigator) {
       navigator.vibrate(pattern);
     }
+  },
+  
+  /**
+   * Contextual haptic feedback based on action type
+   * @param type - The type of action
+   */
+  contextual: async (type: 'success' | 'error' | 'warning' | 'selection' | 'action' | 'light' | 'medium' | 'heavy') => {
+    switch (type) {
+      case 'success':
+        return hapticFeedback.success();
+      case 'error': 
+        return hapticFeedback.error();
+      case 'warning':
+        return hapticFeedback.warning();
+      case 'selection':
+        return hapticFeedback.selection();
+      case 'light':
+        return hapticFeedback.light();
+      case 'medium':
+        return hapticFeedback.medium();
+      case 'heavy':
+        return hapticFeedback.heavy();
+      case 'action':
+      default:
+        return hapticFeedback.medium();
+    }
+  },
+  
+  /**
+   * Impact feedback for buttons and UI controls
+   * @param strength - Strength of the impact
+   */
+  impact: async (strength: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if (Platform.isNative()) {
+      switch (strength) {
+        case 'light':
+          await Haptics.impact({ style: ImpactStyle.Light });
+          break;
+        case 'heavy':
+          await Haptics.impact({ style: ImpactStyle.Heavy });
+          break;
+        case 'medium':
+        default:
+          await Haptics.impact({ style: ImpactStyle.Medium });
+      }
+    }
   }
 };

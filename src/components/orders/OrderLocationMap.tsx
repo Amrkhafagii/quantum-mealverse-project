@@ -4,10 +4,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { Order } from '@/types/order';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import MapContainer from '../maps/MapContainer';
-import { OfflineMapFallback } from '../maps/OfflineMapFallback';
 import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import UnifiedMapView from '../maps/UnifiedMapView';
 
