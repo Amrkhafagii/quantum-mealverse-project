@@ -8,13 +8,25 @@ import { OrderTimer } from '../status/OrderTimer';
 import { toast } from '@/hooks/use-toast';
 
 interface OrderRestaurantStatusProps {
-  order: Order;
+  order?: Order;
+  status?: string;
+  restaurantName?: string;
+  assignmentStatus?: any;
+  isCancelling?: boolean;
+  onCancel?: () => Promise<void>;
+  orderId?: string;
   onStatusChange?: (status: string) => void;
   onCloseModal?: () => void;
 }
 
 export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   order,
+  status,
+  restaurantName,
+  assignmentStatus,
+  isCancelling,
+  onCancel,
+  orderId,
   onStatusChange,
   onCloseModal
 }) => {
@@ -23,27 +35,32 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   
   const initialTimerDuration = 60 * 5; // 5 minutes
   
+  // Get status either from order object or direct status prop
+  const orderStatus = order ? order.status : status;
+  
   useEffect(() => {
     // Set initial expiry date
-    const initialExpiry = new Date(order.updated_at);
-    initialExpiry.setSeconds(initialExpiry.getSeconds() + initialTimerDuration);
-    setTimerExpiryDate(initialExpiry);
-    
-    // Check if timer has already expired on mount
-    if (new Date() > initialExpiry) {
-      setIsTimerExpired(true);
-    }
-    
-    // Setup interval to check expiry every second
-    const intervalId = setInterval(() => {
-      if (timerExpiryDate && new Date() > timerExpiryDate) {
+    if (order?.updated_at) {
+      const initialExpiry = new Date(order.updated_at);
+      initialExpiry.setSeconds(initialExpiry.getSeconds() + initialTimerDuration);
+      setTimerExpiryDate(initialExpiry);
+      
+      // Check if timer has already expired on mount
+      if (new Date() > initialExpiry) {
         setIsTimerExpired(true);
-        clearInterval(intervalId);
       }
-    }, 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [order.updated_at, initialTimerDuration, timerExpiryDate]);
+      
+      // Setup interval to check expiry every second
+      const intervalId = setInterval(() => {
+        if (timerExpiryDate && new Date() > timerExpiryDate) {
+          setIsTimerExpired(true);
+          clearInterval(intervalId);
+        }
+      }, 1000);
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [order?.updated_at, initialTimerDuration, timerExpiryDate]);
   
   const handleTimerExpire = () => {
     setIsTimerExpired(true);
@@ -62,6 +79,10 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
   };
   
   const handleCancelOrder = async () => {
+    if (onCancel) {
+      await onCancel();
+    }
+    
     if (onStatusChange) {
       onStatusChange('cancelled');
     }
@@ -84,19 +105,19 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             <Store className="mr-2 h-5 w-5 text-quantum-cyan" /> 
             Restaurant Status
           </div>
-          {(!isTimerExpired && order.status === 'pending') && (
+          {(!isTimerExpired && orderStatus === 'pending') && (
             <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
               <Clock className="mr-1 h-3 w-3" /> Awaiting Response
             </Badge>
           )}
         </CardTitle>
         <CardDescription>
-          {order.restaurant?.name || 'Restaurant'} needs to confirm your order
+          {(order?.restaurant?.name || restaurantName || 'Restaurant')} needs to confirm your order
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {order.status === 'pending' && (
+          {orderStatus === 'pending' && (
             <>
               {isTimerExpired ? (
                 <div className="bg-amber-500/20 rounded-md p-3 text-amber-200">
@@ -122,24 +143,27 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
                       variant="outline"
                       className="border-red-500/50 text-red-300 hover:bg-red-500/20"
                       onClick={handleCancelOrder}
+                      disabled={isCancelling}
                     >
                       <X className="mr-1 h-4 w-4" />
-                      Cancel Order
+                      {isCancelling ? 'Cancelling...' : 'Cancel Order'}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <OrderTimer 
-                  updatedAt={order.updated_at} 
-                  expiresAt={timerExpiryDate} 
-                  orderId={order.id}
-                  onTimerExpire={handleTimerExpire} 
-                />
+                order?.updated_at && timerExpiryDate && (
+                  <OrderTimer 
+                    updatedAt={order.updated_at} 
+                    expiresAt={timerExpiryDate} 
+                    orderId={order.id || orderId || ''} 
+                    onTimerExpire={handleTimerExpire}
+                  />
+                )
               )}
             </>
           )}
           
-          {order.status === 'confirmed' && (
+          {orderStatus === 'confirmed' && (
             <div className="bg-green-500/10 rounded-md p-3 text-green-300">
               <div className="flex items-center mb-2">
                 <Clock className="mr-2 h-5 w-5 text-green-400" />
@@ -151,7 +175,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             </div>
           )}
           
-          {order.status === 'preparing' && (
+          {orderStatus === 'preparing' && (
             <div className="bg-blue-500/10 rounded-md p-3 text-blue-300">
               <div className="flex items-center mb-2">
                 <Clock className="mr-2 h-5 w-5 text-blue-400" />
@@ -163,7 +187,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             </div>
           )}
           
-          {order.status === 'ready' && (
+          {orderStatus === 'ready' && (
             <div className="bg-purple-500/10 rounded-md p-3 text-purple-300">
               <div className="flex items-center mb-2">
                 <Clock className="mr-2 h-5 w-5 text-purple-400" />
@@ -175,7 +199,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             </div>
           )}
           
-          {order.status === 'out_for_delivery' && (
+          {orderStatus === 'out_for_delivery' && (
             <div className="bg-orange-500/10 rounded-md p-3 text-orange-300">
               <div className="flex items-center mb-2">
                 <Clock className="mr-2 h-5 w-5 text-orange-400" />
@@ -187,7 +211,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             </div>
           )}
           
-          {order.status === 'delivered' && (
+          {orderStatus === 'delivered' && (
             <div className="bg-green-500/10 rounded-md p-3 text-green-300">
               <div className="flex items-center mb-2">
                 <Clock className="mr-2 h-5 w-5 text-green-400" />
@@ -199,7 +223,7 @@ export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
             </div>
           )}
           
-          {order.status === 'cancelled' && (
+          {orderStatus === 'cancelled' && (
             <div className="bg-red-500/10 rounded-md p-3 text-red-300">
               <div className="flex items-center mb-2">
                 <Clock className="mr-2 h-5 w-5 text-red-400" />

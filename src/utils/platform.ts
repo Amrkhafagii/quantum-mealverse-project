@@ -1,4 +1,3 @@
-
 import { Capacitor } from '@capacitor/core';
 import { Device } from '@capacitor/device';
 
@@ -30,6 +29,14 @@ export class Platform {
       const minTabletWidth = 768; // Common breakpoint for tablets
       return window.innerWidth >= minTabletWidth && !this.isMobileBrowser();
     }
+  }
+  
+  static isMobile(): boolean {
+    // If on native platform, it's mobile
+    if (this.isNative()) return true;
+    
+    // Otherwise check if it's a mobile browser
+    return this.isMobileBrowser();
   }
   
   static async getAndroidVersion(): Promise<number> {

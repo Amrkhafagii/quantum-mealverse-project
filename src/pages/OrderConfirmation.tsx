@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, Share2, Download, Printer, CircleCheck } from 'lucide-react';
@@ -14,7 +15,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
 import { OrderHeader } from '@/components/orders/thank-you/OrderHeader';
-import { OrderStatusDisplay } from '@/components/orders/OrderStatusDisplay';
+import OrderStatusDisplay from '@/components/orders/OrderStatusDisplay'; // Fixed import
 import { OrderItemsList } from '@/components/orders/OrderItemsList';
 import { OrderRestaurantStatus } from '@/components/orders/thank-you/OrderRestaurantStatus';
 import { ActionButtons } from '@/components/orders/thank-you/ActionButtons';

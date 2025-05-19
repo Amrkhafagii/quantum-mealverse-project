@@ -1,153 +1,137 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
-import { toast } from '@/components/ui/use-toast';
-import { AlertCircle } from 'lucide-react';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { useToast } from '@/hooks/use-toast';
+import { WifiOff, AlertTriangle } from 'lucide-react';
+
+interface NetworkPredictionConfig {
+  pollIntervalMs?: number;
+  latencyThreshold?: number;
+  packetLossThreshold?: number;
+  useHeuristics?: boolean;
+}
 
 interface NetworkPredictiveMonitorProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
   enablePredictions?: boolean;
-  sensitivityLevel?: 'low' | 'medium' | 'high';
   notifyUser?: boolean;
+  config?: NetworkPredictionConfig;
 }
 
 export function NetworkPredictiveMonitor({
   children,
   enablePredictions = true,
-  sensitivityLevel = 'medium',
-  notifyUser = true
+  notifyUser = true,
+  config = {}
 }: NetworkPredictiveMonitorProps) {
   const { isOnline, connectionType } = useConnectionStatus();
-  const { latency, quality, isFlaky } = useNetworkQuality();
-  const [degradingConnection, setDegradingConnection] = useState(false);
-  const latencyHistory = useRef<number[]>([]);
-  const qualityHistory = useRef<string[]>([]);
-  const lastWarningTime = useRef<number | null>(null);
+  const { quality, latency, packetLoss } = useNetworkQuality();
+  const [predictionActive, setPredictionActive] = useState(false);
+  const [possibleDisconnection, setPossibleDisconnection] = useState(false);
+  const { toast } = useToast();
   
-  // Convert sensitivity level to numerical thresholds
-  const thresholds = {
-    low: { 
-      latencyJump: 100, 
-      consistentDegradation: 5,
-      warningCooldown: 60000 // 60 seconds
-    },
-    medium: { 
-      latencyJump: 70, 
-      consistentDegradation: 3,
-      warningCooldown: 30000 // 30 seconds
-    },
-    high: { 
-      latencyJump: 40, 
-      consistentDegradation: 2,
-      warningCooldown: 15000 // 15 seconds
-    }
-  }[sensitivityLevel];
+  const {
+    pollIntervalMs = 5000,
+    latencyThreshold = 800,
+    packetLossThreshold = 15,
+    useHeuristics = true
+  } = config;
   
-  // Detect if we're in a tunnel or elevator based on connection patterns
-  const detectMobilityIssues = useCallback(() => {
-    if (!isOnline || connectionType !== 'cellular') return false;
-    
-    // Check rapid latency increases which often happen when entering tunnels/elevators
-    if (latencyHistory.current.length >= 3) {
-      const recent = latencyHistory.current.slice(-3);
-      const increasing = recent[1] > recent[0] && recent[2] > recent[1];
-      const rapidIncrease = recent[2] - recent[0] > thresholds.latencyJump;
-      
-      if (increasing && rapidIncrease) {
-        return true;
-      }
-    }
-    
-    return false;
-  }, [isOnline, connectionType, thresholds.latencyJump]);
-  
-  // Analyze connection patterns to predict potential issues
-  const analyzeConnectionPatterns = useCallback(() => {
+  // Function to predict possible connection issues
+  const checkForPotentialIssues = useCallback(() => {
     if (!enablePredictions || !isOnline) return;
     
-    // Check for mobility issues (tunnels, elevators)
-    const mobilityIssue = detectMobilityIssues();
+    const isHighLatency = latency && latency > latencyThreshold;
+    const isHighPacketLoss = packetLoss && packetLoss > packetLossThreshold;
     
-    // Check for consistent quality degradation
-    let degradingQuality = false;
-    if (qualityHistory.current.length >= thresholds.consistentDegradation) {
-      const recentQualities = qualityHistory.current.slice(-thresholds.consistentDegradation);
-      const qualities = ['unknown', 'very-poor', 'poor', 'fair', 'good', 'excellent'];
-      
-      // Check if quality is consistently decreasing
-      let decreasing = true;
-      for (let i = 1; i < recentQualities.length; i++) {
-        const prevIndex = qualities.indexOf(recentQualities[i-1]);
-        const currentIndex = qualities.indexOf(recentQualities[i]);
-        
-        if (currentIndex >= prevIndex) {
-          decreasing = false;
-          break;
-        }
+    let isPotentialDisconnect = false;
+    
+    // Check if we're on a connection type that might have issues
+    if (useHeuristics) {
+      // Potential issues when in tunnels, elevators, etc.
+      if (connectionType === 'cellular' && quality === 'poor' && (isHighLatency || isHighPacketLoss)) {
+        isPotentialDisconnect = true;
       }
       
-      degradingQuality = decreasing;
+      // Unstable WiFi when signal is weak
+      if (connectionType === 'wifi' && quality === 'poor' && isHighPacketLoss) {
+        isPotentialDisconnect = true;
+      }
+    } else {
+      // Simple check based on metrics only
+      isPotentialDisconnect = isHighLatency && isHighPacketLoss;
     }
     
-    // Determine if we should warn about degrading connection
-    const shouldWarn = mobilityIssue || degradingQuality;
-    
-    // Only update state if it's changing
-    if (shouldWarn !== degradingConnection) {
-      setDegradingConnection(shouldWarn);
+    // Update state if prediction changes
+    if (isPotentialDisconnect !== possibleDisconnection) {
+      setPossibleDisconnection(isPotentialDisconnect);
       
-      // Show notification if needed and cooldown period has passed
-      const now = Date.now();
-      if (shouldWarn && notifyUser && 
-          (!lastWarningTime.current || now - lastWarningTime.current > thresholds.warningCooldown)) {
+      // Notify the user if needed
+      if (isPotentialDisconnect && notifyUser) {
         toast({
-          title: "Connection Warning",
-          description: mobilityIssue 
-            ? "You may be entering an area with poor connectivity."
-            : "Your connection quality is degrading rapidly.",
-          variant: "warning",
+          title: "Possible connection issue ahead",
+          description: "Your network quality is deteriorating. You might experience connection issues soon.",
+          // Change from "warning" to "default" which is a valid variant
+          variant: "default",
           duration: 5000,
           action: (
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-          )
+            <div className="flex items-center justify-center w-8 h-8 bg-amber-100 dark:bg-amber-900 rounded-full">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+          ),
         });
-        
-        lastWarningTime.current = now;
       }
     }
-  }, [enablePredictions, isOnline, detectMobilityIssues, notifyUser, thresholds, degradingConnection]);
+  }, [
+    enablePredictions, 
+    isOnline, 
+    connectionType, 
+    quality, 
+    latency,
+    packetLoss, 
+    latencyThreshold,
+    packetLossThreshold,
+    useHeuristics, 
+    possibleDisconnection, 
+    notifyUser,
+    toast
+  ]);
   
-  // Track network metrics history
+  // Set up polling for connection prediction
   useEffect(() => {
-    if (!isOnline) {
-      // Clear history when offline
-      latencyHistory.current = [];
-      qualityHistory.current = [];
+    if (!enablePredictions) {
+      setPredictionActive(false);
       return;
     }
     
-    // Track latency if available
-    if (latency) {
-      latencyHistory.current.push(latency);
-      // Keep last 10 measurements
-      if (latencyHistory.current.length > 10) {
-        latencyHistory.current.shift();
-      }
-    }
+    setPredictionActive(true);
     
-    // Track connection quality
-    qualityHistory.current.push(quality);
-    if (qualityHistory.current.length > 10) {
-      qualityHistory.current.shift();
-    }
+    // Initial check
+    checkForPotentialIssues();
     
-    // Analyze patterns to predict issues
-    analyzeConnectionPatterns();
+    // Set up interval for regular checks
+    const interval = setInterval(() => {
+      checkForPotentialIssues();
+    }, pollIntervalMs);
     
-  }, [isOnline, latency, quality, analyzeConnectionPatterns]);
+    return () => clearInterval(interval);
+  }, [enablePredictions, checkForPotentialIssues, pollIntervalMs]);
   
-  // Return children since this is just a monitoring component
-  return children || null;
+  // Return children with potential warning
+  return (
+    <>
+      {children}
+      
+      {/* Predictive warning indicator could be added here if needed */}
+      {predictionActive && possibleDisconnection && (
+        <div className="hidden">
+          {/* Hidden element just to track state */}
+          <WifiOff className="h-0 w-0" />
+        </div>
+      )}
+    </>
+  );
 }
 
 export default NetworkPredictiveMonitor;

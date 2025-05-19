@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Plus, Minus, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -181,6 +180,15 @@ export const RequestQueueProvider: React.FC<RequestQueueProviderProps> = ({ chil
 export const useRequestQueue = () => {
   return React.useContext(RequestQueueContext);
 };
+
+// Update the RequestExecutor interface to properly handle Promise<unknown>
+export interface RequestExecutor {
+  execute: () => Promise<any>; // Allow any return type for execute
+  priority: 'high' | 'normal' | 'low';
+  maxRetries?: number;
+  description?: string;
+  metadata?: Record<string, any>;
+}
 
 // Component to display and manage the queue
 export const RequestQueueManager: React.FC = () => {

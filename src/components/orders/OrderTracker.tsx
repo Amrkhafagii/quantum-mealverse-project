@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, AlertCircle } from 'lucide-react';
@@ -5,7 +6,7 @@ import { format } from 'date-fns';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { OrderStatusTimeline } from './OrderStatusTimeline';
 import { ReturnRequestForm } from './ReturnRequestForm';
-import { OrderStatusDisplay } from './OrderStatusDisplay';
+import OrderStatusDisplay from './status/OrderStatusDisplay'; // Fixed import
 import { OrderDetailsGrid } from './OrderDetailsGrid';
 import { OrderItemsList } from './OrderItemsList';
 import { useOrderData } from '@/hooks/useOrderData';

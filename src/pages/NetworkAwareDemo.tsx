@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';

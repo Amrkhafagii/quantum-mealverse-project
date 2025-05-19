@@ -1,225 +1,228 @@
 
-import React from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import React, { useState, useEffect } from 'react';
+import { useDeviceOrientation } from '@/hooks/useDeviceOrientation';
 import { Platform } from '@/utils/platform';
-import { Smartphone, Tablet, MonitorSmartphone } from 'lucide-react';
+import { TabsList, TabsTrigger, Tabs, TabsContent } from '../ui/tabs';
+import { Separator } from '../ui/separator';
 
-interface PlatformLayoutProps {
-  children: React.ReactNode;
-  headerContent?: React.ReactNode;
-  footerContent?: React.ReactNode;
-  sidebarContent?: React.ReactNode;
-  bottomTabItems?: Array<{
-    id: string;
-    label: string;
-    icon: React.ReactNode;
-  }>;
-  activeTabId?: string;
-  onTabChange?: (tabId: string) => void;
-  className?: string;
+interface Section {
+  id: string;
+  title: string;
+  content: React.ReactNode;
+  icon?: React.ReactNode;
 }
 
-export const PlatformLayout: React.FC<PlatformLayoutProps> = ({
-  children,
-  headerContent,
-  footerContent,
-  sidebarContent,
-  bottomTabItems,
-  activeTabId,
-  onTabChange,
-  className = '',
-}) => {
-  const { 
-    isPlatformIOS, 
-    isPlatformAndroid, 
-    isPlatformWeb,
-    isDesktop,
-    isTablet,
-    isMobile 
-  } = useResponsive();
+export interface PlatformLayoutProps {
+  sections: Section[];
+  defaultActive?: string;
+  onActiveChange?: (active: string) => void;
+  className?: string;
+  layoutType?: 'auto' | 'stack' | 'tabs' | 'split' | 'tabBar';
+}
 
-  // Determine which platform UI pattern to use
-  const renderContent = () => {
-    if (isPlatformIOS || isPlatformAndroid) {
-      return renderMobileLayout();
-    } else if (isTablet) {
-      return renderTabletLayout();
-    } else {
-      return renderDesktopLayout();
+const PlatformLayout: React.FC<PlatformLayoutProps> = ({
+  sections,
+  defaultActive,
+  onActiveChange,
+  className = '',
+  layoutType = 'auto'
+}) => {
+  const [active, setActive] = useState(defaultActive || (sections[0]?.id || ''));
+  const { orientation } = useDeviceOrientation();
+  const isMobile = Platform.isMobile();
+  const isTablet = Platform.isTablet();
+  
+  // Determine the most appropriate layout type based on device and orientation
+  const getLayoutType = () => {
+    if (layoutType !== 'auto') {
+      return layoutType;
+    }
+    
+    // Mobile in portrait mode
+    if (isMobile && orientation === 'portrait') {
+      return 'stack';
+    }
+    
+    // Mobile in landscape mode
+    if (isMobile && orientation === 'landscape') {
+      return 'tabs';
+    }
+    
+    // Tablet or desktop
+    if (isTablet || !isMobile) {
+      return 'split';
+    }
+    
+    // Default fallback
+    return 'stack';
+  };
+  
+  const effectiveLayoutType = getLayoutType();
+  
+  // Handle active section change
+  const handleActiveChange = (newActive: string) => {
+    setActive(newActive);
+    if (onActiveChange) {
+      onActiveChange(newActive);
     }
   };
-
-  // Mobile layout with bottom tabs or basic layout
-  const renderMobileLayout = () => {
-    const safeAreaClass = isPlatformIOS ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-4';
-    
-    return (
-      <div className={`flex flex-col min-h-screen ${className}`}>
-        {/* Mobile Header */}
-        {headerContent && (
-          <header className={`sticky top-0 z-10 bg-background ${isPlatformIOS ? 'pt-[env(safe-area-inset-top)]' : 'pt-2'}`}>
-            {headerContent}
-          </header>
-        )}
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-        
-        {/* Mobile Footer or Tab Bar */}
-        {(bottomTabItems && bottomTabItems.length > 0) ? (
-          <PlatformTabBar 
-            activeItemId={activeTabId || bottomTabItems[0].id} 
-            onItemClick={onTabChange || (() => {})} 
-            bottomTabItems={bottomTabItems}
-            isPlatformIOS={isPlatformIOS}
-          />
-        ) : footerContent ? (
-          <footer className={`bg-background ${safeAreaClass}`}>
-            {footerContent}
-          </footer>
-        ) : null}
-      </div>
-    );
-  };
-
-  // Tablet layout with sidebar
-  const renderTabletLayout = () => {
-    return (
-      <div className={`flex min-h-screen ${className}`}>
-        {/* Sidebar */}
-        {sidebarContent && (
-          <aside className="w-64 border-r border-border bg-muted/10">
-            {sidebarContent}
-          </aside>
-        )}
-        
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          {headerContent && (
-            <header className="sticky top-0 z-10 bg-background">
-              {headerContent}
-            </header>
-          )}
-          
-          {/* Main Content */}
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
-          
-          {/* Footer */}
-          {footerContent && (
-            <footer className="bg-background">
-              {footerContent}
-            </footer>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Desktop layout with sidebar and fixed width
-  const renderDesktopLayout = () => {
-    return (
-      <div className={`flex justify-center ${className}`}>
-        <div className="flex min-h-screen max-w-7xl w-full">
-          {/* Sidebar */}
-          {sidebarContent && (
-            <aside className="w-64 border-r border-border bg-muted/10">
-              {sidebarContent}
-            </aside>
-          )}
-          
-          <div className="flex-1 flex flex-col">
-            {/* Header */}
-            {headerContent && (
-              <header className="sticky top-0 z-10 bg-background">
-                {headerContent}
-              </header>
-            )}
-            
-            {/* Main Content */}
-            <main className="flex-1">
-              {children}
-            </main>
-            
-            {/* Footer */}
-            {footerContent && (
-              <footer className="bg-background">
-                {footerContent}
-              </footer>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return renderContent();
-};
-
-// Platform-specific tab bar component
-interface PlatformTabBarProps {
-  activeItemId: string;
-  onItemClick: (itemId: string) => void;
-  bottomTabItems: Array<{
-    id: string;
-    label: string;
-    icon: React.ReactNode;
-  }>;
-  isPlatformIOS: boolean;
-}
-
-const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
-  activeItemId,
-  onItemClick,
-  bottomTabItems,
-  isPlatformIOS
-}) => {
-  const safeAreaClass = isPlatformIOS ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-1';
   
-  // iOS style tab bar vs Material style
-  return (
-    <div className={`sticky bottom-0 border-t border-border bg-background ${safeAreaClass}`}>
-      <div className="flex items-center justify-around">
-        {bottomTabItems.map((item) => {
-          const isActive = item.id === activeItemId;
+  // Update active section if defaultActive changes
+  useEffect(() => {
+    if (defaultActive) {
+      setActive(defaultActive);
+    }
+  }, [defaultActive]);
+  
+  // Stack Layout (mobile portrait)
+  if (effectiveLayoutType === 'stack') {
+    return (
+      <div className={`platform-layout platform-stack ${className}`}>
+        {sections.map((section) => {
+          const isActiveSection = section.id === active;
           
-          // iOS style: icon above label
-          if (isPlatformIOS) {
-            return (
-              <button
-                key={item.id}
-                className={`flex flex-col items-center justify-center py-2 px-4 ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`}
-                onClick={() => onItemClick(item.id)}
-              >
-                <div className="mb-1">{item.icon}</div>
-                <span className="text-xs">{item.label}</span>
-              </button>
-            );
-          }
-          
-          // Android style: icon with label side by side when active
           return (
-            <button
-              key={item.id}
-              className={`flex items-center justify-center py-3 px-4 ${
-                isActive
-                  ? 'text-primary bg-primary/10 rounded-full'
-                  : 'text-muted-foreground'
-              }`}
-              onClick={() => onItemClick(item.id)}
-            >
-              <div className="mr-2">{item.icon}</div>
-              {isActive && <span className="text-xs">{item.label}</span>}
-            </button>
+            <div key={section.id} className={`section ${isActiveSection ? 'block' : 'hidden'}`}>
+              {section.content}
+            </div>
           );
         })}
+        
+        <div className="platform-nav fixed bottom-0 left-0 right-0 bg-background border-t z-10 flex justify-around p-2">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+                section.id === active 
+                  ? 'text-primary bg-muted' 
+                  : 'text-muted-foreground hover:text-primary hover:bg-muted/50'
+              }`}
+              onClick={() => handleActiveChange(section.id)}
+            >
+              <div className="mb-1">{section.icon}</div>
+              <span className="text-xs">{section.title}</span>
+            </button>
+          ))}
+        </div>
+        
+        <div className="pb-16">
+          {/* Space for bottom nav */}
+        </div>
       </div>
-    </div>
+    );
+  }
+  
+  // Tabs Layout (standard tabs)
+  if (effectiveLayoutType === 'tabs') {
+    return (
+      <Tabs 
+        value={active} 
+        onValueChange={handleActiveChange}
+        className={`platform-layout platform-tabs ${className}`}
+      >
+        <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+          {sections.map((section) => (
+            <TabsTrigger 
+              key={section.id} 
+              value={section.id}
+              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none py-2 px-4"
+            >
+              <div className="flex items-center space-x-2">
+                {section.icon && <span>{section.icon}</span>}
+                <span>{section.title}</span>
+              </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        
+        {sections.map((section) => (
+          <TabsContent key={section.id} value={section.id} className="mt-2">
+            {section.content}
+          </TabsContent>
+        ))}
+      </Tabs>
+    );
+  }
+  
+  // Split Layout (master-detail)
+  if (effectiveLayoutType === 'split') {
+    return (
+      <div className={`platform-layout platform-split grid grid-cols-12 gap-4 ${className}`}>
+        <div className="col-span-3 border-r pr-4">
+          <div className="space-y-1">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                className={`w-full flex items-center space-x-2 p-2 text-left rounded-md transition-colors ${
+                  section.id === active 
+                    ? 'bg-muted text-primary font-medium' 
+                    : 'text-muted-foreground hover:bg-muted/50'
+                }`}
+                onClick={() => handleActiveChange(section.id)}
+              >
+                {section.icon && <span>{section.icon}</span>}
+                <span>{section.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="col-span-9">
+          {sections.find(s => s.id === active)?.content}
+        </div>
+      </div>
+    );
+  }
+  
+  // Tab Bar Layout (mobile app style)
+  if (effectiveLayoutType === 'tabBar') {
+    return (
+      <div className={`platform-layout platform-tab-bar ${className}`}>
+        <div className="content-area pb-16">
+          {sections.find(s => s.id === active)?.content}
+        </div>
+        
+        <div className="tab-bar fixed bottom-0 left-0 right-0 bg-background border-t z-10 flex justify-around p-1">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              className={`flex flex-col items-center p-2 rounded-md transition-colors ${
+                section.id === active 
+                  ? 'text-primary' 
+                  : 'text-muted-foreground'
+              }`}
+              onClick={() => handleActiveChange(section.id)}
+            >
+              <div className="mb-1">{section.icon}</div>
+              <span className="text-xs">{section.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
+  // Fallback to tabs if no matching layout
+  return (
+    <Tabs 
+      value={active} 
+      onValueChange={handleActiveChange}
+      className={`platform-layout platform-default ${className}`}
+    >
+      <TabsList>
+        {sections.map((section) => (
+          <TabsTrigger key={section.id} value={section.id}>
+            {section.title}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      
+      {sections.map((section) => (
+        <TabsContent key={section.id} value={section.id}>
+          {section.content}
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 };
 

@@ -28,6 +28,7 @@ interface LazyMapProps {
   forceWebView?: boolean;
   enableAnimation?: boolean;
   enableControls?: boolean;
+  isNative?: boolean; // Added this prop
 }
 
 const LazyMap: React.FC<LazyMapProps> = ({
@@ -45,10 +46,10 @@ const LazyMap: React.FC<LazyMapProps> = ({
   forceWebView = false,
   enableAnimation = true,
   enableControls = true,
+  isNative = Platform.isNative() && !forceWebView, // Default value based on platform
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { quality, isLowQuality } = useNetworkQuality();
-  const isNative = Platform.isNative() && !forceWebView;
   const mapElementRef = useRef<HTMLDivElement>(null);
   
   // Use low performance mode if network quality is low or explicitly set
