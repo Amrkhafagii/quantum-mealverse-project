@@ -1,4 +1,4 @@
-import { MealPlan, Meal, Food, MealFood } from '@/types/food';
+import { MealPlan, Meal, Food, MealFood, FoodCategory, CookingState } from '@/types/food';
 import { foodDataService, FoodItem, NutritionData } from '../foodDataService';
 import { TDEEResult, MealDistribution } from './types';
 
@@ -182,7 +182,7 @@ const getSuitableFoodsForMeal = (mealType: string): {
 const selectOptimalFood = (foods: Food[], nutrientType: string, targetAmount: number): Food => {
   if (!foods || foods.length === 0) {
     // Use fallback food if no foods are available
-    return createFallbackFood(nutrientType, `${nutrientType} food`) as Food;
+    return createFallbackFood(nutrientType as FoodCategory, `${nutrientType} food`);
   }
   
   // If there's a target amount, try to find foods that have good nutrient density
@@ -400,10 +400,11 @@ export const calculatePortion = (food: Food, targetGrams: number, nutrientType: 
 };
 
 /**
- * Create a fallback food item if API fails
+ * Create a fallback food item if API fails - now returns a proper Food object
  */
-export const createFallbackFood = (category: string, name: string) => {
+export const createFallbackFood = (category: string, name: string): Food => {
   let calories = 0, protein = 0, carbs = 0, fat = 0;
+  const foodCategory = category as FoodCategory || 'protein';
   
   // Use reasonable defaults based on category
   switch (category) {
@@ -425,26 +426,33 @@ export const createFallbackFood = (category: string, name: string) => {
       carbs = 5;
       fat = 14;
       break;
-    case 'vegetable':
+    case 'vegetables':
       calories = 35;
       protein = 2;
       carbs = 7;
       fat = 0;
       break;
+    default:
+      // Default to protein if category is unknown
+      calories = 165;
+      protein = 25;
+      carbs = 0;
+      fat = 8;
   }
   
-  // Create the fallback food item with USDA API structure
+  // Create and return a properly structured Food object
   return {
-    fdcId: Math.floor(Math.random() * 10000) + 50000,
-    description: name,
-    dataType: 'Foundation',
-    publishedDate: new Date().toISOString(),
-    foodNutrients: [
-      { nutrientId: 1008, nutrientName: 'Energy', nutrientNumber: '208', value: calories, unitName: 'kcal' },
-      { nutrientId: 1003, nutrientName: 'Protein', nutrientNumber: '203', value: protein, unitName: 'g' },
-      { nutrientId: 1005, nutrientName: 'Carbohydrates', nutrientNumber: '205', value: carbs, unitName: 'g' },
-      { nutrientId: 1004, nutrientName: 'Fat', nutrientNumber: '204', value: fat, unitName: 'g' }
-    ]
+    id: crypto.randomUUID(),
+    name: name,
+    category: foodCategory,
+    calories: calories,
+    protein: protein,
+    carbs: carbs,
+    fat: fat,
+    portion: 100, // default 100g portion
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: 'raw' as CookingState
   };
 };
 
