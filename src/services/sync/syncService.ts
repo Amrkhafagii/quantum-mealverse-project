@@ -1,7 +1,10 @@
+
 import { supabase } from '@/services/supabaseClient';
 import { getPendingActions, removePendingAction } from '@/utils/offlineStorage/index';
-// Note: We don't need to import cancelOrderWithOfflineSupport as it's not used here
 
+/**
+ * Synchronize offline data with the server
+ */
 export const syncOfflineData = async () => {
   try {
     const pendingActions = await getPendingActions();
@@ -44,3 +47,6 @@ export const syncOfflineData = async () => {
     console.error('Error syncing offline data:', error);
   }
 };
+
+// Alias for backward compatibility
+export const syncPendingActions = syncOfflineData;

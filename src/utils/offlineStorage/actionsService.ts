@@ -1,11 +1,8 @@
 
 import offlineStorage from './factory';
-import { OfflineAction, STORAGE_KEYS } from './types';
-import { v4 as uuidv4 } from 'uuid';
+import { OfflineAction, STORAGE_KEYS, MAX_RETRY_COUNT } from './types';
 
-/**
- * Get all pending offline actions
- */
+// Utility functions for working with pending actions
 export const getPendingActions = async (): Promise<OfflineAction[]> => {
   try {
     const actions = await offlineStorage.get<OfflineAction[]>(STORAGE_KEYS.PENDING_ACTIONS);
@@ -16,58 +13,46 @@ export const getPendingActions = async (): Promise<OfflineAction[]> => {
   }
 };
 
-/**
- * Add a new pending action
- * @param type Action type
- * @param payload Action payload
- */
-export const addPendingAction = async (type: string, payload: any): Promise<string> => {
+export const queueOfflineAction = async (action: Omit<OfflineAction, 'id' | 'timestamp' | 'retryCount'>): Promise<void> => {
   try {
     const actions = await getPendingActions();
+    
+    // Generate a unique ID
+    const id = `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     const newAction: OfflineAction = {
-      id: uuidv4(),
-      type,
-      payload,
-      timestamp: new Date().toISOString(),
+      ...action,
+      id,
+      timestamp: Date.now(), // Use number instead of string for timestamp
       retryCount: 0
     };
     
     actions.push(newAction);
     await offlineStorage.set(STORAGE_KEYS.PENDING_ACTIONS, actions);
-    return newAction.id;
   } catch (error) {
-    console.error('Error adding pending action:', error);
-    throw error;
+    console.error('Error queueing offline action:', error);
   }
 };
 
-/**
- * Remove a pending action by ID
- * @param id Action ID to remove
- */
-export const removePendingAction = async (id: string): Promise<void> => {
+export const removePendingAction = async (actionId: string): Promise<void> => {
   try {
     const actions = await getPendingActions();
-    const updatedActions = actions.filter(action => action.id !== id);
+    const updatedActions = actions.filter(action => action.id !== actionId);
     await offlineStorage.set(STORAGE_KEYS.PENDING_ACTIONS, updatedActions);
   } catch (error) {
-    console.error(`Error removing pending action ${id}:`, error);
-    throw error;
+    console.error('Error removing pending action:', error);
   }
 };
 
-/**
- * Increment retry count for an action
- * @param id Action ID
- */
-export const incrementRetryCount = async (id: string): Promise<void> => {
+export const incrementRetryCount = async (actionId: string): Promise<void> => {
   try {
     const actions = await getPendingActions();
+    
     const updatedActions = actions.map(action => {
-      if (action.id === id) {
+      if (action.id === actionId) {
         return {
           ...action,
-          retryCount: action.retryCount + 1
+          retryCount: (action.retryCount || 0) + 1
         };
       }
       return action;
@@ -75,40 +60,28 @@ export const incrementRetryCount = async (id: string): Promise<void> => {
     
     await offlineStorage.set(STORAGE_KEYS.PENDING_ACTIONS, updatedActions);
   } catch (error) {
-    console.error(`Error incrementing retry count for action ${id}:`, error);
-    throw error;
+    console.error('Error incrementing retry count:', error);
   }
 };
 
-/**
- * Check if an action has exceeded retry limit
- * @param id Action ID
- * @param limit Optional retry limit (default: 5)
- */
-export const hasExceededRetryLimit = async (id: string, limit = 5): Promise<boolean> => {
+export const hasExceededRetryLimit = async (actionId: string): Promise<boolean> => {
   try {
     const actions = await getPendingActions();
-    const action = actions.find(a => a.id === id);
+    const action = actions.find(a => a.id === actionId);
     
-    if (!action) {
-      return false;
-    }
+    if (!action) return false;
     
-    return action.retryCount >= limit;
+    return (action.retryCount || 0) >= MAX_RETRY_COUNT;
   } catch (error) {
-    console.error(`Error checking retry limit for action ${id}:`, error);
+    console.error('Error checking retry limit:', error);
     return false;
   }
 };
 
-/**
- * Clear all pending actions
- */
 export const clearAllPendingActions = async (): Promise<void> => {
   try {
     await offlineStorage.set(STORAGE_KEYS.PENDING_ACTIONS, []);
   } catch (error) {
     console.error('Error clearing pending actions:', error);
-    throw error;
   }
 };

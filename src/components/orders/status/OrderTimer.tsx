@@ -1,78 +1,43 @@
 
 import React, { useState, useEffect } from 'react';
-import { Progress } from '@/components/ui/progress';
-import { calculateRemainingTime, formatTime, calculateProgress } from '@/utils/timer/timerCalculations';
 
-export interface OrderTimerProps {
-  updatedAt?: string;
-  expiresAt?: string;
-  expiryTime?: string; // Added for compatibility with OrderRestaurantStatus
-  orderId?: string;
-  onTimerExpire?: () => void;
+interface OrderTimerProps {
+  estimatedTime: number;
 }
 
-export const OrderTimer: React.FC<OrderTimerProps> = ({ 
-  updatedAt,
-  expiresAt,
-  expiryTime,
-  orderId,
-  onTimerExpire
-}) => {
-  const [secondsLeft, setSecondsLeft] = useState<number>(300); // Default to 5 min
-  const [progress, setProgress] = useState<number>(100);
-  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
+export const OrderTimer: React.FC<OrderTimerProps> = ({ estimatedTime }) => {
+  const [timeRemaining, setTimeRemaining] = useState(estimatedTime);
 
   useEffect(() => {
-    // If we have an explicit expiry time, use that
-    if (expiresAt || expiryTime) {
-      const expiresAtDate = new Date(expiresAt || expiryTime || '');
-      const intervalId = setInterval(() => {
-        const remainingSeconds = calculateRemainingTime(expiresAtDate, serverTimeOffset);
-        setSecondsLeft(remainingSeconds);
-        setProgress(calculateProgress(remainingSeconds));
-        
-        if (remainingSeconds <= 0) {
-          clearInterval(intervalId);
-          if (onTimerExpire) {
-            onTimerExpire();
-          }
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 0) {
+          clearInterval(timer);
+          return 0;
         }
-      }, 1000);
-      
-      return () => clearInterval(intervalId);
-    }
+        return prev - 1;
+      });
+    }, 60000); // Update every minute
     
-    // Otherwise use the updatedAt time + 5 minutes logic
-    if (updatedAt) {
-      const startTime = new Date(updatedAt);
-      const expiresAtDate = new Date(startTime.getTime() + (5 * 60 * 1000)); // 5 minutes
-      
-      const intervalId = setInterval(() => {
-        const remainingSeconds = calculateRemainingTime(expiresAtDate, serverTimeOffset);
-        setSecondsLeft(remainingSeconds);
-        setProgress(calculateProgress(remainingSeconds));
-        
-        if (remainingSeconds <= 0) {
-          clearInterval(intervalId);
-          if (onTimerExpire) {
-            onTimerExpire();
-          }
-        }
-      }, 1000);
-      
-      return () => clearInterval(intervalId);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
     }
-  }, [updatedAt, expiresAt, expiryTime, serverTimeOffset, onTimerExpire]);
+    return `${mins} minutes`;
+  };
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm">
-        <span>Time remaining:</span>
-        <span className={secondsLeft < 60 ? "text-red-500 font-semibold" : ""}>
-          {formatTime(secondsLeft)}
-        </span>
+    <div className="order-timer my-4">
+      <h3 className="text-lg font-medium">Estimated Time:</h3>
+      <div className="text-2xl font-bold">
+        {timeRemaining > 0 ? formatTime(timeRemaining) : "Ready soon!"}
       </div>
-      <Progress value={progress} className="h-2" />
     </div>
   );
 };

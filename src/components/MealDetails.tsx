@@ -1,7 +1,30 @@
 
 import React, { useEffect, useState } from 'react';
-import supabase from '@/services/supabaseClient';
-import { Meal as MealType } from '@/types/meal';
+import { supabase } from '@/services/supabaseClient';
+
+// Define the meal type directly here since the import was failing
+interface MealType {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  price: number;
+  category: string;
+  ingredients: string[];
+  steps: string[];
+  preparation_time: number;
+  restaurant_id: string;
+  is_available: boolean;
+  is_active: boolean;
+  nutritional_info: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  created_at: string;
+  updated_at: string;
+}
 
 const MealDetails: React.FC<{ id: string }> = ({ id }) => {
   const [meal, setMeal] = useState<MealType | null>(null);

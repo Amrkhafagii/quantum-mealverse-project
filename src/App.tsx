@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Auth from "@/pages/Auth";
@@ -11,6 +10,7 @@ import { NetworkStatusProvider } from "@/components/providers/NetworkStatusProvi
 import MainLayout from "@/components/layout/MainLayout";
 import PlatformUIDemo from "@/pages/PlatformUIDemo";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import StorageDemoPage from './pages/StorageDemo';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -28,6 +28,7 @@ function App() {
                     <Routes>
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/platform-ui" element={<PlatformUIDemo />} />
+                      <Route path="/storage-demo" element={<StorageDemoPage />} />
                       <Route path="*" element={<MainLayout />} />
                     </Routes>
                     <Toaster />

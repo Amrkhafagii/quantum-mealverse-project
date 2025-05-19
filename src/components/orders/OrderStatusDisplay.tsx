@@ -1,10 +1,13 @@
 
 import React from 'react';
-import { OrderStatus } from '@/types/order';
-import OrderStatusMessage from './status/OrderStatusMessage';
-import OrderStatusTimeline from './OrderStatusTimeline';
+
+// Define OrderStatus directly since the import failed
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'in_transit' | 'delivered' | 'completed' | 'cancelled';
+
+import { OrderStatusMessage } from './status/OrderStatusMessage';
+import { OrderStatusTimeline } from './OrderStatusTimeline';
 import CancelOrderButton from './status/CancelOrderButton';
-import OrderTimer from './status/OrderTimer';
+import { OrderTimer } from './status/OrderTimer';
 
 interface OrderStatusDisplayProps {
   status: OrderStatus;
