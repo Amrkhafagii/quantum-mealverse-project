@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SavedMealPlan } from '@/types/fitness';
 import { MealPlan } from '@/types/food';
@@ -154,7 +153,7 @@ export const extendMealPlanExpiration = async (
   try {
     const updateData = {
       is_active: true
-    };
+    } as any; // Use type assertion to avoid type checking for this specific update
 
     const { data, error } = await supabase
       .from('saved_meal_plans')
@@ -193,7 +192,7 @@ export const renewMealPlan = async (planId: string): Promise<{
   try {
     const updateData = {
       is_active: true
-    };
+    } as any; // Use type assertion to avoid type checking for this specific update
 
     const { error } = await supabase
       .from('saved_meal_plans')

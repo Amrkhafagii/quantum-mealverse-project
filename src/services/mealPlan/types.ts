@@ -1,4 +1,5 @@
 
+
 import { Json } from '@/types/database';
 import { MealPlan, Meal, Food, MealFood } from '@/types/food';
 import { SavedMealPlan } from '@/types/fitness';
@@ -61,3 +62,4 @@ export interface UnitConversion {
   toUnit: string;
   factor: number;
 }
+

@@ -1,4 +1,5 @@
 
+
 export interface SavedMealPlan {
   id?: string;
   user_id: string;
@@ -24,3 +25,4 @@ export interface DailyQuest {
   completed: boolean;
   deadline?: string;
 }
+
