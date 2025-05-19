@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { WorkoutSchedule, WorkoutLog } from '@/types/fitness';
 

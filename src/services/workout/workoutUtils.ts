@@ -1,56 +1,42 @@
 
-import { WorkoutDay, WorkoutSchedule } from '@/types/fitness';
-import { Json } from '@/types/database';
+import { WorkoutSchedule } from '@/types/fitness';
 
 /**
- * Converts raw database data to properly typed workout days
+ * Converts nested objects to JSON strings for Supabase storage
  */
-export const fromSupabaseJson = (jsonData: Json): any => {
-  if (typeof jsonData === 'string') {
-    try {
-      return JSON.parse(jsonData);
-    } catch (e) {
-      console.error('Error parsing JSON data:', e);
-      return [];
-    }
+export const toSupabaseJson = (data: any): any => {
+  if (!data) return null;
+  
+  // If it's an array, process each item
+  if (Array.isArray(data)) {
+    return data;
   }
-  return jsonData;
+  
+  // For objects, stringify them
+  if (typeof data === 'object') {
+    return JSON.stringify(data);
+  }
+  
+  return data;
 };
 
 /**
- * Converts workout days to format suitable for Supabase storage
+ * Format database data to match the WorkoutSchedule type
  */
-export const toSupabaseJson = (data: WorkoutDay[]): Json => {
-  return JSON.stringify(data) as unknown as Json;
-};
-
-/**
- * Formats a workout log for Supabase insertion
- */
-export const formatWorkoutLogForSupabase = (workoutLog: any): any => {
+export const formatScheduleData = (data: any): WorkoutSchedule => {
+  if (!data) return null;
+  
   return {
-    ...workoutLog,
-    completed_exercises: JSON.stringify(workoutLog.completed_exercises)
-  };
-};
-
-/**
- * Formats schedule data from the database into the WorkoutSchedule interface
- */
-export const formatScheduleData = (schedule: any): WorkoutSchedule => {
-  return {
-    id: schedule.id,
-    user_id: schedule.user_id,
-    workout_plan_id: schedule.workout_plan_id,
-    days_of_week: Array.isArray(schedule.days_of_week) ? schedule.days_of_week : [],
-    day_of_week: schedule.day_of_week || '',
-    time: schedule.time || schedule.preferred_time || '',
-    preferred_time: schedule.preferred_time || '',
-    reminder: schedule.reminder || false,
-    start_date: schedule.start_date,
-    end_date: schedule.end_date,
-    active: schedule.active || false,
-    created_at: schedule.created_at || undefined,
-    updated_at: schedule.updated_at || undefined
+    id: data.id,
+    user_id: data.user_id,
+    workout_plan_id: data.workout_plan_id,
+    day_of_week: data.day_of_week,
+    days_of_week: Array.isArray(data.days_of_week) ? data.days_of_week : [],
+    time: data.time,
+    preferred_time: data.preferred_time,
+    reminder: data.reminder,
+    start_date: data.start_date,
+    end_date: data.end_date,
+    active: data.active ?? true
   };
 };
