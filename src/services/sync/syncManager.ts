@@ -1,6 +1,7 @@
+
 import { BackgroundSync } from '@/utils/backgroundSync';
 import { Platform } from '@/utils/platform';
-import { syncPendingActions } from './syncService';
+import { syncPendingActions, getLastSyncTimestamp, getSyncQueue } from './syncService';
 
 let syncSystemInitialized = false;
 
@@ -102,17 +103,56 @@ export const useSyncManager = () => {
    */
   const getPendingActionsCount = async (): Promise<number> => {
     try {
-      // This function would check the offline queue for pending operations
-      // For now, just return 0 as a placeholder
-      return 0;
+      const queue = await getSyncQueue();
+      return queue.operations.length;
     } catch (error) {
       console.error('Failed to get pending actions count:', error);
       return 0;
     }
   };
 
+  /**
+   * Manual sync function to force immediate sync
+   */
+  const manualSync = async (): Promise<boolean> => {
+    try {
+      const success = await syncPendingActions();
+      return success;
+    } catch (error) {
+      console.error('Manual sync failed:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Clear all pending actions from the sync queue
+   */
+  const clearAllPendingActions = async (): Promise<boolean> => {
+    try {
+      const queue = await getSyncQueue();
+      queue.operations = [];
+      await saveSyncQueue(queue);
+      return true;
+    } catch (error) {
+      console.error('Failed to clear pending actions:', error);
+      return false;
+    }
+  };
+
   return {
     scheduleBackgroundSync,
     getPendingActionsCount,
+    manualSync,
+    clearAllPendingActions,
+    getLastSyncTimestamp
   };
+};
+
+// Helper function to save sync queue - needed for clearAllPendingActions
+const saveSyncQueue = async (queue: any): Promise<void> => {
+  try {
+    localStorage.setItem('offline_sync_queue', JSON.stringify(queue));
+  } catch (error) {
+    console.error('Error saving sync queue:', error);
+  }
 };

@@ -24,7 +24,7 @@ export function StorageDemo() {
   const [importData, setImportData] = useState('');
   const { isOnline } = useConnectionStatus();
   const { toast } = useToast();
-  const { clearAllPendingActions, getLastSyncTimestamp } = useSyncManager();
+  const { clearAllPendingActions, getLastSyncTimestamp, manualSync } = useSyncManager();
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   
   // Get the last sync time on component mount
@@ -111,6 +111,42 @@ export function StorageDemo() {
       title: "Pending actions cleared",
       description: "All pending offline actions have been removed",
     });
+  };
+
+  const handleForceSync = async () => {
+    if (!isOnline) {
+      toast({
+        title: "You're offline",
+        description: "Connect to the internet to sync your data",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Syncing...",
+      description: "Forcing immediate sync of pending actions",
+    });
+    
+    const success = await manualSync();
+    
+    if (success) {
+      toast({
+        title: "Sync completed",
+        description: "All pending actions have been processed",
+      });
+      
+      const timestamp = await getLastSyncTimestamp();
+      if (timestamp) {
+        setLastSyncTime(new Date(timestamp).toLocaleString());
+      }
+    } else {
+      toast({
+        title: "Sync incomplete",
+        description: "Some actions could not be processed",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -236,7 +272,7 @@ export function StorageDemo() {
                     Clear Pending Actions
                   </Button>
                   
-                  <Button>
+                  <Button onClick={handleForceSync}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Force Sync Now
                   </Button>
