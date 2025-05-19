@@ -64,16 +64,18 @@ export const saveMealPlan = async (
   error: any;
 }> => {
   try {
+    const mealPlanData: Partial<SavedMealPlanExtended> = {
+      user_id: userId,
+      name,
+      meal_plan: mealPlan as unknown as Json,
+      tdee_id: tdeeId || null,
+      date_created: new Date().toISOString(),
+      is_active: true
+    };
+
     const { data, error } = await supabase
       .from('saved_meal_plans')
-      .insert({
-        user_id: userId,
-        name,
-        meal_plan: mealPlan as unknown as Json,
-        tdee_id: tdeeId || null,
-        date_created: new Date().toISOString(),
-        is_active: true
-      })
+      .insert(mealPlanData)
       .select()
       .single();
       
@@ -149,11 +151,13 @@ export const extendMealPlanExpiration = async (
   error: any;
 }> => {
   try {
+    const updateData: Partial<SavedMealPlanExtended> = {
+      is_active: true
+    };
+
     const { data, error } = await supabase
       .from('saved_meal_plans')
-      .update({
-        is_active: true
-      })
+      .update(updateData)
       .eq('id', planId)
       .eq('user_id', userId)
       .select()
@@ -186,11 +190,13 @@ export const renewMealPlan = async (planId: string): Promise<{
   error?: string;
 }> => {
   try {
+    const updateData: Partial<SavedMealPlanExtended> = {
+      is_active: true
+    };
+
     const { error } = await supabase
       .from('saved_meal_plans')
-      .update({
-        is_active: true
-      })
+      .update(updateData)
       .eq('id', planId);
       
     if (error) throw error;
