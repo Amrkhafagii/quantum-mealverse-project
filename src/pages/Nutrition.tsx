@@ -56,7 +56,7 @@ const Nutrition = () => {
 
   const handleCalculationComplete = (result: TDEEResult) => {
     setCalculationResult(result);
-    // Generate meal plan based on TDEE results
+    // Generate meal plan based on TDEE results - now synchronous
     const generatedMealPlan = generateMealPlan(result);
     setMealPlan(generatedMealPlan);
     

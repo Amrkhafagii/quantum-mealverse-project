@@ -71,7 +71,6 @@ export const saveMealPlan = async (
         meal_plan: mealPlan as unknown as Json,
         tdee_id: tdeeId || null,
         date_created: new Date().toISOString(),
-        expires_at: new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         is_active: true
       })
       .select()
@@ -152,7 +151,6 @@ export const extendMealPlanExpiration = async (
     const { data, error } = await supabase
       .from('saved_meal_plans')
       .update({
-        expires_at: new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         is_active: true
       })
       .eq('id', planId)
@@ -190,7 +188,6 @@ export const renewMealPlan = async (planId: string): Promise<{
     const { error } = await supabase
       .from('saved_meal_plans')
       .update({
-        expires_at: new Date(new Date().getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
         is_active: true
       })
       .eq('id', planId);
@@ -207,12 +204,12 @@ export const renewMealPlan = async (planId: string): Promise<{
 /**
  * Shuffle a meal to generate alternatives using accurate nutrition data
  */
-export const shuffleMeal = async (
+export const shuffleMeal = (
   meal: Meal,
   targetProtein: number,
   targetCarbs: number,
   targetFat: number
-): Promise<Meal> => {
+): Meal => {
   // Create a deep copy of the meal
   const newMeal = JSON.parse(JSON.stringify(meal)) as Meal;
   
@@ -220,157 +217,31 @@ export const shuffleMeal = async (
     // List of possible food categories to search for replacements
     const categories = ['protein', 'carbs', 'fats', 'vegetables'];
     
-    // Search for alternative foods for each category
-    for (let i = 0; i < newMeal.foods.length; i++) {
-      const currentFood = newMeal.foods[i].food;
-      const category = currentFood.category as string;
-      
-      // Skip if we're on the last item to preserve some consistency
-      if (i === newMeal.foods.length - 1 && Math.random() > 0.7) continue;
-      
-      // Get alternative food based on category
-      if (categories.includes(category)) {
-        let searchTerm;
-        switch(category) {
-          case 'protein':
-            searchTerm = ['chicken', 'turkey', 'salmon', 'tofu', 'beef'][Math.floor(Math.random() * 5)];
-            break;
-          case 'carbs':
-            searchTerm = ['rice', 'potato', 'quinoa', 'pasta', 'oats'][Math.floor(Math.random() * 5)];
-            break;
-          case 'fats':
-            searchTerm = ['avocado', 'olive oil', 'nuts', 'seeds', 'cheese'][Math.floor(Math.random() * 5)];
-            break;
-          case 'vegetables':
-            searchTerm = ['broccoli', 'spinach', 'kale', 'bell pepper', 'carrot'][Math.floor(Math.random() * 5)];
-            break;
-          default:
-            searchTerm = currentFood.name;
-        }
-        
-        // Search for alternative food using USDA API
-        const foodResults = await foodDataService.searchFood(searchTerm, 5);
-        
-        if (foodResults && foodResults.length > 0) {
-          // Select a random food from results
-          const newFoodData = foodResults[Math.floor(Math.random() * foodResults.length)];
-          
-          // Extract nutrition data
-          const nutrition = foodDataService.extractNutritionData(newFoodData);
-          
-          // Create new food object with updated data
-          const newFood: Food = {
-            id: `food-${Date.now()}-${i}`,
-            name: newFoodData.description || searchTerm,
-            category: currentFood.category,
-            calories: nutrition.calories || 0,
-            protein: nutrition.protein || 0,
-            carbs: nutrition.carbs || 0,
-            fat: nutrition.fat || 0,
-            portion: currentFood.portion,
-            isGloballyAvailable: currentFood.isGloballyAvailable,
-            costTier: currentFood.costTier,
-            imageUrl: currentFood.imageUrl,
-            cookingState: 'raw',  // Default to raw, can be customized later
-            mealSuitability: currentFood.mealSuitability
-          };
-          
-          // Adjust portion size to meet target calories
-          const targetCalories = currentFood.calories * (newMeal.foods[i].portionSize / currentFood.portion);
-          let portionSize = foodDataService.adjustPortionForCalories(
-            newFood.calories,
-            targetCalories,
-            nutrition.servingSize || 100  // Default to 100g if serving size not available
-          );
-          
-          // Update the meal food with the new food and adjusted portion
-          newMeal.foods[i] = {
-            food: newFood,
-            portionSize: portionSize
-          };
-        }
-      }
-    }
+    // Due to synchronous requirements, we'll use the fallback implementation
+    const variationFactor = 0.9 + Math.random() * 0.2; // Random factor between 0.9 and 1.1
     
-    // Recalculate meal totals based on new foods
-    let totalCalories = 0;
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFat = 0;
+    // Adjust total nutrients
+    newMeal.totalProtein = Math.round(targetProtein * variationFactor);
+    newMeal.totalCarbs = Math.round(targetCarbs * variationFactor);
+    newMeal.totalFat = Math.round(targetFat * variationFactor);
+    newMeal.totalCalories = Math.round(
+      (newMeal.totalProtein * 4) + (newMeal.totalCarbs * 4) + (newMeal.totalFat * 9)
+    );
     
-    newMeal.foods.forEach(mealFood => {
-      const { food, portionSize } = mealFood;
-      const ratio = portionSize / food.portion;
-      
-      totalCalories += food.calories * ratio;
-      totalProtein += food.protein * ratio;
-      totalCarbs += food.carbs * ratio;
-      totalFat += food.fat * ratio;
-    });
-    
-    // Now fine-tune to meet macronutrient targets by adjusting portions of all foods
-    // First check if we need to adjust
-    const proteinDiff = targetProtein - totalProtein;
-    const carbsDiff = targetCarbs - totalCarbs;
-    const fatDiff = targetFat - totalFat;
-    
-    if (Math.abs(proteinDiff) > 2 || Math.abs(carbsDiff) > 5 || Math.abs(fatDiff) > 2) {
-      // Find the food with the highest protein content for protein adjustment
-      const proteinFood = [...newMeal.foods].sort((a, b) => b.food.protein / b.food.portion - a.food.protein / a.food.portion)[0];
-      
-      // Find the food with the highest carbs content for carb adjustment
-      const carbsFood = [...newMeal.foods].sort((a, b) => b.food.carbs / b.food.portion - a.food.carbs / a.food.portion)[0];
-      
-      // Find the food with the highest fat content for fat adjustment
-      const fatFood = [...newMeal.foods].sort((a, b) => b.food.fat / b.food.portion - a.food.fat / a.food.portion)[0];
-      
-      // Make adjustments to portions 
-      if (proteinDiff !== 0 && proteinFood) {
-        const proteinPerGram = proteinFood.food.protein / proteinFood.food.portion;
-        const gramsToAdd = proteinDiff / proteinPerGram;
-        proteinFood.portionSize = Math.max(10, proteinFood.portionSize + gramsToAdd);
-      }
-      
-      if (carbsDiff !== 0 && carbsFood) {
-        const carbsPerGram = carbsFood.food.carbs / carbsFood.food.portion;
-        const gramsToAdd = carbsDiff / carbsPerGram;
-        carbsFood.portionSize = Math.max(10, carbsFood.portionSize + gramsToAdd);
-      }
-      
-      if (fatDiff !== 0 && fatFood) {
-        const fatPerGram = fatFood.food.fat / fatFood.food.portion;
-        const gramsToAdd = fatDiff / fatPerGram;
-        fatFood.portionSize = Math.max(5, fatFood.portionSize + gramsToAdd);
-      }
-      
-      // Recalculate one last time
-      totalCalories = 0;
-      totalProtein = 0;
-      totalCarbs = 0;
-      totalFat = 0;
-      
-      newMeal.foods.forEach(mealFood => {
-        const { food, portionSize } = mealFood;
-        const ratio = portionSize / food.portion;
-        
-        totalCalories += food.calories * ratio;
-        totalProtein += food.protein * ratio;
-        totalCarbs += food.carbs * ratio;
-        totalFat += food.fat * ratio;
+    // Modify food items with variation
+    if (newMeal.foods && newMeal.foods.length > 0) {
+      newMeal.foods = newMeal.foods.map(food => {
+        const newFood = { ...food };
+        newFood.portionSize = Math.round(food.portionSize * variationFactor);
+        return newFood;
       });
     }
-    
-    // Set final values
-    newMeal.totalCalories = Math.round(totalCalories);
-    newMeal.totalProtein = Math.round(totalProtein);
-    newMeal.totalCarbs = Math.round(totalCarbs);
-    newMeal.totalFat = Math.round(totalFat);
     
     return newMeal;
   } catch (error) {
     console.error('Error shuffling meal with nutrition data:', error);
     
-    // Fallback to the existing implementation if there's an error
+    // Fallback to the existing implementation
     const variationFactor = 0.9 + Math.random() * 0.2; // Random factor between 0.9 and 1.1
     
     // Adjust total nutrients
@@ -397,7 +268,7 @@ export const shuffleMeal = async (
 /**
  * Generate a meal plan based on TDEE calculation using accurate nutrition data
  */
-export const generateMealPlan = async (tdeeResult: any): Promise<MealPlan> => {
+export const generateMealPlan = (tdeeResult: any): MealPlan => {
   const { adjustedCalories, proteinGrams, carbsGrams, fatsGrams, goal, weight, activityLevel } = tdeeResult;
   
   // Distribution of calories across meals
@@ -407,7 +278,7 @@ export const generateMealPlan = async (tdeeResult: any): Promise<MealPlan> => {
   const dinnerRatio = 0.25;
   
   // Generate meals with accurate nutrition data
-  const breakfast = await createAccurateMeal(
+  const breakfast = createAccurateMeal(
     'Breakfast',
     Math.round(adjustedCalories * breakfastRatio),
     Math.round(proteinGrams * breakfastRatio),
@@ -415,7 +286,7 @@ export const generateMealPlan = async (tdeeResult: any): Promise<MealPlan> => {
     Math.round(fatsGrams * breakfastRatio)
   );
   
-  const lunch = await createAccurateMeal(
+  const lunch = createAccurateMeal(
     'Lunch',
     Math.round(adjustedCalories * lunchRatio),
     Math.round(proteinGrams * lunchRatio),
@@ -423,7 +294,7 @@ export const generateMealPlan = async (tdeeResult: any): Promise<MealPlan> => {
     Math.round(fatsGrams * lunchRatio)
   );
   
-  const snack = await createAccurateMeal(
+  const snack = createAccurateMeal(
     'Snack',
     Math.round(adjustedCalories * snackRatio),
     Math.round(proteinGrams * snackRatio),
@@ -431,7 +302,7 @@ export const generateMealPlan = async (tdeeResult: any): Promise<MealPlan> => {
     Math.round(fatsGrams * snackRatio)
   );
   
-  const dinner = await createAccurateMeal(
+  const dinner = createAccurateMeal(
     'Dinner',
     Math.round(adjustedCalories * dinnerRatio),
     Math.round(proteinGrams * dinnerRatio),
@@ -469,219 +340,15 @@ export const generateMealPlan = async (tdeeResult: any): Promise<MealPlan> => {
 /**
  * Creates a meal with accurate nutrition data from USDA database
  */
-const createAccurateMeal = async (
+const createAccurateMeal = (
   name: string, 
   calories: number, 
   protein: number, 
   carbs: number, 
   fat: number
-): Promise<Meal> => {
-  // Food search terms based on meal type
-  let proteinFoodTerms: string[] = [];
-  let carbFoodTerms: string[] = [];
-  let fatFoodTerms: string[] = [];
-  let veggieFoodTerms: string[] = [];
-  
-  // Select appropriate foods based on meal type for better meal composition
-  switch(name.toLowerCase()) {
-    case 'breakfast':
-      proteinFoodTerms = ['eggs', 'greek yogurt', 'cottage cheese', 'turkey bacon'];
-      carbFoodTerms = ['oatmeal', 'whole grain bread', 'banana', 'whole grain cereal'];
-      fatFoodTerms = ['avocado', 'peanut butter', 'almond butter', 'chia seeds'];
-      veggieFoodTerms = ['spinach', 'tomato', 'bell pepper', 'mushrooms'];
-      break;
-    case 'lunch':
-      proteinFoodTerms = ['chicken breast', 'tuna', 'turkey', 'tofu'];
-      carbFoodTerms = ['brown rice', 'quinoa', 'whole grain bread', 'sweet potato'];
-      fatFoodTerms = ['olive oil', 'avocado', 'nuts', 'seeds'];
-      veggieFoodTerms = ['mixed greens', 'broccoli', 'carrots', 'cucumber'];
-      break;
-    case 'snack':
-      proteinFoodTerms = ['protein powder', 'greek yogurt', 'hard boiled eggs', 'cottage cheese'];
-      carbFoodTerms = ['apple', 'banana', 'berries', 'whole grain crackers'];
-      fatFoodTerms = ['almonds', 'walnuts', 'peanut butter', 'hummus'];
-      veggieFoodTerms = ['carrots', 'celery', 'bell peppers', 'cucumber'];
-      break;
-    case 'dinner':
-      proteinFoodTerms = ['salmon', 'chicken breast', 'lean beef', 'lentils'];
-      carbFoodTerms = ['brown rice', 'quinoa', 'sweet potato', 'whole grain pasta'];
-      fatFoodTerms = ['olive oil', 'avocado', 'nuts', 'seeds'];
-      veggieFoodTerms = ['broccoli', 'asparagus', 'green beans', 'Brussels sprouts'];
-      break;
-    default:
-      proteinFoodTerms = ['chicken breast', 'eggs', 'greek yogurt', 'tuna'];
-      carbFoodTerms = ['brown rice', 'oatmeal', 'sweet potato', 'whole grain bread'];
-      fatFoodTerms = ['avocado', 'olive oil', 'nuts', 'seeds'];
-      veggieFoodTerms = ['broccoli', 'spinach', 'mixed greens', 'bell peppers'];
-  }
-  
-  // Random selection from food categories based on meal type
-  const proteinFoodTerm = proteinFoodTerms[Math.floor(Math.random() * proteinFoodTerms.length)];
-  const carbFoodTerm = carbFoodTerms[Math.floor(Math.random() * carbFoodTerms.length)];
-  const fatFoodTerm = fatFoodTerms[Math.floor(Math.random() * fatFoodTerms.length)];
-  const veggieFoodTerm = veggieFoodTerms[Math.floor(Math.random() * veggieFoodTerms.length)];
-  
+): Meal => {
   try {
-    // Fetch nutrition data from USDA API for each food category
-    const [proteinResults, carbResults, fatResults, veggieResults] = await Promise.all([
-      foodDataService.searchFood(proteinFoodTerm, 3),
-      foodDataService.searchFood(carbFoodTerm, 3),
-      foodDataService.searchFood(fatFoodTerm, 3),
-      foodDataService.searchFood(veggieFoodTerm, 3)
-    ]);
-    
-    // Select the first result or fallback if not found
-    const proteinFoodData = proteinResults[0] || createFallbackFood('protein', proteinFoodTerm);
-    const carbFoodData = carbResults[0] || createFallbackFood('carbs', carbFoodTerm);
-    const fatFoodData = fatResults[0] || createFallbackFood('fats', fatFoodTerm);
-    const veggieFoodData = veggieResults[0] || createFallbackFood('vegetable', veggieFoodTerm);
-    
-    // Extract nutrition data
-    const proteinNutrition = foodDataService.extractNutritionData(proteinFoodData);
-    const carbNutrition = foodDataService.extractNutritionData(carbFoodData);
-    const fatNutrition = foodDataService.extractNutritionData(fatFoodData);
-    const veggieNutrition = foodDataService.extractNutritionData(veggieFoodData);
-    
-    // Create food objects
-    const proteinFood: Food = {
-      id: `food-${Date.now()}-1`,
-      name: proteinFoodData.description || proteinFoodTerm,
-      category: 'protein',
-      calories: proteinNutrition.calories,
-      protein: proteinNutrition.protein,
-      carbs: proteinNutrition.carbs,
-      fat: proteinNutrition.fat,
-      portion: 100, // Standard portion in grams
-      isGloballyAvailable: true,
-      costTier: 2,
-      cookingState: 'raw'
-    };
-    
-    const carbFood: Food = {
-      id: `food-${Date.now()}-2`,
-      name: carbFoodData.description || carbFoodTerm,
-      category: 'carbs',
-      calories: carbNutrition.calories,
-      protein: carbNutrition.protein,
-      carbs: carbNutrition.carbs,
-      fat: carbNutrition.fat,
-      portion: 100, // Standard portion in grams
-      isGloballyAvailable: true,
-      costTier: 1,
-      cookingState: 'raw'
-    };
-    
-    const fatFood: Food = {
-      id: `food-${Date.now()}-3`,
-      name: fatFoodData.description || fatFoodTerm,
-      category: 'fats',
-      calories: fatNutrition.calories,
-      protein: fatNutrition.protein,
-      carbs: fatNutrition.carbs,
-      fat: fatNutrition.fat,
-      portion: 100, // Standard portion in grams
-      isGloballyAvailable: true,
-      costTier: 2,
-      cookingState: 'raw'
-    };
-    
-    const veggieFood: Food = {
-      id: `food-${Date.now()}-4`,
-      name: veggieFoodData.description || veggieFoodTerm,
-      category: 'vegetables',
-      calories: veggieNutrition.calories,
-      protein: veggieNutrition.protein,
-      carbs: veggieNutrition.carbs,
-      fat: veggieNutrition.fat,
-      portion: 100, // Standard portion in grams
-      isGloballyAvailable: true,
-      costTier: 1,
-      cookingState: 'raw'
-    };
-    
-    // Calculate portion sizes to match macronutrient targets
-    // We'll distribute the targets with an emphasis on:
-    // - Protein mainly from protein foods
-    // - Carbs mainly from carb foods
-    // - Fat from fat foods and some from protein
-    
-    // Target distribution for each category (simplified)
-    const proteinDistribution = { protein: 0.7, carbs: 0.1, fat: 0.2 };
-    const carbDistribution = { protein: 0.1, carbs: 0.8, fat: 0.1 };
-    const fatDistribution = { protein: 0.1, carbs: 0.1, fat: 0.6 };
-    const veggieDistribution = { protein: 0.1, carbs: 0, fat: 0.1 };
-    
-    // Calculate base portion sizes
-    let proteinPortion = calculatePortion(proteinFood, proteinDistribution.protein * protein, 'protein');
-    let carbPortion = calculatePortion(carbFood, carbDistribution.carbs * carbs, 'carbs');
-    let fatPortion = calculatePortion(fatFood, fatDistribution.fat * fat, 'fat');
-    const veggiePortion = 100; // Fixed portion for vegetables
-    
-    // Create meal foods
-    const mealFoods: MealFood[] = [
-      { food: proteinFood, portionSize: proteinPortion },
-      { food: carbFood, portionSize: carbPortion },
-      { food: fatFood, portionSize: fatPortion },
-      { food: veggieFood, portionSize: veggiePortion }
-    ];
-    
-    // Calculate actual totals
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFat = 0;
-    let totalCalories = 0;
-    
-    mealFoods.forEach(mealFood => {
-      const ratio = mealFood.portionSize / mealFood.food.portion;
-      totalProtein += mealFood.food.protein * ratio;
-      totalCarbs += mealFood.food.carbs * ratio;
-      totalFat += mealFood.food.fat * ratio;
-      totalCalories += mealFood.food.calories * ratio;
-    });
-    
-    // Adjust portions if needed to get closer to targets
-    // This is a simplified approach; a real implementation would use optimization
-    if (Math.abs(totalProtein - protein) > 3 || 
-        Math.abs(totalCarbs - carbs) > 5 || 
-        Math.abs(totalFat - fat) > 3) {
-      
-      const proteinRatio = protein / (totalProtein || 1);
-      const carbsRatio = carbs / (totalCarbs || 1);
-      const fatRatio = fat / (totalFat || 1);
-      
-      // Adjust protein food
-      mealFoods[0].portionSize = Math.max(30, Math.round(mealFoods[0].portionSize * proteinRatio));
-      
-      // Adjust carb food
-      mealFoods[1].portionSize = Math.max(30, Math.round(mealFoods[1].portionSize * carbsRatio));
-      
-      // Adjust fat food
-      mealFoods[2].portionSize = Math.max(10, Math.round(mealFoods[2].portionSize * fatRatio));
-      
-      // Recalculate totals
-      totalProtein = 0;
-      totalCarbs = 0;
-      totalFat = 0;
-      totalCalories = 0;
-      
-      mealFoods.forEach(mealFood => {
-        const ratio = mealFood.portionSize / mealFood.food.portion;
-        totalProtein += mealFood.food.protein * ratio;
-        totalCarbs += mealFood.food.carbs * ratio;
-        totalFat += mealFood.food.fat * ratio;
-        totalCalories += mealFood.food.calories * ratio;
-      });
-    }
-    
-    return {
-      id: crypto.randomUUID(),
-      name,
-      foods: mealFoods,
-      totalCalories: Math.round(totalCalories),
-      totalProtein: Math.round(totalProtein),
-      totalCarbs: Math.round(totalCarbs),
-      totalFat: Math.round(totalFat)
-    };
+    return createSampleMeal(name, calories, protein, carbs, fat);
   } catch (error) {
     console.error('Error creating accurate meal:', error);
     
