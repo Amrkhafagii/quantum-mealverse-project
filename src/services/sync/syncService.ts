@@ -1,5 +1,5 @@
 
-import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit } from '@/utils/offlineStorage';
+import { getPendingActions, removePendingAction, incrementRetryCount, hasExceededRetryLimit, cancelOrderWithOfflineSupport } from '@/utils/offlineStorage';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { toast } from 'sonner';
 
@@ -92,4 +92,7 @@ export const hasPendingActions = async (): Promise<boolean> => {
   }
 };
 
-export default { syncPendingActions, hasPendingActions };
+// Fix for the CancelOrderButton component
+export { cancelOrderWithOfflineSupport };
+
+export default { syncPendingActions, hasPendingActions, cancelOrderWithOfflineSupport };

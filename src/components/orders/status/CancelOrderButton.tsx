@@ -1,105 +1,86 @@
-
-import React, { useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { cancelOrderWithOfflineSupport } from '@/services/sync/syncService';
+import { queueOfflineAction } from '@/utils/offlineStorage';
+import { cancelOrderWithOfflineSupport } from '@/utils/offlineStorage';
 
 interface CancelOrderButtonProps {
   orderId: string;
-  onCancelOrder?: () => void;
+  onCancelSuccess?: () => void;
 }
 
-export const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ orderId, onCancelOrder }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+const CancelOrderButton: React.FC<CancelOrderButtonProps> = ({ orderId, onCancelSuccess }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { isOnline } = useConnectionStatus();
-
-  const handleCancel = async () => {
-    setIsLoading(true);
-    
-    try {
-      const result = await cancelOrderWithOfflineSupport(orderId);
-      
-      if (result) {
-        toast({
-          title: isOnline ? 'Order cancelled' : 'Order will be cancelled when online',
-          description: isOnline 
-            ? 'Your order has been cancelled successfully.' 
-            : 'Your request has been queued and will be processed when you are back online.',
-          variant: 'default',
+  
+  const { mutate: cancelOrder, isLoading } = useMutation(
+    async () => {
+      if (isOnline) {
+        // Online: Call Supabase function to cancel the order
+        const { error } = await supabase
+          .from('orders')
+          .update({ status: 'cancelled' })
+          .eq('id', orderId);
+        
+        if (error) {
+          console.error("Error cancelling order:", error);
+          throw new Error("Failed to cancel order");
+        }
+        
+        return true;
+      } else {
+        // Offline: Queue the action
+        await queueOfflineAction({
+          type: 'cancel_order',
+          payload: { orderId },
         });
         
-        if (onCancelOrder) {
-          onCancelOrder();
-        }
-      } else {
-        toast({
-          title: 'Cancellation failed',
-          description: 'There was an error cancelling your order. Please try again.',
-          variant: 'destructive',
-        });
+        // Optimistically update the UI
+        await cancelOrderWithOfflineSupport(orderId);
+        
+        return true;
       }
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      toast({
-        title: 'Cancellation failed',
-        description: 'There was an error cancelling your order. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-      setDialogOpen(false);
+    },
+    {
+      onSuccess: async () => {
+        toast({
+          title: "Order Cancelled",
+          description: "Your order has been successfully cancelled.",
+        });
+        
+        // Invalidate and refetch queries
+        await queryClient.invalidateQueries(['active-orders']);
+        await queryClient.invalidateQueries(['past-orders']);
+        await queryClient.invalidateQueries(['order-details', orderId]);
+        
+        // Execute callback if provided
+        if (onCancelSuccess) {
+          onCancelSuccess();
+        }
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to cancel order. Please try again.",
+          variant: "destructive",
+        });
+      },
     }
-  };
-
+  );
+  
   return (
-    <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive" size="sm">
-          Cancel Order
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent className="bg-quantum-darkBlue border-quantum-cyan/20">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Cancel Order</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to cancel this order? {!isOnline && 'You are currently offline. This action will be processed when you are back online.'}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              handleCancel();
-            }}
-            disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cancelling...
-              </>
-            ) : (
-              'Yes, Cancel Order'
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Button 
+      variant="destructive" 
+      onClick={() => cancelOrder()}
+      disabled={isLoading}
+    >
+      {isLoading ? 'Cancelling...' : 'Cancel Order'}
+    </Button>
   );
 };
+
+export default CancelOrderButton;
