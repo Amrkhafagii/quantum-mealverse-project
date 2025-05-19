@@ -14,6 +14,8 @@ import Fitness from "@/pages/Fitness";
 import Nutrition from "@/pages/Nutrition";
 import PageTransition from "@/components/layout/PageTransition";
 import { NetworkPredictiveMonitor } from "@/components/network/NetworkPredictiveMonitor";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Profile from "@/pages/Profile";
 
 // Restaurant routes
 import RestaurantDashboard from "@/pages/restaurant/Dashboard";
@@ -39,25 +41,62 @@ const MainLayout: React.FC = () => {
           <div id="main-content" className="flex-1">
             <PageTransition type="fade" className="w-full h-full">
               <Routes location={location}>
-                {/* Main Routes */}
+                {/* Public Routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/about" element={<About />} />
+                
+                {/* Customer Routes */}
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/customer" element={<Customer />} />
                 <Route path="/restaurant/:id" element={<Restaurant />} />
-                <Route path="/orders" element={<Orders />} />
+                
+                {/* Protected Routes requiring authentication */}
+                <Route path="/orders" element={
+                  <ProtectedRoute>
+                    <Orders />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
                 <Route path="/fitness" element={<Fitness />} />
                 <Route path="/nutrition" element={<Nutrition />} />
                 
-                {/* Restaurant Admin Routes */}
-                <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
-                <Route path="/restaurant/menu" element={<RestaurantMenu />} />
-                <Route path="/restaurant/orders" element={<RestaurantOrders />} />
+                {/* Restaurant Admin Routes - protected by user type */}
+                <Route path="/restaurant/dashboard" element={
+                  <ProtectedRoute allowedUserTypes={['restaurant']}>
+                    <RestaurantDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/restaurant/menu" element={
+                  <ProtectedRoute allowedUserTypes={['restaurant']}>
+                    <RestaurantMenu />
+                  </ProtectedRoute>
+                } />
+                <Route path="/restaurant/orders" element={
+                  <ProtectedRoute allowedUserTypes={['restaurant']}>
+                    <RestaurantOrders />
+                  </ProtectedRoute>
+                } />
                 
-                {/* Delivery Routes */}
-                <Route path="/delivery/onboarding" element={<OnboardingPage />} />
-                <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
-                <Route path="/delivery/settings" element={<DeliverySettings />} />
+                {/* Delivery Routes - protected by user type */}
+                <Route path="/delivery/onboarding" element={
+                  <ProtectedRoute allowedUserTypes={['delivery']}>
+                    <OnboardingPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/delivery/dashboard" element={
+                  <ProtectedRoute allowedUserTypes={['delivery']} requiresLocation={true}>
+                    <DeliveryDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/delivery/settings" element={
+                  <ProtectedRoute allowedUserTypes={['delivery']}>
+                    <DeliverySettings />
+                  </ProtectedRoute>
+                } />
               </Routes>
             </PageTransition>
           </div>

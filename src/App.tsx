@@ -40,8 +40,12 @@ function App() {
                           <BrowserRouter>
                             {/* No AnimatePresence wrapper to avoid conflict with PageTransition */}
                             <Routes>
-                              {/* Auth and Demo routes handled at App level */}
+                              {/* Auth routes with mode parameters */}
                               <Route path="/auth" element={<Auth />} />
+                              <Route path="/login" element={<Auth />} />
+                              <Route path="/register" element={<Auth state={{ mode: 'signup' }} />} />
+                              
+                              {/* Demo routes handled at App level */}
                               <Route path="/platform-ui" element={<PlatformUIDemo />} />
                               <Route path="/storage-demo" element={<StorageDemoPage />} />
                               <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />

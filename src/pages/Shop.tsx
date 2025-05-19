@@ -1,17 +1,11 @@
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 
 const Shop = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Redirect to Customer page when accessing shop
-    navigate('/customer');
-  }, [navigate]);
-
-  // This will not be visible as we redirect immediately
-  return null;
+  // Use Navigate component instead of useNavigate hook in useEffect
+  // This is more reliable and prevents blank pages
+  return <Navigate to="/customer" replace />;
 };
 
 export default Shop;

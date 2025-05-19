@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader } from 'lucide-react';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { toast } from 'sonner';
-import { useUserType } from '@/hooks/useUserType'; // Add this import
+import { useUserType } from '@/hooks/useUserType';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiresLocation = false
 }) => {
   const { user, loading: authLoading } = useAuth();
-  const { userType, loading: userTypeLoading } = useUserType(); // Use the hook instead
+  const { userType, loading: userTypeLoading } = useUserType();
   const { 
     permissionStatus, 
     isLocationStale, 
