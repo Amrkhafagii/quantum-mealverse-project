@@ -8,6 +8,9 @@ export interface StarRatingProps {
   size?: 'sm' | 'md' | 'lg';
   onChange?: (rating: number) => void;
   className?: string;
+  interactive?: boolean;
+  onRatingChange?: (rating: number) => void;
+  showNumber?: boolean;
 }
 
 export const StarRating: React.FC<StarRatingProps> = ({
@@ -15,11 +18,21 @@ export const StarRating: React.FC<StarRatingProps> = ({
   readOnly = false,
   size = 'md',
   onChange,
+  onRatingChange,
   className = '',
+  interactive = false,
+  showNumber = false,
 }) => {
   const handleStarClick = (selectedRating: number) => {
     if (readOnly) return;
-    onChange?.(selectedRating);
+    
+    if (onChange) {
+      onChange(selectedRating);
+    }
+    
+    if (onRatingChange) {
+      onRatingChange(selectedRating);
+    }
   };
 
   // Size mapping
@@ -66,8 +79,13 @@ export const StarRating: React.FC<StarRatingProps> = ({
   };
 
   return (
-    <div className={`flex items-center ${className} ${!readOnly ? 'cursor-pointer' : ''}`}>
+    <div className={`flex items-center ${className} ${(!readOnly || interactive) ? 'cursor-pointer' : ''}`}>
       {renderStars()}
+      {showNumber && (
+        <span className="ml-2 text-sm font-medium">
+          {rating.toFixed(1)}
+        </span>
+      )}
     </div>
   );
 };
