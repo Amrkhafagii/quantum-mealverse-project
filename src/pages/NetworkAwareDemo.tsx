@@ -263,7 +263,10 @@ const NetworkAwareDemo = () => {
         
         <TabsContent value="retry">
           <RetryBoundary 
-            onRetry={execute}
+            onRetry={() => {
+              // Explicit return type casting to fix the Promise<unknown> to Promise<void> error
+              return execute().then(() => {});
+            }}
             retryText="Retry Network Operation"
             errorTitle="Network Operation Failed"
             errorDescription="The operation couldn't be completed due to a network issue."

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useConnectionStatus } from './useConnectionStatus';
 
@@ -7,11 +8,12 @@ export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor
 interface NetworkQualityResult {
   quality: NetworkQuality;
   isLowQuality: boolean;
-  isFlaky: boolean; // Added missing property
-  hasTransitioned: boolean; // Added missing property
+  isFlaky: boolean;
+  hasTransitioned: boolean;
   latency: number | null;
   bandwidth: number | null;
   checkQuality: () => Promise<void>;
+  packetLoss?: number | null; // Added explicit packetLoss property
 }
 
 export function useNetworkQuality(): NetworkQualityResult {
@@ -19,6 +21,7 @@ export function useNetworkQuality(): NetworkQualityResult {
   const [quality, setQuality] = useState<NetworkQuality>('unknown');
   const [latency, setLatency] = useState<number | null>(null);
   const [bandwidth, setBandwidth] = useState<number | null>(null);
+  const [packetLoss, setPacketLoss] = useState<number | null>(null); // Added state for packet loss
   const [isLowQuality, setIsLowQuality] = useState(false);
   const [isFlaky, setIsFlaky] = useState(false);
   const [hasTransitioned, setHasTransitioned] = useState(false);
@@ -66,6 +69,26 @@ export function useNetworkQuality(): NetworkQualityResult {
         return 1000;  // Default assumption
     }
   }, [connectionType]);
+
+  // Added simulated function to estimate packet loss
+  const estimatePacketLoss = useCallback(async (): Promise<number> => {
+    if (!isOnline) return 100; // 100% loss when offline
+    
+    // Simulated packet loss based on connection quality indicators
+    if (latency && bandwidth) {
+      // Higher latency or lower bandwidth indicates potentially higher packet loss
+      const latencyFactor = latency > 500 ? 0.7 : latency > 250 ? 0.3 : 0.1;
+      const bandwidthFactor = bandwidth < 1000 ? 0.5 : bandwidth < 5000 ? 0.2 : 0.05;
+      
+      // Calculate a packet loss percentage (0-100)
+      const calculatedPacketLoss = (latencyFactor + bandwidthFactor) * 50;
+      
+      // Add some randomness to simulate fluctuations
+      return Math.min(100, Math.max(0, calculatedPacketLoss + (Math.random() * 5 - 2.5)));
+    }
+    
+    return connectionType === 'wifi' ? 2 : 5; // Default values
+  }, [isOnline, latency, bandwidth, connectionType]);
 
   // Updated to use the new quality types
   const determineQuality = useCallback((latency: number, bandwidth: number): NetworkQuality => {
@@ -138,6 +161,7 @@ export function useNetworkQuality(): NetworkQualityResult {
       setIsFlaky(false);
       setLatency(null);
       setBandwidth(null);
+      setPacketLoss(null);
       return;
     }
 
@@ -147,6 +171,9 @@ export function useNetworkQuality(): NetworkQualityResult {
       
       const estimatedBandwidth = await estimateBandwidth();
       setBandwidth(estimatedBandwidth);
+      
+      const estimatedPacketLoss = await estimatePacketLoss();
+      setPacketLoss(estimatedPacketLoss);
       
       const newQuality = determineQuality(measuredLatency, estimatedBandwidth);
       setQuality(newQuality);
@@ -162,7 +189,7 @@ export function useNetworkQuality(): NetworkQualityResult {
       setQuality('unknown');
       setIsLowQuality(false);
     }
-  }, [isOnline, measureLatency, estimateBandwidth, determineQuality, detectFlakyConnection]);
+  }, [isOnline, measureLatency, estimateBandwidth, estimatePacketLoss, determineQuality, detectFlakyConnection]);
 
   // Check quality when online status or connection type changes
   useEffect(() => {
@@ -187,7 +214,8 @@ export function useNetworkQuality(): NetworkQualityResult {
     isFlaky, 
     hasTransitioned,
     latency, 
-    bandwidth, 
+    bandwidth,
+    packetLoss, // Include packetLoss in the return value
     checkQuality 
   };
 }

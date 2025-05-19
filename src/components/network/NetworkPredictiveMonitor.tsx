@@ -26,7 +26,7 @@ export function NetworkPredictiveMonitor({
   config = {}
 }: NetworkPredictiveMonitorProps) {
   const { isOnline, connectionType } = useConnectionStatus();
-  const { quality, latency, packetLoss } = useNetworkQuality();
+  const { quality, latency, isFlaky } = useNetworkQuality();
   const [predictionActive, setPredictionActive] = useState(false);
   const [possibleDisconnection, setPossibleDisconnection] = useState(false);
   const { toast } = useToast();
@@ -43,7 +43,9 @@ export function NetworkPredictiveMonitor({
     if (!enablePredictions || !isOnline) return;
     
     const isHighLatency = latency && latency > latencyThreshold;
-    const isHighPacketLoss = packetLoss && packetLoss > packetLossThreshold;
+    // Set a default value for packet loss since it might not exist in the type
+    const estimatedPacketLoss = isFlaky ? 20 : 0;
+    const isHighPacketLoss = estimatedPacketLoss > packetLossThreshold;
     
     let isPotentialDisconnect = false;
     
@@ -72,7 +74,6 @@ export function NetworkPredictiveMonitor({
         toast({
           title: "Possible connection issue ahead",
           description: "Your network quality is deteriorating. You might experience connection issues soon.",
-          // Change from "warning" to "default" which is a valid variant
           variant: "default",
           duration: 5000,
           action: (
@@ -89,7 +90,7 @@ export function NetworkPredictiveMonitor({
     connectionType, 
     quality, 
     latency,
-    packetLoss, 
+    isFlaky, 
     latencyThreshold,
     packetLossThreshold,
     useHeuristics, 

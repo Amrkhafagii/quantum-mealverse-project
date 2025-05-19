@@ -9,7 +9,7 @@ const GoogleMap = React.lazy(() => import('./DeliveryGoogleMap'));
 
 interface LazyMapProps {
   mapId: string;
-  center: { lat: number; lng: number };
+  center?: { lat: number; lng: number };
   zoom?: number;
   markers?: Array<{
     latitude: number;
@@ -28,12 +28,20 @@ interface LazyMapProps {
   forceWebView?: boolean;
   enableAnimation?: boolean;
   enableControls?: boolean;
-  isNative?: boolean; // Added this prop
+  isNative?: boolean;
+  
+  // Adding missing props that are passed from MapContainer
+  driverLocation?: any;
+  customerLocation?: any;
+  restaurantLocation?: any;
+  isInteractive?: boolean;
+  zoomLevel?: number;
+  locations?: any[];
 }
 
 const LazyMap: React.FC<LazyMapProps> = ({
   mapId,
-  center,
+  center = { lat: 0, lng: 0 },
   zoom = 14,
   markers = [],
   showRoute = false,
@@ -46,7 +54,13 @@ const LazyMap: React.FC<LazyMapProps> = ({
   forceWebView = false,
   enableAnimation = true,
   enableControls = true,
-  isNative = Platform.isNative() && !forceWebView, // Default value based on platform
+  isNative = Platform.isNative() && !forceWebView,
+  driverLocation,
+  customerLocation,
+  restaurantLocation,
+  isInteractive = true,
+  zoomLevel,
+  locations = []
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { quality, isLowQuality } = useNetworkQuality();
@@ -68,6 +82,63 @@ const LazyMap: React.FC<LazyMapProps> = ({
     setIsLoading(false);
   };
 
+  // Compute derived center location for the map
+  const computedCenter = React.useMemo(() => {
+    if (driverLocation) return { lat: driverLocation.latitude, lng: driverLocation.longitude };
+    if (customerLocation) return { lat: customerLocation.latitude, lng: customerLocation.longitude };
+    if (restaurantLocation) return { lat: restaurantLocation.latitude, lng: restaurantLocation.longitude };
+    if (center) return center;
+    return { lat: 0, lng: 0 };
+  }, [driverLocation, customerLocation, restaurantLocation, center]);
+
+  // Convert locations to markers if provided
+  const computedMarkers = React.useMemo(() => {
+    const allMarkers = [...markers];
+    
+    if (driverLocation) {
+      allMarkers.push({
+        latitude: driverLocation.latitude,
+        longitude: driverLocation.longitude,
+        title: "Driver",
+        type: "driver"
+      });
+    }
+    
+    if (customerLocation) {
+      allMarkers.push({
+        latitude: customerLocation.latitude,
+        longitude: customerLocation.longitude,
+        title: "Customer",
+        type: "customer"
+      });
+    }
+    
+    if (restaurantLocation) {
+      allMarkers.push({
+        latitude: restaurantLocation.latitude,
+        longitude: restaurantLocation.longitude,
+        title: "Restaurant",
+        type: "restaurant"
+      });
+    }
+    
+    // Add any additional locations
+    if (locations && locations.length > 0) {
+      locations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          allMarkers.push({
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            title: loc.title || "",
+            type: loc.type || ""
+          });
+        }
+      });
+    }
+    
+    return allMarkers;
+  }, [markers, driverLocation, customerLocation, restaurantLocation, locations]);
+
   return (
     <div className={`relative ${className}`} style={{ width: width || '100%', height }}>
       {isLoading && (
@@ -78,9 +149,9 @@ const LazyMap: React.FC<LazyMapProps> = ({
         {isNative ? (
           <NativeMap
             mapId={mapId}
-            center={center}
-            zoom={zoom}
-            markers={markers}
+            center={computedCenter}
+            zoom={zoomLevel || zoom}
+            markers={computedMarkers}
             height={height}
             width={width}
             className={className}
@@ -90,9 +161,9 @@ const LazyMap: React.FC<LazyMapProps> = ({
           <React.Suspense fallback={<Skeleton className="w-full h-full" />}>
             <GoogleMap
               mapId={mapId}
-              center={center}
-              zoom={zoom} 
-              markers={markers}
+              center={computedCenter}
+              zoom={zoomLevel || zoom}
+              markers={computedMarkers}
               showRoute={showRoute}
               routeOrigin={routeOrigin}
               routeDestination={routeDestination}
