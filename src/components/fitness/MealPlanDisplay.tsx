@@ -1,4 +1,3 @@
-// Fix the import path for useAuth
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -6,9 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Droplets, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth'; // Fixed import path
+import { useAuth } from '@/hooks/useAuth'; 
 import { MealPlan } from '@/types/food';
-import { saveMealPlan } from '@/services/mealPlan'; // Updated import
+import { saveMealPlan as saveMealPlanToDb } from '@/services/mealPlan'; // Renamed import to avoid conflict
 
 interface MealPlanDisplayProps {
   mealPlan: MealPlan;
@@ -33,8 +32,8 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, tdeeResult 
     const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
 
     try {
-      const result = await saveMealPlan(user.id, planName, mealPlan, tdeeResult);
-      if (result.success) {
+      const result = await saveMealPlanToDb(user.id, planName, mealPlan, tdeeResult);
+      if (result.data) {
         toast.success('Meal plan saved successfully!');
       } else {
         toast.error(`Failed to save meal plan: ${result.error}`);
@@ -154,54 +153,3 @@ interface TDEEResult {
   carbsGrams: number;
   fatsGrams: number;
 }
-
-// Add the saveMealPlan function to handle JSON conversion properly
-const saveMealPlan = async (userId: string, planName: string, mealPlan: MealPlan, tdeeResult: TDEEResult) => {
-  try {
-    // Calculate expiration date (14 days from now)
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    
-    // First create or get TDEE record
-    const { data: tdeeData, error: tdeeError } = await supabase
-      .from('user_tdee')
-      .insert({
-        user_id: userId,
-        date: new Date().toISOString(),
-        tdee: tdeeResult.tdee,
-        bmr: tdeeResult.bmr,
-        goal: tdeeResult.goal,
-        activity_level: 'moderate', // Default value as it's not stored in TDEEResult
-        protein_target: tdeeResult.proteinGrams,
-        carbs_target: tdeeResult.carbsGrams,
-        fat_target: tdeeResult.fatsGrams,
-      })
-      .select('id')
-      .single();
-      
-    if (tdeeError) throw tdeeError;
-    
-    // Serialize the meal plan to proper JSON format
-    const serializedMealPlan = JSON.parse(JSON.stringify(mealPlan));
-    
-    // Now save the meal plan with expiration date
-    const { data, error } = await supabase
-      .from('saved_meal_plans')
-      .insert({
-        user_id: userId,
-        name: planName,
-        date_created: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
-        is_active: true,
-        tdee_id: tdeeData.id,
-        meal_plan: serializedMealPlan,
-      });
-      
-    if (error) throw error;
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error saving meal plan:', error);
-    return { success: false, error };
-  }
-};
