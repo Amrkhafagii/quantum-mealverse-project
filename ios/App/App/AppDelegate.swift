@@ -16,6 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     private var poorQualityLocationCount: Int = 0
     private var batteryLevelMonitoringEnabled: Bool = false
     
+    // Import our BackgroundSync class
+    private let backgroundSync = BackgroundSync.self
+    
     // Location filtering parameters
     private let minimumHorizontalAccuracy: CLLocationAccuracy = 100.0
     private let significantDistance: CLLocationDistance = 50.0 // 50 meters considered significant
@@ -219,6 +222,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             return
         }
         
+        // Check if the device supports monitoring significant location changes
+        // Fix for "monitoringSignificantLocationChanges" error
         locationManager.startMonitoringSignificantLocationChanges()
         print("Started monitoring significant location changes")
     }

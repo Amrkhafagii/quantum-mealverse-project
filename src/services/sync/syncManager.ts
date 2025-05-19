@@ -139,12 +139,19 @@ export const useSyncManager = () => {
     }
   };
 
+  /**
+   * Get the timestamp of the last successful sync
+   */
+  const getLastSyncTime = async (): Promise<string | null> => {
+    return getLastSyncTimestamp();
+  };
+
   return {
     scheduleBackgroundSync,
     getPendingActionsCount,
     manualSync,
     clearAllPendingActions,
-    getLastSyncTimestamp
+    getLastSyncTimestamp: getLastSyncTime
   };
 };
 
