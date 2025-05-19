@@ -4,7 +4,7 @@ import { BackgroundSync, setupBackgroundSyncListeners, useBackgroundSync } from 
 import { toast } from '@/components/ui/use-toast';
 import { getPendingActions, clearAllPendingActions } from '@/utils/offlineStorage';
 import { syncPendingActions } from '@/services/sync/syncService';
-import { Capacitor } from '@capacitor/core';
+import { Platform } from '@/utils/platform';
 
 // Initialize the sync system
 export function initializeSyncSystem() {
@@ -29,7 +29,13 @@ export function initializeSyncSystem() {
 // Cleanup function
 export function cleanupSyncSystem() {
   window.removeEventListener('online', handleOnline);
-  BackgroundSync.removeAllListeners();
+  
+  // Only call removeAllListeners on native platforms
+  if (Platform.isNative()) {
+    BackgroundSync.removeAllListeners().catch(err => {
+      console.warn("Error removing background sync listeners:", err);
+    });
+  }
 }
 
 // When device comes online
@@ -96,7 +102,7 @@ export function useSyncManager() {
       toast({
         title: "Offline",
         description: "You are currently offline. Sync will happen automatically when you're back online.",
-        variant: "destructive" // Changed from "warning" to "destructive" to fix the type error
+        variant: "destructive" 
       });
       return false;
     }
@@ -105,15 +111,27 @@ export function useSyncManager() {
   };
   
   const scheduleBackgroundSync = async (immediate = false): Promise<void> => {
-    if (!Capacitor.isNativePlatform()) {
-      console.log("Background sync scheduling is only available on native platforms");
-      return;
-    }
-    
-    if (immediate) {
-      await syncNow();
+    if (Platform.isNative()) {
+      try {
+        if (immediate) {
+          await syncNow();
+        } else {
+          await scheduleSync();
+        }
+      } catch (error) {
+        console.error("Error scheduling background sync:", error);
+        
+        // Fallback to direct sync if plugin fails
+        if (immediate && isOnline) {
+          await performSync(false);
+        }
+      }
     } else {
-      await scheduleSync();
+      // For web platforms, we'll use our web fallback
+      console.log("Web platform: Using direct sync instead of background sync");
+      if (immediate && isOnline) {
+        await performSync(false);
+      }
     }
   };
   

@@ -44,7 +44,13 @@ export const useOrdersSync = () => {
   // For native platforms, schedule background sync
   useEffect(() => {
     if (Platform.isNative()) {
-      scheduleBackgroundSync(false);
+      try {
+        scheduleBackgroundSync(false);
+      } catch (error) {
+        console.error("Error scheduling background sync:", error);
+      }
+    } else {
+      console.log("Web platform: Background sync scheduling skipped");
     }
   }, [scheduleBackgroundSync]);
   

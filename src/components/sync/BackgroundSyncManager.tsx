@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Platform } from '@/utils/platform';
 import { initializeSyncSystem, cleanupSyncSystem, useSyncManager } from '@/services/sync/syncManager';
 
 interface BackgroundSyncManagerProps {
@@ -24,8 +24,11 @@ export function BackgroundSyncManager({ children }: BackgroundSyncManagerProps) 
     }, 30000); // Check every 30 seconds
 
     // If on native platform, schedule background sync
-    if (Capacitor.isNativePlatform()) {
+    if (Platform.isNative()) {
       scheduleBackgroundSync(false);
+    } else {
+      // For web, we can still set up periodic checks
+      console.log('Web platform detected: Using web fallback for background sync');
     }
 
     return () => {
