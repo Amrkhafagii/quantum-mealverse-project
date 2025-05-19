@@ -36,7 +36,7 @@ const MainLayout: React.FC = () => {
           <SkipLink targetId="main-content" />
           
           <div id="main-content" className="flex-1">
-            <PageTransition type="fade" identifier={location.pathname} className="w-full h-full">
+            <PageTransition type="fade" className="w-full h-full">
               <Routes location={location}>
                 {/* Main Routes */}
                 <Route path="/" element={<Index />} />
