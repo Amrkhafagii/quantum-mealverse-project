@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import StorageDemoPage from './pages/StorageDemo';
 import AdaptiveFormDemo from './pages/AdaptiveFormDemo';
 import PlatformLayoutDemo from './pages/PlatformLayoutDemo';
+import NetworkAdaptationDemo from './pages/NetworkAdaptationDemo';
 import { PageTransition } from "./components/layout/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { RequestQueueProvider } from "./components/network/RequestQueue";
@@ -43,6 +44,7 @@ function App() {
                               <Route path="/storage-demo" element={<StorageDemoPage />} />
                               <Route path="/adaptive-forms" element={<AdaptiveFormDemo />} />
                               <Route path="/platform-layout" element={<PlatformLayoutDemo />} />
+                              <Route path="/network-adaptation" element={<NetworkAdaptationDemo />} />
                               <Route path="*" element={<MainLayout />} />
                             </Routes>
                           </AnimatePresence>

@@ -1,117 +1,112 @@
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Platform } from '@/utils/platform';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import NativeMap from './NativeMap';
 
-// Lazy load the map components
-const DeliveryGoogleMap = React.lazy(() => 
-  import('./DeliveryGoogleMap')
-);
-
-const NativeMap = React.lazy(() => 
-  import('./NativeMap')
-);
+const GoogleMap = React.lazy(() => import('./DeliveryGoogleMap'));
 
 interface LazyMapProps {
-  isNative?: boolean;
-  onMapReady?: () => void;
-  className?: string;
-  mapId?: string;
+  mapId: string;
+  center: { lat: number; lng: number };
+  zoom?: number;
+  markers?: Array<{
+    latitude: number;
+    longitude: number;
+    title?: string;
+    description?: string;
+    type?: string;
+  }>;
+  showRoute?: boolean;
+  routeOrigin?: { lat: number; lng: number };
+  routeDestination?: { lat: number; lng: number };
   height?: string;
-  [key: string]: any; // For other props to pass through to the map component
+  width?: string;
+  className?: string;
+  lowPerformanceMode?: boolean;
+  forceWebView?: boolean;
+  enableAnimation?: boolean;
+  enableControls?: boolean;
 }
 
 const LazyMap: React.FC<LazyMapProps> = ({
-  isNative = false,
-  onMapReady,
+  mapId,
+  center,
+  zoom = 14,
+  markers = [],
+  showRoute = false,
+  routeOrigin,
+  routeDestination,
+  height = '300px',
+  width,
   className = '',
-  height = 'h-[300px]',
-  mapId = 'default-map',
-  ...mapProps
+  lowPerformanceMode = false,
+  forceWebView = false,
+  enableAnimation = true,
+  enableControls = true,
 }) => {
-  const [isInView, setIsInView] = useState(false);
-  const [mapLoaded, setMapLoaded] = useState(false);
-
-  // Set up intersection observer to load map only when in viewport
+  const [isLoading, setIsLoading] = useState(true);
+  const { quality, isLowQuality } = useNetworkQuality();
+  const isNative = Platform.isNative() && !forceWebView;
+  const mapElementRef = useRef<HTMLDivElement>(null);
+  
+  // Use low performance mode if network quality is low or explicitly set
+  const useLowPerformanceMode = lowPerformanceMode || isLowQuality;
+  
   useEffect(() => {
-    const options = {
-      root: null,
-      rootMargin: '200px', // Load a bit before it comes into view
-      threshold: 0.01
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      });
-    }, options);
-
-    const currentElement = document.getElementById(`map-container-${mapId}`);
-    if (currentElement) {
-      observer.observe(currentElement);
-    }
-
-    return () => {
-      if (currentElement) {
-        observer.unobserve(currentElement);
-      }
-      observer.disconnect();
-    };
-  }, [mapId]);
+    // Simulate map load time
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleMapLoad = () => {
-    setMapLoaded(true);
-    if (onMapReady) {
-      onMapReady();
-    }
+    setIsLoading(false);
   };
 
   return (
-    <Card className={className}>
-      <CardContent className={`p-0 ${height} relative`} id={`map-container-${mapId}`}>
-        {!isInView ? (
-          <div className="flex items-center justify-center h-full bg-gray-100 rounded-md">
-            <div className="text-center">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Map loading...</p>
-            </div>
-          </div>
+    <div className={`relative ${className}`} style={{ width: width || '100%', height }}>
+      {isLoading && (
+        <Skeleton className="w-full h-full absolute top-0 left-0" />
+      )}
+      
+      <div className={`w-full h-full ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`} ref={mapElementRef}>
+        {isNative ? (
+          <NativeMap
+            mapId={mapId}
+            center={center}
+            zoom={zoom}
+            markers={markers}
+            height={height}
+            width={width}
+            className={className}
+            liteMode={useLowPerformanceMode}
+          />
         ) : (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full bg-gray-100 rounded-md">
-              <div className="text-center">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Loading map...</p>
-              </div>
-            </div>
-          }>
-            {isNative ? (
-              <NativeMap
-                {...mapProps}
-                className="h-full w-full"
-                onMapLoad={handleMapLoad}
-              />
-            ) : (
-              <DeliveryGoogleMap
-                {...mapProps}
-                className="h-full w-full"
-                onMapLoad={handleMapLoad}
-              />
-            )}
-          </Suspense>
+          <React.Suspense fallback={<Skeleton className="w-full h-full" />}>
+            <GoogleMap
+              mapId={mapId}
+              center={center}
+              zoom={zoom} 
+              markers={markers}
+              showRoute={showRoute}
+              routeOrigin={routeOrigin}
+              routeDestination={routeDestination}
+              height={height}
+              width={width}
+              className={className}
+              lowPerformanceMode={useLowPerformanceMode}
+              enableAnimation={enableAnimation && !useLowPerformanceMode}
+              enableControls={enableControls && !useLowPerformanceMode}
+              onLoad={handleMapLoad}
+            />
+          </React.Suspense>
         )}
-        
-        {/* Show loading overlay until the map is fully loaded */}
-        {isInView && !mapLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

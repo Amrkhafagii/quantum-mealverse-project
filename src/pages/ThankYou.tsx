@@ -14,6 +14,7 @@ import { useInterval } from '@/hooks/use-interval';
 import { cancelOrder } from '@/services/orders/orderService';
 import { checkAssignmentStatus } from '@/services/orders/webhookService';
 import { supabase } from '@/integrations/supabase/client';
+import OrderStatusDisplay from '@/components/orders/OrderStatusDisplay';
 
 const ThankYou = () => {
   const navigate = useNavigate();

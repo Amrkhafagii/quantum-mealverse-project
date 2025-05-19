@@ -14,6 +14,16 @@ const BASE_DELAY = 1000;
 // Create storage manager instance for sync operations
 const syncStorage = StorageManager.getInstance('sync');
 
+// Define supported tables - this must match the table names in Supabase
+const SUPPORTED_TABLES = ['orders', 'user_preferences'] as const;
+
+type SupportedTable = typeof SUPPORTED_TABLES[number];
+
+// Type guard to check if a string is a supported table name
+function isSupportedTable(table: string): table is SupportedTable {
+  return (SUPPORTED_TABLES as readonly string[]).includes(table);
+}
+
 /**
  * Get the sync queue from storage
  */
@@ -153,6 +163,10 @@ export async function processSync(networkStatus: NetworkStatus): Promise<boolean
 async function processInsertOperation(operation: SyncOperation): Promise<void> {
   const { table, data } = operation;
   
+  if (!isSupportedTable(table)) {
+    throw new Error(`Unsupported table: ${table}`);
+  }
+  
   // If we have an optimistic id, we need to remove it before inserting
   const { optimisticId, ...insertData } = data || {};
   
@@ -198,6 +212,10 @@ async function processInsertOperation(operation: SyncOperation): Promise<void> {
 async function processUpdateOperation(operation: SyncOperation): Promise<void> {
   const { table, data, filters } = operation;
   
+  if (!isSupportedTable(table)) {
+    throw new Error(`Unsupported table: ${table}`);
+  }
+  
   // Handle tables with updated_at columns
   const updatedData = { ...data };
   if (['orders', 'user_preferences'].includes(table)) {
@@ -211,7 +229,10 @@ async function processUpdateOperation(operation: SyncOperation): Promise<void> {
   if (filters) {
     Object.keys(filters).forEach(key => {
       const value = filters[key];
-      query = query.eq(key, value);
+      if (query) {
+        // @ts-ignore - We're dynamically applying filters
+        query = query.eq(key, value);
+      }
     });
   }
   
@@ -228,6 +249,10 @@ async function processUpdateOperation(operation: SyncOperation): Promise<void> {
 async function processDeleteOperation(operation: SyncOperation): Promise<void> {
   const { table, filters } = operation;
   
+  if (!isSupportedTable(table)) {
+    throw new Error(`Unsupported table: ${table}`);
+  }
+  
   if (!filters || Object.keys(filters).length === 0) {
     throw new Error(`Delete operation requires filters`);
   }
@@ -238,7 +263,10 @@ async function processDeleteOperation(operation: SyncOperation): Promise<void> {
   // Apply filters
   Object.keys(filters).forEach(key => {
     const value = filters[key];
-    query = query.eq(key, value);
+    if (query) {
+      // @ts-ignore - We're dynamically applying filters
+      query = query.eq(key, value);
+    }
   });
   
   const { error } = await query;

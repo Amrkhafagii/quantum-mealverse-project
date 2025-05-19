@@ -1,141 +1,119 @@
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-// Replace the import with the community version that's installed
 import { CapacitorGoogleMaps } from '@capacitor-community/capacitor-googlemaps-native';
-import { OfflineMapFallback } from './OfflineMapFallback';
+import { Platform } from '@/utils/platform';
 
 interface NativeMapProps {
-  initialLocation?: {
-    latitude: number;
-    longitude: number;
-  };
+  mapId: string;
+  center: { lat: number; lng: number };
+  height: string;
+  width?: string;
+  zoom?: number;
   markers?: Array<{
     latitude: number;
     longitude: number;
     title?: string;
+    description?: string;
+    type?: string;
   }>;
-  onMapReady?: () => void;
-  onMarkerClick?: (markerId: string) => void;
-  height?: string;
-  width?: string;
   className?: string;
+  liteMode?: boolean;
 }
 
-export const NativeMap: React.FC<NativeMapProps> = ({
-  initialLocation,
-  markers = [],
-  onMapReady,
-  onMarkerClick,
-  height = '300px',
+const NativeMap: React.FC<NativeMapProps> = ({
+  mapId,
+  center,
+  height,
   width = '100%',
+  zoom = 14,
+  markers = [],
   className = '',
+  liteMode = false
 }) => {
-  const mapRef = React.useRef<HTMLDivElement>(null);
-  const [mapId, setMapId] = React.useState<string | null>(null);
-  const [isMapAvailable, setIsMapAvailable] = React.useState(true);
-
-  // Try to initialize the map
-  React.useEffect(() => {
-    if (!mapRef.current || mapId) return;
-
-    const createMap = async () => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [mapInitialized, setMapInitialized] = useState(false);
+  
+  useEffect(() => {
+    const initMap = async () => {
+      if (!mapRef.current || !Platform.isNative()) return;
+      
       try {
-        if (!Capacitor.isNativePlatform()) {
-          console.warn('Native maps are only available on native platforms');
-          setIsMapAvailable(false);
-          return;
-        }
-
-        const mapData = await CapacitorGoogleMaps.create({
-          element: mapRef.current!,
-          forceCreate: true,
-          id: `native-map-${Date.now()}`,
-          config: {
-            center: {
-              lat: initialLocation?.latitude || 37.7749,
-              lng: initialLocation?.longitude || -122.4194
-            },
-            zoom: 14,
-            androidLiteMode: false
-          }
-        });
-
-        setMapId(mapData.id);
+        // Get bounds of the mapRef element
+        const bounds = mapRef.current.getBoundingClientRect();
         
-        if (onMapReady) {
-          onMapReady();
-        }
-
-        // Add markers
-        if (markers.length > 0 && mapData.id) {
-          await Promise.all(markers.map(marker => {
-            return CapacitorGoogleMaps.addMarker({
-              id: mapData.id,
-              marker: {
-                coordinate: {
-                  lat: marker.latitude,
-                  lng: marker.longitude
-                },
+        // Initialize the map
+        await CapacitorGoogleMaps.create({
+          width: bounds.width,
+          height: bounds.height,
+          x: bounds.x,
+          y: bounds.y,
+          latitude: center.lat,
+          longitude: center.lng,
+          zoom: zoom,
+          liteMode: liteMode
+        });
+        
+        setMapInitialized(true);
+        
+        // Add markers if provided
+        if (markers && markers.length > 0) {
+          await Promise.all(
+            markers.map(async (marker) => {
+              await CapacitorGoogleMaps.addMarker({
+                latitude: marker.latitude,
+                longitude: marker.longitude,
                 title: marker.title || '',
-              }
-            });
-          }));
+                snippet: marker.description || '',
+                opacity: 1.0,
+                isFlat: false,
+                iconUrl: marker.type === 'restaurant' 
+                  ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
+                  : marker.type === 'customer'
+                  ? 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                  : marker.type === 'driver'
+                  ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                  : undefined
+              });
+            })
+          );
         }
-      } catch (error) {
-        console.error('Error initializing native map:', error);
-        setIsMapAvailable(false);
+      } catch (err) {
+        console.error('Failed to initialize native map:', err);
       }
     };
-
-    createMap();
-
-    // Cleanup function
+    
+    initMap();
+    
     return () => {
-      if (mapId) {
-        CapacitorGoogleMaps.remove({
-          id: mapId
-        }).catch(error => console.error('Error removing map:', error));
+      // Clean up the map when component unmounts
+      if (mapInitialized) {
+        try {
+          CapacitorGoogleMaps.destroy();
+        } catch (err) {
+          console.error('Error destroying map:', err);
+        }
       }
     };
-  }, [initialLocation, mapId, markers, onMapReady]);
-
-  // Handle marker clicks
-  React.useEffect(() => {
-    if (!mapId || !onMarkerClick) return;
-
-    const handleMarkerClick = (event: CustomEvent) => {
-      onMarkerClick(event.detail.markerId);
-    };
-
-    document.addEventListener('googleMapMarkerClick', handleMarkerClick);
-
-    return () => {
-      document.removeEventListener('googleMapMarkerClick', handleMarkerClick);
-    };
-  }, [mapId, onMarkerClick]);
-
-  if (!isMapAvailable) {
-    return (
-      <OfflineMapFallback 
-        title="Native Maps Unavailable" 
-        description="Native maps functionality is not available on this device."
-        locationData={initialLocation ? {
-          latitude: initialLocation.latitude,
-          longitude: initialLocation.longitude
-        } : undefined}
-        showLocationData={!!initialLocation}
-        className={className}
-      />
-    );
-  }
+  }, [center, zoom, markers, liteMode]);
 
   return (
     <div 
-      ref={mapRef}
-      style={{ height, width }} 
-      className={`native-map-container ${className}`}
-    />
+      ref={mapRef} 
+      id={mapId}
+      className={`native-map ${className}`}
+      style={{
+        height,
+        width: width || '100%',
+        background: '#f0f0f0',
+      }}
+    >
+      {!Platform.isNative() && (
+        <div className="flex items-center justify-center h-full bg-gray-100 text-gray-500">
+          Native map only available on iOS/Android
+        </div>
+      )}
+    </div>
   );
 };
 
