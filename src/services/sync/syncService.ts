@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SyncOperation, SyncQueue } from '@/types/sync';
 import { Platform } from '@/utils/platform';
@@ -142,24 +141,24 @@ export const syncPendingActions = async (): Promise<boolean> => {
 const processOperation = async (operation: SyncOperation): Promise<void> => {
   switch (operation.type) {
     case 'insert':
-      // Use proper type casting for dynamic table access
-      await supabase.from(operation.table as any).insert(operation.data);
+      // Fix: Use type assertion on the entire from() call
+      await (supabase.from(operation.table) as any).insert(operation.data);
       break;
       
     case 'update':
       if (!operation.filters) {
         throw new Error('Update operation requires filters');
       }
-      // Use proper type casting for dynamic table access
-      await supabase.from(operation.table as any).update(operation.data).match(operation.filters);
+      // Fix: Use type assertion on the entire from() call
+      await (supabase.from(operation.table) as any).update(operation.data).match(operation.filters);
       break;
       
     case 'delete':
       if (!operation.filters) {
         throw new Error('Delete operation requires filters');
       }
-      // Use proper type casting for dynamic table access
-      await supabase.from(operation.table as any).delete().match(operation.filters);
+      // Fix: Use type assertion on the entire from() call
+      await (supabase.from(operation.table) as any).delete().match(operation.filters);
       break;
       
     default:

@@ -199,8 +199,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         locationManager.stopUpdatingLocation()
         
         // Keep significant location changes running for critical updates
-        if !locationManager.monitoringSignificantLocationChanges {
-            startSignificantLocationChanges()
+        // Fix: Check for significant change monitoring availability instead of relying on property
+        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            locationManager.startMonitoringSignificantLocationChanges()
         }
     }
     
@@ -222,8 +223,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             return
         }
         
-        // Check if the device supports monitoring significant location changes
-        // Fix for "monitoringSignificantLocationChanges" error
+        // Start monitoring significant location changes
         locationManager.startMonitoringSignificantLocationChanges()
         print("Started monitoring significant location changes")
     }
