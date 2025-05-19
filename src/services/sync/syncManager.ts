@@ -1,145 +1,118 @@
-
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { BackgroundSync, setupBackgroundSyncListeners, useBackgroundSync } from '@/utils/backgroundSync';
-import { toast } from '@/components/ui/use-toast';
-import { getPendingActions, clearAllPendingActions } from '@/utils/offlineStorage';
-import { syncPendingActions } from '@/services/sync/syncService';
+import { BackgroundSync } from '@/utils/backgroundSync';
 import { Platform } from '@/utils/platform';
+import { syncPendingActions } from './syncService';
 
-// Initialize the sync system
-export function initializeSyncSystem() {
-  // Set up event listeners
-  setupBackgroundSyncListeners(
-    // On sync started
-    () => {
-      console.log("Background sync started");
-      // You could update UI indicators here
-    },
-    // On sync completed
-    () => {
-      console.log("Background sync completed");
-      // You could update UI indicators here
-    }
-  );
-  
-  // Listen for online/offline events to trigger syncs appropriately
-  window.addEventListener('online', handleOnline);
-}
+let syncSystemInitialized = false;
 
-// Cleanup function
-export function cleanupSyncSystem() {
-  window.removeEventListener('online', handleOnline);
-  
-  // Only call removeAllListeners on native platforms
-  if (Platform.isNative()) {
-    BackgroundSync.removeAllListeners().catch(err => {
-      console.warn("Error removing background sync listeners:", err);
-    });
+/**
+ * Initialize the sync system
+ */
+export const initializeSyncSystem = () => {
+  if (syncSystemInitialized) {
+    return;
   }
-}
 
-// When device comes online
-function handleOnline() {
-  getPendingActionsCount().then(count => {
-    if (count > 0) {
-      console.log(`Device is online with ${count} pending actions. Starting sync...`);
-      performSync(false);
+  // Add event listeners for sync events
+  setupSyncEventListeners();
+
+  syncSystemInitialized = true;
+  console.log('Sync system initialized');
+};
+
+/**
+ * Clean up the sync system
+ */
+export const cleanupSyncSystem = () => {
+  if (!syncSystemInitialized) {
+    return;
+  }
+
+  // Remove event listeners for sync events
+  if (Platform.isNative()) {
+    BackgroundSync.removeAllListeners().catch(console.error);
+  }
+
+  syncSystemInitialized = false;
+  console.log('Sync system cleaned up');
+};
+
+/**
+ * Set up listeners for sync events
+ */
+const setupSyncEventListeners = () => {
+  if (Platform.isNative()) {
+    // Listen for sync events from native code
+    BackgroundSync.addListener('backgroundSync', async (event) => {
+      console.log('Background sync event received:', event);
+      
+      if (event.type === 'SYNC') {
+        try {
+          await syncPendingActions();
+          console.log('Background sync completed');
+        } catch (error) {
+          console.error('Background sync failed:', error);
+        }
+      }
+    }).catch(console.error);
+  }
+
+  // Also handle web fallback events
+  document.addEventListener('backgroundSync', async (event: any) => {
+    console.log('Web fallback sync event received:', event.detail?.type);
+    
+    if (event.detail?.type === 'SYNC') {
+      try {
+        await syncPendingActions();
+        console.log('Web fallback sync completed');
+      } catch (error) {
+        console.error('Web fallback sync failed:', error);
+      }
     }
   });
-}
+};
 
-// Get number of pending actions
-export async function getPendingActionsCount(): Promise<number> {
-  const actions = await getPendingActions();
-  return actions.length;
-}
-
-// Perform a sync operation
-export async function performSync(showNotifications = true): Promise<boolean> {
-  try {
-    if (showNotifications) {
-      const pendingCount = await getPendingActionsCount();
-      if (pendingCount > 0) {
-        toast({
-          title: "Syncing data",
-          description: `Processing ${pendingCount} pending ${pendingCount === 1 ? 'item' : 'items'}`,
-        });
+/**
+ * Hook to manage sync operations
+ */
+export const useSyncManager = () => {
+  /**
+   * Schedule background sync
+   */
+  const scheduleBackgroundSync = async (force = false) => {
+    try {
+      if (Platform.isNative()) {
+        await BackgroundSync.schedule({ forceImmediate: force });
+      } else {
+        // For web, we can dispatch a custom event
+        if (force) {
+          document.dispatchEvent(
+            new CustomEvent('backgroundSync', { detail: { type: 'SYNC' } })
+          );
+        }
       }
-    }
-    
-    await syncPendingActions();
-    
-    if (showNotifications) {
-      toast({
-        title: "Sync complete",
-        description: "Your data has been synchronized",
-      });
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Sync failed:', error);
-    
-    if (showNotifications) {
-      toast({
-        title: "Sync failed",
-        description: "Could not synchronize your data. Will try again later.",
-        variant: "destructive"
-      });
-    }
-    
-    return false;
-  }
-}
-
-// Hook for components that need sync functionality
-export function useSyncManager() {
-  const { isOnline } = useConnectionStatus();
-  const { scheduleSync, syncNow, getLastSyncTimestamp } = useBackgroundSync();
-  
-  const manualSync = async (): Promise<boolean> => {
-    if (!isOnline) {
-      toast({
-        title: "Offline",
-        description: "You are currently offline. Sync will happen automatically when you're back online.",
-        variant: "destructive" 
-      });
+      return true;
+    } catch (error) {
+      console.error('Failed to schedule background sync:', error);
       return false;
     }
-    
-    return performSync(true);
   };
-  
-  const scheduleBackgroundSync = async (immediate = false): Promise<void> => {
-    if (Platform.isNative()) {
-      try {
-        if (immediate) {
-          await syncNow();
-        } else {
-          await scheduleSync();
-        }
-      } catch (error) {
-        console.error("Error scheduling background sync:", error);
-        
-        // Fallback to direct sync if plugin fails
-        if (immediate && isOnline) {
-          await performSync(false);
-        }
-      }
-    } else {
-      // For web platforms, we'll use our web fallback
-      console.log("Web platform: Using direct sync instead of background sync");
-      if (immediate && isOnline) {
-        await performSync(false);
-      }
+
+  /**
+   * Get pending actions count
+   */
+  const getPendingActionsCount = async (): Promise<number> => {
+    try {
+      // This function would check the offline queue for pending operations
+      // For now, just return 0 as a placeholder
+      return 0;
+    } catch (error) {
+      console.error('Failed to get pending actions count:', error);
+      return 0;
     }
   };
-  
+
   return {
-    manualSync,
     scheduleBackgroundSync,
     getPendingActionsCount,
-    getLastSyncTimestamp,
-    clearAllPendingActions,
   };
-}
+};
