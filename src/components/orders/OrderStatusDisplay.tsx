@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { OrderStatusMessage } from './OrderStatusMessage';
 import CancelOrderButton from './status/CancelOrderButton';
-import { OrderTimer } from './OrderTimer';
+import { OrderTimer } from '@/components/orders/status/OrderTimer';
 import { Order } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';

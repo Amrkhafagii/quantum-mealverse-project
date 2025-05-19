@@ -30,7 +30,27 @@ const MealDetails = ({ id: propId }: MealDetailsProps) => {
         throw new Error(error.message);
       }
 
-      return data as MealType;
+      // Convert the data to match MealType format
+      const mealData: MealType = {
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        price: data.price,
+        calories: data.nutritional_info?.calories || 0,
+        protein: data.nutritional_info?.protein || 0,
+        carbs: data.nutritional_info?.carbs || 0,
+        fat: data.nutritional_info?.fat || 0,
+        image_url: data.image_url,
+        is_active: data.is_available || true,
+        restaurant_id: data.restaurant_id,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        ingredients: data.ingredients || [],
+        steps: data.steps || [],
+        nutritional_info: data.nutritional_info
+      };
+
+      return mealData;
     },
     enabled: !!id,
   });

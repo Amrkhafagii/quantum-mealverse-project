@@ -64,6 +64,19 @@ export const removePendingAction = async (actionId: string): Promise<void> => {
 };
 
 /**
+ * Clear all pending actions
+ */
+export const clearAllPendingActions = async (): Promise<void> => {
+  try {
+    await offlineStorage.set(STORAGE_KEYS.PENDING_ACTIONS, []);
+    console.log('All pending actions cleared');
+  } catch (error) {
+    console.error('Error clearing pending actions:', error);
+    throw error;
+  }
+};
+
+/**
  * Increment the retry count for an action
  * @param actionId ID of the action to update
  */
