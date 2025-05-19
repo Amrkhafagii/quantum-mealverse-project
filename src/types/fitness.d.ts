@@ -1,4 +1,3 @@
-
 // User profile types
 export interface UserProfile {
   id: string;
@@ -164,10 +163,9 @@ export interface UserWorkoutStats {
   }>;
 }
 
-// Add the missing type for SavedMealPlanWithExpiry
+// Update the SavedMealPlanWithExpiry interface to match our changes
 export interface SavedMealPlanWithExpiry extends SavedMealPlan {
-  is_active?: boolean;
-  expires_at?: string;
+  // No additional fields needed as is_active is now in the base interface
 }
 
 export interface SavedMealPlan {
@@ -177,4 +175,6 @@ export interface SavedMealPlan {
   meal_plan?: any;
   tdee_id?: string;
   date_created?: string;
+  is_active?: boolean;
+  expires_at?: string;
 }
