@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
   plugins: {
     BiometricAuth: {
       // Plugin-specific configurations would go here
+    },
+    GoogleMaps: {
+      apiKey: "YOUR_GOOGLE_MAPS_API_KEY_HERE" // Replace with your actual Google Maps API key
     }
   }
 };
