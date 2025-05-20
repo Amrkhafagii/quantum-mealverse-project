@@ -14,7 +14,6 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 		F62B34BB2DDD2C8F000C7FDD /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F62B34B72DDD2C8F000C7FDD /* Main.storyboard */; };
-		F62B34BC2DDD2C8F000C7FDD /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F62B34B52DDD2C8F000C7FDD /* Launchscreen.storyboard */; };
 		F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4732DDCAA900085D82E /* ActivityManager.swift */; };
 		F62EC4762DDCAAA10085D82E /* BackgroundSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */; };
 		F62EC4852DDCAAE00085D82E /* RouteOptimizationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */; };
@@ -27,6 +26,7 @@
 		F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4832DDCAAE00085D82E /* QrScannerViewController.swift */; };
 		F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */; };
 		F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */; };
+		F68E51C42DDD328800FF9F76 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F68E51C32DDD328800FF9F76 /* Launch Screen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,7 +39,6 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
-		F62B34B42DDD2C8F000C7FDD /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Launchscreen.storyboard; sourceTree = "<group>"; };
 		F62B34B62DDD2C8F000C7FDD /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Main.storyboard; sourceTree = "<group>"; };
 		F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BiometricAuthPlugin.h; sourceTree = "<group>"; };
 		F62B34BA2DDD2C8F000C7FDD /* QrScannerPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QrScannerPlugin.h; sourceTree = "<group>"; };
@@ -57,6 +56,7 @@
 		F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteOptimizationPlugin.swift; sourceTree = "<group>"; };
 		F62EC4902DDCAAE60085D82E /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		F62EC4912DDCAB060085D82E /* RouteOptimizationPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RouteOptimizationPlugin.h; sourceTree = "<group>"; };
+		F68E51C32DDD328800FF9F76 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = SOURCE_ROOT; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -140,7 +140,7 @@
 		F62B34B82DDD2C8F000C7FDD /* Base.lproj */ = {
 			isa = PBXGroup;
 			children = (
-				F62B34B52DDD2C8F000C7FDD /* Launchscreen.storyboard */,
+				F68E51C32DDD328800FF9F76 /* Launch Screen.storyboard */,
 				F62B34B72DDD2C8F000C7FDD /* Main.storyboard */,
 			);
 			path = Base.lproj;
@@ -209,11 +209,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				F62B34BB2DDD2C8F000C7FDD /* Main.storyboard in Resources */,
-				F62B34BC2DDD2C8F000C7FDD /* Launchscreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+				F68E51C42DDD328800FF9F76 /* Launch Screen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,14 +294,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		F62B34B52DDD2C8F000C7FDD /* Launchscreen.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				F62B34B42DDD2C8F000C7FDD /* Base */,
-			);
-			name = Launchscreen.storyboard;
-			sourceTree = "<group>";
-		};
 		F62B34B72DDD2C8F000C7FDD /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
