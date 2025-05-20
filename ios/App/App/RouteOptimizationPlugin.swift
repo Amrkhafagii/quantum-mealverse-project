@@ -21,11 +21,9 @@ public class RouteOptimizationPlugin: CAPPlugin {
         }
     }
     
-    // Google Maps API key (fetched from app configuration)
     private var googleMapsApiKey: String {
-        let config = getConfig().object(forKey: "plugins") as? [String: Any]
-        let googleMapsConfig = (config?["GoogleMaps"] as? [String: Any])
-        return googleMapsConfig?["apiKey"] as? String ?? ""
+        let config = getConfig()
+        return config.getString("plugins.GoogleMaps.apiKey") ?? ""
     }
     
     @objc func calculateOptimalRoute(_ call: CAPPluginCall) {
