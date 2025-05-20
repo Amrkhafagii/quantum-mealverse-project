@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
       // Plugin-specific configurations would go here
     },
     GoogleMaps: {
-      apiKey: "YOUR_GOOGLE_MAPS_API_KEY_HERE" // Replace with your actual Google Maps API key
+      apiKey: "AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs" // Replace with your actual Google Maps API key
     }
   }
 };
