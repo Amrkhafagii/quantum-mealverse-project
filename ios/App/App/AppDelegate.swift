@@ -114,7 +114,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 completionHandler(.noData)
             }
             
-            // Create the observer variable before using it in the closure
+            // Declare the observer variable before the closure
             var observer: NSObjectProtocol?
             
             // Now set the observer
@@ -191,7 +191,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
             }
             
-            // Create the observer variable before using it in the closure
+            // Declare the observer variable before the closure
             var observer: NSObjectProtocol?
             
             // Set the observer in a separate statement

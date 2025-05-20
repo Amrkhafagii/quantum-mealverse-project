@@ -13,8 +13,13 @@ public class RouteOptimizationPlugin: CAPPlugin {
     private var activeRequest: CAPPluginCall?
     private let locationManager = CLLocationManager()
     private var isAuthorized: Bool {
-        return CLLocationManager.authorizationStatus() == .authorizedWhenInUse ||
-               CLLocationManager.authorizationStatus() == .authorizedAlways
+        if #available(iOS 14.0, *) {
+            return self.locationManager.authorizationStatus == .authorizedWhenInUse ||
+                  self.locationManager.authorizationStatus == .authorizedAlways
+        } else {
+            return CLLocationManager.authorizationStatus() == .authorizedWhenInUse ||
+                  CLLocationManager.authorizationStatus() == .authorizedAlways
+        }
     }
     
     @objc func calculateOptimalRoute(_ call: CAPPluginCall) {
@@ -46,8 +51,13 @@ public class RouteOptimizationPlugin: CAPPlugin {
                    let lng = waypointDict["longitude"] as? Double {
                     let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
                     let name = waypointDict["name"] as? String ?? "Waypoint"
-                    let waypoint = MKWaypoint(coordinate: coordinate, name: name)
-                    waypoints.append(waypoint)
+                    if #available(iOS 16.0, *) {
+                        let waypoint = MKWaypoint(coordinate: coordinate, name: name)
+                        waypoints.append(waypoint)
+                    } else {
+                        // For iOS versions below 16.0, we'll handle waypoints differently
+                        // by using MKMapItem directly in the request below
+                    }
                 }
             }
         }
@@ -72,17 +82,23 @@ public class RouteOptimizationPlugin: CAPPlugin {
         case "walking":
             request.transportType = .walking
         case "transit":
-            request.transportType = .transit
+            if #available(iOS 16.0, *) {
+                request.transportType = .transit
+            } else {
+                request.transportType = .automobile
+            }
         default:
             request.transportType = .automobile
         }
         
         // Handle route options
-        if avoidHighways {
-            request.highwayPreference = .avoid
-        }
-        if avoidTolls {
-            request.tollPreference = .avoid
+        if #available(iOS 16.0, *) {
+            if avoidHighways {
+                request.highwayPreference = .avoid
+            }
+            if avoidTolls {
+                request.tollPreference = .avoid
+            }
         }
         
         // Make the request
@@ -129,7 +145,7 @@ public class RouteOptimizationPlugin: CAPPlugin {
             }
             
             // Encode polyline
-            let encodedPolyline = self.encodePolyline(route.polyline.points, count: route.polyline.pointCount)
+            let encodedPolyline = self.encodePolyline(route.polyline)
             
             // Format response
             let routeResponse: [String: Any] = [
@@ -258,7 +274,7 @@ public class RouteOptimizationPlugin: CAPPlugin {
             let newTotalDuration = totalDuration + route.expectedTravelTime
             
             // Encode and append polyline
-            let segmentPolyline = self.encodePolyline(route.polyline.points, count: route.polyline.pointCount)
+            let segmentPolyline = self.encodePolyline(route.polyline)
             let updatedEncodedPoints = encodedPoints.isEmpty ? segmentPolyline : encodedPoints + segmentPolyline
             
             // Calculate the next segment
@@ -359,13 +375,14 @@ public class RouteOptimizationPlugin: CAPPlugin {
     }
     
     // Helper to encode a polyline
-    private func encodePolyline(_ coords: UnsafeMutablePointer<MKMapPoint>, count: Int) -> String {
+    private func encodePolyline(_ polyline: MKPolyline) -> String {
         var result = ""
         var lastLat = 0
         var lastLng = 0
         
-        for i in 0..<count {
-            let coordinate = coords[i].coordinate
+        for i in 0..<polyline.pointCount {
+            let point = polyline.points[i]
+            let coordinate = point.coordinate
             
             let lat = Int(coordinate.latitude * 100000)
             let lng = Int(coordinate.longitude * 100000)

@@ -1,3 +1,4 @@
+
 import Foundation
 import Capacitor
 import BackgroundTasks
@@ -14,44 +15,53 @@ import UIKit
     
     // Register background tasks
     @objc public static func register() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: backgroundIdentifier, using: nil) { task in
-            self.handleBackgroundSync(task: task as! BGAppRefreshTask)
+        if #available(iOS 13.0, *) {
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: backgroundIdentifier, using: nil) { task in
+                self.handleBackgroundSync(task: task as! BGAppRefreshTask)
+            }
+            
+            // Initialize the user pattern analyzer
+            userPatternAnalyzer = UserPatternAnalyzer()
+            
+            // Setup observer for when app goes to background
+            NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+                self.scheduleAppRefresh()
+            }
+            
+            print("Background sync tasks registered")
+        } else {
+            print("Background sync tasks not registered - requires iOS 13.0+")
         }
-        
-        // Initialize the user pattern analyzer
-        userPatternAnalyzer = UserPatternAnalyzer()
-        
-        // Setup observer for when app goes to background
-        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
-            self.scheduleAppRefresh()
-        }
-        
-        print("Background sync tasks registered")
     }
     
     // Schedule the next background refresh task
     @objc public static func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: backgroundIdentifier)
-        
-        // Set intelligent scheduling based on user patterns
-        if let nextOptimalTime = calculateNextOptimalSyncTime() {
-            request.earliestBeginDate = nextOptimalTime
-            print("Background sync scheduled for optimal time: \(nextOptimalTime)")
+        if #available(iOS 13.0, *) {
+            let request = BGAppRefreshTaskRequest(identifier: backgroundIdentifier)
+            
+            // Set intelligent scheduling based on user patterns
+            if let nextOptimalTime = calculateNextOptimalSyncTime() {
+                request.earliestBeginDate = nextOptimalTime
+                print("Background sync scheduled for optimal time: \(nextOptimalTime)")
+            } else {
+                // Default to 15 minutes if no pattern is established
+                request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+                print("Background sync scheduled with default time")
+            }
+            
+            do {
+                try BGTaskScheduler.shared.submit(request)
+                print("Background task scheduled successfully")
+            } catch {
+                print("Could not schedule background task: \(error)")
+            }
         } else {
-            // Default to 15 minutes if no pattern is established
-            request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
-            print("Background sync scheduled with default time")
-        }
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("Background task scheduled successfully")
-        } catch {
-            print("Could not schedule background task: \(error)")
+            print("Background scheduling requires iOS 13.0+")
         }
     }
     
     // Handle the background sync task
+    @available(iOS 13.0, *)
     private static func handleBackgroundSync(task: BGAppRefreshTask) {
         // Create a task assertion to extend runtime if needed
         let taskAssertionID = UIApplication.shared.beginBackgroundTask {
@@ -115,7 +125,7 @@ import UIKit
             completion(false, NSError(domain: "BackgroundSyncError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sync operation timed out"]))
         }
         
-        // Declare the observer variable before the closure that uses it
+        // Declare the observer variable before the closure
         var observer: NSObjectProtocol?
         
         // Set up observer for sync completion from the JS side
