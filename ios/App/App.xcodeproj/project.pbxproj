@@ -1,3 +1,4 @@
+
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
@@ -24,6 +25,7 @@
 		F62EC48B2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47E2DDCAAE00085D82E /* BiometricAuthPlugin.swift */; };
 		F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4832DDCAAE00085D82E /* QrScannerViewController.swift */; };
 		F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */; };
+		F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,7 @@
 		F62EC4732DDCAA900085D82E /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
 		F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSync.swift; sourceTree = "<group>"; };
 		F62EC4772DDCAAE00085D82E /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
+		F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RouteOptimizationPlugin.m; sourceTree = "<group>"; };
 		F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BiometricAuthPlugin.m; sourceTree = "<group>"; };
 		F62EC47E2DDCAAE00085D82E /* BiometricAuthPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthPlugin.swift; sourceTree = "<group>"; };
 		F62EC47F2DDCAAE00085D82E /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
@@ -48,6 +51,7 @@
 		F62EC4832DDCAAE00085D82E /* QrScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QrScannerViewController.swift; sourceTree = "<group>"; };
 		F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteOptimizationPlugin.swift; sourceTree = "<group>"; };
 		F62EC4902DDCAAE60085D82E /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
+		F62EC4912DDCAB060085D82E /* RouteOptimizationPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RouteOptimizationPlugin.h; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -100,6 +104,8 @@
 				F62EC4812DDCAAE00085D82E /* QrScannerPlugin.m */,
 				F62EC4822DDCAAE00085D82E /* QrScannerPlugin.swift */,
 				F62EC4832DDCAAE00085D82E /* QrScannerViewController.swift */,
+				F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */,
+				F62EC4912DDCAB060085D82E /* RouteOptimizationPlugin.h */,
 				F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */,
 				F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */,
 				F62EC4732DDCAA900085D82E /* ActivityManager.swift */,
@@ -260,6 +266,7 @@
 				F62EC48B2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */,
 				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
 				F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */,
+				F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */,
 				F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 			);

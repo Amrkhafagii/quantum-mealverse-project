@@ -44,20 +44,17 @@ public class RouteOptimizationPlugin: CAPPlugin {
         let destination = CLLocationCoordinate2D(latitude: destLat, longitude: destLng)
         
         // Get waypoints if provided
-        var waypoints: [MKWaypoint] = []
+        var waypoints: [MKMapItem] = []
         if let waypointsArray = call.getArray("waypoints") as? [[String: Any]] {
             for waypointDict in waypointsArray {
                 if let lat = waypointDict["latitude"] as? Double,
                    let lng = waypointDict["longitude"] as? Double {
                     let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
                     let name = waypointDict["name"] as? String ?? "Waypoint"
-                    if #available(iOS 16.0, *) {
-                        let waypoint = MKWaypoint(coordinate: coordinate, name: name)
-                        waypoints.append(waypoint)
-                    } else {
-                        // For iOS versions below 16.0, we'll handle waypoints differently
-                        // by using MKMapItem directly in the request below
-                    }
+                    let placemark = MKPlacemark(coordinate: coordinate)
+                    let mapItem = MKMapItem(placemark: placemark)
+                    mapItem.name = name
+                    waypoints.append(mapItem)
                 }
             }
         }

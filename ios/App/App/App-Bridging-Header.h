@@ -5,3 +5,5 @@
 
 #import "QrScannerPlugin.h"
 #import "BiometricAuthPlugin.h"
+#import "RouteOptimizationPlugin.h"
+
