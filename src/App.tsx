@@ -28,7 +28,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ResponsiveProvider>
-        <ThemeProvider defaultTheme="dark">
+        <ThemeProvider defaultTheme="system">
           <AuthProvider>
             <GoogleMapsProvider>
               <MapViewProvider>
