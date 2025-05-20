@@ -1,4 +1,3 @@
-
 import Foundation
 import Capacitor
 import BackgroundTasks
@@ -116,10 +115,16 @@ import UIKit
             completion(false, NSError(domain: "BackgroundSyncError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sync operation timed out"]))
         }
         
+        // Declare the observer variable before the closure that uses it
+        var observer: NSObjectProtocol?
+        
         // Set up observer for sync completion from the JS side
-        let observer = NotificationCenter.default.addObserver(forName: syncCompleteNotification, object: nil, queue: .main) { _ in
+        observer = NotificationCenter.default.addObserver(forName: syncCompleteNotification, object: nil, queue: .main) { _ in
             timer.invalidate()
-            NotificationCenter.default.removeObserver(observer)
+            // Use optional binding to safely remove the observer
+            if let observerToRemove = observer {
+                NotificationCenter.default.removeObserver(observerToRemove)
+            }
             completion(true, nil)
         }
     }

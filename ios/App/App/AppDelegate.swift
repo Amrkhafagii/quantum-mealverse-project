@@ -114,9 +114,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 completionHandler(.noData)
             }
             
-            // Listen for sync completion
-            let observer = NotificationCenter.default.addObserver(forName: Notification.Name("backgroundSyncCompleted"), object: nil, queue: .main) { _ in
-                NotificationCenter.default.removeObserver(observer)
+            // Create the observer variable before using it in the closure
+            var observer: NSObjectProtocol?
+            
+            // Now set the observer
+            observer = NotificationCenter.default.addObserver(forName: Notification.Name("backgroundSyncCompleted"), object: nil, queue: .main) { _ in
+                // Use optional binding to safely remove the observer
+                if let observerToRemove = observer {
+                    NotificationCenter.default.removeObserver(observerToRemove)
+                }
                 completionHandler(.newData)
             }
         } else {
@@ -185,8 +191,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
             }
             
-            // Add observer for location updates
-            let observer = NotificationCenter.default.addObserver(
+            // Create the observer variable before using it in the closure
+            var observer: NSObjectProtocol?
+            
+            // Set the observer in a separate statement
+            observer = NotificationCenter.default.addObserver(
                 forName: NSNotification.Name("locationUpdateAvailable"), 
                 object: nil, 
                 queue: .main
@@ -198,7 +207,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             
             // Set a timeout to remove observer
             DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
-                NotificationCenter.default.removeObserver(observer)
+                // Use optional binding to safely remove the observer
+                if let observerToRemove = observer {
+                    NotificationCenter.default.removeObserver(observerToRemove)
+                }
                 if !didComplete {
                     completionHandler(.noData)
                 }
