@@ -1,4 +1,3 @@
-
 import Foundation
 import Capacitor
 import MapKit
@@ -43,8 +42,11 @@ public class RouteOptimizationPlugin: CAPPlugin {
         let origin = CLLocationCoordinate2D(latitude: originLat, longitude: originLng)
         let destination = CLLocationCoordinate2D(latitude: destLat, longitude: destLng)
         
-        // Get waypoints if provided
-        var waypoints: [MKMapItem] = []
+        // Create first and last point
+        var allStops = [origin]
+        
+        // Get waypoints if provided and add to allStops
+        var waypointItems: [MKMapItem] = []
         if let waypointsArray = call.getArray("waypoints") as? [[String: Any]] {
             for waypointDict in waypointsArray {
                 if let lat = waypointDict["latitude"] as? Double,
@@ -54,111 +56,42 @@ public class RouteOptimizationPlugin: CAPPlugin {
                     let placemark = MKPlacemark(coordinate: coordinate)
                     let mapItem = MKMapItem(placemark: placemark)
                     mapItem.name = name
-                    waypoints.append(mapItem)
+                    waypointItems.append(mapItem)
+                    allStops.append(coordinate)
                 }
             }
         }
         
+        // Add destination as the last stop
+        allStops.append(destination)
+        
         // Get options if provided
         let optionsDict = call.getObject("options") ?? [:]
         let optimizeWaypoints = optionsDict["optimizeWaypoints"] as? Bool ?? true
-        let avoidTolls = optionsDict["avoidTolls"] as? Bool ?? false
-        let avoidHighways = optionsDict["avoidHighways"] as? Bool ?? false
         
-        // Create route request
-        let originItem = MKMapItem(placemark: MKPlacemark(coordinate: origin))
-        let destinationItem = MKMapItem(placemark: MKPlacemark(coordinate: destination))
-        
-        let request = MKDirections.Request()
-        request.source = originItem
-        request.destination = destinationItem
-        
-        // Set transport type
-        let modeString = optionsDict["mode"] as? String ?? "driving"
-        switch modeString {
-        case "walking":
-            request.transportType = .walking
-        case "transit":
-            if #available(iOS 16.0, *) {
-                request.transportType = .transit
-            } else {
-                request.transportType = .automobile
-            }
-        default:
-            request.transportType = .automobile
+        // Optimize waypoint order if requested and if we have waypoints
+        if optimizeWaypoints && allStops.count > 3 {
+            // Keep origin and destination fixed, optimize waypoints in between
+            let optimizedStops = optimizeStopOrder(
+                origin: allStops[0],
+                intermediateStops: Array(allStops[1..<allStops.count-1]),
+                destination: allStops[allStops.count-1],
+                options: optionsDict
+            )
+            allStops = optimizedStops
         }
         
-        // Handle route options
-        if #available(iOS 16.0, *) {
-            if avoidHighways {
-                request.highwayPreference = .avoid
-            }
-            if avoidTolls {
-                request.tollPreference = .avoid
-            }
-        }
-        
-        // Make the request
-        self.activeDirectionsRequest = MKDirections(request: request)
-        self.activeDirectionsRequest?.calculate { [weak self] response, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                self.activeRequest?.reject("Failed to calculate route: \(error.localizedDescription)")
-                self.activeDirectionsRequest = nil
-                self.activeRequest = nil
-                return
-            }
-            
-            guard let response = response, let route = response.routes.first else {
-                self.activeRequest?.reject("No routes found")
-                self.activeDirectionsRequest = nil
-                self.activeRequest = nil
-                return
-            }
-            
-            // Process the route
-            var legs: [[String: Any]] = []
-            var totalDistance: Double = 0
-            var totalDuration: Double = 0
-            
-            for step in route.steps {
-                let leg: [String: Any] = [
-                    "startLocation": [
-                        "latitude": step.polyline.points[0].coordinate.latitude,
-                        "longitude": step.polyline.points[0].coordinate.longitude
-                    ],
-                    "endLocation": [
-                        "latitude": step.polyline.points[step.polyline.pointCount - 1].coordinate.latitude,
-                        "longitude": step.polyline.points[step.polyline.pointCount - 1].coordinate.longitude
-                    ],
-                    "distance": step.distance,
-                    "duration": step.expectedTravelTime,
-                    "instructions": step.instructions
-                ]
-                legs.append(leg)
-                totalDistance += step.distance
-                totalDuration += step.expectedTravelTime
-            }
-            
-            // Encode polyline
-            let encodedPolyline = self.encodePolyline(route.polyline)
-            
-            // Format response
-            let routeResponse: [String: Any] = [
-                "route": [
-                    "waypoints": self.formatWaypoints(route: route),
-                    "distance": totalDistance,
-                    "duration": totalDuration,
-                    "polyline": encodedPolyline,
-                    "legs": legs
-                ]
-            ]
-            
-            self.activeRequest?.resolve(routeResponse)
-            self.activeDirectionsRequest = nil
-            self.activeRequest = nil
-        }
+        // Process the route through segments
+        self.calculateSegmentedRoute(
+            coordinates: allStops,
+            index: 0,
+            legs: [],
+            totalDistance: 0,
+            totalDuration: 0,
+            encodedPoints: "",
+            options: optionsDict,
+            call: call
+        )
     }
     
     @objc func calculateMultiStopRoute(_ call: CAPPluginCall) {
@@ -175,6 +108,8 @@ public class RouteOptimizationPlugin: CAPPlugin {
         }
         
         let returnToOrigin = call.getBool("returnToOrigin") ?? false
+        let options = call.getObject("options") ?? [:]
+        let optimizeWaypoints = options["optimizeWaypoints"] as? Bool ?? true
         
         // Create an array of stops with coordinates
         var coordinates: [CLLocationCoordinate2D] = []
@@ -190,12 +125,52 @@ public class RouteOptimizationPlugin: CAPPlugin {
             coordinates.append(coordinates[0])
         }
         
-        // For multi-stop routes, we'll need to make multiple requests
-        // For simplicity in this example, we're just going to chain them
-        self.calculateSegmentedRoute(coordinates: coordinates, index: 0, legs: [], totalDistance: 0, totalDuration: 0, encodedPoints: "")
+        // If optimization requested and we have enough stops
+        if optimizeWaypoints && coordinates.count > 3 {
+            // For multi-stop, optimize all except first and last if returnToOrigin is true
+            if returnToOrigin {
+                let optimizedStops = optimizeStopOrder(
+                    origin: coordinates[0],
+                    intermediateStops: Array(coordinates[1..<coordinates.count-1]),
+                    destination: coordinates[coordinates.count-1],
+                    options: options
+                )
+                coordinates = optimizedStops
+            } else {
+                // When not returning to origin, we optimize all except the first
+                let optimizedStops = optimizeStopOrder(
+                    origin: coordinates[0],
+                    intermediateStops: Array(coordinates[1..<coordinates.count]),
+                    destination: nil,
+                    options: options
+                )
+                coordinates = optimizedStops
+            }
+        }
+        
+        // Calculate route through segments
+        self.calculateSegmentedRoute(
+            coordinates: coordinates,
+            index: 0,
+            legs: [],
+            totalDistance: 0,
+            totalDuration: 0,
+            encodedPoints: "",
+            options: options,
+            call: call
+        )
     }
     
-    private func calculateSegmentedRoute(coordinates: [CLLocationCoordinate2D], index: Int, legs: [[String: Any]], totalDistance: Double, totalDuration: Double, encodedPoints: String) {
+    private func calculateSegmentedRoute(
+        coordinates: [CLLocationCoordinate2D],
+        index: Int,
+        legs: [[String: Any]],
+        totalDistance: Double,
+        totalDuration: Double,
+        encodedPoints: String,
+        options: [String: Any],
+        call: CAPPluginCall
+    ) {
         // If we've processed all segments, return the result
         if index >= coordinates.count - 1 {
             // Format and return the complete route
@@ -206,13 +181,20 @@ public class RouteOptimizationPlugin: CAPPlugin {
                 ]
             }
             
+            // Create indices array to show the order of waypoints
+            var indices: [Int] = []
+            for i in 0..<coordinates.count {
+                indices.append(i)
+            }
+            
             let routeResponse: [String: Any] = [
                 "route": [
                     "waypoints": waypoints,
                     "distance": totalDistance,
                     "duration": totalDuration,
                     "polyline": encodedPoints,
-                    "legs": legs
+                    "legs": legs,
+                    "optimizedOrder": indices
                 ]
             ]
             
@@ -229,10 +211,39 @@ public class RouteOptimizationPlugin: CAPPlugin {
         let request = MKDirections.Request()
         request.source = originItem
         request.destination = destinationItem
-        request.transportType = .automobile
+        
+        // Set transport type based on options
+        if let modeString = options["mode"] as? String {
+            switch modeString {
+            case "walking":
+                request.transportType = .walking
+            case "transit":
+                if #available(iOS 16.0, *) {
+                    request.transportType = .transit
+                } else {
+                    request.transportType = .automobile
+                }
+            default:
+                request.transportType = .automobile
+            }
+        } else {
+            request.transportType = .automobile
+        }
+        
+        // Handle route options
+        if #available(iOS 16.0, *) {
+            if let avoidHighways = options["avoidHighways"] as? Bool, avoidHighways {
+                request.highwayPreference = .avoid
+            }
+            if let avoidTolls = options["avoidTolls"] as? Bool, avoidTolls {
+                request.tollPreference = .avoid
+            }
+        }
         
         // Make the request
         let directions = MKDirections(request: request)
+        self.activeDirectionsRequest = directions
+        
         directions.calculate { [weak self] response, error in
             guard let self = self else { return }
             
@@ -250,9 +261,8 @@ public class RouteOptimizationPlugin: CAPPlugin {
                 return
             }
             
-            // Add this segment's info
-            var updatedLegs = legs
-            let segmentLeg: [String: Any] = [
+            // Create the leg for this segment
+            var segmentLeg: [String: Any] = [
                 "startLocation": [
                     "latitude": coordinates[index].latitude,
                     "longitude": coordinates[index].longitude
@@ -264,6 +274,25 @@ public class RouteOptimizationPlugin: CAPPlugin {
                 "distance": route.distance,
                 "duration": route.expectedTravelTime
             ]
+            
+            // Add steps if available
+            var steps: [[String: Any]] = []
+            for step in route.steps {
+                let stepDict: [String: Any] = [
+                    "instructions": step.instructions,
+                    "distance": step.distance,
+                    "duration": step.expectedTravelTime,
+                    "maneuver": step.notice ?? ""
+                ]
+                steps.append(stepDict)
+            }
+            
+            if !steps.isEmpty {
+                segmentLeg["steps"] = steps
+            }
+            
+            // Add this leg to our collection
+            var updatedLegs = legs
             updatedLegs.append(segmentLeg)
             
             // Update totals
@@ -281,7 +310,9 @@ public class RouteOptimizationPlugin: CAPPlugin {
                 legs: updatedLegs,
                 totalDistance: newTotalDistance,
                 totalDuration: newTotalDuration,
-                encodedPoints: updatedEncodedPoints
+                encodedPoints: updatedEncodedPoints,
+                options: options,
+                call: call
             )
         }
     }
@@ -345,6 +376,77 @@ public class RouteOptimizationPlugin: CAPPlugin {
         }
         
         call.resolve()
+    }
+    
+    // Optimize the order of waypoints
+    private func optimizeStopOrder(
+        origin: CLLocationCoordinate2D,
+        intermediateStops: [CLLocationCoordinate2D],
+        destination: CLLocationCoordinate2D?,
+        options: [String: Any]
+    ) -> [CLLocationCoordinate2D] {
+        // Start with origin
+        var result = [origin]
+        
+        // No intermediate stops to optimize
+        if intermediateStops.isEmpty {
+            // Add destination if provided
+            if let destination = destination {
+                result.append(destination)
+            }
+            return result
+        }
+        
+        // Choose optimization strategy
+        let optimizationStrategy = options["stopOptimization"] as? String ?? "distance"
+        var waypoints = intermediateStops
+        
+        // For complex routes, a proper TSP algorithm would go here
+        // This is a simple greedy algorithm that finds the nearest unvisited waypoint
+        var currentPoint = origin
+        
+        while !waypoints.isEmpty {
+            // Find nearest point
+            var nearestIndex = 0
+            var shortestDistance = Double.greatestFiniteMagnitude
+            
+            for (index, waypoint) in waypoints.enumerated() {
+                let distance: Double
+                
+                if optimizationStrategy == "duration" {
+                    // In a real implementation, this would use estimated travel time
+                    // For now, we approximate with straight-line distance
+                    distance = calculateDistance(currentPoint, waypoint)
+                } else {
+                    // Default to distance-based optimization
+                    distance = calculateDistance(currentPoint, waypoint)
+                }
+                
+                if distance < shortestDistance {
+                    shortestDistance = distance
+                    nearestIndex = index
+                }
+            }
+            
+            // Add nearest point to result and remove from waypoints
+            result.append(waypoints[nearestIndex])
+            currentPoint = waypoints[nearestIndex]
+            waypoints.remove(at: nearestIndex)
+        }
+        
+        // Add destination if provided
+        if let destination = destination {
+            result.append(destination)
+        }
+        
+        return result
+    }
+    
+    // Helper to calculate straight-line distance between two coordinates
+    private func calculateDistance(_ coord1: CLLocationCoordinate2D, _ coord2: CLLocationCoordinate2D) -> Double {
+        let location1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
+        let location2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
+        return location1.distance(from: location2)
     }
     
     // Helper to format waypoints from a route

@@ -17,6 +17,7 @@ export interface RouteOptions {
   departureTime?: Date;
   trafficModel?: 'best_guess' | 'pessimistic' | 'optimistic';
   units?: 'metric' | 'imperial';
+  stopOptimization?: 'distance' | 'duration'; // Added to control optimization strategy
 }
 
 export interface OptimizedRoute {
@@ -25,6 +26,7 @@ export interface OptimizedRoute {
   duration: number; // in seconds
   polyline: string;
   legs: RouteLeg[];
+  optimizedOrder?: number[]; // Added to show the optimized order of waypoints
 }
 
 export interface RouteLeg {

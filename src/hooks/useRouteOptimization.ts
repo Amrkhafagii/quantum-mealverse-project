@@ -9,6 +9,7 @@ import { hapticFeedback } from '@/utils/hapticFeedback';
 interface UseRouteOptimizationOptions {
   onRouteCalculated?: (route: OptimizedRoute) => void;
   onError?: (error: Error) => void;
+  stopOptimization?: 'distance' | 'duration';
 }
 
 export function useRouteOptimization(options?: UseRouteOptimizationOptions) {
@@ -41,6 +42,14 @@ export function useRouteOptimization(options?: UseRouteOptimizationOptions) {
       
       // Provide haptic feedback when starting route calculation
       await hapticFeedback.light();
+      
+      // Add the stopOptimization strategy if specified in hook options
+      if (options?.stopOptimization && !routeOptions.stopOptimization) {
+        routeOptions = {
+          ...routeOptions,
+          stopOptimization: options.stopOptimization
+        };
+      }
       
       // If not on a native platform, fall back to web API
       if (!Platform.isNative()) {
@@ -124,6 +133,14 @@ export function useRouteOptimization(options?: UseRouteOptimizationOptions) {
       
       // Provide haptic feedback when starting route calculation
       await hapticFeedback.medium();
+      
+      // Add the stopOptimization strategy if specified in hook options
+      if (options?.stopOptimization && !routeOptions.stopOptimization) {
+        routeOptions = {
+          ...routeOptions,
+          stopOptimization: options.stopOptimization
+        };
+      }
       
       // If not on a native platform, fall back to web API
       if (!Platform.isNative()) {
