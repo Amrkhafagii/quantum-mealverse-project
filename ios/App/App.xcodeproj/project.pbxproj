@@ -26,6 +26,7 @@
 		F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */; };
 		F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */; };
 		F68E51C42DDD328800FF9F76 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F68E51C32DDD328800FF9F76 /* Launch Screen.storyboard */; };
+		F6E075492DDD3C6A00C455BC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F6E075472DDD3C6A00C455BC /* Main.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 		F62EC4902DDCAAE60085D82E /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		F62EC4912DDCAB060085D82E /* RouteOptimizationPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RouteOptimizationPlugin.h; sourceTree = "<group>"; };
 		F68E51C32DDD328800FF9F76 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = SOURCE_ROOT; };
+		F6E075482DDD3C6A00C455BC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Main.storyboard; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -139,6 +141,7 @@
 			isa = PBXGroup;
 			children = (
 				F68E51C32DDD328800FF9F76 /* Launch Screen.storyboard */,
+				F6E075472DDD3C6A00C455BC /* Main.storyboard */,
 			);
 			path = Base.lproj;
 			sourceTree = "<group>";
@@ -208,6 +211,7 @@
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
+				F6E075492DDD3C6A00C455BC /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				F68E51C42DDD328800FF9F76 /* Launch Screen.storyboard in Resources */,
 			);
@@ -288,6 +292,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		F6E075472DDD3C6A00C455BC /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				F6E075482DDD3C6A00C455BC /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		504EC3141FED79650016851F /* Debug */ = {
