@@ -1,6 +1,8 @@
+
 import Foundation
 import Capacitor
 import BackgroundTasks
+import UIKit
 
 @objc public class BackgroundSync: NSObject {
     private static let backgroundIdentifier = "com.lovable.quantummealverse.background-sync"

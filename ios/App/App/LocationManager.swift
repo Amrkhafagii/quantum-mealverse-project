@@ -1,3 +1,4 @@
+
 import UIKit
 import Capacitor
 import CoreLocation
@@ -6,10 +7,10 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     static let shared = LocationManager()
     
     // Location manager
-    private(set) var locationManager: CLLocationManager?
+    var locationManager: CLLocationManager?
     private var lastSignificantLocation: CLLocation?
     private var poorQualityLocationCount: Int = 0
-    private var isMoving: Bool = true
+    var isMoving: Bool = true
     
     // Battery monitoring
     private var batteryLevelMonitoringEnabled: Bool = false

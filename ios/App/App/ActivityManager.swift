@@ -1,5 +1,6 @@
 
 import CoreMotion
+import CoreLocation
 
 class ActivityManager {
     static let shared = ActivityManager()
@@ -27,7 +28,7 @@ class ActivityManager {
             let isNowStationary = activity.stationary
             
             // If movement state changed
-            if LocationManager.shared.isMoving == isNowStationary {
+            if LocationManager.shared.isMoving != isNowStationary {
                 DispatchQueue.main.async {
                     LocationManager.shared.setIsMoving(!isNowStationary)
                 }
