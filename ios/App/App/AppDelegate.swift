@@ -3,6 +3,7 @@ import Capacitor
 import CoreLocation
 import CoreMotion
 import BackgroundTasks
+import ObjectiveC
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -125,14 +126,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     private func handleLegacyBackgroundFetch(_ application: UIApplication, completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        // Request a single location update during background fetch
+        // Use the LocationManager directly for background fetch
         guard let locationManager = LocationManager.shared.locationManager else {
             completionHandler(.failed)
             return
         }
         
         // Only proceed if we have authorization
-        if locationManager.authorizationStatus == .authorizedAlways {
+        let authStatus: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            authStatus = locationManager.authorizationStatus
+        } else {
+            authStatus = CLLocationManager.authorizationStatus()
+        }
+        
+        if authStatus == .authorizedAlways {
             // Reset location manager with energy efficient settings for this fetch
             locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
             locationManager.distanceFilter = 50
@@ -146,8 +154,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             // Schedule timeout
             DispatchQueue.main.asyncAfter(deadline: .now() + 25, execute: locationFetchTimeout)
             
-            // Create a one-time location update handler
-            let locationUpdateHandler: ((CLLocation) -> Void) = { location in
+            // Request a single location update
+            var didComplete = false
+            
+            let locationHandler: LocationUpdateCompletion = { location in
+                // Only process once
+                guard !didComplete else { return }
+                didComplete = true
+                
                 // Cancel the timeout
                 locationFetchTimeout.cancel()
                 
@@ -171,11 +185,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
             }
             
-            // Temporarily store the handler
-            // In a real implementation, you'd use a more robust solution to handle the callback
-            objc_setAssociatedObject(self, "oneTimeLocationHandler", locationUpdateHandler, .OBJC_ASSOCIATION_RETAIN)
+            // Add observer for location updates
+            let observer = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("locationUpdateAvailable"), 
+                object: nil, 
+                queue: .main
+            ) { notification in
+                if let location = notification.userInfo?["location"] as? CLLocation {
+                    locationHandler(location)
+                }
+            }
             
-            // Request a single location update
+            // Set a timeout to remove observer
+            DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+                NotificationCenter.default.removeObserver(observer)
+                if !didComplete {
+                    completionHandler(.noData)
+                }
+            }
+            
+            // Request the location update
             locationManager.requestLocation()
         } else {
             // No authorization for background location
@@ -184,22 +213,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-// Extension to help with single location updates during background fetch
-extension CLLocationManager {
-    static var oneTimeHandlers = [CLLocationManager: (CLLocation) -> Void]()
-    
-    func requestLocation(completion: @escaping (CLLocation) -> Void) {
-        CLLocationManager.oneTimeHandlers[self] = completion
-        self.requestLocation()
-    }
-}
-
-extension CLLocationManagerDelegate {
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let completion = CLLocationManager.oneTimeHandlers[manager],
-           let location = locations.last {
-            completion(location)
-            CLLocationManager.oneTimeHandlers.removeValue(forKey: manager)
-        }
-    }
-}
+// Type alias for location update completion handler
+typealias LocationUpdateCompletion = (CLLocation) -> Void

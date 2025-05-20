@@ -39,7 +39,14 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     func checkLocationPermission() {
         guard let locationManager = locationManager else { return }
         
-        switch locationManager.authorizationStatus {
+        let status: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            status = locationManager.authorizationStatus
+        } else {
+            status = CLLocationManager.authorizationStatus()
+        }
+        
+        switch status {
         case .notDetermined:
             // Start with requesting when-in-use first
             locationManager.requestWhenInUseAuthorization()
@@ -256,6 +263,13 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
                 "speed": location.speed,
                 "isMoving": isMoving
             ]
+        )
+        
+        // Also post notification for the single location request system
+        NotificationCenter.default.post(
+            name: NSNotification.Name("locationUpdateAvailable"),
+            object: nil,
+            userInfo: ["location": location]
         )
     }
     
