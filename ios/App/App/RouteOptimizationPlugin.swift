@@ -33,7 +33,7 @@ public class RouteOptimizationPlugin: CAPPlugin {
               let originLat = originDict["latitude"] as? Double,
               let originLng = originDict["longitude"] as? Double,
               let destDict = call.getObject("destination"),
-              let destLat = destDict["latitude"] as? Double, 
+              let destLat = destDict["latitude"] as? Double,
               let destLng = destDict["longitude"] as? Double else {
             call.reject("Origin and destination coordinates are required")
             return
@@ -280,13 +280,13 @@ public class RouteOptimizationPlugin: CAPPlugin {
             for step in route.steps {
                 let stepDict: [String: Any] = [
                     "instructions": step.instructions,
-                    "distance": step.distance,
-                    "duration": step.expectedTravelTime,
-                    "maneuver": step.notice ?? ""
+                    "distance": step.distance,          // in meters
+                    "duration": step.expectedTravelTime,// in seconds
+                    "maneuver": step.notice ?? step.instructions  // fallback to instructions if notice is nil
                 ]
                 steps.append(stepDict)
             }
-            
+
             if !steps.isEmpty {
                 segmentLeg["steps"] = steps
             }
@@ -327,7 +327,7 @@ public class RouteOptimizationPlugin: CAPPlugin {
               let originLat = originDict["latitude"] as? Double,
               let originLng = originDict["longitude"] as? Double,
               let destDict = call.getObject("destination"),
-              let destLat = destDict["latitude"] as? Double, 
+              let destLat = destDict["latitude"] as? Double,
               let destLng = destDict["longitude"] as? Double else {
             call.reject("Origin and destination coordinates are required")
             return
@@ -453,17 +453,24 @@ public class RouteOptimizationPlugin: CAPPlugin {
     private func formatWaypoints(route: MKRoute) -> [[String: Any]] {
         var waypoints: [[String: Any]] = []
         
-        // Add source
-        if let sourceCoordinate = route.steps.first?.polyline.points[0].coordinate {
+        // Safely add source coordinate (first point)
+        if let firstStep = route.steps.first {
+            let firstPolyline = firstStep.polyline
+            let firstPoint = firstPolyline.points()[0]
+            let sourceCoordinate = firstPoint.coordinate
+            
             waypoints.append([
                 "latitude": sourceCoordinate.latitude,
                 "longitude": sourceCoordinate.longitude
             ])
         }
         
-        // Add destination
-        if let lastStep = route.steps.last,
-           let destinationCoordinate = lastStep.polyline.points[lastStep.polyline.pointCount - 1].coordinate {
+        // Safely add destination coordinate (last point)
+        if let lastStep = route.steps.last {
+            let lastPolyline = lastStep.polyline
+            let lastPoint = lastPolyline.points()[lastPolyline.pointCount - 1]
+            let destinationCoordinate = lastPoint.coordinate
+            
             waypoints.append([
                 "latitude": destinationCoordinate.latitude,
                 "longitude": destinationCoordinate.longitude
@@ -480,7 +487,7 @@ public class RouteOptimizationPlugin: CAPPlugin {
         var lastLng = 0
         
         for i in 0..<polyline.pointCount {
-            let point = polyline.points[i]
+            let point = polyline.points()[i]
             let coordinate = point.coordinate
             
             let lat = Int(coordinate.latitude * 100000)
