@@ -1,27 +1,62 @@
 import { DeliveryLocation, LocationFreshness } from '@/types/location';
+import { secureStorage } from './secureStorage';
+
+// Constants for secure storage keys
+const LOCATION_STORAGE_KEY = 'deliveryLocation';
+const ORDERS_STORAGE_KEY = 'cached_orders';
+const PENDING_ACTIONS_KEY = 'pending_actions';
 
 /**
- * Save delivery location to local storage
+ * Save delivery location to secure storage
  */
-export const cacheDeliveryLocation = (location: DeliveryLocation): void => {
+export const cacheDeliveryLocation = async (location: DeliveryLocation): Promise<boolean> => {
   try {
-    localStorage.setItem('deliveryLocation', JSON.stringify(location));
+    return await secureStorage.setItem(LOCATION_STORAGE_KEY, location);
   } catch (error) {
     console.error('Error caching delivery location:', error);
+    // Fallback to legacy storage
+    try {
+      localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
+      return true;
+    } catch (fallbackError) {
+      console.error('Error in fallback storage:', fallbackError);
+      return false;
+    }
   }
 };
 
 /**
- * Get cached delivery location from local storage
+ * Get cached delivery location from secure storage
  */
-export const getCachedDeliveryLocation = (): DeliveryLocation | null => {
+export const getCachedDeliveryLocation = async (): Promise<DeliveryLocation | null> => {
   try {
-    const cached = localStorage.getItem('deliveryLocation');
-    if (!cached) return null;
+    // Try to get from secure storage
+    const location = await secureStorage.getItem<DeliveryLocation>(LOCATION_STORAGE_KEY);
+    if (location) return location;
     
-    return JSON.parse(cached) as DeliveryLocation;
+    // Fallback to legacy storage if not found in secure storage
+    const legacyLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (legacyLocation) {
+      const parsedLocation = JSON.parse(legacyLocation) as DeliveryLocation;
+      // Migrate to secure storage
+      await secureStorage.setItem(LOCATION_STORAGE_KEY, parsedLocation);
+      return parsedLocation;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error getting cached delivery location:', error);
+    
+    // Last resort fallback
+    try {
+      const legacyLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (legacyLocation) {
+        return JSON.parse(legacyLocation) as DeliveryLocation;
+      }
+    } catch (fallbackError) {
+      console.error('Error in fallback retrieval:', fallbackError);
+    }
+    
     return null;
   }
 };
@@ -137,39 +172,67 @@ export const calculateLocationFreshness = (timestamp: string): LocationFreshness
 /**
  * Cache an order for offline access
  */
-export const cacheOrderData = (orderId: string, orderData: any): void => {
+export const cacheOrderData = async (orderId: string, orderData: any): Promise<boolean> => {
   try {
-    const cachedOrders = getCachedOrders();
+    const cachedOrders = await getCachedOrders();
     cachedOrders[orderId] = {
       data: orderData,
       timestamp: Date.now()
     };
-    localStorage.setItem('cached_orders', JSON.stringify(cachedOrders));
+    return await secureStorage.setItem(ORDERS_STORAGE_KEY, cachedOrders);
   } catch (error) {
     console.error('Error caching order data:', error);
+    // Fallback to localStorage
+    try {
+      const cachedOrders = getCachedOrdersSync();
+      cachedOrders[orderId] = {
+        data: orderData,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(cachedOrders));
+      return true;
+    } catch (fallbackError) {
+      console.error('Error in fallback order caching:', fallbackError);
+      return false;
+    }
   }
 };
 
 /**
  * Get a cached order by ID
  */
-export const getCachedOrder = (orderId: string): any | null => {
+export const getCachedOrder = async (orderId: string): Promise<any | null> => {
   try {
-    const cachedOrders = getCachedOrders();
+    const cachedOrders = await getCachedOrders();
     return cachedOrders[orderId]?.data || null;
   } catch (error) {
     console.error('Error getting cached order:', error);
-    return null;
+    // Fallback to localStorage
+    try {
+      const cachedOrders = getCachedOrdersSync();
+      return cachedOrders[orderId]?.data || null;
+    } catch (fallbackError) {
+      console.error('Error in fallback order retrieval:', fallbackError);
+      return null;
+    }
   }
 };
 
 /**
- * Get all cached orders
+ * Get all cached orders - async version that uses secure storage
  */
-export const getCachedOrders = (): Record<string, { data: any, timestamp: number }> => {
+export const getCachedOrders = async (): Promise<Record<string, { data: any, timestamp: number }>> => {
   try {
-    const cached = localStorage.getItem('cached_orders');
-    return cached ? JSON.parse(cached) : {};
+    const orders = await secureStorage.getItem<Record<string, { data: any, timestamp: number }>>(ORDERS_STORAGE_KEY);
+    if (orders) return orders;
+    
+    // Migrate from localStorage if not in secure storage
+    const legacyOrders = getCachedOrdersSync();
+    if (Object.keys(legacyOrders).length > 0) {
+      await secureStorage.setItem(ORDERS_STORAGE_KEY, legacyOrders);
+    }
+    
+    return legacyOrders;
   } catch (error) {
     console.error('Error getting cached orders:', error);
     return {};
@@ -177,28 +240,57 @@ export const getCachedOrders = (): Record<string, { data: any, timestamp: number
 };
 
 /**
+ * Synchronous version that uses localStorage - for fallback
+ */
+export const getCachedOrdersSync = (): Record<string, { data: any, timestamp: number }> => {
+  try {
+    const cached = localStorage.getItem(ORDERS_STORAGE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  } catch (error) {
+    console.error('Error getting cached orders from localStorage:', error);
+    return {};
+  }
+};
+
+/**
  * Clear a cached order by ID
  */
-export const clearCachedOrder = (orderId: string): void => {
+export const clearCachedOrder = async (orderId: string): Promise<boolean> => {
   try {
-    const cachedOrders = getCachedOrders();
+    const cachedOrders = await getCachedOrders();
     if (cachedOrders[orderId]) {
       delete cachedOrders[orderId];
-      localStorage.setItem('cached_orders', JSON.stringify(cachedOrders));
+      return await secureStorage.setItem(ORDERS_STORAGE_KEY, cachedOrders);
     }
+    return true;
   } catch (error) {
     console.error('Error clearing cached order:', error);
+    // Fallback to localStorage
+    try {
+      const cachedOrders = getCachedOrdersSync();
+      if (cachedOrders[orderId]) {
+        delete cachedOrders[orderId];
+        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(cachedOrders));
+      }
+      return true;
+    } catch (fallbackError) {
+      console.error('Error in fallback clear cached order:', fallbackError);
+      return false;
+    }
   }
 };
 
 /**
  * Clear all cached orders
  */
-export const clearAllCachedOrders = (): void => {
+export const clearAllCachedOrders = async (): Promise<boolean> => {
   try {
-    localStorage.removeItem('cached_orders');
+    await secureStorage.removeItem(ORDERS_STORAGE_KEY);
+    localStorage.removeItem(ORDERS_STORAGE_KEY); // Also clear from localStorage
+    return true;
   } catch (error) {
     console.error('Error clearing all cached orders:', error);
+    return false;
   }
 };
 
@@ -258,106 +350,19 @@ export const clearAllPendingActions = (): void => {
 
 /**
  * Securely cache delivery location with encryption
+ * This is now a wrapper around our new secure storage implementation
  */
 export const securelyStoreLocation = async (location: DeliveryLocation): Promise<void> => {
-  try {
-    // Encryption key generation (in a real app you'd want to store this securely)
-    const encoder = new TextEncoder();
-    const keyData = await crypto.subtle.digest(
-      'SHA-256',
-      encoder.encode('location-encryption-key-salt')
-    );
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'AES-GCM' },
-      false,
-      ['encrypt']
-    );
-    
-    // Generate random IV
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    
-    // Encrypt the location data
-    const locationJson = JSON.stringify(location);
-    const encryptedData = await crypto.subtle.encrypt(
-      {
-        name: 'AES-GCM',
-        iv
-      },
-      cryptoKey,
-      encoder.encode(locationJson)
-    );
-    
-    // Store encrypted data and IV
-    const encryptedArray = new Uint8Array(encryptedData);
-    const base64Data = btoa(String.fromCharCode.apply(null, Array.from(encryptedArray)));
-    const base64Iv = btoa(String.fromCharCode.apply(null, Array.from(iv)));
-    
-    localStorage.setItem('secureLocationData', base64Data);
-    localStorage.setItem('secureLocationIv', base64Iv);
-    
-  } catch (error) {
-    console.error('Error securely storing location:', error);
-    // Fallback to regular storage if encryption isn't supported
-    cacheDeliveryLocation(location);
+  const success = await cacheDeliveryLocation(location);
+  if (!success) {
+    throw new Error('Failed to securely store location');
   }
 };
 
 /**
  * Retrieve securely stored location
+ * This is now a wrapper around our new secure storage implementation
  */
 export const getSecurelyStoredLocation = async (): Promise<DeliveryLocation | null> => {
-  try {
-    const encryptedData = localStorage.getItem('secureLocationData');
-    const storedIv = localStorage.getItem('secureLocationIv');
-    
-    if (!encryptedData || !storedIv) {
-      return null;
-    }
-    
-    // Recreate encryption key
-    const encoder = new TextEncoder();
-    const keyData = await crypto.subtle.digest(
-      'SHA-256',
-      encoder.encode('location-encryption-key-salt')
-    );
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'AES-GCM' },
-      false,
-      ['decrypt']
-    );
-    
-    // Convert stored data back to array buffers
-    const encryptedArray = Uint8Array.from(
-      atob(encryptedData).split('').map(c => c.charCodeAt(0))
-    );
-    const iv = Uint8Array.from(
-      atob(storedIv).split('').map(c => c.charCodeAt(0))
-    );
-    
-    // Decrypt the data
-    const decryptedData = await crypto.subtle.decrypt(
-      {
-        name: 'AES-GCM',
-        iv
-      },
-      cryptoKey,
-      encryptedArray
-    );
-    
-    // Convert to location object
-    const decoder = new TextDecoder();
-    const locationJson = decoder.decode(decryptedData);
-    return JSON.parse(locationJson) as DeliveryLocation;
-    
-  } catch (error) {
-    console.error('Error retrieving secure location:', error);
-    // Fallback to regular storage
-    return getCachedDeliveryLocation();
-  }
+  return await getCachedDeliveryLocation();
 };

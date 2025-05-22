@@ -43,7 +43,7 @@ export interface DeviceInfo {
   platform: 'web' | 'ios' | 'android';
   model?: string;
   os_version?: string;
-  app_version?: string;
+  app_version?: string; // Updated to match the correct property name
 }
 
 export type LocationSource = 

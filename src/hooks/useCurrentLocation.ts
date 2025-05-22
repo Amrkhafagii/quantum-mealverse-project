@@ -27,7 +27,7 @@ export function useCurrentLocation() {
         platform,
         model: info.model,
         os_version: info.osVersion,
-        app_version: info.appVersion || '1.0.0',
+        app_version: info.appVersion // Using the fixed property name
       };
     } catch (err) {
       console.warn('Could not get device info:', err);
