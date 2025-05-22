@@ -3,6 +3,8 @@
 #import "LocationPermissionsPlugin.h"
 #import <Capacitor/Capacitor.h>
 
-// Forward declaration needed for Objective-C
-@implementation LocationPermissionsPlugin
-@end
+// This is a proper bridge implementation that forwards to Swift
+// instead of providing a duplicate implementation
+CAP_PLUGIN_METHOD(checkPermissionStatus, CAPPluginReturnPromise);
+CAP_PLUGIN_METHOD(requestLocationPermission, CAPPluginReturnPromise);
+
