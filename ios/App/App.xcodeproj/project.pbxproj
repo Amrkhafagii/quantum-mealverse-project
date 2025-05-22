@@ -26,6 +26,7 @@
 		F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4832DDCAAE00085D82E /* QrScannerViewController.swift */; };
 		F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */; };
 		F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */; };
+		F661C9112DDF64B400142AEF /* LocationPermissionsPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F661C9102DDF64B400142AEF /* LocationPermissionsPlugin.m */; };
 		F6956E5C2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6956E5A2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift */; };
 		F6E075492DDD3C6A00C455BC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F6E075472DDD3C6A00C455BC /* Main.storyboard */; };
 /* End PBXBuildFile section */
@@ -57,6 +58,8 @@
 		F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteOptimizationPlugin.swift; sourceTree = "<group>"; };
 		F62EC4902DDCAAE60085D82E /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		F62EC4912DDCAB060085D82E /* RouteOptimizationPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RouteOptimizationPlugin.h; sourceTree = "<group>"; };
+		F661C90F2DDF64B400142AEF /* LocationPermissionsPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocationPermissionsPlugin.h; sourceTree = "<group>"; };
+		F661C9102DDF64B400142AEF /* LocationPermissionsPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LocationPermissionsPlugin.m; sourceTree = "<group>"; };
 		F6956E5A2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPermissionsPlugin.swift; sourceTree = "<group>"; };
 		F6E075482DDD3C6A00C455BC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Main.storyboard; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
@@ -103,6 +106,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				F661C90F2DDF64B400142AEF /* LocationPermissionsPlugin.h */,
+				F661C9102DDF64B400142AEF /* LocationPermissionsPlugin.m */,
 				F6956E5A2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift */,
 				F62B34B82DDD2C8F000C7FDD /* Base.lproj */,
 				F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */,
@@ -282,6 +287,7 @@
 				F62EC4852DDCAAE00085D82E /* RouteOptimizationPlugin.swift in Sources */,
 				F6956E5C2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift in Sources */,
 				F62EC4862DDCAAE00085D82E /* QrScannerPlugin.swift in Sources */,
+				F661C9112DDF64B400142AEF /* LocationPermissionsPlugin.m in Sources */,
 				F62EC4872DDCAAE00085D82E /* LocationManager.swift in Sources */,
 				F62EC4882DDCAAE00085D82E /* NotificationManager.swift in Sources */,
 				F62EC4892DDCAAE00085D82E /* BackgroundTaskManager.swift in Sources */,
