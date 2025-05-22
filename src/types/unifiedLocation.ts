@@ -1,90 +1,82 @@
 
-/**
- * Type definitions for the unified location system
- */
-
-export type LocationType = 'user' | 'delivery' | 'order' | 'restaurant';
-
-export interface UnifiedLocation {
-  id: string;
-  location_type: LocationType;
-  user_id?: string;
-  order_id?: string;
-  delivery_assignment_id?: string;
-  restaurant_id?: string;
-  
-  // Geolocation data
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  accuracy?: number;
-  altitude_accuracy?: number;
-  heading?: number;
-  speed?: number;
-  
-  // Metadata
-  timestamp: string;
-  device_info?: DeviceInfo;
-  source: LocationSource;
-  is_moving?: boolean;
-  battery_level?: number;
-  network_type?: NetworkType;
-  
-  // Privacy & compliance
-  retention_expires_at?: string;
-  is_anonymized?: boolean;
-  user_consent?: boolean;
-  
-  // For PostGIS (will be populated server-side)
-  geom?: any;
-}
+export type LocationSource = 'gps' | 'wifi' | 'cell_tower' | 'ip_address' | 'fused' | 'unknown';
+export type NetworkType = 'wifi' | 'cellular_5g' | 'cellular_4g' | 'cellular_3g' | 'cellular_2g' | 'ethernet' | 'unknown' | 'none';
+export type Platform = 'ios' | 'android' | 'web';
+export type LocationMode = 'foreground' | 'background' | 'passive';
+export type LocationPermission = 'granted' | 'denied' | 'restricted' | 'unknown';
 
 export interface DeviceInfo {
-  platform: 'web' | 'ios' | 'android';
+  platform: Platform;
   model?: string;
-  osVersion?: string;  // Updated from os_version
-  appVersion?: string; // Updated from app_version
+  osVersion?: string;
 }
 
-export type LocationSource = 
-  | 'gps' 
-  | 'network' 
-  | 'wifi' 
-  | 'cell_tower' 
-  | 'ip' 
-  | 'manual' 
-  | 'cached';
-
-export type NetworkType =
-  | 'wifi'
-  | 'cellular_2g'
-  | 'cellular_3g'
-  | 'cellular_4g'
-  | 'cellular_5g'
-  | 'unknown'
-  | 'none';
-
-export interface LocationQueryParams {
-  userId?: string;
-  orderId?: string;
-  deliveryAssignmentId?: string;
-  restaurantId?: string;
-  locationType?: LocationType;
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
-  includeExpired?: boolean;
+export interface NetworkInfo {
+  type: NetworkType;
+  connected: boolean;
+  connectionType?: string;
+  estimatedBandwidth?: number;
+  metered?: boolean;
 }
 
-export interface LocationPrivacySettings {
-  retentionDays: number;
-  automaticallyAnonymize: boolean;
-  collectDeviceInfo: boolean;
-  allowPreciseLocation: boolean;
+export interface LocationOptions {
+  enableHighAccuracy?: boolean;
+  maximumAge?: number;
+  timeout?: number;
+  mode?: LocationMode;
 }
 
-export interface LocationHistoryEntry extends UnifiedLocation {
-  address?: string;
-  place_name?: string;
-  activity?: string;
+export interface UnifiedLocation {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  altitude?: number;
+  accuracy?: number;
+  speed?: number;
+  heading?: number;
+  source?: LocationSource;
+  sourceConfidence?: number;
+  deviceInfo?: DeviceInfo;
+  networkInfo?: NetworkInfo;
+  isMoving?: boolean;
+  metadata?: {
+    applicationState?: 'active' | 'background' | 'inactive';
+    batteryLevel?: number;
+    batteryIsCharging?: boolean;
+    activityType?: 'still' | 'walking' | 'running' | 'automotive';
+    verticalAccuracy?: number;
+    bearingAccuracy?: number;
+    speedAccuracy?: number;
+    isMock?: boolean;
+    significantChange?: boolean;
+    syncStatus?: 'local' | 'syncing' | 'synced' | 'failed';
+  };
+  address?: {
+    formattedAddress?: string;
+    locality?: string;
+    adminArea?: string;
+    country?: string;
+    postalCode?: string;
+  };
+}
+
+export interface LocationError {
+  code: number;
+  message: string;
+  type: 'permission' | 'position' | 'timeout' | 'network' | 'unknown';
+  fatal: boolean;
+}
+
+export interface LocationServiceConfig {
+  desiredAccuracy?: 'high' | 'medium' | 'low' | 'passive';
+  distanceFilter?: number;
+  stationaryRadius?: number;
+  activityType?: string;
+  debounce?: number;
+  stopOnTerminate?: boolean;
+  startOnBoot?: boolean;
+  enableBackgroundLocation?: boolean;
+  headlessJS?: boolean;
+  showsBackgroundLocationIndicator?: boolean;
+  pausesLocationUpdatesAutomatically?: boolean;
 }

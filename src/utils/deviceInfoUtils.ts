@@ -16,7 +16,7 @@ export const getDeviceInfo = async (): Promise<DeviceInfo> => {
       platform,
       model: info.model,
       osVersion: info.osVersion,
-      appVersion: info.appVersion || undefined
+      // Remove the appVersion property that doesn't exist on DeviceInfo
     };
   } catch (err) {
     console.warn('Could not get device info:', err);
