@@ -18,6 +18,17 @@ import { MainContent } from '@/components/customer/MainContent';
 import { motion } from 'framer-motion';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { Platform } from '@/utils/platform';
+import { logLocationDebug, clearLocationStorage, exportLocationLogs } from '@/utils/locationDebug';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { RefreshCcw, Bug, Save, Trash2 } from 'lucide-react';
 
 const Customer = () => {
   const { user } = useAuth();
@@ -26,6 +37,7 @@ const Customer = () => {
   const [isMapView, setIsMapView] = useState(false);
   const [forceRefresh, setForceRefresh] = useState(0); // Added to force refresh
   const [lastLocationUpdate, setLastLocationUpdate] = useState<null | {latitude: number, longitude: number}>(null);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   
   // Use our enhanced nearest restaurant hook
   const { 
@@ -48,11 +60,25 @@ const Customer = () => {
       userId: user?.id, 
       email: user?.email
     });
+
+    // Debug log
+    logLocationDebug('auth-state', {
+      context: {
+        isAuthenticated: !!user,
+        userId: user?.id
+      }
+    });
   }, [user]);
 
-  // Enhanced handler for location request with fallback
+  // Enhanced handler for location request with fallback and debug logging
   const handleLocationRequest = useCallback(async () => {
     try {
+      logLocationDebug('request-location-start', {
+        context: { 
+          isAuthenticated: !!user,
+          permissionStatus
+        }
+      });
       console.log('handleLocationRequest called - requesting user location');
       toast.loading('Requesting your location...');
       
@@ -60,10 +86,18 @@ const Customer = () => {
       
       let success = await requestPermission();
       
+      logLocationDebug('request-permission-result', {
+        context: { success, permissionStatus }
+      });
+      
       // If the primary method failed and we're on web, try the direct web implementation fallback
       if (!success && Platform.isWeb()) {
         console.log('Primary location request failed, trying direct browser implementation');
+        logLocationDebug('fallback-location-attempt', { context: { method: 'direct-browser' } });
+        
         const location = await getDirectLocation();
+        
+        logLocationDebug('fallback-location-result', { location });
         
         if (location && location.latitude && location.longitude) {
           // Manual call to find restaurants if we got location via fallback
@@ -72,47 +106,86 @@ const Customer = () => {
           
           if (user) {
             console.log('User is authenticated, calling findNearestRestaurants');
+            logLocationDebug('find-restaurants-call', { 
+              context: { 
+                via: 'fallback',
+                location
+              } 
+            });
+            
             await findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
             toast.success('Location updated successfully');
             success = true;
           } else {
             console.error('Cannot find restaurants: user not authenticated');
+            logLocationDebug('auth-error', { 
+              error: 'User not authenticated when trying to find restaurants',
+              context: { via: 'fallback' } 
+            });
             toast.error('You must be logged in to find restaurants');
           }
         }
       }
       
       if (!success) {
+        logLocationDebug('location-request-failed', { 
+          error: 'Could not get location',
+          context: { permissionStatus } 
+        });
         toast.error('Could not get your location. Please check your browser settings.');
       }
       
       return success;
     } catch (error) {
       console.error('Location request error:', error);
+      logLocationDebug('location-request-error', { error });
       toast.error('Failed to access your location');
       return false;
     }
-  }, [requestPermission, getDirectLocation, findNearestRestaurants, user]);
+  }, [requestPermission, getDirectLocation, findNearestRestaurants, user, permissionStatus]);
   
   const handleLocationUpdate = useCallback(async (loc: { latitude: number; longitude: number }) => {
     // This will be called by LocationStateManager when location is updated
     if (loc && loc.latitude && loc.longitude) {
       console.log('Location updated in Customer.tsx:', loc);
+      logLocationDebug('location-updated', { 
+        location: loc,
+        context: { component: 'Customer.tsx' } 
+      });
+      
       setLastLocationUpdate(loc);
       
       try {
         // Check authentication before refreshing restaurants
         if (user) {
           console.log('User is authenticated, finding nearby restaurants with location:', loc);
+          logLocationDebug('find-restaurants-attempt', { 
+            context: { 
+              userAuthenticated: true,
+              location: loc 
+            } 
+          });
           
           // Explicitly refresh restaurants when location is updated
           console.log('Calling findNearestRestaurants with updated location');
           const results = await findNearestRestaurants(50);
           
+          logLocationDebug('find-restaurants-result', { 
+            context: { 
+              results: results?.length || 0,
+              location: loc
+            } 
+          });
+          
           if (results && results.length > 0) {
             toast.success(`Found ${results.length} restaurants near you!`);
           } else {
             toast.warning('No restaurants found nearby, try a different location');
+            logLocationDebug('no-restaurants-found', { 
+              context: { 
+                location: loc
+              } 
+            });
           }
           
           // Set the flag to auto-navigate to menu when location is first acquired
@@ -122,14 +195,23 @@ const Customer = () => {
           setForceRefresh(prev => prev + 1);
         } else {
           console.error('Cannot find restaurants: user not authenticated');
+          logLocationDebug('auth-error', { 
+            error: 'User not authenticated when trying to find restaurants',
+            context: { via: 'locationUpdate' } 
+          });
           toast.error('You must be logged in to find restaurants');
         }
       } catch (err) {
         console.error('Error finding restaurants after location update:', err);
+        logLocationDebug('restaurant-search-error', { error: err });
         toast.error('Could not find nearby restaurants');
       }
     } else {
       console.error('Invalid location data received in handleLocationUpdate', loc);
+      logLocationDebug('invalid-location-data', { 
+        error: 'Invalid location data received',
+        context: { location: loc } 
+      });
     }
   }, [findNearestRestaurants, user]);
   
@@ -139,10 +221,20 @@ const Customer = () => {
       // Try again after a small delay
       const timer = setTimeout(() => {
         console.log('No restaurants found, retrying...');
+        logLocationDebug('retry-find-restaurants', { 
+          context: { 
+            attempt: forceRefresh,
+            location: lastLocationUpdate
+          } 
+        });
+        
         if (user) {
           refreshRestaurants(50);
         } else {
           console.error('Retry failed: user not authenticated');
+          logLocationDebug('auth-error', { 
+            error: 'User not authenticated when trying to retry restaurant search'
+          });
           toast.error('Please log in to find restaurants');
         }
       }, 2000);
@@ -154,6 +246,16 @@ const Customer = () => {
   // Log when nearby restaurants change
   useEffect(() => {
     console.log('Nearby restaurants updated:', nearbyRestaurants);
+    logLocationDebug('restaurants-updated', { 
+      context: { 
+        count: nearbyRestaurants.length,
+        restaurants: nearbyRestaurants.map(r => ({
+          id: r.restaurant_id,
+          name: r.restaurant_name,
+          distance: r.distance_km
+        }))
+      } 
+    });
   }, [nearbyRestaurants]);
   
   const toggleMapView = () => {
@@ -167,6 +269,25 @@ const Customer = () => {
       toast("Switching to list view", { 
         icon: "📋"
       });
+    }
+  };
+
+  const handleClearLocationStorage = async () => {
+    const success = await clearLocationStorage();
+    if (success) {
+      toast.success("Location storage cleared", {
+        description: "Please reload the page for changes to take effect"
+      });
+    } else {
+      toast.error("Failed to clear location storage");
+    }
+  };
+
+  const handleExportLogs = () => {
+    if (exportLocationLogs()) {
+      toast.success("Debug logs exported successfully");
+    } else {
+      toast.error("Failed to export debug logs");
     }
   };
 
@@ -222,11 +343,92 @@ const Customer = () => {
               Quantum Meals
             </motion.h1>
             
-            <ViewToggle 
-              isMapView={isMapView}
-              onToggle={toggleMapView}
-              showToggle={permissionStatus === 'granted'}
-            />
+            <div className="flex items-center gap-2">
+              <ViewToggle 
+                isMapView={isMapView}
+                onToggle={toggleMapView}
+                showToggle={permissionStatus === 'granted'}
+              />
+              
+              <Dialog open={showDebugPanel} onOpenChange={setShowDebugPanel}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="flex items-center gap-1">
+                    <Bug className="h-4 w-4" />
+                    Debug
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Location Debugging</DialogTitle>
+                    <DialogDescription>
+                      Debug information and tools for troubleshooting location issues
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 bg-gray-900 p-4 rounded-md">
+                        <h3 className="text-sm font-medium text-gray-400">Auth Status</h3>
+                        <pre className="text-xs bg-black/50 p-2 rounded overflow-auto max-h-40">
+                          {JSON.stringify({ 
+                            isAuthenticated: !!user, 
+                            userId: user?.id,
+                            email: user?.email 
+                          }, null, 2)}
+                        </pre>
+                      </div>
+                      
+                      <div className="space-y-2 bg-gray-900 p-4 rounded-md">
+                        <h3 className="text-sm font-medium text-gray-400">Location Status</h3>
+                        <pre className="text-xs bg-black/50 p-2 rounded overflow-auto max-h-40">
+                          {JSON.stringify({ 
+                            permissionStatus,
+                            lastLocationUpdate,
+                            restaurantCount: nearbyRestaurants.length,
+                            loading: loadingRestaurants
+                          }, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 bg-gray-900 p-4 rounded-md">
+                      <h3 className="text-sm font-medium text-gray-400">Restaurants Found</h3>
+                      <pre className="text-xs bg-black/50 p-2 rounded overflow-auto max-h-40">
+                        {JSON.stringify(nearbyRestaurants, null, 2)}
+                      </pre>
+                    </div>
+                    
+                    <div className="flex flex-col space-y-2">
+                      <Button 
+                        onClick={() => handleLocationRequest()}
+                        className="flex items-center gap-2"
+                      >
+                        <RefreshCcw className="h-4 w-4" />
+                        Force Location Update 
+                      </Button>
+                      
+                      <Button 
+                        onClick={handleClearLocationStorage}
+                        variant="destructive"
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Clear Location Storage
+                      </Button>
+                      
+                      <Button 
+                        onClick={handleExportLogs}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        Export Debug Logs
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
           
           <ErrorBoundary>

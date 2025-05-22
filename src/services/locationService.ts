@@ -281,7 +281,7 @@ export const toUnifiedLocation = (
     longitude: deliveryLocation.longitude,
     accuracy: deliveryLocation.accuracy,
     speed: deliveryLocation.speed,
-    is_moving: deliveryLocation.isMoving,
+    isMoving: deliveryLocation.isMoving,
     timestamp: new Date(deliveryLocation.timestamp || Date.now()).toISOString(),
     source: 'gps'
   };

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLocationTracker } from './useLocationTracker';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { logLocationDebug } from '@/utils/locationDebug';
 
 export interface NearbyRestaurant {
   restaurant_id: string;
@@ -23,6 +24,15 @@ export const useNearestRestaurant = () => {
 
   const findNearestRestaurants = useCallback(async (maxDistance = 50) => {
     // Enhanced debugging for authentication state
+    logLocationDebug('find-nearest-restaurants-called', {
+      context: { 
+        userExists: !!user, 
+        userId: user?.id,
+        maxDistance,
+        location
+      }
+    });
+    
     console.log('findNearestRestaurants called with user state:', { 
       userExists: !!user, 
       userId: user?.id,
@@ -32,6 +42,11 @@ export const useNearestRestaurant = () => {
     // If not authenticated, don't fetch restaurants
     if (!user) {
       console.error('User is not authenticated, skipping restaurant fetch');
+      logLocationDebug('restaurant-search-aborted', { 
+        error: 'User not authenticated',
+        context: { via: 'findNearestRestaurants' } 
+      });
+      
       setRefreshStatus('idle');
       setLoading(false);
       toast.error("Authentication required", { 
@@ -43,6 +58,14 @@ export const useNearestRestaurant = () => {
     // Check for valid location with improved logging
     if (!locationIsValid()) {
       console.error('Location is not valid for restaurant search', location);
+      logLocationDebug('invalid-location', { 
+        error: 'Location is not valid for restaurant search',
+        context: { 
+          location,
+          isValid: locationIsValid()
+        }
+      });
+      
       setRefreshStatus('error');
       toast.error("Location required", { 
         description: "We need your location to find nearby restaurants" 
@@ -55,6 +78,12 @@ export const useNearestRestaurant = () => {
     
     try {
       console.log('Finding nearest restaurants with location:', location);
+      logLocationDebug('restaurant-search-start', { 
+        context: { 
+          location,
+          maxDistance
+        }
+      });
       
       // More detailed logging before RPC call
       console.log('Calling Supabase RPC with params:', {
@@ -71,6 +100,14 @@ export const useNearestRestaurant = () => {
 
       if (error) {
         console.error('Error in find_nearest_restaurant RPC:', error);
+        logLocationDebug('restaurant-search-error', { 
+          error,
+          context: { 
+            location,
+            maxDistance
+          }
+        });
+        
         setRefreshStatus('error');
         toast.error("Database error", {
           description: "Could not search for restaurants. Please try again."
@@ -79,6 +116,12 @@ export const useNearestRestaurant = () => {
       }
       
       console.log('Nearest restaurants data received:', data);
+      logLocationDebug('restaurant-search-result', { 
+        context: { 
+          count: data?.length || 0,
+          results: data
+        }
+      });
       
       if (data && data.length > 0) {
         console.log(`Found ${data.length} restaurants near location`);
@@ -95,6 +138,13 @@ export const useNearestRestaurant = () => {
         return data;
       } else {
         console.log('No restaurants found in the area');
+        logLocationDebug('no-restaurants-found', { 
+          context: { 
+            location,
+            maxDistance
+          }
+        });
+        
         setNearbyRestaurants([]);
         setRefreshStatus('idle');
         toast.error("No restaurants found", {
@@ -104,6 +154,14 @@ export const useNearestRestaurant = () => {
       }
     } catch (error) {
       console.error('Error finding nearest restaurants:', error);
+      logLocationDebug('restaurant-search-exception', { 
+        error,
+        context: { 
+          location,
+          maxDistance
+        }
+      });
+      
       setRefreshStatus('error');
       toast.error("Error", {
         description: "Could not find nearest restaurants"
@@ -119,6 +177,13 @@ export const useNearestRestaurant = () => {
     // Only find restaurants if user is authenticated and location is valid
     if (user && locationIsValid()) {
       console.log('Location is valid and user is authenticated, finding nearest restaurants');
+      logLocationDebug('auto-find-restaurants', { 
+        context: { 
+          userExists: !!user,
+          location
+        }
+      });
+      
       findNearestRestaurants();
     } else {
       console.log('Location is not valid or user is not authenticated yet', {
@@ -126,13 +191,28 @@ export const useNearestRestaurant = () => {
         locationValid: locationIsValid(),
         location
       });
+      
+      logLocationDebug('auto-find-restaurants-skipped', { 
+        context: { 
+          userExists: !!user,
+          locationValid: locationIsValid(),
+          location
+        }
+      });
     }
   }, [location, locationIsValid, findNearestRestaurants, user]);
 
   const refreshRestaurants = useCallback((maxDistance = 50) => {
     console.log('Manually refreshing restaurants with max distance:', maxDistance);
+    logLocationDebug('manual-refresh-restaurants', { 
+      context: { 
+        maxDistance,
+        location
+      }
+    });
+    
     return findNearestRestaurants(maxDistance);
-  }, [findNearestRestaurants]);
+  }, [findNearestRestaurants, location]);
 
   return {
     nearbyRestaurants,

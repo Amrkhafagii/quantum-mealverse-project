@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { LocationHistoryEntry, LocationQueryParams } from '@/types/unifiedLocation';
 import { toast } from 'sonner';
@@ -167,9 +166,9 @@ const convertToCSV = (locations: LocationHistoryEntry[]): string => {
       location.accuracy || '',
       location.speed || '',
       location.source,
-      location.address?.replace(/,/g, ';') || '',
-      location.place_name?.replace(/,/g, ';') || '',
-      location.activity?.replace(/,/g, ';') || ''
+      location.address?.formattedAddress || '',
+      location.place_name || '',
+      location.metadata?.activityType || 'unknown'
     ];
     
     csvRows.push(row.join(','));

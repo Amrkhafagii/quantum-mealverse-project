@@ -1,350 +1,186 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback } from 'react';
+import { DeliveryLocation } from '@/types/location';
+import { useLocationPermission } from './useLocationPermission';
+import { logLocationDebug } from '@/utils/locationDebug';
 
-interface LocationTrackerOptions {
-  watchPosition?: boolean;
-  trackingInterval?: number; // milliseconds
-  onLocationUpdate?: (position: GeolocationPosition) => void;
-  onError?: (error: GeolocationPositionError) => void;
-  showToasts?: boolean;
-}
-
-interface Location {
-  latitude: number;
-  longitude: number;
-}
-
-// Custom error that mimics GeolocationPositionError but can be created manually
-interface CustomPositionError {
-  code: number;
-  message: string;
-  PERMISSION_DENIED?: number;
-  POSITION_UNAVAILABLE?: number;
-  TIMEOUT?: number;
-}
-
-export const useLocationTracker = (options: LocationTrackerOptions = {}) => {
-  const {
-    watchPosition = true,
-    trackingInterval = 15 * 60 * 1000, // Default to 15 minutes
-    onLocationUpdate,
-    onError,
-    showToasts = true
-  } = options;
-
-  const [position, setPosition] = useState<GeolocationPosition | null>(null);
-  const [location, setLocation] = useState<Location | null>(null);
-  const [error, setError] = useState<GeolocationPositionError | CustomPositionError | null>(null);
+export const useLocationTracker = () => {
+  const [location, setLocation] = useState<DeliveryLocation | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
-  const intervalIdRef = useRef<number | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null);
-  const [isLoadingPosition, setIsLoadingPosition] = useState(false);
+  const { permissionStatus, requestPermission } = useLocationPermission();
 
-  // Check for cached location on initialization
-  useEffect(() => {
-    try {
-      const cachedLocationString = localStorage.getItem('userLocation');
-      if (cachedLocationString) {
-        const cachedLocation = JSON.parse(cachedLocationString);
-        if (cachedLocation?.latitude && cachedLocation?.longitude) {
-          // Use cached location initially
-          setLocation({
-            latitude: cachedLocation.latitude,
-            longitude: cachedLocation.longitude
-          });
-          // If timestamp is available, set lastUpdated
-          if (cachedLocation.timestamp) {
-            setLastUpdated(new Date(cachedLocation.timestamp));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error reading cached location:', error);
-    }
-  }, []);
-
-  const clearWatchPosition = useCallback(() => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
-  }, []);
-
-  const clearTrackingInterval = useCallback(() => {
-    if (intervalIdRef.current !== null) {
-      clearInterval(intervalIdRef.current);
-      intervalIdRef.current = null;
-    }
-  }, []);
-
-  const handleSuccess = useCallback((pos: GeolocationPosition) => {
-    setPosition(pos);
-    // Also set the simplified location object
-    const newLocation = {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude
-    };
-    setLocation(newLocation);
-    setLastUpdated(new Date());
-    setError(null);
-    setIsLoadingPosition(false);
-    
-    // Cache location in localStorage
-    try {
-      localStorage.setItem('userLocation', JSON.stringify({
-        ...newLocation,
-        timestamp: new Date().getTime()
-      }));
-    } catch (error) {
-      console.error('Error caching location:', error);
-    }
-    
-    if (onLocationUpdate) {
-      onLocationUpdate(pos);
-    }
-    
-    if (showToasts) {
-      toast.success("Location updated", {
-        description: "Your location has been refreshed successfully",
-        duration: 2000
-      });
-    }
-  }, [onLocationUpdate, showToasts]);
-
-  const handleError = useCallback((err: GeolocationPositionError) => {
-    setError(err);
-    setIsLoadingPosition(false);
-    
-    if (showToasts) {
-      // Show appropriate error message based on error code
-      if (err.code === 1) { // PERMISSION_DENIED
-        toast.error("Location access denied", {
-          description: "Please enable location services in your browser settings"
-        });
-      } else if (err.code === 2) { // POSITION_UNAVAILABLE
-        toast.error("Location unavailable", {
-          description: "Could not detect your current location"
-        });
-      } else if (err.code === 3) { // TIMEOUT
-        toast.error("Location request timed out", {
-          description: "Please try again when you have a better connection"
-        });
-      }
-    }
-    
-    if (onError) {
-      onError(err);
-    }
-  }, [onError, showToasts]);
-
-  const getCurrentPosition = useCallback(() => {
-    if (!navigator.geolocation) {
-      // Create a custom error object instead of modifying a GeolocationPositionError
-      const customError: CustomPositionError = {
-        code: 2, // POSITION_UNAVAILABLE
-        message: 'Geolocation not supported',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-      };
-      
-      setError(customError);
-      if (onError) {
-        // Cast is needed since our custom error isn't exactly a GeolocationPositionError
-        onError(customError as unknown as GeolocationPositionError);
-      }
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      handleSuccess,
-      handleError,
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  }, [handleSuccess, handleError, onError]);
-
-  // Check if permission is already granted
-  const checkPermissionStatus = useCallback(async (): Promise<PermissionState | null> => {
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-        setPermissionStatus(result.state);
-        
-        // Listen for permission changes
-        result.addEventListener('change', () => {
-          setPermissionStatus(result.state);
-        });
-
-        return result.state;
-      } catch (err) {
-        console.error('Error checking permission:', err);
-        return null;
-      }
-    }
-    return null;
-  }, []);
-
-  useEffect(() => {
-    checkPermissionStatus();
-  }, [checkPermissionStatus]);
-
-  // Add a new method that returns a promise with the location
-  const getCurrentLocation = useCallback((): Promise<Location | null> => {
-    return new Promise((resolve, reject) => {
-      setIsLoadingPosition(true);
-      
-      if (!navigator.geolocation) {
-        // Create a custom error object instead of modifying a GeolocationPositionError
-        const customError: CustomPositionError = {
-          code: 2, // POSITION_UNAVAILABLE
-          message: 'Geolocation not supported',
-          PERMISSION_DENIED: 1,
-          POSITION_UNAVAILABLE: 2,
-          TIMEOUT: 3
-        };
-        
-        setError(customError);
-        setIsLoadingPosition(false);
-        reject(customError);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude
-          };
-          setLocation(loc);
-          setPosition(pos);
-          setLastUpdated(new Date());
-          setIsLoadingPosition(false);
-          
-          // Cache location in localStorage
-          try {
-            localStorage.setItem('userLocation', JSON.stringify({
-              ...loc,
-              timestamp: new Date().getTime()
-            }));
-          } catch (error) {
-            console.error('Error caching location:', error);
-          }
-          
-          resolve(loc);
-        },
-        (err) => {
-          setError(err);
-          setIsLoadingPosition(false);
-          reject(err);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
-    });
-  }, []);
-
-  const startTracking = useCallback(() => {
-    if (!navigator.geolocation) {
-      // Create a custom error object instead of modifying a GeolocationPositionError
-      const customError: CustomPositionError = {
-        code: 2, // POSITION_UNAVAILABLE
-        message: 'Geolocation not supported',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-      };
-      
-      setError(customError);
-      setIsTracking(false);
-      if (onError) {
-        // Cast is needed since our custom error isn't exactly a GeolocationPositionError
-        onError(customError as unknown as GeolocationPositionError);
-      }
-      return;
-    }
-
-    setIsTracking(true);
-
-    // Get initial position
-    getCurrentPosition();
-
-    if (watchPosition) {
-      // Start watching position
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        handleSuccess,
-        handleError,
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
-    } else {
-      // Use interval-based tracking instead
-      intervalIdRef.current = window.setInterval(() => {
-        getCurrentPosition();
-      }, trackingInterval);
-    }
-  }, [getCurrentPosition, handleSuccess, handleError, watchPosition, trackingInterval, onError]);
-
-  const stopTracking = useCallback(() => {
-    clearWatchPosition();
-    clearTrackingInterval();
-    setIsTracking(false);
-  }, [clearWatchPosition, clearTrackingInterval]);
-
-  // Helper to validate if we have valid location data
   const locationIsValid = useCallback(() => {
-    return location !== null && 
+    const isValid = location && 
       typeof location.latitude === 'number' && 
-      typeof location.longitude === 'number';
+      typeof location.longitude === 'number' &&
+      !isNaN(location.latitude) &&
+      !isNaN(location.longitude);
+    
+    logLocationDebug('location-validity-check', { 
+      context: { 
+        isValid,
+        location
+      }
+    });
+    
+    return !!isValid;
   }, [location]);
 
-  // Calculate how fresh the location data is
-  const getLocationAge = useCallback(() => {
-    if (!lastUpdated) return null;
-    return Date.now() - lastUpdated.getTime();
-  }, [lastUpdated]);
+  // Get current location
+  const getCurrentPosition = useCallback(async () => {
+    try {
+      logLocationDebug('get-current-position-start', {
+        context: { permissionStatus }
+      });
+      
+      if (permissionStatus !== 'granted') {
+        const permissionGranted = await requestPermission();
+        
+        logLocationDebug('permission-request-result', {
+          context: { 
+            requested: true, 
+            granted: permissionGranted,
+            newStatus: permissionStatus
+          }
+        });
+        
+        if (!permissionGranted) {
+          setError('Location permission denied');
+          return null;
+        }
+      }
 
-  // Check if location is stale (older than 2 minutes)
-  const isLocationStale = useCallback(() => {
-    const age = getLocationAge();
-    return age !== null && age > 120000; // 2 minutes
-  }, [getLocationAge]);
+      return new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            logLocationDebug('position-success', {
+              context: { 
+                coords: {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                  accuracy: position.coords.accuracy
+                }
+              }
+            });
+            resolve(position);
+          },
+          error => {
+            logLocationDebug('position-error', { error });
+            reject(error);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      });
+    } catch (err) {
+      logLocationDebug('get-current-position-exception', { error: err });
+      setError(err instanceof Error ? err.message : 'Unknown error getting location');
+      return null;
+    }
+  }, [permissionStatus, requestPermission]);
 
-  // Clean up on unmount
+  // Update location function
+  const updateLocation = useCallback(async () => {
+    try {
+      const position = await getCurrentPosition();
+      
+      if (position) {
+        const newLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: position.timestamp,
+          source: 'gps'
+        };
+        
+        setLocation(newLocation);
+        setError(null);
+        
+        logLocationDebug('location-updated', { location: newLocation });
+        console.log('Location updated:', newLocation);
+        
+        localStorage.setItem('lastLocation', JSON.stringify({
+          ...newLocation,
+          updatedAt: new Date().toISOString()
+        }));
+        
+        return newLocation;
+      }
+      return null;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error updating location');
+      logLocationDebug('update-location-error', { error: err });
+      console.error('Error updating location:', err);
+      return null;
+    }
+  }, [getCurrentPosition]);
+
+  // Initialize tracking
   useEffect(() => {
-    return () => {
-      clearWatchPosition();
-      clearTrackingInterval();
-    };
-  }, [clearWatchPosition, clearTrackingInterval]);
+    // Try to load from local storage first
+    try {
+      const savedLocation = localStorage.getItem('lastLocation');
+      if (savedLocation) {
+        const parsedLocation = JSON.parse(savedLocation);
+        // Check if the saved location is relatively recent (less than 30 minutes old)
+        const savedTime = new Date(parsedLocation.updatedAt).getTime();
+        const now = Date.now();
+        const thirtyMinutesMs = 30 * 60 * 1000;
+        
+        if (now - savedTime < thirtyMinutesMs) {
+          setLocation(parsedLocation);
+          logLocationDebug('loaded-cached-location', { 
+            location: parsedLocation,
+            context: {
+              ageMs: now - savedTime
+            } 
+          });
+          console.log('Loaded cached location:', parsedLocation);
+        } else {
+          logLocationDebug('cached-location-expired', { 
+            context: {
+              savedLocation: parsedLocation,
+              ageMs: now - savedTime
+            } 
+          });
+          console.log('Cached location is too old, will request fresh location');
+          // Still set it temporarily but will refresh
+          setLocation(parsedLocation);
+          // We'll trigger an update below
+        }
+      }
+    } catch (err) {
+      console.error('Error loading cached location:', err);
+      logLocationDebug('cached-location-error', { error: err });
+    }
+    
+    // Always try to get a fresh location on component mount
+    if (permissionStatus === 'granted') {
+      updateLocation();
+    }
+  }, [permissionStatus, updateLocation]);
+
+  // Start tracking when permission is granted
+  useEffect(() => {
+    if (permissionStatus === 'granted' && !isTracking) {
+      setIsTracking(true);
+      updateLocation();
+      
+      // Set up periodic location updates - every minute
+      const intervalId = setInterval(updateLocation, 60000);
+      
+      return () => {
+        clearInterval(intervalId);
+        setIsTracking(false);
+      };
+    }
+  }, [permissionStatus, isTracking, updateLocation]);
 
   return {
-    position,
-    error,
-    isTracking,
     location,
-    lastUpdated,
-    permissionStatus,
-    isLoadingPosition,
-    getLocationAge,
-    isLocationStale,
-    startTracking,
-    stopTracking,
-    getCurrentPosition,
-    getCurrentLocation,
+    updateLocation,
+    isTracking,
+    error,
     locationIsValid,
-    checkPermissionStatus
   };
 };

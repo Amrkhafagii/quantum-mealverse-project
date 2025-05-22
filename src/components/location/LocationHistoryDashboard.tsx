@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
 import { 
@@ -93,6 +92,12 @@ const LocationHistoryDashboard: React.FC = () => {
         {source}
       </Badge>
     );
+  };
+
+  const formattedTime = timestamp => {
+    // Convert timestamp to string if it's a number
+    const timestampStr = typeof timestamp === 'number' ? String(timestamp) : timestamp;
+    return new Date(timestampStr).toLocaleTimeString();
   };
 
   return (
@@ -266,7 +271,7 @@ const LocationHistoryDashboard: React.FC = () => {
                 {locationHistory.map((location: LocationHistoryEntry) => (
                   <TableRow key={location.id}>
                     <TableCell className="font-medium">
-                      {formatDate(location.timestamp)}
+                      {formattedTime(location.timestamp)}
                     </TableCell>
                     <TableCell>
                       {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
