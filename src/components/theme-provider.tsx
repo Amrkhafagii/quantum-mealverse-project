@@ -36,42 +36,55 @@ export function ThemeProvider({
   attribute = "data-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return (localStorage.getItem(storageKey) as Theme) || defaultTheme
+    } catch (e) {
+      console.error("Error accessing localStorage:", e);
+      return defaultTheme;
+    }
+  })
 
   useEffect(() => {
-    const root = window.document.documentElement
+    try {
+      const root = window.document.documentElement
 
-    if (disableTransitionOnChange) {
-      root.classList.add("no-transitions")
-    }
-
-    if (attribute === "class") {
-      root.classList.remove("light", "dark")
-
-      if (theme !== "system") {
-        root.classList.add(theme)
+      if (disableTransitionOnChange) {
+        root.classList.add("no-transitions")
       }
-    } else {
-      if (theme === "system") {
-        root.removeAttribute(attribute)
+
+      if (attribute === "class") {
+        root.classList.remove("light", "dark")
+
+        if (theme !== "system") {
+          root.classList.add(theme)
+        }
       } else {
-        root.setAttribute(attribute, theme)
+        if (theme === "system") {
+          root.removeAttribute(attribute)
+        } else {
+          root.setAttribute(attribute, theme)
+        }
       }
-    }
 
-    if (disableTransitionOnChange) {
-      // Force a reflow
-      root.offsetHeight
-      root.classList.remove("no-transitions")
+      if (disableTransitionOnChange) {
+        // Force a reflow
+        root.offsetHeight
+        root.classList.remove("no-transitions")
+      }
+    } catch (e) {
+      console.error("Error applying theme:", e);
     }
   }, [theme, attribute, disableTransitionOnChange])
 
   const value = {
     theme,
     setTheme: (newTheme: Theme) => {
-      localStorage.setItem(storageKey, newTheme)
+      try {
+        localStorage.setItem(storageKey, newTheme)
+      } catch (e) {
+        console.error("Error setting theme in localStorage:", e);
+      }
       setTheme(newTheme)
     },
   }
@@ -81,22 +94,26 @@ export function ThemeProvider({
       return
     }
 
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    try {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
 
-    const handleChange = () => {
-      if (theme === "system") {
-        document.documentElement.classList.remove("light", "dark")
-        document.documentElement.classList.add(
-          mediaQuery.matches ? "dark" : "light"
-        )
+      const handleChange = () => {
+        if (theme === "system") {
+          document.documentElement.classList.remove("light", "dark")
+          document.documentElement.classList.add(
+            mediaQuery.matches ? "dark" : "light"
+          )
+        }
       }
-    }
 
-    handleChange()
-    mediaQuery.addEventListener("change", handleChange)
+      handleChange()
+      mediaQuery.addEventListener("change", handleChange)
 
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange)
+      return () => {
+        mediaQuery.removeEventListener("change", handleChange)
+      }
+    } catch (e) {
+      console.error("Error setting up media query listener:", e);
     }
   }, [enableSystem, theme])
 

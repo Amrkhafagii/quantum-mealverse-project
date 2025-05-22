@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ParticleBackground from '@/components/ParticleBackground';
 import { FeaturedMeals } from '@/components/FeaturedMeals';
@@ -11,9 +11,12 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
     const checkAdminStatus = async () => {
+      setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -27,13 +30,23 @@ const Index = () => {
             setIsAdmin(true);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error checking admin status:", error);
+        setError(error?.message || "Failed to check admin status");
+        
+        // Show toast for better user feedback
+        toast({
+          title: "Connection Error",
+          description: "Unable to connect to the server. Please check your internet connection.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
     checkAdminStatus();
-  }, []);
+  }, [toast]);
 
   const goToAdminDashboard = () => {
     navigate('/admin');
@@ -46,6 +59,25 @@ const Index = () => {
   const exploreFitness = () => {
     navigate('/fitness');
   };
+
+  // If we're having connection issues, show a fallback UI
+  if (error) {
+    return (
+      <div className="min-h-screen bg-quantum-black text-white flex items-center justify-center">
+        <div className="text-center p-4">
+          <h1 className="text-3xl font-bold text-quantum-cyan mb-4">Connection Issue</h1>
+          <p className="mb-4">{error}</p>
+          <p className="mb-6">Please check your internet connection and reload the app.</p>
+          <button 
+            className="cyber-button text-lg"
+            onClick={() => window.location.reload()}
+          >
+            Reload App
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

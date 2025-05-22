@@ -2,7 +2,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Auth from "@/pages/Auth";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GoogleMapsProvider } from "@/contexts/GoogleMapsContext";
 import { DeliveryMapProvider } from "@/contexts/DeliveryMapContext";
@@ -20,6 +19,7 @@ import PlatformLayoutDemo from './pages/PlatformLayoutDemo';
 import NetworkAdaptationDemo from './pages/NetworkAdaptationDemo';
 import ConnectionManagementDemo from './pages/ConnectionManagementDemo';
 import { RequestQueueProvider } from "./components/network/RequestQueue";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -27,8 +27,8 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ResponsiveProvider>
-        <ThemeProvider defaultTheme="system">
+      <ThemeProvider defaultTheme="system">
+        <ResponsiveProvider>
           <AuthProvider>
             <GoogleMapsProvider>
               <MapViewProvider>
@@ -67,8 +67,8 @@ function App() {
               </MapViewProvider>
             </GoogleMapsProvider>
           </AuthProvider>
-        </ThemeProvider>
-      </ResponsiveProvider>
+        </ResponsiveProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

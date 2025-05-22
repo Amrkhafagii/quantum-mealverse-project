@@ -5,7 +5,13 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.117bb8e72e6f4681936555049936510d',
   appName: 'quantum-mealverse-project',
   webDir: 'dist',
- 
+  server: {
+    androidScheme: 'https',
+    // Using a local development server during development
+    // Comment this out for production builds
+    url: 'http://localhost:8080',
+    cleartext: true
+  },
   plugins: {
     BiometricAuth: {
       // Plugin-specific configurations would go here
