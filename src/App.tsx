@@ -18,6 +18,7 @@ import AdaptiveFormDemo from './pages/AdaptiveFormDemo';
 import PlatformLayoutDemo from './pages/PlatformLayoutDemo';
 import NetworkAdaptationDemo from './pages/NetworkAdaptationDemo';
 import ConnectionManagementDemo from './pages/ConnectionManagementDemo';
+import LocationHistoryPage from './pages/LocationHistoryPage';
 import { RequestQueueProvider } from "./components/network/RequestQueue";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
@@ -53,6 +54,7 @@ function App() {
                               <Route path="/platform-layout" element={<PlatformLayoutDemo />} />
                               <Route path="/network-adaptation" element={<NetworkAdaptationDemo />} />
                               <Route path="/connection-management" element={<ConnectionManagementDemo />} />
+                              <Route path="/location-history" element={<LocationHistoryPage />} />
                               
                               {/* All other routes handled by MainLayout */}
                               <Route path="/*" element={<MainLayout />} />
