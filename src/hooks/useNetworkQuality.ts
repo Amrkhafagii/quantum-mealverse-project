@@ -1,221 +1,195 @@
-
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useConnectionStatus } from './useConnectionStatus';
 
-// Updated network quality type to match what's used in components
-export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'unknown';
+/**
+ * Network quality assessment
+ */
+export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown';
 
-interface NetworkQualityResult {
-  quality: NetworkQuality;
-  isLowQuality: boolean;
-  isFlaky: boolean;
-  hasTransitioned: boolean;
+/**
+ * Network quality metrics
+ */
+interface NetworkMetrics {
   latency: number | null;
-  bandwidth: number | null;
-  checkQuality: () => Promise<void>;
-  packetLoss?: number | null; // Added explicit packetLoss property
+  downlink: number | null;
+  rtt: number | null;
+  effectiveType: string | null;
+  successRate: number;
+  jitter: number | null;
 }
 
-export function useNetworkQuality(): NetworkQualityResult {
-  const { isOnline, connectionType, wasOffline } = useConnectionStatus();
+/**
+ * Measures and monitors network quality
+ */
+export const useNetworkQuality = () => {
+  const { isOnline, connectionType } = useConnectionStatus();
   const [quality, setQuality] = useState<NetworkQuality>('unknown');
-  const [latency, setLatency] = useState<number | null>(null);
-  const [bandwidth, setBandwidth] = useState<number | null>(null);
-  const [packetLoss, setPacketLoss] = useState<number | null>(null); // Added state for packet loss
   const [isLowQuality, setIsLowQuality] = useState(false);
-  const [isFlaky, setIsFlaky] = useState(false);
-  const [hasTransitioned, setHasTransitioned] = useState(false);
-  const prevQualityRef = useRef<NetworkQuality>('unknown');
-  const flakyDetectionCount = useRef(0);
-  const qualityChangeHistory = useRef<Array<{time: number, quality: NetworkQuality}>>([]);
-  
-  const measureLatency = useCallback(async (): Promise<number> => {
-    const start = performance.now();
-    
-    try {
-      // Make a small request to measure latency
-      // Using fetch with cache: 'no-store' to prevent cached responses
-      const response = await fetch('/ping', { 
-        method: 'GET',
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      
-      if (!response.ok) throw new Error('Network response was not ok');
-      
-      const end = performance.now();
-      return end - start;
-    } catch (err) {
-      console.error('Error measuring latency:', err);
-      return 999; // High value to indicate poor connection
-    }
-  }, []);
+  const [metrics, setMetrics] = useState<NetworkMetrics>({
+    latency: null,
+    downlink: null,
+    rtt: null, 
+    effectiveType: null,
+    successRate: 1.0,
+    jitter: null
+  });
 
-  const estimateBandwidth = useCallback(async (): Promise<number> => {
-    // In a real implementation, we would download a known-size file and measure time
-    // For this demo, we'll estimate based on connection type
-    switch (connectionType?.toLowerCase()) {
-      case 'wifi':
-        return 10000; // 10 Mbps
-      case 'cellular':
-        return 2000;  // 2 Mbps
-      case '4g':
-        return 5000;  // 5 Mbps
-      case '3g':
-        return 1000;  // 1 Mbps
-      case '2g':
-        return 100;   // 100 Kbps
-      default:
-        return 1000;  // Default assumption
-    }
-  }, [connectionType]);
-
-  // Added simulated function to estimate packet loss
-  const estimatePacketLoss = useCallback(async (): Promise<number> => {
-    if (!isOnline) return 100; // 100% loss when offline
-    
-    // Simulated packet loss based on connection quality indicators
-    if (latency && bandwidth) {
-      // Higher latency or lower bandwidth indicates potentially higher packet loss
-      const latencyFactor = latency > 500 ? 0.7 : latency > 250 ? 0.3 : 0.1;
-      const bandwidthFactor = bandwidth < 1000 ? 0.5 : bandwidth < 5000 ? 0.2 : 0.05;
-      
-      // Calculate a packet loss percentage (0-100)
-      const calculatedPacketLoss = (latencyFactor + bandwidthFactor) * 50;
-      
-      // Add some randomness to simulate fluctuations
-      return Math.min(100, Math.max(0, calculatedPacketLoss + (Math.random() * 5 - 2.5)));
-    }
-    
-    return connectionType === 'wifi' ? 2 : 5; // Default values
-  }, [isOnline, latency, bandwidth, connectionType]);
-
-  // Updated to use the new quality types
-  const determineQuality = useCallback((latency: number, bandwidth: number): NetworkQuality => {
-    if (latency < 100 && bandwidth > 5000) return 'excellent';
-    if (latency < 200 && bandwidth > 2000) return 'good';
-    if (latency < 300 && bandwidth > 1000) return 'fair';
-    if (latency < 500 && bandwidth > 500) return 'poor';
-    return 'very-poor';
-  }, []);
-
-  // Detect flaky connections based on rapid quality changes
-  const detectFlakyConnection = useCallback((newQuality: NetworkQuality) => {
-    const now = Date.now();
-    
-    // Add this quality change to history
-    qualityChangeHistory.current.push({ time: now, quality: newQuality });
-    
-    // Only keep last 10 minutes of history
-    const tenMinutesAgo = now - 10 * 60 * 1000;
-    qualityChangeHistory.current = qualityChangeHistory.current.filter(item => item.time > tenMinutesAgo);
-    
-    // If quality is degrading from the previous check
-    if (prevQualityRef.current !== 'unknown' && 
-        isQualityWorse(newQuality, prevQualityRef.current)) {
-      flakyDetectionCount.current += 1;
-    } else {
-      // Slowly reduce the flaky count if connection is stable
-      flakyDetectionCount.current = Math.max(0, flakyDetectionCount.current - 0.5);
-    }
-    
-    // Count rapid changes in the last 2 minutes
-    const twoMinutesAgo = now - 2 * 60 * 1000;
-    const recentChanges = qualityChangeHistory.current.filter(item => item.time > twoMinutesAgo);
-    
-    // Connection is considered flaky if we've had many quality changes or degradations
-    const isFlaky = recentChanges.length >= 3 || flakyDetectionCount.current >= 2;
-    
-    setIsFlaky(isFlaky);
-    prevQualityRef.current = newQuality;
-    
-    // Set hasTransitioned if quality changed
-    if (prevQualityRef.current !== newQuality) {
-      setHasTransitioned(true);
-      
-      // Reset transition flag after 10 seconds
-      setTimeout(() => {
-        setHasTransitioned(false);
-      }, 10000);
-    }
-  }, []);
-  
-  // Helper to determine if new quality is worse than previous
-  const isQualityWorse = (newQuality: NetworkQuality, oldQuality: NetworkQuality): boolean => {
-    const qualityRank: Record<NetworkQuality, number> = {
-      'excellent': 5,
-      'good': 4,
-      'fair': 3,
-      'poor': 2,
-      'very-poor': 1,
-      'unknown': 0
-    };
-    
-    return qualityRank[newQuality] < qualityRank[oldQuality];
-  };
-
-  const checkQuality = useCallback(async () => {
+  // Use Network Information API if available
+  useEffect(() => {
     if (!isOnline) {
-      setQuality('unknown');
-      setIsLowQuality(false);
-      setIsFlaky(false);
-      setLatency(null);
-      setBandwidth(null);
-      setPacketLoss(null);
+      setQuality('poor');
+      setIsLowQuality(true);
       return;
     }
 
-    try {
-      const measuredLatency = await measureLatency();
-      setLatency(measuredLatency);
-      
-      const estimatedBandwidth = await estimateBandwidth();
-      setBandwidth(estimatedBandwidth);
-      
-      const estimatedPacketLoss = await estimatePacketLoss();
-      setPacketLoss(estimatedPacketLoss);
-      
-      const newQuality = determineQuality(measuredLatency, estimatedBandwidth);
-      setQuality(newQuality);
-      
-      // Set low quality flag based on the quality level
-      const isLow = newQuality === 'poor' || newQuality === 'very-poor';
-      setIsLowQuality(isLow);
-      
-      // Detect if connection is flaky
-      detectFlakyConnection(newQuality);
-    } catch (err) {
-      console.error('Error checking network quality:', err);
-      setQuality('unknown');
-      setIsLowQuality(false);
+    // Start with unknown quality
+    if (quality === 'unknown') {
+      // Use connection type as initial estimate
+      if (connectionType === 'wifi' || connectionType === 'ethernet') {
+        setQuality('good');
+        setIsLowQuality(false);
+      } else if (connectionType === 'cellular_5g' || connectionType === 'cellular_4g') {
+        setQuality('fair');
+        setIsLowQuality(false);
+      } else if (connectionType === 'cellular_3g' || connectionType === 'cellular_2g') {
+        setQuality('poor');
+        setIsLowQuality(true);
+      }
     }
-  }, [isOnline, measureLatency, estimateBandwidth, estimatePacketLoss, determineQuality, detectFlakyConnection]);
 
-  // Check quality when online status or connection type changes
-  useEffect(() => {
-    checkQuality();
-    
-    // Set up periodic checks every 30 seconds
-    const intervalId = setInterval(checkQuality, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, [isOnline, connectionType, checkQuality]);
+    if ('connection' in navigator) {
+      const connection = (navigator as any).connection;
+      if (connection) {
+        // Update metrics from Network Information API
+        const updateConnectionInfo = () => {
+          const newMetrics = {
+            ...metrics,
+            downlink: connection.downlink || null,
+            rtt: connection.rtt || null,
+            effectiveType: connection.effectiveType || null
+          };
+          setMetrics(newMetrics);
+          
+          // Determine quality based on effective type
+          if (connection.effectiveType === '4g') {
+            setQuality('excellent');
+            setIsLowQuality(false);
+          } else if (connection.effectiveType === '3g') {
+            setQuality('good');
+            setIsLowQuality(false);
+          } else if (connection.effectiveType === '2g') {
+            setQuality('fair');
+            setIsLowQuality(true);
+          } else if (connection.effectiveType === 'slow-2g') {
+            setQuality('poor');
+            setIsLowQuality(true);
+          }
+        };
 
-  // Also check quality when we transition from offline to online
-  useEffect(() => {
-    if (isOnline && wasOffline) {
-      checkQuality();
+        // Initial check
+        updateConnectionInfo();
+        
+        // Listen for changes
+        connection.addEventListener('change', updateConnectionInfo);
+        return () => connection.removeEventListener('change', updateConnectionInfo);
+      }
     }
-  }, [isOnline, wasOffline, checkQuality]);
 
-  return { 
-    quality, 
-    isLowQuality, 
-    isFlaky, 
-    hasTransitioned,
-    latency, 
-    bandwidth,
-    packetLoss, // Include packetLoss in the return value
-    checkQuality 
-  };
-}
+    // If Network Information API is not available, use latency tests
+    const latencyChecks: number[] = [];
+    let lastCheckTime = 0;
+    
+    const checkLatency = async () => {
+      // Don't check too frequently (at most once per 30 seconds)
+      const now = Date.now();
+      if (now - lastCheckTime < 30000) return;
+      lastCheckTime = now;
+      
+      try {
+        const start = performance.now();
+        
+        // Use a tiny request to check latency
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        await fetch('/favicon.ico', { 
+          method: 'HEAD',
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const latency = performance.now() - start;
+        
+        // Store latest measurements (keep last 5)
+        latencyChecks.push(latency);
+        if (latencyChecks.length > 5) {
+          latencyChecks.shift();
+        }
+        
+        // Calculate average and jitter
+        const avgLatency = latencyChecks.reduce((sum, val) => sum + val, 0) / latencyChecks.length;
+        let jitter = 0;
+        if (latencyChecks.length > 1) {
+          let sumSquaredDiffs = 0;
+          for (const check of latencyChecks) {
+            sumSquaredDiffs += Math.pow(check - avgLatency, 2);
+          }
+          jitter = Math.sqrt(sumSquaredDiffs / latencyChecks.length);
+        }
+        
+        // Update metrics
+        setMetrics(prev => ({
+          ...prev,
+          latency: avgLatency,
+          jitter,
+          successRate: (prev.successRate * 0.8) + 0.2 // Successful request improves rate
+        }));
+        
+        // Update quality based on latency
+        if (avgLatency < 100) {
+          setQuality('excellent');
+          setIsLowQuality(false);
+        } else if (avgLatency < 300) {
+          setQuality('good');
+          setIsLowQuality(false);
+        } else if (avgLatency < 600) {
+          setQuality('fair');
+          setIsLowQuality(true);
+        } else {
+          setQuality('poor');
+          setIsLowQuality(true);
+        }
+      } catch (error) {
+        console.error('Error measuring latency:', error);
+        
+        // Failed request decreases success rate
+        setMetrics(prev => ({
+          ...prev,
+          successRate: prev.successRate * 0.8
+        }));
+        
+        // If success rate drops too low, consider connection poor
+        if (metrics.successRate < 0.5) {
+          setQuality('poor');
+          setIsLowQuality(true);
+        }
+      }
+    };
+    
+    // Initial check with a delay
+    const initialDelayId = setTimeout(checkLatency, 2000);
+    
+    // Schedule periodic checks
+    const intervalId = setInterval(checkLatency, 60000); // Check every minute
+    
+    return () => {
+      clearTimeout(initialDelayId);
+      clearInterval(intervalId);
+    };
+  }, [isOnline, connectionType]);
+
+  return { quality, isLowQuality, metrics };
+};
+
+export default useNetworkQuality;
