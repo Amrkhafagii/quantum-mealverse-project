@@ -57,7 +57,6 @@
 		F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteOptimizationPlugin.swift; sourceTree = "<group>"; };
 		F62EC4902DDCAAE60085D82E /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		F62EC4912DDCAB060085D82E /* RouteOptimizationPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RouteOptimizationPlugin.h; sourceTree = "<group>"; };
-		F6956E582DDF591F005AB8A2 /* LocationPermissionsPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocationPermissionsPlugin.h; sourceTree = "<group>"; };
 		F6956E5A2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPermissionsPlugin.swift; sourceTree = "<group>"; };
 		F6E075482DDD3C6A00C455BC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Main.storyboard; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
@@ -104,7 +103,6 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
-				F6956E582DDF591F005AB8A2 /* LocationPermissionsPlugin.h */,
 				F6956E5A2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift */,
 				F62B34B82DDD2C8F000C7FDD /* Base.lproj */,
 				F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */,
