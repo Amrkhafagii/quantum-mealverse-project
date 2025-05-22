@@ -27,19 +27,22 @@ const configureIOSStatusBar = async () => {
     // Use standard dynamic import instead of Function constructor
     const { StatusBar } = await import('@capacitor/status-bar');
     
+    // Import the Style enum properly
+    const { Style } = await import('@capacitor/status-bar');
+    
     // Check device type for proper configuration
     if (Platform.hasDynamicIsland()) {
       // For devices with Dynamic Island
-      await StatusBar.setStyle({ style: 'dark' });
+      await StatusBar.setStyle({ style: Style.Dark });
       await StatusBar.setOverlaysWebView({ overlay: true });
       await StatusBar.setBackgroundColor({ color: '#FFFFFF00' }); // Transparent
     } else if (Platform.hasNotch()) {
       // For devices with notch
-      await StatusBar.setStyle({ style: 'dark' });
+      await StatusBar.setStyle({ style: Style.Dark });
       await StatusBar.setOverlaysWebView({ overlay: true });
     } else {
       // For regular devices
-      await StatusBar.setStyle({ style: 'dark' });
+      await StatusBar.setStyle({ style: Style.Dark });
       await StatusBar.setOverlaysWebView({ overlay: false });
       await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
     }
@@ -126,7 +129,10 @@ const renderApp = async () => {
       <React.StrictMode>
         <ResponsiveProvider>
           <CartProvider>
-            <App />
+            <MapViewProvider>
+              <App />
+              <Toaster />
+            </MapViewProvider>
           </CartProvider>
         </ResponsiveProvider>
       </React.StrictMode>,
