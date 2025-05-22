@@ -5,17 +5,69 @@ import { createDeliveryLocation } from '@/utils/locationConverters';
 import { DeliveryLocation } from '@/types/location';
 import { Platform } from '@/utils/platform';
 import { toast } from 'sonner';
+import { securelyStoreLocation, getSecurelyStoredLocation } from '@/utils/locationUtils';
+import { Device } from '@capacitor/device';
+import { Network } from '@capacitor/network';
+import { UnifiedLocation, DeviceInfo, NetworkType, LocationSource } from '@/types/unifiedLocation';
 
 export function useCurrentLocation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
 
+  // Get device info for enhanced location context
+  const getDeviceInfo = async (): Promise<DeviceInfo> => {
+    try {
+      const info = await Device.getInfo();
+      const platform = info.platform === 'ios' || info.platform === 'android' 
+        ? info.platform 
+        : 'web';
+        
+      return {
+        platform,
+        model: info.model,
+        os_version: info.osVersion,
+        app_version: info.appVersion || '1.0.0',
+      };
+    } catch (err) {
+      console.warn('Could not get device info:', err);
+      return { platform: 'web' };
+    }
+  };
+
+  // Get network information
+  const getNetworkInfo = async (): Promise<{ type: NetworkType }> => {
+    try {
+      const status = await Network.getStatus();
+      let networkType: NetworkType = 'unknown';
+      
+      if (!status.connected) {
+        networkType = 'none';
+      } else if (status.connectionType === 'wifi') {
+        networkType = 'wifi';
+      } else if (status.connectionType === 'cellular') {
+        // In a real app, you might want to detect the cellular generation
+        networkType = 'cellular_4g';
+      }
+      
+      return { type: networkType };
+    } catch (err) {
+      console.warn('Could not get network info:', err);
+      return { type: 'unknown' };
+    }
+  };
+
   const getCurrentLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
     try {
       setIsLoading(true);
       setError(null);
       console.log('useCurrentLocation: Getting current location');
+      
+      // Try to get device and network info for enhanced context
+      const [deviceInfo, networkInfo] = await Promise.all([
+        getDeviceInfo(),
+        getNetworkInfo()
+      ]);
       
       // Special handling for web environment - use browser API directly
       if (Platform.isWeb()) {
@@ -32,7 +84,7 @@ export function useCurrentLocation() {
           }
           
           navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
               console.log('useCurrentLocation: Browser geolocation successful');
               const locationData = {
                 latitude: position.coords.latitude,
@@ -44,6 +96,14 @@ export function useCurrentLocation() {
               };
               
               console.log('useCurrentLocation: Location data:', locationData);
+              
+              // Store location data securely when available
+              try {
+                await securelyStoreLocation(locationData);
+              } catch (e) {
+                console.warn('Could not store location securely, falling back to standard storage', e);
+              }
+              
               setLastLocation(locationData);
               setIsLoading(false);
               resolve(locationData);
@@ -83,8 +143,34 @@ export function useCurrentLocation() {
       
       console.log('useCurrentLocation: Capacitor geolocation successful', position);
       const locationData = createDeliveryLocation(position);
+      
+      // Create enhanced location object with device and network context
+      const unifiedLocation: UnifiedLocation = {
+        id: crypto.randomUUID(),
+        location_type: 'user',
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        accuracy: locationData.accuracy,
+        speed: locationData.speed,
+        timestamp: new Date().toISOString(),
+        device_info: deviceInfo,
+        source: 'gps',
+        is_moving: locationData.isMoving,
+        network_type: networkInfo.type,
+        user_consent: true,
+      };
+      
+      // Store in memory state
       setLastLocation(locationData);
       setIsLoading(false);
+      
+      // Try to store securely
+      try {
+        await securelyStoreLocation(locationData);
+      } catch (e) {
+        console.warn('Could not store location securely', e);
+      }
+      
       return locationData;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get location';

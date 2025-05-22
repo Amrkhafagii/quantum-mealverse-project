@@ -255,3 +255,109 @@ export const clearAllPendingActions = (): void => {
     console.error('Error clearing all pending actions:', error);
   }
 };
+
+/**
+ * Securely cache delivery location with encryption
+ */
+export const securelyStoreLocation = async (location: DeliveryLocation): Promise<void> => {
+  try {
+    // Encryption key generation (in a real app you'd want to store this securely)
+    const encoder = new TextEncoder();
+    const keyData = await crypto.subtle.digest(
+      'SHA-256',
+      encoder.encode('location-encryption-key-salt')
+    );
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
+    
+    // Generate random IV
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    
+    // Encrypt the location data
+    const locationJson = JSON.stringify(location);
+    const encryptedData = await crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv
+      },
+      cryptoKey,
+      encoder.encode(locationJson)
+    );
+    
+    // Store encrypted data and IV
+    const encryptedArray = new Uint8Array(encryptedData);
+    const base64Data = btoa(String.fromCharCode.apply(null, Array.from(encryptedArray)));
+    const base64Iv = btoa(String.fromCharCode.apply(null, Array.from(iv)));
+    
+    localStorage.setItem('secureLocationData', base64Data);
+    localStorage.setItem('secureLocationIv', base64Iv);
+    
+  } catch (error) {
+    console.error('Error securely storing location:', error);
+    // Fallback to regular storage if encryption isn't supported
+    cacheDeliveryLocation(location);
+  }
+};
+
+/**
+ * Retrieve securely stored location
+ */
+export const getSecurelyStoredLocation = async (): Promise<DeliveryLocation | null> => {
+  try {
+    const encryptedData = localStorage.getItem('secureLocationData');
+    const storedIv = localStorage.getItem('secureLocationIv');
+    
+    if (!encryptedData || !storedIv) {
+      return null;
+    }
+    
+    // Recreate encryption key
+    const encoder = new TextEncoder();
+    const keyData = await crypto.subtle.digest(
+      'SHA-256',
+      encoder.encode('location-encryption-key-salt')
+    );
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'AES-GCM' },
+      false,
+      ['decrypt']
+    );
+    
+    // Convert stored data back to array buffers
+    const encryptedArray = Uint8Array.from(
+      atob(encryptedData).split('').map(c => c.charCodeAt(0))
+    );
+    const iv = Uint8Array.from(
+      atob(storedIv).split('').map(c => c.charCodeAt(0))
+    );
+    
+    // Decrypt the data
+    const decryptedData = await crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv
+      },
+      cryptoKey,
+      encryptedArray
+    );
+    
+    // Convert to location object
+    const decoder = new TextDecoder();
+    const locationJson = decoder.decode(decryptedData);
+    return JSON.parse(locationJson) as DeliveryLocation;
+    
+  } catch (error) {
+    console.error('Error retrieving secure location:', error);
+    // Fallback to regular storage
+    return getCachedDeliveryLocation();
+  }
+};
