@@ -7,6 +7,7 @@ import { MapPin, Battery } from 'lucide-react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import ResponsiveContainer from '@/components/ui/responsive-container';
 import { Platform } from '@/utils/platform';
+import { useAuth } from '@/hooks/useAuth';
 
 export const BackgroundTrackingPermissions: React.FC = () => {
   const { 
@@ -16,18 +17,43 @@ export const BackgroundTrackingPermissions: React.FC = () => {
     requestBackgroundPermission
   } = useLocationPermission();
   
+  const { user } = useAuth();
   const { isMobile, isPlatformIOS, isPlatformAndroid } = useResponsive();
   const [showAlert, setShowAlert] = useState(false);
   
   useEffect(() => {
-    // Check permissions if we're on a mobile device
-    if (Platform.isNative()) {
+    // Check if we should automatically prompt for permissions on mobile
+    // Only do this if the user is authenticated and we're on a mobile device
+    const autoRequestLocationOnMobile = async () => {
+      if (Platform.isNative() && user) {
+        // If we're on a mobile device and the permission hasn't been decided yet
+        // request it automatically after a short delay
+        if (permissionStatus === 'prompt') {
+          // Wait a moment to let the app finish initializing
+          setTimeout(async () => {
+            try {
+              await requestPermission();
+            } catch (err) {
+              console.error("Error auto-requesting location permission:", err);
+            }
+          }, 1500);
+        }
+      }
+    };
+    
+    autoRequestLocationOnMobile();
+    
+    // Check permissions for showing the alert
+    if (Platform.isNative() && user) {
       const hasPermission = permissionStatus === "granted" 
         && backgroundPermissionStatus === "granted";
       
       setShowAlert(!hasPermission);
+    } else {
+      // Don't show the alert if user is not authenticated
+      setShowAlert(false);
     }
-  }, [permissionStatus, backgroundPermissionStatus]);
+  }, [permissionStatus, backgroundPermissionStatus, requestPermission, user]);
   
   const handleRequestPermission = async () => {
     try {
@@ -45,8 +71,8 @@ export const BackgroundTrackingPermissions: React.FC = () => {
     }
   };
   
-  // Don't show anything if not on a mobile device
-  if (!Platform.isNative() || !showAlert) {
+  // Don't show anything if not on a mobile device or user is not authenticated
+  if (!Platform.isNative() || !user || !showAlert) {
     return null;
   }
   

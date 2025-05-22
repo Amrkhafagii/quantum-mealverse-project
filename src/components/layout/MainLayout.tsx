@@ -45,9 +45,9 @@ const MainLayout: React.FC = () => {
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/about" element={<About />} />
-                
-                {/* Customer Routes - now protected */}
                 <Route path="/shop" element={<Shop />} />
+                
+                {/* Customer Route - now protected */}
                 <Route path="/customer" element={
                   <ProtectedRoute>
                     <Customer />
