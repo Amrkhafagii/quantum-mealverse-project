@@ -329,22 +329,26 @@ const Customer = () => {
   const handleManualLocationSet = useCallback((lat: number, lng: number) => {
     if (lat && lng) {
       // Create proper DeliveryLocation object with required properties
-      const manualLocation: DeliveryLocation = {
+      const manualLocation = {
         latitude: lat,
         longitude: lng,
         accuracy: 0,
         timestamp: Date.now(),
-        source: 'manual'
+        source: 'manual' as const
       };
       
       // Now properly set this location
       localStorage.setItem('manualLocation', JSON.stringify(manualLocation));
-      setSelectedLocation(manualLocation);
       
-      // Also update the query to use this new location
-      refetch();
+      // Remove unused setSelectedLocation and refetch usage
+      console.log('Set manual location:', manualLocation);
+      
+      // Refresh restaurants with the new location
+      if (user) {
+        refreshRestaurants(50);
+      }
     }
-  }, [refetch]);
+  }, [refreshRestaurants, user]);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

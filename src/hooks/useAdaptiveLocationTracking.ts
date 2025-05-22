@@ -32,6 +32,7 @@ export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {
   } = options;
 
   const [isTracking, setIsTracking] = useState(false);
+  const [isBackgroundTracking, setIsBackgroundTracking] = useState(false);
   const [currentInterval, setCurrentInterval] = useState(initialInterval);
   const [isMoving, setIsMoving] = useState(false);
   const [speed, setSpeed] = useState(0);
@@ -192,6 +193,7 @@ export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {
 
   return {
     isTracking,
+    isBackgroundTracking, // Added this property
     startTracking,
     stopTracking,
     forceLocationUpdate,

@@ -40,7 +40,7 @@ export function useIntelligentTracking({
   const location = locationService.location;
   const isTracking = locationService.isTracking || false;
   
-  // Define wrapper methods
+  // Define wrapper methods for location tracking
   const updateLocation = async () => {
     const result = await locationService.updateLocation?.();
     if (result && onLocationUpdate) {
@@ -50,14 +50,6 @@ export function useIntelligentTracking({
     return result || null;
   };
   
-  const startTracking = () => {
-    locationService.startTracking?.();
-  };
-  
-  const stopTracking = () => {
-    locationService.stopTracking?.();
-  };
-
   // Determine optimal tracking mode based on all factors
   useEffect(() => {
     const result = calculateTrackingMode({
@@ -82,7 +74,8 @@ export function useIntelligentTracking({
   // Start tracking with the calculated interval
   useEffect(() => {
     if (!isTracking && orderId) {
-      startTracking();
+      // Start tracking if we have an order and we're not already tracking
+      locationService.startTracking?.();
     }
     
     // Set up the interval for location updates
@@ -116,6 +109,6 @@ export function useIntelligentTracking({
     distanceToDestination,
     isTracking,
     forceLocationUpdate,
-    stopTracking
+    stopTracking: locationService.stopTracking
   };
 }

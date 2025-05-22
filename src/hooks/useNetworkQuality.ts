@@ -13,6 +13,7 @@ export function useNetworkQuality() {
   const [isLowQuality, setIsLowQuality] = useState<boolean>(false);
   const [effectiveType, setEffectiveType] = useState<string>('4g');
   const [downlink, setDownlink] = useState<number | null>(null);
+  const [bandwidth, setBandwidth] = useState<number | null>(null);
   const [latency, setLatency] = useState<number | null>(null);
   const [isFlaky, setIsFlaky] = useState<boolean>(false);
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
@@ -78,6 +79,21 @@ export function useNetworkQuality() {
       }
     }
 
+    // Estimate bandwidth in Mbps based on downlink or connection type
+    const estimatedBandwidth = downlink
+      ? downlink
+      : connectionType === 'wifi'
+      ? 25 // Default WiFi estimate
+      : effectiveType === '5g'
+      ? 100
+      : effectiveType === '4g'
+      ? 20
+      : effectiveType === '3g'
+      ? 5
+      : 0.5; // 2g or below
+      
+    setBandwidth(estimatedBandwidth);
+
     // Check if quality has changed significantly
     if (previousQuality && newQuality !== previousQuality) {
       setHasTransitioned(true);
@@ -137,26 +153,29 @@ export function useNetworkQuality() {
     
     // Listen for network status changes
     const setupListener = async () => {
-      const listener = await Network.addListener('networkStatusChange', status => {
-        setIsConnected(status.connected);
-        setConnectionType(status.connectionType as NetworkType);
-        determineNetworkQuality();
-      });
-      
-      return listener;
+      try {
+        return await Network.addListener('networkStatusChange', status => {
+          setIsConnected(status.connected);
+          setConnectionType(status.connectionType as NetworkType);
+          determineNetworkQuality();
+        });
+      } catch (error) {
+        console.error('Error setting up network listener:', error);
+        return null;
+      }
     };
     
-    let listener: any;
+    let networkListener: any = null;
     setupListener().then(result => {
-      listener = result;
+      networkListener = result;
     });
     
     // Set up periodic checks for more detailed mobile connection state
     const intervalId = setInterval(updateNetworkInfo, 30000); // Check every 30s
     
     return () => {
-      if (listener && typeof listener.remove === 'function') {
-        void listener.remove().catch(console.error);
+      if (networkListener) {
+        networkListener.remove().catch((err: any) => console.error('Error removing network listener:', err));
       }
       clearInterval(intervalId);
     };
@@ -170,6 +189,7 @@ export function useNetworkQuality() {
     isLowQuality,
     effectiveType,
     downlink,
+    bandwidth, // Added this property
     latency,
     isFlaky,
     hasTransitioned,

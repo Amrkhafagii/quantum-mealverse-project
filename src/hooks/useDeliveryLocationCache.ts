@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DeliveryLocation } from '@/types/location';
-import { LocationFreshness } from '@/types/location';
+import { LocationFreshness } from '@/types/unifiedLocation';
 
 export function useDeliveryLocationCache() {
   const [cachedLocations, setCachedLocations] = useState<Map<string, DeliveryLocation>>(new Map());

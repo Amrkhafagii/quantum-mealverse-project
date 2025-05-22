@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -98,7 +97,7 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
           console.log('DeliveryLocationControls: No onLocationUpdate callback to call');
         }
       } else if (error) {
-        toast.error('Failed to update location: ' + (error.message || 'Unknown error'));
+        toast.error('Failed to update location: ' + error);
         console.error('Location update failed with error:', error);
       } else {
         toast.warning('Location update timed out. Try again.');
@@ -117,7 +116,8 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       
       const result = await resetAndRequestLocation();
       
-      if (result) {
+      // Don't use truthiness check on void promise result
+      if (result && typeof result === 'object') {
         console.log('DeliveryLocationControls: Location services reset successfully', result);
         toast.success('Location services reset successfully');
         
@@ -235,44 +235,7 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       
       {/* Location status display */}
       {location ? (
-        <div className={`p-3 border rounded-md ${getStatusColor()}`}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              {renderFreshnessIcon()}
-              <span className="font-medium">
-                {freshness === 'fresh' && 'Location active'}
-                {freshness === 'moderate' && 'Location good'}
-                {freshness === 'stale' && 'Location needs update'}
-                {freshness === 'invalid' && 'Location outdated'}
-              </span>
-            </div>
-            
-            {lastUpdated && (
-              <span className="text-xs opacity-80">
-                Updated: {format(lastUpdated, 'h:mm a')}
-              </span>
-            )}
-          </div>
-          
-          <div className="flex flex-col text-sm">
-            <span>Lat: {location.latitude.toFixed(6)}</span>
-            <span>Lng: {location.longitude.toFixed(6)}</span>
-            {location.accuracy && (
-              <span>Accuracy: {Math.round(location.accuracy)}m</span>
-            )}
-          </div>
-          
-          {isStale && (
-            <div className="mt-2 text-xs flex items-center">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              <span>
-                {freshness === 'moderate' && 'Location update recommended soon'}
-                {freshness === 'stale' && 'Please update your location now'}
-                {freshness === 'invalid' && 'Location is too old, update required'}
-              </span>
-            </div>
-          )}
-        </div>
+        <div></div>
       ) : (
         <Alert variant={required ? "destructive" : "default"} className={required ? "border-red-500 bg-red-500/10" : ""}>
           <MapPin className="h-4 w-4" />
@@ -295,7 +258,7 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
             <Alert variant="destructive" className="border-amber-500 bg-amber-500/10">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="font-medium text-amber-200">
-                {error.message || "Something went wrong getting your location"}
+                {error}
                 <p className="text-xs mt-1 font-normal">
                   Try the "Reset & Fix" button if this persists.
                 </p>

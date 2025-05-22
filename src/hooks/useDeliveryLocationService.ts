@@ -1,12 +1,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { DeliveryLocation, LocationFreshness } from '@/types/location';
+import { DeliveryLocation } from '@/types/location';
 import { useLocationPermissions } from '@/hooks/useLocationPermissions';
 import { useAdaptiveLocationTracking } from '@/hooks/useAdaptiveLocationTracking';
 import { useDeliveryLocationCache } from '@/hooks/useDeliveryLocationCache';
 import { useBatteryMonitor } from '@/utils/batteryMonitor';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { calculateTrackingMode } from '@/utils/trackingModeCalculator';
+
+// Import LocationFreshness from unifiedLocation since it's not in location.ts
+import { LocationFreshness } from '@/types/unifiedLocation';
 
 interface DeliveryLocationMap {
   [key: string]: {
@@ -30,11 +33,7 @@ export function useDeliveryLocationService() {
   const [location, setLocation] = useState<DeliveryLocation | null>(null);
   
   // Use adaptive location tracking
-  const {
-    startTracking: startAdaptiveTracking,
-    stopTracking: stopAdaptiveTracking,
-    isBackgroundTracking
-  } = useAdaptiveLocationTracking({
+  const adaptiveTracking = useAdaptiveLocationTracking({
     onLocationUpdate: (loc) => {
       setLocation(loc);
       setLastUpdated(Date.now());
@@ -48,6 +47,13 @@ export function useDeliveryLocationService() {
     batteryAware: true,
     enableAdaptiveSampling: true
   });
+  
+  // Extract methods from adaptiveTracking
+  const { 
+    startTracking: startAdaptiveTracking, 
+    stopTracking: stopAdaptiveTracking,
+    isBackgroundTracking
+  } = adaptiveTracking;
   
   // Update all locations
   const updateLocations = useCallback(async () => {
@@ -155,24 +161,43 @@ export function useDeliveryLocationService() {
   }, [lastUpdated]);
 
   // Reset and request a new location
-  const resetAndRequestLocation = useCallback(async () => {
-    if (permissionStatus !== 'granted') {
-      await requestPermissions();
+  const resetAndRequestLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
+    try {
+      if (permissionStatus !== 'granted') {
+        await requestPermissions();
+      }
+      
+      if (isTracking) {
+        await stopAdaptiveTracking();
+        await startAdaptiveTracking();
+      } else {
+        await startAdaptiveTracking();
+        setIsTracking(true);
+      }
+      
+      // Return the current location or null
+      return location;
+    } catch (error) {
+      console.error('Error resetting location:', error);
+      return null;
     }
-    
-    if (isTracking) {
-      await stopAdaptiveTracking();
-      await startAdaptiveTracking();
-    } else {
-      await startAdaptiveTracking();
-      setIsTracking(true);
-    }
-  }, [permissionStatus, requestPermissions, isTracking, startAdaptiveTracking, stopAdaptiveTracking]);
+  }, [permissionStatus, requestPermissions, isTracking, startAdaptiveTracking, stopAdaptiveTracking, location]);
 
   // Check if location is valid
   const locationIsValid = useCallback(() => {
     return location !== null && !isLocationStale();
   }, [location, isLocationStale]);
+  
+  // Add startTracking and stopTracking methods for API consistency
+  const startTracking = useCallback(async () => {
+    await startAdaptiveTracking();
+    setIsTracking(true);
+  }, [startAdaptiveTracking]);
+  
+  const stopTracking = useCallback(() => {
+    stopAdaptiveTracking();
+    setIsTracking(false);
+  }, [stopAdaptiveTracking]);
   
   return {
     // For the DeliveryLocationService
@@ -183,16 +208,23 @@ export function useDeliveryLocationService() {
     isUpdating,
     updateInterval,
     
-    // Additional properties for components
+    // Location data
     location,
     permissionStatus,
     isStale: isLocationStale(),
     freshness,
     lastUpdated,
+    
+    // Location methods
     updateLocation,
     resetAndRequestLocation,
+    startTracking,
+    stopTracking,
+    
+    // Status
     error,
     isTracking,
+    isBackgroundTracking,
     locationIsValid,
     isBatteryLow: isLowBattery,
     batteryLevel

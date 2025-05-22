@@ -9,7 +9,8 @@ export function createDeliveryLocation(position: any): DeliveryLocation {
     timestamp: position.timestamp || Date.now(),
     accuracy: position.coords.accuracy,
     speed: position.coords.speed || 0,
-    isMoving: (position.coords.speed || 0) > 0.5
+    isMoving: (position.coords.speed || 0) > 0.5,
+    source: 'gps'
   };
 }
 
