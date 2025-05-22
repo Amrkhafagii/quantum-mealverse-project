@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapViewToggle } from '@/components/location/MapViewToggle';
+import MapViewToggle from '@/components/location/MapViewToggle';
 import { LocationStatusIndicator } from '@/components/location/LocationStatusIndicator';
 
 interface ViewToggleProps {
