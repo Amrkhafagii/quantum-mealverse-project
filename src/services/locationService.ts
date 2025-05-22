@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType, LocationSource } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
@@ -229,7 +228,6 @@ export const deleteUserLocationHistory = async (
 
 /**
  * Find nearby locations using PostGIS
- * We'll use raw SQL for this since we need spatial functions
  */
 export const findNearbyLocations = async (
   latitude: number,
@@ -260,7 +258,7 @@ export const findNearbyLocations = async (
       ? [longitude, latitude, radiusKm, type, limit]
       : [longitude, latitude, radiusKm, limit];
 
-    const { data, error } = await supabase.rpc('exec_sql', { 
+    const { data, error } = await supabase.rpc('exec_sql' as any, { 
       query, 
       params 
     });
@@ -377,6 +375,129 @@ function applyPrivacySettings(
 
   return result;
 }
+
+/**
+ * Purge expired location data
+ * This function can be called periodically (e.g., daily) to clean up data
+ */
+export const purgeExpiredLocations = async (): Promise<{ 
+  success: boolean, 
+  count: number 
+}> => {
+  try {
+    const now = new Date().toISOString();
+    
+    // Find records to delete for logging
+    const { data: expiredData, error: countError } = await supabase
+      .from('unified_locations' as any)
+      .select('id')
+      .lt('retention_expires_at', now);
+      
+    if (countError) {
+      console.error('Error counting expired locations:', countError);
+      return { success: false, count: 0 };
+    }
+    
+    // Delete expired records
+    const { error } = await supabase
+      .from('unified_locations' as any)
+      .delete()
+      .lt('retention_expires_at', now);
+
+    if (error) {
+      console.error('Error purging expired locations:', error);
+      return { success: false, count: 0 };
+    }
+    
+    const count = expiredData?.length || 0;
+    console.log(`Purged ${count} expired location records`);
+    
+    return { success: true, count };
+  } catch (error) {
+    console.error('Error in purgeExpiredLocations:', error);
+    return { success: false, count: 0 };
+  }
+};
+
+/**
+ * Anonymize old location data beyond retention period but keep it for analytics
+ */
+export const anonymizeOldLocations = async (
+  daysThreshold: number = 90
+): Promise<{ 
+  success: boolean, 
+  count: number 
+}> => {
+  try {
+    // Calculate the cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+    const cutoffDateString = cutoffDate.toISOString();
+    
+    // Find non-anonymized old records
+    const { data: oldData, error: countError } = await supabase
+      .from('unified_locations' as any)
+      .select('id')
+      .lt('timestamp', cutoffDateString)
+      .eq('is_anonymized', false);
+      
+    if (countError) {
+      console.error('Error counting old locations:', countError);
+      return { success: false, count: 0 };
+    }
+    
+    // Update old records to anonymize them
+    const { error } = await supabase
+      .from('unified_locations' as any)
+      .update({ 
+        is_anonymized: true,
+        user_id: null,  // Remove user ID
+        device_info: null  // Remove device info
+      })
+      .lt('timestamp', cutoffDateString)
+      .eq('is_anonymized', false);
+
+    if (error) {
+      console.error('Error anonymizing old locations:', error);
+      return { success: false, count: 0 };
+    }
+    
+    const count = oldData?.length || 0;
+    console.log(`Anonymized ${count} old location records`);
+    
+    return { success: true, count };
+  } catch (error) {
+    console.error('Error in anonymizeOldLocations:', error);
+    return { success: false, count: 0 };
+  }
+};
+
+/**
+ * Scheduled job to run retention policies
+ * This can be called by a cron job or other scheduling mechanism
+ */
+export const runRetentionPolicies = async (): Promise<{
+  purged: number,
+  anonymized: number,
+  success: boolean
+}> => {
+  try {
+    // First, purge expired data
+    const purgeResult = await purgeExpiredLocations();
+    
+    // Then anonymize old data
+    const anonymizeResult = await anonymizeOldLocations();
+    
+    return {
+      purged: purgeResult.count,
+      anonymized: anonymizeResult.count,
+      success: purgeResult.success && anonymizeResult.success
+    };
+  } catch (error) {
+    console.error('Error running retention policies:', error);
+    return { purged: 0, anonymized: 0, success: false };
+  }
+};
 
 /**
  * Export location history for a user
