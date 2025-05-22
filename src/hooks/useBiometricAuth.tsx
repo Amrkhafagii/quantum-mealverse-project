@@ -147,6 +147,7 @@ export const useBiometricAuth = () => {
         
         const result = await BiometricAuth.authenticate({
           reason: reason || 'Authenticate to continue',
+          title: 'Authenticate', // Added title parameter
           cancelTitle: 'Cancel',
         });
         

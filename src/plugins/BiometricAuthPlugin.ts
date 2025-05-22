@@ -3,8 +3,9 @@ import { registerPlugin } from '@capacitor/core';
 
 export interface BiometricPluginInterface {
   isAvailable(): Promise<{ available: boolean, biometryType: string }>;
-  authenticate(options: { reason: string, title: string }): Promise<{ authenticated: boolean }>;
+  authenticate(options: { reason: string, title?: string, cancelTitle?: string }): Promise<{ authenticated: boolean }>;
   setupBiometricLogin(options: { userId: string, token: string }): Promise<{ success: boolean }>;
+  checkBiometryAvailability(): Promise<{ isAvailable: boolean, biometryType: string }>;
 }
 
 // Create a safely initialized plugin with proper error handling
@@ -24,7 +25,9 @@ const createSafeBiometricAuth = () => {
       authenticate: async (): Promise<{authenticated: boolean}> => 
         ({ authenticated: false }),
       setupBiometricLogin: async (): Promise<{success: boolean}> => 
-        ({ success: false })
+        ({ success: false }),
+      checkBiometryAvailability: async (): Promise<{isAvailable: boolean, biometryType: string}> =>
+        ({ isAvailable: false, biometryType: 'none' })
     } as BiometricPluginInterface;
   }
 };
