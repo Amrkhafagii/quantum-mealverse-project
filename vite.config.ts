@@ -19,22 +19,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  build: {
-    rollupOptions: {
-      external: [
-        // Mark Capacitor packages as external dependencies
-        '@capacitor/core',
-        '@capacitor/preferences',
-        '@capacitor/app',
-        '@capacitor/device',
-        '@capacitor/haptics',
-        '@capacitor/network',
-        '@capacitor/status-bar',
-        '@capacitor/geolocation',
-        '@capacitor/local-notifications',
-        '@capacitor/push-notifications'
-      ]
-    }
   }
+  // Removed external configuration to allow proper bundling for web environments
 }));
