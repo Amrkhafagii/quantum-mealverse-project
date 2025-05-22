@@ -42,8 +42,8 @@ export interface UnifiedLocation {
 export interface DeviceInfo {
   platform: 'web' | 'ios' | 'android';
   model?: string;
-  os_version?: string;
-  app_version?: string; // Updated to match the correct property name
+  osVersion?: string;  // Updated from os_version
+  appVersion?: string; // Updated from app_version
 }
 
 export type LocationSource = 

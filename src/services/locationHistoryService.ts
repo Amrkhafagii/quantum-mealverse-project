@@ -226,8 +226,16 @@ export const getLocationStats = async (userId: string): Promise<{
     const uniqueDevices = new Set();
     if (devicesData) {
       devicesData.forEach(item => {
-        if (item.device_info && item.device_info.platform && item.device_info.model) {
-          uniqueDevices.add(`${item.device_info.platform}:${item.device_info.model}`);
+        // Need to check if device_info exists and has the required properties
+        const deviceInfo = item.device_info as any;
+        if (deviceInfo && typeof deviceInfo === 'object') {
+          // Check if platform and model exist as properties
+          const platform = deviceInfo.platform;
+          const model = deviceInfo.model;
+          
+          if (platform && model) {
+            uniqueDevices.add(`${platform}:${model}`);
+          }
         }
       });
     }

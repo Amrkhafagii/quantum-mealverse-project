@@ -14,6 +14,7 @@ export function useCurrentLocation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
+  const [locationSource, setLocationSource] = useState<LocationSource>('gps');
 
   // Get device info for enhanced location context
   const getDeviceInfo = async (): Promise<DeviceInfo> => {
@@ -26,8 +27,8 @@ export function useCurrentLocation() {
       return {
         platform,
         model: info.model,
-        os_version: info.osVersion,
-        app_version: info.appVersion
+        osVersion: info.osVersion,
+        appVersion: info.appVersion
       };
     } catch (err) {
       console.warn('Could not get device info:', err);
@@ -86,13 +87,24 @@ export function useCurrentLocation() {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
               console.log('useCurrentLocation: Browser geolocation successful');
+              // Determine source based on accuracy
+              let source: LocationSource = 'gps';
+              if (position.coords.accuracy > 100) {
+                source = 'wifi';
+              } else if (position.coords.accuracy > 1000) {
+                source = 'cell_tower';
+              }
+              
+              setLocationSource(source);
+              
               const locationData = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 timestamp: position.timestamp || Date.now(),
                 accuracy: position.coords.accuracy,
                 speed: position.coords.speed || 0,
-                isMoving: (position.coords.speed || 0) > 0.5
+                isMoving: (position.coords.speed || 0) > 0.5,
+                source: source
               };
               
               console.log('useCurrentLocation: Location data:', locationData);
@@ -134,15 +146,48 @@ export function useCurrentLocation() {
         });
       }
       
-      // Standard Capacitor implementation for native platforms
-      console.log('useCurrentLocation: Using Capacitor Geolocation');
-      const position = await Geolocation.getCurrentPosition({
+      // Standard Capacitor implementation for native platforms with enhanced options
+      console.log('useCurrentLocation: Using Capacitor Geolocation with hybrid positioning');
+      
+      // Use options to get the most accurate result on native platforms
+      const options = {
         enableHighAccuracy: true,
         timeout: 10000,
-      });
+        maximumAge: 0
+      };
       
+      // Android has additional options for the Fused Location Provider
+      if (Platform.isAndroid()) {
+        Object.assign(options, {
+          // These would be used by a native implementation of the Fused Location Provider
+          androidFusedLocation: true,
+          forceRequestLocation: true,
+        });
+      }
+      
+      const position = await Geolocation.getCurrentPosition(options);
       console.log('useCurrentLocation: Capacitor geolocation successful', position);
-      const locationData = createDeliveryLocation(position);
+      
+      // Extract source from extras if available (set by our enhanced native implementation)
+      let source: LocationSource = position.extras?.source as LocationSource || 'gps';
+      
+      // Fallback: Determine source based on accuracy if not provided by native code
+      if (!source) {
+        if (position.coords.accuracy > 100) {
+          source = 'wifi';
+        } else if (position.coords.accuracy > 1000) {
+          source = 'cell_tower';
+        } else {
+          source = 'gps';
+        }
+      }
+      
+      setLocationSource(source);
+      
+      const locationData = {
+        ...createDeliveryLocation(position),
+        source
+      };
       
       // Create enhanced location object with device and network context
       const unifiedLocation: UnifiedLocation = {
@@ -154,7 +199,7 @@ export function useCurrentLocation() {
         speed: locationData.speed,
         timestamp: new Date().toISOString(),
         device_info: deviceInfo,
-        source: 'gps',
+        source: source,
         is_moving: locationData.isMoving,
         network_type: networkInfo.type,
         user_consent: true,
@@ -186,6 +231,7 @@ export function useCurrentLocation() {
     getCurrentLocation,
     isLoadingLocation: isLoading,
     locationError: error,
-    lastLocation
+    lastLocation,
+    locationSource
   };
 }

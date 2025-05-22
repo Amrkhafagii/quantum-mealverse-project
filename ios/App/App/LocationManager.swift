@@ -1,16 +1,28 @@
-
 import UIKit
 import Capacitor
 import CoreLocation
+import CoreMotion
+import BackgroundTasks
+import ObjectiveC
+import NetworkExtension
 
 class LocationManager: NSObject, CLLocationManagerDelegate {
     static let shared = LocationManager()
     
     // Location manager
     var locationManager: CLLocationManager?
+    var significantLocationManager: CLLocationManager?
     private var lastSignificantLocation: CLLocation?
     private var poorQualityLocationCount: Int = 0
     var isMoving: Bool = true
+    
+    // Hybrid positioning properties
+    private var wifiPositioningEnabled: Bool = true
+    private var cellTowerPositioningEnabled: Bool = true
+    private var inaccurateLocationsCount: Int = 0
+    private var hybridLocationsBuffer: [CLLocation] = []
+    private let hybridLocationsBufferMaxSize = 5
+    private var lastPositioningAttemptTimestamp: Date?
     
     // Battery monitoring
     private var batteryLevelMonitoringEnabled: Bool = false
@@ -29,8 +41,15 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     // MARK: - Setup
     
     func setupLocationManager() {
+        // Setup main location manager
         locationManager = CLLocationManager()
         locationManager?.delegate = self
+        
+        // Setup separate manager for significant location changes
+        significantLocationManager = CLLocationManager()
+        significantLocationManager?.delegate = self
+        
+        // Configure initial settings
         updateLocationSettingsBasedOnBattery()
     }
     
@@ -79,13 +98,92 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = true // Let system optimize pausing
         
-        // Start significant location changes which uses less battery
-        startSignificantLocationChanges()
+        // Start hybrid positioning system
+        startHybridPositioning()
         
         // Also start standard updates when in foreground for better accuracy
         locationManager.startUpdatingLocation()
         
         print("Background location updates enabled")
+    }
+    
+    // MARK: - Hybrid Positioning System
+    
+    func startHybridPositioning() {
+        guard let locationManager = locationManager,
+              let significantLocationManager = significantLocationManager else { return }
+        
+        // 1. GPS/Core Location - Standard updates
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.startUpdatingLocation()
+        
+        // 2. Significant Location Changes - Battery efficient background updates
+        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            significantLocationManager.startMonitoringSignificantLocationChanges()
+        }
+        
+        // 3. Enable WiFi positioning if allowed and available
+        if wifiPositioningEnabled {
+            // WiFi positioning happens automatically when using CoreLocation
+            // But we can ensure WiFi is enabled when possible
+            if #available(iOS 13.0, *) {
+                activateWifiIfNeeded()
+            }
+        }
+        
+        // Clear and initialize the location buffer
+        hybridLocationsBuffer.removeAll()
+        
+        print("Hybrid positioning system started")
+    }
+    
+    @available(iOS 13.0, *)
+    private func activateWifiIfNeeded() {
+        // Request WiFi information access - this improves location accuracy when WiFi is used
+        NEHotspotHelper.register(options: [:], queue: .main) { _ in }
+        
+        // Note: This is just to request WiFi access - actual WiFi positioning
+        // is handled automatically by CoreLocation, this just ensures WiFi
+        // is a factor in the location determination
+    }
+    
+    // Add a location to the hybrid buffer and process when we have enough data
+    private func addToHybridLocationsBuffer(_ location: CLLocation) {
+        // Only add quality locations to buffer
+        guard location.horizontalAccuracy > 0 && location.horizontalAccuracy < 100 else {
+            return
+        }
+        
+        // Add to buffer
+        hybridLocationsBuffer.append(location)
+        
+        // Maintain max buffer size
+        if hybridLocationsBuffer.count > hybridLocationsBufferMaxSize {
+            hybridLocationsBuffer.removeFirst()
+        }
+        
+        // If we have enough locations, process them
+        if hybridLocationsBuffer.count >= 3 {
+            processHybridLocations()
+        }
+    }
+    
+    // Process the buffered locations to get a more accurate position
+    private func processHybridLocations() {
+        // Skip if buffer is empty
+        guard !hybridLocationsBuffer.isEmpty else { return }
+        
+        // Simple approach: use the location with best accuracy
+        var bestLocation = hybridLocationsBuffer[0]
+        
+        for location in hybridLocationsBuffer {
+            if location.horizontalAccuracy < bestLocation.horizontalAccuracy {
+                bestLocation = location
+            }
+        }
+        
+        // Use the best location
+        reportLocationUpdate(bestLocation)
     }
     
     // MARK: - Battery Level Monitoring
@@ -146,14 +244,14 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     // MARK: - Location Tracking Methods
     
     func startSignificantLocationChanges() {
-        guard let locationManager = locationManager,
+        guard let significantLocationManager = significantLocationManager,
               CLLocationManager.significantLocationChangeMonitoringAvailable() else {
             print("Significant location change monitoring not available")
             return
         }
         
         // Start monitoring significant location changes
-        locationManager.startMonitoringSignificantLocationChanges()
+        significantLocationManager.startMonitoringSignificantLocationChanges()
         print("Started monitoring significant location changes")
     }
     
@@ -165,7 +263,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         
         // Keep significant location changes running for critical updates
         if CLLocationManager.significantLocationChangeMonitoringAvailable() {
-            locationManager.startMonitoringSignificantLocationChanges()
+            startSignificantLocationChanges()
         }
     }
     
@@ -214,41 +312,30 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
             
             locationManager.stopUpdatingLocation()
             
-            // Use a different accuracy temporarily
-            let originalAccuracy = locationManager.desiredAccuracy
-            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
-            
-            // Restart after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                // Reset to original accuracy
-                locationManager.desiredAccuracy = originalAccuracy
-                locationManager.startUpdatingLocation()
-            }
-            
-            // Reset counter
+            // Reset inaccurate counter
             poorQualityLocationCount = 0
+            
+            // Try to activate hybrid positioning
+            startHybridPositioning()
         }
     }
     
-    // MARK: - CLLocationManagerDelegate
+    // MARK: - Reporting Location Updates
     
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        checkLocationPermission()
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        
-        // Filter low quality or insignificant locations
-        guard isQualityLocation(location) else {
-            // Take action if too many poor quality locations
-            takePoorQualityAction()
-            return
-        }
-        
+    private func reportLocationUpdate(_ location: CLLocation) {
         // When we receive location updates in the background, extend background execution time
         if UIApplication.shared.applicationState == .background {
             BackgroundTaskManager.shared.extendBackgroundExecution()
+        }
+        
+        // Determine source
+        let source: String
+        if location.horizontalAccuracy <= 20 {
+            source = "gps" // High accuracy typical of GPS
+        } else if location.horizontalAccuracy <= 65 {
+            source = "wifi" // Medium accuracy typical of WiFi
+        } else {
+            source = "cell_tower" // Lower accuracy typical of cell towers
         }
         
         // Post notification with location data for JS bridge to pick up
@@ -261,7 +348,8 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
                 "accuracy": location.horizontalAccuracy,
                 "timestamp": location.timestamp.timeIntervalSince1970 * 1000,
                 "speed": location.speed,
-                "isMoving": isMoving
+                "isMoving": isMoving,
+                "source": source
             ]
         )
         
@@ -273,8 +361,34 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         )
     }
     
+    // MARK: - CLLocationManagerDelegate
+    
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        checkLocationPermission()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        
+        // Add to hybrid location buffer for processing
+        addToHybridLocationsBuffer(location)
+        
+        // Filter low quality locations
+        if isQualityLocation(location) {
+            reportLocationUpdate(location)
+        } else {
+            // Take action if too many poor quality locations
+            takePoorQualityAction()
+        }
+    }
+    
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location manager failed with error: \(error.localizedDescription)")
+        
+        // If we get an error with the main location manager, try the significant change service
+        if manager == locationManager && CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            startSignificantLocationChanges()
+        }
     }
     
     // MARK: - Activity-Based Location Tracking
@@ -302,15 +416,20 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     func handleAppDidBecomeActive() {
+        let authStatus: CLAuthorizationStatus
+        if #available(iOS 14.0, *), let locationManager = locationManager {
+            authStatus = locationManager.authorizationStatus
+        } else {
+            authStatus = CLLocationManager.authorizationStatus()
+        }
+        
         // Switch to standard location updates for better accuracy when foregrounded
-        if locationManager?.authorizationStatus == .authorizedAlways || 
-           locationManager?.authorizationStatus == .authorizedWhenInUse {
-            
+        if authStatus == .authorizedAlways || authStatus == .authorizedWhenInUse {
             // Update settings based on latest battery level
             updateLocationSettingsBasedOnBattery()
             
-            // Start regular updates if moving or just activated
-            locationManager?.startUpdatingLocation()
+            // Restart hybrid positioning
+            startHybridPositioning()
         }
     }
     
@@ -333,3 +452,6 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         saveCriticalLocationData()
     }
 }
+
+// Type alias for location update completion handler
+typealias LocationUpdateCompletion = (CLLocation) -> Void
