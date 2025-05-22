@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { createDeliveryLocation } from '@/utils/locationConverters';
@@ -27,7 +26,7 @@ export function useCurrentLocation() {
         platform,
         model: info.model,
         os_version: info.osVersion,
-        app_version: info.appVersion || '1.0.0',  // Fixed property name to match interface
+        app_version: info.appVersion || '1.0.0',  // Using app_version to match interface
       };
     } catch (err) {
       console.warn('Could not get device info:', err);

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType, LocationSource } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
@@ -40,7 +39,7 @@ export const saveLocation = async (
       source: location.source || 'manual'
     };
 
-    // Use type assertion to tell TypeScript this table exists
+    // For TypeScript to recognize this table exists, use type assertions
     const { data, error } = await supabase
       .from('unified_locations' as any)
       .insert(locationToSave)
@@ -229,6 +228,7 @@ export const deleteUserLocationHistory = async (
 
 /**
  * Find nearby locations using PostGIS
+ * We'll use raw SQL for this since we need spatial functions
  */
 export const findNearbyLocations = async (
   latitude: number,
@@ -238,29 +238,38 @@ export const findNearbyLocations = async (
   limit: number = 20
 ): Promise<UnifiedLocation[]> => {
   try {
-    // Since we can't use function call directly, use a raw SQL query
+    // For PostGIS operations, we'll use a different approach
+    // Create a SQL query that can be executed safely
+    const params: any[] = [longitude, latitude, radiusKm];
+    
+    let typeCondition = '';
+    if (type) {
+      typeCondition = "AND location_type = $4";
+      params.push(type);
+    }
+    
+    // Add limit as the last parameter
+    params.push(limit);
+    
     const sql = `
       SELECT * FROM unified_locations
       WHERE ST_DWithin(
-        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
         $3 * 1000
       )
-      ${type ? "AND location_type = $4" : ""}
+      ${typeCondition}
       ORDER BY ST_Distance(
-        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
-        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
       )
-      LIMIT ${type ? "$5" : "$4"}
+      LIMIT $${params.length}
     `;
-    
-    const params = type 
-      ? [longitude, latitude, radiusKm, type, limit]
-      : [longitude, latitude, radiusKm, limit];
-    
-    // Use a standard RPC call to execute custom queries
-    const { data, error } = await supabase.rpc('query_raw' as any, { 
-      sql_query: sql, 
+
+    // Execute the SQL using a generic function call
+    // This is safer than constructing a dynamic query
+    const { data, error } = await supabase.rpc('exec_sql' as any, { 
+      query: sql, 
       params: params 
     });
 
