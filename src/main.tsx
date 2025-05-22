@@ -18,10 +18,21 @@ const configureIOSStatusBar = async () => {
       const module = await importModule;
       const StatusBar = module.StatusBar;
       
-      // Configure status bar
-      await StatusBar.setStyle({ style: 'dark' });
-      if (Platform.hasNotch() || Platform.hasDynamicIsland()) {
+      // Check device type for proper configuration
+      if (Platform.hasDynamicIsland()) {
+        // For devices with Dynamic Island
+        await StatusBar.setStyle({ style: 'dark' });
         await StatusBar.setOverlaysWebView({ overlay: true });
+        await StatusBar.setBackgroundColor({ color: '#FFFFFF00' }); // Transparent
+      } else if (Platform.hasNotch()) {
+        // For devices with notch
+        await StatusBar.setStyle({ style: 'dark' });
+        await StatusBar.setOverlaysWebView({ overlay: true });
+      } else {
+        // For regular devices
+        await StatusBar.setStyle({ style: 'dark' });
+        await StatusBar.setOverlaysWebView({ overlay: false });
+        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
       }
     } catch (error) {
       console.error('Error configuring iOS status bar:', error);
@@ -34,6 +45,28 @@ const initializePlatform = async () => {
   await configureIOSStatusBar();
 };
 
+// Track device orientation
+const setupOrientationClasses = () => {
+  const updateOrientation = () => {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    
+    if (isLandscape) {
+      document.body.classList.add('landscape');
+      document.body.classList.remove('portrait');
+    } else {
+      document.body.classList.add('portrait');
+      document.body.classList.remove('landscape');
+    }
+  };
+  
+  // Set initial orientation
+  updateOrientation();
+  
+  // Update on resize and orientation change
+  window.addEventListener('resize', updateOrientation);
+  window.addEventListener('orientationchange', updateOrientation);
+};
+
 // Simple error boundary for startup errors
 const renderApp = async () => {
   try {
@@ -44,6 +77,10 @@ const renderApp = async () => {
     if (Platform.isIOS()) {
       document.body.classList.add('ios-device');
       
+      // Add specific device classes
+      const model = Platform.getiPhoneModel();
+      document.body.classList.add(`device-${model}`);
+      
       if (Platform.hasNotch()) {
         document.body.classList.add('has-notch');
       }
@@ -51,6 +88,9 @@ const renderApp = async () => {
       if (Platform.hasDynamicIsland()) {
         document.body.classList.add('has-dynamic-island');
       }
+      
+      // Set up orientation tracking
+      setupOrientationClasses();
     }
 
     ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -1,4 +1,3 @@
-
 export class Platform {
   // Check if we're in a native platform
   static isNative(): boolean {
@@ -26,7 +25,8 @@ export class Platform {
       return this.getPlatformName() === 'ios';
     } catch (e) {
       console.warn('Error checking iOS platform:', e);
-      return false;
+      // Fall back to user agent detection as a backup
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     }
   }
 
@@ -38,7 +38,10 @@ export class Platform {
     // Simple heuristic for tablet detection
     if (this.isNative()) {
       // For native, we'll need to implement platform-specific logic in future
-      // For now, assume it's not a tablet
+      // For now, check for iPad in iOS
+      if (this.isIOS()) {
+        return /iPad/.test(navigator.userAgent);
+      }
       return false;
     } else {
       // For web: use screen dimensions as a heuristic
@@ -107,31 +110,44 @@ export class Platform {
     const minDim = Math.min(width, height);
     
     // iPhone dimensions for different models (physical pixels in portrait)
-    if (maxDim === 812 && minDim === 375) return 'iPhoneX/XS/11Pro/12mini/13mini';
-    if (maxDim === 896 && minDim === 414) return 'iPhoneXR/XSMax/11/11ProMax';
-    if (maxDim === 844 && minDim === 390) return 'iPhone12/12Pro/13/13Pro/14';
-    if (maxDim === 926 && minDim === 428) return 'iPhone12ProMax/13ProMax/14Plus';
+    if (maxDim === 568 && minDim === 320) return 'iPhone5_SE1';
+    if (maxDim === 667 && minDim === 375) return 'iPhone6_7_8';
+    if (maxDim === 736 && minDim === 414) return 'iPhone6_7_8Plus';
+    if (maxDim === 812 && minDim === 375) return 'iPhoneX_XS_11Pro_12mini_13mini';
+    if (maxDim === 896 && minDim === 414) return 'iPhoneXR_XSMax_11';
+    if (maxDim === 844 && minDim === 390) return 'iPhone12_12Pro_13_13Pro_14';
+    if (maxDim === 926 && minDim === 428) return 'iPhone12ProMax_13ProMax_14Plus';
     if (maxDim === 852 && minDim === 393) return 'iPhone14Pro';
     if (maxDim === 932 && minDim === 430) return 'iPhone14ProMax';
-    if (maxDim === 667 && minDim === 375) return 'iPhone6/6s/7/8/SE2';
-    if (maxDim === 736 && minDim === 414) return 'iPhone6Plus/6sPlus/7Plus/8Plus';
-    if (maxDim === 568 && minDim === 320) return 'iPhoneSE/5s/5c/5';
+    
+    // iPad detection
+    if (this.isTablet() && this.isIOS()) return 'iPad';
     
     return 'unknown';
   }
   
-  // Get status bar height for iOS devices
+  // Get status bar height for iOS devices based on model
   static getStatusBarHeight(): number {
     if (this.isIOS()) {
-      // Get the safe area inset top value
-      const safeAreaTop = parseInt(
-        getComputedStyle(document.documentElement)
-          .getPropertyValue('--sat')
-          .replace('px', '')
-      );
+      const model = this.getiPhoneModel();
+      const orientation = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
       
-      // Return the safe area inset top or a default value if it's not available
-      return isNaN(safeAreaTop) ? 44 : safeAreaTop;
+      // Dynamic Island devices
+      if (model === 'iPhone14Pro' || model === 'iPhone14ProMax') {
+        return orientation === 'portrait' ? 54 : 21;
+      }
+      
+      // Notched devices
+      if (model.includes('iPhoneX') || 
+          model.includes('iPhone11') || 
+          model.includes('iPhone12') || 
+          model.includes('iPhone13') || 
+          (model.includes('iPhone14') && !model.includes('Pro'))) {
+        return orientation === 'portrait' ? 44 : 0;
+      }
+      
+      // Non-notched devices
+      return orientation === 'portrait' ? 20 : 0;
     }
     
     // Default status bar height for other platforms
@@ -142,22 +158,22 @@ export class Platform {
     if (!this.isIOS()) return false;
     
     const model = this.getiPhoneModel();
-    return model.includes('X') || 
-           model.includes('11') || 
-           model.includes('12') || 
-           model.includes('13') || 
-           model.includes('14');
+    return model.includes('iPhoneX') || 
+           model.includes('iPhone11') || 
+           model.includes('iPhone12') || 
+           model.includes('iPhone13') || 
+           (model.includes('iPhone14') && !model.includes('Pro'));
   }
   
   static hasDynamicIsland(): boolean {
     if (!this.isIOS()) return false;
     
     const model = this.getiPhoneModel();
-    return model.includes('14Pro');
+    return model.includes('iPhone14Pro');
   }
   
   static isMobileBrowser(): boolean {
-    if (this.isNative()) return false;
+    if (this.isNative()) return true;
     
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
     return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
@@ -179,6 +195,32 @@ export class Platform {
     } catch (error) {
       console.warn('Error detecting platform:', error);
       return 'web';
+    }
+  }
+  
+  // Get safe area insets directly from CSS environment variables
+  static getSafeAreaInsets(): { top: number; right: number; bottom: number; left: number } {
+    if (!this.isIOS()) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+    
+    try {
+      // Get computed values from CSS environment variables
+      const style = getComputedStyle(document.documentElement);
+      const top = parseInt(style.getPropertyValue('--sat').replace('px', '') || '0');
+      const right = parseInt(style.getPropertyValue('--sar').replace('px', '') || '0');
+      const bottom = parseInt(style.getPropertyValue('--sab').replace('px', '') || '0');
+      const left = parseInt(style.getPropertyValue('--sal').replace('px', '') || '0');
+      
+      return {
+        top: isNaN(top) ? 0 : top,
+        right: isNaN(right) ? 0 : right,
+        bottom: isNaN(bottom) ? 0 : bottom,
+        left: isNaN(left) ? 0 : left
+      };
+    } catch (err) {
+      console.warn('Error getting safe area insets:', err);
+      return { top: 0, right: 0, bottom: 0, left: 0 };
     }
   }
 }

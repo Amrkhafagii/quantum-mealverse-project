@@ -1,13 +1,29 @@
 
 /* iOS-specific styles for proper device adaptation */
 
-/* Status bar adjustments */
+/* Status bar & safe area global variables */
+:root {
+  /* iOS safe area inset variables */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  
+  /* Common iOS status bar heights */
+  --ios-status-bar-default: 20px;
+  --ios-status-bar-notch: 44px;
+  --ios-status-bar-dynamic-island: 54px;
+}
+
+/* Basic device setup */
 .ios-device {
   /* Ensure the app respects device heights and notches */
   min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  overscroll-behavior-y: none; /* Prevent bounce on iOS Safari */
 }
 
-/* Basic safe area utilities */
+/* Safe area utilities */
 .ios-safe-area-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -53,6 +69,23 @@
   font-size: 16px;
 }
 
+/* Fixed bottom elements should respect safe area */
+.ios-device .fixed-bottom {
+  bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Safari-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .vh-fix {
+    height: -webkit-fill-available;
+  }
+  
+  .min-vh-fix {
+    min-height: -webkit-fill-available;
+  }
+}
+
 /* Fix for landscape mode on notched devices */
 @media screen and (orientation: landscape) {
   .has-notch .landscape-notch-left {
@@ -62,29 +95,78 @@
   .has-notch .landscape-notch-right {
     padding-right: env(safe-area-inset-right, 0px);
   }
+  
+  .has-notch.landscape header {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-top: 0;
+  }
 }
 
 /* Specific device size adjustments */
+/* iPhone 5, SE (1st gen) */
+@media screen and (device-width: 320px) and (device-height: 568px),
+       screen and (device-width: 568px) and (device-height: 320px) {
+  .ios-device .iphone5-adjust {
+    /* Custom adjustments for smaller iPhones */
+    font-size: 0.9rem;
+  }
+}
+
+/* iPhone 6, 7, 8, SE (2nd gen) */
+@media screen and (device-width: 375px) and (device-height: 667px),
+       screen and (device-width: 667px) and (device-height: 375px) {
+  .ios-device .iphone678-adjust {
+    /* Specific adjustments */
+    padding-top: 20px; /* Default status bar height */
+  }
+}
+
+/* iPhone 6+, 7+, 8+ */
+@media screen and (device-width: 414px) and (device-height: 736px),
+       screen and (device-width: 736px) and (device-height: 414px) {
+  .ios-device .iphone-plus-adjust {
+    /* Specific adjustments */
+    padding-top: 20px; /* Default status bar height */
+  }
+}
+
 /* iPhone X, XS, 11 Pro, 12 mini, 13 mini */
 @media screen and (device-width: 375px) and (device-height: 812px),
        screen and (device-width: 812px) and (device-height: 375px) {
-  .ios-device .status-bar-x {
-    padding-top: 44px; /* iPhone X/XS specific status bar height */
+  .ios-device .notch-x-adjust {
+    padding-top: 44px; /* iPhone X/XS status bar height */
+  }
+}
+
+/* iPhone XR, XS Max, 11, 11 Pro Max */
+@media screen and (device-width: 414px) and (device-height: 896px),
+       screen and (device-width: 896px) and (device-height: 414px) {
+  .ios-device .notch-xr-adjust {
+    padding-top: 44px; /* iPhone XR/XS Max status bar height */
   }
 }
 
 /* iPhone 12, 12 Pro, 13, 13 Pro, 14 */
 @media screen and (device-width: 390px) and (device-height: 844px),
        screen and (device-width: 844px) and (device-height: 390px) {
-  .ios-device .status-bar-12 {
+  .ios-device .notch-12-adjust {
     padding-top: 47px; /* iPhone 12/13 specific status bar height */
+  }
+}
+
+/* iPhone 12 Pro Max, 13 Pro Max, 14 Plus */
+@media screen and (device-width: 428px) and (device-height: 926px),
+       screen and (device-width: 926px) and (device-height: 428px) {
+  .ios-device .notch-12promax-adjust {
+    padding-top: 47px; /* iPhone 12/13 Pro Max status bar height */
   }
 }
 
 /* iPhone 14 Pro */
 @media screen and (device-width: 393px) and (device-height: 852px),
        screen and (device-width: 852px) and (device-height: 393px) {
-  .ios-device .dynamic-island-adjust {
+  .ios-device .dynamic-island-14pro-adjust {
     padding-top: 54px; /* iPhone 14 Pro status bar + dynamic island */
   }
 }
@@ -92,8 +174,16 @@
 /* iPhone 14 Pro Max */
 @media screen and (device-width: 430px) and (device-height: 932px),
        screen and (device-width: 932px) and (device-height: 430px) {
-  .ios-device .dynamic-island-adjust {
+  .ios-device .dynamic-island-14promax-adjust {
     padding-top: 54px; /* iPhone 14 Pro Max status bar + dynamic island */
+  }
+}
+
+/* iPad adaptations */
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+  .ios-device.ipad {
+    /* iPad specific adjustments */
+    --ipad-status-bar: 24px;
   }
 }
 
@@ -107,4 +197,10 @@
 /* Improve scrolling experience */
 .ios-device .scroll-container {
   -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Fix for iOS modal bottom sheet to respect safe area bottom */
+.ios-device .modal-sheet {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }

@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { Platform } from '@/utils/platform';
+import SafeAreaView from '@/components/ios/SafeAreaView';
 
 // Import the refactored components
 import NavLinks from './navbar/NavLinks';
@@ -27,7 +28,16 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const { cart } = useCart();
-  const { isMobile, isTablet, isPlatformIOS, statusBarHeight, safeAreaTop } = useResponsive();
+  const { 
+    isMobile, 
+    isTablet, 
+    isPlatformIOS, 
+    statusBarHeight,
+    safeAreaTop, 
+    hasNotch,
+    hasDynamicIsland
+  } = useResponsive();
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleLogout = async () => {
@@ -46,21 +56,13 @@ const Navbar: React.FC<NavbarProps> = ({
     setMobileMenuOpen(false);
   };
   
-  // Calculate the navbar's top padding for iOS devices
-  const getNavbarStyle = () => {
-    if (isPlatformIOS) {
-      // On iOS, respect the status bar height
-      return { 
-        paddingTop: Platform.hasNotch() ? `${safeAreaTop}px` : `${statusBarHeight}px` 
-      };
-    }
-    return {};
-  };
-  
+  // We use SafeAreaView instead of manual styling now
   return (
-    <nav 
-      className="bg-white shadow-sm dark:bg-gray-800 sticky top-0 z-50 ios-safe-area-top"
-      style={getNavbarStyle()}
+    <SafeAreaView 
+      as="nav"
+      className="bg-white shadow-sm dark:bg-gray-800 sticky top-0 z-50"
+      disableSides
+      disableBottom
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
@@ -113,7 +115,7 @@ const Navbar: React.FC<NavbarProps> = ({
         onLogout={handleLogout}
         onCloseMenu={closeMobileMenu}
       />
-    </nav>
+    </SafeAreaView>
   );
 };
 

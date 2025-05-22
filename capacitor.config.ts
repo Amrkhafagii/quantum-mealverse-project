@@ -13,12 +13,42 @@ const config: CapacitorConfig = {
     // cleartext: true
   },
   plugins: {
+    StatusBar: {
+      // Configure status bar for iOS
+      style: 'dark',
+      backgroundColor: '#ffffff',
+      overlaysWebView: true,
+      // Smart status bar handling based on app content (iOS only)
+      iosOverlaysWebView: true
+    },
     BiometricAuth: {
       // Plugin-specific configurations would go here
     },
     GoogleMaps: {
       apiKey: "AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs" // Replace with your actual Google Maps API key
+    },
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true, 
+      showSpinner: false,
+      backgroundColor: "#FFFFFF",
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP",
+      iosSpinnerStyle: "small"
     }
+  },
+  ios: {
+    // iOS-specific configuration
+    contentInset: "automatic",
+    preferredContentMode: "mobile",
+    scheme: "quantum-mealverse", // Deep linking scheme
+    limitsNavigationsToAppBoundDomains: true,
+    handleApplicationNotifications: true
+  },
+  android: {
+    // Android-specific configuration
+    captureInput: true,
+    webContentsDebuggingEnabled: true
   }
 };
 

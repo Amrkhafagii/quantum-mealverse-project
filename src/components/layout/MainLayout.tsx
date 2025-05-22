@@ -16,6 +16,7 @@ import PageTransition from "@/components/layout/PageTransition";
 import { NetworkPredictiveMonitor } from "@/components/network/NetworkPredictiveMonitor";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Profile from "@/pages/Profile";
+import SafeAreaView from "@/components/ios/SafeAreaView";
 
 // Restaurant routes
 import RestaurantDashboard from "@/pages/restaurant/Dashboard";
@@ -28,13 +29,13 @@ import DeliveryDashboard from "@/pages/delivery/DeliveryDashboard";
 import DeliverySettings from "@/pages/delivery/DeliverySettings";
 
 const MainLayout: React.FC = () => {
-  const { isMobile } = useResponsive();
+  const { isMobile, isPlatformIOS } = useResponsive();
   const location = useLocation();
 
   return (
     <NetworkStatusProvider>
       <NetworkPredictiveMonitor>
-        <div className="min-h-screen flex flex-col">
+        <SafeAreaView className="min-h-screen flex flex-col" disableTop>
           {/* Accessibility skip link */}
           <SkipLink targetId="main-content" />
           
@@ -100,7 +101,7 @@ const MainLayout: React.FC = () => {
               </Routes>
             </PageTransition>
           </div>
-        </div>
+        </SafeAreaView>
       </NetworkPredictiveMonitor>
     </NetworkStatusProvider>
   );
