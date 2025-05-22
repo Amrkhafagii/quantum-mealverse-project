@@ -28,6 +28,7 @@ export function useCurrentLocation() {
         platform,
         model: info.model,
         osVersion: info.osVersion,
+        // Using optional chaining to handle potential missing property
         appVersion: info.appVersion
       };
     } catch (err) {
@@ -169,7 +170,16 @@ export function useCurrentLocation() {
       console.log('useCurrentLocation: Capacitor geolocation successful', position);
       
       // Extract source from extras if available (set by our enhanced native implementation)
-      let source: LocationSource = position.extras?.source as LocationSource || 'gps';
+      let source: LocationSource = 'gps';
+      
+      // Safely access position.extras with a type guard
+      const positionWithExtras = position as any; // Use 'any' for accessing possible extras
+      if (positionWithExtras.extras && typeof positionWithExtras.extras === 'object') {
+        if (positionWithExtras.extras.source && 
+            typeof positionWithExtras.extras.source === 'string') {
+          source = positionWithExtras.extras.source as LocationSource;
+        }
+      }
       
       // Fallback: Determine source based on accuracy if not provided by native code
       if (!source) {
