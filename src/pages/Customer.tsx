@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,18 +10,9 @@ import { MealType } from '@/types/meal';
 import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader2, Filter, SlidersHorizontal, Search } from 'lucide-react';
+import { MapPin, Loader2, AlertTriangle } from 'lucide-react';
 import { getMenuItems } from '@/services/restaurant/menuService';
 import { createTestMenuItems } from '@/utils/createTestMenuItems';
-import DietaryFilters, { DietaryFilterOption, DIETARY_TAGS } from '@/components/filters/DietaryFilters';
-import { Input } from '@/components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,27 +26,9 @@ const RestaurantMapView = React.lazy(() =>
   import('@/components/location/RestaurantMapView')
 );
 
-type SortOption = 'price-asc' | 'price-desc' | 'rating-desc' | 'calories-asc';
-
 const Customer = () => {
   const { location, permissionStatus, requestPermission } = useLocationPermission();
   const [isMapView, setIsMapView] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('rating-desc');
-  const [dietaryFilters, setDietaryFilters] = useState<DietaryFilterOption[]>(
-    DIETARY_TAGS.map(tag => ({ id: tag.id, name: tag.name, active: false }))
-  );
-  const [manualLocationInput, setManualLocationInput] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  
-  const activeFiltersCount = dietaryFilters.filter(f => f.active).length;
-
-  // Use our enhanced nearest restaurant hook
-  const { 
-    nearbyRestaurants, 
-    loading: loadingRestaurants,
-    findNearestRestaurants 
-  } = useNearestRestaurant();
   
   // Check if user was redirected from restaurant menu and navigate back there if needed
   useEffect(() => {
@@ -71,6 +45,13 @@ const Customer = () => {
       }
     }
   }, []);
+
+  // Use our enhanced nearest restaurant hook
+  const { 
+    nearbyRestaurants, 
+    loading: loadingRestaurants,
+    findNearestRestaurants 
+  } = useNearestRestaurant();
 
   React.useEffect(() => {
     const checkForMenuItems = async () => {
@@ -114,7 +95,7 @@ const Customer = () => {
   }, [nearbyRestaurants]);
 
   const { data: menuItems, isLoading: loadingMenuItems, error } = useQuery({
-    queryKey: ['menuItems', nearbyRestaurants, searchTerm, sortBy, dietaryFilters],
+    queryKey: ['menuItems', nearbyRestaurants],
     queryFn: async () => {
       if (!nearbyRestaurants.length) return [];
       
@@ -176,52 +157,14 @@ const Customer = () => {
           dietary_tags: mockDietaryTags
         } as MealType;
       }) || [];
-      
-      // Apply search filter
-      if (searchTerm.trim()) {
-        const search = searchTerm.toLowerCase();
-        transformedItems = transformedItems.filter(item =>
-          item.name.toLowerCase().includes(search) || 
-          (item.description && item.description.toLowerCase().includes(search))
-        );
-      }
 
-      // Apply dietary filters
-      const activeFilters = dietaryFilters.filter(f => f.active).map(f => f.id);
-      if (activeFilters.length > 0) {
-        transformedItems = transformedItems.filter(item =>
-          item.dietary_tags && 
-          activeFilters.every(filter => item.dietary_tags!.includes(filter))
-        );
-      }
+      // Apply random sort to simulate rating-based sorting
+      transformedItems.sort(() => Math.random() - 0.5);
       
-      // Apply sorting
-      switch (sortBy) {
-        case 'price-asc':
-          transformedItems.sort((a, b) => a.price - b.price);
-          break;
-        case 'price-desc':
-          transformedItems.sort((a, b) => b.price - a.price);
-          break;
-        case 'calories-asc':
-          transformedItems.sort((a, b) => a.calories - b.calories);
-          break;
-        case 'rating-desc':
-        default:
-          // For proper rating we'd fetch ratings for these items
-          // For now, use a random sort to simulate
-          transformedItems.sort(() => Math.random() - 0.5);
-          break;
-      }
-
       return transformedItems;
     },
     enabled: nearbyRestaurants.length > 0
   });
-
-  const handleFilterChange = (newFilters: DietaryFilterOption[]) => {
-    setDietaryFilters(newFilters);
-  };
   
   const handleLocationUpdate = (loc: { latitude: number; longitude: number }) => {
     // This will be called by LocationStateManager when location is updated
@@ -315,7 +258,7 @@ const Customer = () => {
               loadingContent={loadingUI}
               showLoadingState
               autoNavigateToMenu={true}
-              forcePrompt={false} // Explicitly set to false to prevent re-showing the prompt
+              forcePrompt={false}
             >
               {/* Content once location is acquired */}
               <div>
@@ -348,53 +291,6 @@ const Customer = () => {
                   </motion.div>
                 )}
 
-                {/* Search, filter and sort controls */}
-                <motion.div 
-                  className="flex flex-col md:flex-row gap-4 mb-6 items-center"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                >
-                  <div className={`relative flex-1 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-quantum-cyan/40 rounded-lg' : ''}`}>
-                    <Input 
-                      type="text"
-                      placeholder="Search meals..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-quantum-darkBlue/30 border-quantum-cyan/30 focus:border-quantum-cyan/60 pr-10"
-                      onFocus={() => setIsSearchFocused(true)}
-                      onBlur={() => setIsSearchFocused(false)}
-                    />
-                    <div className="absolute right-3 top-2.5 text-gray-400">
-                      <Search className="h-4 w-4" />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 w-full md:w-auto">
-                    <DietaryFilters 
-                      filters={dietaryFilters} 
-                      onFilterChange={handleFilterChange} 
-                      activeCount={activeFiltersCount} 
-                    />
-
-                    <Select
-                      value={sortBy}
-                      onValueChange={(value) => setSortBy(value as SortOption)}
-                    >
-                      <SelectTrigger className="bg-quantum-darkBlue/30 border-quantum-cyan/30 w-[180px]">
-                        <SlidersHorizontal className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Sort by" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-quantum-darkBlue border-quantum-cyan/30">
-                        <SelectItem value="rating-desc">Top Rated</SelectItem>
-                        <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                        <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                        <SelectItem value="calories-asc">Lowest Calories</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </motion.div>
-                
                 {/* Toggle between map and list views */}
                 <AnimatePresence mode="wait">
                   {isMapView ? (
@@ -445,25 +341,18 @@ const Customer = () => {
                           </Button>
                         </div>
                       ) : (
-                        <>
-                          {activeFiltersCount > 0 && (
-                            <p className="mb-4 text-sm text-gray-400">
-                              {`Showing ${menuItems?.length} meals matching your dietary preferences`}
-                            </p>
-                          )}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {menuItems?.map((item: MealType, index) => (
-                              <motion.div
-                                key={item.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                              >
-                                <CustomerMealCard meal={item} />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {menuItems?.map((item: MealType, index) => (
+                            <motion.div
+                              key={item.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: index * 0.05 }}
+                            >
+                              <CustomerMealCard meal={item} />
+                            </motion.div>
+                          ))}
+                        </div>
                       )}
                     </motion.div>
                   )}
