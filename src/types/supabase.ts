@@ -1,4 +1,3 @@
-
 // Import the base Database type
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 import { Json } from "@/integrations/supabase/types";

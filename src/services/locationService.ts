@@ -30,27 +30,37 @@ export const saveLocation = async (
       ...locationWithPrivacy,
       retention_expires_at: expiryDate.toISOString(),
       id: location.id || crypto.randomUUID(),
-      timestamp: location.timestamp || new Date().toISOString()
+      timestamp: location.timestamp || new Date().toISOString(),
+      // Ensure source is valid - default to 'manual' if not specified or invalid
+      source: isValidSource(location.source) ? location.source : 'manual'
     };
 
     // Now we can access the table since it's been created
+    // Use custom types for now since the types haven't been regenerated yet
     const { data, error } = await supabase
       .from('unified_locations')
       .insert(locationToSave)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Error saving location:', error);
       throw error;
     }
 
-    return data;
+    return data && data.length > 0 ? data[0] as UnifiedLocation : null;
   } catch (error) {
     console.error('Error in saveLocation:', error);
     return null;
   }
 };
+
+/**
+ * Check if source is a valid LocationSource type
+ */
+function isValidSource(source?: string): source is LocationSource {
+  if (!source) return false;
+  return ['gps', 'network', 'wifi', 'cell_tower', 'ip', 'manual', 'cached'].includes(source);
+}
 
 /**
  * Query locations based on filters
@@ -61,7 +71,7 @@ export const queryLocations = async (
   try {
     let query = supabase
       .from('unified_locations')
-      .select('*');
+      .select();
 
     // Apply filters
     if (params.userId) {
@@ -95,7 +105,8 @@ export const queryLocations = async (
     
     // By default, don't include expired locations
     if (!params.includeExpired) {
-      query = query.gt('retention_expires_at', new Date().toISOString());
+      const now = new Date().toISOString();
+      query = query.or(`retention_expires_at.gt.${now},retention_expires_at.is.null`);
     }
 
     // Apply limit if specified
@@ -113,7 +124,7 @@ export const queryLocations = async (
       throw error;
     }
 
-    return data || [];
+    return data as UnifiedLocation[] || [];
   } catch (error) {
     console.error('Error in queryLocations:', error);
     return [];
@@ -131,7 +142,7 @@ export const getLatestLocation = async (
   try {
     const { data, error } = await supabase
       .from('unified_locations')
-      .select('*')
+      .select()
       .eq('location_type', type)
       .eq(idField, id)
       .order('timestamp', { ascending: false })
@@ -147,7 +158,7 @@ export const getLatestLocation = async (
       throw error;
     }
 
-    return data;
+    return data as UnifiedLocation;
   } catch (error) {
     console.error('Error in getLatestLocation:', error);
     return null;
@@ -239,7 +250,7 @@ export const findNearbyLocations = async (
       throw error;
     }
 
-    return data || [];
+    return data as UnifiedLocation[] || [];
   } catch (error) {
     console.error('Error in findNearbyLocations:', error);
     return [];
