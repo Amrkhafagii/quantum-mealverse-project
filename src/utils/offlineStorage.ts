@@ -3,7 +3,7 @@ import { Platform } from './platform';
 import { OfflineAction } from './offlineStorage/types';
 
 // Forward exports from the modular system
-export { OfflineStorage } from './offlineStorage/types';
+export type { OfflineStorage } from './offlineStorage/types';
 export type { OfflineAction } from './offlineStorage/types';
 export { STORAGE_KEYS, MAX_RETRY_COUNT } from './offlineStorage/types';
 
