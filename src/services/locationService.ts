@@ -13,9 +13,6 @@ const DEFAULT_PRIVACY_SETTINGS: LocationPrivacySettings = {
 
 /**
  * Save a location to the unified locations table
- * 
- * NOTE: This function assumes that a unified_locations table has been created in your Supabase database.
- * If the table doesn't exist yet, this function will fail.
  */
 export const saveLocation = async (
   location: Partial<UnifiedLocation>
@@ -36,10 +33,7 @@ export const saveLocation = async (
       timestamp: location.timestamp || new Date().toISOString()
     };
 
-    // We can't directly access the table until it's created in Supabase
-    // The code below is commented out until you create the unified_locations table
-    
-    /*
+    // Now we can access the table since it's been created
     const { data, error } = await supabase
       .from('unified_locations')
       .insert(locationToSave)
@@ -52,11 +46,6 @@ export const saveLocation = async (
     }
 
     return data;
-    */
-    
-    // For now, return the prepared location object
-    console.log('Location prepared for saving (table not yet created):', locationToSave);
-    return locationToSave as UnifiedLocation;
   } catch (error) {
     console.error('Error in saveLocation:', error);
     return null;
@@ -70,8 +59,6 @@ export const queryLocations = async (
   params: LocationQueryParams
 ): Promise<UnifiedLocation[]> => {
   try {
-    // This is a placeholder for future implementation once the unified_locations table is created
-    /*
     let query = supabase
       .from('unified_locations')
       .select('*');
@@ -127,10 +114,6 @@ export const queryLocations = async (
     }
 
     return data || [];
-    */
-    
-    console.log('Query parameters for locations (table not yet created):', params);
-    return []; // Return empty array until table is created
   } catch (error) {
     console.error('Error in queryLocations:', error);
     return [];
@@ -146,8 +129,6 @@ export const getLatestLocation = async (
   idField: 'user_id' | 'order_id' | 'delivery_assignment_id' | 'restaurant_id'
 ): Promise<UnifiedLocation | null> => {
   try {
-    // This is a placeholder for future implementation once the unified_locations table is created
-    /*
     const { data, error } = await supabase
       .from('unified_locations')
       .select('*')
@@ -167,10 +148,6 @@ export const getLatestLocation = async (
     }
 
     return data;
-    */
-    
-    console.log(`Getting latest ${type} location for ${idField}=${id} (table not yet created)`);
-    return null; // Return null until table is created
   } catch (error) {
     console.error('Error in getLatestLocation:', error);
     return null;
@@ -182,8 +159,6 @@ export const getLatestLocation = async (
  */
 export const deleteLocation = async (locationId: string): Promise<boolean> => {
   try {
-    // This is a placeholder for future implementation once the unified_locations table is created
-    /*
     const { error } = await supabase
       .from('unified_locations')
       .delete()
@@ -193,9 +168,7 @@ export const deleteLocation = async (locationId: string): Promise<boolean> => {
       console.error('Error deleting location:', error);
       throw error;
     }
-    */
     
-    console.log(`Deleting location ${locationId} (table not yet created)`);
     return true;
   } catch (error) {
     console.error('Error in deleteLocation:', error);
@@ -212,8 +185,6 @@ export const deleteUserLocationHistory = async (
   endDate?: string
 ): Promise<boolean> => {
   try {
-    // This is a placeholder for future implementation once the unified_locations table is created
-    /*
     let query = supabase
       .from('unified_locations')
       .delete()
@@ -233,9 +204,7 @@ export const deleteUserLocationHistory = async (
       console.error('Error deleting location history:', error);
       throw error;
     }
-    */
     
-    console.log(`Deleting location history for user ${userId} (table not yet created)`);
     return true;
   } catch (error) {
     console.error('Error in deleteUserLocationHistory:', error);
@@ -254,22 +223,15 @@ export const findNearbyLocations = async (
   limit: number = 20
 ): Promise<UnifiedLocation[]> => {
   try {
-    // This is a placeholder for future implementation once the unified_locations table and PostGIS functions are created
-    /*
-    let rpcParams: any = {
-      lat: latitude,
-      lng: longitude,
-      radius_km: radiusKm,
-      result_limit: limit
-    };
-    
-    if (type) {
-      rpcParams.location_type = type;
-    }
-    
     const { data, error } = await supabase.rpc(
       'find_locations_within_radius',
-      rpcParams
+      {
+        lat: latitude,
+        lng: longitude,
+        radius_km: radiusKm,
+        location_type: type || null,
+        result_limit: limit
+      }
     );
 
     if (error) {
@@ -278,10 +240,6 @@ export const findNearbyLocations = async (
     }
 
     return data || [];
-    */
-    
-    console.log(`Finding locations within ${radiusKm}km of ${latitude},${longitude} (function not yet created)`);
-    return [];
   } catch (error) {
     console.error('Error in findNearbyLocations:', error);
     return [];
@@ -327,8 +285,28 @@ async function getUserPrivacySettings(
   }
 
   try {
-    // In a real implementation, fetch user's specific privacy settings
-    // For now, return defaults
+    // Query user_preferences table to get location_tracking settings
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('location_tracking_enabled')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      console.warn('No user preferences found, using defaults', error);
+      return DEFAULT_PRIVACY_SETTINGS;
+    }
+
+    // User has opted out of location tracking
+    if (data.location_tracking_enabled === false) {
+      return {
+        ...DEFAULT_PRIVACY_SETTINGS,
+        automaticallyAnonymize: true,
+        collectDeviceInfo: false,
+        allowPreciseLocation: false
+      };
+    }
+
     return DEFAULT_PRIVACY_SETTINGS;
   } catch (error) {
     console.error('Error getting user privacy settings:', error);
