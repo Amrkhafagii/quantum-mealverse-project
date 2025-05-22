@@ -61,4 +61,5 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
   }
 }
 
-export const LocationPermissionsWeb = new LocationPermissionsWeb();
+// Create and export an instance of the plugin
+export const LocationPermissionsWebInstance = new LocationPermissionsWeb();

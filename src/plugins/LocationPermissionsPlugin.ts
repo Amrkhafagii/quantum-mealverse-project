@@ -16,7 +16,7 @@ const createSafeLocationPermissions = () => {
   try {
     // Register the plugin with a web fallback
     return registerPlugin<LocationPermissionsPlugin>('LocationPermissions', {
-      web: () => import('./web/LocationPermissionsWeb').then(m => m.LocationPermissionsWeb),
+      web: () => import('./web/LocationPermissionsWeb').then(m => m.LocationPermissionsWebInstance),
     });
   } catch (error) {
     console.error('Error initializing LocationPermissions plugin:', error);
