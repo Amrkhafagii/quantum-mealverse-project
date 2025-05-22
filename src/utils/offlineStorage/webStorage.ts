@@ -2,8 +2,7 @@
 import { OfflineStorage } from './types';
 
 /**
- * Web implementation of offline storage using IndexedDB
- * with localStorage fallback when IndexedDB is unavailable
+ * Web implementation of offline storage using IndexedDB with localStorage fallback
  */
 export class WebStorage implements OfflineStorage {
   private dbName = 'offlineAppStorage';
@@ -19,24 +18,29 @@ export class WebStorage implements OfflineStorage {
     if (this.db) return this.db;
     
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.dbVersion);
-      
-      request.onerror = () => {
-        console.error('Error opening IndexedDB');
-        reject(request.error);
-      };
-      
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve(request.result);
-      };
-      
-      request.onupgradeneeded = (event) => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName);
-        }
-      };
+      try {
+        const request = indexedDB.open(this.dbName, this.dbVersion);
+        
+        request.onerror = () => {
+          console.error('Error opening IndexedDB');
+          reject(request.error);
+        };
+        
+        request.onsuccess = () => {
+          this.db = request.result;
+          resolve(request.result);
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            db.createObjectStore(this.storeName);
+          }
+        };
+      } catch (error) {
+        console.error('IndexedDB not supported, will fall back to localStorage');
+        reject(error);
+      }
     });
   }
 
@@ -156,10 +160,10 @@ export class WebStorage implements OfflineStorage {
       console.error('Error accessing IndexedDB:', error);
       // Fall back to localStorage as a backup
       try {
-        return Promise.resolve(Object.keys(localStorage));
+        return Object.keys(localStorage);
       } catch (fallbackError) {
         console.error('Error using localStorage fallback:', fallbackError);
-        return Promise.resolve([]);
+        return [];
       }
     }
   }

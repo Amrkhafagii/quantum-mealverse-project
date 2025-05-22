@@ -1,6 +1,22 @@
 
-import { Preferences } from '@capacitor/preferences';
 import { OfflineStorage } from './types';
+
+// Dynamic import of Capacitor Preferences to avoid direct dependency in web environments
+let Preferences: any = null;
+
+// Try to load @capacitor/preferences only in environments where it's available
+const loadPreferences = async () => {
+  if (Preferences) return Preferences;
+  
+  try {
+    const module = await import('@capacitor/preferences');
+    Preferences = module.Preferences;
+    return Preferences;
+  } catch (error) {
+    console.error('Error loading Capacitor Preferences:', error);
+    throw new Error('Capacitor Preferences is not available in this environment');
+  }
+};
 
 /**
  * Native implementation of offline storage using Capacitor Preferences
@@ -8,7 +24,8 @@ import { OfflineStorage } from './types';
 export class NativeStorage implements OfflineStorage {
   async get<T>(key: string): Promise<T | null> {
     try {
-      const { value } = await Preferences.get({ key });
+      const prefs = await loadPreferences();
+      const { value } = await prefs.get({ key });
       return value ? JSON.parse(value) : null;
     } catch (error) {
       console.error('Error getting item from native storage:', error);
@@ -18,7 +35,8 @@ export class NativeStorage implements OfflineStorage {
 
   async set<T>(key: string, value: T): Promise<void> {
     try {
-      await Preferences.set({
+      const prefs = await loadPreferences();
+      await prefs.set({
         key,
         value: JSON.stringify(value),
       });
@@ -30,7 +48,8 @@ export class NativeStorage implements OfflineStorage {
 
   async remove(key: string): Promise<void> {
     try {
-      await Preferences.remove({ key });
+      const prefs = await loadPreferences();
+      await prefs.remove({ key });
     } catch (error) {
       console.error('Error removing item from native storage:', error);
       throw error;
@@ -39,7 +58,8 @@ export class NativeStorage implements OfflineStorage {
 
   async keys(): Promise<string[]> {
     try {
-      const { keys } = await Preferences.keys();
+      const prefs = await loadPreferences();
+      const { keys } = await prefs.keys();
       return keys;
     } catch (error) {
       console.error('Error getting keys from native storage:', error);
@@ -49,7 +69,8 @@ export class NativeStorage implements OfflineStorage {
 
   async clear(): Promise<void> {
     try {
-      await Preferences.clear();
+      const prefs = await loadPreferences();
+      await prefs.clear();
     } catch (error) {
       console.error('Error clearing native storage:', error);
       throw error;

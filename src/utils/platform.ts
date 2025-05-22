@@ -1,17 +1,33 @@
+
 import { Capacitor } from '@capacitor/core';
 import { Device } from '@capacitor/device';
 
 export class Platform {
   static isNative(): boolean {
-    return Capacitor.isNativePlatform();
+    try {
+      return Capacitor.isNativePlatform();
+    } catch (e) {
+      console.warn('Error checking native platform status:', e);
+      return false;
+    }
   }
 
   static isAndroid(): boolean {
-    return Capacitor.getPlatform() === 'android';
+    try {
+      return Capacitor.getPlatform() === 'android';
+    } catch (e) {
+      console.warn('Error checking Android platform:', e);
+      return false;
+    }
   }
 
   static isIOS(): boolean {
-    return Capacitor.getPlatform() === 'ios';
+    try {
+      return Capacitor.getPlatform() === 'ios';
+    } catch (e) {
+      console.warn('Error checking iOS platform:', e);
+      return false;
+    }
   }
 
   static isWeb(): boolean {
