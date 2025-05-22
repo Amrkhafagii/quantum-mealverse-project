@@ -334,6 +334,26 @@ export interface DatabaseExtensions {
           user_consent?: boolean;
         };
       };
+      data_retention_logs: {
+        Row: {
+          id: string;
+          executed_at: string;
+          results: Json;
+          success: boolean;
+        };
+        Insert: {
+          id?: string;
+          executed_at: string;
+          results: Json;
+          success: boolean;
+        };
+        Update: {
+          id?: string;
+          executed_at?: string;
+          results?: Json;
+          success?: boolean;
+        };
+      };
     };
   };
 }

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType, LocationSource } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
@@ -237,30 +238,13 @@ export const findNearbyLocations = async (
   limit: number = 20
 ): Promise<UnifiedLocation[]> => {
   try {
-    // For PostGIS operations, we'll use a direct SQL approach
-    const query = `
-      SELECT * FROM unified_locations
-      WHERE ST_DWithin(
-        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
-        ST_SetSRID(ST_Point($1, $2), 4326)::geography,
-        $3 * 1000
-      )
-      ${type ? "AND location_type = $4" : ""}
-      ORDER BY ST_Distance(
-        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
-        ST_SetSRID(ST_Point($1, $2), 4326)::geography
-      )
-      LIMIT ${type ? "$5" : "$4"}
-    `;
-
-    // Build params array based on whether type is provided
-    const params = type 
-      ? [longitude, latitude, radiusKm, type, limit]
-      : [longitude, latitude, radiusKm, limit];
-
-    const { data, error } = await supabase.rpc('exec_sql' as any, { 
-      query, 
-      params 
+    // Use a SQL RPC call to leverage PostGIS
+    const { data, error } = await supabase.rpc('find_nearby_locations', {
+      p_latitude: latitude,
+      p_longitude: longitude,
+      p_radius_km: radiusKm,
+      p_location_type: type || null,
+      p_limit: limit
     });
 
     if (error) {

@@ -73,7 +73,8 @@ export const runAllDataRetentionPolicies = async (): Promise<{
  */
 const logRetentionPolicyExecution = async (results: Record<string, any>): Promise<void> => {
   try {
-    await supabase.from('data_retention_logs').insert({
+    // Use type assertion to inform TypeScript that the table exists
+    await supabase.from('data_retention_logs' as any).insert({
       executed_at: new Date().toISOString(),
       results: results,
       success: Object.values(results).every(r => (r as any).success)
