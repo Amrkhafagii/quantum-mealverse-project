@@ -4,10 +4,8 @@ import { LocationPermissionStatus, LocationPermissionsPlugin } from '../Location
 
 export class LocationPermissionsWeb extends WebPlugin implements LocationPermissionsPlugin {
   constructor() {
-    super({
-      name: 'LocationPermissions',
-      platforms: ['web']
-    });
+    super();
+    // No need to pass configuration object in newer Capacitor versions
   }
 
   async requestLocationPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
