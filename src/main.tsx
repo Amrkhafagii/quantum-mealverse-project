@@ -1,4 +1,3 @@
-
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
@@ -9,7 +8,7 @@ import { MapViewProvider } from './contexts/MapViewContext'
 import { CartProvider } from './contexts/CartContext'
 import { ResponsiveProvider } from './contexts/ResponsiveContext'
 import { Platform } from './utils/platform'
-import { ErrorBoundary } from './components/ErrorBoundary'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // CSS variables for safe area insets - these will be available before React loads
 if (typeof document !== 'undefined' && document.documentElement) {
@@ -141,6 +140,9 @@ const renderApp = async () => {
       // Set up orientation tracking
       setupOrientationClasses();
     }
+    
+    // Mark platform as initialized after all detection is complete
+    Platform.setInitialized(true);
     
     // Lazily initialize biometric modules after a short delay
     setTimeout(initializeBiometricModules, 2000);

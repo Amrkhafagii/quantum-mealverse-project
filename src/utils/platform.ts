@@ -14,6 +14,7 @@ export class Platform {
     hasDynamicIsland?: boolean;
     safeAreaInsets?: {top: number; right: number; bottom: number; left: number};
     statusBarHeight?: number;
+    initialized?: boolean;
   } = {};
 
   /**
@@ -61,6 +62,28 @@ export class Platform {
       this._cache.platformName = 'web';
       return 'web';
     }
+  }
+
+  /**
+   * Check if the platform utility has been initialized
+   */
+  static isInitialized(): boolean {
+    // Return cached initialization status if available
+    if (this._cache.initialized !== undefined) {
+      return this._cache.initialized;
+    }
+    
+    // Consider initialized if we have successfully determined the platform
+    const initialized = this._cache.platformName !== undefined;
+    this._cache.initialized = initialized;
+    return initialized;
+  }
+
+  /**
+   * Mark the platform as initialized
+   */
+  static setInitialized(value: boolean = true): void {
+    this._cache.initialized = value;
   }
 
   // Check if we're in a native platform
@@ -447,4 +470,3 @@ if (typeof document !== 'undefined' && document.documentElement) {
   document.documentElement.style.setProperty('--sab', 'env(safe-area-inset-bottom, 0px)');
   document.documentElement.style.setProperty('--sal', 'env(safe-area-inset-left, 0px)');
 }
-
