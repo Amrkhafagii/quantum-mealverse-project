@@ -4,10 +4,12 @@ import { Geolocation } from '@capacitor/geolocation';
 import { createDeliveryLocation } from '@/utils/locationConverters';
 import { DeliveryLocation } from '@/types/location';
 import { Platform } from '@/utils/platform';
+import { toast } from 'sonner';
 
 export function useCurrentLocation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
 
   const getCurrentLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
     try {
@@ -24,6 +26,7 @@ export function useCurrentLocation() {
             console.error(errorMsg);
             setError(errorMsg);
             setIsLoading(false);
+            toast.error('Geolocation not supported');
             resolve(null);
             return;
           }
@@ -41,22 +44,24 @@ export function useCurrentLocation() {
               };
               
               console.log('useCurrentLocation: Location data:', locationData);
+              setLastLocation(locationData);
               setIsLoading(false);
               resolve(locationData);
             },
             (err) => {
               console.error('Browser geolocation error:', err);
               
+              let errorMessage = 'An unknown error occurred.';
               if (err.code === 1) {
-                setError('Permission denied. Please enable location in your browser settings.');
+                errorMessage = 'Permission denied. Please enable location in your browser settings.';
               } else if (err.code === 2) {
-                setError('Location information is unavailable.');
+                errorMessage = 'Location information is unavailable.';
               } else if (err.code === 3) {
-                setError('The request to get user location timed out.');
-              } else {
-                setError('An unknown error occurred.');
+                errorMessage = 'The request to get user location timed out.';
               }
               
+              setError(errorMessage);
+              toast.error('Location error', { description: errorMessage });
               setIsLoading(false);
               resolve(null);
             },
@@ -78,11 +83,14 @@ export function useCurrentLocation() {
       
       console.log('useCurrentLocation: Capacitor geolocation successful', position);
       const locationData = createDeliveryLocation(position);
+      setLastLocation(locationData);
       setIsLoading(false);
       return locationData;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get location';
       console.error('Error getting current location', err);
-      setError('Failed to get location');
+      setError(errorMessage);
+      toast.error('Location error', { description: errorMessage });
       setIsLoading(false);
       return null;
     }
@@ -91,6 +99,7 @@ export function useCurrentLocation() {
   return {
     getCurrentLocation,
     isLoadingLocation: isLoading,
-    locationError: error
+    locationError: error,
+    lastLocation
   };
 }

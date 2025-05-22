@@ -25,6 +25,7 @@ const Customer = () => {
   const { getCurrentLocation: getDirectLocation } = useCurrentLocation();
   const [isMapView, setIsMapView] = useState(false);
   const [forceRefresh, setForceRefresh] = useState(0); // Added to force refresh
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<null | {latitude: number, longitude: number}>(null);
   
   // Use our enhanced nearest restaurant hook
   const { 
@@ -39,11 +40,24 @@ const Customer = () => {
 
   // Fetch menu items from nearby restaurants
   const { data: menuItems, isLoading: loadingMenuItems, error } = useMenuItems(nearbyRestaurants);
+  
+  // Log authentication status on component mount and auth changes
+  useEffect(() => {
+    console.log('Customer component - Auth state:', { 
+      isAuthenticated: !!user, 
+      userId: user?.id, 
+      email: user?.email
+    });
+  }, [user]);
 
   // Enhanced handler for location request with fallback
   const handleLocationRequest = useCallback(async () => {
     try {
+      console.log('handleLocationRequest called - requesting user location');
       toast.loading('Requesting your location...');
+      
+      console.log('Authentication state before location request:', { isLoggedIn: !!user });
+      
       let success = await requestPermission();
       
       // If the primary method failed and we're on web, try the direct web implementation fallback
@@ -53,10 +67,18 @@ const Customer = () => {
         
         if (location && location.latitude && location.longitude) {
           // Manual call to find restaurants if we got location via fallback
-          console.log('Got location via fallback, calling findNearestRestaurants');
-          await findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
-          toast.success('Location updated successfully');
-          success = true;
+          console.log('Got location via fallback:', location);
+          setLastLocationUpdate(location);
+          
+          if (user) {
+            console.log('User is authenticated, calling findNearestRestaurants');
+            await findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
+            toast.success('Location updated successfully');
+            success = true;
+          } else {
+            console.error('Cannot find restaurants: user not authenticated');
+            toast.error('You must be logged in to find restaurants');
+          }
         }
       }
       
@@ -70,42 +92,69 @@ const Customer = () => {
       toast.error('Failed to access your location');
       return false;
     }
-  }, [requestPermission, getDirectLocation, findNearestRestaurants]);
+  }, [requestPermission, getDirectLocation, findNearestRestaurants, user]);
   
   const handleLocationUpdate = useCallback(async (loc: { latitude: number; longitude: number }) => {
     // This will be called by LocationStateManager when location is updated
     if (loc && loc.latitude && loc.longitude) {
       console.log('Location updated in Customer.tsx:', loc);
+      setLastLocationUpdate(loc);
+      
       try {
-        // Explicitly refresh restaurants when location is updated
-        console.log('Calling findNearestRestaurants with updated location');
-        await findNearestRestaurants(50);
-        toast.success('Finding restaurants near you...');
-        
-        // Set the flag to auto-navigate to menu when location is first acquired
-        localStorage.setItem('autoNavigateToMenu', 'true');
-        
-        // Force a refresh of restaurant data
-        setForceRefresh(prev => prev + 1);
+        // Check authentication before refreshing restaurants
+        if (user) {
+          console.log('User is authenticated, finding nearby restaurants with location:', loc);
+          
+          // Explicitly refresh restaurants when location is updated
+          console.log('Calling findNearestRestaurants with updated location');
+          const results = await findNearestRestaurants(50);
+          
+          if (results && results.length > 0) {
+            toast.success(`Found ${results.length} restaurants near you!`);
+          } else {
+            toast.warning('No restaurants found nearby, try a different location');
+          }
+          
+          // Set the flag to auto-navigate to menu when location is first acquired
+          localStorage.setItem('autoNavigateToMenu', 'true');
+          
+          // Force a refresh of restaurant data
+          setForceRefresh(prev => prev + 1);
+        } else {
+          console.error('Cannot find restaurants: user not authenticated');
+          toast.error('You must be logged in to find restaurants');
+        }
       } catch (err) {
         console.error('Error finding restaurants after location update:', err);
         toast.error('Could not find nearby restaurants');
       }
+    } else {
+      console.error('Invalid location data received in handleLocationUpdate', loc);
     }
-  }, [findNearestRestaurants]);
+  }, [findNearestRestaurants, user]);
   
   // Add an effect to retry finding restaurants if none are found but we have location
   useEffect(() => {
-    if (forceRefresh > 0 && nearbyRestaurants.length === 0 && !loadingRestaurants) {
+    if (forceRefresh > 0 && nearbyRestaurants.length === 0 && !loadingRestaurants && lastLocationUpdate) {
       // Try again after a small delay
       const timer = setTimeout(() => {
         console.log('No restaurants found, retrying...');
-        refreshRestaurants(50);
+        if (user) {
+          refreshRestaurants(50);
+        } else {
+          console.error('Retry failed: user not authenticated');
+          toast.error('Please log in to find restaurants');
+        }
       }, 2000);
       
       return () => clearTimeout(timer);
     }
-  }, [forceRefresh, nearbyRestaurants.length, loadingRestaurants, refreshRestaurants]);
+  }, [forceRefresh, nearbyRestaurants.length, loadingRestaurants, refreshRestaurants, user, lastLocationUpdate]);
+
+  // Log when nearby restaurants change
+  useEffect(() => {
+    console.log('Nearby restaurants updated:', nearbyRestaurants);
+  }, [nearbyRestaurants]);
   
   const toggleMapView = () => {
     setIsMapView(prev => !prev);

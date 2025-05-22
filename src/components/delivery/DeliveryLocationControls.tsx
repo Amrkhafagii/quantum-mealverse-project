@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
@@ -35,8 +35,20 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
   
   const { updateDriverLocation } = useDeliveryMap();
   
+  // Log when component mounts and whenever key props change
+  useEffect(() => {
+    console.log('DeliveryLocationControls: Mounted/Updated with props:', {
+      hasOnLocationUpdate: !!onLocationUpdate,
+      required,
+      showHelp,
+      currentLocation: location,
+      permissionStatus,
+      isTracking
+    });
+  }, [onLocationUpdate, required, showHelp, location, permissionStatus, isTracking]);
+  
   // Update driver location on map when location changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (location) {
       if (updateDriverLocation) {
         updateDriverLocation({
@@ -74,11 +86,16 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
         
         // If we have an onLocationUpdate callback, call it with the new location
         if (onLocationUpdate && result) {
-          console.log('DeliveryLocationControls: Calling onLocationUpdate after successful update');
+          console.log('DeliveryLocationControls: Calling onLocationUpdate after successful update', {
+            latitude: result.latitude,
+            longitude: result.longitude
+          });
           onLocationUpdate({
             latitude: result.latitude,
             longitude: result.longitude
           });
+        } else {
+          console.log('DeliveryLocationControls: No onLocationUpdate callback to call');
         }
       } else if (error) {
         toast.error('Failed to update location: ' + (error.message || 'Unknown error'));
@@ -106,11 +123,16 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
         
         // If we have an onLocationUpdate callback, call it with the new location
         if (onLocationUpdate && result) {
-          console.log('DeliveryLocationControls: Calling onLocationUpdate after reset');
+          console.log('DeliveryLocationControls: Calling onLocationUpdate after reset with', {
+            latitude: result.latitude,
+            longitude: result.longitude
+          });
           onLocationUpdate({
             latitude: result.latitude,
             longitude: result.longitude
           });
+        } else {
+          console.log('DeliveryLocationControls: No onLocationUpdate callback to call after reset');
         }
       } else {
         toast.warning('Reset completed, but no location obtained');

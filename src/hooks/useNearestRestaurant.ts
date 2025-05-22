@@ -22,16 +22,27 @@ export const useNearestRestaurant = () => {
   const { user } = useAuth();
 
   const findNearestRestaurants = useCallback(async (maxDistance = 50) => {
+    // Enhanced debugging for authentication state
+    console.log('findNearestRestaurants called with user state:', { 
+      userExists: !!user, 
+      userId: user?.id,
+      maxDistance
+    });
+
     // If not authenticated, don't fetch restaurants
     if (!user) {
-      console.log('User is not authenticated, skipping restaurant fetch');
+      console.error('User is not authenticated, skipping restaurant fetch');
       setRefreshStatus('idle');
       setLoading(false);
+      toast.error("Authentication required", { 
+        description: "Please log in to find nearby restaurants" 
+      });
       return null;
     }
 
+    // Check for valid location with improved logging
     if (!locationIsValid()) {
-      console.error('Location is not valid for restaurant search');
+      console.error('Location is not valid for restaurant search', location);
       setRefreshStatus('error');
       toast.error("Location required", { 
         description: "We need your location to find nearby restaurants" 
@@ -44,6 +55,13 @@ export const useNearestRestaurant = () => {
     
     try {
       console.log('Finding nearest restaurants with location:', location);
+      
+      // More detailed logging before RPC call
+      console.log('Calling Supabase RPC with params:', {
+        lat: location.latitude,
+        lng: location.longitude,
+        maxDistance
+      });
       
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: location.latitude,
@@ -103,7 +121,11 @@ export const useNearestRestaurant = () => {
       console.log('Location is valid and user is authenticated, finding nearest restaurants');
       findNearestRestaurants();
     } else {
-      console.log('Location is not valid or user is not authenticated yet');
+      console.log('Location is not valid or user is not authenticated yet', {
+        userExists: !!user,
+        locationValid: locationIsValid(),
+        location
+      });
     }
   }, [location, locationIsValid, findNearestRestaurants, user]);
 
