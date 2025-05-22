@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType, LocationSource } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
@@ -238,44 +239,35 @@ export const findNearbyLocations = async (
   limit: number = 20
 ): Promise<UnifiedLocation[]> => {
   try {
-    // For PostGIS operations, we'll use a different approach
-    // Create a SQL query that can be executed safely
-    const params: any[] = [longitude, latitude, radiusKm];
-    
-    let typeCondition = '';
-    if (type) {
-      typeCondition = "AND location_type = $4";
-      params.push(type);
-    }
-    
-    // Add limit as the last parameter
-    params.push(limit);
-    
-    const sql = `
+    // For PostGIS operations, we'll use a direct SQL approach
+    const query = `
       SELECT * FROM unified_locations
       WHERE ST_DWithin(
-        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
+        ST_SetSRID(ST_Point($1, $2), 4326)::geography,
         $3 * 1000
       )
-      ${typeCondition}
+      ${type ? "AND location_type = $4" : ""}
       ORDER BY ST_Distance(
-        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+        ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography,
+        ST_SetSRID(ST_Point($1, $2), 4326)::geography
       )
-      LIMIT $${params.length}
+      LIMIT ${type ? "$5" : "$4"}
     `;
 
-    // Execute the SQL using a generic function call
-    // This is safer than constructing a dynamic query
-    const { data, error } = await supabase.rpc('exec_sql' as any, { 
-      query: sql, 
-      params: params 
+    // Build params array based on whether type is provided
+    const params = type 
+      ? [longitude, latitude, radiusKm, type, limit]
+      : [longitude, latitude, radiusKm, limit];
+
+    const { data, error } = await supabase.rpc('exec_sql', { 
+      query, 
+      params 
     });
 
     if (error) {
       console.error('Error finding nearby locations:', error);
-      throw error;
+      return [];
     }
 
     return (data || []) as unknown as UnifiedLocation[];
