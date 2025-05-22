@@ -51,7 +51,7 @@ export const saveLocation = async (
       throw error;
     }
 
-    return data && data.length > 0 ? data[0] as UnifiedLocation : null;
+    return data && data.length > 0 ? (data[0] as unknown as UnifiedLocation) : null;
   } catch (error) {
     console.error('Error in saveLocation:', error);
     return null;
@@ -128,7 +128,7 @@ export const queryLocations = async (
       throw error;
     }
 
-    return data as UnifiedLocation[] || [];
+    return (data || []) as unknown as UnifiedLocation[];
   } catch (error) {
     console.error('Error in queryLocations:', error);
     return [];
@@ -162,7 +162,7 @@ export const getLatestLocation = async (
       throw error;
     }
 
-    return data as UnifiedLocation;
+    return data as unknown as UnifiedLocation;
   } catch (error) {
     console.error('Error in getLatestLocation:', error);
     return null;
@@ -269,7 +269,7 @@ export const findNearbyLocations = async (
       throw error;
     }
 
-    return data as UnifiedLocation[] || [];
+    return (data || []) as unknown as UnifiedLocation[];
   } catch (error) {
     console.error('Error in findNearbyLocations:', error);
     return [];
