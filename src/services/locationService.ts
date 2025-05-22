@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType } from '@/types/unifiedLocation';
+import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType, LocationSource } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
 
 // Default location privacy settings
@@ -234,16 +234,31 @@ export const findNearbyLocations = async (
   limit: number = 20
 ): Promise<UnifiedLocation[]> => {
   try {
-    const { data, error } = await supabase.rpc(
-      'find_locations_within_radius',
-      {
-        lat: latitude,
-        lng: longitude,
-        radius_km: radiusKm,
-        location_type: type || null,
-        result_limit: limit
-      }
-    );
+    // Note: Since function support may be limited, we'll need to adapt this
+    // to use direct ST_DWithin queries if RPC doesn't work
+    const query = `
+      SELECT * FROM unified_locations
+      WHERE ST_DWithin(
+        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+        $3 * 1000
+      )
+      ${type ? "AND location_type = $4" : ""}
+      ORDER BY ST_Distance(
+        ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+      )
+      LIMIT $${type ? "5" : "4"}
+    `;
+    
+    const params = type 
+      ? [longitude, latitude, radiusKm, type, limit]
+      : [longitude, latitude, radiusKm, limit];
+    
+    const { data, error } = await supabase.rpc('query_raw', { 
+      sql_query: query, 
+      params: params 
+    });
 
     if (error) {
       console.error('Error finding nearby locations:', error);
