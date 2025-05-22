@@ -1,4 +1,3 @@
-
 import { Platform } from '@/utils/platform';
 
 /**
@@ -58,13 +57,35 @@ class SecureStorage {
         localStorage.removeItem(`secure_${key}_iv`);
       } else if (Platform.isIOS() || Platform.isAndroid()) {
         // Use Capacitor Preferences for native platforms
-        const { Preferences } = await import('@capacitor/preferences');
-        await Preferences.remove({ key: `secure_${key}` });
+        try {
+          // Using dynamic import to avoid direct dependency during build
+          const { Preferences } = await this.getPreferencesModule();
+          await Preferences.remove({ key: `secure_${key}` });
+        } catch (error) {
+          console.error('Failed to remove from native storage:', error);
+          // Fallback to localStorage
+          localStorage.removeItem(`secure_${key}`);
+          localStorage.removeItem(`secure_${key}_iv`);
+        }
       }
       return true;
     } catch (error) {
       console.error('Error removing secure data:', error);
       return false;
+    }
+  }
+
+  // Helper method to safely load the Preferences module
+  private async getPreferencesModule() {
+    try {
+      // Using Function constructor to prevent bundlers from analyzing this at build time
+      // This ensures the import only happens at runtime and not during build
+      const importModule = new Function('return import("@capacitor/preferences")')();
+      const module = await importModule;
+      return module;
+    } catch (error) {
+      console.error('Error loading Capacitor Preferences:', error);
+      throw new Error('Capacitor Preferences is not available in this environment');
     }
   }
 
@@ -163,26 +184,32 @@ class SecureStorage {
     try {
       // Use Capacitor's Preferences as we don't have direct Keychain access
       // In a real app, you would use a Keychain plugin or native code
-      const { Preferences } = await import('@capacitor/preferences');
+      const module = await this.getPreferencesModule();
+      const Preferences = module.Preferences;
       await Preferences.set({
         key: `secure_${key}`,
         value: JSON.stringify(value)
       });
     } catch (error) {
       console.error('Error storing in Keychain:', error);
-      throw error;
+      
+      // Fallback to web storage
+      await this.encryptAndStoreWeb(key, value);
     }
   }
 
   private async retrieveFromKeychain<T>(key: string): Promise<T | null> {
     try {
-      const { Preferences } = await import('@capacitor/preferences');
+      const module = await this.getPreferencesModule();
+      const Preferences = module.Preferences;
       const result = await Preferences.get({ key: `secure_${key}` });
       if (!result.value) return null;
       return JSON.parse(result.value) as T;
     } catch (error) {
       console.error('Error retrieving from Keychain:', error);
-      throw error;
+      
+      // Fallback to web storage
+      return await this.retrieveAndDecryptWeb<T>(key);
     }
   }
 
@@ -190,27 +217,32 @@ class SecureStorage {
   private async storeInEncryptedPrefs(key: string, value: any): Promise<void> {
     try {
       // Use Capacitor's Preferences as we don't have direct EncryptedSharedPreferences access
-      // In a real app with native plugins, you would use EncryptedSharedPreferences
-      const { Preferences } = await import('@capacitor/preferences');
+      const module = await this.getPreferencesModule();
+      const Preferences = module.Preferences;
       await Preferences.set({
         key: `secure_${key}`,
         value: JSON.stringify(value)
       });
     } catch (error) {
       console.error('Error storing in EncryptedSharedPreferences:', error);
-      throw error;
+      
+      // Fallback to web storage
+      await this.encryptAndStoreWeb(key, value);
     }
   }
 
   private async retrieveFromEncryptedPrefs<T>(key: string): Promise<T | null> {
     try {
-      const { Preferences } = await import('@capacitor/preferences');
+      const module = await this.getPreferencesModule();
+      const Preferences = module.Preferences;
       const result = await Preferences.get({ key: `secure_${key}` });
       if (!result.value) return null;
       return JSON.parse(result.value) as T;
     } catch (error) {
       console.error('Error retrieving from EncryptedSharedPreferences:', error);
-      throw error;
+      
+      // Fallback to web storage
+      return await this.retrieveAndDecryptWeb<T>(key);
     }
   }
 
