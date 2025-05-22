@@ -1,6 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { LocationHistoryEntry, LocationQueryParams } from '@/types/unifiedLocation';
 import { toast } from 'sonner';
+import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 
 /**
  * Fetch a user's location history
@@ -166,7 +168,7 @@ const convertToCSV = (locations: LocationHistoryEntry[]): string => {
       location.accuracy || '',
       location.speed || '',
       location.source,
-      location.address?.formattedAddress || '',
+      location.address || '',  // Fixed: Handle when address is a string
       location.place_name || '',
       location.metadata?.activityType || 'unknown'
     ];
@@ -258,6 +260,9 @@ export const getLocationStats = async (userId: string): Promise<{
 
 /**
  * Enrich a location with address information
+ * 
+ * @param location The location entry to enrich with address data
+ * @returns The location with added address information
  */
 const enrichLocationWithAddress = async (location: LocationHistoryEntry): Promise<LocationHistoryEntry> => {
   try {
@@ -266,9 +271,19 @@ const enrichLocationWithAddress = async (location: LocationHistoryEntry): Promis
       return location;
     }
     
+    // Get Google Maps API key from context or environment
+    const { googleMapsApiKey } = await import('@/contexts/GoogleMapsContext').then(
+      module => ({ googleMapsApiKey: module.useGoogleMaps().googleMapsApiKey })
+    ).catch(() => ({ googleMapsApiKey: '' }));
+    
+    if (!googleMapsApiKey) {
+      console.warn('No Google Maps API key available for geocoding');
+      return location;
+    }
+    
     // Use geocoding service to get address
     const geocodeResponse = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${GOOGLE_MAPS_API_KEY}`
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${googleMapsApiKey}`
     );
     
     const geocodeData = await geocodeResponse.json();
@@ -280,11 +295,25 @@ const enrichLocationWithAddress = async (location: LocationHistoryEntry): Promis
       // Extract formatted address
       const formattedAddress = addressResult.formatted_address;
       
+      // Extract place name from the address components
+      const extractPlaceName = (addressComponents: any[]): string => {
+        const locality = addressComponents.find(component => 
+          component.types.includes('locality')
+        );
+        
+        const sublocality = addressComponents.find(component => 
+          component.types.includes('sublocality') || 
+          component.types.includes('neighborhood')
+        );
+        
+        return (locality?.long_name || sublocality?.long_name || 'Unknown Location');
+      };
+      
       // Return the enriched location
       return {
         ...location,
         address: formattedAddress,
-        place_name: extractPlaceName(formattedAddress),
+        place_name: extractPlaceName(addressResult.address_components),
         metadata: {
           ...location.metadata,
           placeId: addressResult.place_id,

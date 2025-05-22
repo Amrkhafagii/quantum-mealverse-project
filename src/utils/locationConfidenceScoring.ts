@@ -1,6 +1,6 @@
 
 import { NetworkType } from '@/types/unifiedLocation';
-import { LocationSource, UnifiedLocation, ConfidenceScore } from '@/types/unifiedLocation';
+import { LocationSource, UnifiedLocation } from '@/types/unifiedLocation';
 
 // Scoring weights for different factors
 const SOURCE_WEIGHTS: Record<LocationSource, number> = {
@@ -41,6 +41,19 @@ const NETWORK_WEIGHTS: Record<NetworkType, number> = {
 };
 
 export type ConfidenceCategory = 'high' | 'medium' | 'low' | 'very-low' | 'unknown';
+
+// Export the ConfidenceScore interface here
+export interface ConfidenceScore {
+  overall: number; // 0-100
+  factors: {
+    source: number;
+    accuracy: number;
+    recency: number;
+    network: number;
+    movement: number;
+  };
+  rating: 'high' | 'medium' | 'low' | 'unknown';
+}
 
 /**
  * Calculate a confidence score for a location

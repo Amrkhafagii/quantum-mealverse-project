@@ -1,6 +1,7 @@
 
 import { UnifiedLocation } from '@/types/unifiedLocation';
-import { calculateLocationConfidence, ConfidenceScore } from './locationConfidenceScoring';
+import { calculateLocationConfidence } from './locationConfidenceScoring';
+import type { ConfidenceScore } from './locationConfidenceScoring';
 
 /**
  * Fuse multiple location sources into one most accurate location
