@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { MapPin, AlertTriangle, MapPinOff, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import LocationPromptBanner from './LocationPromptBanner';
 import { Skeleton } from '@/components/ui/skeleton';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { useNavigate } from 'react-router-dom';
@@ -49,7 +49,6 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
   
   const navigate = useNavigate();
   const { nearbyRestaurants, findNearestRestaurants } = useNearestRestaurant();
-  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasContentLoaded, setHasContentLoaded] = useState(false);
   const [hasNavigated, setHasNavigated] = useState(false);
@@ -64,26 +63,10 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
 
     const cachedLocationString = localStorage.getItem('userLocation');
     
-    // Determine whether to show the prompt based on:
-    // 1. User must be authenticated to see location prompt on web
-    // 2. If forcePrompt is true and the user is authenticated, we show it unless permission is already granted
-    // 3. If we're a delivery user, we always need location permission
-    // 4. If we've already shown the prompt before (tracked in hasShownInitialPrompt)
-    // 5. If we already have permission granted (from permission state)
-    
-    // For mobile devices, we should always request permission regardless of auth state
-    // For web, only request if the user is authenticated
-    const isAuthenticated = user !== null;
-    const shouldShowPrompt = 
-      (isMobileDevice || isAuthenticated) && // Only show if on mobile OR authenticated on web
-      ((forcePrompt && permissionStatus !== 'granted') || 
-      (isDeliveryUser && permissionStatus !== 'granted') ||
-      (!hasShownInitialPrompt && permissionStatus !== 'granted'));
-    
-    setShowPermissionPrompt(shouldShowPrompt);
+    // We're not showing location prompt banners anymore, so we skip this logic
     
     // If we have cached location, use it immediately
-    if (cachedLocationString && !location && isAuthenticated) {
+    if (cachedLocationString && !location && user) {
       try {
         const parsedLocation = JSON.parse(cachedLocationString);
         if (parsedLocation?.latitude && parsedLocation?.longitude) {
@@ -172,33 +155,6 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     }
   }, [nearbyRestaurants, autoNavigateToMenu, hasNavigated, hasContentLoaded, isLoading, navigate, user]);
 
-  const handlePermissionGranted = async () => {
-    setIsLoading(true);
-    
-    try {
-      const result = await requestPermission();
-      if (result && location) {
-        toast.success("Location enabled!", {
-          description: "Now we can show you nearby options"
-        });
-        
-        // Hide permission prompt immediately after successful location access
-        if (result) {
-          setShowPermissionPrompt(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error requesting location:', error);
-      toast.error("Location error", {
-        description: "We couldn't get your location. Please try again."
-      });
-    } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
-    }
-  };
-
   const handleSignIn = () => {
     // Redirect to auth page
     navigate('/auth', { state: { referrer: '/customer' } });
@@ -248,22 +204,10 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
       );
     }
     
-    // Initial case: Show permission prompt if needed
-    if (permissionStatus !== 'granted' && showPermissionPrompt) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <LocationPromptBanner onPermissionGranted={handlePermissionGranted} />
-        </motion.div>
-      );
-    }
+    // Removed all location prompt UI components
     
     // Error case: Permission denied
-    if (permissionStatus === 'denied') {
+    if (permissionStatus === 'denied' && isDeliveryUser) {
       return (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -277,9 +221,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
             <div>
               <h3 className="text-lg font-medium mb-2">Location access denied</h3>
               <p className="text-gray-400 mb-4">
-                {isDeliveryUser ? 
-                  "Location access is required for delivery services. Please enable location in your browser settings." : 
-                  "You'll need to enable location access in your browser settings to see nearby restaurants."}
+                Location access is required for delivery services. Please enable location in your browser settings.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button 
@@ -290,15 +232,6 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
                 </Button>
-                {!isDeliveryUser && (
-                  <Button
-                    onClick={() => setShowPermissionPrompt(false)} 
-                    variant="default"
-                    className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
-                  >
-                    Continue Without Location
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -348,7 +281,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
               size="sm"
               variant="outline"
               className="border-amber-500/50"
-              onClick={handlePermissionGranted}
+              onClick={requestPermission}
               disabled={isRequesting}
             >
               {isRequesting ? (
