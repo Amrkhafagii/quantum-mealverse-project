@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedLocation, LocationQueryParams, LocationPrivacySettings, LocationType, LocationSource } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
@@ -8,7 +7,12 @@ const DEFAULT_PRIVACY_SETTINGS: LocationPrivacySettings = {
   retentionDays: 30, // GDPR-friendly default
   automaticallyAnonymize: true,
   collectDeviceInfo: true,
-  allowPreciseLocation: true
+  allowPreciseLocation: true,
+  allowBackgroundTracking: false, // Default to false for privacy
+  precisionLevel: 'high',
+  shareWith: ['internal'],
+  retentionPeriod: 'medium',
+  allowThirdPartySharing: false // Default to false for privacy
 };
 
 /**
@@ -349,9 +353,13 @@ function applyPrivacySettings(
 
   // Reduce location precision if needed
   if (!settings.allowPreciseLocation && result.latitude !== undefined && result.longitude !== undefined) {
-    // Round to lower precision (roughly 1km precision)
-    result.latitude = Math.round(result.latitude * 100) / 100;
-    result.longitude = Math.round(result.longitude * 100) / 100;
+    // Adjust precision based on precisionLevel setting
+    const precisionFactor = settings.precisionLevel === 'low' ? 10 : 
+                           settings.precisionLevel === 'medium' ? 100 : 1000;
+    
+    // Round to lower precision (roughly 1km precision for 'low')
+    result.latitude = Math.round(result.latitude * precisionFactor) / precisionFactor;
+    result.longitude = Math.round(result.longitude * precisionFactor) / precisionFactor;
     
     // Mark that precision was reduced
     result.accuracy = result.accuracy ? Math.max(1000, result.accuracy) : 1000;

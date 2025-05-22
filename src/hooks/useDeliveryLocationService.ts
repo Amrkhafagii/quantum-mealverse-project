@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DeliveryLocation } from '@/types/location';
 import { useLocationPermissions } from '@/hooks/useLocationPermissions';
 import { useAdaptiveLocationTracking } from '@/hooks/useAdaptiveLocationTracking';

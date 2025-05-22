@@ -1,133 +1,87 @@
 
-import { NetworkQuality } from '@/hooks/useNetworkQuality';
-
-export type LocationMode = 'high' | 'balanced' | 'low' | 'passive';
-export type NetworkType = 'wifi' | 'cellular_4g' | 'cellular_5g' | 'cellular_3g' | 'cellular_2g' | 'ethernet' | 'unknown' | 'none';
-export type LocationSource = 'gps' | 'wifi' | 'cell' | 'manual' | 'ip' | 'cached' | 'fusion' | 'unknown';
-export type LocationType = 'current' | 'destination' | 'pickup' | 'dropoff' | 'waypoint' | 'history' | 'user';
-export type LocationFreshness = 'fresh' | 'moderate' | 'stale' | 'invalid' | 'expired' | 'recent';
-
-export interface DeviceInfo {
-  platform: string;
-  model?: string;
-  manufacturer?: string;
-  osVersion?: string;
-  appVersion?: string;
-  batteryLevel?: number;
-}
-
-export interface Platform {
-  name: string;
-  version?: string;
-  isWeb?: boolean;
-  isNative?: boolean;
-}
-
-export interface NetworkInfo {
-  type: NetworkType;
-  connectionType?: string;
-  connected: boolean;
-  estimatedBandwidth?: number;
-  metered?: boolean;
-}
-
-export interface NetworkMetrics {
-  latency: number | null;
-  bandwidth?: number | null;
-  jitter?: number | null;
-  packetLoss?: number | null;
-  effectiveType?: string;
-}
-
-export interface NetworkQualityData {
-  quality: NetworkQuality;
-  isLowQuality: boolean;
-  metrics: NetworkMetrics;
-  hasTransitioned: boolean;
-  isFlaky: boolean;
-}
-
+// Location types for the unified location tracking system
 export interface UnifiedLocation {
   id?: string;
   latitude: number;
   longitude: number;
   accuracy?: number;
-  timestamp: string;
-  speed?: number;
   altitude?: number;
   heading?: number;
-  isMoving?: boolean;
+  speed?: number;
+  timestamp: string;
   source: LocationSource;
-  deviceInfo?: DeviceInfo;
-  networkInfo?: NetworkInfo;
+  isMoving?: boolean;
+  device_info?: DeviceInfo;
+  is_anonymized?: boolean;
   user_id?: string;
+  location_type?: LocationType;
   order_id?: string;
   delivery_assignment_id?: string;
   restaurant_id?: string;
-  location_type?: LocationType;
-  is_anonymized?: boolean;
-  device_info?: DeviceInfo;
+  geom?: any; // PostGIS geometry type
+  network_type?: string;
+  battery_level?: number;
   retention_expires_at?: string;
-  place_name?: string;
-  address?: {
-    formattedAddress?: string;
-    locality?: string;  
-    adminArea?: string;
-    country?: string;
-    postalCode?: string;
-  };
-  metadata?: {
-    activityType?: string;
-    [key: string]: any;
-  };
+}
+
+export type LocationSource = 'gps' | 'network' | 'wifi' | 'cell_tower' | 'ip' | 'manual' | 'cached' | 'fusion';
+
+export type LocationType = 'delivery_driver' | 'restaurant' | 'customer' | 'order' | 'system';
+
+export type LocationFreshness = 'fresh' | 'stale' | 'expired';
+
+export interface DeviceInfo {
+  platform: Platform;
+  model?: string;
+  osVersion?: string;
+  appVersion?: string;
+  deviceId?: string;
+}
+
+export interface NetworkInfo {
+  type: string;
+  effectiveType?: string;
+  downlink?: number;
+}
+
+export type Platform = 'ios' | 'android' | 'web' | 'unknown';
+
+export interface ConfidenceScore {
+  accuracy: number;
+  recency: number;
+  source: number;
+  overall: number;
 }
 
 export interface LocationHistoryEntry extends UnifiedLocation {
   id: string;
-  userId?: string;
-  tripId?: string;
-  batteryLevel?: number;
-  networkQuality?: NetworkQuality;
+  timestamp: string;
+  address?: string;
   place_name?: string;
-  address?: {
-    formattedAddress?: string;
-    locality?: string;
-    adminArea?: string;
-    country?: string;
-    postalCode?: string;
-  };
-  metadata?: {
-    activityType?: string;
-    [key: string]: any;
-  };
+  metadata?: any;
 }
 
 export interface LocationQueryParams {
   userId?: string;
-  tripId?: string;
-  startTime?: string;
-  endTime?: string;
-  limit?: number;
-  minAccuracy?: number;
-  source?: LocationSource[];
-  type?: LocationType;
-  startDate?: string;
-  endDate?: string;
-  includeExpired?: boolean;
   orderId?: string;
   deliveryAssignmentId?: string;
   restaurantId?: string;
   locationType?: LocationType;
+  startDate?: string;
+  endDate?: string;
+  includeExpired?: boolean;
+  limit?: number;
 }
 
+// Updated LocationPrivacySettings interface with all required properties
 export interface LocationPrivacySettings {
+  retentionDays: number;
+  automaticallyAnonymize: boolean;
+  collectDeviceInfo: boolean;
+  allowPreciseLocation: boolean;
   allowBackgroundTracking: boolean;
-  precisionLevel: 'high' | 'medium' | 'low' | 'approximate';
-  shareWith: 'none' | 'app' | 'selected' | 'all';
-  retentionPeriod: number; // days
+  precisionLevel: 'high' | 'medium' | 'low';
+  shareWith: string[];
+  retentionPeriod: 'short' | 'medium' | 'long';
   allowThirdPartySharing: boolean;
-  retentionDays?: number;
-  automaticallyAnonymize?: boolean;
-  collectDeviceInfo?: boolean;
-  allowPreciseLocation?: boolean;
 }
