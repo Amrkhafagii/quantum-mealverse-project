@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
@@ -325,6 +324,27 @@ const Customer = () => {
     loadingMenuItems,
     user
   );
+
+  // Fix the location prop type
+  const handleManualLocationSet = useCallback((lat: number, lng: number) => {
+    if (lat && lng) {
+      // Create proper DeliveryLocation object with required properties
+      const manualLocation: DeliveryLocation = {
+        latitude: lat,
+        longitude: lng,
+        accuracy: 0,
+        timestamp: Date.now(),
+        source: 'manual'
+      };
+      
+      // Now properly set this location
+      localStorage.setItem('manualLocation', JSON.stringify(manualLocation));
+      setSelectedLocation(manualLocation);
+      
+      // Also update the query to use this new location
+      refetch();
+    }
+  }, [refetch]);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

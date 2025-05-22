@@ -1,5 +1,8 @@
 import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 import { Platform } from './platform';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Calculate estimated download time for a file based on network bandwidth

@@ -1,168 +1,110 @@
 
-/**
- * Utility for platform detection
- */
-export class Platform {
-  private static initialized = false;
+// This is a platform utility to check device capabilities and provide platform-specific info
+import { Capacitor } from '@capacitor/core';
+import { Device } from '@capacitor/device';
+
+// Cache results to avoid repeated calls to Device API
+const cache: Record<string, any> = {
+  deviceInfo: null,
+  highEndDevice: null
+};
+
+export const Platform = {
+  isWeb: (): boolean => {
+    return Capacitor.getPlatform() === 'web';
+  },
   
-  /**
-   * Check if platform detection has been initialized
-   */
-  static isInitialized(): boolean {
-    return Platform.initialized;
-  }
+  isAndroid: (): boolean => {
+    return Capacitor.getPlatform() === 'android';
+  },
   
-  /**
-   * Set initialized state (for internal use)
-   */
-  static setInitialized(value: boolean): void {
-    Platform.initialized = value;
-  }
+  isIOS: (): boolean => {
+    return Capacitor.getPlatform() === 'ios';
+  },
   
-  /**
-   * Check if app is running on iOS
-   */
-  static isIOS(): boolean {
-    return typeof navigator !== 'undefined' && 
-      (/iPad|iPhone|iPod/.test(navigator.userAgent) || 
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
-  }
+  isMobile: (): boolean => {
+    return this.isAndroid() || this.isIOS();
+  },
   
-  /**
-   * Check if app is running on Android
-   */
-  static isAndroid(): boolean {
-    return typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
-  }
-  
-  /**
-   * Check if app is running on web
-   */
-  static isWeb(): boolean {
-    return !Platform.isNative();
-  }
-  
-  /**
-   * Check if app is running on mobile browser (not native app)
-   */
-  static isMobileBrowser(): boolean {
-    return !Platform.isNative() && Platform.isMobile();
-  }
-  
-  /**
-   * Check if app is running on a tablet device
-   */
-  static isTablet(): boolean {
-    if (typeof navigator === 'undefined') return false;
+  isTablet: (): boolean => {
+    // Simple check using screen dimensions
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const minDimension = Math.min(width, height);
+    const maxDimension = Math.max(width, height);
     
-    // iOS tablet detection
-    if (Platform.isIOS() && navigator.maxTouchPoints > 1) {
-      return !(/iPhone/.test(navigator.userAgent));
+    // Most tablets have a minimum dimension of at least 600dp
+    return minDimension >= 600 || maxDimension >= 960;
+  },
+  
+  isMobileBrowser: (): boolean => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  },
+  
+  getDeviceInfo: async () => {
+    if (cache.deviceInfo) return cache.deviceInfo;
+    
+    try {
+      const info = await Device.getInfo();
+      cache.deviceInfo = info;
+      return info;
+    } catch (err) {
+      console.error('Error getting device info:', err);
+      return {
+        platform: 'web',
+        model: 'unknown',
+        operatingSystem: 'unknown',
+        osVersion: 'unknown',
+        manufacturer: 'unknown',
+        webViewVersion: 'unknown'
+      };
     }
+  },
+  
+  // Check if the device is considered high-end
+  isHighEndDevice: async (): Promise<boolean> => {
+    if (cache.highEndDevice !== null) return cache.highEndDevice;
     
-    // Android tablet detection
-    if (Platform.isAndroid()) {
-      return /Tablet|tablet/.test(navigator.userAgent);
+    try {
+      const info = await Platform.getDeviceInfo();
+      
+      // For iOS, consider iPhone X and newer, iPad Pro, iPad Air 3rd gen+ as high-end
+      if (info.platform === 'ios') {
+        // Check for iPhone X or newer
+        if (info.model.includes('iPhone') && parseInt(info.model.replace('iPhone', ''), 10) >= 10) {
+          cache.highEndDevice = true;
+          return true;
+        }
+        
+        // Check for iPad Pro or iPad Air 3rd gen+
+        if (info.model.includes('iPad Pro') || 
+            (info.model.includes('iPad Air') && parseInt(info.model.split(',')[0].replace('iPad Air', ''), 10) >= 3)) {
+          cache.highEndDevice = true;
+          return true;
+        }
+      } 
+      // For Android, use memory and OS version as indicators
+      else if (info.platform === 'android') {
+        // Consider Android 10+ with decent hardware as high-end
+        const osVersion = parseInt(info.osVersion.split('.')[0], 10);
+        if (osVersion >= 10) {
+          cache.highEndDevice = true;
+          return true;
+        }
+      }
+      
+      // For web, assume modern desktop browsers are high-end
+      if (!Platform.isMobileBrowser()) {
+        cache.highEndDevice = true;
+        return true;
+      }
+      
+      cache.highEndDevice = false;
+      return false;
+    } catch (err) {
+      console.error('Error determining device capability:', err);
+      cache.highEndDevice = false;
+      return false;
     }
-    
-    // Generic tablet detection based on screen size
-    return typeof window !== 'undefined' && 
-      Math.min(window.screen.width, window.screen.height) >= 600;
   }
-  
-  /**
-   * Check if app is running on a mobile device (phone or tablet)
-   */
-  static isMobile(): boolean {
-    return Platform.isIOS() || Platform.isAndroid() || 
-      (typeof navigator !== 'undefined' && /Mobi|mobile/i.test(navigator.userAgent));
-  }
-  
-  /**
-   * Check if app is running on a native platform (iOS or Android)
-   */
-  static isNative(): boolean {
-    return Platform.isIOS() || Platform.isAndroid() || 
-      (typeof (window as any)?.Capacitor !== 'undefined');
-  }
-  
-  /**
-   * Check if device has a notch
-   */
-  static hasNotch(): boolean {
-    if (Platform.isIOS()) {
-      const model = Platform.getiPhoneModel();
-      const notchedModels = ['X', 'XR', 'XS', '11', '12', '13', '14', '15'];
-      return notchedModels.some(m => model.includes(m));
-    }
-    
-    // For Android, we can't reliably detect a notch without native APIs
-    // So we use a heuristic based on device pixel ratio and year
-    if (Platform.isAndroid() && typeof window !== 'undefined') {
-      const pixelRatio = window.devicePixelRatio || 1;
-      const year = new Date().getFullYear();
-      return pixelRatio >= 2.5 && year >= 2018;
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Check if device has a dynamic island (iPhone 14 Pro and newer)
-   */
-  static hasDynamicIsland(): boolean {
-    if (!Platform.isIOS()) return false;
-    
-    const model = Platform.getiPhoneModel();
-    return model.includes('14 Pro') || model.includes('15 Pro') || parseInt(model) >= 14;
-  }
-  
-  /**
-   * Get iPhone model string
-   */
-  static getiPhoneModel(): string {
-    if (!Platform.isIOS()) return '';
-    
-    const userAgent = navigator.userAgent;
-    const match = userAgent.match(/iPhone(?:\s+|\w+)*\s+(\d+)/i);
-    if (match && match[1]) {
-      return `iPhone ${match[1]}`;
-    }
-    
-    if (/iPhone/i.test(userAgent)) {
-      return 'iPhone';
-    }
-    
-    return '';
-  }
-  
-  /**
-   * Get Android version number
-   */
-  static getAndroidVersion(): number {
-    if (!Platform.isAndroid()) return 0;
-    
-    const match = navigator.userAgent.match(/Android\s+([0-9.]+)/);
-    if (match && match[1]) {
-      return parseFloat(match[1]);
-    }
-    
-    return 0;
-  }
-  
-  /**
-   * Get platform name in a consistent format
-   */
-  static getPlatformName(): string {
-    if (Platform.isIOS()) return 'ios';
-    if (Platform.isAndroid()) return 'android';
-    return 'web';
-  }
-  
-  /**
-   * Reset platform detection cache
-   */
-  static resetCache(): void {
-    Platform.initialized = false;
-  }
-}
+};

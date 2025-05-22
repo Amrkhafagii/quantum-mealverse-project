@@ -85,7 +85,7 @@ export const useLocationTracker = () => {
       const position = await getCurrentPosition();
       
       if (position) {
-        const newLocation = {
+        const newLocation: DeliveryLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
