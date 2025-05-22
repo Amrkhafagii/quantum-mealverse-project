@@ -4,7 +4,7 @@ import { useConnectionStatus } from './useConnectionStatus';
 /**
  * Network quality assessment
  */
-export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown';
+export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'unknown';
 
 /**
  * Network quality metrics
@@ -16,6 +16,7 @@ interface NetworkMetrics {
   effectiveType: string | null;
   successRate: number;
   jitter: number | null;
+  bandwidth?: number | null;
 }
 
 /**
@@ -25,13 +26,17 @@ export const useNetworkQuality = () => {
   const { isOnline, connectionType } = useConnectionStatus();
   const [quality, setQuality] = useState<NetworkQuality>('unknown');
   const [isLowQuality, setIsLowQuality] = useState(false);
+  const [hasTransitioned, setHasTransitioned] = useState(false);
+  const [isFlaky, setIsFlaky] = useState(false);
+  const [latency, setLatency] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<NetworkMetrics>({
     latency: null,
     downlink: null,
     rtt: null, 
     effectiveType: null,
     successRate: 1.0,
-    jitter: null
+    jitter: null,
+    bandwidth: null
   });
 
   // Use Network Information API if available
@@ -66,11 +71,13 @@ export const useNetworkQuality = () => {
             ...metrics,
             downlink: connection.downlink || null,
             rtt: connection.rtt || null,
-            effectiveType: connection.effectiveType || null
+            effectiveType: connection.effectiveType || null,
+            bandwidth: connection.downlink ? connection.downlink * 1000 : null // Estimate bandwidth from downlink
           };
           setMetrics(newMetrics);
           
           // Determine quality based on effective type
+          const previousQuality = quality;
           if (connection.effectiveType === '4g') {
             setQuality('excellent');
             setIsLowQuality(false);
@@ -83,6 +90,12 @@ export const useNetworkQuality = () => {
           } else if (connection.effectiveType === 'slow-2g') {
             setQuality('poor');
             setIsLowQuality(true);
+          }
+          
+          // Detect transition in quality
+          if (previousQuality !== quality && previousQuality !== 'unknown') {
+            setHasTransitioned(true);
+            setTimeout(() => setHasTransitioned(false), 5000); // Reset after 5 seconds
           }
         };
 
@@ -119,10 +132,11 @@ export const useNetworkQuality = () => {
         });
         
         clearTimeout(timeoutId);
-        const latency = performance.now() - start;
+        const currentLatency = performance.now() - start;
+        setLatency(currentLatency);
         
         // Store latest measurements (keep last 5)
-        latencyChecks.push(latency);
+        latencyChecks.push(currentLatency);
         if (latencyChecks.length > 5) {
           latencyChecks.shift();
         }
@@ -138,6 +152,12 @@ export const useNetworkQuality = () => {
           jitter = Math.sqrt(sumSquaredDiffs / latencyChecks.length);
         }
         
+        // Detect flaky connection
+        if (jitter > 200) {
+          setIsFlaky(true);
+          setTimeout(() => setIsFlaky(false), 60000); // Reset after 1 minute
+        }
+        
         // Update metrics
         setMetrics(prev => ({
           ...prev,
@@ -147,6 +167,7 @@ export const useNetworkQuality = () => {
         }));
         
         // Update quality based on latency
+        const previousQuality = quality;
         if (avgLatency < 100) {
           setQuality('excellent');
           setIsLowQuality(false);
@@ -156,9 +177,18 @@ export const useNetworkQuality = () => {
         } else if (avgLatency < 600) {
           setQuality('fair');
           setIsLowQuality(true);
-        } else {
+        } else if (avgLatency < 1000) {
           setQuality('poor');
           setIsLowQuality(true);
+        } else {
+          setQuality('very-poor');
+          setIsLowQuality(true);
+        }
+        
+        // Detect transition in quality
+        if (previousQuality !== quality && previousQuality !== 'unknown') {
+          setHasTransitioned(true);
+          setTimeout(() => setHasTransitioned(false), 5000); // Reset after 5 seconds
         }
       } catch (error) {
         console.error('Error measuring latency:', error);
@@ -187,9 +217,36 @@ export const useNetworkQuality = () => {
       clearTimeout(initialDelayId);
       clearInterval(intervalId);
     };
-  }, [isOnline, connectionType]);
+  }, [isOnline, connectionType, quality]);
 
-  return { quality, isLowQuality, metrics };
+  // Check quality function for external components
+  const checkQuality = () => {
+    // Trigger a quality check immediately
+    const checkNow = async () => {
+      try {
+        const start = performance.now();
+        await fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' });
+        const currentLatency = performance.now() - start;
+        setLatency(currentLatency);
+        return currentLatency;
+      } catch (error) {
+        console.error('Error checking quality:', error);
+        return null;
+      }
+    };
+    
+    return checkNow();
+  };
+
+  return { 
+    quality, 
+    isLowQuality, 
+    metrics, 
+    hasTransitioned, 
+    isFlaky, 
+    latency,
+    checkQuality 
+  };
 };
 
 export default useNetworkQuality;

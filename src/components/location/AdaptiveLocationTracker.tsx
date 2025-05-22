@@ -4,7 +4,7 @@ import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useAdaptiveAccuracy } from '@/hooks/useAdaptiveAccuracy';
 import { LocationConfidenceIndicator } from './LocationConfidenceIndicator';
 import { DeliveryLocation } from '@/types/location';
-import { UnifiedLocation } from '@/types/unifiedLocation';
+import { UnifiedLocation, LocationSource } from '@/types/unifiedLocation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,24 +41,77 @@ export function AdaptiveLocationTracker({
   // Convert DeliveryLocation to UnifiedLocation for our confidence indicator
   const createUnifiedLocation = (location: DeliveryLocation): UnifiedLocation => {
     return {
-      id: crypto.randomUUID(),
-      location_type: 'user',
       latitude: location.latitude,
       longitude: location.longitude,
-      accuracy: location.accuracy,
-      speed: location.speed,
+      accuracy: location.accuracy || undefined,
+      speed: location.speed || undefined,
       timestamp: new Date().toISOString(),
-      device_info: { platform: 'web' },
-      source: location.source || 'manual',
-      is_moving: location.isMoving,
-      network_type: networkType,
-      user_consent: true,
+      deviceInfo: { platform: 'web' },
+      source: (location.source as LocationSource) || 'manual',
+      isMoving: location.isMoving,
+      network_type: networkType as any
     };
   };
 
   // Update location with adaptive settings
   const updateLocation = useCallback(async () => {
     try {
+      setIsLoading(true);
+      setError(null);
+      console.log('useCurrentLocation: Getting current location');
+      
+      // Try to get device and network info for enhanced context
+      const [deviceInfo, networkInfo] = await Promise.all([
+        getDeviceInfo(),
+        getNetworkInfo()
+      ]);
+      
+      // Special handling for web environment - use browser API directly
+      if (Platform.isWeb()) {
+        console.log('useCurrentLocation: Using browser geolocation API');
+        const browserLocation = await getBrowserLocation();
+        if (browserLocation) {
+          setLocationSource(browserLocation.source || 'gps');
+          setLastLocation(browserLocation);
+          setIsLoading(false);
+          return browserLocation;
+        }
+        
+        setIsLoading(false);
+        return null;
+      }
+      
+      // Use Capacitor implementation for native platforms
+      const capacitorLocation = await getCapacitorLocation();
+      if (capacitorLocation) {
+        setLocationSource(capacitorLocation.source || 'gps');
+        setLastLocation(capacitorLocation);
+        setIsLoading(false);
+        return capacitorLocation;
+      }
+      
+      const errorMessage = 'Failed to get location from any source';
+      setError(errorMessage);
+      toast.error('Location error', { description: errorMessage });
+      setIsLoading(false);
+      return null;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get location';
+      console.error('Error getting current location', err);
+      setError(errorMessage);
+      toast.error('Location error', { description: errorMessage });
+      setIsLoading(false);
+      return null;
+    }
+  }, []);
+
+  // Update location with adaptive settings
+  const updateLocation = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('useCurrentLocation: Getting current location');
+      
       const location = await getCurrentLocation();
       
       if (location) {

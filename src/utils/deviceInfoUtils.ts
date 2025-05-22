@@ -1,25 +1,31 @@
 
-import { Device } from '@capacitor/device';
-import { DeviceInfo } from '@/types/unifiedLocation';
+import { DeviceInfo, Platform } from '@/types/unifiedLocation';
 
 /**
- * Get device info for enhanced location context
+ * Get information about the current device
  */
 export const getDeviceInfo = async (): Promise<DeviceInfo> => {
+  // Default to web platform
+  const deviceInfo: DeviceInfo = {
+    platform: 'web',
+    model: 'Browser',
+    osVersion: navigator.userAgent
+  };
+  
+  // Try to get more specific information if available
   try {
-    const info = await Device.getInfo();
-    const platform = info.platform === 'ios' || info.platform === 'android' 
-      ? info.platform 
-      : 'web';
+    // Check for Capacitor for native apps
+    if ((window as any).Capacitor) {
+      const { Device } = (window as any).Capacitor.Plugins;
+      const info = await Device.getInfo();
       
-    return {
-      platform,
-      model: info.model,
-      osVersion: info.osVersion,
-      // Remove the appVersion property that doesn't exist on DeviceInfo
-    };
-  } catch (err) {
-    console.warn('Could not get device info:', err);
-    return { platform: 'web' };
+      deviceInfo.platform = info.platform.toLowerCase();
+      deviceInfo.model = info.model;
+      deviceInfo.osVersion = info.osVersion;
+    }
+  } catch (error) {
+    console.error('Error getting device info:', error);
   }
+  
+  return deviceInfo;
 };

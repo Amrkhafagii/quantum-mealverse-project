@@ -1,81 +1,47 @@
 
-import { toast } from 'sonner';
 import { DeliveryLocation } from '@/types/location';
-import { LocationSource } from '@/types/unifiedLocation';
-import { securelyStoreLocation } from './locationUtils';
-
-interface GeolocationOptions {
-  enableHighAccuracy: boolean;
-  timeout: number;
-  maximumAge: number;
-}
 
 /**
- * Get location using browser's geolocation API
+ * Get location from browser's Geolocation API
  */
-export const getBrowserLocation = (options: GeolocationOptions = {
-  enableHighAccuracy: true,
-  timeout: 10000,
-  maximumAge: 0
-}): Promise<DeliveryLocation | null> => {
-  return new Promise<DeliveryLocation | null>((resolve) => {
-    if (!navigator.geolocation) {
-      const errorMsg = 'Geolocation is not supported by this browser';
-      console.error(errorMsg);
-      toast.error('Geolocation not supported');
-      resolve(null);
-      return;
-    }
+export const getBrowserLocation = async (): Promise<DeliveryLocation | null> => {
+  // Check if geolocation is supported
+  if (!navigator.geolocation) {
+    throw new Error('Geolocation not supported by this browser');
+  }
+  
+  try {
+    // Get position from browser
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 30000
+      });
+    });
     
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        console.log('Browser geolocation successful');
-        
-        // Determine source based on accuracy
-        let source: LocationSource = 'gps';
-        if (position.coords.accuracy > 100) {
-          source = 'wifi';
-        } else if (position.coords.accuracy > 1000) {
-          source = 'cell_tower';
-        }
-        
-        const locationData: DeliveryLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          timestamp: position.timestamp || Date.now(),
-          accuracy: position.coords.accuracy,
-          speed: position.coords.speed || 0,
-          isMoving: (position.coords.speed || 0) > 0.5,
-          source: source
-        };
-        
-        console.log('Browser location data:', locationData);
-        
-        // Store location data securely when available
-        try {
-          await securelyStoreLocation(locationData);
-        } catch (e) {
-          console.warn('Could not store location securely, falling back to standard storage', e);
-        }
-        
-        resolve(locationData);
-      },
-      (err) => {
-        console.error('Browser geolocation error:', err);
-        
-        let errorMessage = 'An unknown error occurred.';
-        if (err.code === 1) {
-          errorMessage = 'Permission denied. Please enable location in your browser settings.';
-        } else if (err.code === 2) {
-          errorMessage = 'Location information is unavailable.';
-        } else if (err.code === 3) {
-          errorMessage = 'The request to get user location timed out.';
-        }
-        
-        toast.error('Location error', { description: errorMessage });
-        resolve(null);
-      },
-      options
-    );
-  });
+    // Format as DeliveryLocation
+    const location: DeliveryLocation = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      timestamp: position.timestamp,
+      accuracy: position.coords.accuracy,
+      altitude: position.coords.altitude || undefined,
+      heading: position.coords.heading !== null ? position.coords.heading : undefined,
+      speed: position.coords.speed !== null ? position.coords.speed : undefined,
+      source: 'gps'
+    };
+    
+    return location;
+  } catch (error) {
+    if ((error as GeolocationPositionError).code === 1) {
+      throw new Error('Location permission denied');
+    } else if ((error as GeolocationPositionError).code === 2) {
+      throw new Error('Location unavailable');
+    } else if ((error as GeolocationPositionError).code === 3) {
+      throw new Error('Location request timed out');
+    } else {
+      throw error;
+    }
+  }
 };

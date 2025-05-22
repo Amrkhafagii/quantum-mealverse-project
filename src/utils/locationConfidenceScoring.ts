@@ -9,9 +9,11 @@ export const SOURCE_CONFIDENCE: Record<LocationSource, number> = {
   'wifi': 70,
   'network': 60,
   'cell_tower': 50,
-  'ip': 30,
+  'ip_address': 30,
   'manual': 40,
-  'cached': 20
+  'cached': 20,
+  'fused': 80,
+  'unknown': 10
 };
 
 /**
@@ -24,7 +26,8 @@ export const NETWORK_CONFIDENCE_MODIFIER: Record<NetworkType, number> = {
   'cellular_3g': -10,
   'cellular_2g': -20,
   'unknown': -15,
-  'none': -30        // Large reduction if no network
+  'none': -30,       // Large reduction if no network
+  'ethernet': 0      // No reduction for ethernet
 };
 
 /**
@@ -46,7 +49,7 @@ export const ACCURACY_THRESHOLDS = {
  */
 export const calculateLocationConfidence = (location: UnifiedLocation): number => {
   // Start with base confidence from location source
-  let score = SOURCE_CONFIDENCE[location.source] || 50;
+  let score = SOURCE_CONFIDENCE[location.source || 'unknown'] || 50;
   
   // Factor in accuracy if available
   if (location.accuracy !== undefined && location.accuracy !== null) {
@@ -67,11 +70,15 @@ export const calculateLocationConfidence = (location: UnifiedLocation): number =
   
   // Factor in network quality
   if (location.network_type) {
-    score += NETWORK_CONFIDENCE_MODIFIER[location.network_type];
+    score += NETWORK_CONFIDENCE_MODIFIER[location.network_type] || 0;
   }
   
   // Factor in freshness (if timestamp is older than 5 minutes, reduce confidence)
-  const ageInMinutes = (Date.now() - new Date(location.timestamp).getTime()) / (1000 * 60);
+  const timestamp = typeof location.timestamp === 'string' 
+    ? new Date(location.timestamp).getTime() 
+    : (typeof location.timestamp === 'number' ? location.timestamp : Date.now());
+    
+  const ageInMinutes = (Date.now() - timestamp) / (1000 * 60);
   if (ageInMinutes > 30) {
     score -= 50;
   } else if (ageInMinutes > 15) {
@@ -105,9 +112,9 @@ export const getLocationQualityDescription = (location: UnifiedLocation): string
   
   switch (category) {
     case 'high':
-      return `High confidence (${score}%) - ${location.source} location with ${location.accuracy || 'unknown'} meter accuracy`;
+      return `High confidence (${score}%) - ${location.source || 'unknown'} location with ${location.accuracy || 'unknown'} meter accuracy`;
     case 'medium':
-      return `Medium confidence (${score}%) - ${location.source} location with ${location.accuracy || 'unknown'} meter accuracy`;
+      return `Medium confidence (${score}%) - ${location.source || 'unknown'} location with ${location.accuracy || 'unknown'} meter accuracy`;
     case 'low':
       return `Low confidence (${score}%) - Consider refreshing location`;
     case 'very-low':

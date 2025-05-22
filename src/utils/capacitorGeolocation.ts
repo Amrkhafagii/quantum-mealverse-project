@@ -1,75 +1,44 @@
 
-import { Geolocation } from '@capacitor/geolocation';
 import { DeliveryLocation } from '@/types/location';
-import { Platform } from '@/utils/platform';
-import { createDeliveryLocation } from '@/utils/locationConverters';
-import { LocationSource } from '@/types/unifiedLocation';
-import { securelyStoreLocation } from './locationUtils';
 
 /**
- * Get location using Capacitor's Geolocation plugin
+ * Get location using Capacitor Geolocation API
  */
 export const getCapacitorLocation = async (): Promise<DeliveryLocation | null> => {
+  // Check if Capacitor is available
+  if (!(window as any).Capacitor) {
+    return null;
+  }
+  
   try {
-    console.log('Using Capacitor Geolocation with hybrid positioning');
+    // Try to import Capacitor Geolocation
+    const { Geolocation } = (window as any).Capacitor.Plugins;
     
-    // Use options to get the most accurate result on native platforms
-    const options = {
+    // Get current position
+    const position = await Geolocation.getCurrentPosition({
       enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
+      timeout: 15000
+    });
+    
+    if (!position || !position.coords) {
+      return null;
+    }
+    
+    // Format as DeliveryLocation
+    const location: DeliveryLocation = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      timestamp: position.timestamp,
+      accuracy: position.coords.accuracy,
+      altitude: position.coords.altitude,
+      heading: position.coords.heading !== null ? position.coords.heading : undefined,
+      speed: position.coords.speed,
+      source: 'gps'
     };
     
-    // Android has additional options for the Fused Location Provider
-    if (Platform.isAndroid()) {
-      Object.assign(options, {
-        // These would be used by a native implementation of the Fused Location Provider
-        androidFusedLocation: true,
-        forceRequestLocation: true,
-      });
-    }
-    
-    const position = await Geolocation.getCurrentPosition(options);
-    console.log('Capacitor geolocation successful', position);
-    
-    // Extract source from extras if available (set by our enhanced native implementation)
-    let source: LocationSource = 'gps';
-    
-    // Safely access position.extras with a type guard
-    const positionWithExtras = position as any; // Use 'any' for accessing possible extras
-    if (positionWithExtras.extras && typeof positionWithExtras.extras === 'object') {
-      if (positionWithExtras.extras.source && 
-          typeof positionWithExtras.extras.source === 'string') {
-        source = positionWithExtras.extras.source as LocationSource;
-      }
-    }
-    
-    // Fallback: Determine source based on accuracy if not provided by native code
-    if (!source) {
-      if (position.coords.accuracy > 100) {
-        source = 'wifi';
-      } else if (position.coords.accuracy > 1000) {
-        source = 'cell_tower';
-      } else {
-        source = 'gps';
-      }
-    }
-    
-    const locationData: DeliveryLocation = {
-      ...createDeliveryLocation(position),
-      source
-    };
-    
-    // Try to store securely
-    try {
-      await securelyStoreLocation(locationData);
-    } catch (e) {
-      console.warn('Could not store location securely', e);
-    }
-    
-    return locationData;
-  } catch (err) {
-    console.error('Error getting Capacitor location', err);
+    return location;
+  } catch (error) {
+    console.error('Error getting Capacitor location:', error);
     return null;
   }
 };

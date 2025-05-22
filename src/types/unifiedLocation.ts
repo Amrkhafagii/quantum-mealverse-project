@@ -1,9 +1,10 @@
 
-export type LocationSource = 'gps' | 'wifi' | 'cell_tower' | 'ip_address' | 'fused' | 'unknown';
+export type LocationSource = 'gps' | 'wifi' | 'cell_tower' | 'ip_address' | 'fused' | 'unknown' | 'manual' | 'network' | 'cached';
 export type NetworkType = 'wifi' | 'cellular_5g' | 'cellular_4g' | 'cellular_3g' | 'cellular_2g' | 'ethernet' | 'unknown' | 'none';
 export type Platform = 'ios' | 'android' | 'web';
 export type LocationMode = 'foreground' | 'background' | 'passive';
 export type LocationPermission = 'granted' | 'denied' | 'restricted' | 'unknown';
+export type LocationType = 'user' | 'order' | 'restaurant' | 'delivery';
 
 export interface DeviceInfo {
   platform: Platform;
@@ -26,10 +27,37 @@ export interface LocationOptions {
   mode?: LocationMode;
 }
 
+export interface LocationPrivacySettings {
+  retentionDays: number;
+  automaticallyAnonymize: boolean;
+  collectDeviceInfo: boolean;
+  allowPreciseLocation: boolean;
+}
+
+export interface LocationQueryParams {
+  userId?: string;
+  orderId?: string;
+  deliveryAssignmentId?: string;
+  restaurantId?: string;
+  locationType?: LocationType;
+  startDate?: string;
+  endDate?: string;
+  includeExpired?: boolean;
+  limit?: number;
+}
+
+export interface LocationHistoryEntry extends UnifiedLocation {
+  entryType: 'location' | 'gap' | 'event';
+  durationSeconds?: number;
+  eventType?: string;
+  eventDescription?: string;
+}
+
 export interface UnifiedLocation {
+  id?: string;
   latitude: number;
   longitude: number;
-  timestamp: number;
+  timestamp: number | string;
   altitude?: number;
   accuracy?: number;
   speed?: number;
@@ -39,6 +67,16 @@ export interface UnifiedLocation {
   deviceInfo?: DeviceInfo;
   networkInfo?: NetworkInfo;
   isMoving?: boolean;
+  network_type?: NetworkType;
+  location_type?: LocationType;
+  user_id?: string;
+  order_id?: string;
+  delivery_assignment_id?: string;
+  restaurant_id?: string;
+  is_anonymized?: boolean;
+  device_info?: DeviceInfo;
+  retention_expires_at?: string;
+  user_consent?: boolean;
   metadata?: {
     applicationState?: 'active' | 'background' | 'inactive';
     batteryLevel?: number;
