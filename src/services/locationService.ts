@@ -239,7 +239,7 @@ export const findNearbyLocations = async (
 ): Promise<UnifiedLocation[]> => {
   try {
     // Use a SQL RPC call to leverage PostGIS
-    const { data, error } = await supabase.rpc('find_nearby_locations', {
+    const { data, error } = await supabase.rpc('find_nearby_locations' as any, {
       p_latitude: latitude,
       p_longitude: longitude,
       p_radius_km: radiusKm,

@@ -275,6 +275,27 @@ export type Database = {
         }
         Relationships: []
       }
+      data_retention_logs: {
+        Row: {
+          executed_at: string
+          id: string
+          results: Json
+          success: boolean
+        }
+        Insert: {
+          executed_at?: string
+          id?: string
+          results: Json
+          success?: boolean
+        }
+        Update: {
+          executed_at?: string
+          id?: string
+          results?: Json
+          success?: boolean
+        }
+        Relationships: []
+      }
       delivery_assignment_rejections: {
         Row: {
           assignment_id: string
@@ -2049,6 +2070,84 @@ export type Database = {
         }
         Relationships: []
       }
+      unified_locations: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          altitude_accuracy: number | null
+          battery_level: number | null
+          delivery_assignment_id: string | null
+          device_info: Json | null
+          geom: unknown | null
+          heading: number | null
+          id: string
+          is_anonymized: boolean | null
+          is_moving: boolean | null
+          latitude: number
+          location_type: string
+          longitude: number
+          network_type: string | null
+          order_id: string | null
+          restaurant_id: string | null
+          retention_expires_at: string | null
+          source: string
+          speed: number | null
+          timestamp: string
+          user_consent: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          altitude?: number | null
+          altitude_accuracy?: number | null
+          battery_level?: number | null
+          delivery_assignment_id?: string | null
+          device_info?: Json | null
+          geom?: unknown | null
+          heading?: number | null
+          id?: string
+          is_anonymized?: boolean | null
+          is_moving?: boolean | null
+          latitude: number
+          location_type: string
+          longitude: number
+          network_type?: string | null
+          order_id?: string | null
+          restaurant_id?: string | null
+          retention_expires_at?: string | null
+          source: string
+          speed?: number | null
+          timestamp?: string
+          user_consent?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          altitude?: number | null
+          altitude_accuracy?: number | null
+          battery_level?: number | null
+          delivery_assignment_id?: string | null
+          device_info?: Json | null
+          geom?: unknown | null
+          heading?: number | null
+          id?: string
+          is_anonymized?: boolean | null
+          is_moving?: boolean | null
+          latitude?: number
+          location_type?: string
+          longitude?: number
+          network_type?: string | null
+          order_id?: string | null
+          restaurant_id?: string | null
+          retention_expires_at?: string | null
+          source?: string
+          speed?: number | null
+          timestamp?: string
+          user_consent?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       unit_test_customer: {
         Row: {
           actual_output: Json | null
@@ -2941,6 +3040,40 @@ export type Database = {
           customer_address: string
           customer_latitude: number
           customer_longitude: number
+        }[]
+      }
+      find_nearby_locations: {
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_radius_km?: number
+          p_location_type?: string
+          p_limit?: number
+        }
+        Returns: {
+          accuracy: number | null
+          altitude: number | null
+          altitude_accuracy: number | null
+          battery_level: number | null
+          delivery_assignment_id: string | null
+          device_info: Json | null
+          geom: unknown | null
+          heading: number | null
+          id: string
+          is_anonymized: boolean | null
+          is_moving: boolean | null
+          latitude: number
+          location_type: string
+          longitude: number
+          network_type: string | null
+          order_id: string | null
+          restaurant_id: string | null
+          retention_expires_at: string | null
+          source: string
+          speed: number | null
+          timestamp: string
+          user_consent: boolean | null
+          user_id: string | null
         }[]
       }
       find_nearest_restaurant: {

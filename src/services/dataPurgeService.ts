@@ -1,4 +1,3 @@
-
 import { runRetentionPolicies } from './locationService';
 import { supabase } from '@/integrations/supabase/client';
 
