@@ -26,19 +26,23 @@ export const saveLocation = async (
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + settings.retentionDays);
     
+    // Check if source is valid, default to 'manual' if not
+    if (!isValidSource(location.source)) {
+      console.warn(`Invalid location source: ${location.source}, defaulting to 'manual'`);
+      location.source = 'manual';
+    }
+    
     const locationToSave = {
       ...locationWithPrivacy,
       retention_expires_at: expiryDate.toISOString(),
       id: location.id || crypto.randomUUID(),
       timestamp: location.timestamp || new Date().toISOString(),
-      // Ensure source is valid - default to 'manual' if not specified or invalid
-      source: isValidSource(location.source) ? location.source : 'manual'
+      source: location.source || 'manual'
     };
 
-    // Now we can access the table since it's been created
-    // Use custom types for now since the types haven't been regenerated yet
+    // Use type assertion to tell TypeScript this table exists
     const { data, error } = await supabase
-      .from('unified_locations')
+      .from('unified_locations' as any)
       .insert(locationToSave)
       .select();
 
@@ -70,7 +74,7 @@ export const queryLocations = async (
 ): Promise<UnifiedLocation[]> => {
   try {
     let query = supabase
-      .from('unified_locations')
+      .from('unified_locations' as any)
       .select();
 
     // Apply filters
@@ -141,7 +145,7 @@ export const getLatestLocation = async (
 ): Promise<UnifiedLocation | null> => {
   try {
     const { data, error } = await supabase
-      .from('unified_locations')
+      .from('unified_locations' as any)
       .select()
       .eq('location_type', type)
       .eq(idField, id)
@@ -171,7 +175,7 @@ export const getLatestLocation = async (
 export const deleteLocation = async (locationId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('unified_locations')
+      .from('unified_locations' as any)
       .delete()
       .eq('id', locationId);
 
@@ -197,7 +201,7 @@ export const deleteUserLocationHistory = async (
 ): Promise<boolean> => {
   try {
     let query = supabase
-      .from('unified_locations')
+      .from('unified_locations' as any)
       .delete()
       .eq('user_id', userId);
     
@@ -234,9 +238,8 @@ export const findNearbyLocations = async (
   limit: number = 20
 ): Promise<UnifiedLocation[]> => {
   try {
-    // Note: Since function support may be limited, we'll need to adapt this
-    // to use direct ST_DWithin queries if RPC doesn't work
-    const query = `
+    // Since we can't use function call directly, use a raw SQL query
+    const sql = `
       SELECT * FROM unified_locations
       WHERE ST_DWithin(
         ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
@@ -248,15 +251,16 @@ export const findNearbyLocations = async (
         ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
       )
-      LIMIT $${type ? "5" : "4"}
+      LIMIT ${type ? "$5" : "$4"}
     `;
     
     const params = type 
       ? [longitude, latitude, radiusKm, type, limit]
       : [longitude, latitude, radiusKm, limit];
     
-    const { data, error } = await supabase.rpc('query_raw', { 
-      sql_query: query, 
+    // Use a standard RPC call to execute custom queries
+    const { data, error } = await supabase.rpc('query_raw' as any, { 
+      sql_query: sql, 
       params: params 
     });
 
