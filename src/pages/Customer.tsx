@@ -50,10 +50,7 @@ const Customer = () => {
         
         if (location && location.latitude && location.longitude) {
           // Manual call to find restaurants if we got location via fallback
-          findNearestRestaurants({
-            latitude: location.latitude,
-            longitude: location.longitude
-          });
+          findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
           toast.success('Location updated successfully');
           success = true;
         }
@@ -75,7 +72,7 @@ const Customer = () => {
     // This will be called by LocationStateManager when location is updated
     if (loc && loc.latitude && loc.longitude) {
       console.log('Location updated:', loc);
-      findNearestRestaurants(loc);
+      findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
       // Set the flag to auto-navigate to menu when location is first acquired
       localStorage.setItem('autoNavigateToMenu', 'true');
     }
