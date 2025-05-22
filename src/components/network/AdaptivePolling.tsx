@@ -1,111 +1,131 @@
 
-import React, { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { getAdaptivePollingInterval } from '@/utils/networkAdaptation';
-import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
+import { useBatteryMonitor } from '@/utils/batteryMonitor';
+import { NetworkAwareContainer } from './NetworkAwareContainer';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
-const AdaptivePolling = () => {
-  const [baseInterval, setBaseInterval] = useState<number>(30);
-  const [networkType, setNetworkType] = useState<NetworkType>('wifi');
-  const [networkQuality, setNetworkQuality] = useState<NetworkQuality>('good');
-  const [isActive, setIsActive] = useState<boolean>(true);
-  const [currentInterval, setCurrentInterval] = useState<number>(30);
+interface AdaptivePollingProps {
+  children?: React.ReactNode;
+  title?: string;
+  baseInterval?: number;
+  onPoll?: () => Promise<any>;
+  showControls?: boolean;
+  initiallyEnabled?: boolean;
+}
 
-  // Update interval when parameters change
+export default function AdaptivePolling({
+  children,
+  title = 'Adaptive Polling',
+  baseInterval = 5000,
+  onPoll,
+  showControls = true,
+  initiallyEnabled = false
+}: AdaptivePollingProps) {
+  const { quality, isOnline } = useNetworkQuality();
+  const { batteryLevel } = useBatteryMonitor();
+  const [isPolling, setIsPolling] = useState(initiallyEnabled);
+  const [adaptiveInterval, setAdaptiveInterval] = useState(baseInterval);
+  const [lastPollTime, setLastPollTime] = useState<Date | null>(null);
+  const [nextPollTime, setNextPollTime] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Calculate adaptive polling interval based on network quality
   useEffect(() => {
-    const baseIntervalMs = baseInterval * 1000;
-    const adaptedIntervalMs = getAdaptivePollingInterval(
-      baseIntervalMs, 
-      networkType,
-      networkQuality,
-      isActive
+    const interval = getAdaptivePollingInterval(
+      baseInterval,
+      quality,
+      isOnline,
+      batteryLevel
     );
-    setCurrentInterval(adaptedIntervalMs / 1000); // Convert back to seconds for display
-  }, [baseInterval, networkType, networkQuality, isActive]);
-
+    setAdaptiveInterval(interval);
+  }, [quality, isOnline, batteryLevel, baseInterval]);
+  
+  // Polling function
+  const poll = useCallback(async () => {
+    if (!isPolling || !onPoll || !isOnline) return;
+    
+    setIsLoading(true);
+    setLastPollTime(new Date());
+    
+    try {
+      await onPoll();
+    } catch (error) {
+      console.error('Error polling:', error);
+    } finally {
+      setIsLoading(false);
+      // Schedule next poll
+      const nextTime = new Date();
+      nextTime.setTime(nextTime.getTime() + adaptiveInterval);
+      setNextPollTime(nextTime);
+    }
+  }, [isPolling, onPoll, adaptiveInterval, isOnline]);
+  
+  // Set up polling interval
+  useEffect(() => {
+    if (!isPolling) {
+      setNextPollTime(null);
+      return;
+    }
+    
+    // Initial poll
+    poll();
+    
+    // Set up interval for regular polling
+    const intervalId = setInterval(() => {
+      poll();
+    }, adaptiveInterval);
+    
+    return () => clearInterval(intervalId);
+  }, [isPolling, poll, adaptiveInterval]);
+  
+  const togglePolling = () => {
+    setIsPolling(prev => !prev);
+  };
+  
   return (
-    <div className="p-4 border rounded-md space-y-4">
-      <div className="flex justify-between">
-        <h3 className="text-lg font-medium">Adaptive Polling Demo</h3>
-        <div className="text-sm text-muted-foreground">
-          Current interval: <span className="font-semibold">{currentInterval.toFixed(1)}s</span>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label>Base Interval (seconds)</Label>
-          <Slider 
-            defaultValue={[baseInterval]} 
-            max={60} 
-            min={5}
-            step={1}
-            onValueChange={(val) => setBaseInterval(val[0])}
-          />
-          <div className="text-sm text-right">{baseInterval}s</div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Network Type</Label>
-            <Select 
-              value={networkType} 
-              onValueChange={(value) => setNetworkType(value as NetworkType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="wifi">WiFi</SelectItem>
-                <SelectItem value="cellular_5g">5G</SelectItem>
-                <SelectItem value="cellular_4g">4G</SelectItem>
-                <SelectItem value="cellular_3g">3G</SelectItem>
-                <SelectItem value="ethernet">Ethernet</SelectItem>
-                <SelectItem value="none">No Connection</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Network Quality</Label>
-            <Select 
-              value={networkQuality} 
-              onValueChange={(value) => setNetworkQuality(value as NetworkQuality)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="excellent">Excellent</SelectItem>
-                <SelectItem value="good">Good</SelectItem>
-                <SelectItem value="fair">Fair</SelectItem>
-                <SelectItem value="poor">Poor</SelectItem>
-                <SelectItem value="very-poor">Very Poor</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>App State</Label>
-          <Select 
-            value={isActive ? "active" : "background"}
-            onValueChange={(value) => setIsActive(value === "active")}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active (Foreground)</SelectItem>
-              <SelectItem value="background">Background</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
+    <NetworkAwareContainer>
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {showControls && (
+            <div className="mb-4 flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Polling interval: <span className="font-medium">{adaptiveInterval / 1000}s</span>
+                </p>
+                {lastPollTime && (
+                  <p className="text-xs text-muted-foreground">
+                    Last poll: {lastPollTime.toLocaleTimeString()}
+                  </p>
+                )}
+              </div>
+              
+              <Button
+                variant={isPolling ? "default" : "outline"}
+                onClick={togglePolling}
+                size="sm"
+                className="ml-2"
+                disabled={!isOnline && isPolling}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Polling...
+                  </>
+                ) : isPolling ? 'Stop Polling' : 'Start Polling'}
+              </Button>
+            </div>
+          )}
+          
+          {children}
+        </CardContent>
+      </Card>
+    </NetworkAwareContainer>
   );
-};
-
-export default AdaptivePolling;
+}

@@ -18,8 +18,8 @@ export const NetworkStateIndicator: React.FC<NetworkStateIndicatorProps> = ({
   alwaysShow = false,
   variant = 'normal'
 }) => {
-  const { isOnline, connectionType } = useConnectionStatus();
-  const { quality, isFlaky, hasTransitioned } = useNetworkQuality();
+  const { isOnline, connectionType, wasOffline, resetWasOffline } = useConnectionStatus();
+  const { quality, isLowQuality, hasTransitioned, isFlaky } = useNetworkQuality();
   const [visible, setVisible] = useState(false);
   const [wasOnline, setWasOnline] = useState(isOnline);
   const [lastTransitionTime, setLastTransitionTime] = useState<number | null>(null);
@@ -75,7 +75,8 @@ export const NetworkStateIndicator: React.FC<NetworkStateIndicatorProps> = ({
   const getMessage = () => {
     if (!isOnline) return 'Offline mode';
     if (isFlaky) return 'Unstable connection';
-    if (quality === 'poor' || quality === 'very-poor') return 'Poor connection';
+    if (quality === 'very-poor') return 'Very poor connection';
+    if (quality === 'poor') return 'Poor connection';
     if (quality === 'fair') return 'Fair connection';
     if (quality === 'excellent') return 'Excellent connection';
     return 'Online';
@@ -94,7 +95,7 @@ export const NetworkStateIndicator: React.FC<NetworkStateIndicatorProps> = ({
           <div className={`${getBackgroundColor()} text-white rounded-full shadow-lg flex items-center ${variant === 'slim' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1'} pointer-events-auto`}>
             {getIcon()}
             <span className="ml-1">{getMessage()}</span>
-            {showQuality && quality !== 'unknown' && variant !== 'slim' && (
+            {showQuality && quality && quality !== 'unknown' && variant !== 'slim' && (
               <span className="ml-1 text-xs opacity-80">({quality})</span>
             )}
           </div>

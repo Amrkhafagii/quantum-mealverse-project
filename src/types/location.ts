@@ -1,7 +1,7 @@
 
 // If the file doesn't exist, create it
 export type LocationSource = 'gps' | 'wifi' | 'cell' | 'manual' | 'ip' | 'cached';
-export type LocationFreshness = 'fresh' | 'moderate' | 'stale' | 'invalid';
+export type LocationFreshness = 'fresh' | 'moderate' | 'stale' | 'invalid' | 'recent' | 'expired';
 
 export interface DeliveryLocation {
   latitude: number;
