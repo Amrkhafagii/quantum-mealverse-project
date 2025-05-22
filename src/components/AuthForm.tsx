@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -24,6 +25,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [platformInitialized, setPlatformInitialized] = useState(false);
   
   // Restaurant specific fields
   const [restaurantName, setRestaurantName] = useState('');
@@ -37,6 +39,40 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const location = useLocation();
   const { requestPermission } = useLocationPermission();
   
+  // Check platform initialization
+  useEffect(() => {
+    let mounted = true;
+    let checkTimer: number | undefined;
+    
+    const checkPlatform = () => {
+      try {
+        // Check if platform is initialized
+        if (Platform.isInitialized()) {
+          if (mounted) {
+            setPlatformInitialized(true);
+          }
+          return;
+        }
+        
+        // Retry after a delay
+        checkTimer = window.setTimeout(checkPlatform, 100);
+      } catch (error) {
+        console.warn("Error checking platform:", error);
+        if (mounted) {
+          // Proceed anyway to avoid blocking auth
+          setPlatformInitialized(true);
+        }
+      }
+    };
+    
+    checkPlatform();
+    
+    return () => {
+      mounted = false;
+      if (checkTimer) clearTimeout(checkTimer);
+    };
+  }, []);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -195,6 +231,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     setShowLocationPrompt(false);
     navigate('/', { replace: true });
   };
+  
+  // Handle biometric login success
+  const handleBiometricSuccess = () => {
+    setShowLocationPrompt(true);
+  };
+  
+  // Handle biometric login error
+  const handleBiometricError = (error: any) => {
+    console.error("Biometric login error:", error);
+    toast({
+      title: "Biometric login failed",
+      description: "Please login with your email and password instead.",
+      variant: "destructive",
+    });
+  };
 
   // Render the location prompt or the auth form
   if (showLocationPrompt) {
@@ -207,18 +258,30 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     );
   }
 
-  // Only render biometric button if we're on a native platform
-  const renderBiometricButton = () => {
-    if (!Platform.isInitialized()) return null;
+  // Safely determine if biometric login should be rendered
+  const shouldShowBiometricButton = () => {
+    if (mode !== 'login') return false;
     
-    if (mode === 'login' && Platform.isNative()) {
-      return (
-        <BiometricErrorBoundary>
-          <BiometricLoginButton onSuccess={() => setShowLocationPrompt(true)} />
-        </BiometricErrorBoundary>
-      );
+    try {
+      return platformInitialized && Platform.isNative();
+    } catch (error) {
+      console.warn("Error checking platform for biometrics:", error);
+      return false;
     }
-    return null;
+  };
+
+  // Render biometric button with error boundary
+  const renderBiometricButton = () => {
+    if (!shouldShowBiometricButton()) return null;
+    
+    return (
+      <BiometricErrorBoundary>
+        <BiometricLoginButton 
+          onSuccess={handleBiometricSuccess} 
+          onError={handleBiometricError}
+        />
+      </BiometricErrorBoundary>
+    );
   };
 
   return (

@@ -10,10 +10,15 @@ import { useNavigate } from 'react-router-dom';
 
 export interface BiometricLoginButtonProps {
   onSuccess?: () => void;
+  onError?: (error: any) => void;
 }
 
-export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSuccess }) => {
+export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ 
+  onSuccess,
+  onError
+}) => {
   const [loading, setLoading] = useState(false);
+  const [platformReady, setPlatformReady] = useState(false);
   const { 
     isAvailable, 
     biometryType, 
@@ -24,11 +29,32 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  // Check if platform is initialized before proceeding
+  useEffect(() => {
+    const checkPlatform = () => {
+      // Use try/catch to safely check platform initialization
+      try {
+        if (Platform.isInitialized()) {
+          setPlatformReady(true);
+        } else {
+          // Try again in 100ms if platform is not initialized
+          setTimeout(checkPlatform, 100);
+        }
+      } catch (error) {
+        console.warn("Error checking platform initialization:", error);
+        setPlatformReady(false);
+      }
+    };
+    
+    checkPlatform();
+  }, []);
+  
   // Don't render anything if:
-  // 1. Biometric auth is not initialized yet
-  // 2. Biometrics are not available
-  // 3. We're not on a native platform (web)
-  if (!isInitialized || !isAvailable || !Platform.isNative()) {
+  // 1. Platform is not ready
+  // 2. Biometric auth is not initialized yet
+  // 3. Biometrics are not available
+  // 4. We're not on a native platform (web)
+  if (!platformReady || !isInitialized || !isAvailable || !Platform.isNative()) {
     return null;
   }
   
@@ -67,6 +93,10 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
               description: "There was an error completing your login. Please try again with your password.",
               variant: "destructive"
             });
+            
+            if (onError) {
+              onError(loginError);
+            }
           }
         } else {
           toast({
@@ -83,6 +113,10 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
         description: "There was an error with biometric authentication. Please try again or use your password.",
         variant: "destructive"
       });
+      
+      if (onError) {
+        onError(error);
+      }
     } finally {
       setLoading(false);
     }
