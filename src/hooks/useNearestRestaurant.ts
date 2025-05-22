@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocationTracker } from './useLocationTracker';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface NearbyRestaurant {
   restaurant_id: string;
@@ -18,8 +19,17 @@ export const useNearestRestaurant = () => {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const [refreshStatus, setRefreshStatus] = useState<'idle' | 'refreshing' | 'error'>('idle');
   const { location, locationIsValid } = useLocationTracker();
+  const { user } = useAuth();
 
   const findNearestRestaurants = useCallback(async (maxDistance = 50) => {
+    // If not authenticated, don't fetch restaurants
+    if (!user) {
+      console.log('User is not authenticated, skipping restaurant fetch');
+      setRefreshStatus('idle');
+      setLoading(false);
+      return null;
+    }
+
     if (!locationIsValid()) {
       setRefreshStatus('error');
       toast.error("Location required", { 
@@ -76,16 +86,17 @@ export const useNearestRestaurant = () => {
     } finally {
       setLoading(false);
     }
-  }, [location, locationIsValid, lastRefreshTime]);
+  }, [location, locationIsValid, lastRefreshTime, user]);
 
   useEffect(() => {
-    if (locationIsValid()) {
-      console.log('Location is valid, finding nearest restaurants');
+    // Only find restaurants if user is authenticated and location is valid
+    if (user && locationIsValid()) {
+      console.log('Location is valid and user is authenticated, finding nearest restaurants');
       findNearestRestaurants();
     } else {
-      console.log('Location is not valid yet');
+      console.log('Location is not valid or user is not authenticated yet');
     }
-  }, [location, locationIsValid, findNearestRestaurants]);
+  }, [location, locationIsValid, findNearestRestaurants, user]);
 
   const refreshRestaurants = useCallback((maxDistance = 50) => {
     findNearestRestaurants(maxDistance);

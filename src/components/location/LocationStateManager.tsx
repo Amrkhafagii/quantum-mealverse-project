@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { useNavigate } from 'react-router-dom';
 import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
+import { useAuth } from '@/hooks/useAuth';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 
 interface LocationStateManagerProps {
   onLocationUpdate?: (location: { latitude: number; longitude: number }) => void;
@@ -42,6 +44,10 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     isLocationStale
   } = useLocationPermission();
   
+  const { user } = useAuth();
+  const { isPlatformIOS, isPlatformAndroid } = useResponsive();
+  const isMobileDevice = isPlatformIOS || isPlatformAndroid;
+  
   const navigate = useNavigate();
   const { nearbyRestaurants, findNearestRestaurants } = useNearestRestaurant();
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
@@ -50,7 +56,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
   const [hasNavigated, setHasNavigated] = useState(false);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
-  // Check user type from current path
+  // Check if user type from current path
   const isDeliveryUser = window.location.pathname.includes('/delivery/');
 
   // Check for cached location in localStorage on mount
@@ -60,18 +66,25 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     const cachedLocationString = localStorage.getItem('userLocation');
     
     // Determine whether to show the prompt based on:
-    // 1. If forcePrompt is true, we show it unless permission is already granted
-    // 2. If we're a delivery user, we always need location permission
-    // 3. If we've already shown the prompt before (tracked in hasShownInitialPrompt)
-    // 4. If we already have permission granted (from permission state)
-    const shouldShowPrompt = (forcePrompt && permissionStatus !== 'granted') || 
-                             (isDeliveryUser && permissionStatus !== 'granted') ||
-                             (!hasShownInitialPrompt && permissionStatus !== 'granted');
+    // 1. User must be authenticated to see location prompt on web
+    // 2. If forcePrompt is true and the user is authenticated, we show it unless permission is already granted
+    // 3. If we're a delivery user, we always need location permission
+    // 4. If we've already shown the prompt before (tracked in hasShownInitialPrompt)
+    // 5. If we already have permission granted (from permission state)
+    
+    // For mobile devices, we should always request permission regardless of auth state
+    // For web, only request if the user is authenticated
+    const isAuthenticated = user !== null;
+    const shouldShowPrompt = 
+      (isMobileDevice || isAuthenticated) && // Only show if on mobile OR authenticated on web
+      ((forcePrompt && permissionStatus !== 'granted') || 
+      (isDeliveryUser && permissionStatus !== 'granted') ||
+      (!hasShownInitialPrompt && permissionStatus !== 'granted'));
     
     setShowPermissionPrompt(shouldShowPrompt);
     
     // If we have cached location, use it immediately
-    if (cachedLocationString && !location) {
+    if (cachedLocationString && !location && isAuthenticated) {
       try {
         const parsedLocation = JSON.parse(cachedLocationString);
         if (parsedLocation?.latitude && parsedLocation?.longitude) {
@@ -92,10 +105,13 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     }
     
     setInitialCheckDone(true);
-  }, [hasInitialized, location, hasShownInitialPrompt, isDeliveryUser, forcePrompt, onLocationUpdate, permissionStatus]);
+  }, [hasInitialized, location, hasShownInitialPrompt, isDeliveryUser, forcePrompt, onLocationUpdate, permissionStatus, user, isMobileDevice]);
 
   // Update location cache when location changes
   useEffect(() => {
+    // Don't update anything if user is not authenticated (except for delivery users who need location)
+    if (!user && !isDeliveryUser) return;
+
     if (location?.coords && location.coords.latitude && location.coords.longitude) {
       const locationData = {
         latitude: location.coords.latitude,
@@ -109,8 +125,8 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         onLocationUpdate(locationData);
       }
 
-      // Find the nearest restaurants if not a delivery user
-      if (!isDeliveryUser) {
+      // Find the nearest restaurants if not a delivery user and user is authenticated
+      if (!isDeliveryUser && user) {
         findNearestRestaurants();
       }
       
@@ -130,7 +146,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         }, 1500);
       }
     }
-  }, [location, hasContentLoaded, onLocationUpdate, findNearestRestaurants, isDeliveryUser]);
+  }, [location, hasContentLoaded, onLocationUpdate, findNearestRestaurants, isDeliveryUser, user]);
 
   // Navigate to restaurant menu when restaurants are found
   useEffect(() => {
@@ -139,7 +155,8 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
       nearbyRestaurants.length > 0 && 
       !hasNavigated && 
       hasContentLoaded && 
-      !isLoading
+      !isLoading &&
+      user // Only auto-navigate if user is authenticated
     ) {
       setHasNavigated(true);
       const firstRestaurant = nearbyRestaurants[0];
@@ -154,7 +171,7 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         description: "Taking you to the nearest menu..."
       });
     }
-  }, [nearbyRestaurants, autoNavigateToMenu, hasNavigated, hasContentLoaded, isLoading, navigate]);
+  }, [nearbyRestaurants, autoNavigateToMenu, hasNavigated, hasContentLoaded, isLoading, navigate, user]);
 
   const handlePermissionGranted = async () => {
     setIsLoading(true);
@@ -183,6 +200,15 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
     }
   };
 
+  const handleSignIn = () => {
+    // Redirect to auth page
+    navigate('/auth', { state: { referrer: '/customer' } });
+    
+    toast.info("Sign in required", {
+      description: "Please sign in to see restaurants near you"
+    });
+  };
+
   // Decide what to render based on permission state and loading
   const renderContent = () => {
     // If we're still doing initial check or initialization, show brief loading
@@ -191,6 +217,35 @@ export const LocationStateManager: React.FC<LocationStateManagerProps> = ({
         <div className="flex items-center justify-center py-8">
           <LoadingSpinner size="small" text="Loading location data..." />
         </div>
+      );
+    }
+
+    // Check if user is authenticated (unless we're in the delivery section)
+    if (!user && !isDeliveryUser) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.3 }}
+          className="bg-quantum-darkBlue/50 border-l-4 border-quantum-cyan p-6 rounded-md mb-6"
+        >
+          <div className="flex items-start">
+            <AlertTriangle className="h-6 w-6 text-quantum-cyan mr-4 mt-1" />
+            <div>
+              <h3 className="text-lg font-medium mb-2">Sign in required</h3>
+              <p className="text-gray-400 mb-4">
+                Please sign in to see restaurants and meals near you.
+              </p>
+              <Button 
+                onClick={handleSignIn}
+                className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+              >
+                Sign In
+              </Button>
+            </div>
+          </div>
+        </motion.div>
       );
     }
     

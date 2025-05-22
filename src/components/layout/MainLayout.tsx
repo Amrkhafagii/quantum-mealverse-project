@@ -46,9 +46,13 @@ const MainLayout: React.FC = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/about" element={<About />} />
                 
-                {/* Customer Routes */}
+                {/* Customer Routes - now protected */}
                 <Route path="/shop" element={<Shop />} />
-                <Route path="/customer" element={<Customer />} />
+                <Route path="/customer" element={
+                  <ProtectedRoute>
+                    <Customer />
+                  </ProtectedRoute>
+                } />
                 <Route path="/restaurant/:id" element={<Restaurant />} />
                 
                 {/* Protected Routes requiring authentication */}
