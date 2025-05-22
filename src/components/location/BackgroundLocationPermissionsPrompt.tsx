@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { MapPin, MapPinOff, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Platform } from '@/utils/platform';
@@ -20,9 +20,9 @@ export const BackgroundLocationPermissionsPrompt = () => {
   
   // Get Android version on component mount
   useEffect(() => {
-    const getAndroidVersion = async () => {
+    const getAndroidVersion = () => {
       if (Platform.isAndroid()) {
-        const version = await Platform.getAndroidVersion();
+        const version = Platform.getAndroidVersion();
         setAndroidVersion(version);
       }
     };

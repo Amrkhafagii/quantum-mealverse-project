@@ -51,6 +51,8 @@ export interface LocationHistoryEntry extends UnifiedLocation {
   durationSeconds?: number;
   eventType?: string;
   eventDescription?: string;
+  place_name?: string;
+  activity?: string;
 }
 
 export interface UnifiedLocation {
@@ -95,6 +97,7 @@ export interface UnifiedLocation {
     adminArea?: string;
     country?: string;
     postalCode?: string;
+    replace?: (value: string) => string;
   };
 }
 
@@ -118,3 +121,13 @@ export interface LocationServiceConfig {
   showsBackgroundLocationIndicator?: boolean;
   pausesLocationUpdatesAutomatically?: boolean;
 }
+
+export interface NetworkMetrics {
+  latency: number;
+  bandwidth: number;
+  packetLoss: number;
+  jitter: number;
+  reliability: number;
+}
+
+export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'unknown';

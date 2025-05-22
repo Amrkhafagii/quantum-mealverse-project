@@ -10,6 +10,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, Map, Activity, Battery } from 'lucide-react';
 import { toast } from 'sonner';
+import { Platform } from '@/utils/platform';
+import { getDeviceInfo } from '@/utils/deviceInfoUtils';
+import { getNetworkInfo } from '@/utils/networkInfoUtils';
+import { getBrowserLocation } from '@/utils/webGeolocation';
+import { getCapacitorLocation } from '@/utils/capacitorGeolocation';
 
 interface AdaptiveLocationTrackerProps {
   activityContext?: 'stationary' | 'walking' | 'driving' | 'unknown';
@@ -22,6 +27,9 @@ export function AdaptiveLocationTracker({
 }: AdaptiveLocationTrackerProps) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [locationHistory, setLocationHistory] = useState<UnifiedLocation[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [locationSource, setLocationSource] = useState<string>('unknown');
   
   // Use our hooks
   const { getCurrentLocation, isLoadingLocation, locationError, lastLocation } = useCurrentLocation();
@@ -47,9 +55,12 @@ export function AdaptiveLocationTracker({
       speed: location.speed || undefined,
       timestamp: new Date().toISOString(),
       deviceInfo: { platform: 'web' },
-      source: (location.source as LocationSource) || 'manual',
+      source: (location.source as LocationSource) || 'unknown',
       isMoving: location.isMoving,
-      network_type: networkType as any
+      networkInfo: { 
+        type: networkType as any, 
+        connected: isNetworkAvailable
+      }
     };
   };
 
@@ -58,59 +69,7 @@ export function AdaptiveLocationTracker({
     try {
       setIsLoading(true);
       setError(null);
-      console.log('useCurrentLocation: Getting current location');
-      
-      // Try to get device and network info for enhanced context
-      const [deviceInfo, networkInfo] = await Promise.all([
-        getDeviceInfo(),
-        getNetworkInfo()
-      ]);
-      
-      // Special handling for web environment - use browser API directly
-      if (Platform.isWeb()) {
-        console.log('useCurrentLocation: Using browser geolocation API');
-        const browserLocation = await getBrowserLocation();
-        if (browserLocation) {
-          setLocationSource(browserLocation.source || 'gps');
-          setLastLocation(browserLocation);
-          setIsLoading(false);
-          return browserLocation;
-        }
-        
-        setIsLoading(false);
-        return null;
-      }
-      
-      // Use Capacitor implementation for native platforms
-      const capacitorLocation = await getCapacitorLocation();
-      if (capacitorLocation) {
-        setLocationSource(capacitorLocation.source || 'gps');
-        setLastLocation(capacitorLocation);
-        setIsLoading(false);
-        return capacitorLocation;
-      }
-      
-      const errorMessage = 'Failed to get location from any source';
-      setError(errorMessage);
-      toast.error('Location error', { description: errorMessage });
-      setIsLoading(false);
-      return null;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to get location';
-      console.error('Error getting current location', err);
-      setError(errorMessage);
-      toast.error('Location error', { description: errorMessage });
-      setIsLoading(false);
-      return null;
-    }
-  }, []);
-
-  // Update location with adaptive settings
-  const updateLocation = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('useCurrentLocation: Getting current location');
+      console.log('AdaptiveLocationTracker: Getting current location');
       
       const location = await getCurrentLocation();
       
@@ -127,9 +86,12 @@ export function AdaptiveLocationTracker({
       }
     } catch (err) {
       console.error('Error updating location', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
       toast.error('Failed to update location', {
         description: err instanceof Error ? err.message : 'Unknown error'
       });
+    } finally {
+      setIsLoading(false);
     }
   }, [getCurrentLocation, networkType, onLocationUpdate]);
   
@@ -241,12 +203,12 @@ export function AdaptiveLocationTracker({
           </div>
           <Button 
             onClick={updateLocation} 
-            disabled={isLoadingLocation}
+            disabled={isLoadingLocation || isLoading}
             variant="outline"
             size="sm"
             className="flex items-center gap-1"
           >
-            {isLoadingLocation ? (
+            {isLoadingLocation || isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />

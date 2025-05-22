@@ -7,13 +7,13 @@ import { LocationSource, UnifiedLocation, NetworkType } from '@/types/unifiedLoc
 export const SOURCE_CONFIDENCE: Record<LocationSource, number> = {
   'gps': 90,
   'wifi': 70,
-  'network': 60,
   'cell_tower': 50,
   'ip_address': 30,
   'manual': 40,
   'cached': 20,
   'fused': 80,
-  'unknown': 10
+  'unknown': 10,
+  'network': 60
 };
 
 /**
