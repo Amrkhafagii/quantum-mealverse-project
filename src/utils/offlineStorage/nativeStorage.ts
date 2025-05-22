@@ -9,7 +9,10 @@ const loadPreferences = async () => {
   if (Preferences) return Preferences;
   
   try {
-    const module = await import('@capacitor/preferences');
+    // Using Function constructor to prevent bundlers from analyzing this at build time
+    // This ensures the import only happens at runtime and not during build
+    const importModule = new Function('return import("@capacitor/preferences")')();
+    const module = await importModule;
     Preferences = module.Preferences;
     return Preferences;
   } catch (error) {

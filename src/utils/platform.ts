@@ -1,11 +1,11 @@
 
-import { Capacitor } from '@capacitor/core';
-import { Device } from '@capacitor/device';
-
 export class Platform {
+  // Check if we're in a native platform
   static isNative(): boolean {
     try {
-      return Capacitor.isNativePlatform();
+      // Using dynamic imports to avoid build-time issues
+      // This function will be evaluated at runtime, not during the build
+      return this.getPlatformName() !== 'web';
     } catch (e) {
       console.warn('Error checking native platform status:', e);
       return false;
@@ -14,7 +14,7 @@ export class Platform {
 
   static isAndroid(): boolean {
     try {
-      return Capacitor.getPlatform() === 'android';
+      return this.getPlatformName() === 'android';
     } catch (e) {
       console.warn('Error checking Android platform:', e);
       return false;
@@ -23,7 +23,7 @@ export class Platform {
 
   static isIOS(): boolean {
     try {
-      return Capacitor.getPlatform() === 'ios';
+      return this.getPlatformName() === 'ios';
     } catch (e) {
       console.warn('Error checking iOS platform:', e);
       return false;
@@ -61,6 +61,11 @@ export class Platform {
     }
     
     try {
+      // Dynamically import Device to avoid build issues
+      const importModule = new Function('return import("@capacitor/device")')();
+      const module = await importModule;
+      const Device = module.Device;
+      
       const info = await Device.getInfo();
       const versionString = info.osVersion || '';
       const majorVersion = parseInt(versionString.split('.')[0]);
@@ -79,9 +84,21 @@ export class Platform {
   }
   
   static getPlatformName(): string {
-    if (this.isIOS()) return 'ios';
-    if (this.isAndroid()) return 'android';
-    if (this.isMobileBrowser()) return 'mobile-web';
-    return 'web';
+    try {
+      if (typeof window === 'undefined') return 'web';
+      
+      // Check for Capacitor global object
+      const capacitorGlobal = (window as any).Capacitor;
+      if (!capacitorGlobal) return 'web';
+      
+      const platform = capacitorGlobal.getPlatform();
+      if (platform === 'ios') return 'ios';
+      if (platform === 'android') return 'android';
+      
+      return 'web';
+    } catch (error) {
+      console.warn('Error detecting platform:', error);
+      return 'web';
+    }
   }
 }
