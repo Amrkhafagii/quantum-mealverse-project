@@ -22,6 +22,7 @@ export function useForegroundLocationTracking({
   const [currentPosition, setCurrentPosition] = useState<DeliveryLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState<boolean>(false);
+  const [isForegroundTracking, setIsForegroundTracking] = useState<boolean>(false);
   const watchId = useRef<string | null>(null);
 
   // Convert Capacitor position to our DeliveryLocation format
@@ -66,9 +67,9 @@ export function useForegroundLocationTracking({
   };
 
   // Start watching position
-  const startTracking = async () => {
+  const startForegroundTracking = async () => {
     if (watchId.current !== null) {
-      return; // Already tracking
+      return true; // Already tracking
     }
     
     try {
@@ -101,7 +102,10 @@ export function useForegroundLocationTracking({
         );
         
         setIsTracking(true);
+        setIsForegroundTracking(true);
+        return true;
       }
+      return false;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error starting location tracking';
       setError(errorMessage);
@@ -111,28 +115,38 @@ export function useForegroundLocationTracking({
       }
       
       console.error('Location tracking error:', errorMessage);
+      return false;
     }
   };
 
+  // Start tracking (alias for startForegroundTracking)
+  const startTracking = startForegroundTracking;
+
   // Stop watching position
-  const stopTracking = async () => {
+  const stopForegroundTracking = async () => {
     if (watchId.current === null) {
-      return; // Not tracking
+      return true; // Not tracking
     }
     
     try {
       await Geolocation.clearWatch({ id: watchId.current });
       watchId.current = null;
       setIsTracking(false);
+      setIsForegroundTracking(false);
+      return true;
     } catch (err) {
       console.error('Error stopping location tracking:', err);
+      return false;
     }
   };
+
+  // Stop tracking (alias for stopForegroundTracking)
+  const stopTracking = stopForegroundTracking;
 
   // Start tracking on mount if watchPosition is true
   useEffect(() => {
     if (watchPosition) {
-      startTracking();
+      startForegroundTracking();
     } else {
       getCurrentPosition();
     }
@@ -161,6 +175,10 @@ export function useForegroundLocationTracking({
     isTracking,
     getCurrentPosition,
     startTracking,
-    stopTracking
+    stopTracking,
+    // Add the new properties
+    startForegroundTracking,
+    stopForegroundTracking,
+    isForegroundTracking
   };
 }

@@ -1,102 +1,92 @@
 
-import { calculateDistance } from '@/utils/locationUtils';
 import { DeliveryLocation } from '@/types/location';
+import { calculateDistance } from '@/utils/locationUtils';
 
 export type TrackingMode = 'high' | 'medium' | 'low' | 'minimal';
 
-interface TrackingModeFactors {
+interface TrackingModeParams {
   isLowBattery: boolean;
   isLowQuality: boolean;
-  orderStatus?: string;
-  location?: DeliveryLocation | null;
+  orderStatus: string;
+  location: DeliveryLocation | null;
   customerLocation?: { latitude: number; longitude: number };
   restaurantLocation?: { latitude: number; longitude: number };
   forceLowPowerMode?: boolean;
 }
 
-/**
- * Calculate the optimal tracking mode based on multiple factors
- */
-export const calculateTrackingMode = ({
-  isLowBattery,
-  isLowQuality,
-  orderStatus,
-  location,
-  customerLocation,
-  restaurantLocation,
-  forceLowPowerMode
-}: TrackingModeFactors): {
-  trackingMode: TrackingMode;
+export function calculateTrackingMode(params: TrackingModeParams): { 
+  trackingMode: TrackingMode; 
   distanceToDestination: number | null;
-} => {
-  // Start with the default mode
-  let trackingMode: TrackingMode = 'medium';
+} {
+  const { 
+    isLowBattery, 
+    isLowQuality, 
+    orderStatus, 
+    location, 
+    customerLocation,
+    restaurantLocation,
+    forceLowPowerMode
+  } = params;
+  
   let distanceToDestination: number | null = null;
   
-  // Calculate distance to destination if we have necessary data
+  // Calculate distance to destination based on order status
   if (location) {
-    // Determine the relevant destination based on order status
-    let destination = null;
-    
-    if (orderStatus === 'accepted' || orderStatus === 'preparing') {
-      // Heading to restaurant
-      destination = restaurantLocation;
-    } else if (orderStatus === 'picked_up' || orderStatus === 'on_the_way') {
-      // Heading to customer
-      destination = customerLocation;
-    }
-
-    // Calculate distance if we have a destination
-    if (destination && destination.latitude && destination.longitude) {
+    if (orderStatus === 'pickedup' && customerLocation) {
+      // If order is picked up, destination is customer
       distanceToDestination = calculateDistance(
-        location.latitude, 
+        location.latitude,
         location.longitude,
-        destination.latitude,
-        destination.longitude
+        customerLocation.latitude,
+        customerLocation.longitude
+      );
+    } else if (orderStatus === 'accepted' && restaurantLocation) {
+      // If order is accepted but not picked up, destination is restaurant
+      distanceToDestination = calculateDistance(
+        location.latitude,
+        location.longitude,
+        restaurantLocation.latitude,
+        restaurantLocation.longitude
       );
     }
   }
 
-  // Force low power mode if specified
+  // Force low power mode if requested
   if (forceLowPowerMode) {
-    trackingMode = 'minimal';
-  } 
-  // Low battery takes precedence for battery conservation
-  else if (isLowBattery) {
-    trackingMode = 'low';
-  } 
-  // Network quality affects battery usage and data consumption
-  else if (isLowQuality) {
-    trackingMode = 'low';
+    return { trackingMode: 'minimal', distanceToDestination };
   }
-  // Order status and proximity based adjustments
-  else if (orderStatus && distanceToDestination !== null) {
-    if (orderStatus === 'delivered' || orderStatus === 'cancelled') {
-      // Lowest priority - order is complete
-      trackingMode = 'minimal';
-    }
-    else if (orderStatus === 'on_the_way' && distanceToDestination < 1) {
-      // Highest priority - very close to customer
-      trackingMode = 'high';
-    }
-    else if ((orderStatus === 'accepted' || orderStatus === 'preparing') && distanceToDestination < 0.5) {
-      // High priority - close to restaurant for pickup
-      trackingMode = 'high';
-    }
-    else if (orderStatus === 'on_the_way' && distanceToDestination < 5) {
-      // Medium-high priority - approaching customer
-      trackingMode = 'medium';
-    }
-  }
-  
-  return { trackingMode, distanceToDestination };
-};
 
-/**
- * Get the tracking interval in milliseconds based on the tracking mode
- */
-export const getTrackingInterval = (trackingMode: TrackingMode): number => {
-  switch (trackingMode) {
+  // Determine tracking mode based on battery, network, and distance
+  if (isLowBattery && isLowQuality) {
+    return { trackingMode: 'minimal', distanceToDestination };
+  } 
+  else if (isLowBattery) {
+    return { trackingMode: 'low', distanceToDestination };
+  }
+  else if (isLowQuality) {
+    return { trackingMode: 'low', distanceToDestination };
+  }
+  else if (distanceToDestination !== null) {
+    if (distanceToDestination < 0.5) { // Within 500m
+      return { trackingMode: 'high', distanceToDestination };
+    }
+    else if (distanceToDestination < 2) { // Within 2km
+      return { trackingMode: 'medium', distanceToDestination };
+    }
+  }
+
+  // Default tracking mode based on order status
+  if (orderStatus === 'pickedup') {
+    return { trackingMode: 'medium', distanceToDestination };
+  } else if (orderStatus === 'accepted') {
+    return { trackingMode: 'medium', distanceToDestination };
+  }
+
+  return { trackingMode: 'low', distanceToDestination };
+}
+
+export function getTrackingInterval(mode: TrackingMode): number {
+  switch (mode) {
     case 'high':
       return 10000; // 10 seconds
     case 'medium':
@@ -104,8 +94,8 @@ export const getTrackingInterval = (trackingMode: TrackingMode): number => {
     case 'low':
       return 60000; // 1 minute
     case 'minimal':
-      return 180000; // 3 minutes
+      return 120000; // 2 minutes
     default:
       return 30000; // Default to medium
   }
-};
+}

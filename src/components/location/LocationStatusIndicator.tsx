@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { MapPin, WifiOff, Clock, Battery, BatteryLow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LocationFreshness } from '@/types/location';
 
 interface LocationStatusIndicatorProps {
   className?: string;
@@ -20,7 +21,23 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
   showTooltip = false
 }) => {
   const { isOnline, connectionType } = useConnectionStatus();
-  const { isTracking, freshness, isBatteryLow, batteryLevel } = useDeliveryLocationService();
+  const locationService = useDeliveryLocationService();
+  const [currentFreshness, setCurrentFreshness] = useState<LocationFreshness>('fresh');
+  
+  // Extract required properties from the location service
+  const { 
+    isTracking = false,
+    freshness = 'fresh', 
+    isBatteryLow = false, 
+    batteryLevel = null 
+  } = locationService;
+
+  // Use freshness from the service when available
+  useEffect(() => {
+    if (freshness) {
+      setCurrentFreshness(freshness);
+    }
+  }, [freshness]);
   
   const sizeClasses = {
     sm: 'h-6 text-xs',
@@ -51,7 +68,7 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
           <MapPin size={iconSize[size]} className="text-yellow-500" />
           <span className="text-yellow-500 font-medium">Location Off</span>
         </>
-      ) : freshness === 'stale' ? (
+      ) : currentFreshness === 'stale' ? (
         <>
           <Clock size={iconSize[size]} className="text-yellow-500" />
           <span className="text-yellow-500 font-medium">Stale</span>
@@ -96,7 +113,7 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
                 ? "Device is currently offline" 
                 : !isTracking 
                 ? "Location tracking is disabled" 
-                : freshness === 'stale' 
+                : currentFreshness === 'stale' 
                 ? "Location data may be outdated" 
                 : "Location tracking is active"}
             </p>

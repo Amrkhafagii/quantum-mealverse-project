@@ -25,18 +25,33 @@ export const useNativeLocationService = (options: {
   // Use the smaller hooks
   const { permissionStatus, requestPermissions } = useLocationPermissions();
   const { getCurrentLocation } = useCurrentLocation();
-  const { startBackgroundTracking, stopBackgroundTracking, isBackgroundTracking } = useBackgroundLocationTracking({
+  
+  // Get the background tracking functions
+  const { 
+    startBackgroundTracking, 
+    stopBackgroundTracking, 
+    isBackgroundTracking 
+  } = useBackgroundLocationTracking({
     onLocationUpdate: (newLocation) => {
       setLocation(newLocation);
       setLastUpdated(new Date());
     }
   });
-  const { startForegroundTracking, stopForegroundTracking, isForegroundTracking } = useForegroundLocationTracking({
+  
+  // Get the foreground tracking functions - using proper destructuring with renamed variables
+  const foregroundTracker = useForegroundLocationTracking({
     onLocationUpdate: (newLocation) => {
       setLocation(newLocation);
       setLastUpdated(new Date());
     }
   });
+  
+  // Destructuring with renamed variables to avoid naming conflicts
+  const { 
+    startTracking: startForegroundTracking,
+    stopTracking: stopForegroundTracking,
+    isTracking: isForegroundTracking
+  } = foregroundTracker;
 
   // Update tracking state when either type of tracking changes
   useEffect(() => {

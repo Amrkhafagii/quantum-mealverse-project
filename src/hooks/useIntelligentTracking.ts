@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDeliveryLocationService } from './useDeliveryLocationService';
 import { useNetworkQuality } from './useNetworkQuality';
 import { DeliveryLocation } from '@/types/location';
@@ -31,16 +31,32 @@ export function useIntelligentTracking({
   const [trackingMode, setTrackingMode] = useState<TrackingMode>('medium');
   const [trackingInterval, setTrackingInterval] = useState(30000); // 30 seconds default
   const [distanceToDestination, setDistanceToDestination] = useState<number | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<DeliveryLocation | null>(null);
 
   // Use the delivery location service for location tracking
   const locationService = useDeliveryLocationService();
-  const { 
-    location,
-    updateLocation,
-    isTracking,
-    startTracking,
-    stopTracking
-  } = locationService;
+  
+  // Extract only the properties we need
+  const location = locationService.location;
+  const isTracking = locationService.isTracking || false;
+  
+  // Define wrapper methods
+  const updateLocation = async () => {
+    const result = await locationService.updateLocation?.();
+    if (result && onLocationUpdate) {
+      onLocationUpdate(result);
+      setCurrentLocation(result);
+    }
+    return result || null;
+  };
+  
+  const startTracking = () => {
+    locationService.startTracking?.();
+  };
+  
+  const stopTracking = () => {
+    locationService.stopTracking?.();
+  };
 
   // Determine optimal tracking mode based on all factors
   useEffect(() => {
@@ -83,7 +99,7 @@ export function useIntelligentTracking({
     return () => {
       clearInterval(intervalId);
     };
-  }, [trackingInterval, orderId, isTracking, startTracking, updateLocation, onLocationUpdate]);
+  }, [trackingInterval, orderId, isTracking]);
 
   // Force an immediate location update
   const forceLocationUpdate = useCallback(async () => {
@@ -92,7 +108,7 @@ export function useIntelligentTracking({
   }, [updateLocation]);
 
   return {
-    location,
+    location: currentLocation || location,
     trackingMode,
     trackingInterval,
     batteryLevel,
