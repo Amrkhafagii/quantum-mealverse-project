@@ -1,53 +1,54 @@
 
 import { WebPlugin } from '@capacitor/core';
-import type { LocationPermissionStatus, LocationPermissionsPlugin } from '../LocationPermissionsPlugin';
+import type { LocationPermissionsPlugin, LocationPermissionStatus } from '../LocationPermissionsPlugin';
 
 export class LocationPermissionsWeb extends WebPlugin implements LocationPermissionsPlugin {
-  async requestLocationPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
+  async requestLocationPermission(_options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
+    console.log('Web implementation of requestLocationPermission');
     try {
-      // For web, we can only request regular location permission
-      const result = await navigator.permissions.query({ name: 'geolocation' });
-      
-      // Convert result to our format
-      const status = this.convertPermissionStatus(result.state);
-      
-      // If prompt, attempt to request permission by getting position
-      if (status.location === 'prompt') {
+      // For web, try to request permission using the Geolocation API
+      if (navigator && navigator.geolocation) {
         return new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
-            () => resolve({ location: 'granted', backgroundLocation: 'denied' }),
-            () => resolve({ location: 'denied', backgroundLocation: 'denied' }),
+            () => {
+              resolve({ location: 'granted', backgroundLocation: 'prompt' });
+            },
+            (error) => {
+              console.log('Geolocation permission error:', error);
+              if (error.code === error.PERMISSION_DENIED) {
+                resolve({ location: 'denied', backgroundLocation: 'denied' });
+              } else {
+                resolve({ location: 'prompt', backgroundLocation: 'prompt' });
+              }
+            },
             { timeout: 10000 }
           );
         });
       }
       
-      return status;
+      return { location: 'prompt', backgroundLocation: 'prompt' };
     } catch (error) {
-      console.error('Web location permission error:', error);
+      console.error('Error in web implementation of requestLocationPermission:', error);
       return { location: 'prompt', backgroundLocation: 'prompt' };
     }
   }
 
   async checkPermissionStatus(): Promise<LocationPermissionStatus> {
+    console.log('Web implementation of checkPermissionStatus');
     try {
-      const result = await navigator.permissions.query({ name: 'geolocation' });
-      return this.convertPermissionStatus(result.state);
-    } catch (error) {
-      console.error('Web location permission check error:', error);
+      if (navigator && navigator.permissions) {
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        if (status.state === 'granted') {
+          return { location: 'granted', backgroundLocation: 'prompt' };
+        } else if (status.state === 'denied') {
+          return { location: 'denied', backgroundLocation: 'denied' };
+        }
+      }
+      
       return { location: 'prompt', backgroundLocation: 'prompt' };
-    }
-  }
-  
-  private convertPermissionStatus(state: PermissionState): LocationPermissionStatus {
-    switch (state) {
-      case 'granted':
-        return { location: 'granted', backgroundLocation: 'denied' };
-      case 'denied':
-        return { location: 'denied', backgroundLocation: 'denied' };
-      case 'prompt':
-      default:
-        return { location: 'prompt', backgroundLocation: 'prompt' };
+    } catch (error) {
+      console.error('Error in web implementation of checkPermissionStatus:', error);
+      return { location: 'prompt', backgroundLocation: 'prompt' };
     }
   }
 }
