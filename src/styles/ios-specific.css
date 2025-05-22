@@ -1,0 +1,110 @@
+
+/* iOS-specific styles for proper device adaptation */
+
+/* Status bar adjustments */
+.ios-device {
+  /* Ensure the app respects device heights and notches */
+  min-height: -webkit-fill-available;
+}
+
+/* Basic safe area utilities */
+.ios-safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.ios-safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.ios-safe-area-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.ios-safe-area-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.ios-safe-area {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Device-specific adjustments */
+.has-notch header {
+  padding-top: env(safe-area-inset-top);
+}
+
+.has-dynamic-island header {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Bottom nav bar adjustments */
+.ios-device .bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Form input adjustments for iOS */
+.ios-device input,
+.ios-device textarea,
+.ios-device select {
+  /* Prevent zoom on focus */
+  font-size: 16px;
+}
+
+/* Fix for landscape mode on notched devices */
+@media screen and (orientation: landscape) {
+  .has-notch .landscape-notch-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  
+  .has-notch .landscape-notch-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+/* Specific device size adjustments */
+/* iPhone X, XS, 11 Pro, 12 mini, 13 mini */
+@media screen and (device-width: 375px) and (device-height: 812px),
+       screen and (device-width: 812px) and (device-height: 375px) {
+  .ios-device .status-bar-x {
+    padding-top: 44px; /* iPhone X/XS specific status bar height */
+  }
+}
+
+/* iPhone 12, 12 Pro, 13, 13 Pro, 14 */
+@media screen and (device-width: 390px) and (device-height: 844px),
+       screen and (device-width: 844px) and (device-height: 390px) {
+  .ios-device .status-bar-12 {
+    padding-top: 47px; /* iPhone 12/13 specific status bar height */
+  }
+}
+
+/* iPhone 14 Pro */
+@media screen and (device-width: 393px) and (device-height: 852px),
+       screen and (device-width: 852px) and (device-height: 393px) {
+  .ios-device .dynamic-island-adjust {
+    padding-top: 54px; /* iPhone 14 Pro status bar + dynamic island */
+  }
+}
+
+/* iPhone 14 Pro Max */
+@media screen and (device-width: 430px) and (device-height: 932px),
+       screen and (device-width: 932px) and (device-height: 430px) {
+  .ios-device .dynamic-island-adjust {
+    padding-top: 54px; /* iPhone 14 Pro Max status bar + dynamic island */
+  }
+}
+
+/* Improve touch targets on iOS */
+.ios-device button,
+.ios-device a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Improve scrolling experience */
+.ios-device .scroll-container {
+  -webkit-overflow-scrolling: touch;
+}

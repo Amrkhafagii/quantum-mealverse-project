@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { Menu, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useResponsive } from '@/contexts/ResponsiveContext';
+import { Platform } from '@/utils/platform';
 
 // Import the refactored components
 import NavLinks from './navbar/NavLinks';
@@ -26,7 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, logout } = useAuth();
   const { cart } = useCart();
-  const { isMobile, isTablet } = useResponsive();
+  const { isMobile, isTablet, isPlatformIOS, statusBarHeight, safeAreaTop } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleLogout = async () => {
@@ -45,8 +46,22 @@ const Navbar: React.FC<NavbarProps> = ({
     setMobileMenuOpen(false);
   };
   
+  // Calculate the navbar's top padding for iOS devices
+  const getNavbarStyle = () => {
+    if (isPlatformIOS) {
+      // On iOS, respect the status bar height
+      return { 
+        paddingTop: Platform.hasNotch() ? `${safeAreaTop}px` : `${statusBarHeight}px` 
+      };
+    }
+    return {};
+  };
+  
   return (
-    <nav className="bg-white shadow-sm dark:bg-gray-800 sticky top-0 z-50">
+    <nav 
+      className="bg-white shadow-sm dark:bg-gray-800 sticky top-0 z-50 ios-safe-area-top"
+      style={getNavbarStyle()}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">

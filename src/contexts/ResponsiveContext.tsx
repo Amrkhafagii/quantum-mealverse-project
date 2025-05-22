@@ -23,6 +23,10 @@ export interface ResponsiveContextType {
   safeAreaBottom: number;
   safeAreaLeft: number;
   safeAreaRight: number;
+  statusBarHeight: number;
+  hasNotch: boolean;
+  hasDynamicIsland: boolean;
+  iPhoneModel: string;
 }
 
 const defaultContext: ResponsiveContextType = {
@@ -43,7 +47,11 @@ const defaultContext: ResponsiveContextType = {
   safeAreaTop: 0,
   safeAreaBottom: 0,
   safeAreaLeft: 0,
-  safeAreaRight: 0
+  safeAreaRight: 0,
+  statusBarHeight: 0,
+  hasNotch: false,
+  hasDynamicIsland: false,
+  iPhoneModel: 'unknown'
 };
 
 const ResponsiveContext = createContext<ResponsiveContextType>(defaultContext);
@@ -62,6 +70,9 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
     isPlatformWeb: Platform.isWeb(),
     screenWidth: window.innerWidth,
     screenHeight: window.innerHeight,
+    hasNotch: Platform.hasNotch(),
+    hasDynamicIsland: Platform.hasDynamicIsland(),
+    iPhoneModel: Platform.getiPhoneModel(),
   });
 
   // Update responsive state on mount and resize
@@ -92,11 +103,17 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
       else if (width < 1280) androidScreenSize = 'large';
       else androidScreenSize = 'xlarge';
       
-      // Get safe area insets
-      const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0');
-      const safeAreaRight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sar') || '0');
-      const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0');
-      const safeAreaLeft = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sal') || '0');
+      // Get safe area insets from CSS variables
+      const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat').replace('px', '') || '0');
+      const safeAreaRight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sar').replace('px', '') || '0');
+      const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab').replace('px', '') || '0');
+      const safeAreaLeft = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sal').replace('px', '') || '0');
+      
+      // Get iOS-specific information
+      const statusBarHeight = Platform.getStatusBarHeight();
+      const hasNotch = Platform.hasNotch();
+      const hasDynamicIsland = Platform.hasDynamicIsland();
+      const iPhoneModel = Platform.getiPhoneModel();
       
       // Update the state
       setState({
@@ -117,7 +134,11 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
         safeAreaTop,
         safeAreaBottom,
         safeAreaLeft,
-        safeAreaRight
+        safeAreaRight,
+        statusBarHeight,
+        hasNotch,
+        hasDynamicIsland,
+        iPhoneModel
       });
     };
     
@@ -130,9 +151,13 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
     // Listen for dark mode changes
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     darkModeMediaQuery.addEventListener('change', updateResponsiveState);
+
+    // Listen for orientation changes specifically on mobile devices
+    window.addEventListener('orientationchange', updateResponsiveState);
     
     return () => {
       window.removeEventListener('resize', updateResponsiveState);
+      window.removeEventListener('orientationchange', updateResponsiveState);
       darkModeMediaQuery.removeEventListener('change', updateResponsiveState);
     };
   }, []);

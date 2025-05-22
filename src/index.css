@@ -1,7 +1,9 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 @import './styles/responsive.css';
+@import './styles/ios-specific.css';
  
 @layer base {
   :root {
@@ -25,6 +27,12 @@
     --input: 240 5.9% 90%;
     --ring: 142.1 76.2% 36.3%;
     --radius: 0.5rem;
+    
+    /* Safe area insets as CSS variables */
+    --sat: env(safe-area-inset-top, 0);
+    --sar: env(safe-area-inset-right, 0);
+    --sab: env(safe-area-inset-bottom, 0);
+    --sal: env(safe-area-inset-left, 0);
   }
  
   .dark {
