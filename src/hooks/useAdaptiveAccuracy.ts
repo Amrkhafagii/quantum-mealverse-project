@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';

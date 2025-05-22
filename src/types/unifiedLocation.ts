@@ -22,13 +22,14 @@ export interface UnifiedLocation {
   network_type?: string;
   battery_level?: number;
   retention_expires_at?: string;
+  networkInfo?: NetworkInfo; // Add networkInfo property
 }
 
-export type LocationSource = 'gps' | 'network' | 'wifi' | 'cell_tower' | 'ip' | 'manual' | 'cached' | 'fusion';
+export type LocationSource = 'gps' | 'network' | 'wifi' | 'cell_tower' | 'ip' | 'manual' | 'cached' | 'fusion' | 'unknown';
 
 export type LocationType = 'delivery_driver' | 'restaurant' | 'customer' | 'order' | 'system';
 
-export type LocationFreshness = 'fresh' | 'stale' | 'expired';
+export type LocationFreshness = 'fresh' | 'stale' | 'expired' | 'moderate' | 'invalid';
 
 export interface DeviceInfo {
   platform: Platform;
@@ -39,18 +40,37 @@ export interface DeviceInfo {
 }
 
 export interface NetworkInfo {
-  type: string;
+  type: NetworkType;
   effectiveType?: string;
   downlink?: number;
+  connected?: boolean;
+  connectionType?: string;
+  estimatedBandwidth?: number;
+  metered?: boolean;
 }
+
+export type NetworkType = 'wifi' | 'ethernet' | 'cellular_5g' | 'cellular_4g' | 'cellular_3g' | 'cellular_2g' | 'none' | 'unknown';
 
 export type Platform = 'ios' | 'android' | 'web' | 'unknown';
 
 export interface ConfidenceScore {
-  accuracy: number;
-  recency: number;
-  source: number;
-  overall: number;
+  overall: number; // 0-100
+  factors: {
+    source: number;
+    accuracy: number;
+    recency: number;
+    network: number;
+    movement: number;
+  };
+  rating: 'high' | 'medium' | 'low' | 'unknown';
+}
+
+export interface NetworkMetrics {
+  latency: number | null;
+  bandwidth?: number | null;
+  jitter?: number | null;
+  packetLoss?: number | null;
+  effectiveType?: string;
 }
 
 export interface LocationHistoryEntry extends UnifiedLocation {
@@ -59,6 +79,7 @@ export interface LocationHistoryEntry extends UnifiedLocation {
   address?: string;
   place_name?: string;
   metadata?: any;
+  formattedAddress?: string; // Add this missing property
 }
 
 export interface LocationQueryParams {

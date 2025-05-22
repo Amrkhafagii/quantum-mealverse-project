@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useAdaptiveAccuracy } from '@/hooks/useAdaptiveAccuracy';
@@ -54,8 +53,8 @@ export function AdaptiveLocationTracker({
       accuracy: location.accuracy || undefined,
       speed: location.speed || undefined,
       timestamp: new Date().toISOString(),
-      deviceInfo: { platform: 'web' },
-      source: (location.source as LocationSource) || 'unknown',
+      device_info: { platform: 'web' },
+      source: (location.source || 'unknown') as LocationSource,
       isMoving: location.isMoving || false,
       networkInfo: { 
         type: networkType as any, 

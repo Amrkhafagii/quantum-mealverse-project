@@ -255,3 +255,47 @@ export const getLocationStats = async (userId: string): Promise<{
     };
   }
 };
+
+/**
+ * Enrich a location with address information
+ */
+const enrichLocationWithAddress = async (location: LocationHistoryEntry): Promise<LocationHistoryEntry> => {
+  try {
+    // If we already have an address, skip the geocoding
+    if (location.address) {
+      return location;
+    }
+    
+    // Use geocoding service to get address
+    const geocodeResponse = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${GOOGLE_MAPS_API_KEY}`
+    );
+    
+    const geocodeData = await geocodeResponse.json();
+    
+    if (geocodeData.status === 'OK' && geocodeData.results.length > 0) {
+      // Get the first result which is usually the most accurate
+      const addressResult = geocodeData.results[0];
+      
+      // Extract formatted address
+      const formattedAddress = addressResult.formatted_address;
+      
+      // Return the enriched location
+      return {
+        ...location,
+        address: formattedAddress,
+        place_name: extractPlaceName(formattedAddress),
+        metadata: {
+          ...location.metadata,
+          placeId: addressResult.place_id,
+          addressComponents: addressResult.address_components
+        }
+      };
+    }
+    
+    return location;
+  } catch (error) {
+    console.error('Error enriching location with address:', error);
+    return location;
+  }
+};

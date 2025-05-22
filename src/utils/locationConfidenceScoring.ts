@@ -1,16 +1,17 @@
 
 import { NetworkType } from '@/types/unifiedLocation';
-import { LocationSource, UnifiedLocation } from '@/types/unifiedLocation';
+import { LocationSource, UnifiedLocation, ConfidenceScore } from '@/types/unifiedLocation';
 
 // Scoring weights for different factors
 const SOURCE_WEIGHTS: Record<LocationSource, number> = {
   'gps': 10,
   'wifi': 7,
-  'cell': 5,
+  'cell_tower': 5,
   'manual': 3,
   'ip': 2,
   'cached': 1,
   'fusion': 6,
+  'network': 5,
   'unknown': 0
 };
 
@@ -40,18 +41,6 @@ const NETWORK_WEIGHTS: Record<NetworkType, number> = {
 };
 
 export type ConfidenceCategory = 'high' | 'medium' | 'low' | 'very-low' | 'unknown';
-
-export interface ConfidenceScore {
-  overall: number; // 0-100
-  factors: {
-    source: number;
-    accuracy: number;
-    recency: number;
-    network: number;
-    movement: number;
-  };
-  rating: 'high' | 'medium' | 'low' | 'unknown';
-}
 
 /**
  * Calculate a confidence score for a location
@@ -95,7 +84,7 @@ export function calculateLocationConfidence(location: UnifiedLocation): Confiden
   }
   
   // Network factor
-  const networkScore = location.networkInfo?.connected 
+  const networkScore = (location.networkInfo?.connected && location.networkInfo?.type)
     ? (NETWORK_WEIGHTS[location.networkInfo.type] || 0) 
     : 0;
   
@@ -149,14 +138,16 @@ export function calculateLocationConfidence(location: UnifiedLocation): Confiden
 /**
  * Get a simplified confidence category
  */
-export function getConfidenceCategory(score: ConfidenceScore): ConfidenceCategory {
-  if (score.overall >= 75) {
+export function getConfidenceCategory(score: ConfidenceScore | number): ConfidenceCategory {
+  const overallScore = typeof score === 'number' ? score : score.overall;
+  
+  if (overallScore >= 75) {
     return 'high';
-  } else if (score.overall >= 50) {
+  } else if (overallScore >= 50) {
     return 'medium';
-  } else if (score.overall >= 25) {
+  } else if (overallScore >= 25) {
     return 'low';
-  } else if (score.overall > 0) {
+  } else if (overallScore > 0) {
     return 'very-low';
   } else {
     return 'unknown';

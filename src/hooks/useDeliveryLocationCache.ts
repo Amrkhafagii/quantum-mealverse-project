@@ -19,7 +19,7 @@ export function useDeliveryLocationCache() {
     } else if (diff < 1800000) { // Less than 30 minutes
       return 'stale';
     } else {
-      return 'invalid';
+      return 'expired';
     }
   }, []);
 
@@ -44,7 +44,7 @@ export function useDeliveryLocationCache() {
     const timestamp = lastUpdated.get(id) || 0;
     
     if (!location) {
-      return { location: null, freshness: 'invalid' };
+      return { location: null, freshness: 'expired' };
     }
     
     return {

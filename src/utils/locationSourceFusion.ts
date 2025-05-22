@@ -1,3 +1,4 @@
+
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { calculateLocationConfidence, ConfidenceScore } from './locationConfidenceScoring';
 
@@ -25,13 +26,13 @@ export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | n
   
   // If the best location is significantly better than others, use it directly
   if (locationsWithScores.length > 1 && 
-      locationsWithScores[0].score.overall > locationsWithScores[1].score.overall + 20) {
+      locationsWithScores[0].score.overall > (locationsWithScores[1].score.overall + 20)) {
     return locationsWithScores[0].location;
   }
   
   // Otherwise, fuse the top locations
   const topLocations = locationsWithScores.filter(
-    item => item.score.overall >= locationsWithScores[0].score.overall - 20
+    item => item.score.overall >= (locationsWithScores[0].score.overall - 20)
   );
   
   // Calculate weighted average for coordinates

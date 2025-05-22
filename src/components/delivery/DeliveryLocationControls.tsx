@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 import { toast } from 'sonner';
+import { LocationFreshness } from '@/types/unifiedLocation';
 
 interface DeliveryLocationControlsProps {
   onLocationUpdate?: (location: { latitude: number; longitude: number }) => void;
@@ -150,7 +151,7 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       case 'fresh': return 'bg-green-500/20 border-green-500/30 text-green-400';
       case 'moderate': return 'bg-blue-500/20 border-blue-500/30 text-blue-400';
       case 'stale': return 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400';
-      case 'invalid': return 'bg-red-500/20 border-red-500/30 text-red-400';
+      case 'expired': return 'bg-red-500/20 border-red-500/30 text-red-400';
       default: return 'bg-gray-500/20 border-gray-500/30 text-gray-400';
     }
   };
@@ -160,7 +161,7 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       case 'fresh': return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       case 'moderate': return <MapPin className="h-4 w-4 text-blue-500" />;
       case 'stale': return <RefreshCw className="h-4 w-4 text-yellow-500" />;
-      case 'invalid': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'expired': return <AlertCircle className="h-4 w-4 text-red-500" />;
       default: return <MapPin className="h-4 w-4" />;
     }
   };

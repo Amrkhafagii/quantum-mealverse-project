@@ -35,7 +35,7 @@ export function useNetworkQuality(options: UseNetworkQualityOptions = {}) {
         setQuality('offline');
         setIsLowQuality(true);
         setConnectionType('none');
-        return;
+        return { quality: 'offline' as NetworkQuality, isLowQuality: true };
       }
       
       // Get connection type
@@ -111,11 +111,11 @@ export function useNetworkQuality(options: UseNetworkQualityOptions = {}) {
         console.error('Error checking network quality:', error);
         setQuality('poor');
         setIsLowQuality(true);
-        return { quality: 'poor', isLowQuality: true };
+        return { quality: 'poor' as NetworkQuality, isLowQuality: true };
       }
     } catch (e) {
       console.error('Could not check network status:', e);
-      return { quality: 'unknown', isLowQuality: false };
+      return { quality: 'unknown' as NetworkQuality, isLowQuality: false };
     }
   }, [quality]);
   

@@ -355,7 +355,7 @@ function applyPrivacySettings(
   if (!settings.allowPreciseLocation && result.latitude !== undefined && result.longitude !== undefined) {
     // Adjust precision based on precisionLevel setting
     const precisionFactor = settings.precisionLevel === 'low' ? 10 : 
-                           settings.precisionLevel === 'medium' ? 100 : 1000;
+                          settings.precisionLevel === 'medium' ? 100 : 1000;
     
     // Round to lower precision (roughly 1km precision for 'low')
     result.latitude = Math.round(result.latitude * precisionFactor) / precisionFactor;
