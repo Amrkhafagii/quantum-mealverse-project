@@ -23,7 +23,7 @@ const createSafeLocationPermissions = () => {
     
     // Return a fallback implementation that won't crash the app
     return {
-      requestLocationPermission: async (): Promise<LocationPermissionStatus> => {
+      requestLocationPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
         console.warn('LocationPermissions plugin not available, using fallback');
         try {
           // Try to use Geolocation API directly as fallback

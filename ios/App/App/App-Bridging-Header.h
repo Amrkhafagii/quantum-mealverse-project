@@ -7,4 +7,3 @@
 #import "BiometricAuthPlugin.h"
 #import "RouteOptimizationPlugin.h"
 #import "LocationPermissionsPlugin.h"
-

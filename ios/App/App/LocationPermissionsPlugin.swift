@@ -10,15 +10,18 @@ public class LocationPermissionsPlugin: CAPPlugin, CLLocationManagerDelegate {
 
     override public func load() {
         locationManager.delegate = self
+        print("LocationPermissionsPlugin loaded")
     }
     
     @objc func checkPermissionStatus(_ call: CAPPluginCall) {
+        print("Checking permission status")
         let status = CLLocationManager.authorizationStatus()
         let result = getPermissionStatusDict(status)
         call.resolve(result)
     }
     
     @objc func requestLocationPermission(_ call: CAPPluginCall) {
+        print("Requesting location permission")
         let includeBackground = call.getBool("includeBackground") ?? false
         let callbackId = call.callbackId
         
@@ -51,6 +54,7 @@ public class LocationPermissionsPlugin: CAPPlugin, CLLocationManagerDelegate {
     
     // CLLocationManagerDelegate method
     public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        print("Location permission status changed to: \(status)")
         let result = getPermissionStatusDict(status)
         
         // Resolve all pending callbacks with the new status
