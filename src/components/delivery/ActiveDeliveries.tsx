@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
@@ -48,7 +47,7 @@ export const ActiveDeliveries: React.FC<ActiveDeliveriesProps> = ({
   
   // Setup enhanced location tracking
   const { 
-    position, 
+    location, 
     isTracking, 
     startTracking, 
     stopTracking, 
@@ -56,31 +55,7 @@ export const ActiveDeliveries: React.FC<ActiveDeliveriesProps> = ({
     lastUpdated,
     getCurrentLocation,
     permissionStatus
-  } = useLocationTracker({
-    watchPosition: true,
-    trackingInterval: 10000,
-    onLocationUpdate: (pos) => {
-      // If we have an active delivery, update its location
-      if (selectedAssignmentId && ['picked_up', 'on_the_way'].includes(
-        activeAssignments.find(a => a.id === selectedAssignmentId)?.status || ''
-      )) {
-        updateLocation(
-          selectedAssignmentId, 
-          pos.coords.latitude, 
-          pos.coords.longitude
-        );
-        setLocationUpdateTime(new Date());
-      }
-    },
-    onError: (err) => {
-      console.error('Location error:', err);
-      toast({
-        title: "Location Error",
-        description: "Unable to track your location. Please enable location services.",
-        variant: "destructive",
-      });
-    }
-  });
+  } = useLocationTracker();
   
   // Force a location update on demand
   const handleForceLocationUpdate = async () => {

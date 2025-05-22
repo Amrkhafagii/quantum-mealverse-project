@@ -40,7 +40,7 @@ export const useLocationTracker = () => {
   }, [location]);
 
   // Get current location
-  const getCurrentPosition = useCallback(async () => {
+  const getCurrentLocation = useCallback(async () => {
     try {
       logLocationDebug('get-current-position-start', {
         context: { permissionStatus }
@@ -83,6 +83,23 @@ export const useLocationTracker = () => {
           },
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
         );
+      }).then(position => {
+        const newLocation: DeliveryLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: position.timestamp,
+          source: 'gps',
+          speed: position.coords.speed || undefined,
+          heading: position.coords.heading || undefined,
+          altitude: position.coords.altitude || undefined
+        };
+        
+        setLocation(newLocation);
+        setLastUpdated(new Date());
+        setError(null);
+        
+        return newLocation;
       });
     } catch (err) {
       logLocationDebug('get-current-position-exception', { error: err });
@@ -94,18 +111,18 @@ export const useLocationTracker = () => {
   // Update location function
   const updateLocation = useCallback(async () => {
     try {
-      const position = await getCurrentPosition();
+      const position = await getCurrentLocation();
       
       if (position) {
         const newLocation: DeliveryLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          accuracy: position.accuracy,
           timestamp: position.timestamp,
           source: 'gps',
-          speed: position.coords.speed || undefined,
-          heading: position.coords.heading || undefined,
-          altitude: position.coords.altitude || undefined
+          speed: position.speed || undefined,
+          heading: position.heading || undefined,
+          altitude: position.altitude || undefined
         };
         
         setLocation(newLocation);
@@ -129,7 +146,7 @@ export const useLocationTracker = () => {
       console.error('Error updating location:', err);
       return null;
     }
-  }, [getCurrentPosition]);
+  }, [getCurrentLocation]);
 
   // Start tracking location
   const startTracking = useCallback(() => {

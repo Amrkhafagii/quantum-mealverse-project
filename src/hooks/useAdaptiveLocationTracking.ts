@@ -131,7 +131,8 @@ export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {
             accuracy: Math.random() * 10 + 5,
             speed: speed,
             isMoving: isMoving,
-            timestamp: now
+            timestamp: now,
+            source: 'gps'
           };
           
           onLocationUpdate(location);
@@ -175,7 +176,8 @@ export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {
           accuracy: Math.random() * 5 + 3, // More accurate when manually requested
           speed: speed,
           isMoving: isMoving,
-          timestamp: now
+          timestamp: now,
+          source: 'gps'
         };
         
         onLocationUpdate(location);
@@ -188,19 +190,11 @@ export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {
     }
   }, [isTracking, onLocationUpdate, speed, isMoving]);
 
-  // Update tracking settings
-  const updateSettings = useCallback((newSettings: Partial<LocationSettings>) => {
-    if (newSettings.interval) {
-      setCurrentInterval(newSettings.interval);
-    }
-  }, []);
-
   return {
     isTracking,
     startTracking,
     stopTracking,
     forceLocationUpdate,
-    updateSettings,
     currentInterval,
     isMoving,
     speed,

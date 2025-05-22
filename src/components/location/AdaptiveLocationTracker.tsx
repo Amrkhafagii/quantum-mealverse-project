@@ -56,7 +56,7 @@ export function AdaptiveLocationTracker({
       timestamp: new Date().toISOString(),
       deviceInfo: { platform: 'web' },
       source: (location.source as LocationSource) || 'unknown',
-      isMoving: location.isMoving,
+      isMoving: location.isMoving || false,
       networkInfo: { 
         type: networkType as any, 
         connected: isNetworkAvailable

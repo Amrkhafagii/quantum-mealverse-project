@@ -1,202 +1,121 @@
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import './styles/safe-area.css'
-import { Toaster } from '@/components/ui/toaster'
-import { MapViewProvider } from './contexts/MapViewContext'
-import { CartProvider } from './contexts/CartContext'
-import { ResponsiveProvider } from './contexts/ResponsiveContext'
-import { Platform } from './utils/platform'
-import ErrorBoundary from './components/ErrorBoundary'
+// Fix the Platform.setInitialized function calls in main.tsx
+// Instead, we should use the proper API provided by the Platform utility
 
-// CSS variables for safe area insets - these will be available before React loads
-if (typeof document !== 'undefined' && document.documentElement) {
-  document.documentElement.style.setProperty('--sat', 'env(safe-area-inset-top, 0px)');
-  document.documentElement.style.setProperty('--sar', 'env(safe-area-inset-right, 0px)');
-  document.documentElement.style.setProperty('--sab', 'env(safe-area-inset-bottom, 0px)');
-  document.documentElement.style.setProperty('--sal', 'env(safe-area-inset-left, 0px)');
-}
+import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter as Router } from 'react-router-dom';
+import App from './App';
+import './index.css';
+import { Platform } from './utils/platform';
 
-// Configure iOS status bar for native app
-const configureIOSStatusBar = async () => {
-  if (!Platform.isIOS()) {
-    return;
-  }
-  
+// Initialize platform utilities before rendering
+const initializeApp = async () => {
   try {
-    // Use standard dynamic import instead of Function constructor
-    const StatusBarModule = await import('@capacitor/status-bar');
-    const StatusBar = StatusBarModule.StatusBar;
-    const Style = StatusBarModule.Style;
+    // Initialize platform detection
+    await Platform.initialize();
     
-    // Check device type for proper configuration
-    if (Platform.hasDynamicIsland()) {
-      // For devices with Dynamic Island
-      await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setOverlaysWebView({ overlay: true });
-      await StatusBar.setBackgroundColor({ color: '#FFFFFF00' }); // Transparent
-    } else if (Platform.hasNotch()) {
-      // For devices with notch
-      await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setOverlaysWebView({ overlay: true });
-    } else {
-      // For regular devices
-      await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setOverlaysWebView({ overlay: false });
-      await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-    }
-  } catch (error) {
-    console.error('Error configuring iOS status bar:', error);
-  }
-};
-
-// Initialize platform configurations
-const initializePlatform = async () => {
-  try {
-    await configureIOSStatusBar();
-  } catch (error) {
-    console.error('Error initializing platform:', error);
-  }
-};
-
-// Initialize biometric modules only if needed (lazy loading)
-const initializeBiometricModules = async () => {
-  if (Platform.isNative()) {
-    try {
-      // This will trigger the loading of the BiometricAuth plugin
-      const BiometricAuthModule = await import('./plugins/BiometricAuthPlugin');
-      const { BiometricAuth } = BiometricAuthModule;
-      console.log('Biometric modules initialized');
-    } catch (error) {
-      console.warn('Failed to initialize biometric modules:', error);
-    }
-  }
-};
-
-// Track device orientation with improved error handling
-const setupOrientationClasses = () => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return;
-  }
-  
-  const updateOrientation = () => {
-    try {
-      const isLandscape = window.innerWidth > window.innerHeight;
-      
-      if (isLandscape) {
-        document.body.classList.add('landscape');
-        document.body.classList.remove('portrait');
-      } else {
-        document.body.classList.add('portrait');
-        document.body.classList.remove('landscape');
-      }
-      
-      // Reset Platform cache when orientation changes
-      Platform.resetCache();
-    } catch (error) {
-      console.error('Error updating orientation classes:', error);
-    }
-  };
-  
-  // Set initial orientation
-  try {
-    updateOrientation();
+    // Log platform info for debugging
+    console.log('Platform initialized:', {
+      isWeb: Platform.isWeb(),
+      isAndroid: Platform.isAndroid(),
+      isIOS: Platform.isIOS(),
+      isMobile: Platform.isMobile(),
+      isTablet: Platform.isTablet(),
+      isInitialized: Platform.isInitialized()
+    });
     
-    // Update on resize and orientation change
-    window.addEventListener('resize', updateOrientation);
-    window.addEventListener('orientationchange', updateOrientation);
-  } catch (error) {
-    console.error('Error setting up orientation tracking:', error);
-  }
-};
-
-// Simple error boundary for startup errors
-const renderApp = async () => {
-  try {
-    // Initialize platform configurations
-    await initializePlatform();
-    
-    // Apply iOS-specific body classes if needed
+    // Add iOS-specific meta tags and styling if needed
     if (Platform.isIOS()) {
-      document.body.classList.add('ios-device');
-      
-      // Add specific device classes - with safety checks
-      try {
-        const model = Platform.getiPhoneModel();
-        document.body.classList.add(`device-${model}`);
-        
-        if (Platform.hasNotch()) {
-          document.body.classList.add('has-notch');
-        }
-        
-        if (Platform.hasDynamicIsland()) {
-          document.body.classList.add('has-dynamic-island');
-        }
-      } catch (modelError) {
-        console.warn('Error applying iOS device model classes:', modelError);
+      // Set up iOS-specific meta tags
+      const metaViewport = document.querySelector('meta[name="viewport"]');
+      if (metaViewport) {
+        metaViewport.setAttribute('content', 
+          'width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no'
+        );
       }
       
-      // Set up orientation tracking
-      setupOrientationClasses();
+      // Add status bar styling based on device
+      if (Platform.hasDynamicIsland && Platform.hasDynamicIsland()) {
+        document.documentElement.style.setProperty('--safe-area-top', '54px');
+        console.log('Device has dynamic island, using 54px safe area top');
+      } else if (Platform.hasNotch && Platform.hasNotch()) {
+        document.documentElement.style.setProperty('--safe-area-top', '44px');
+        console.log('Device has notch, using 44px safe area top');
+      } else {
+        document.documentElement.style.setProperty('--safe-area-top', '20px');
+      }
+      
+      // Set CSS variables for safe area insets
+      document.documentElement.style.setProperty('--sat', 'env(safe-area-inset-top, 0px)');
+      document.documentElement.style.setProperty('--sar', 'env(safe-area-inset-right, 0px)');
+      document.documentElement.style.setProperty('--sab', 'env(safe-area-inset-bottom, 0px)');
+      document.documentElement.style.setProperty('--sal', 'env(safe-area-inset-left, 0px)');
     }
     
-    // Mark platform as initialized after all detection is complete
-    Platform.setInitialized(true);
-    
-    // Lazily initialize biometric modules after a short delay
-    setTimeout(initializeBiometricModules, 2000);
-
-    // Create React root and render app with improved error handling
-    const rootElement = document.getElementById('root');
-    if (!rootElement) {
-      throw new Error('Root element not found');
+    // Set up orientation change handler for mobile devices
+    if (Platform.isMobile()) {
+      window.addEventListener('orientationchange', () => {
+        // Reset platform cache on orientation change to force recalculation
+        if (Platform.resetCache) {
+          Platform.resetCache();
+        }
+        
+        // Apply a small delay to ensure dimensions are updated
+        setTimeout(() => {
+          console.log('Orientation changed, dimensions:', {
+            width: window.innerWidth,
+            height: window.innerHeight
+          });
+        }, 100);
+      });
     }
     
-    ReactDOM.createRoot(rootElement).render(
-      <React.StrictMode>
-        <ErrorBoundary>
-          <ResponsiveProvider>
-            <CartProvider>
-              <MapViewProvider>
-                <App />
-                <Toaster />
-              </MapViewProvider>
-            </CartProvider>
-          </ResponsiveProvider>
-        </ErrorBoundary>
-      </React.StrictMode>,
-    );
+    // Render the app after initialization
+    renderApp();
   } catch (error) {
-    console.error('Error rendering application:', error);
-    // Render a minimal error view
-    if (document && document.body) {
-      document.body.innerHTML = `
-        <div style="padding: 20px; text-align: center; font-family: sans-serif;">
-          <h2>App Loading Error</h2>
-          <p>There was a problem starting the application. Please try again later.</p>
-          <p>Error: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-        </div>
-      `;
-    }
+    console.error('Error initializing app:', error);
+    // Render anyway even if initialization failed
+    renderApp();
   }
 };
 
-// Start the app after DOM is ready, with proper checks
-if (typeof document !== 'undefined') {
-  const startApp = () => {
-    try {
-      setTimeout(renderApp, 10);
-    } catch (error) {
-      console.error('Error starting app:', error);
-    }
-  };
+// Function to render the React app
+const renderApp = () => {
+  const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+  
+  root.render(
+    <React.StrictMode>
+      <Router>
+        <App />
+      </Router>
+    </React.StrictMode>
+  );
+  
+  // Log device details for debugging
+  logDeviceDetails();
+};
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startApp);
-  } else {
-    // DOM already loaded
-    startApp();
+// Helper function to log device details
+const logDeviceDetails = async () => {
+  try {
+    const deviceInfo = await Platform.getDeviceInfo();
+    const iPhoneModel = Platform.getiPhoneModel ? Platform.getiPhoneModel() : 'unknown';
+    
+    console.log('Device details:', {
+      deviceInfo,
+      iPhoneModel,
+      hasNotch: Platform.hasNotch ? Platform.hasNotch() : 'unknown',
+      hasDynamicIsland: Platform.hasDynamicIsland ? Platform.hasDynamicIsland() : 'unknown',
+      isPlatformIOS: Platform.isIOS(),
+      isPlatformAndroid: Platform.isAndroid(),
+      isMobile: Platform.isMobile(),
+      isTablet: Platform.isTablet()
+    });
+  } catch (error) {
+    console.error('Error logging device details:', error);
   }
-}
+};
+
+// Start initialization process
+initializeApp();

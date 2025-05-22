@@ -1,4 +1,3 @@
-
 import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 import { Platform } from './platform';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';

@@ -1,75 +1,65 @@
-
 import { useState, useEffect } from 'react';
 import { DeliveryLocation, LocationFreshness } from '@/types/location';
-import { 
-  getCachedDeliveryLocation, 
-  calculateLocationFreshness, 
-  isLocationStale 
-} from '@/utils/locationUtils';
 
+// Simple cache helper for delivery locations
 export const useDeliveryLocationCache = () => {
-  const [cachedLocation, setCachedLocation] = useState<DeliveryLocation | null>(null);
-  const [cachedLocationFreshness, setCachedLocationFreshness] = useState<LocationFreshness>('invalid');
-  const [isStale, setIsStale] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [cachedLocations, setCachedLocations] = useState<
+    Map<string, { location: DeliveryLocation; timestamp: number }>
+  >(new Map());
 
-  // Initialize with cached location if available
+  // Add a location to the cache
+  const cacheLocation = (id: string, location: DeliveryLocation) => {
+    setCachedLocations((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(id, { location, timestamp: Date.now() });
+      return newMap;
+    });
+  };
+
+  // Get a location from the cache
+  const getCachedLocation = (id: string): DeliveryLocation | null => {
+    const cached = cachedLocations.get(id);
+    return cached ? cached.location : null;
+  };
+
+  // Get the freshness of a cached location
+  const getCacheFreshness = (id: string): LocationFreshness => {
+    const cached = cachedLocations.get(id);
+    if (!cached) return 'expired';
+
+    const now = Date.now();
+    const age = now - cached.timestamp;
+
+    if (age < 60 * 1000) return 'fresh'; // Less than 1 minute
+    if (age < 5 * 60 * 1000) return 'recent'; // Less than 5 minutes
+    if (age < 30 * 60 * 1000) return 'stale'; // Less than 30 minutes
+    return 'expired';
+  };
+
+  // Remove expired locations from the cache
   useEffect(() => {
-    const fetchCachedLocation = async () => {
-      setIsLoading(true);
-      try {
-        const cachedLocation = await getCachedDeliveryLocation();
+    const cleanupInterval = setInterval(() => {
+      setCachedLocations((prev) => {
+        const now = Date.now();
+        const newMap = new Map();
         
-        if (cachedLocation) {
-          setCachedLocation(cachedLocation);
-          
-          if (cachedLocation.timestamp) {
-            const timestamp = typeof cachedLocation.timestamp === 'number' 
-              ? new Date(cachedLocation.timestamp).toISOString()
-              : new Date(cachedLocation.timestamp).toISOString();
-              
-            const freshness = calculateLocationFreshness(timestamp);
-            setCachedLocationFreshness(freshness);
-            setIsStale(isLocationStale(timestamp));
-            setLastUpdated(new Date(cachedLocation.timestamp));
+        // Only keep locations that are less than 1 hour old
+        prev.forEach((value, key) => {
+          if (now - value.timestamp < 60 * 60 * 1000) {
+            newMap.set(key, value);
           }
-        }
-      } catch (error) {
-        console.error("Error fetching cached location:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchCachedLocation();
+        });
+        
+        return newMap;
+      });
+    }, 10 * 60 * 1000); // Clean up every 10 minutes
+
+    return () => clearInterval(cleanupInterval);
   }, []);
 
-  // Calculate freshness based on age whenever checking state
-  useEffect(() => {
-    if (!cachedLocation?.timestamp) return;
-    
-    const checkFreshness = () => {
-      const timestamp = typeof cachedLocation.timestamp === 'number'
-        ? new Date(cachedLocation.timestamp).toISOString()
-        : new Date(cachedLocation.timestamp).toISOString();
-        
-      const freshness = calculateLocationFreshness(timestamp);
-      setCachedLocationFreshness(freshness);
-      setIsStale(isLocationStale(timestamp));
-    };
-    
-    // Check immediately and then every minute
-    checkFreshness();
-    const interval = setInterval(checkFreshness, 60000);
-    return () => clearInterval(interval);
-  }, [cachedLocation?.timestamp]);
-
   return {
-    cachedLocation,
-    cachedLocationFreshness,
-    isStale,
-    lastUpdated,
-    isLoading
+    cacheLocation,
+    getCachedLocation,
+    getCacheFreshness
   };
 };

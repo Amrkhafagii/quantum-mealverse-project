@@ -157,6 +157,99 @@ export const Platform = {
     } catch (err) {
       console.error('Error initializing platform utilities:', err);
     }
+  },
+
+  // Reset platform cache
+  resetCache: (): void => {
+    Object.keys(cache).forEach(key => {
+      if (key !== 'initialized') {
+        cache[key] = null;
+      }
+    });
+    console.log('Platform cache reset');
+  },
+
+  // Check if device has a notch
+  hasNotch: (): boolean => {
+    // Simple detection based on model
+    try {
+      const ua = navigator.userAgent;
+      // iPhones X and newer have notches (except SE models)
+      if (/iPhone/.test(ua) && 
+          !(/iPhone SE/.test(ua)) && 
+          (window.screen.height / window.screen.width) > 2) {
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Error checking for notch:', err);
+      return false;
+    }
+  },
+
+  // Check if device has dynamic island
+  hasDynamicIsland: (): boolean => {
+    // Only iPhone 14 Pro and newer have dynamic island
+    try {
+      const ua = navigator.userAgent;
+      // Very simplistic check - would need refinement for real use
+      if (/iPhone/.test(ua) && 
+          (window.screen.height / window.screen.width) > 2 &&
+          window.devicePixelRatio > 2.5) {
+        // This is a very rough approximation
+        const model = Platform.getiPhoneModel();
+        return model === 'iPhone14Pro' || model === 'iPhone14ProMax' || 
+               model.includes('iPhone15') || model.includes('iPhone16');
+      }
+      return false;
+    } catch (err) {
+      console.error('Error checking for dynamic island:', err);
+      return false;
+    }
+  },
+
+  // Get iPhone model name
+  getiPhoneModel: (): string => {
+    try {
+      const ua = navigator.userAgent;
+      if (!/iPhone/.test(ua)) {
+        return 'unknown';
+      }
+      
+      // This is a simplified version - real implementation would be more complex
+      const screenHeight = window.screen.height;
+      const screenWidth = window.screen.width;
+      const ratio = window.devicePixelRatio || 1;
+      
+      // Very basic detection logic - would need refinement for real use
+      if (screenHeight === 812 && screenWidth === 375 && ratio === 3) {
+        return 'iPhoneX_XS_11Pro_12mini_13mini';
+      } else if (screenHeight === 896 && screenWidth === 414 && ratio === 2) {
+        return 'iPhoneXR_11';
+      } else if (screenHeight === 896 && screenWidth === 414 && ratio === 3) {
+        return 'iPhoneXSMax_11ProMax';
+      } else if (screenHeight === 844 && screenWidth === 390 && ratio === 3) {
+        return 'iPhone12_12Pro_13_13Pro_14';
+      } else if (screenHeight === 926 && screenWidth === 428 && ratio === 3) {
+        return 'iPhone12ProMax_13ProMax_14Plus';
+      } else if ((screenHeight === 852 || screenHeight === 854) && screenWidth === 393) {
+        return 'iPhone14Pro';
+      } else if ((screenHeight === 932 || screenHeight === 934) && screenWidth === 430) {
+        return 'iPhone14ProMax';
+      }
+      
+      return 'unknown';
+    } catch (err) {
+      console.error('Error detecting iPhone model:', err);
+      return 'unknown';
+    }
+  },
+  
+  // Get platform name
+  getPlatformName: (): string => {
+    if (Platform.isIOS()) return 'iOS';
+    if (Platform.isAndroid()) return 'Android';
+    return 'Web';
   }
 };
 

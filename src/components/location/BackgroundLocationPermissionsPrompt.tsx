@@ -20,10 +20,12 @@ export const BackgroundLocationPermissionsPrompt = () => {
   
   // Get Android version on component mount
   useEffect(() => {
-    const getAndroidVersion = () => {
+    const getAndroidVersion = async () => {
       if (Platform.isAndroid()) {
-        const version = Platform.getAndroidVersion();
-        setAndroidVersion(version);
+        const version = await Platform.getAndroidVersion();
+        if (version !== null) {
+          setAndroidVersion(version);
+        }
       }
     };
     

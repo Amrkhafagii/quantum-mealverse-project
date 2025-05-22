@@ -1,186 +1,110 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import React, { useState, useEffect } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { getAdaptivePollingInterval } from '@/utils/networkAdaptation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Clock, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
+import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 
-interface AdaptivePollingProps {
-  baseInterval?: number; // in ms
-  onPoll?: () => Promise<any>;
-  children?: React.ReactNode;
-  showProgress?: boolean;
-  className?: string;
-  title?: string;
-}
+const AdaptivePolling = () => {
+  const [baseInterval, setBaseInterval] = useState<number>(30);
+  const [networkType, setNetworkType] = useState<NetworkType>('wifi');
+  const [networkQuality, setNetworkQuality] = useState<NetworkQuality>('good');
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [currentInterval, setCurrentInterval] = useState<number>(30);
 
-const AdaptivePolling: React.FC<AdaptivePollingProps> = ({
-  baseInterval = 5000,
-  onPoll,
-  children,
-  showProgress = true,
-  className = '',
-  title = 'Adaptive Polling'
-}) => {
-  const [isPaused, setIsPaused] = useState(false);
-  const [lastPollTime, setLastPollTime] = useState<Date | null>(null);
-  const [timeToNextPoll, setTimeToNextPoll] = useState<number>(baseInterval);
-  const [progress, setProgress] = useState(0);
-  const [isPolling, setIsPolling] = useState(false);
-  const { quality } = useNetworkQuality();
-  const { isOnline } = useConnectionStatus();
-  
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Calculate adaptive interval based on network quality
-  const adaptiveInterval = getAdaptivePollingInterval(baseInterval, quality, isOnline);
-  
-  const performPoll = async () => {
-    if (!isOnline || isPaused) return;
-    
-    setIsPolling(true);
-    
-    try {
-      if (onPoll) {
-        await onPoll();
-      }
-      setLastPollTime(new Date());
-    } catch (error) {
-      console.error('Polling error:', error);
-    } finally {
-      setIsPolling(false);
-      setTimeToNextPoll(adaptiveInterval);
-      setProgress(0);
-      
-      // Schedule next poll
-      schedulePoll();
-    }
-  };
-  
-  const schedulePoll = () => {
-    // Clear any existing timeout
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current);
-    }
-    
-    // Schedule next poll if online and not paused
-    if (isOnline && !isPaused) {
-      pollTimeoutRef.current = setTimeout(performPoll, adaptiveInterval);
-    }
-  };
-  
-  // Update progress counter
+  // Update interval when parameters change
   useEffect(() => {
-    if (isPaused || !isOnline) return;
-    
-    // Clear previous interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    
-    // Set up progress tracking interval
-    intervalRef.current = setInterval(() => {
-      setTimeToNextPoll(prev => {
-        const newTime = prev - 100;
-        setProgress(((adaptiveInterval - newTime) / adaptiveInterval) * 100);
-        return Math.max(0, newTime);
-      });
-    }, 100);
-    
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isPaused, isOnline, adaptiveInterval]);
-  
-  // Handle changes to the adaptive interval
-  useEffect(() => {
-    setTimeToNextPoll(adaptiveInterval);
-    
-    // If we have an active poll scheduled, reschedule it with the new interval
-    if (pollTimeoutRef.current && isOnline && !isPaused) {
-      clearTimeout(pollTimeoutRef.current);
-      pollTimeoutRef.current = setTimeout(performPoll, adaptiveInterval);
-    }
-  }, [adaptiveInterval, isOnline, isPaused]);
-  
-  // Initial poll
-  useEffect(() => {
-    // Perform initial poll
-    if (isOnline && !isPaused) {
-      performPoll();
-    }
-    
-    return () => {
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-      }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-  
+    const baseIntervalMs = baseInterval * 1000;
+    const adaptedIntervalMs = getAdaptivePollingInterval(
+      baseIntervalMs, 
+      networkType,
+      networkQuality,
+      isActive
+    );
+    setCurrentInterval(adaptedIntervalMs / 1000); // Convert back to seconds for display
+  }, [baseInterval, networkType, networkQuality, isActive]);
+
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex justify-between">
-          <span>{title}</span>
-          <div className="flex items-center text-sm space-x-1">
-            <Clock className="h-4 w-4 mr-1" />
-            <span>{Math.round(adaptiveInterval / 1000)}s</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6" 
-              onClick={() => setIsPaused(prev => !prev)}
-            >
-              {isPaused ? (
-                <PlayCircle className="h-4 w-4" />
-              ) : (
-                <PauseCircle className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent>
-        {showProgress && !isPaused && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-1 text-xs">
-              <span>Next update in {Math.ceil(timeToNextPoll / 1000)}s</span>
-              <span className="text-muted-foreground">
-                Network quality: <span className="capitalize">{quality}</span>
-              </span>
-            </div>
-            <Progress value={progress} className="h-1" />
-          </div>
-        )}
-        
-        {showProgress && isPaused && (
-          <div className="flex justify-between items-center mb-4 text-xs text-muted-foreground">
-            <span>Polling paused</span>
-            <Button size="sm" variant="outline" onClick={() => {
-              setIsPaused(false);
-              performPoll();
-            }} className="h-7 text-xs">
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Resume
-            </Button>
-          </div>
-        )}
-        
-        <div className={isPolling ? 'opacity-50' : ''}>
-          {children}
+    <div className="p-4 border rounded-md space-y-4">
+      <div className="flex justify-between">
+        <h3 className="text-lg font-medium">Adaptive Polling Demo</h3>
+        <div className="text-sm text-muted-foreground">
+          Current interval: <span className="font-semibold">{currentInterval.toFixed(1)}s</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label>Base Interval (seconds)</Label>
+          <Slider 
+            defaultValue={[baseInterval]} 
+            max={60} 
+            min={5}
+            step={1}
+            onValueChange={(val) => setBaseInterval(val[0])}
+          />
+          <div className="text-sm text-right">{baseInterval}s</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Network Type</Label>
+            <Select 
+              value={networkType} 
+              onValueChange={(value) => setNetworkType(value as NetworkType)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="wifi">WiFi</SelectItem>
+                <SelectItem value="cellular_5g">5G</SelectItem>
+                <SelectItem value="cellular_4g">4G</SelectItem>
+                <SelectItem value="cellular_3g">3G</SelectItem>
+                <SelectItem value="ethernet">Ethernet</SelectItem>
+                <SelectItem value="none">No Connection</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Network Quality</Label>
+            <Select 
+              value={networkQuality} 
+              onValueChange={(value) => setNetworkQuality(value as NetworkQuality)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excellent">Excellent</SelectItem>
+                <SelectItem value="good">Good</SelectItem>
+                <SelectItem value="fair">Fair</SelectItem>
+                <SelectItem value="poor">Poor</SelectItem>
+                <SelectItem value="very-poor">Very Poor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>App State</Label>
+          <Select 
+            value={isActive ? "active" : "background"}
+            onValueChange={(value) => setIsActive(value === "active")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active (Foreground)</SelectItem>
+              <SelectItem value="background">Background</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
   );
 };
 

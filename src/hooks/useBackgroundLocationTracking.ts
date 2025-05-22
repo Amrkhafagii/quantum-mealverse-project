@@ -40,6 +40,7 @@ export function useBackgroundLocationTracking({ onLocationUpdate }: BackgroundTr
               longitude: position.longitude,
               accuracy: position.accuracy,
               timestamp: Date.now(),
+              source: 'gps'
             };
             
             if (onLocationUpdate) {

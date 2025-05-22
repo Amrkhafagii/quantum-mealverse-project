@@ -1,99 +1,166 @@
 
-import { useState, useCallback } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
+import { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { createDeliveryLocation } from '@/utils/locationConverters';
+import { Geolocation, Position } from '@capacitor/geolocation';
 import { DeliveryLocation } from '@/types/location';
 
-interface ForegroundTrackingOptions {
+interface LocationOptions {
+  watchPosition?: boolean;
+  highAccuracy?: boolean;
+  interval?: number;
   onLocationUpdate?: (location: DeliveryLocation) => void;
+  onError?: (error: any) => void;
 }
 
-export function useForegroundLocationTracking({ onLocationUpdate }: ForegroundTrackingOptions = {}) {
-  const [isTracking, setIsTracking] = useState(false);
-  const [watchId, setWatchId] = useState<string | number | null>(null);
+export function useForegroundLocationTracking({
+  watchPosition = false,
+  highAccuracy = true,
+  interval = 10000,
+  onLocationUpdate,
+  onError
+}: LocationOptions = {}) {
+  const [currentPosition, setCurrentPosition] = useState<DeliveryLocation | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isTracking, setIsTracking] = useState<boolean>(false);
+  const watchId = useRef<string | null>(null);
 
-  const startForegroundTracking = useCallback(async () => {
+  // Convert Capacitor position to our DeliveryLocation format
+  const formatPosition = (position: Position): DeliveryLocation => {
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracy: position.coords.accuracy,
+      timestamp: position.timestamp,
+      source: 'gps'
+    };
+  };
+
+  // Get current position once
+  const getCurrentPosition = async () => {
     try {
-      // Different implementation based on platform
-      if (Capacitor.isNativePlatform()) {
-        const watchId = await Geolocation.watchPosition(
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: highAccuracy,
+        timeout: 10000
+      });
+      
+      const formattedPosition = formatPosition(position);
+      setCurrentPosition(formattedPosition);
+      setError(null);
+      
+      if (onLocationUpdate) {
+        onLocationUpdate(formattedPosition);
+      }
+      
+      return formattedPosition;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error getting location';
+      setError(errorMessage);
+      
+      if (onError) {
+        onError(err);
+      }
+      
+      console.error('Location error:', errorMessage);
+      return null;
+    }
+  };
+
+  // Start watching position
+  const startTracking = async () => {
+    if (watchId.current !== null) {
+      return; // Already tracking
+    }
+    
+    try {
+      // First get current position
+      await getCurrentPosition();
+      
+      // Then start watching
+      if (watchPosition && Capacitor.isPluginAvailable('Geolocation')) {
+        watchId.current = await Geolocation.watchPosition(
           {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 3000,
+            enableHighAccuracy: highAccuracy,
+            timeout: 10000
           },
-          (position) => {
-            if (!position) return;
+          (position, err) => {
+            if (err) {
+              if (onError) onError(err);
+              setError(err.message);
+              return;
+            }
             
-            const locationData = createDeliveryLocation(position);
-            if (onLocationUpdate) {
-              onLocationUpdate(locationData);
+            if (position) {
+              const formattedPosition = formatPosition(position);
+              setCurrentPosition(formattedPosition);
+              
+              if (onLocationUpdate) {
+                onLocationUpdate(formattedPosition);
+              }
             }
           }
         );
         
-        setWatchId(watchId);
-      } else {
-        // Fallback for web: use regular geolocation via the web API
-        if ('geolocation' in navigator) {
-          const webWatchId = navigator.geolocation.watchPosition(
-            (position) => {
-              const locationData: DeliveryLocation = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: position.timestamp,
-              };
-              
-              if (onLocationUpdate) {
-                onLocationUpdate(locationData);
-              }
-            },
-            (err) => {
-              console.error('Error watching position', err);
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 3000,
-            }
-          );
-          
-          setWatchId(webWatchId);
-        }
+        setIsTracking(true);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error starting location tracking';
+      setError(errorMessage);
+      
+      if (onError) {
+        onError(err);
       }
       
-      setIsTracking(true);
-      return true;
-    } catch (err) {
-      console.error('Error starting location tracking', err);
-      return false;
+      console.error('Location tracking error:', errorMessage);
     }
-  }, [onLocationUpdate]);
+  };
 
-  const stopForegroundTracking = useCallback(async () => {
-    if (watchId === null) return true;
+  // Stop watching position
+  const stopTracking = async () => {
+    if (watchId.current === null) {
+      return; // Not tracking
+    }
     
     try {
-      if (Capacitor.isNativePlatform()) {
-        await Geolocation.clearWatch({ id: watchId as string });
-      } else if (typeof watchId === 'number') {
-        navigator.geolocation.clearWatch(watchId);
-      }
-      
-      setWatchId(null);
+      await Geolocation.clearWatch({ id: watchId.current });
+      watchId.current = null;
       setIsTracking(false);
-      return true;
     } catch (err) {
-      console.error('Error stopping location tracking', err);
-      return false;
+      console.error('Error stopping location tracking:', err);
     }
-  }, [watchId]);
+  };
+
+  // Start tracking on mount if watchPosition is true
+  useEffect(() => {
+    if (watchPosition) {
+      startTracking();
+    } else {
+      getCurrentPosition();
+    }
+    
+    return () => {
+      if (watchId.current !== null) {
+        Geolocation.clearWatch({ id: watchId.current }).catch(console.error);
+      }
+    };
+  }, [watchPosition]);
+
+  // Handle interval updates if not watching position
+  useEffect(() => {
+    if (!watchPosition && interval > 0) {
+      const intervalId = setInterval(getCurrentPosition, interval);
+      
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [watchPosition, interval]);
 
   return {
-    isForegroundTracking: isTracking,
-    startForegroundTracking,
-    stopForegroundTracking
+    position: currentPosition,
+    error,
+    isTracking,
+    getCurrentPosition,
+    startTracking,
+    stopTracking
   };
 }

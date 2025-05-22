@@ -1,128 +1,113 @@
 
 import React, { useState, useEffect } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { getAdaptiveImageDimensions } from '@/utils/networkAdaptation';
+import { getAdaptiveImageQuality, getAdaptiveImageDimensions } from '@/utils/networkAdaptation';
+import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 
-interface AdaptiveImageProps {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  className?: string;
-  priority?: boolean;
-  fallbackSrc?: string;
-  placeholderColor?: string;
-  enableLqip?: boolean; // Low Quality Image Placeholder
-}
+const AdaptiveImage = () => {
+  const [networkType, setNetworkType] = useState<NetworkType>('wifi');
+  const [networkQuality, setNetworkQuality] = useState<NetworkQuality>('good');
+  const [quality, setQuality] = useState('high');
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [isLoading, setIsLoading] = useState(false);
 
-/**
- * Network-aware image component that adapts quality based on connection
- */
-export const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
-  src,
-  alt,
-  width,
-  height,
-  className = '',
-  priority = false,
-  fallbackSrc,
-  placeholderColor = '#f0f0f0',
-  enableLqip = true
-}) => {
-  const [isLoading, setIsLoading] = useState(!priority);
-  const [error, setError] = useState(false);
-  const [imgSrc, setImgSrc] = useState(src);
-  const { quality, isLowQuality } = useNetworkQuality();
-  const { isOnline } = useConnectionStatus();
-  
-  // Determine optimal image dimensions based on network quality
-  const dimensions = getAdaptiveImageDimensions(width, height, quality);
-  
+  // Update image parameters based on network conditions
   useEffect(() => {
-    if (!isOnline && fallbackSrc) {
-      setImgSrc(fallbackSrc);
-      return;
-    }
+    // Get adaptive quality
+    const adaptiveQuality = getAdaptiveImageQuality(networkType, networkQuality);
+    setQuality(adaptiveQuality);
     
-    // For low quality connections, we might modify the image URL
-    // to request a lower quality version from the server
-    if (isLowQuality) {
-      // This is a simplified example. In reality, you would use a proper
-      // image optimization service like Cloudinary, Imgix, etc.
-      const qualityParam = isLowQuality ? '?quality=low' : '';
-      if (!src.includes('?')) {
-        setImgSrc(`${src}${qualityParam}`);
-      }
-    } else {
-      setImgSrc(src);
-    }
-  }, [src, isOnline, isLowQuality, fallbackSrc]);
-  
-  // Placeholder dimensions should match the actual image dimensions ratio
-  const placeholderWidth = dimensions.width || width;
-  const placeholderHeight = dimensions.height || height;
-  
-  const handleLoad = () => {
-    setIsLoading(false);
-    setError(false);
-  };
-  
-  const handleError = () => {
-    setError(true);
-    setIsLoading(false);
-    if (fallbackSrc && imgSrc !== fallbackSrc) {
-      setImgSrc(fallbackSrc);
-    }
-  };
-  
-  // Generate a simple LQIP (Low Quality Image Placeholder) for offline mode
-  const generatePlaceholder = () => {
-    const aspectRatio = width / height;
-    return (
-      <div
-        className={`bg-gray-200 dark:bg-gray-700 overflow-hidden ${className}`}
-        style={{
-          width: placeholderWidth,
-          height: placeholderHeight,
-          backgroundColor: placeholderColor,
-        }}
-        aria-label={alt}
-      >
-        <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
-          {alt || 'Image'}
-        </div>
-      </div>
-    );
-  };
-  
-  if (!isOnline && !fallbackSrc && !enableLqip) {
-    return generatePlaceholder();
-  }
+    // Get adaptive dimensions
+    const adaptiveDimensions = getAdaptiveImageDimensions(800, 600, networkType, networkQuality);
+    setDimensions(adaptiveDimensions);
+    
+    // Simulate loading
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 600);
+    
+    return () => clearTimeout(timer);
+  }, [networkType, networkQuality]);
 
   return (
-    <div className={`relative ${className}`} style={{ width: placeholderWidth, height: placeholderHeight }}>
-      {isLoading && <Skeleton className="absolute inset-0" />}
-      
-      {enableLqip && <div 
-        className={`absolute inset-0 bg-gray-200 dark:bg-gray-700 transition-opacity duration-300 ${isLoading ? 'opacity-100' : 'opacity-0'}`}
-        style={{ backgroundColor: placeholderColor }}
-      />}
-      
-      {error && !fallbackSrc && generatePlaceholder()}
-      
-      {(!error || fallbackSrc) && (
-        <img
-          src={imgSrc}
-          alt={alt}
-          width={dimensions.width}
-          height={dimensions.height}
-          className={`${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300 ${className}`}
-          loading={priority ? 'eager' : 'lazy'}
-          onLoad={handleLoad}
-          onError={handleError}
-        />
+    <div className="p-4 border rounded-md space-y-4">
+      <div className="flex justify-between items-start">
+        <h3 className="text-lg font-medium">Adaptive Image Demo</h3>
+        <div className="flex flex-col items-end">
+          <div className="text-sm text-muted-foreground">
+            Quality: <span className="font-semibold">{quality}</span>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Dimensions: <span className="font-semibold">{dimensions.width}x{dimensions.height}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="space-y-2">
+          <Label>Network Type</Label>
+          <Select 
+            value={networkType} 
+            onValueChange={(value) => setNetworkType(value as NetworkType)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="wifi">WiFi</SelectItem>
+              <SelectItem value="cellular_5g">5G</SelectItem>
+              <SelectItem value="cellular_4g">4G</SelectItem>
+              <SelectItem value="cellular_3g">3G</SelectItem>
+              <SelectItem value="ethernet">Ethernet</SelectItem>
+              <SelectItem value="none">No Connection</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Network Quality</Label>
+          <Select 
+            value={networkQuality} 
+            onValueChange={(value) => setNetworkQuality(value as NetworkQuality)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="excellent">Excellent</SelectItem>
+              <SelectItem value="good">Good</SelectItem>
+              <SelectItem value="fair">Fair</SelectItem>
+              <SelectItem value="poor">Poor</SelectItem>
+              <SelectItem value="very-poor">Very Poor</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <Skeleton className="w-full h-64" />
+      ) : (
+        <div className="relative w-full h-64 overflow-hidden rounded-md border">
+          <div 
+            className="w-full h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+            style={{ 
+              filter: quality === 'low' ? 'blur(4px)' : 
+                      quality === 'medium' ? 'blur(1px)' : 'none',
+              opacity: quality === 'low' ? 0.7 : 
+                       quality === 'medium' ? 0.85 : 1,
+              transform: `scale(${quality === 'original' ? 1 : 0.95})`,
+              transition: 'filter 0.3s, opacity 0.3s, transform 0.3s'
+            }}
+          ></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-white font-medium bg-black bg-opacity-40 px-4 py-2 rounded">
+              Sample Image ({quality})
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

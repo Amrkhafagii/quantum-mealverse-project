@@ -37,3 +37,5 @@ export interface LocationSettings {
   updateInterval: number;
   backgroundTracking: boolean;
 }
+
+export type LocationFreshness = 'fresh' | 'recent' | 'stale' | 'expired';
