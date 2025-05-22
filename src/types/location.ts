@@ -1,4 +1,3 @@
-
 export interface LocationWithAccuracy {
   latitude: number;
   longitude: number;
@@ -9,10 +8,14 @@ export interface LocationWithAccuracy {
 export interface DeliveryLocation {
   latitude: number;
   longitude: number;
-  timestamp?: number;
+  timestamp: number | string;
   accuracy?: number;
   speed?: number;
   isMoving?: boolean;
+  altitude?: number;
+  heading?: number;
+  address?: string;
+  source?: import('./unifiedLocation').LocationSource; // Added source field
 }
 
 export type LocationFreshness = 'fresh' | 'moderate' | 'stale' | 'invalid';
