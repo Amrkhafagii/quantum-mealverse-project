@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { getActiveOrders } from '@/utils/offlineStorage';
+import { getActiveOrders, storeActiveOrder } from '@/utils/offlineStorage/ordersService';
 
 export const useOrdersData = (userId?: string) => {
   const { isOnline } = useConnectionStatus();
@@ -44,9 +44,7 @@ export const useOrdersData = (userId?: string) => {
         // Store active orders for offline access
         if (data && data.length > 0) {
           data.forEach(order => {
-            import('@/utils/offlineStorage').then(({ storeActiveOrder }) => {
-              storeActiveOrder(order);
-            });
+            storeActiveOrder(order);
           });
         }
         
@@ -103,9 +101,7 @@ export const useOrdersData = (userId?: string) => {
         // Store past orders for offline access too
         if (data && data.length > 0) {
           data.forEach(order => {
-            import('@/utils/offlineStorage').then(({ storeActiveOrder }) => {
-              storeActiveOrder(order);
-            });
+            storeActiveOrder(order);
           });
         }
         

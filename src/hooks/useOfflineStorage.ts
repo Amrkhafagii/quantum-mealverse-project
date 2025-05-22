@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
-import offlineStorage from '../utils/offlineStorage';
+import offlineStorage from '../utils/offlineStorage/factory';
 
 interface UseOfflineStorageOptions<T> {
   key: string;
