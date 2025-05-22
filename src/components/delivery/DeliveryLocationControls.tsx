@@ -97,7 +97,8 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
           console.log('DeliveryLocationControls: No onLocationUpdate callback to call');
         }
       } else if (error) {
-        toast.error('Failed to update location: ' + error);
+        const errorMsg = typeof error === 'string' ? error : 'Failed to update location';
+        toast.error(errorMsg);
         console.error('Location update failed with error:', error);
       } else {
         toast.warning('Location update timed out. Try again.');
@@ -116,13 +117,13 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       
       const result = await resetAndRequestLocation();
       
-      // Don't use truthiness check on void promise result
-      if (result && typeof result === 'object') {
+      // Check if result is a valid location object
+      if (result && 'latitude' in result && 'longitude' in result) {
         console.log('DeliveryLocationControls: Location services reset successfully', result);
         toast.success('Location services reset successfully');
         
         // If we have an onLocationUpdate callback, call it with the new location
-        if (onLocationUpdate && result) {
+        if (onLocationUpdate) {
           console.log('DeliveryLocationControls: Calling onLocationUpdate after reset with', {
             latitude: result.latitude,
             longitude: result.longitude
@@ -139,7 +140,8 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       }
     } catch (e) {
       console.error('Error during location reset:', e);
-      toast.error('Failed to reset location services');
+      const errorMsg = e instanceof Error ? e.message : 'Failed to reset location services';
+      toast.error(errorMsg);
     }
   };
 

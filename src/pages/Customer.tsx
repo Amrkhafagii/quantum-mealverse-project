@@ -18,6 +18,8 @@ import { motion } from 'framer-motion';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { Platform } from '@/utils/platform';
 import { logLocationDebug, clearLocationStorage, exportLocationLogs } from '@/utils/locationDebug';
+import { UnifiedLocation } from '@/types/unifiedLocation';
+import { DeliveryLocation } from '@/types/location';
 import { 
   Dialog,
   DialogContent,
@@ -143,16 +145,19 @@ const Customer = () => {
     }
   }, [requestPermission, getDirectLocation, findNearestRestaurants, user, permissionStatus]);
   
-  const handleLocationUpdate = useCallback(async (loc: { latitude: number; longitude: number }) => {
+  const handleLocationUpdate = useCallback(async (loc: DeliveryLocation | Partial<UnifiedLocation>) => {
     // This will be called by LocationStateManager when location is updated
-    if (loc && loc.latitude && loc.longitude) {
+    if (loc && 'latitude' in loc && 'longitude' in loc) {
       console.log('Location updated in Customer.tsx:', loc);
       logLocationDebug('location-updated', { 
         location: loc,
         context: { component: 'Customer.tsx' } 
       });
       
-      setLastLocationUpdate(loc);
+      setLastLocationUpdate({
+        latitude: loc.latitude,
+        longitude: loc.longitude
+      });
       
       try {
         // Check authentication before refreshing restaurants
@@ -329,7 +334,7 @@ const Customer = () => {
   const handleManualLocationSet = useCallback((lat: number, lng: number) => {
     if (lat && lng) {
       // Create proper DeliveryLocation object with required properties
-      const manualLocation = {
+      const manualLocation: DeliveryLocation = {
         latitude: lat,
         longitude: lng,
         accuracy: 0,
@@ -340,7 +345,6 @@ const Customer = () => {
       // Now properly set this location
       localStorage.setItem('manualLocation', JSON.stringify(manualLocation));
       
-      // Remove unused setSelectedLocation and refetch usage
       console.log('Set manual location:', manualLocation);
       
       // Refresh restaurants with the new location

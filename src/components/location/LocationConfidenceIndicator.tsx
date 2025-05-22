@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { calculateLocationConfidence, getConfidenceCategory, getLocationQualityDescription } from '@/utils/locationConfidenceScoring';
+import { calculateLocationConfidence, getConfidenceCategory, getLocationQualityDescription, ConfidenceCategory } from '@/utils/locationConfidenceScoring';
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { AlertCircle, CheckCircle, Info, AlertTriangle, SignalMedium } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,7 @@ export function LocationConfidenceIndicator({
           </TooltipTrigger>
           <TooltipContent>
             <p>{qualityDescription}</p>
-            <p className="text-xs mt-1">Score: {confidenceScore}/100</p>
+            <p className="text-xs mt-1">Score: {confidenceScore.overall}/100</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -88,7 +88,7 @@ export function LocationConfidenceIndicator({
           Location Confidence
         </h4>
         <Badge variant="outline" className={color}>
-          {confidenceScore}%
+          {confidenceScore.overall}%
         </Badge>
       </div>
       
@@ -107,7 +107,7 @@ export function LocationConfidenceIndicator({
         )}
         <div className="flex justify-between">
           <span>Network</span>
-          <span className="font-medium">{location.network_type || 'unknown'}</span>
+          <span className="font-medium">{location.networkInfo?.type || 'unknown'}</span>
         </div>
       </div>
     </div>

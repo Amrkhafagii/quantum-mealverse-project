@@ -31,13 +31,15 @@ const RECENCY_THRESHOLDS = {
 const NETWORK_WEIGHTS: Record<NetworkType, number> = {
   'wifi': 10,
   'ethernet': 10,
-  'cellular_5g': 9, // Using cellular_5g to match NetworkType
+  'cellular_5g': 9,
   'cellular_4g': 7,
   'cellular_3g': 5,
   'cellular_2g': 3,
   'unknown': 2,
   'none': 0
 };
+
+export type ConfidenceCategory = 'high' | 'medium' | 'low' | 'very-low' | 'unknown';
 
 export interface ConfidenceScore {
   overall: number; // 0-100
@@ -142,4 +144,43 @@ export function calculateLocationConfidence(location: UnifiedLocation): Confiden
     factors,
     rating
   };
+}
+
+/**
+ * Get a simplified confidence category
+ */
+export function getConfidenceCategory(score: ConfidenceScore): ConfidenceCategory {
+  if (score.overall >= 75) {
+    return 'high';
+  } else if (score.overall >= 50) {
+    return 'medium';
+  } else if (score.overall >= 25) {
+    return 'low';
+  } else if (score.overall > 0) {
+    return 'very-low';
+  } else {
+    return 'unknown';
+  }
+}
+
+/**
+ * Get a human-readable description of location quality
+ */
+export function getLocationQualityDescription(location: UnifiedLocation): string {
+  const score = calculateLocationConfidence(location);
+  const category = getConfidenceCategory(score);
+  
+  switch (category) {
+    case 'high':
+      return `High quality location from ${location.source} source with ${location.accuracy}m accuracy.`;
+    case 'medium':
+      return `Decent location accuracy from ${location.source} source.`;
+    case 'low':
+      return `Limited location reliability from ${location.source} source.`;
+    case 'very-low':
+      return `Poor location accuracy. Consider refreshing or using a different source.`;
+    case 'unknown':
+    default:
+      return 'Unable to determine location quality.';
+  }
 }

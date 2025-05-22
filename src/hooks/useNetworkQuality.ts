@@ -1,198 +1,257 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Network } from '@capacitor/network';
 import { Capacitor } from '@capacitor/core';
 
-export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'offline' | 'unknown';
-export type NetworkType = 'wifi' | 'cellular' | 'none' | 'unknown';
+export type NetworkQuality = 'excellent' | 'good' | 'moderate' | 'poor' | 'offline' | 'unknown';
+
+interface NetworkMetrics {
+  rtt?: number | null;
+  downlink?: number | null;
+  jitter?: number | null;
+  score?: number | null;
+}
+
+interface EffectiveConnectionType {
+  effectiveType?: string | null;
+}
+
+interface NetworkQualityData extends NetworkMetrics, EffectiveConnectionType {
+  quality: NetworkQuality;
+  isLowQuality: boolean;
+  hasTransitioned: boolean;
+  isFlaky: boolean;
+}
+
+const initialNetworkData: NetworkQualityData = {
+  quality: 'unknown',
+  isLowQuality: false,
+  hasTransitioned: false,
+  isFlaky: false,
+  rtt: null,
+  downlink: null,
+  jitter: null,
+  score: null,
+  effectiveType: null
+};
+
+const mapConnectionType = (type: string | null): string => {
+  switch (type) {
+    case 'wifi': return 'wifi';
+    case 'cellular': return 'cellular';
+    case 'ethernet': return 'ethernet';
+    case 'none': return 'none';
+    default: return 'unknown';
+  }
+};
 
 export function useNetworkQuality() {
-  const [isConnected, setIsConnected] = useState<boolean>(true);
-  const [connectionType, setConnectionType] = useState<NetworkType>('unknown');
-  const [quality, setQuality] = useState<NetworkQuality>('good');
+  const [quality, setQuality] = useState<NetworkQuality>('unknown');
   const [isLowQuality, setIsLowQuality] = useState<boolean>(false);
-  const [effectiveType, setEffectiveType] = useState<string>('4g');
-  const [downlink, setDownlink] = useState<number | null>(null);
-  const [bandwidth, setBandwidth] = useState<number | null>(null);
-  const [latency, setLatency] = useState<number | null>(null);
-  const [isFlaky, setIsFlaky] = useState<boolean>(false);
   const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
-  const [previousQuality, setPreviousQuality] = useState<NetworkQuality | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(true);
+  const [connectionType, setConnectionType] = useState<string>('unknown');
+  const [metrics, setMetrics] = useState<NetworkMetrics>({ rtt: null, downlink: null, jitter: null, score: null });
+  const [effectiveType, setEffectiveType] = useState<string | null>(null);
+  const [isFlaky, setIsFlaky] = useState<boolean>(false);
+  const timeoutRef = useRef<number | null>(null);
+  const [testCount, setTestCount] = useState(0);
+  const [consecutivePoor, setConsecutivePoor] = useState(0);
 
-  const determineNetworkQuality = useCallback(() => {
-    if (!isConnected) {
+  // Constants for scoring
+  const GOOD_SCORE = 0.8;
+  const MODERATE_SCORE = 0.5;
+  const POOR_SCORE = 0.2;
+  const MAX_TESTS = 3;
+  const POOR_THRESHOLD = 2;
+
+  // Helper function to run the network quality test
+  const runQualityTest = useCallback(async (): Promise<number | null> => {
+    const startTime = Date.now();
+    try {
+      // Use a small, cache-busted image
+      const imageUrl = `https://source.unsplash.com/random?q=${startTime}`;
+      const response = await fetch(imageUrl, { mode: 'no-cors' });
+      if (!response.ok) {
+        console.warn('Network test image failed to load');
+        return null;
+      }
+      const endTime = Date.now();
+      const duration = (endTime - startTime);
+      const score = Math.max(0, 1 - (duration / 1000)); // Normalize to 0-1 scale
+      return score;
+    } catch (error) {
+      console.error('Network quality test error:', error);
+      return null;
+    }
+  }, []);
+
+  // Function to evaluate network quality
+  const evaluateQuality = useCallback((score: number | null) => {
+    if (score === null) {
+      return 'unknown';
+    } else if (score >= GOOD_SCORE) {
+      return 'excellent';
+    } else if (score >= MODERATE_SCORE) {
+      return 'good';
+    } else if (score > POOR_SCORE) {
+      return 'moderate';
+    } else {
+      return 'poor';
+    }
+  }, []);
+
+  // Schedule a quality check
+  const scheduleQualityCheck = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(async () => {
+      if (!isConnected) {
+        console.log('Skipping quality check: not connected');
+        return;
+      }
+      
+      const score = await runQualityTest();
+      const newQuality = evaluateQuality(score);
+      
+      setTestCount(prevCount => prevCount + 1);
+      
+      // Update metrics
+      setMetrics(prev => ({ ...prev, score }));
+      
+      // Handle consecutive poor scores
+      if (newQuality === 'poor') {
+        setConsecutivePoor(prev => prev + 1);
+      } else {
+        setConsecutivePoor(0);
+      }
+      
+      // Determine if the connection is flaky
+      const flaky = consecutivePoor >= POOR_THRESHOLD;
+      setIsFlaky(flaky);
+      
+      // Set quality state
+      setQuality(newQuality);
+      setIsLowQuality(newQuality === 'poor' || newQuality === 'moderate');
+      
+      console.log(`Network quality: ${newQuality} (score: ${score}, test ${testCount}, flaky: ${flaky})`);
+      
+      // Reschedule if needed
+      if (testCount < MAX_TESTS) {
+        scheduleQualityCheck();
+      } else {
+        console.log('Max tests reached, monitoring passively');
+      }
+    }, 2000) as unknown as number;
+  }, [runQualityTest, evaluateQuality, isConnected, testCount, consecutivePoor]);
+
+  // Setup network info monitoring
+  useEffect(() => {
+    // Initial setup
+    let initialCheckDone = false;
+    
+    const initialCheck = async () => {
+      try {
+        const status = await Network.getStatus();
+        
+        // Set initial connection status
+        setIsConnected(status.connected);
+        setConnectionType(mapConnectionType(status.connectionType));
+        
+        // Schedule a quality check on initial setup
+        if (status.connected) {
+          scheduleQualityCheck();
+        } else {
+          setQuality('offline');
+          setIsLowQuality(true);
+        }
+      } catch (error) {
+        console.error('Error checking initial network status:', error);
+        setQuality('unknown');
+        setIsLowQuality(false);
+      } finally {
+        initialCheckDone = true;
+      }
+    };
+
+    // Set up network listener
+    let networkListener: any = null;
+    
+    const setupListener = async () => {
+      try {
+        const listener = await Network.addListener('networkStatusChange', (status) => {
+          // Update connection type and check quality
+          setConnectionType(mapConnectionType(status.connectionType));
+          setIsConnected(status.connected);
+          
+          // Schedule a quality check when network changes
+          if (status.connected) {
+            scheduleQualityCheck();
+          } else {
+            setQuality('offline');
+            setIsLowQuality(true);
+          }
+          
+          // Record the transition
+          setHasTransitioned(true);
+          setTimeout(() => setHasTransitioned(false), 3000);
+        });
+        
+        networkListener = listener;
+      } catch (error) {
+        console.error('Error setting up network listener:', error);
+      }
+    };
+    
+    setupListener();
+
+    // Browser fallback
+    const handleOnline = () => {
+      setIsConnected(true);
+      setConnectionType('unknown');
+      scheduleQualityCheck();
+    };
+
+    const handleOffline = () => {
+      setIsConnected(false);
       setQuality('offline');
       setIsLowQuality(true);
-      return;
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Run initial check if not already done
+    if (!initialCheckDone) {
+      initialCheck();
     }
 
-    let newQuality: NetworkQuality = 'unknown';
-
-    if (connectionType === 'wifi') {
-      // On WiFi, check if the effective type is slow
-      if (effectiveType === '2g') {
-        newQuality = 'poor';
-        setIsLowQuality(true);
-      } else if (effectiveType === '3g') {
-        newQuality = 'fair';
-        setIsLowQuality(false);
-      } else {
-        newQuality = 'excellent';
-        setIsLowQuality(false);
-      }
-    } else if (connectionType === 'cellular') {
-      // On cellular, classify by effective connection
-      if (effectiveType === '2g') {
-        newQuality = 'poor';
-        setIsLowQuality(true);
-      } else if (effectiveType === '3g') {
-        newQuality = 'fair';
-        setIsLowQuality(true);
-      } else if (effectiveType === '4g') {
-        newQuality = 'good';
-        setIsLowQuality(false);
-      } else if (effectiveType === '5g') {
-        newQuality = 'excellent';
-        setIsLowQuality(false);
-      }
-    } else {
-      // Unknown or none
-      newQuality = 'unknown';
-      setIsLowQuality(true);
-    }
-
-    // Also check if we have downlink speed info
-    if (downlink !== null) {
-      // Downlink is in Mbps
-      if (downlink < 0.5) {
-        newQuality = 'very-poor';
-        setIsLowQuality(true);
-      } else if (downlink < 2) {
-        newQuality = 'poor';
-        setIsLowQuality(true);
-      } else if (downlink < 10) {
-        newQuality = 'good';
-        setIsLowQuality(false);
-      } else {
-        newQuality = 'excellent';
-        setIsLowQuality(false);
-      }
-    }
-
-    // Estimate bandwidth in Mbps based on downlink or connection type
-    const estimatedBandwidth = downlink
-      ? downlink
-      : connectionType === 'wifi'
-      ? 25 // Default WiFi estimate
-      : effectiveType === '5g'
-      ? 100
-      : effectiveType === '4g'
-      ? 20
-      : effectiveType === '3g'
-      ? 5
-      : 0.5; // 2g or below
+    return () => {
+      // Clean up resources
+      clearTimeout(timeoutRef.current);
       
-    setBandwidth(estimatedBandwidth);
-
-    // Check if quality has changed significantly
-    if (previousQuality && newQuality !== previousQuality) {
-      setHasTransitioned(true);
-      // Reset transition flag after 5 seconds
-      setTimeout(() => setHasTransitioned(false), 5000);
-    }
-
-    setPreviousQuality(newQuality);
-    setQuality(newQuality);
-  }, [isConnected, connectionType, effectiveType, downlink, previousQuality]);
-
-  // Check quality actively
-  const checkQuality = useCallback(async (): Promise<NetworkQuality> => {
-    await updateNetworkInfo();
-    return quality;
-  }, [quality]);
-
-  // Update network information
-  const updateNetworkInfo = useCallback(async () => {
-    try {
-      const status = await Network.getStatus();
-      setIsConnected(status.connected);
-      setConnectionType(status.connectionType as NetworkType);
-      
-      // Estimate latency with a simple ping
-      try {
-        const start = Date.now();
-        await fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' });
-        const pingLatency = Date.now() - start;
-        setLatency(pingLatency);
-        
-        // Set flaky if latency is inconsistent (simplified logic for demo)
-        setIsFlaky(pingLatency > 300);
-      } catch (error) {
-        setIsFlaky(true);
-      }
-      
-      // Web-only: get more detailed connection information if available
-      if (typeof navigator !== 'undefined' && 'connection' in navigator) {
-        const conn = (navigator as any).connection;
-        if (conn) {
-          setEffectiveType(conn.effectiveType || '4g');
-          setDownlink(conn.downlink || null);
+      if (networkListener) {
+        try {
+          networkListener.remove();
+        } catch (err) {
+          console.error('Error removing network listener:', err);
         }
       }
       
-      determineNetworkQuality();
-    } catch (error) {
-      console.error('Error getting network status:', error);
-    }
-  }, [determineNetworkQuality]);
-
-  // Initialize and set up listeners
-  useEffect(() => {
-    // Initial check
-    updateNetworkInfo();
-    
-    // Listen for network status changes
-    const setupListener = async () => {
-      try {
-        return await Network.addListener('networkStatusChange', status => {
-          setIsConnected(status.connected);
-          setConnectionType(status.connectionType as NetworkType);
-          determineNetworkQuality();
-        });
-      } catch (error) {
-        console.error('Error setting up network listener:', error);
-        return null;
-      }
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
-    
-    let networkListener: any = null;
-    setupListener().then(result => {
-      networkListener = result;
-    });
-    
-    // Set up periodic checks for more detailed mobile connection state
-    const intervalId = setInterval(updateNetworkInfo, 30000); // Check every 30s
-    
-    return () => {
-      if (networkListener) {
-        networkListener.remove().catch((err: any) => console.error('Error removing network listener:', err));
-      }
-      clearInterval(intervalId);
-    };
-  }, [updateNetworkInfo, determineNetworkQuality]);
+  }, [runQualityTest, evaluateQuality, scheduleQualityCheck]);
 
   return {
-    isConnected,
-    isOnline: isConnected,
-    connectionType,
     quality,
     isLowQuality,
-    effectiveType,
-    downlink,
-    bandwidth, // Added this property
-    latency,
-    isFlaky,
     hasTransitioned,
-    checkQuality
+    isConnected,
+    connectionType,
+    metrics,
+    effectiveType,
+    isFlaky
   };
 }

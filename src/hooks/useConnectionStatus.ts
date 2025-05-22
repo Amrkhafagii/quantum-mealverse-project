@@ -46,7 +46,7 @@ export function useConnectionStatus() {
     
     const setupListener = async () => {
       try {
-        networkListener = await Network.addListener('networkStatusChange', (status) => {
+        const listener = await Network.addListener('networkStatusChange', (status) => {
           // If we were offline before and now we're online, set wasOffline flag
           if (!isOnline && status.connected) {
             setWasOffline(true);
@@ -55,6 +55,8 @@ export function useConnectionStatus() {
           setIsOnline(status.connected);
           setConnectionType(status.connectionType);
         });
+        
+        networkListener = listener;
       } catch (error) {
         console.error('Error setting up network listener:', error);
       }
@@ -80,7 +82,12 @@ export function useConnectionStatus() {
     return () => {
       // Clean up listeners
       if (networkListener) {
-        networkListener.remove().catch((err: any) => console.error('Error removing network listener:', err));
+        // Handle the Promise.remove properly
+        try {
+          networkListener.remove();
+        } catch (err) {
+          console.error('Error removing network listener:', err);
+        }
       }
       
       window.removeEventListener('online', handleOnline);
