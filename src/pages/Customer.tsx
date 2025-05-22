@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -16,10 +16,13 @@ import { useAutoRestaurantNavigation } from '@/hooks/useAutoRestaurantNavigation
 import { ViewToggle } from '@/components/customer/ViewToggle';
 import { MainContent } from '@/components/customer/MainContent';
 import { motion } from 'framer-motion';
+import { useCurrentLocation } from '@/hooks/useCurrentLocation';
+import { Platform } from '@/utils/platform';
 
 const Customer = () => {
   const { user } = useAuth();
   const { permissionStatus, requestPermission } = useLocationPermission();
+  const { getCurrentLocation: getDirectLocation } = useCurrentLocation();
   const [isMapView, setIsMapView] = useState(false);
   
   // Use our enhanced nearest restaurant hook
@@ -34,15 +37,49 @@ const Customer = () => {
 
   // Fetch menu items from nearby restaurants
   const { data: menuItems, isLoading: loadingMenuItems, error } = useMenuItems(nearbyRestaurants);
+
+  // Enhanced handler for location request with fallback
+  const handleLocationRequest = useCallback(async () => {
+    try {
+      let success = await requestPermission();
+      
+      // If the primary method failed and we're on web, try the direct web implementation fallback
+      if (!success && Platform.isWeb()) {
+        console.log('Primary location request failed, trying direct browser implementation');
+        const location = await getDirectLocation();
+        
+        if (location && location.latitude && location.longitude) {
+          // Manual call to find restaurants if we got location via fallback
+          findNearestRestaurants({
+            latitude: location.latitude,
+            longitude: location.longitude
+          });
+          toast.success('Location updated successfully');
+          success = true;
+        }
+      }
+      
+      if (!success) {
+        toast.error('Could not get your location. Please check your browser settings.');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Location request error:', error);
+      toast.error('Failed to access your location');
+      return false;
+    }
+  }, [requestPermission, getDirectLocation, findNearestRestaurants]);
   
-  const handleLocationUpdate = (loc: { latitude: number; longitude: number }) => {
+  const handleLocationUpdate = useCallback((loc: { latitude: number; longitude: number }) => {
     // This will be called by LocationStateManager when location is updated
-    if (loc) {
-      findNearestRestaurants();
+    if (loc && loc.latitude && loc.longitude) {
+      console.log('Location updated:', loc);
+      findNearestRestaurants(loc);
       // Set the flag to auto-navigate to menu when location is first acquired
       localStorage.setItem('autoNavigateToMenu', 'true');
     }
-  };
+  }, [findNearestRestaurants]);
   
   const toggleMapView = () => {
     setIsMapView(prev => !prev);
@@ -132,7 +169,7 @@ const Customer = () => {
                 error={error}
                 nearbyRestaurants={nearbyRestaurants}
                 toggleMapView={toggleMapView}
-                onLocationRequest={requestPermission}
+                onLocationRequest={handleLocationRequest}
               />
             </LocationStateManager>
           </ErrorBoundary>
