@@ -17,51 +17,25 @@ export function useCurrentLocation() {
         },
         (error) => {
           console.error('Geolocation error:', error);
-          reject(error);
+          
+          // Specific error messaging based on error code
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              reject(new Error('Location access denied. Please enable location services in your browser settings.'));
+              break;
+            case error.POSITION_UNAVAILABLE:
+              reject(new Error('Location information is unavailable. Please try again in a different area.'));
+              break;
+            case error.TIMEOUT:
+              reject(new Error('Location request timed out. Please check your GPS signal and try again.'));
+              break;
+            default:
+              reject(new Error('An unknown error occurred while retrieving your location.'));
+          }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
       );
     });
-  };
-
-  const fallbackToIpLocation = async (): Promise<DeliveryLocation> => {
-    try {
-      // This would normally call an IP geolocation API
-      // For this example, we'll just return Austin, TX coordinates
-      const result = {
-        latitude: 30.2672,
-        longitude: -97.7431,
-        accuracy: 5000,  // IP geolocation is not very accurate
-        timestamp: Date.now(),
-        source: 'ip' as LocationSource,
-      };
-      
-      setLocationSource('ip');
-      return result;
-    } catch (error) {
-      console.error('IP Geolocation error:', error);
-      throw new Error('Failed to get location from IP');
-    }
-  };
-
-  const fallbackToCellLocation = async (): Promise<DeliveryLocation> => {
-    try {
-      // This would normally use cell tower triangulation
-      // For this example, we'll just return Austin, TX coordinates with slight variation
-      const result = {
-        latitude: 30.2672 + (Math.random() * 0.01),
-        longitude: -97.7431 + (Math.random() * 0.01),
-        accuracy: 1000,  // Cell tower triangulation is somewhat accurate
-        timestamp: Date.now(),
-        source: 'cell' as LocationSource,
-      };
-      
-      setLocationSource('cell');
-      return result;
-    } catch (error) {
-      console.error('Cell location error:', error);
-      throw new Error('Failed to get location from cell towers');
-    }
   };
 
   const getCurrentLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
@@ -69,7 +43,7 @@ export function useCurrentLocation() {
     setErrorMessage(null);
 
     try {
-      // Try to get the location using the browser's geolocation API first
+      // Get the location using the browser's geolocation API
       const position = await getPositionFromNavigator();
       
       const location: DeliveryLocation = {
@@ -85,23 +59,10 @@ export function useCurrentLocation() {
       
       setLastLocation(location);
       return location;
-    } catch (gpsError) {
-      // If GPS fails, try IP geolocation
-      try {
-        const ipLocation = await fallbackToIpLocation();
-        setLastLocation(ipLocation);
-        return ipLocation;
-      } catch (ipError) {
-        // If IP geolocation fails, try cell tower triangulation
-        try {
-          const cellLocation = await fallbackToCellLocation();
-          setLastLocation(cellLocation);
-          return cellLocation;
-        } catch (cellError) {
-          setErrorMessage('Could not determine your location. Please check your device settings.');
-          return null;
-        }
-      }
+    } catch (error: any) {
+      console.error('Location retrieval failed:', error);
+      setErrorMessage(error.message || 'Could not get your location. Please check your device settings.');
+      return null;
     } finally {
       setIsLoadingLocation(false);
     }

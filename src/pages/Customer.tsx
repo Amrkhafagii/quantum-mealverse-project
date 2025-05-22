@@ -20,6 +20,7 @@ import { Platform } from '@/utils/platform';
 import { logLocationDebug, clearLocationStorage, exportLocationLogs } from '@/utils/locationDebug';
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { DeliveryLocation } from '@/types/location';
+import { getHighAccuracyLocation, getLocationErrorGuidance } from '@/utils/locationAccuracyManager';
 import { 
   Dialog,
   DialogContent,
@@ -29,16 +30,22 @@ import {
   DialogFooter,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { RefreshCcw, Bug, Save, Trash2 } from 'lucide-react';
+import { 
+  Alert, 
+  AlertTitle, 
+  AlertDescription 
+} from '@/components/ui/alert';
+import { RefreshCcw, Bug, Save, Trash2, MapPin, AlertTriangle } from 'lucide-react';
 
 const Customer = () => {
   const { user } = useAuth();
   const { permissionStatus, requestPermission } = useLocationPermission();
   const { getCurrentLocation: getDirectLocation } = useCurrentLocation();
   const [isMapView, setIsMapView] = useState(false);
-  const [forceRefresh, setForceRefresh] = useState(0); // Added to force refresh
+  const [forceRefresh, setForceRefresh] = useState(0); 
   const [lastLocationUpdate, setLastLocationUpdate] = useState<null | {latitude: number, longitude: number}>(null);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   
   // Use our enhanced nearest restaurant hook
   const { 
@@ -71,7 +78,7 @@ const Customer = () => {
     });
   }, [user]);
 
-  // Enhanced handler for location request with fallback and debug logging
+  // Enhanced handler for location request using only high-accuracy sources
   const handleLocationRequest = useCallback(async () => {
     try {
       logLocationDebug('request-location-start', {
@@ -80,70 +87,59 @@ const Customer = () => {
           permissionStatus
         }
       });
-      console.log('handleLocationRequest called - requesting user location');
-      toast.loading('Requesting your location...');
       
-      console.log('Authentication state before location request:', { isLoggedIn: !!user });
+      console.log('handleLocationRequest called - requesting high accuracy location');
+      toast.loading('Getting your location...');
       
-      let success = await requestPermission();
+      // First ensure we have location permission
+      const permissionSuccess = await requestPermission();
       
-      logLocationDebug('request-permission-result', {
-        context: { success, permissionStatus }
+      if (!permissionSuccess) {
+        toast.error('Location permission denied', {
+          description: 'Please enable location in your browser settings to use this feature'
+        });
+        setLocationError('Location permission denied. Please enable location access in your browser settings.');
+        return false;
+      }
+      
+      // Try to get high-accuracy location (GPS/WiFi only)
+      const location = await getHighAccuracyLocation();
+      
+      if (!location) {
+        toast.error('Unable to get accurate location');
+        setLocationError('Could not determine your precise location. Please try again in an area with better GPS reception.');
+        return false;
+      }
+      
+      logLocationDebug('high-accuracy-location-success', { 
+        context: { location } 
       });
       
-      // If the primary method failed and we're on web, try the direct web implementation fallback
-      if (!success && Platform.isWeb()) {
-        console.log('Primary location request failed, trying direct browser implementation');
-        logLocationDebug('fallback-location-attempt', { context: { method: 'direct-browser' } });
-        
-        const location = await getDirectLocation();
-        
-        logLocationDebug('fallback-location-result', { location });
-        
-        if (location && location.latitude && location.longitude) {
-          // Manual call to find restaurants if we got location via fallback
-          console.log('Got location via fallback:', location);
-          setLastLocationUpdate(location);
-          
-          if (user) {
-            console.log('User is authenticated, calling findNearestRestaurants');
-            logLocationDebug('find-restaurants-call', { 
-              context: { 
-                via: 'fallback',
-                location
-              } 
-            });
-            
-            await findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
-            toast.success('Location updated successfully');
-            success = true;
-          } else {
-            console.error('Cannot find restaurants: user not authenticated');
-            logLocationDebug('auth-error', { 
-              error: 'User not authenticated when trying to find restaurants',
-              context: { via: 'fallback' } 
-            });
-            toast.error('You must be logged in to find restaurants');
-          }
-        }
-      }
+      setLastLocationUpdate({
+        latitude: location.latitude,
+        longitude: location.longitude
+      });
       
-      if (!success) {
-        logLocationDebug('location-request-failed', { 
-          error: 'Could not get location',
-          context: { permissionStatus } 
-        });
-        toast.error('Could not get your location. Please check your browser settings.');
+      if (user) {
+        console.log('User is authenticated, finding nearby restaurants with location');
+        await findNearestRestaurants(50);
+        toast.success('Location updated successfully');
+        setLocationError(null);
+        return true;
+      } else {
+        console.error('Cannot find restaurants: user not authenticated');
+        toast.error('You must be logged in to find restaurants');
+        return false;
       }
-      
-      return success;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Location request error:', error);
+      const guidance = getLocationErrorGuidance(error);
       logLocationDebug('location-request-error', { error });
-      toast.error('Failed to access your location');
+      toast.error('Location error', { description: guidance });
+      setLocationError(guidance);
       return false;
     }
-  }, [requestPermission, getDirectLocation, findNearestRestaurants, user, permissionStatus]);
+  }, [requestPermission, findNearestRestaurants, user, permissionStatus]);
   
   const handleLocationUpdate = useCallback(async (loc: UnifiedLocation | DeliveryLocation) => {
     // This will be called by LocationStateManager when location is updated
@@ -162,60 +158,28 @@ const Customer = () => {
       try {
         // Check authentication before refreshing restaurants
         if (user) {
-          console.log('User is authenticated, finding nearby restaurants with location:', loc);
-          logLocationDebug('find-restaurants-attempt', { 
-            context: { 
-              userAuthenticated: true,
-              location: loc 
-            } 
-          });
-          
-          // Explicitly refresh restaurants when location is updated
-          console.log('Calling findNearestRestaurants with updated location');
+          console.log('User is authenticated, finding nearby restaurants with location');
           const results = await findNearestRestaurants(50);
-          
-          logLocationDebug('find-restaurants-result', { 
-            context: { 
-              results: results?.length || 0,
-              location: loc
-            } 
-          });
           
           if (results && results.length > 0) {
             toast.success(`Found ${results.length} restaurants near you!`);
+            setLocationError(null);
           } else {
             toast.warning('No restaurants found nearby, try a different location');
-            logLocationDebug('no-restaurants-found', { 
-              context: { 
-                location: loc
-              } 
-            });
           }
           
-          // Set the flag to auto-navigate to menu when location is first acquired
           localStorage.setItem('autoNavigateToMenu', 'true');
-          
-          // Force a refresh of restaurant data
           setForceRefresh(prev => prev + 1);
         } else {
           console.error('Cannot find restaurants: user not authenticated');
-          logLocationDebug('auth-error', { 
-            error: 'User not authenticated when trying to find restaurants',
-            context: { via: 'locationUpdate' } 
-          });
           toast.error('You must be logged in to find restaurants');
         }
       } catch (err) {
         console.error('Error finding restaurants after location update:', err);
-        logLocationDebug('restaurant-search-error', { error: err });
         toast.error('Could not find nearby restaurants');
       }
     } else {
       console.error('Invalid location data received in handleLocationUpdate', loc);
-      logLocationDebug('invalid-location-data', { 
-        error: 'Invalid location data received',
-        context: { location: loc } 
-      });
     }
   }, [findNearestRestaurants, user]);
   
@@ -225,20 +189,11 @@ const Customer = () => {
       // Try again after a small delay
       const timer = setTimeout(() => {
         console.log('No restaurants found, retrying...');
-        logLocationDebug('retry-find-restaurants', { 
-          context: { 
-            attempt: forceRefresh,
-            location: lastLocationUpdate
-          } 
-        });
         
         if (user) {
           refreshRestaurants(50);
         } else {
           console.error('Retry failed: user not authenticated');
-          logLocationDebug('auth-error', { 
-            error: 'User not authenticated when trying to retry restaurant search'
-          });
           toast.error('Please log in to find restaurants');
         }
       }, 2000);
@@ -264,15 +219,10 @@ const Customer = () => {
   
   const toggleMapView = () => {
     setIsMapView(prev => !prev);
-    // Show appropriate toast message
     if (!isMapView) {
-      toast("Switching to map view", { 
-        icon: "🗺️"
-      });
+      toast("Switching to map view", { icon: "🗺️" });
     } else {
-      toast("Switching to list view", { 
-        icon: "📋"
-      });
+      toast("Switching to list view", { icon: "📋" });
     }
   };
 
@@ -323,36 +273,12 @@ const Customer = () => {
 
   // Handle auto-navigation to first restaurant
   useAutoRestaurantNavigation(
-    true, // autoNavigateToMenu
+    true, 
     nearbyRestaurants,
-    true, // hasContentLoaded
+    true, 
     loadingMenuItems,
     user
   );
-
-  // Fix the location prop type
-  const handleManualLocationSet = useCallback((lat: number, lng: number) => {
-    if (lat && lng) {
-      // Create proper DeliveryLocation object with required properties
-      const manualLocation: DeliveryLocation = {
-        latitude: lat,
-        longitude: lng,
-        accuracy: 0,
-        timestamp: Date.now(),
-        source: 'manual' as const
-      };
-      
-      // Now properly set this location
-      localStorage.setItem('manualLocation', JSON.stringify(manualLocation));
-      
-      console.log('Set manual location:', manualLocation);
-      
-      // Refresh restaurants with the new location
-      if (user) {
-        refreshRestaurants(50);
-      }
-    }
-  }, [refreshRestaurants, user]);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
@@ -458,6 +384,27 @@ const Customer = () => {
               </Dialog>
             </div>
           </div>
+          
+          {locationError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Location Error</AlertTitle>
+              <AlertDescription>
+                {locationError}
+              </AlertDescription>
+              <div className="mt-4">
+                <Button 
+                  onClick={handleLocationRequest}
+                  variant="outline" 
+                  size="sm"
+                  className="bg-transparent text-white border-white/30"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            </Alert>
+          )}
           
           <ErrorBoundary>
             <LocationStateManager 

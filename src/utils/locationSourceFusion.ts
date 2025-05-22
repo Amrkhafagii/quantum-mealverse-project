@@ -1,4 +1,3 @@
-
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { calculateLocationConfidence } from './locationConfidenceScoring';
 import type { ConfidenceScore } from './locationConfidenceScoring';
@@ -6,6 +5,7 @@ import type { ConfidenceScore } from './locationConfidenceScoring';
 /**
  * Fuse multiple location sources into one most accurate location
  * Uses confidence scores to determine the best location
+ * IMPORTANT: Only fuses high-accuracy sources (GPS and WiFi)
  */
 export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | null {
   if (!locations || locations.length === 0) {
@@ -16,8 +16,23 @@ export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | n
     return locations[0];
   }
   
-  // Calculate confidence scores for each location
-  const locationsWithScores = locations.map(location => ({
+  // Filter out low-accuracy sources first (keep only GPS and WiFi)
+  const highAccuracySources = locations.filter(loc => 
+    loc.source === 'gps' || loc.source === 'wifi'
+  );
+  
+  if (highAccuracySources.length === 0) {
+    console.warn('No high-accuracy location sources available for fusion');
+    return null;
+  }
+  
+  // If we're down to one high-accuracy source, use it
+  if (highAccuracySources.length === 1) {
+    return highAccuracySources[0];
+  }
+  
+  // Calculate confidence scores for high-accuracy locations
+  const locationsWithScores = highAccuracySources.map(location => ({
     location,
     score: calculateLocationConfidence(location)
   }));
@@ -76,6 +91,7 @@ export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | n
 
 /**
  * Get the optimal location based on the context of what the location will be used for
+ * IMPORTANT: Only uses high-accuracy sources (GPS and WiFi)
  * 
  * @param locations Available location sources
  * @param purpose Purpose of the location request (affects prioritization)
@@ -86,31 +102,41 @@ export const getOptimalLocation = (
 ): UnifiedLocation | null => {
   if (!locations.length) return null;
   
+  // First filter to only high-accuracy sources
+  const highAccuracySources = locations.filter(loc => 
+    loc.source === 'gps' || loc.source === 'wifi'
+  );
+  
+  if (highAccuracySources.length === 0) {
+    console.warn('No high-accuracy location sources available');
+    return null;
+  }
+  
   switch (purpose) {
     case 'navigation':
       // For navigation, prioritize accuracy over age
       return fuseLocations(
         // Sort by recency first, then filter for reasonable accuracy
-        locations
-          .filter(l => !l.accuracy || l.accuracy < 200)
+        highAccuracySources
+          .filter(l => !l.accuracy || l.accuracy < 100) // Stricter accuracy requirement
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       );
       
     case 'tracking':
-      // For tracking, we want the most recent location, even if less accurate
-      return locations.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )[0];
+      // For tracking, we want the most recent HIGH ACCURACY location
+      return highAccuracySources
+        .filter(l => !l.accuracy || l.accuracy < 150) // Only somewhat accurate locations
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0] || null;
       
     case 'geofencing':
       // For geofencing, we need good accuracy
       return fuseLocations(
-        locations.filter(l => !l.accuracy || l.accuracy < 100)
+        highAccuracySources.filter(l => !l.accuracy || l.accuracy < 50) // Very strict accuracy
       );
       
     case 'general':
     default:
-      // For general purpose, use fusion of all available sources
-      return fuseLocations(locations);
+      // For general purpose, use fusion of all available high-accuracy sources
+      return fuseLocations(highAccuracySources);
   }
 };

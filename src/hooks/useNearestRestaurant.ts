@@ -5,6 +5,7 @@ import { useLocationTracker } from './useLocationTracker';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { logLocationDebug } from '@/utils/locationDebug';
+import { isHighAccuracyLocation } from '@/utils/locationAccuracyManager';
 
 export interface NearbyRestaurant {
   restaurant_id: string;
@@ -55,20 +56,21 @@ export const useNearestRestaurant = () => {
       return null;
     }
 
-    // Check for valid location with improved logging
-    if (!locationIsValid()) {
-      console.error('Location is not valid for restaurant search', location);
+    // Check for valid high-accuracy location
+    if (!locationIsValid() || !isHighAccuracyLocation(location)) {
+      console.error('Location is not valid or not high-accuracy for restaurant search', location);
       logLocationDebug('invalid-location', { 
-        error: 'Location is not valid for restaurant search',
+        error: 'Location is not valid or not high-accuracy for restaurant search',
         context: { 
           location,
-          isValid: locationIsValid()
+          isValid: locationIsValid(),
+          isHighAccuracy: location ? isHighAccuracyLocation(location) : false
         }
       });
       
       setRefreshStatus('error');
-      toast.error("Location required", { 
-        description: "We need your location to find nearby restaurants" 
+      toast.error("Precise location required", { 
+        description: "We need your precise location from GPS or WiFi to find nearby restaurants" 
       });
       return null;
     }
@@ -83,13 +85,6 @@ export const useNearestRestaurant = () => {
           location,
           maxDistance
         }
-      });
-      
-      // More detailed logging before RPC call
-      console.log('Calling Supabase RPC with params:', {
-        lat: location.latitude,
-        lng: location.longitude,
-        maxDistance
       });
       
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
@@ -174,21 +169,23 @@ export const useNearestRestaurant = () => {
   }, [location, locationIsValid, lastRefreshTime, user]);
 
   useEffect(() => {
-    // Only find restaurants if user is authenticated and location is valid
-    if (user && locationIsValid()) {
-      console.log('Location is valid and user is authenticated, finding nearest restaurants');
+    // Only find restaurants if user is authenticated and location is valid and high-accuracy
+    if (user && locationIsValid() && isHighAccuracyLocation(location)) {
+      console.log('Location is valid high-accuracy and user is authenticated, finding nearest restaurants');
       logLocationDebug('auto-find-restaurants', { 
         context: { 
           userExists: !!user,
-          location
+          location,
+          isHighAccuracy: true
         }
       });
       
       findNearestRestaurants();
     } else {
-      console.log('Location is not valid or user is not authenticated yet', {
+      console.log('Location is not valid/high-accuracy or user is not authenticated yet', {
         userExists: !!user,
         locationValid: locationIsValid(),
+        isHighAccuracy: location ? isHighAccuracyLocation(location) : false,
         location
       });
       
@@ -196,6 +193,7 @@ export const useNearestRestaurant = () => {
         context: { 
           userExists: !!user,
           locationValid: locationIsValid(),
+          isHighAccuracy: location ? isHighAccuracyLocation(location) : false,
           location
         }
       });
