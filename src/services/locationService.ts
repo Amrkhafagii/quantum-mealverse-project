@@ -39,7 +39,7 @@ export const saveLocation = async (
       source: location.source || 'manual'
     };
 
-    // For TypeScript to recognize this table exists, use type assertions
+    // Use type assertion for TypeScript to recognize this table exists
     const { data, error } = await supabase
       .from('unified_locations' as any)
       .insert(locationToSave)
