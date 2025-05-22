@@ -1,3 +1,4 @@
+
 import UIKit
 import Capacitor
 import CoreLocation
@@ -9,8 +10,21 @@ import ObjectiveC
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var servicesInitialized = false
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Defer heavy initializations to avoid blocking app launch
+        // We'll initialize services after a short delay to ensure UI is shown first
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.initializeServices(application)
+        }
+        
+        return true
+    }
+    
+    private func initializeServices(_ application: UIApplication) {
+        guard !servicesInitialized else { return }
+        
         // Initialize location manager
         LocationManager.shared.checkLocationPermission()
         
@@ -27,7 +41,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             BackgroundSync.register()
         }
         
-        return true
+        servicesInitialized = true
+        print("Services initialized successfully")
     }
     
     // MARK: - Application Lifecycle Methods
@@ -38,6 +53,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        guard servicesInitialized else { return }
+        
         // Update location tracking for background mode
         LocationManager.shared.handleAppDidEnterBackground()
         
@@ -55,11 +72,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // If services not initialized yet, do it now
+        if !servicesInitialized {
+            initializeServices(application)
+        }
+        
         // Update location tracking for foreground mode
         LocationManager.shared.handleAppDidBecomeActive()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
+        guard servicesInitialized else { return }
+        
         // Cleanup
         LocationManager.shared.cleanup()
         ActivityManager.shared.stopActivityMonitoring()
@@ -101,6 +125,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - Background App Refresh
     
     func application(_ application: UIApplication, performFetchWithCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        guard servicesInitialized else {
+            completionHandler(.noData)
+            return
+        }
+        
         // This is called when the system wakes up the app for a background fetch
         print("Background fetch initiated")
         

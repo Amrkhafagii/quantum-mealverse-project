@@ -6,11 +6,11 @@ const config: CapacitorConfig = {
   appName: 'quantum-mealverse-project',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    // Using a local development server during development
-    // Comment this out for production builds
-    url: 'http://localhost:8080',
-    cleartext: true
+    androidScheme: 'https'
+    // Development URL removed to ensure app loads web assets from bundle
+    // Uncomment the below lines during development only
+    // url: 'http://localhost:8080',
+    // cleartext: true
   },
   plugins: {
     BiometricAuth: {
