@@ -31,30 +31,54 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({
   
   // Check if platform is initialized before proceeding
   useEffect(() => {
-    const checkPlatform = () => {
-      // Use try/catch to safely check platform initialization
+    let isMounted = true;
+    let platformCheckTimer: number | undefined;
+
+    const checkPlatform = async () => {
       try {
-        if (Platform.isInitialized()) {
-          setPlatformReady(true);
+        // Use safer platform check
+        if (Platform.isInitialized && Platform.isInitialized()) {
+          if (isMounted) {
+            setPlatformReady(true);
+          }
         } else {
           // Try again in 100ms if platform is not initialized
-          setTimeout(checkPlatform, 100);
+          platformCheckTimer = window.setTimeout(checkPlatform, 100);
         }
       } catch (error) {
         console.warn("Error checking platform initialization:", error);
-        setPlatformReady(false);
+        // After multiple failures, proceed anyway to avoid blocking the UI completely
+        if (isMounted) {
+          setPlatformReady(true);
+        }
       }
     };
     
     checkPlatform();
+    
+    return () => {
+      isMounted = false;
+      if (platformCheckTimer) {
+        clearTimeout(platformCheckTimer);
+      }
+    };
   }, []);
   
-  // Don't render anything if:
-  // 1. Platform is not ready
-  // 2. Biometric auth is not initialized yet
-  // 3. Biometrics are not available
-  // 4. We're not on a native platform (web)
-  if (!platformReady || !isInitialized || !isAvailable || !Platform.isNative()) {
+  // Check if we should render the button
+  const shouldRender = () => {
+    try {
+      // Safety checks before rendering
+      const isNative = Platform.isNative && typeof Platform.isNative === 'function' && Platform.isNative();
+      
+      return platformReady && isInitialized && isAvailable && isNative;
+    } catch (error) {
+      console.warn("Error in shouldRender check:", error);
+      return false;
+    }
+  };
+  
+  // Don't render anything if requirements aren't met
+  if (!shouldRender()) {
     return null;
   }
   

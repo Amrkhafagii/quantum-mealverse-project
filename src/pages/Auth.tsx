@@ -43,11 +43,23 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
   useEffect(() => {
     let isMounted = true;
     let platformCheckTimer: number | undefined;
+    let retryCount = 0;
+    const maxRetries = 20; // Maximum number of retries
     
     const initPlatform = async () => {
       try {
         // Check if platform is initialized
-        if (Platform.isInitialized()) {
+        if (Platform.isInitialized && Platform.isInitialized()) {
+          if (isMounted) {
+            setIsInitialized(true);
+          }
+          return;
+        }
+        
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          // After maximum retries, proceed anyway to avoid UI blocking
+          console.warn('Platform not initialized after maximum retries');
           if (isMounted) {
             setIsInitialized(true);
           }
@@ -69,7 +81,7 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
     
     return () => {
       isMounted = false;
-      if (platformCheckTimer) {
+      if (platformCheckTimer !== undefined) {
         clearTimeout(platformCheckTimer);
       }
     };

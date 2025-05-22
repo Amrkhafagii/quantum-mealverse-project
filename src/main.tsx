@@ -1,3 +1,4 @@
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
@@ -26,10 +27,9 @@ const configureIOSStatusBar = async () => {
   
   try {
     // Use standard dynamic import instead of Function constructor
-    const { StatusBar } = await import('@capacitor/status-bar');
-    
-    // Import the Style enum properly
-    const { Style } = await import('@capacitor/status-bar');
+    const StatusBarModule = await import('@capacitor/status-bar');
+    const StatusBar = StatusBarModule.StatusBar;
+    const Style = StatusBarModule.Style;
     
     // Check device type for proper configuration
     if (Platform.hasDynamicIsland()) {
@@ -66,7 +66,8 @@ const initializeBiometricModules = async () => {
   if (Platform.isNative()) {
     try {
       // This will trigger the loading of the BiometricAuth plugin
-      const { BiometricAuth } = await import('./plugins/BiometricAuthPlugin');
+      const BiometricAuthModule = await import('./plugins/BiometricAuthPlugin');
+      const { BiometricAuth } = BiometricAuthModule;
       console.log('Biometric modules initialized');
     } catch (error) {
       console.warn('Failed to initialize biometric modules:', error);
