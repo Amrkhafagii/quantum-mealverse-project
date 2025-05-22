@@ -78,18 +78,42 @@ export const useBiometricAuth = () => {
           const biometricModule = await import('../plugins/BiometricAuthPlugin');
           const BiometricAuth = biometricModule.BiometricAuth;
           
-          const availabilityCheck = await BiometricAuth.checkBiometryAvailability();
-          const type = availabilityCheck.biometryType?.toLowerCase() as BiometryType;
-          const available = availabilityCheck.isAvailable === true;
-          
-          // Get stored biometric ID to check if it's set up
-          const storedBiometricId = localStorage.getItem('biometric_user_id');
-          
-          if (mounted) {
-            setIsAvailable(available);
-            setBiometryType(available ? type : 'none');
-            setIsBiometricSetup(!!storedBiometricId && available);
-            setIsInitialized(true);
+          try {
+            // First try using checkBiometryAvailability
+            const availabilityCheck = await BiometricAuth.checkBiometryAvailability();
+            const type = availabilityCheck.biometryType?.toLowerCase() as BiometryType;
+            const available = availabilityCheck.isAvailable === true;
+            
+            // Get stored biometric ID to check if it's set up
+            const storedBiometricId = localStorage.getItem('biometric_user_id');
+            
+            if (mounted) {
+              setIsAvailable(available);
+              setBiometryType(available ? type : 'none');
+              setIsBiometricSetup(!!storedBiometricId && available);
+              setIsInitialized(true);
+            }
+          } catch (methodError: any) {
+            // If checkBiometryAvailability is not implemented, try isAvailable
+            if (methodError?.code === 'UNIMPLEMENTED') {
+              console.log('checkBiometryAvailability not implemented, falling back to isAvailable');
+              
+              const fallbackCheck = await BiometricAuth.isAvailable();
+              const type = fallbackCheck.biometryType?.toLowerCase() as BiometryType;
+              const available = fallbackCheck.available === true;
+              
+              // Get stored biometric ID to check if it's set up
+              const storedBiometricId = localStorage.getItem('biometric_user_id');
+              
+              if (mounted) {
+                setIsAvailable(available);
+                setBiometryType(available ? type : 'none');
+                setIsBiometricSetup(!!storedBiometricId && available);
+                setIsInitialized(true);
+              }
+            } else {
+              throw methodError;
+            }
           }
         } catch (error) {
           console.error('Error initializing biometric auth:', error);
@@ -145,13 +169,30 @@ export const useBiometricAuth = () => {
         const biometricModule = await import('../plugins/BiometricAuthPlugin');
         const BiometricAuth = biometricModule.BiometricAuth;
         
-        const result = await BiometricAuth.authenticate({
-          reason: reason || 'Authenticate to continue',
-          title: 'Authenticate', // Added title parameter
-          cancelTitle: 'Cancel',
-        });
-        
-        return result?.authenticated === true;
+        try {
+          // Try with all parameters first
+          const result = await BiometricAuth.authenticate({
+            reason: reason || 'Authenticate to continue',
+            title: 'Authenticate',
+            cancelTitle: 'Cancel',
+          });
+          
+          return result?.authenticated === true;
+        } catch (paramError: any) {
+          // If the error is related to unsupported parameters, try with fewer parameters
+          if (paramError?.code === 'UNIMPLEMENTED' || paramError?.message?.includes('does not exist')) {
+            console.log('Full authentication parameters not supported, trying with reduced parameters');
+            
+            // Try with just the reason
+            const fallbackResult = await BiometricAuth.authenticate({
+              reason: reason || 'Authenticate to continue'
+            });
+            
+            return fallbackResult?.authenticated === true;
+          } else {
+            throw paramError;
+          }
+        }
       } catch (error) {
         console.error('Native biometric authentication error:', error);
         // Show error toast

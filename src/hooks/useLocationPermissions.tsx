@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
-import LocationPermissions, { LocationPermissionStatus } from '@/plugins/LocationPermissionsPlugin';
-import { toast } from '@/components/ui/use-toast';
+import LocationPermissions from '@/plugins/LocationPermissionsPlugin';
+import { useToast } from '@/components/ui/use-toast';
 
 interface LocationPermissionsHookReturn {
   permissionStatus: PermissionState;
@@ -19,22 +19,32 @@ export function useLocationPermissions(): LocationPermissionsHookReturn {
   const [backgroundPermissionStatus, setBackgroundPermissionStatus] = useState<PermissionState>('prompt');
   const [isRequesting, setIsRequesting] = useState(false);
   const [hasEducationalUiBeenShown, setHasEducationalUiBeenShown] = useState(false);
+  const { toast } = useToast();
 
   // Check permission status on component mount
   useEffect(() => {
     const checkPermissions = async () => {
       try {
         if (Capacitor.isNativePlatform()) {
-          if (Capacitor.getPlatform() === 'android') {
-            // Use our native Android implementation
+          try {
+            // Try to use our custom LocationPermissions plugin
             const status = await LocationPermissions.checkPermissionStatus();
             setPermissionStatus(status.location as PermissionState);
             setBackgroundPermissionStatus(status.backgroundLocation as PermissionState);
-          } else {
-            // Default to Capacitor Geolocation for iOS and other platforms
-            const permission = await Geolocation.checkPermissions();
-            setPermissionStatus(permission.location);
-            setBackgroundPermissionStatus(permission.coarseLocation || 'prompt');
+          } catch (pluginError: any) {
+            // Handle UNIMPLEMENTED error by falling back to Capacitor Geolocation
+            if (pluginError?.code === 'UNIMPLEMENTED') {
+              console.log('LocationPermissions plugin not implemented, falling back to Geolocation');
+              const permission = await Geolocation.checkPermissions();
+              setPermissionStatus(permission.location);
+              setBackgroundPermissionStatus(permission.coarseLocation || 'prompt');
+            } else {
+              console.error('Error checking location permissions:', pluginError);
+              // Still try the fallback
+              const permission = await Geolocation.checkPermissions();
+              setPermissionStatus(permission.location);
+              setBackgroundPermissionStatus(permission.coarseLocation || 'prompt');
+            }
           }
         } else {
           // Web fallback
@@ -53,19 +63,35 @@ export function useLocationPermissions(): LocationPermissionsHookReturn {
     };
     
     checkPermissions();
-  }, []);
+  }, [toast]);
 
   // Request foreground location permission
   const requestPermission = useCallback(async (): Promise<boolean> => {
     setIsRequesting(true);
     try {
-      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-        // Use our Android native implementation
-        const result = await LocationPermissions.requestLocationPermission({ includeBackground: false });
-        setPermissionStatus(result.location as PermissionState);
-        return result.location === 'granted';
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // First try our custom plugin
+          const result = await LocationPermissions.requestLocationPermission({ includeBackground: false });
+          setPermissionStatus(result.location as PermissionState);
+          return result.location === 'granted';
+        } catch (pluginError: any) {
+          // If UNIMPLEMENTED, fall back to Capacitor Geolocation
+          if (pluginError?.code === 'UNIMPLEMENTED') {
+            console.log('LocationPermissions plugin not implemented, falling back to Geolocation');
+            const permission = await Geolocation.requestPermissions();
+            setPermissionStatus(permission.location);
+            return permission.location === 'granted';
+          } else {
+            console.error('Error requesting location permission:', pluginError);
+            // Try fallback anyway
+            const permission = await Geolocation.requestPermissions();
+            setPermissionStatus(permission.location);
+            return permission.location === 'granted';
+          }
+        }
       } else {
-        // Use Capacitor for other platforms
+        // Web implementation
         const permission = await Geolocation.requestPermissions();
         setPermissionStatus(permission.location);
         return permission.location === 'granted';
@@ -81,12 +107,12 @@ export function useLocationPermissions(): LocationPermissionsHookReturn {
     } finally {
       setIsRequesting(false);
     }
-  }, []);
+  }, [toast]);
 
   // Request background location permission (Android 10+ specific)
   const requestBackgroundPermission = useCallback(async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
-      // Only relevant for Android
+    if (!Capacitor.isNativePlatform()) {
+      // Only relevant for native platforms
       return true;
     }
 
@@ -94,10 +120,24 @@ export function useLocationPermissions(): LocationPermissionsHookReturn {
     setHasEducationalUiBeenShown(true);
     
     try {
-      const result = await LocationPermissions.requestLocationPermission({ includeBackground: true });
-      setPermissionStatus(result.location as PermissionState);
-      setBackgroundPermissionStatus(result.backgroundLocation as PermissionState);
-      return result.backgroundLocation === 'granted';
+      try {
+        // Try our custom plugin first
+        const result = await LocationPermissions.requestLocationPermission({ includeBackground: true });
+        setPermissionStatus(result.location as PermissionState);
+        setBackgroundPermissionStatus(result.backgroundLocation as PermissionState);
+        return result.backgroundLocation === 'granted';
+      } catch (pluginError: any) {
+        // If UNIMPLEMENTED, fall back to regular permission
+        if (pluginError?.code === 'UNIMPLEMENTED') {
+          console.log('Background location permission not implemented, using regular permission');
+          const permission = await Geolocation.requestPermissions();
+          setPermissionStatus(permission.location);
+          return permission.location === 'granted';
+        } else {
+          console.error('Error requesting background location permission:', pluginError);
+          return false;
+        }
+      }
     } catch (err) {
       console.error('Error requesting background location permission:', err);
       toast({
@@ -109,7 +149,7 @@ export function useLocationPermissions(): LocationPermissionsHookReturn {
     } finally {
       setIsRequesting(false);
     }
-  }, []);
+  }, [toast]);
 
   return {
     permissionStatus,
