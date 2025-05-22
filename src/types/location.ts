@@ -8,6 +8,10 @@ export interface DeliveryLocation {
   accuracy: number;
   timestamp: number;
   source: LocationSource;
+  speed?: number;
+  isMoving?: boolean;
+  altitude?: number | null;
+  heading?: number | null;
   address?: {
     formattedAddress?: string;
     locality?: string;  

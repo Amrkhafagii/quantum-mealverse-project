@@ -1,3 +1,4 @@
+
 import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 import { Platform } from './platform';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
@@ -340,4 +341,212 @@ export const getAdaptiveBatchSize = (
   
   // Calculate new batch size and ensure it's at least 5
   return Math.max(5, Math.round(defaultBatchSize * multiplier));
+};
+
+/**
+ * Get adaptive image dimensions based on network conditions and device capabilities
+ * @param originalWidth Original image width
+ * @param originalHeight Original image height
+ * @param networkType Current network type
+ * @param networkQuality Current network quality
+ * @returns Object with adjusted width and height
+ */
+export const getAdaptiveImageDimensions = (
+  originalWidth: number,
+  originalHeight: number,
+  networkType: NetworkType,
+  networkQuality: NetworkQuality
+): { width: number; height: number } => {
+  let scaleFactor = 1;
+  
+  // Determine scale factor based on network conditions
+  if (networkQuality === 'very-poor') {
+    scaleFactor = 0.3; // 30% of original size
+  } else if (networkQuality === 'poor') {
+    scaleFactor = 0.5; // 50% of original size
+  } else if (networkQuality === 'fair') {
+    scaleFactor = 0.7; // 70% of original size
+  } else if (networkQuality === 'good') {
+    scaleFactor = 0.9; // 90% of original size
+  }
+  
+  // Further adjust based on network type
+  if (networkType === 'none') {
+    scaleFactor *= 0.5;
+  } else if (networkType.includes('cellular') && networkType !== 'cellular_5g' && networkType !== 'cellular_4g') {
+    scaleFactor *= 0.7;
+  }
+  
+  // Calculate new dimensions
+  const width = Math.round(originalWidth * scaleFactor);
+  const height = Math.round(originalHeight * scaleFactor);
+  
+  return { width, height };
+};
+
+/**
+ * Get adaptive polling interval based on network conditions and app state
+ * @param baseIntervalMs Base polling interval in milliseconds
+ * @param networkType Current network type
+ * @param networkQuality Current network quality
+ * @param isAppActive Whether the app is in the foreground
+ * @returns Adjusted polling interval in milliseconds
+ */
+export const getAdaptivePollingInterval = (
+  baseIntervalMs: number,
+  networkType: NetworkType,
+  networkQuality: NetworkQuality,
+  isAppActive: boolean = true
+): number => {
+  let multiplier = 1;
+  
+  // App in background - increase polling interval
+  if (!isAppActive) {
+    multiplier = 3;
+  }
+  
+  // Adjust based on network quality
+  switch (networkQuality) {
+    case 'excellent':
+      multiplier *= 0.8;
+      break;
+    case 'good':
+      multiplier *= 1;
+      break;
+    case 'fair':
+      multiplier *= 1.5;
+      break;
+    case 'poor':
+      multiplier *= 2.5;
+      break;
+    case 'very-poor':
+      multiplier *= 4;
+      break;
+  }
+  
+  // Further adjust based on network type
+  if (networkType === 'none') {
+    multiplier *= 5;
+  } else if (networkType.includes('cellular') && networkType !== 'cellular_5g') {
+    multiplier *= 1.5;
+  }
+  
+  // Calculate new interval and apply reasonable limits
+  const newInterval = Math.round(baseIntervalMs * multiplier);
+  
+  // Ensure interval is at least 5 seconds and at most 5 minutes
+  return Math.min(Math.max(newInterval, 5000), 300000);
+};
+
+/**
+ * Custom hook for adapting content based on network and device capabilities
+ */
+export const useContentAdaptation = () => {
+  const { networkQuality } = useNetworkQuality();
+  const { networkType, isOnline } = useConnectionStatus();
+  const [deviceCapabilities, setDeviceCapabilities] = useState({
+    isHighEnd: false,
+    isMobile: Platform.isMobile(),
+    isNative: Platform.isNative()
+  });
+  
+  // Update device capabilities
+  useEffect(() => {
+    const checkDeviceCapabilities = async () => {
+      const isHighEnd = await Platform.isHighEndDevice();
+      
+      setDeviceCapabilities({
+        isHighEnd,
+        isMobile: Platform.isMobile(),
+        isNative: Platform.isNative()
+      });
+    };
+    
+    checkDeviceCapabilities();
+  }, []);
+  
+  // Calculate content adaptation options
+  const adaptiveOptions = {
+    imageQuality: getAdaptiveImageQuality(networkType, networkQuality),
+    videoQuality: getAdaptiveVideoQuality(networkType, networkQuality),
+    enableHighEndFeatures: shouldEnableHighEndFeatures(networkType, networkQuality),
+    useLazyLoading: shouldLazyLoad(500000, { type: networkType, connected: isOnline }),
+    pollingInterval: getAdaptivePollingInterval(30000, networkType, networkQuality),
+    batchSize: getAdaptiveBatchSize(20, networkType, networkQuality),
+  };
+  
+  return {
+    ...adaptiveOptions,
+    networkQuality,
+    networkType,
+    isOnline,
+    deviceCapabilities
+  };
+};
+
+/**
+ * Custom hook for batched API requests based on network conditions
+ */
+export const useRequestBatching = (defaultBatchSize: number = 20) => {
+  const { networkQuality } = useNetworkQuality();
+  const { networkType, isOnline } = useConnectionStatus();
+  
+  // Calculate optimal batch size
+  const batchSize = getAdaptiveBatchSize(defaultBatchSize, networkType, networkQuality);
+  
+  // Helper function to split large requests into multiple batches
+  const batchRequests = useCallback(<T>(
+    items: T[],
+    processBatch: (batch: T[]) => Promise<any>,
+    options?: { 
+      onProgress?: (completed: number, total: number) => void,
+      sequential?: boolean
+    }
+  ): Promise<any[]> => {
+    const { onProgress, sequential = false } = options || {};
+    const batches: T[][] = [];
+    
+    // Split items into batches
+    for (let i = 0; i < items.length; i += batchSize) {
+      batches.push(items.slice(i, i + batchSize));
+    }
+    
+    // Process batches
+    if (sequential) {
+      // Process sequentially
+      return batches.reduce(async (prevPromise, currentBatch, index) => {
+        const results = await prevPromise;
+        const batchResults = await processBatch(currentBatch);
+        
+        if (onProgress) {
+          onProgress((index + 1) * batchSize, items.length);
+        }
+        
+        return [...results, batchResults];
+      }, Promise.resolve([]) as Promise<any[]>);
+    } else {
+      // Process in parallel
+      const promises = batches.map((batch, index) => {
+        const promise = processBatch(batch);
+        
+        if (onProgress) {
+          promise.then(() => {
+            onProgress((index + 1) * batchSize, items.length);
+          });
+        }
+        
+        return promise;
+      });
+      
+      return Promise.all(promises);
+    }
+  }, [batchSize]);
+  
+  return {
+    batchSize,
+    batchRequests,
+    isOnline,
+    networkType,
+    networkQuality
+  };
 };

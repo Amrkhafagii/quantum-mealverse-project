@@ -6,7 +6,9 @@ import { Device } from '@capacitor/device';
 // Cache results to avoid repeated calls to Device API
 const cache: Record<string, any> = {
   deviceInfo: null,
-  highEndDevice: null
+  highEndDevice: null,
+  androidVersion: null,
+  initialized: false
 };
 
 export const Platform = {
@@ -23,7 +25,11 @@ export const Platform = {
   },
   
   isMobile: (): boolean => {
-    return this.isAndroid() || this.isIOS();
+    return Platform.isAndroid() || Platform.isIOS();
+  },
+  
+  isNative: (): boolean => {
+    return Platform.isAndroid() || Platform.isIOS();
   },
   
   isTablet: (): boolean => {
@@ -106,5 +112,53 @@ export const Platform = {
       cache.highEndDevice = false;
       return false;
     }
+  },
+  
+  // Get Android version as a number
+  getAndroidVersion: async (): Promise<number | null> => {
+    if (cache.androidVersion !== null) return cache.androidVersion;
+    
+    try {
+      if (!Platform.isAndroid()) {
+        cache.androidVersion = null;
+        return null;
+      }
+      
+      const info = await Platform.getDeviceInfo();
+      const version = parseInt(info.osVersion.split('.')[0], 10);
+      
+      cache.androidVersion = version;
+      return version;
+    } catch (err) {
+      console.error('Error getting Android version:', err);
+      return null;
+    }
+  },
+  
+  // Check if platform utilities are initialized
+  isInitialized: (): boolean => {
+    return cache.initialized;
+  },
+  
+  // Initialize platform utilities
+  initialize: async (): Promise<void> => {
+    if (cache.initialized) return;
+    
+    try {
+      // Pre-cache device info
+      await Platform.getDeviceInfo();
+      
+      // Pre-cache high-end device status
+      await Platform.isHighEndDevice();
+      
+      // Mark as initialized
+      cache.initialized = true;
+      console.log('Platform utilities initialized');
+    } catch (err) {
+      console.error('Error initializing platform utilities:', err);
+    }
   }
 };
+
+// Initialize platform utilities on import
+Platform.initialize().catch(console.error);

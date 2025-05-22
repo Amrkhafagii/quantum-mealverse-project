@@ -8,6 +8,7 @@ export const useLocationTracker = () => {
   const [location, setLocation] = useState<DeliveryLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { permissionStatus, requestPermission } = useLocationPermission();
 
   const locationIsValid = useCallback(() => {
@@ -25,6 +26,17 @@ export const useLocationTracker = () => {
     });
     
     return !!isValid;
+  }, [location]);
+
+  // Check if location data is stale (older than 5 minutes)
+  const isLocationStale = useCallback(() => {
+    if (!location || !location.timestamp) return true;
+    
+    const staleThreshold = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const now = Date.now();
+    const locationTime = location.timestamp;
+    
+    return (now - locationTime) > staleThreshold;
   }, [location]);
 
   // Get current location
@@ -90,10 +102,14 @@ export const useLocationTracker = () => {
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
           timestamp: position.timestamp,
-          source: 'gps'
+          source: 'gps',
+          speed: position.coords.speed || undefined,
+          heading: position.coords.heading || undefined,
+          altitude: position.coords.altitude || undefined
         };
         
         setLocation(newLocation);
+        setLastUpdated(new Date());
         setError(null);
         
         logLocationDebug('location-updated', { location: newLocation });
@@ -115,6 +131,28 @@ export const useLocationTracker = () => {
     }
   }, [getCurrentPosition]);
 
+  // Start tracking location
+  const startTracking = useCallback(() => {
+    if (isTracking) return;
+    setIsTracking(true);
+    
+    // Update location immediately
+    updateLocation();
+    
+    // Set interval to update location periodically
+    const intervalId = setInterval(updateLocation, 60000); // Every minute
+    
+    return () => {
+      clearInterval(intervalId);
+      setIsTracking(false);
+    };
+  }, [isTracking, updateLocation]);
+
+  // Stop tracking location
+  const stopTracking = useCallback(() => {
+    setIsTracking(false);
+  }, []);
+
   // Initialize tracking
   useEffect(() => {
     // Try to load from local storage first
@@ -129,6 +167,7 @@ export const useLocationTracker = () => {
         
         if (now - savedTime < thirtyMinutesMs) {
           setLocation(parsedLocation);
+          setLastUpdated(new Date(parsedLocation.updatedAt));
           logLocationDebug('loaded-cached-location', { 
             location: parsedLocation,
             context: {
@@ -146,6 +185,7 @@ export const useLocationTracker = () => {
           console.log('Cached location is too old, will request fresh location');
           // Still set it temporarily but will refresh
           setLocation(parsedLocation);
+          setLastUpdated(new Date(parsedLocation.updatedAt));
           // We'll trigger an update below
         }
       }
@@ -163,18 +203,13 @@ export const useLocationTracker = () => {
   // Start tracking when permission is granted
   useEffect(() => {
     if (permissionStatus === 'granted' && !isTracking) {
-      setIsTracking(true);
-      updateLocation();
-      
-      // Set up periodic location updates - every minute
-      const intervalId = setInterval(updateLocation, 60000);
+      const cleanup = startTracking();
       
       return () => {
-        clearInterval(intervalId);
-        setIsTracking(false);
+        if (cleanup) cleanup();
       };
     }
-  }, [permissionStatus, isTracking, updateLocation]);
+  }, [permissionStatus, isTracking, startTracking]);
 
   return {
     location,
@@ -182,5 +217,11 @@ export const useLocationTracker = () => {
     isTracking,
     error,
     locationIsValid,
+    isLocationStale,
+    lastUpdated,
+    getCurrentLocation: updateLocation,
+    permissionStatus,
+    startTracking,
+    stopTracking
   };
 };
