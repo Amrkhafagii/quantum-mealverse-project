@@ -1,0 +1,121 @@
+
+/* Safe Area CSS Variables */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* Safe Area Padding Utilities */
+.pt-safe {
+  padding-top: var(--sat);
+}
+
+.pr-safe {
+  padding-right: var(--sar);
+}
+
+.pb-safe {
+  padding-bottom: var(--sab);
+}
+
+.pl-safe {
+  padding-left: var(--sal);
+}
+
+.px-safe {
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+.py-safe {
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+}
+
+.p-safe {
+  padding: var(--sat) var(--sar) var(--sab) var(--sal);
+}
+
+/* Safe Area Margin Utilities */
+.mt-safe {
+  margin-top: var(--sat);
+}
+
+.mr-safe {
+  margin-right: var(--sar);
+}
+
+.mb-safe {
+  margin-bottom: var(--sab);
+}
+
+.ml-safe {
+  margin-left: var(--sal);
+}
+
+/* Improved SafeAreaView container */
+.safe-area-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* iOS Status Bar Height Classes */
+.ios-status-bar-height {
+  height: var(--sat);
+}
+
+.ios-has-notch .ios-status-bar-height {
+  height: 44px;
+}
+
+.ios-has-dynamic-island .ios-status-bar-height {
+  height: 54px;
+}
+
+/* Device Orientation Classes */
+body.portrait .portrait-only {
+  display: flex;
+}
+
+body.landscape .portrait-only {
+  display: none;
+}
+
+body.portrait .landscape-only {
+  display: none;
+}
+
+body.landscape .landscape-only {
+  display: flex;
+}
+
+/* iOS-specific styles */
+.ios-device .ios-safe-area-top {
+  padding-top: var(--sat);
+}
+
+.ios-device .ios-safe-area-bottom {
+  padding-bottom: var(--sab);
+}
+
+/* Fix for notched iPhones */
+.ios-device.has-notch .fixed-bottom,
+.ios-device.has-dynamic-island .fixed-bottom {
+  padding-bottom: var(--sab);
+}
+
+/* Fix for landscape mode in notched devices */
+@media (orientation: landscape) {
+  .ios-device.has-notch .fixed-left,
+  .ios-device.has-dynamic-island .fixed-left {
+    padding-left: var(--sal);
+  }
+  
+  .ios-device.has-notch .fixed-right,
+  .ios-device.has-dynamic-island .fixed-right {
+    padding-right: var(--sar);
+  }
+}

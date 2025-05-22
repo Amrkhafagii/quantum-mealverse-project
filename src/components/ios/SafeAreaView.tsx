@@ -1,123 +1,98 @@
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
-import { Platform } from '@/utils/platform';
 
 interface SafeAreaViewProps {
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
   disableTop?: boolean;
   disableBottom?: boolean;
   disableSides?: boolean;
-  disableStatusBarHeight?: boolean;
   as?: React.ElementType;
-  style?: React.CSSProperties;
-  insetValue?: 'env' | 'computed' | 'adaptive';
 }
 
-/**
- * SafeAreaView component that adapts to iOS safe areas
- * 
- * @param children - The content to render
- * @param className - Additional CSS classes
- * @param disableTop - Whether to disable top safe area padding
- * @param disableBottom - Whether to disable bottom safe area padding
- * @param disableSides - Whether to disable left/right safe area padding
- * @param disableStatusBarHeight - Whether to disable status bar height padding
- * @param as - The HTML element to use
- * @param style - Additional inline styles
- * @param insetValue - How to calculate insets: 'env' (CSS variables), 'computed' (JS values), or 'adaptive' (best of both)
- */
 const SafeAreaView: React.FC<SafeAreaViewProps> = ({
   children,
   className = '',
   disableTop = false,
   disableBottom = false,
   disableSides = false,
-  disableStatusBarHeight = false,
-  as: Component = 'div',
-  style = {},
-  insetValue = 'adaptive'
+  as: Component = 'div'
 }) => {
   const { 
-    safeAreaTop, 
-    safeAreaBottom, 
-    safeAreaLeft, 
-    safeAreaRight, 
-    statusBarHeight,
-    isPlatformIOS,
-    hasNotch,
-    hasDynamicIsland,
-    deviceOrientation
+    isPlatformIOS, 
+    isInitialized, 
+    safeAreaTop,
+    safeAreaBottom,
+    safeAreaLeft,
+    safeAreaRight
   } = useResponsive();
   
-  const isLandscape = deviceOrientation === 'landscape';
-  
-  // Calculate safe area styles based on chosen method
-  const getSafeAreaStyle = () => {
-    // Return empty object if not iOS
-    if (!isPlatformIOS) return {};
+  // Don't apply safe area classes until the responsive context is fully initialized
+  const safeAreaClasses = React.useMemo(() => {
+    const classes: string[] = [];
     
-    // If using direct CSS env variables
-    if (insetValue === 'env') {
-      return {
-        paddingTop: !disableTop ? 'env(safe-area-inset-top, 0px)' : undefined,
-        paddingBottom: !disableBottom ? 'env(safe-area-inset-bottom, 0px)' : undefined,
-        paddingLeft: !disableSides ? 'env(safe-area-inset-left, 0px)' : undefined,
-        paddingRight: !disableSides ? 'env(safe-area-inset-right, 0px)' : undefined,
-      };
+    if (isInitialized && isPlatformIOS) {
+      if (!disableTop) {
+        classes.push('pt-safe');
+      }
+      
+      if (!disableBottom) {
+        classes.push('pb-safe');
+      }
+      
+      if (!disableSides) {
+        classes.push('px-safe');
+      }
+      
+      classes.push('ios-specific');
     }
     
-    // If using computed values
-    if (insetValue === 'computed') {
-      return {
-        paddingTop: !disableTop ? `${safeAreaTop}px` : undefined,
-        paddingBottom: !disableBottom ? `${safeAreaBottom}px` : undefined,
-        paddingLeft: !disableSides ? `${safeAreaLeft}px` : undefined,
-        paddingRight: !disableSides ? `${safeAreaRight}px` : undefined,
-      };
+    return classes.join(' ');
+  }, [isInitialized, isPlatformIOS, disableTop, disableBottom, disableSides]);
+  
+  // Apply inline styles for safe area insets when CSS variables may not be fully applied yet
+  const safeAreaStyles = React.useMemo(() => {
+    if (!isInitialized || !isPlatformIOS) {
+      return {};
     }
     
-    // Adaptive approach - use computed values with status bar handling
-    const topValue = disableTop 
-      ? undefined 
-      : disableStatusBarHeight 
-        ? `${safeAreaTop - statusBarHeight}px` 
-        : `${safeAreaTop}px`;
-        
-    return {
-      paddingTop: topValue,
-      paddingBottom: !disableBottom ? `${safeAreaBottom}px` : undefined,
-      paddingLeft: !disableSides ? `${safeAreaLeft}px` : undefined,
-      paddingRight: !disableSides ? `${safeAreaRight}px` : undefined,
-    };
-  };
-  
-  // Generate device-specific classes
-  const getDeviceClasses = () => {
-    if (!isPlatformIOS) return '';
+    const styles: React.CSSProperties = {};
     
-    let classes = 'ios-safe-area';
+    if (!disableTop && safeAreaTop > 0) {
+      styles.paddingTop = `${safeAreaTop}px`;
+    }
     
-    if (hasNotch) classes += ' has-notch';
-    if (hasDynamicIsland) classes += ' has-dynamic-island';
-    if (isLandscape) classes += ' landscape';
+    if (!disableBottom && safeAreaBottom > 0) {
+      styles.paddingBottom = `${safeAreaBottom}px`;
+    }
     
-    return classes;
-  };
+    if (!disableSides) {
+      if (safeAreaLeft > 0) {
+        styles.paddingLeft = `${safeAreaLeft}px`;
+      }
+      
+      if (safeAreaRight > 0) {
+        styles.paddingRight = `${safeAreaRight}px`;
+      }
+    }
+    
+    return styles;
+  }, [
+    isInitialized,
+    isPlatformIOS,
+    disableTop,
+    disableBottom,
+    disableSides,
+    safeAreaTop,
+    safeAreaBottom,
+    safeAreaLeft,
+    safeAreaRight
+  ]);
   
   return (
-    <Component 
-      className={cn(
-        isPlatformIOS && getDeviceClasses(),
-        className
-      )}
-      style={{
-        ...getSafeAreaStyle(),
-        ...style
-      }}
-    >
+    <Component className={cn(className, safeAreaClasses)} style={safeAreaStyles}>
       {children}
     </Component>
   );

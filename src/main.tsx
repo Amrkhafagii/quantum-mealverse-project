@@ -3,13 +3,14 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './styles/safe-area.css'
 import { Toaster } from '@/components/ui/toaster'
 import { MapViewProvider } from './contexts/MapViewContext'
 import { CartProvider } from './contexts/CartContext'
 import { ResponsiveProvider } from './contexts/ResponsiveContext'
 import { Platform } from './utils/platform'
 
-// CSS variables for safe area insets
+// CSS variables for safe area insets - these will be available before React loads
 if (typeof document !== 'undefined' && document.documentElement) {
   document.documentElement.style.setProperty('--sat', 'env(safe-area-inset-top, 0px)');
   document.documentElement.style.setProperty('--sar', 'env(safe-area-inset-right, 0px)');
@@ -60,7 +61,7 @@ const initializePlatform = async () => {
   }
 };
 
-// Track device orientation
+// Track device orientation with improved error handling
 const setupOrientationClasses = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
@@ -86,11 +87,15 @@ const setupOrientationClasses = () => {
   };
   
   // Set initial orientation
-  updateOrientation();
-  
-  // Update on resize and orientation change
-  window.addEventListener('resize', updateOrientation);
-  window.addEventListener('orientationchange', updateOrientation);
+  try {
+    updateOrientation();
+    
+    // Update on resize and orientation change
+    window.addEventListener('resize', updateOrientation);
+    window.addEventListener('orientationchange', updateOrientation);
+  } catch (error) {
+    console.error('Error setting up orientation tracking:', error);
+  }
 };
 
 // Simple error boundary for startup errors
@@ -103,23 +108,27 @@ const renderApp = async () => {
     if (Platform.isIOS()) {
       document.body.classList.add('ios-device');
       
-      // Add specific device classes
-      const model = Platform.getiPhoneModel();
-      document.body.classList.add(`device-${model}`);
-      
-      if (Platform.hasNotch()) {
-        document.body.classList.add('has-notch');
-      }
-      
-      if (Platform.hasDynamicIsland()) {
-        document.body.classList.add('has-dynamic-island');
+      // Add specific device classes - with safety checks
+      try {
+        const model = Platform.getiPhoneModel();
+        document.body.classList.add(`device-${model}`);
+        
+        if (Platform.hasNotch()) {
+          document.body.classList.add('has-notch');
+        }
+        
+        if (Platform.hasDynamicIsland()) {
+          document.body.classList.add('has-dynamic-island');
+        }
+      } catch (modelError) {
+        console.warn('Error applying iOS device model classes:', modelError);
       }
       
       // Set up orientation tracking
       setupOrientationClasses();
     }
 
-    // Create React root and render app
+    // Create React root and render app with improved error handling
     const rootElement = document.getElementById('root');
     if (!rootElement) {
       throw new Error('Root element not found');
@@ -152,14 +161,20 @@ const renderApp = async () => {
   }
 };
 
-// Start the app after a small delay to ensure DOM is fully loaded
+// Start the app after DOM is ready, with proper checks
 if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+  const startApp = () => {
+    try {
       setTimeout(renderApp, 10);
-    });
+    } catch (error) {
+      console.error('Error starting app:', error);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
   } else {
-    // DOM already loaded, render app with a small delay
-    setTimeout(renderApp, 10);
+    // DOM already loaded
+    startApp();
   }
 }
