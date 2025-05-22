@@ -19,6 +19,7 @@ export function useCurrentLocation() {
         return new Promise<DeliveryLocation | null>((resolve) => {
           if (!navigator.geolocation) {
             setError('Geolocation is not supported by this browser');
+            setIsLoading(false);
             resolve(null);
             return;
           }
@@ -33,6 +34,8 @@ export function useCurrentLocation() {
                 speed: position.coords.speed || 0,
                 isMoving: (position.coords.speed || 0) > 0.5
               };
+              
+              setIsLoading(false);
               resolve(locationData);
             },
             (err) => {
@@ -48,6 +51,7 @@ export function useCurrentLocation() {
                 setError('An unknown error occurred.');
               }
               
+              setIsLoading(false);
               resolve(null);
             },
             {

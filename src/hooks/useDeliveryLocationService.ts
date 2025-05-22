@@ -63,7 +63,8 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
   const [error, setError] = useState<Error | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
   
-  // Use our optimized location tracking hook
+  // Use our optimized location tracking hook with initial default values
+  // FIXED: Breaking the circular dependency by using fixed default values initially
   const { 
     isTracking: optimizedIsTracking,
     startTracking: optimizedStartTracking,
@@ -83,7 +84,7 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
     },
     lowPowerMode: isLowQuality || isBatteryLow,
     distanceFilter: isBatteryLow ? 50 : isLowQuality ? 30 : 10,
-    trackingInterval: getAdjustedTrackingInterval()
+    trackingInterval: DEFAULT_TRACKING_INTERVAL // Start with the default value
   });
   
   // Sync battery state from the optimized hook
@@ -157,6 +158,13 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
       accuracyLevel: isBatteryLow || !isMoving || isLowQuality ? 'low' : 'balanced'
     }));
   }, [isBatteryLow, isLowQuality, isMoving]);
+  
+  // ADDED: Update tracking interval after the hook is fully initialized
+  // This breaks the circular dependency by updating the interval in an effect
+  useEffect(() => {
+    // Only update after we have all the required values
+    updateTrackingInterval();
+  }, [updateTrackingInterval, isMoving, isBatteryLow, isLowQuality, isOnline]);
   
   // Check if location data is stale
   const checkIsLocationStale = useCallback(() => {

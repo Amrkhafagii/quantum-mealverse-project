@@ -6,6 +6,7 @@ import { MapPin, AlertCircle, CheckCircle2, RefreshCw, Loader2 } from 'lucide-re
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
+import { toast } from 'sonner';
 
 interface DeliveryLocationControlsProps {
   onLocationUpdate?: (location: { latitude: number; longitude: number }) => void;
@@ -27,7 +28,8 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
     updateLocation,
     resetAndRequestLocation,
     isUpdating,
-    error
+    error,
+    isTracking
   } = useDeliveryLocationService();
   
   const { updateDriverLocation } = useDeliveryMap();
@@ -54,14 +56,42 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
   }, [location, updateDriverLocation, onLocationUpdate]);
 
   const handleUpdateLocation = async () => {
-    const result = await updateLocation();
-    if (!result && error) {
-      console.error('Location update failed with error:', error);
+    try {
+      // Show loading toast immediately
+      toast.loading('Updating your location...');
+      
+      // Call update location
+      const result = await updateLocation();
+      
+      if (result) {
+        toast.success('Location updated successfully');
+      } else if (error) {
+        toast.error('Failed to update location: ' + (error.message || 'Unknown error'));
+        console.error('Location update failed with error:', error);
+      } else {
+        toast.warning('Location update timed out. Try again.');
+      }
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error('Unknown error updating location');
+      console.error('Exception during location update:', err);
+      toast.error('Error: ' + err.message);
     }
   };
   
   const handleForceReset = async () => {
-    await resetAndRequestLocation();
+    try {
+      toast.loading('Resetting location services...');
+      const result = await resetAndRequestLocation();
+      
+      if (result) {
+        toast.success('Location services reset successfully');
+      } else {
+        toast.warning('Reset completed, but no location obtained');
+      }
+    } catch (e) {
+      console.error('Error during location reset:', e);
+      toast.error('Failed to reset location services');
+    }
   };
 
   const getStatusColor = () => {
