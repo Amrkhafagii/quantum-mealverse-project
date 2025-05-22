@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Platform } from '@/utils/platform';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
@@ -75,6 +74,7 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
   } = useOptimizedLocationTracking({
     onLocationUpdate: (newLocation) => {
       if (newLocation) {
+        console.log('DeliveryLocationService: Got new location from tracking', newLocation);
         setLocation(newLocation);
         setLastUpdated(new Date());
         setFreshness('fresh');
@@ -186,14 +186,18 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
   const updateLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
     setIsUpdating(true);
     try {
+      console.log('DeliveryLocationService: updateLocation called, isTracking:', optimizedIsTracking);
+      
       // If we're already tracking, just return the current location
       if (optimizedIsTracking && location && !checkIsLocationStale()) {
+        console.log('DeliveryLocationService: Already tracking, returning current location');
         setIsUpdating(false);
         return location;
       }
       
       // If we're not tracking, start tracking to get a fresh location
       if (!optimizedIsTracking) {
+        console.log('DeliveryLocationService: Not tracking, starting tracking');
         await optimizedStartTracking();
       }
       
@@ -201,21 +205,31 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
       return new Promise((resolve) => {
         // Set a timeout to avoid waiting forever
         const timeout = setTimeout(() => {
+          console.log('DeliveryLocationService: Location update timed out');
           setIsUpdating(false);
-          resolve(location); // Return current location after timeout
+          // Even if we timed out, return whatever location we have
+          resolve(location); 
         }, 10000);
         
-        // One-time listener for next location update
-        const handler = (newLocation: DeliveryLocation) => {
-          clearTimeout(timeout);
-          setIsUpdating(false);
-          resolve(newLocation);
-        };
+        // Create a temporary listener to resolve when location updates
+        const checkInterval = setInterval(() => {
+          if (location) {
+            console.log('DeliveryLocationService: Location updated during interval check');
+            clearInterval(checkInterval);
+            clearTimeout(timeout);
+            setIsUpdating(false);
+            resolve(location);
+          }
+        }, 1000); // Check every second
         
-        // This is a simplified approach - in a real app you'd register a listener
-        // For now we rely on the optimizedLocationTracking hook's callback
+        // Cleanup function
+        return () => {
+          clearTimeout(timeout);
+          clearInterval(checkInterval);
+        };
       });
     } catch (err) {
+      console.error('DeliveryLocationService: Error updating location', err);
       setError(err instanceof Error ? err : new Error('Failed to update location'));
       setIsUpdating(false);
       return null;
@@ -246,11 +260,17 @@ export function useDeliveryLocationService(): DeliveryLocationServiceReturn {
 
   // Reset and request fresh location
   const resetAndRequestLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
+    console.log('DeliveryLocationService: Resetting and requesting new location');
     setPermissionStatus('prompt');
     if (optimizedIsTracking) {
+      console.log('DeliveryLocationService: Stopping existing tracking before reset');
       await optimizedStopTracking();
     }
+    
+    console.log('DeliveryLocationService: Starting tracking after reset');
     await optimizedStartTracking();
+    
+    console.log('DeliveryLocationService: Updating location after reset');
     return updateLocation();
   }, [optimizedIsTracking, optimizedStopTracking, optimizedStartTracking, updateLocation]);
   

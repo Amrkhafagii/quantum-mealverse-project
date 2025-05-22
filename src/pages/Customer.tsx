@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
@@ -24,12 +24,14 @@ const Customer = () => {
   const { permissionStatus, requestPermission } = useLocationPermission();
   const { getCurrentLocation: getDirectLocation } = useCurrentLocation();
   const [isMapView, setIsMapView] = useState(false);
+  const [forceRefresh, setForceRefresh] = useState(0); // Added to force refresh
   
   // Use our enhanced nearest restaurant hook
   const { 
     nearbyRestaurants, 
     loading: loadingRestaurants,
-    findNearestRestaurants 
+    findNearestRestaurants,
+    refreshRestaurants
   } = useNearestRestaurant();
 
   // Check if restaurants need test menu items
@@ -41,6 +43,7 @@ const Customer = () => {
   // Enhanced handler for location request with fallback
   const handleLocationRequest = useCallback(async () => {
     try {
+      toast.loading('Requesting your location...');
       let success = await requestPermission();
       
       // If the primary method failed and we're on web, try the direct web implementation fallback
@@ -50,7 +53,8 @@ const Customer = () => {
         
         if (location && location.latitude && location.longitude) {
           // Manual call to find restaurants if we got location via fallback
-          findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
+          console.log('Got location via fallback, calling findNearestRestaurants');
+          await findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
           toast.success('Location updated successfully');
           success = true;
         }
@@ -68,15 +72,40 @@ const Customer = () => {
     }
   }, [requestPermission, getDirectLocation, findNearestRestaurants]);
   
-  const handleLocationUpdate = useCallback((loc: { latitude: number; longitude: number }) => {
+  const handleLocationUpdate = useCallback(async (loc: { latitude: number; longitude: number }) => {
     // This will be called by LocationStateManager when location is updated
     if (loc && loc.latitude && loc.longitude) {
-      console.log('Location updated:', loc);
-      findNearestRestaurants(50); // Pass the maxDistance parameter (default 50km)
-      // Set the flag to auto-navigate to menu when location is first acquired
-      localStorage.setItem('autoNavigateToMenu', 'true');
+      console.log('Location updated in Customer.tsx:', loc);
+      try {
+        // Explicitly refresh restaurants when location is updated
+        console.log('Calling findNearestRestaurants with updated location');
+        await findNearestRestaurants(50);
+        toast.success('Finding restaurants near you...');
+        
+        // Set the flag to auto-navigate to menu when location is first acquired
+        localStorage.setItem('autoNavigateToMenu', 'true');
+        
+        // Force a refresh of restaurant data
+        setForceRefresh(prev => prev + 1);
+      } catch (err) {
+        console.error('Error finding restaurants after location update:', err);
+        toast.error('Could not find nearby restaurants');
+      }
     }
   }, [findNearestRestaurants]);
+  
+  // Add an effect to retry finding restaurants if none are found but we have location
+  useEffect(() => {
+    if (forceRefresh > 0 && nearbyRestaurants.length === 0 && !loadingRestaurants) {
+      // Try again after a small delay
+      const timer = setTimeout(() => {
+        console.log('No restaurants found, retrying...');
+        refreshRestaurants(50);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [forceRefresh, nearbyRestaurants.length, loadingRestaurants, refreshRestaurants]);
   
   const toggleMapView = () => {
     setIsMapView(prev => !prev);

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -47,10 +48,13 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       }
       
       if (onLocationUpdate) {
+        console.log('DeliveryLocationControls: Calling onLocationUpdate with location', location);
         onLocationUpdate({
           latitude: location.latitude,
           longitude: location.longitude
         });
+      } else {
+        console.log('DeliveryLocationControls: No onLocationUpdate callback provided');
       }
     }
   }, [location, updateDriverLocation, onLocationUpdate]);
@@ -59,12 +63,23 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
     try {
       // Show loading toast immediately
       toast.loading('Updating your location...');
+      console.log('DeliveryLocationControls: Updating location');
       
       // Call update location
       const result = await updateLocation();
       
       if (result) {
+        console.log('DeliveryLocationControls: Location updated successfully', result);
         toast.success('Location updated successfully');
+        
+        // If we have an onLocationUpdate callback, call it with the new location
+        if (onLocationUpdate && result) {
+          console.log('DeliveryLocationControls: Calling onLocationUpdate after successful update');
+          onLocationUpdate({
+            latitude: result.latitude,
+            longitude: result.longitude
+          });
+        }
       } else if (error) {
         toast.error('Failed to update location: ' + (error.message || 'Unknown error'));
         console.error('Location update failed with error:', error);
@@ -81,10 +96,22 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
   const handleForceReset = async () => {
     try {
       toast.loading('Resetting location services...');
+      console.log('DeliveryLocationControls: Force resetting location');
+      
       const result = await resetAndRequestLocation();
       
       if (result) {
+        console.log('DeliveryLocationControls: Location services reset successfully', result);
         toast.success('Location services reset successfully');
+        
+        // If we have an onLocationUpdate callback, call it with the new location
+        if (onLocationUpdate && result) {
+          console.log('DeliveryLocationControls: Calling onLocationUpdate after reset');
+          onLocationUpdate({
+            latitude: result.latitude,
+            longitude: result.longitude
+          });
+        }
       } else {
         toast.warning('Reset completed, but no location obtained');
       }

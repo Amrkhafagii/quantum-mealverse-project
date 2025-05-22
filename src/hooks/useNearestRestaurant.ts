@@ -31,6 +31,7 @@ export const useNearestRestaurant = () => {
     }
 
     if (!locationIsValid()) {
+      console.error('Location is not valid for restaurant search');
       setRefreshStatus('error');
       toast.error("Location required", { 
         description: "We need your location to find nearby restaurants" 
@@ -53,12 +54,16 @@ export const useNearestRestaurant = () => {
       if (error) {
         console.error('Error in find_nearest_restaurant RPC:', error);
         setRefreshStatus('error');
+        toast.error("Database error", {
+          description: "Could not search for restaurants. Please try again."
+        });
         throw error;
       }
       
-      console.log('Nearest restaurants data:', data);
+      console.log('Nearest restaurants data received:', data);
       
       if (data && data.length > 0) {
+        console.log(`Found ${data.length} restaurants near location`);
         setNearbyRestaurants(data);
         setLastRefreshTime(new Date());
         setRefreshStatus('idle');
@@ -69,12 +74,15 @@ export const useNearestRestaurant = () => {
             description: `Found ${data.length} restaurants near your location`
           });
         }
+        return data;
       } else {
+        console.log('No restaurants found in the area');
         setNearbyRestaurants([]);
         setRefreshStatus('idle');
         toast.error("No restaurants found", {
           description: `No restaurants found within ${maxDistance}km of your location`
         });
+        return [];
       }
     } catch (error) {
       console.error('Error finding nearest restaurants:', error);
@@ -83,6 +91,7 @@ export const useNearestRestaurant = () => {
         description: "Could not find nearest restaurants"
       });
       setNearbyRestaurants([]);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -99,7 +108,8 @@ export const useNearestRestaurant = () => {
   }, [location, locationIsValid, findNearestRestaurants, user]);
 
   const refreshRestaurants = useCallback((maxDistance = 50) => {
-    findNearestRestaurants(maxDistance);
+    console.log('Manually refreshing restaurants with max distance:', maxDistance);
+    return findNearestRestaurants(maxDistance);
   }, [findNearestRestaurants]);
 
   return {

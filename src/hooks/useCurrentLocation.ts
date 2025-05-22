@@ -13,12 +13,16 @@ export function useCurrentLocation() {
     try {
       setIsLoading(true);
       setError(null);
+      console.log('useCurrentLocation: Getting current location');
       
       // Special handling for web environment - use browser API directly
       if (Platform.isWeb()) {
+        console.log('useCurrentLocation: Using browser geolocation API');
         return new Promise<DeliveryLocation | null>((resolve) => {
           if (!navigator.geolocation) {
-            setError('Geolocation is not supported by this browser');
+            const errorMsg = 'Geolocation is not supported by this browser';
+            console.error(errorMsg);
+            setError(errorMsg);
             setIsLoading(false);
             resolve(null);
             return;
@@ -26,6 +30,7 @@ export function useCurrentLocation() {
           
           navigator.geolocation.getCurrentPosition(
             (position) => {
+              console.log('useCurrentLocation: Browser geolocation successful');
               const locationData = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
@@ -35,6 +40,7 @@ export function useCurrentLocation() {
                 isMoving: (position.coords.speed || 0) > 0.5
               };
               
+              console.log('useCurrentLocation: Location data:', locationData);
               setIsLoading(false);
               resolve(locationData);
             },
@@ -64,19 +70,21 @@ export function useCurrentLocation() {
       }
       
       // Standard Capacitor implementation for native platforms
+      console.log('useCurrentLocation: Using Capacitor Geolocation');
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
         timeout: 10000,
       });
       
+      console.log('useCurrentLocation: Capacitor geolocation successful', position);
       const locationData = createDeliveryLocation(position);
+      setIsLoading(false);
       return locationData;
     } catch (err) {
       console.error('Error getting current location', err);
       setError('Failed to get location');
-      return null;
-    } finally {
       setIsLoading(false);
+      return null;
     }
   }, []);
 
