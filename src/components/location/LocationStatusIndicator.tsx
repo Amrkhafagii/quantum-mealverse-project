@@ -5,7 +5,7 @@ import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { MapPin, WifiOff, Clock, Battery, BatteryLow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LocationFreshness } from '@/types/location';
+import { LocationFreshness } from '@/types/unifiedLocation';
 
 interface LocationStatusIndicatorProps {
   className?: string;
@@ -35,7 +35,8 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
   // Use freshness from the service when available
   useEffect(() => {
     if (freshness) {
-      setCurrentFreshness(freshness);
+      // Use type assertion to ensure TypeScript understands this is a valid LocationFreshness
+      setCurrentFreshness(freshness as LocationFreshness);
     }
   }, [freshness]);
   

@@ -75,7 +75,7 @@ export function useIntelligentTracking({
   useEffect(() => {
     if (!isTracking && orderId) {
       // Start tracking if we have an order and we're not already tracking
-      locationService.startTracking?.();
+      locationService.startTracking && locationService.startTracking();
     }
     
     // Set up the interval for location updates

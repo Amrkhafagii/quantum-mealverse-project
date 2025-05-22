@@ -82,12 +82,7 @@ export function useConnectionStatus() {
     return () => {
       // Clean up listeners
       if (networkListener) {
-        // Handle the Promise.remove properly
-        try {
-          networkListener.remove();
-        } catch (err) {
-          console.error('Error removing network listener:', err);
-        }
+        networkListener.remove && networkListener.remove();
       }
       
       window.removeEventListener('online', handleOnline);

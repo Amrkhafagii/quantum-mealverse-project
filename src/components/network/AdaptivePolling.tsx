@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { getAdaptivePollingInterval } from '@/utils/networkAdaptation';
 import { useBatteryMonitor } from '@/utils/batteryMonitor';
 import { NetworkAwareContainer } from './NetworkAwareContainer';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
 
 interface AdaptivePollingProps {
@@ -25,7 +26,8 @@ export default function AdaptivePolling({
   showControls = true,
   initiallyEnabled = false
 }: AdaptivePollingProps) {
-  const { quality, isOnline } = useNetworkQuality();
+  const { quality, isLowQuality } = useNetworkQuality();
+  const { isOnline } = useConnectionStatus();
   const { batteryLevel } = useBatteryMonitor();
   const [isPolling, setIsPolling] = useState(initiallyEnabled);
   const [adaptiveInterval, setAdaptiveInterval] = useState(baseInterval);

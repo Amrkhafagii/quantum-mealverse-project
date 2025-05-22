@@ -1,10 +1,45 @@
 
 import React from 'react';
-import { calculateLocationConfidence, getConfidenceCategory, getLocationQualityDescription, ConfidenceCategory } from '@/utils/locationConfidenceScoring';
+import { calculateLocationConfidence, ConfidenceCategory } from '@/utils/locationConfidenceScoring';
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { AlertCircle, CheckCircle, Info, AlertTriangle, SignalMedium } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Function to get confidence category from score
+function getConfidenceCategory(score: { overall: number }): ConfidenceCategory {
+  if (score.overall >= 75) {
+    return 'high';
+  } else if (score.overall >= 50) {
+    return 'medium';
+  } else if (score.overall >= 25) {
+    return 'low';
+  } else if (score.overall > 0) {
+    return 'very-low';
+  } else {
+    return 'unknown';
+  }
+}
+
+// Function to get location quality description
+function getLocationQualityDescription(location: UnifiedLocation): string {
+  const score = calculateLocationConfidence(location);
+  const category = getConfidenceCategory(score);
+  
+  switch (category) {
+    case 'high':
+      return `High quality location from ${location.source} source with ${location.accuracy}m accuracy.`;
+    case 'medium':
+      return `Decent location accuracy from ${location.source} source.`;
+    case 'low':
+      return `Limited location reliability from ${location.source} source.`;
+    case 'very-low':
+      return `Poor location accuracy. Consider refreshing or using a different source.`;
+    case 'unknown':
+    default:
+      return 'Unable to determine location quality.';
+  }
+}
 
 interface LocationConfidenceIndicatorProps {
   location: UnifiedLocation;

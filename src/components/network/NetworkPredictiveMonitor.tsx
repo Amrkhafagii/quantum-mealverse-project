@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
@@ -25,7 +26,7 @@ export function NetworkPredictiveMonitor({
   config = {}
 }: NetworkPredictiveMonitorProps) {
   const { isOnline, connectionType } = useConnectionStatus();
-  const { quality, latency, isFlaky } = useNetworkQuality();
+  const { quality, metrics, isFlaky } = useNetworkQuality();
   const [predictionActive, setPredictionActive] = useState(false);
   const [possibleDisconnection, setPossibleDisconnection] = useState(false);
   const { toast } = useToast();
@@ -41,9 +42,9 @@ export function NetworkPredictiveMonitor({
   const checkForPotentialIssues = useCallback(() => {
     if (!enablePredictions || !isOnline) return;
     
-    const isHighLatency = latency && latency > latencyThreshold;
+    const isHighLatency = metrics?.latency && metrics.latency > latencyThreshold;
     // Set a default value for packet loss since it might not exist in the type
-    const estimatedPacketLoss = isFlaky ? 20 : 0;
+    const estimatedPacketLoss = isFlaky ? 20 : metrics?.packetLoss || 0;
     const isHighPacketLoss = estimatedPacketLoss > packetLossThreshold;
     
     let isPotentialDisconnect = false;
@@ -88,7 +89,7 @@ export function NetworkPredictiveMonitor({
     isOnline, 
     connectionType, 
     quality, 
-    latency,
+    metrics,
     isFlaky, 
     latencyThreshold,
     packetLossThreshold,

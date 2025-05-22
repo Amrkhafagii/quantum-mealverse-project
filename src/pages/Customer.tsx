@@ -145,7 +145,7 @@ const Customer = () => {
     }
   }, [requestPermission, getDirectLocation, findNearestRestaurants, user, permissionStatus]);
   
-  const handleLocationUpdate = useCallback(async (loc: DeliveryLocation | Partial<UnifiedLocation>) => {
+  const handleLocationUpdate = useCallback(async (loc: UnifiedLocation | DeliveryLocation) => {
     // This will be called by LocationStateManager when location is updated
     if (loc && 'latitude' in loc && 'longitude' in loc) {
       console.log('Location updated in Customer.tsx:', loc);

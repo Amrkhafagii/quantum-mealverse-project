@@ -1,80 +1,76 @@
 import { UnifiedLocation } from '@/types/unifiedLocation';
-import { calculateLocationConfidence } from './locationConfidenceScoring';
+import { calculateLocationConfidence, ConfidenceScore } from './locationConfidenceScoring';
 
 /**
- * Combine multiple location sources into a single optimal location.
- * This uses a weighted average based on confidence scores.
- *
- * @param locations Array of location readings from different sources
- * @returns The fused location or null if no valid locations
+ * Fuse multiple location sources into one most accurate location
+ * Uses confidence scores to determine the best location
  */
-export const fuseLocationSources = (locations: UnifiedLocation[]): UnifiedLocation | null => {
-  if (!locations.length) return null;
+export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | null {
+  if (!locations || locations.length === 0) {
+    return null;
+  }
   
-  // If there's only one location, return it directly
-  if (locations.length === 1) return locations[0];
+  if (locations.length === 1) {
+    return locations[0];
+  }
   
-  // Calculate confidence scores for all locations
-  const locationsWithConfidence = locations.map(location => ({
+  // Calculate confidence scores for each location
+  const locationsWithScores = locations.map(location => ({
     location,
-    confidence: calculateLocationConfidence(location)
+    score: calculateLocationConfidence(location)
   }));
   
-  // Get the highest confidence location as our primary source
-  const bestLocation = locationsWithConfidence.reduce((prev, current) => 
-    current.confidence > prev.confidence ? current : prev, 
-    locationsWithConfidence[0]
+  // Sort by overall confidence score (highest first)
+  locationsWithScores.sort((a, b) => b.score.overall - a.score.overall);
+  
+  // If the best location is significantly better than others, use it directly
+  if (locationsWithScores.length > 1 && 
+      locationsWithScores[0].score.overall > locationsWithScores[1].score.overall + 20) {
+    return locationsWithScores[0].location;
+  }
+  
+  // Otherwise, fuse the top locations
+  const topLocations = locationsWithScores.filter(
+    item => item.score.overall >= locationsWithScores[0].score.overall - 20
   );
   
-  // If the best location has high confidence (>80), just use it directly
-  if (bestLocation.confidence > 80) {
-    return bestLocation.location;
-  }
-  
-  // Otherwise, do a weighted average of coordinates based on confidence
-  const totalConfidence = locationsWithConfidence.reduce((sum, item) => sum + item.confidence, 0);
-  
-  if (totalConfidence === 0) {
-    // If all locations have 0 confidence, just return the most recent
-    const mostRecent = locations.reduce((latest, location) => 
-      new Date(location.timestamp) > new Date(latest.timestamp) ? location : latest, 
-      locations[0]
-    );
-    return mostRecent;
-  }
-  
-  // Calculate weighted coordinates
+  // Calculate weighted average for coordinates
+  let totalWeight = 0;
   let weightedLat = 0;
   let weightedLng = 0;
-  let highestAccuracy = Number.MAX_VALUE;
+  let bestAccuracy = Number.MAX_VALUE;
+  let mostRecentTimestamp = 0;
   
-  locationsWithConfidence.forEach(({ location, confidence }) => {
-    const weight = confidence / totalConfidence;
+  for (const { location, score } of topLocations) {
+    const weight = score.overall;
+    totalWeight += weight;
+    
     weightedLat += location.latitude * weight;
     weightedLng += location.longitude * weight;
     
-    // Keep track of the best accuracy
-    if (location.accuracy !== undefined && location.accuracy < highestAccuracy) {
-      highestAccuracy = location.accuracy;
+    // Keep the best accuracy
+    if (location.accuracy && location.accuracy < bestAccuracy) {
+      bestAccuracy = location.accuracy;
     }
-  });
+    
+    // Keep the most recent timestamp
+    const timestamp = new Date(location.timestamp).getTime();
+    if (timestamp > mostRecentTimestamp) {
+      mostRecentTimestamp = timestamp;
+    }
+  }
   
-  // Create the fused location, inheriting most properties from the best location
-  // but using the weighted average coordinates
-  return {
-    ...bestLocation.location,
-    latitude: weightedLat,
-    longitude: weightedLng,
-    // Adjust accuracy to be a bit worse than the best individual reading
-    // since we're making assumptions in our fusion
-    accuracy: highestAccuracy !== Number.MAX_VALUE 
-      ? Math.round(highestAccuracy * 1.2) 
-      : bestLocation.location.accuracy,
-    // Mark that this is a fused result
-    source: 'fused' as any, // This is technically not in our type, but useful for debugging
-    timestamp: new Date().toISOString()
+  // Create the fused location
+  const fusedLocation: UnifiedLocation = {
+    latitude: weightedLat / totalWeight,
+    longitude: weightedLng / totalWeight,
+    accuracy: bestAccuracy !== Number.MAX_VALUE ? bestAccuracy : undefined,
+    timestamp: new Date(mostRecentTimestamp).toISOString(),
+    source: 'fusion',
   };
-};
+  
+  return fusedLocation;
+}
 
 /**
  * Get the optimal location based on the context of what the location will be used for
@@ -91,7 +87,7 @@ export const getOptimalLocation = (
   switch (purpose) {
     case 'navigation':
       // For navigation, prioritize accuracy over age
-      return fuseLocationSources(
+      return fuseLocations(
         // Sort by recency first, then filter for reasonable accuracy
         locations
           .filter(l => !l.accuracy || l.accuracy < 200)
@@ -106,13 +102,13 @@ export const getOptimalLocation = (
       
     case 'geofencing':
       // For geofencing, we need good accuracy
-      return fuseLocationSources(
+      return fuseLocations(
         locations.filter(l => !l.accuracy || l.accuracy < 100)
       );
       
     case 'general':
     default:
       // For general purpose, use fusion of all available sources
-      return fuseLocationSources(locations);
+      return fuseLocations(locations);
   }
 };

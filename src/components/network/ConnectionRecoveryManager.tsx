@@ -27,7 +27,7 @@ export function ConnectionRecoveryManager({
   criticalDataSources = []
 }: ConnectionRecoveryManagerProps) {
   const { isOnline, wasOffline, connectionType } = useConnectionStatus();
-  const { quality, checkQuality } = useNetworkQuality();
+  const { quality, isLowQuality, checkQuality } = useNetworkQuality();
   const [isRecovering, setIsRecovering] = useState(false);
   const [recoveryProgress, setRecoveryProgress] = useState(0);
   const [showDialog, setShowDialog] = useState(false);

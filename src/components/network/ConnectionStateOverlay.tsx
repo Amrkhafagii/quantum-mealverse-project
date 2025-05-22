@@ -21,7 +21,7 @@ export function ConnectionStateOverlay({
   showForNetworkChange = true
 }: ConnectionStateOverlayProps) {
   const { isOnline, wasOffline, connectionType } = useConnectionStatus();
-  const { quality, hasTransitioned, isFlaky, latency } = useNetworkQuality();
+  const { quality, hasTransitioned, isFlaky, metrics } = useNetworkQuality();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [icon, setIcon] = useState<React.ReactNode | null>(null);
@@ -100,8 +100,8 @@ export function ConnectionStateOverlay({
           <div className={`${color} text-white rounded-full shadow-md px-3 py-1 flex items-center m-2 pointer-events-auto`}>
             {icon}
             <span className="ml-2 text-sm font-medium">{message}</span>
-            {latency && quality !== 'unknown' && (
-              <span className="ml-2 text-xs opacity-80">{latency}ms</span>
+            {metrics && metrics.latency && quality !== 'unknown' && (
+              <span className="ml-2 text-xs opacity-80">{metrics.latency}ms</span>
             )}
           </div>
         </motion.div>

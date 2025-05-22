@@ -8,7 +8,7 @@ import { useBatteryMonitor } from '@/utils/batteryMonitor';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { calculateTrackingMode } from '@/utils/trackingModeCalculator';
 
-// Import LocationFreshness from unifiedLocation since it's not in location.ts
+// Import LocationFreshness from unifiedLocation
 import { LocationFreshness } from '@/types/unifiedLocation';
 
 interface DeliveryLocationMap {

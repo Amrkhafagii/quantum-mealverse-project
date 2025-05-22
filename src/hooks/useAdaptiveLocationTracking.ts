@@ -193,7 +193,7 @@ export const useAdaptiveLocationTracking = (options: AdaptiveLocationOptions = {
 
   return {
     isTracking,
-    isBackgroundTracking, // Added this property
+    isBackgroundTracking,
     startTracking,
     stopTracking,
     forceLocationUpdate,
