@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useAdaptiveAccuracy } from '@/hooks/useAdaptiveAccuracy';
@@ -13,7 +14,7 @@ import { Platform } from '@/utils/platform';
 import { getDeviceInfo } from '@/utils/deviceInfoUtils';
 import { getNetworkInfo } from '@/utils/networkInfoUtils';
 import { getBrowserLocation } from '@/utils/webGeolocation';
-import { getCapacitorLocation } from '@/utils/capacitorGeolocation';
+import { capacitorGeolocation } from '@/utils/capacitorGeolocation';
 
 interface AdaptiveLocationTrackerProps {
   activityContext?: 'stationary' | 'walking' | 'driving' | 'unknown';
