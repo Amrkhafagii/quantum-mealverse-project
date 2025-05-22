@@ -1,51 +1,27 @@
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
-import { CustomerMealCard } from '@/components/CustomerMealCard';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
-import { MealType } from '@/types/meal';
-import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader2, AlertTriangle } from 'lucide-react';
-import { getMenuItems } from '@/services/restaurant/menuService';
-import { createTestMenuItems } from '@/utils/createTestMenuItems';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import MapViewToggle from '@/components/location/MapViewToggle';
-import LocationStatusIndicator from '@/components/location/LocationStatusIndicator';
 import LocationStateManager from '@/components/location/LocationStateManager';
-
-// Lazy load the map component
-const RestaurantMapView = React.lazy(() => 
-  import('@/components/location/RestaurantMapView')
-);
+import { useMenuItems } from '@/hooks/useMenuItems';
+import { useTestMenuItemsCheck } from '@/hooks/useTestMenuItemsCheck';
+import { useAutoRestaurantNavigation } from '@/hooks/useAutoRestaurantNavigation';
+import { ViewToggle } from '@/components/customer/ViewToggle';
+import { MainContent } from '@/components/customer/MainContent';
+import { motion } from 'framer-motion';
 
 const Customer = () => {
-  const { location, permissionStatus, requestPermission } = useLocationPermission();
+  const { user } = useAuth();
+  const { permissionStatus, requestPermission } = useLocationPermission();
   const [isMapView, setIsMapView] = useState(false);
   
-  // Check if user was redirected from restaurant menu and navigate back there if needed
-  useEffect(() => {
-    const restaurantData = sessionStorage.getItem('selectedRestaurant');
-    const shouldAutoNavigate = localStorage.getItem('autoNavigateToMenu') === 'true';
-    
-    if (restaurantData && shouldAutoNavigate) {
-      try {
-        const parsedData = JSON.parse(restaurantData);
-        // Clear the flag to prevent loops
-        localStorage.setItem('autoNavigateToMenu', 'false');
-      } catch (error) {
-        console.error('Error parsing stored restaurant data:', error);
-      }
-    }
-  }, []);
-
   // Use our enhanced nearest restaurant hook
   const { 
     nearbyRestaurants, 
@@ -53,122 +29,14 @@ const Customer = () => {
     findNearestRestaurants 
   } = useNearestRestaurant();
 
-  React.useEffect(() => {
-    const checkForMenuItems = async () => {
-      try {
-        if (nearbyRestaurants.length === 0) {
-          console.log('No nearby restaurants found yet');
-          return;
-        }
-        
-        console.log('Checking menu items for restaurants:', nearbyRestaurants);
-        
-        const restaurantIds = nearbyRestaurants.map(r => r.restaurant_id);
-        
-        for (const restaurantId of restaurantIds) {
-          const { data, error } = await supabase
-            .from('menu_items')
-            .select('count')
-            .eq('restaurant_id', restaurantId);
-          
-          if (error) {
-            console.error(`Error checking menu items for restaurant ${restaurantId}:`, error);
-            continue;
-          }
-          
-          const count = data && data[0]?.count ? parseInt(data[0].count as unknown as string) : 0;
-          console.log(`Restaurant ${restaurantId} has ${count} menu items`);
-          
-          if (count === 0) {
-            console.log(`Creating test menu items for restaurant ${restaurantId}`);
-            await createTestMenuItems(restaurantId);
-          }
-        }
-      } catch (err) {
-        console.error('Unexpected error checking menu items:', err);
-      }
-    };
-    
-    if (nearbyRestaurants.length > 0) {
-      checkForMenuItems();
-    }
-  }, [nearbyRestaurants]);
+  // Check if restaurants need test menu items
+  useTestMenuItemsCheck(nearbyRestaurants);
 
-  const { data: menuItems, isLoading: loadingMenuItems, error } = useQuery({
-    queryKey: ['menuItems', nearbyRestaurants],
-    queryFn: async () => {
-      if (!nearbyRestaurants.length) return [];
-      
-      console.log('Finding menu items for restaurants:', nearbyRestaurants);
-      
-      const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
-      console.log('Restaurant IDs:', restaurantIds);
-      
-      const items = await getMenuItems(restaurantIds as unknown as string, undefined, true);
-      console.log('Menu items fetched using service:', items?.length, items);
-      
-      // Transform menu items to MealType
-      let transformedItems = items?.map(item => {
-        let nutritionalInfo = {
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0
-        };
-        
-        try {
-          if (item.nutritional_info && 
-              typeof item.nutritional_info === 'object' && 
-              !Array.isArray(item.nutritional_info)) {
-            nutritionalInfo = {
-              calories: Number(item.nutritional_info.calories) || 0,
-              protein: Number(item.nutritional_info.protein) || 0,
-              carbs: Number(item.nutritional_info.carbs) || 0,
-              fat: Number(item.nutritional_info.fat) || 0
-            };
-          }
-        } catch (e) {
-          console.error("Error parsing nutritional info:", e);
-        }
-
-        // Generate mock dietary tags for demonstration (would come from database in real app)
-        const mockDietaryTags = [];
-        if (item.id.charCodeAt(0) % 2 === 0) mockDietaryTags.push('vegetarian');
-        if (item.id.charCodeAt(1) % 3 === 0) mockDietaryTags.push('gluten-free');
-        if (item.id.charCodeAt(2) % 4 === 0) mockDietaryTags.push('dairy-free');
-        if (item.id.charCodeAt(3) % 5 === 0) mockDietaryTags.push('vegan');
-        if (item.id.charCodeAt(4) % 6 === 0) mockDietaryTags.push('keto');
-        if (item.id.charCodeAt(5) % 7 === 0) mockDietaryTags.push('high-protein');
-
-        return {
-          id: item.id,
-          name: item.name,
-          description: item.description || '',
-          price: item.price,
-          calories: nutritionalInfo.calories,
-          protein: nutritionalInfo.protein,
-          carbs: nutritionalInfo.carbs,
-          fat: nutritionalInfo.fat,
-          image_url: item.image_url || `https://picsum.photos/seed/${item.id}/300/200`,
-          is_active: item.is_available,
-          restaurant_id: item.restaurant_id,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          dietary_tags: mockDietaryTags
-        } as MealType;
-      }) || [];
-
-      // Apply random sort to simulate rating-based sorting
-      transformedItems.sort(() => Math.random() - 0.5);
-      
-      return transformedItems;
-    },
-    enabled: nearbyRestaurants.length > 0
-  });
+  // Fetch menu items from nearby restaurants
+  const { data: menuItems, isLoading: loadingMenuItems, error } = useMenuItems(nearbyRestaurants);
   
   const handleLocationUpdate = (loc: { latitude: number; longitude: number }) => {
     // This will be called by LocationStateManager when location is updated
-    // We can use this to refresh restaurants or perform other actions
     if (loc) {
       findNearestRestaurants();
       // Set the flag to auto-navigate to menu when location is first acquired
@@ -194,10 +62,9 @@ const Customer = () => {
   const loadingUI = (
     <div className="space-y-6">
       <div className="mb-8">
-        <Skeleton className="h-10 w-64 bg-quantum-darkBlue/70 mb-4" />
         <div className="flex flex-wrap gap-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-40 bg-quantum-darkBlue/70" />
+            <div key={i} className="bg-quantum-darkBlue/30 h-12 w-40 animate-pulse rounded"></div>
           ))}
         </div>
       </div>
@@ -205,20 +72,25 @@ const Customer = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="bg-quantum-darkBlue/30 rounded-lg overflow-hidden">
-            <Skeleton className="h-48 bg-quantum-darkBlue/50" />
-            <div className="p-4">
-              <Skeleton className="h-6 w-3/4 bg-quantum-darkBlue/70 mb-3" />
-              <Skeleton className="h-4 w-1/2 bg-quantum-darkBlue/70 mb-2" />
-              <Skeleton className="h-4 w-5/6 bg-quantum-darkBlue/70" />
-              <div className="flex justify-between mt-4">
-                <Skeleton className="h-8 w-16 bg-quantum-darkBlue/70" />
-                <Skeleton className="h-8 w-24 bg-quantum-darkBlue/70" />
-              </div>
+            <div className="h-48 bg-quantum-darkBlue/50 animate-pulse"></div>
+            <div className="p-4 space-y-2">
+              <div className="h-6 w-3/4 bg-quantum-darkBlue/70 animate-pulse"></div>
+              <div className="h-4 w-1/2 bg-quantum-darkBlue/70 animate-pulse"></div>
+              <div className="h-4 w-5/6 bg-quantum-darkBlue/70 animate-pulse"></div>
             </div>
           </div>
         ))}
       </div>
     </div>
+  );
+
+  // Handle auto-navigation to first restaurant
+  useAutoRestaurantNavigation(
+    true, // autoNavigateToMenu
+    nearbyRestaurants,
+    true, // hasContentLoaded
+    loadingMenuItems,
+    user
   );
 
   return (
@@ -238,18 +110,11 @@ const Customer = () => {
               Quantum Meals
             </motion.h1>
             
-            {permissionStatus === 'granted' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center gap-2">
-                  <LocationStatusIndicator showTooltip={true} />
-                  <MapViewToggle isMapView={isMapView} onToggle={toggleMapView} />
-                </div>
-              </motion.div>
-            )}
+            <ViewToggle 
+              isMapView={isMapView}
+              onToggle={toggleMapView}
+              showToggle={permissionStatus === 'granted'}
+            />
           </div>
           
           <ErrorBoundary>
@@ -260,104 +125,15 @@ const Customer = () => {
               autoNavigateToMenu={true}
               forcePrompt={false}
             >
-              {/* Content once location is acquired */}
-              <div>
-                {/* Restaurant summary section */}
-                {nearbyRestaurants.length > 0 && (
-                  <motion.div 
-                    className="mb-8"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <h2 className="text-2xl font-semibold mb-4 text-quantum-purple">
-                      {nearbyRestaurants.length} {nearbyRestaurants.length === 1 ? 'Restaurant' : 'Restaurants'} Found Nearby
-                    </h2>
-                    <div className="flex flex-wrap gap-4">
-                      {nearbyRestaurants.map((restaurant, index) => (
-                        <motion.div 
-                          key={restaurant.restaurant_id} 
-                          className="bg-quantum-darkBlue/70 rounded-lg p-3 inline-flex items-center"
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                          whileHover={{ scale: 1.05, backgroundColor: 'rgba(108, 92, 231, 0.2)' }}
-                        >
-                          <span className="text-quantum-cyan mr-2">{restaurant.restaurant_name}</span>
-                          <span className="text-xs text-gray-400">{restaurant.distance_km.toFixed(2)} km away</span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Toggle between map and list views */}
-                <AnimatePresence mode="wait">
-                  {isMapView ? (
-                    <motion.div
-                      key="map-view"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="min-h-[500px] rounded-lg overflow-hidden mb-8"
-                    >
-                      <ErrorBoundary fallback={
-                        <div className="flex flex-col items-center justify-center min-h-[400px] bg-quantum-darkBlue/30 rounded-lg p-6">
-                          <p className="text-lg mb-4">Map view could not be loaded</p>
-                          <Button onClick={toggleMapView}>Switch to List View</Button>
-                        </div>
-                      }>
-                        <Suspense fallback={
-                          <div className="flex flex-col items-center justify-center min-h-[400px] bg-quantum-darkBlue/30 rounded-lg">
-                            <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan mb-4" />
-                            <p>Loading map view...</p>
-                          </div>
-                        }>
-                          <RestaurantMapView 
-                            restaurants={nearbyRestaurants}
-                          />
-                        </Suspense>
-                      </ErrorBoundary>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="list-view"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {menuItems?.length === 0 ? (
-                        <div className="text-center py-12">
-                          <p className="text-xl mb-4">No menu items available from nearby restaurants</p>
-                          <p className="text-gray-400 mb-6">Try updating your location or check back later</p>
-                          <Button
-                            onClick={() => requestPermission()}
-                            className="bg-quantum-cyan hover:bg-quantum-cyan/90"
-                          >
-                            <MapPin className="h-4 w-4 mr-2" />
-                            Update Location
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                          {menuItems?.map((item: MealType, index) => (
-                            <motion.div
-                              key={item.id}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, delay: index * 0.05 }}
-                            >
-                              <CustomerMealCard meal={item} />
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <MainContent 
+                isMapView={isMapView}
+                menuItems={menuItems}
+                isLoading={loadingMenuItems}
+                error={error}
+                nearbyRestaurants={nearbyRestaurants}
+                toggleMapView={toggleMapView}
+                onLocationRequest={requestPermission}
+              />
             </LocationStateManager>
           </ErrorBoundary>
         </div>
