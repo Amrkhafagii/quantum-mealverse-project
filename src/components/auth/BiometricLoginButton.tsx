@@ -13,56 +13,30 @@ export interface BiometricLoginButtonProps {
 }
 
 export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSuccess }) => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isAvailableLocal, setIsAvailableLocal] = useState(false);
-  const [biometryTypeLocal, setBiometryTypeLocal] = useState<string | null>(null);
-  const { isAvailable, biometryType, authenticateWithBiometrics } = useBiometricAuth();
+  const [loading, setLoading] = useState(false);
+  const { 
+    isAvailable, 
+    biometryType, 
+    authenticateWithBiometrics, 
+    isInitialized 
+  } = useBiometricAuth();
   const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Initialize biometric state safely
-  useEffect(() => {
-    let isMounted = true;
-    
-    const initBiometricState = async () => {
-      try {
-        // Wait for a small delay to ensure all systems are initialized
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        if (isMounted) {
-          setIsAvailableLocal(isAvailable);
-          setBiometryTypeLocal(biometryType || null);
-          setIsInitialized(true);
-        }
-      } catch (error) {
-        console.error('Error initializing biometric state:', error);
-        if (isMounted) {
-          setIsInitialized(true);
-          setIsAvailableLocal(false);
-        }
-      }
-    };
-    
-    initBiometricState();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [isAvailable, biometryType]);
-  
-  // Don't render anything until initialization is complete
-  if (!isInitialized) {
-    return null;
-  }
-  
-  // Only show if biometrics are available and we're on a native platform
-  if (!isAvailableLocal || !Platform.isNative()) {
+  // Don't render anything if:
+  // 1. Biometric auth is not initialized yet
+  // 2. Biometrics are not available
+  // 3. We're not on a native platform (web)
+  if (!isInitialized || !isAvailable || !Platform.isNative()) {
     return null;
   }
   
   const handleBiometricLogin = async () => {
+    if (loading) return; // Prevent multiple attempts
+    
     try {
+      setLoading(true);
       const authenticated = await authenticateWithBiometrics("Sign in to your account");
       
       if (authenticated) {
@@ -71,19 +45,28 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
         const storedUserId = localStorage.getItem('biometric_user_id');
         
         if (storedUserId) {
-          // Mock login to simulate success for the demo
-          // This would actually retrieve the stored token and use it instead
-          await login('user@example.com', 'password');
-          
-          toast({
-            title: "Biometric login successful",
-            description: "Welcome back!"
-          });
-          
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            navigate('/');
+          try {
+            // Mock login to simulate success for the demo
+            // This would actually retrieve the stored token and use it instead
+            await login('user@example.com', 'password');
+            
+            toast({
+              title: "Biometric login successful",
+              description: "Welcome back!"
+            });
+            
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              navigate('/');
+            }
+          } catch (loginError) {
+            console.error('Login error after biometric auth:', loginError);
+            toast({
+              title: "Login failed",
+              description: "There was an error completing your login. Please try again with your password.",
+              variant: "destructive"
+            });
           }
         } else {
           toast({
@@ -100,15 +83,21 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
         description: "There was an error with biometric authentication. Please try again or use your password.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
   
   const getButtonText = () => {
-    if (biometryTypeLocal === 'faceId') {
+    if (loading) {
+      return 'Authenticating...';
+    }
+    
+    if (biometryType === 'faceId') {
       return 'Sign in with Face ID';
-    } else if (biometryTypeLocal === 'touchId' || biometryTypeLocal === 'fingerprint') {
+    } else if (biometryType === 'touchId' || biometryType === 'fingerprint') {
       return 'Sign in with Touch ID';
-    } else if (biometryTypeLocal === 'webauthn') {
+    } else if (biometryType === 'webauthn') {
       return 'Sign in with WebAuthn';
     }
     return 'Sign in with Biometrics';
@@ -120,6 +109,7 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({ onSu
       variant="outline"
       className="w-full mt-4"
       onClick={handleBiometricLogin}
+      disabled={loading}
     >
       <Fingerprint className="mr-2 h-4 w-4" />
       {getButtonText()}

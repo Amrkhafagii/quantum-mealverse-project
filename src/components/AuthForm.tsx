@@ -11,6 +11,7 @@ import { useLocationPermission } from '@/hooks/useLocationPermission';
 import LocationPermissionsPrompt from './location/LocationPermissionsPrompt';
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton';
 import { Platform } from '@/utils/platform';
+import { BiometricErrorBoundary } from '@/components/auth/BiometricErrorBoundary';
 
 interface AuthFormProps {
   isRegister?: boolean;
@@ -206,6 +207,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     );
   }
 
+  // Only render biometric button if we're on a native platform
+  const renderBiometricButton = () => {
+    if (!Platform.isInitialized()) return null;
+    
+    if (mode === 'login' && Platform.isNative()) {
+      return (
+        <BiometricErrorBoundary>
+          <BiometricLoginButton onSuccess={() => setShowLocationPrompt(true)} />
+        </BiometricErrorBoundary>
+      );
+    }
+    return null;
+  };
+
   return (
     <form onSubmit={handleAuth} className="space-y-6">
       <div className="space-y-4">
@@ -309,9 +324,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         {loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Sign Up'}
       </Button>
       
-      {mode === 'login' && Platform.isNative() && (
-        <BiometricLoginButton onSuccess={() => setShowLocationPrompt(true)} />
-      )}
+      {renderBiometricButton()}
 
       <p className="text-center text-sm">
         {mode === 'login' ? "Don't have an account? " : "Already have an account? "}

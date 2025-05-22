@@ -9,6 +9,7 @@ import { MapViewProvider } from './contexts/MapViewContext'
 import { CartProvider } from './contexts/CartContext'
 import { ResponsiveProvider } from './contexts/ResponsiveContext'
 import { Platform } from './utils/platform'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // CSS variables for safe area insets - these will be available before React loads
 if (typeof document !== 'undefined' && document.documentElement) {
@@ -58,6 +59,19 @@ const initializePlatform = async () => {
     await configureIOSStatusBar();
   } catch (error) {
     console.error('Error initializing platform:', error);
+  }
+};
+
+// Initialize biometric modules only if needed (lazy loading)
+const initializeBiometricModules = async () => {
+  if (Platform.isNative()) {
+    try {
+      // This will trigger the loading of the BiometricAuth plugin
+      const { BiometricAuth } = await import('./plugins/BiometricAuthPlugin');
+      console.log('Biometric modules initialized');
+    } catch (error) {
+      console.warn('Failed to initialize biometric modules:', error);
+    }
   }
 };
 
@@ -127,6 +141,9 @@ const renderApp = async () => {
       // Set up orientation tracking
       setupOrientationClasses();
     }
+    
+    // Lazily initialize biometric modules after a short delay
+    setTimeout(initializeBiometricModules, 2000);
 
     // Create React root and render app with improved error handling
     const rootElement = document.getElementById('root');
@@ -136,14 +153,16 @@ const renderApp = async () => {
     
     ReactDOM.createRoot(rootElement).render(
       <React.StrictMode>
-        <ResponsiveProvider>
-          <CartProvider>
-            <MapViewProvider>
-              <App />
-              <Toaster />
-            </MapViewProvider>
-          </CartProvider>
-        </ResponsiveProvider>
+        <ErrorBoundary>
+          <ResponsiveProvider>
+            <CartProvider>
+              <MapViewProvider>
+                <App />
+                <Toaster />
+              </MapViewProvider>
+            </CartProvider>
+          </ResponsiveProvider>
+        </ErrorBoundary>
       </React.StrictMode>,
     );
   } catch (error) {
