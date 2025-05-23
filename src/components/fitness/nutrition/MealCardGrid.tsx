@@ -70,7 +70,10 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
                   variant="ghost" 
                   size="sm" 
                   className="h-8 w-8 p-0 text-quantum-cyan rounded-full"
-                  onClick={() => onShuffleMeal(index)}
+                  onClick={() => {
+                    onShuffleMeal(index);
+                    shuffleToast();
+                  }}
                 >
                   <RefreshCw className="h-4 w-4" />
                 </Button>
@@ -90,20 +93,33 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
             
             <CardContent className="p-4">
               <div className="max-h-[200px] overflow-y-auto pr-1 space-y-2">
-                {meal.foods.map((mealFood, foodIndex) => (
-                  <div key={foodIndex} className="bg-quantum-black/30 p-2 rounded-md flex justify-between text-sm">
-                    <div className="flex gap-1 items-center">
-                      {mealFood.food.name} 
-                      <span className="text-gray-400 text-xs">({mealFood.portionSize}g)</span>
-                      {mealFood.food.cookingState && (
-                        <span className="text-gray-400 text-xs italic">
-                          {mealFood.food.cookingState === 'cooked' ? '(cooked)' : '(raw)'}
-                        </span>
-                      )}
+                {meal.foods.map((mealFood, foodIndex) => {
+                  // Calculate actual calories and macros based on portion size
+                  const basePortionSize = mealFood.food.portion || 100; // Default to 100g if no portion specified
+                  const actualPortionSize = mealFood.portionSize || 100;
+                  const portionRatio = actualPortionSize / basePortionSize;
+                  
+                  // Calculate actual nutrition values based on portion ratio
+                  const actualCalories = Math.round(mealFood.food.calories * portionRatio);
+                  const actualProtein = Math.round(mealFood.food.protein * portionRatio);
+                  const actualCarbs = Math.round(mealFood.food.carbs * portionRatio);
+                  const actualFat = Math.round(mealFood.food.fat * portionRatio);
+                  
+                  return (
+                    <div key={foodIndex} className="bg-quantum-black/30 p-2 rounded-md flex justify-between text-sm">
+                      <div className="flex gap-1 items-center">
+                        {mealFood.food.name} 
+                        <span className="text-gray-400 text-xs">({mealFood.portionSize}g)</span>
+                        {mealFood.food.cookingState && (
+                          <span className="text-gray-400 text-xs italic">
+                            {mealFood.food.cookingState === 'cooked' ? '(cooked)' : '(raw)'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-gray-400">{actualCalories} kcal</div>
                     </div>
-                    <div className="text-gray-400">{mealFood.food.calories} kcal</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               {/* Order button */}
