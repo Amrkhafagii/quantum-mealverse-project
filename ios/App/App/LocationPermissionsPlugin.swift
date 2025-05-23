@@ -5,6 +5,8 @@ import CoreLocation
 
 @objc(LocationPermissionsPlugin)
 public class LocationPermissionsPlugin: CAPPlugin {
+    // MARK: - Properties
+    
     private var permissionCallbacks: [String: CAPPluginCall] = [:]
     private var locationManager: CLLocationManager?
     private var bestAvailableLocation: CLLocation?
@@ -25,15 +27,28 @@ public class LocationPermissionsPlugin: CAPPlugin {
     private let desiredAccuracy: CLLocationAccuracy = 100 // 100 meters
     private let accuracyTimeout: TimeInterval = 15 // 15 seconds timeout for accuracy improvements
     
+    // MARK: - Lifecycle
+    
     @objc override public func load() {
-        // Ensure LocationManager is initialized first - use synchronous initialization
         print("LocationPermissionsPlugin loading - initializing LocationManager")
         LocationManager.shared.initializeSync()
-        
-        // Use LocationManager's already initialized CLLocationManager instance
         locationManager = LocationManager.shared.locationManager
         
-        // Initialize batch processor with error handling
+        initializeBatchProcessor()
+        registerForNotifications()
+        
+        print("LocationPermissionsPlugin loaded successfully")
+    }
+    
+    deinit {
+        stopAccuracyTimer()
+        batchProcessor.stopBatchProcessingTimer()
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Setup
+    
+    private func initializeBatchProcessor() {
         do {
             batchProcessor = LocationBatchProcessor()
             batchProcessor.setBestLocationHandler { [weak self] location in
@@ -42,8 +57,9 @@ public class LocationPermissionsPlugin: CAPPlugin {
         } catch {
             print("Error initializing LocationBatchProcessor: \(error.localizedDescription)")
         }
-        
-        // Listen for permission changes from other components
+    }
+    
+    private func registerForNotifications() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handlePermissionChange(_:)),
@@ -57,45 +73,20 @@ public class LocationPermissionsPlugin: CAPPlugin {
             name: Notification.Name("locationAuthorizationDidChange"),
             object: nil
         )
-        
-        print("LocationPermissionsPlugin loaded successfully")
     }
     
-    deinit {
-        stopAccuracyTimer()
-        batchProcessor.stopBatchProcessingTimer()
-        NotificationCenter.default.removeObserver(self)
-    }
+    // MARK: - Notification Handlers
     
     @objc func handlePermissionChange(_ notification: Notification) {
-        // When permissions change elsewhere in the app, update any pending callbacks
         if let status = notification.userInfo?["status"] as? CLAuthorizationStatus {
             resolveAllPendingCallbacks(with: status)
-            
-            // Invalidate permission cache when permissions change
             invalidatePermissionCache()
         }
     }
-    
-    private func resolveAllPendingCallbacks(with status: CLAuthorizationStatus) {
-        // Update all pending callbacks with the new status
-        for (id, call) in permissionCallbacks {
-            let formattedStatus = LocationPermissionHelper.formatPermissionStatus(status)
-            call.resolve([
-                "location": formattedStatus.foreground,
-                "backgroundLocation": formattedStatus.background
-            ])
-            permissionCallbacks.removeValue(forKey: id)
-        }
-        
-        // Update permission cache with new status
-        updatePermissionCache(status: status)
-        
-        // Reset request attempts when permissions change
-        requestAttempts = 0
-    }
-    
-    // Cache permission status to reduce redundant checks
+}
+
+// MARK: - Permission Cache Management
+extension LocationPermissionsPlugin {
     private func updatePermissionCache(status: CLAuthorizationStatus) {
         let formattedStatus = LocationPermissionHelper.formatPermissionStatus(status)
         permissionStatusCache = [
@@ -115,25 +106,38 @@ public class LocationPermissionsPlugin: CAPPlugin {
         return Date() < permissionCacheExpiry
     }
     
-    // MARK: - Capacitor Plugin Methods
-    
-    // Main method to request permissions - this is called from JS via `requestPermissions`
+    private func resolveAllPendingCallbacks(with status: CLAuthorizationStatus) {
+        for (id, call) in permissionCallbacks {
+            let formattedStatus = LocationPermissionHelper.formatPermissionStatus(status)
+            call.resolve([
+                "location": formattedStatus.foreground,
+                "backgroundLocation": formattedStatus.background
+            ])
+            permissionCallbacks.removeValue(forKey: id)
+        }
+        
+        updatePermissionCache(status: status)
+        requestAttempts = 0
+    }
+}
+
+// MARK: - Capacitor Plugin Methods
+extension LocationPermissionsPlugin {
     @objc func requestPermissions(_ call: CAPPluginCall) {
         print("requestPermissions called with options:", call.options)
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
-    // Alternative method - this is called from JS via `requestLocationPermission`
     @objc func requestLocationPermission(_ call: CAPPluginCall) {
         print("requestLocationPermission called with options:", call.options)
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
-    // Method to check current permission status
     @objc func checkPermissionStatus(_ call: CAPPluginCall) {
         print("checkPermissionStatus called")
+        
         // Check cache first to avoid bridge calls
         if let cache = permissionStatusCache, permissionCacheIsValid() {
             print("Using cached permission status")
@@ -165,8 +169,10 @@ public class LocationPermissionsPlugin: CAPPlugin {
         
         call.resolve(result)
     }
-    
-    // Shared implementation for both requestPermission methods to avoid duplication
+}
+
+// MARK: - Location Permission Handling
+extension LocationPermissionsPlugin {
     private func requestLocationPermissionInternal(call: CAPPluginCall, background: Bool) {
         let callbackId = call.callbackId
         
@@ -196,7 +202,6 @@ public class LocationPermissionsPlugin: CAPPlugin {
         if let id = callbackId {
             permissionCallbacks[id] = call
             
-            // Request permission via LocationManager with exponential backoff
             requestLocationPermissionWithBackoff(background: background) { [weak self] status in
                 guard let self = self else { return }
                 
@@ -276,12 +281,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
             self.startAccuracyTimer(completion: completion)
             
             // Check if permission is already determined
-            let currentStatus: CLAuthorizationStatus
-            if #available(iOS 14.0, *) {
-                currentStatus = locationManager.authorizationStatus
-            } else {
-                currentStatus = CLLocationManager.authorizationStatus()
-            }
+            let currentStatus = self.getCurrentAuthorizationStatus(locationManager)
             
             if currentStatus != .notDetermined {
                 // Permission already set, request location to check accuracy
@@ -291,6 +291,17 @@ public class LocationPermissionsPlugin: CAPPlugin {
         }
     }
     
+    private func getCurrentAuthorizationStatus(_ locationManager: CLLocationManager) -> CLAuthorizationStatus {
+        if #available(iOS 14.0, *) {
+            return locationManager.authorizationStatus
+        } else {
+            return CLLocationManager.authorizationStatus()
+        }
+    }
+}
+
+// MARK: - Location Handling
+extension LocationPermissionsPlugin {
     private func handleBestLocation(_ location: CLLocation) {
         bestAvailableLocation = location
         print("Best batched location: \(location.coordinate), accuracy: \(location.horizontalAccuracy)m")
@@ -343,7 +354,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
     }
 }
 
-// Extension to check for background modes
+// MARK: - Bundle Extension
 extension Bundle {
     func hasBackgroundMode(for mode: String) -> Bool {
         guard let backgroundModes = object(forInfoDictionaryKey: "UIBackgroundModes") as? [String] else {
