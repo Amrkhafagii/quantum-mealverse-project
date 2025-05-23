@@ -14,7 +14,6 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 		F604BA5D2DE0871D00A42053 /* LocationQualityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA592DE0871D00A42053 /* LocationQualityManager.swift */; };
-		F604BA5E2DE0871D00A42053 /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */; };
 		F604BA5F2DE0871D00A42053 /* HybridPositioningManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA572DE0871D00A42053 /* HybridPositioningManager.swift */; };
 		F604BA602DE0871D00A42053 /* SignificantLocationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA5A2DE0871D00A42053 /* SignificantLocationDelegate.swift */; };
 		F604BA612DE0871D00A42053 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA582DE0871D00A42053 /* LocationManager.swift */; };
@@ -23,6 +22,12 @@
 		F604BA642DE0871D00A42053 /* .gitkeep in Resources */ = {isa = PBXBuildFile; fileRef = F604BA542DE0871D00A42053 /* .gitkeep */; };
 		F604BA6C2DE0901400A42053 /* LocationTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */; };
 		F60695692DDF310500CD918D /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F60695672DDF310500CD918D /* Launch Screen.storyboard */; };
+		F61FC8B12DE0E9690060E51D /* AppInitializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61FC8B02DE0E9690060E51D /* AppInitializer.swift */; };
+		F61FC8B32DE0E9740060E51D /* BackgroundFetchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61FC8B22DE0E9740060E51D /* BackgroundFetchManager.swift */; };
+		F61FC8B52DE0E9850060E51D /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61FC8B42DE0E9850060E51D /* BackgroundTaskManager.swift */; };
+		F61FC8B92DE0E9D90060E51D /* LocationBackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61FC8B82DE0E9D90060E51D /* LocationBackgroundTaskManager.swift */; };
+		F61FC8BB2DE0E9F80060E51D /* SwizzleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61FC8BA2DE0E9F80060E51D /* SwizzleExtensions.swift */; };
+		F61FC8BD2DE0EA030060E51D /* UIAppearanceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61FC8BC2DE0EA030060E51D /* UIAppearanceManager.swift */; };
 		F62819912DE0B60700D98D82 /* LocationPermissionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62819902DE0B60700D98D82 /* LocationPermissionHelper.swift */; };
 		F62819922DE0B60700D98D82 /* LocationBatchProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F628198F2DE0B60700D98D82 /* LocationBatchProcessor.swift */; };
 		F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4732DDCAA900085D82E /* ActivityManager.swift */; };
@@ -51,7 +56,6 @@
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
 		F604BA542DE0871D00A42053 /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
-		F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
 		F604BA562DE0871D00A42053 /* BatteryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMonitor.swift; sourceTree = "<group>"; };
 		F604BA572DE0871D00A42053 /* HybridPositioningManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridPositioningManager.swift; sourceTree = "<group>"; };
 		F604BA582DE0871D00A42053 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
@@ -60,6 +64,12 @@
 		F604BA5B2DE0871D00A42053 /* StandardLocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardLocationDelegate.swift; sourceTree = "<group>"; };
 		F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTrackingManager.swift; sourceTree = "<group>"; };
 		F60695682DDF310500CD918D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		F61FC8B02DE0E9690060E51D /* AppInitializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInitializer.swift; sourceTree = "<group>"; };
+		F61FC8B22DE0E9740060E51D /* BackgroundFetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundFetchManager.swift; sourceTree = "<group>"; };
+		F61FC8B42DE0E9850060E51D /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
+		F61FC8B82DE0E9D90060E51D /* LocationBackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBackgroundTaskManager.swift; sourceTree = "<group>"; };
+		F61FC8BA2DE0E9F80060E51D /* SwizzleExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwizzleExtensions.swift; sourceTree = "<group>"; };
+		F61FC8BC2DE0EA030060E51D /* UIAppearanceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAppearanceManager.swift; sourceTree = "<group>"; };
 		F628198F2DE0B60700D98D82 /* LocationBatchProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBatchProcessor.swift; sourceTree = "<group>"; };
 		F62819902DE0B60700D98D82 /* LocationPermissionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPermissionHelper.swift; sourceTree = "<group>"; };
 		F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BiometricAuthPlugin.h; sourceTree = "<group>"; };
@@ -124,6 +134,11 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				F61FC8BC2DE0EA030060E51D /* UIAppearanceManager.swift */,
+				F61FC8BA2DE0E9F80060E51D /* SwizzleExtensions.swift */,
+				F61FC8B42DE0E9850060E51D /* BackgroundTaskManager.swift */,
+				F61FC8B22DE0E9740060E51D /* BackgroundFetchManager.swift */,
+				F61FC8B02DE0E9690060E51D /* AppInitializer.swift */,
 				F604BA5C2DE0871D00A42053 /* LocationManagement */,
 				F661C90F2DDF64B400142AEF /* LocationPermissionsPlugin.h */,
 				F661C9102DDF64B400142AEF /* LocationPermissionsPlugin.m */,
@@ -165,10 +180,10 @@
 		F604BA5C2DE0871D00A42053 /* LocationManagement */ = {
 			isa = PBXGroup;
 			children = (
+				F61FC8B82DE0E9D90060E51D /* LocationBackgroundTaskManager.swift */,
 				F628198F2DE0B60700D98D82 /* LocationBatchProcessor.swift */,
 				F62819902DE0B60700D98D82 /* LocationPermissionHelper.swift */,
 				F604BA542DE0871D00A42053 /* .gitkeep */,
-				F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */,
 				F604BA562DE0871D00A42053 /* BatteryMonitor.swift */,
 				F604BA572DE0871D00A42053 /* HybridPositioningManager.swift */,
 				F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */,
@@ -321,7 +336,9 @@
 			files = (
 				F62EC4762DDCAAA10085D82E /* BackgroundSync.swift in Sources */,
 				F62EC4852DDCAAE00085D82E /* RouteOptimizationPlugin.swift in Sources */,
+				F61FC8B12DE0E9690060E51D /* AppInitializer.swift in Sources */,
 				F6956E5C2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift in Sources */,
+				F61FC8B32DE0E9740060E51D /* BackgroundFetchManager.swift in Sources */,
 				F62EC4862DDCAAE00085D82E /* QrScannerPlugin.swift in Sources */,
 				F661C9112DDF64B400142AEF /* LocationPermissionsPlugin.m in Sources */,
 				F62EC4882DDCAAE00085D82E /* NotificationManager.swift in Sources */,
@@ -330,14 +347,17 @@
 				F62819922DE0B60700D98D82 /* LocationBatchProcessor.swift in Sources */,
 				F62EC48B2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */,
 				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
+				F61FC8B52DE0E9850060E51D /* BackgroundTaskManager.swift in Sources */,
+				F61FC8BD2DE0EA030060E51D /* UIAppearanceManager.swift in Sources */,
+				F61FC8BB2DE0E9F80060E51D /* SwizzleExtensions.swift in Sources */,
 				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
 				F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */,
 				F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */,
+				F61FC8B92DE0E9D90060E51D /* LocationBackgroundTaskManager.swift in Sources */,
 				F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				F604BA6C2DE0901400A42053 /* LocationTrackingManager.swift in Sources */,
 				F604BA5D2DE0871D00A42053 /* LocationQualityManager.swift in Sources */,
-				F604BA5E2DE0871D00A42053 /* BackgroundTaskManager.swift in Sources */,
 				F604BA5F2DE0871D00A42053 /* HybridPositioningManager.swift in Sources */,
 				F604BA602DE0871D00A42053 /* SignificantLocationDelegate.swift in Sources */,
 				F604BA612DE0871D00A42053 /* LocationManager.swift in Sources */,
