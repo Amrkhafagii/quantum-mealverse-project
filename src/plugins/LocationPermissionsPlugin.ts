@@ -1,4 +1,3 @@
-
 import { registerPlugin } from '@capacitor/core';
 import { debounce, BatchCollector, BridgeStateCache } from '../utils/bridgeOptimization';
 
@@ -10,7 +9,7 @@ export interface LocationPermissionStatus {
 }
 
 export interface LocationPermissionsPlugin {
-  requestPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus>;
+  requestPermissions(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus>;
   requestLocationPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus>;
   checkPermissionStatus(): Promise<LocationPermissionStatus>;
 }
@@ -30,13 +29,15 @@ const permissionStatusCache = new BridgeStateCache<LocationPermissionStatus>(600
 // Create a safely initialized plugin with proper error handling
 const createSafeLocationPermissions = () => {
   try {
+    console.log("Initializing LocationPermissions plugin");
     // Register the plugin with a web fallback
     const plugin = registerPlugin<LocationPermissionsPlugin>('LocationPermissions', {
       web: () => import('./web/LocationPermissionsWeb').then(m => m.LocationPermissionsWebInstance),
     });
     
     // Wrap original methods with optimized versions
-    const originalRequestPermission = plugin.requestPermission.bind(plugin);
+    const originalRequestPermissions = plugin.requestPermissions.bind(plugin);
+    const originalRequestLocationPermission = plugin.requestLocationPermission?.bind(plugin);
     const originalCheckPermissionStatus = plugin.checkPermissionStatus.bind(plugin);
     
     // Debounced version of checkPermissionStatus to prevent rapid calls
@@ -48,26 +49,48 @@ const createSafeLocationPermissions = () => {
     
     // Override methods with optimized versions
     plugin.checkPermissionStatus = async () => {
+      console.log("Calling plugin.checkPermissionStatus");
       // Try to use cached value first
       const cached = permissionStatusCache.get('status');
       if (cached) {
+        console.log("Using cached permission status");
         return cached;
       }
       
       // Fall back to actual call
-      const result = await originalCheckPermissionStatus();
-      permissionStatusCache.set('status', result);
-      return result;
+      console.log("Making bridge call to checkPermissionStatus");
+      try {
+        const result = await originalCheckPermissionStatus();
+        console.log("checkPermissionStatus result:", result);
+        permissionStatusCache.set('status', result);
+        return result;
+      } catch (error) {
+        console.error("Error in checkPermissionStatus:", error);
+        throw error;
+      }
     };
     
-    plugin.requestPermission = async (options) => {
+    plugin.requestPermissions = async (options) => {
+      console.log("Calling plugin.requestPermissions with options:", options);
       // Invalidate cache when requesting permissions
       permissionStatusCache.clear();
-      const result = await originalRequestPermission(options);
-      
-      // Update cache with new permission status
-      permissionStatusCache.set('status', result);
-      return result;
+      try {
+        const result = await originalRequestPermissions(options);
+        console.log("requestPermissions result:", result);
+        // Update cache with new permission status
+        permissionStatusCache.set('status', result);
+        return result;
+      } catch (error) {
+        console.error("Error in requestPermissions:", error);
+        throw error;
+      }
+    };
+
+    // Make requestLocationPermission call requestPermissions for consistency
+    plugin.requestLocationPermission = async (options) => {
+      console.log("Calling plugin.requestLocationPermission with options:", options);
+      // Just forward to requestPermissions
+      return plugin.requestPermissions(options);
     };
     
     return plugin;
@@ -76,18 +99,18 @@ const createSafeLocationPermissions = () => {
     
     // Return a fallback implementation that won't crash the app
     return {
-      requestPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
+      requestPermissions: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
         console.warn('LocationPermissions plugin not available, using fallback');
         return throttledPromiseWithGeolocation();
       },
       
       requestLocationPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
-        console.warn('LocationPermissions plugin not available, using fallback');
+        console.warn('LocationPermissions.requestLocationPermission not available, using fallback');
         return throttledPromiseWithGeolocation();
       },
       
       checkPermissionStatus: async (): Promise<LocationPermissionStatus> => {
-        console.warn('LocationPermissions plugin not available, using fallback');
+        console.warn('LocationPermissions.checkPermissionStatus not available, using fallback');
         // Default to prompt when plugin is unavailable
         return checkPermissionWithGeolocation();
       }

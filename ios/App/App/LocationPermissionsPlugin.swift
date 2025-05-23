@@ -1,4 +1,3 @@
-
 import Foundation
 import Capacitor
 import CoreLocation
@@ -39,6 +38,8 @@ public class LocationPermissionsPlugin: CAPPlugin {
             name: Notification.Name("locationPermissionChanged"),
             object: nil
         )
+        
+        print("LocationPermissionsPlugin loaded")
     }
     
     deinit {
@@ -95,8 +96,22 @@ public class LocationPermissionsPlugin: CAPPlugin {
         return Date() < permissionCacheExpiry
     }
     
-    @objc override public func requestPermissions(_ call: CAPPluginCall) {
-        let backgroundMode = call.getBool("background") ?? false
+    // Main method to request permissions - this is called from JS via `requestPermissions`
+    @objc public func requestPermissions(_ call: CAPPluginCall) {
+        print("requestPermissions called")
+        let includeBackground = call.getBool("includeBackground") ?? false
+        requestLocationPermissionInternal(call: call, background: includeBackground)
+    }
+    
+    // Alternative method - this is called from JS via `requestLocationPermission`
+    @objc public func requestLocationPermission(_ call: CAPPluginCall) {
+        print("requestLocationPermission called")
+        let includeBackground = call.getBool("includeBackground") ?? false
+        requestLocationPermissionInternal(call: call, background: includeBackground)
+    }
+    
+    // Shared implementation for both requestPermission methods to avoid duplication
+    private func requestLocationPermissionInternal(call: CAPPluginCall, background: Bool) {
         let callbackId = call.callbackId
         
         // Check for rapid repeat calls
@@ -106,6 +121,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
         if timeSinceLastRequest < 1.0 && requestAttempts > 0 {
             // Too frequent, use cached result if available
             if let cache = permissionStatusCache, permissionCacheIsValid() {
+                print("Using cached permission result")
                 call.resolve(cache)
                 return
             }
@@ -118,15 +134,17 @@ public class LocationPermissionsPlugin: CAPPlugin {
             permissionCallbacks[id] = call
             
             // Request permission via LocationManager with exponential backoff
-            requestLocationPermissionWithBackoff(background: backgroundMode) { [weak self] status in
+            requestLocationPermissionWithBackoff(background: background) { [weak self] status in
                 guard let self = self else { return }
                 
                 if let savedCall = self.permissionCallbacks[id] {
                     let formattedStatus = self.formatPermissionStatus(status)
-                    savedCall.resolve([
+                    let result = [
                         "location": formattedStatus.foreground,
                         "backgroundLocation": formattedStatus.background
-                    ])
+                    ]
+                    print("Resolving permission request with status: \(result)")
+                    savedCall.resolve(result)
                     self.permissionCallbacks.removeValue(forKey: id)
                 }
                 
@@ -142,8 +160,10 @@ public class LocationPermissionsPlugin: CAPPlugin {
     }
     
     @objc public func checkPermissionStatus(_ call: CAPPluginCall) {
+        print("checkPermissionStatus called")
         // Check cache first to avoid bridge calls
         if let cache = permissionStatusCache, permissionCacheIsValid() {
+            print("Using cached permission status")
             call.resolve(cache)
             return
         }
@@ -154,6 +174,8 @@ public class LocationPermissionsPlugin: CAPPlugin {
             "location": formattedStatus.foreground,
             "backgroundLocation": formattedStatus.background
         ]
+        
+        print("Permission status: \(result)")
         
         // Update cache
         permissionStatusCache = result
@@ -199,12 +221,16 @@ public class LocationPermissionsPlugin: CAPPlugin {
                 self?.addToBatch(location)
             }
             
+            // Set up the delegate with the location manager
+            delegate.setup(with: locationManager)
             locationManager.delegate = delegate
             
             // Determine which permission to request
             if background && Bundle.main.hasBackgroundMode(for: "location") {
+                print("Requesting always authorization")
                 locationManager.requestAlwaysAuthorization()
             } else {
+                print("Requesting when in use authorization")
                 locationManager.requestWhenInUseAuthorization()
             }
             
@@ -221,12 +247,12 @@ public class LocationPermissionsPlugin: CAPPlugin {
             
             if currentStatus != .notDetermined {
                 // Permission already set, request location to check accuracy
+                print("Permission already determined: \(currentStatus), requesting location")
                 locationManager.requestLocation()
             }
         }
     }
     
-    // Add location to batch for processing
     private func addToBatch(_ location: CLLocation) {
         pendingLocationUpdates.append(location)
         
