@@ -100,18 +100,46 @@ public class LocationPermissionsPlugin: CAPPlugin {
         return Date() < permissionCacheExpiry
     }
     
+    // MARK: - Capacitor Plugin Methods
+    
     // Main method to request permissions - this is called from JS via `requestPermissions`
-    @objc override public func requestPermissions(_ call: CAPPluginCall) {
+    @objc func requestPermissions(_ call: CAPPluginCall) {
         print("requestPermissions called")
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
     // Alternative method - this is called from JS via `requestLocationPermission`
-    @objc public func requestLocationPermission(_ call: CAPPluginCall) {
+    @objc func requestLocationPermission(_ call: CAPPluginCall) {
         print("requestLocationPermission called")
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
+    }
+    
+    // Method to check current permission status
+    @objc func checkPermissionStatus(_ call: CAPPluginCall) {
+        print("checkPermissionStatus called")
+        // Check cache first to avoid bridge calls
+        if let cache = permissionStatusCache, permissionCacheIsValid() {
+            print("Using cached permission status")
+            call.resolve(cache)
+            return
+        }
+        
+        let status = LocationPermissionHelper.checkLocationPermission(locationManager: locationManager)
+        let formattedStatus = LocationPermissionHelper.formatPermissionStatus(status)
+        let result = [
+            "location": formattedStatus.foreground,
+            "backgroundLocation": formattedStatus.background
+        ]
+        
+        print("Permission status: \(result)")
+        
+        // Update cache
+        permissionStatusCache = result
+        permissionCacheExpiry = Date().addingTimeInterval(cacheTTL)
+        
+        call.resolve(result)
     }
     
     // Shared implementation for both requestPermission methods to avoid duplication
@@ -161,31 +189,6 @@ public class LocationPermissionsPlugin: CAPPlugin {
         } else {
             call.reject("Failed to process permission request")
         }
-    }
-    
-    @objc public func checkPermissionStatus(_ call: CAPPluginCall) {
-        print("checkPermissionStatus called")
-        // Check cache first to avoid bridge calls
-        if let cache = permissionStatusCache, permissionCacheIsValid() {
-            print("Using cached permission status")
-            call.resolve(cache)
-            return
-        }
-        
-        let status = LocationPermissionHelper.checkLocationPermission(locationManager: locationManager)
-        let formattedStatus = LocationPermissionHelper.formatPermissionStatus(status)
-        let result = [
-            "location": formattedStatus.foreground,
-            "backgroundLocation": formattedStatus.background
-        ]
-        
-        print("Permission status: \(result)")
-        
-        // Update cache
-        permissionStatusCache = result
-        permissionCacheExpiry = Date().addingTimeInterval(cacheTTL)
-        
-        call.resolve(result)
     }
     
     private func requestLocationPermissionWithBackoff(background: Bool, completion: @escaping (CLAuthorizationStatus) -> Void) {
@@ -306,5 +309,15 @@ public class LocationPermissionsPlugin: CAPPlugin {
     private func stopAccuracyTimer() {
         accuracyTimer?.invalidate()
         accuracyTimer = nil
+    }
+}
+
+// Extension to check for background modes
+extension Bundle {
+    func hasBackgroundMode(for mode: String) -> Bool {
+        guard let backgroundModes = object(forInfoDictionaryKey: "UIBackgroundModes") as? [String] else {
+            return false
+        }
+        return backgroundModes.contains(mode)
     }
 }

@@ -1,4 +1,3 @@
-
 import UIKit
 import Capacitor
 import CoreLocation
@@ -16,11 +15,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Set up appearance for navigation bars and toolbars
         configureUIAppearance()
         
-        // Defer heavy initializations to avoid blocking app launch
-        // We'll initialize services after a short delay to ensure UI is shown first
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.initializeServices(application)
-        }
+        // Initialize plugins and core services immediately
+        // This ensures that the LocationPermissionsPlugin is available before any UI components try to use it
+        initializeServices(application)
         
         return true
     }
