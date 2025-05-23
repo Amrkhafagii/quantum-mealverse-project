@@ -27,6 +27,8 @@ interface ExtendedMealFood {
   protein: number;
   carbs: number;
   fat: number;
+  portion?: number;
+  portionSize?: number;
 }
 
 const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, className }) => {
@@ -73,6 +75,18 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, className }
                 <div className="pl-4 space-y-2">
                   {meal.foods.map((food, foodIndex) => {
                     const extendedFood = food as unknown as ExtendedMealFood;
+                    
+                    // Calculate actual calories based on portion size
+                    const basePortionSize = extendedFood.portion || 100; // Default to 100g if no portion specified
+                    const actualPortionSize = extendedFood.portionSize || parseFloat(extendedFood.serving_size) || 100;
+                    const portionRatio = actualPortionSize / basePortionSize;
+                    
+                    // Calculate actual nutrition values based on portion ratio
+                    const actualCalories = Math.round(extendedFood.calories * portionRatio);
+                    const actualProtein = Math.round(extendedFood.protein * portionRatio);
+                    const actualCarbs = Math.round(extendedFood.carbs * portionRatio);
+                    const actualFat = Math.round(extendedFood.fat * portionRatio);
+                    
                     return (
                       <div 
                         key={foodIndex} 
@@ -83,9 +97,9 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, className }
                           <p className="text-sm text-gray-400">{extendedFood.serving_size} {extendedFood.unit}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm">{extendedFood.calories} cal</p>
+                          <p className="text-sm">{actualCalories} cal</p>
                           <p className="text-xs text-gray-400">
-                            P: {extendedFood.protein}g | C: {extendedFood.carbs}g | F: {extendedFood.fat}g
+                            P: {actualProtein}g | C: {actualCarbs}g | F: {actualFat}g
                           </p>
                         </div>
                       </div>
