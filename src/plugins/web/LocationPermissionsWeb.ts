@@ -1,12 +1,12 @@
+
 import { WebPlugin } from '@capacitor/core';
 import type { LocationPermissionsPlugin, LocationPermissionStatus, PermissionState } from '../LocationPermissionsPlugin';
 
 export class LocationPermissionsWeb extends WebPlugin implements LocationPermissionsPlugin {
   constructor() {
-    super();
-    this.config = {
+    super({
       name: 'LocationPermissions'
-    };
+    });
   }
 
   /**
