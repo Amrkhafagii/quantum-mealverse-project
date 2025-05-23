@@ -1,232 +1,132 @@
+
 import { WebPlugin } from '@capacitor/core';
 import type { LocationPermissionsPlugin, LocationPermissionStatus, PermissionState } from '../LocationPermissionsPlugin';
-import { debounce, BridgeStateCache } from '../../utils/bridgeOptimization';
-
-// Store the best location result
-let bestLocationResult: LocationPermissionStatus | null = null;
-let lastRequestTime = 0;
-let requestCount = 0;
-const MAX_REQUESTS_PER_MINUTE = 5;
-const THROTTLE_RESET_TIME = 60000; // 1 minute
-
-// Web-specific caching to reduce geolocation API calls
-const webLocationCache = new BridgeStateCache<LocationPermissionStatus>(120000); // 2 minute TTL for web
 
 export class LocationPermissionsWeb extends WebPlugin implements LocationPermissionsPlugin {
-  private pendingRequests: Array<{ 
-    resolve: (value: LocationPermissionStatus) => void, 
-    options: { includeBackground?: boolean } 
-  }> = [];
-  
-  // Use debounced version for actual implementation to reduce simultaneous calls
-  private debouncedRequestImplementation = debounce(async () => {
-    if (this.pendingRequests.length === 0) return;
-    
-    try {
-      // Process all pending requests with a single geolocation call
-      const result = await this.performLocationRequest();
-      
-      // Resolve all pending requests with the same result
-      this.pendingRequests.forEach(({ resolve }) => {
-        resolve(result);
-      });
-      
-      // Clear pending requests
-      this.pendingRequests = [];
-    } catch (error) {
-      console.error('Error in debounced location request:', error);
-      
-      // Resolve all with fallback in case of error
-      const fallback = bestLocationResult || { 
-        location: 'prompt' as PermissionState, 
-        backgroundLocation: 'prompt' as PermissionState 
-      };
-      
-      this.pendingRequests.forEach(({ resolve }) => {
-        resolve(fallback);
-      });
-      
-      // Clear pending requests
-      this.pendingRequests = [];
-    }
-  }, 200);
-  
-  async requestPermissions(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
-    console.log('Web implementation of requestPermissions');
-    return this.requestLocationPermission(options);
-  }
-  
-  async requestLocationPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
-    console.log('Web implementation of requestLocationPermission');
-    
-    // Check cache first
-    const cacheKey = 'location_permission';
-    const cached = webLocationCache.get(cacheKey);
-    if (cached && cached.location === 'granted') {
-      console.log('Using cached permission result:', cached);
-      return cached;
-    }
-    
-    // Check if we should throttle
-    const now = Date.now();
-    if (now - lastRequestTime > THROTTLE_RESET_TIME) {
-      // It's been more than a minute, reset the counter
-      requestCount = 0;
-    }
-    
-    // Increment the counter
-    requestCount++;
-    lastRequestTime = now;
-    
-    // If we've exceeded the max requests and have a cached result, use it
-    if (requestCount > MAX_REQUESTS_PER_MINUTE && bestLocationResult) {
-      console.log('Throttling location requests, using cached result');
-      return bestLocationResult;
-    }
-    
-    return new Promise((resolve) => {
-      // Queue this request
-      this.pendingRequests.push({ resolve, options });
-      
-      // Trigger the debounced implementation
-      this.debouncedRequestImplementation();
+  constructor() {
+    super({
+      name: 'LocationPermissions',
+      platforms: ['web']
     });
   }
 
-  private async performLocationRequest(): Promise<LocationPermissionStatus> {
-    try {
-      // For web, try to request permission using the Geolocation API
-      if (navigator && navigator.geolocation) {
-        return new Promise((resolve) => {
-          // Set a timeout in case the geolocation API takes too long
-          const timeoutId = setTimeout(() => {
-            console.log('Geolocation request timed out');
-            // If we have a cached result, use it
-            if (bestLocationResult) {
-              resolve(bestLocationResult);
-            } else {
-              resolve({ location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState });
-            }
-          }, 10000);
-          
-          navigator.geolocation.getCurrentPosition(
-            () => {
-              clearTimeout(timeoutId);
-              const result = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
-              bestLocationResult = result; // Cache the successful result
-              webLocationCache.set('location_permission', result);
-              resolve(result);
-            },
-            (error) => {
-              clearTimeout(timeoutId);
-              console.log('Geolocation permission error:', error);
-              
-              if (error.code === error.PERMISSION_DENIED) {
-                const result = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
-                bestLocationResult = result;
-                webLocationCache.set('location_permission', result);
-                resolve(result);
-              } else {
-                // For non-permission errors, check if we have a cached result
-                if (bestLocationResult) {
-                  resolve(bestLocationResult);
-                } else {
-                  resolve({ location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState });
-                }
-              }
-            },
-            { 
-              timeout: 10000, 
-              maximumAge: 180000, // Accept positions up to 3 minutes old
-              enableHighAccuracy: false // Start with lower accuracy for faster response
-            }
-          );
-        });
-      }
-      
-      // Fall back to default response
-      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
-    } catch (error) {
-      console.error('Error in web implementation of requestLocationPermission:', error);
-      
-      // If we have a cached result from a previous successful attempt, use it
-      if (bestLocationResult) {
-        return bestLocationResult;
-      }
-      
-      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
-    }
-  }
-
+  /**
+   * Check browser location permission status with detailed errors
+   */
   async checkPermissionStatus(): Promise<LocationPermissionStatus> {
-    console.log('Web implementation of checkPermissionStatus');
-    
-    // Check cache first
-    const cacheKey = 'location_permission_status';
-    const cached = webLocationCache.get(cacheKey);
-    if (cached) {
-      console.log('Using cached permission status:', cached);
-      return cached;
-    }
-    
     try {
-      // If we have a cached result from a previous check, use it
-      if (bestLocationResult) {
-        return bestLocationResult;
+      console.log('Web: Checking location permission status');
+      
+      // Check if geolocation is available in this browser
+      if (!navigator.geolocation) {
+        console.error('Web: Geolocation API not available in this browser');
+        return {
+          location: 'denied' as PermissionState,
+          backgroundLocation: 'denied' as PermissionState
+        };
       }
       
-      if (navigator && navigator.permissions) {
+      // Check permissions API if available
+      if (navigator.permissions && navigator.permissions.query) {
         try {
-          const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
           
-          if (status.state === 'granted') {
-            bestLocationResult = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
-            webLocationCache.set(cacheKey, bestLocationResult);
-            return bestLocationResult;
-          } else if (status.state === 'denied') {
-            bestLocationResult = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
-            webLocationCache.set(cacheKey, bestLocationResult);
-            return bestLocationResult;
+          let status: PermissionState;
+          switch (permission.state) {
+            case 'granted':
+              status = 'granted';
+              break;
+            case 'denied':
+              status = 'denied';
+              break;
+            default:
+              status = 'prompt';
           }
           
-          // For 'prompt' state, try a low-accuracy location request to verify
-          if (navigator.geolocation) {
-            try {
-              await new Promise<GeolocationPosition>((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                  resolve,
-                  reject,
-                  { timeout: 5000, maximumAge: 300000, enableHighAccuracy: false }
-                );
-              });
-              
-              // If successful, permission is granted
-              bestLocationResult = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
-              webLocationCache.set(cacheKey, bestLocationResult);
-              return bestLocationResult;
-            } catch (e) {
-              // If this fails, the permission is likely denied
-              if (e instanceof GeolocationPositionError && e.code === e.PERMISSION_DENIED) {
-                bestLocationResult = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
-                webLocationCache.set(cacheKey, bestLocationResult);
-                return bestLocationResult;
-              }
-              // Otherwise it's likely still in the prompt state
-            }
-          }
-        } catch (e) {
-          console.warn('Permission API error:', e);
+          console.log(`Web: Permission status determined via Permissions API: ${status}`);
+          
+          return {
+            location: status,
+            backgroundLocation: 'denied' // Background location not supported on web
+          };
+        } catch (permError) {
+          console.warn('Web: Error using Permissions API, falling back to permission inference', permError);
         }
       }
       
-      const result = { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
-      webLocationCache.set(cacheKey, result);
-      return result;
+      // If Permissions API unavailable or failed, we'll need to infer status
+      console.log('Web: Using permission inference method');
+      return {
+        location: 'prompt', // We can't know for sure without requesting
+        backgroundLocation: 'denied' // Background location not supported on web
+      };
     } catch (error) {
-      console.error('Error in web implementation of checkPermissionStatus:', error);
-      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
+      console.error('Web: Error checking permission status', error);
+      throw new Error(`Failed to check location permission: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Request browser location permission with detailed error messages
+   */
+  async requestPermissions(options: { includeBackground?: boolean } = {}): Promise<LocationPermissionStatus> {
+    try {
+      console.log('Web: Requesting location permissions with options:', options);
+      
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation API is not supported in this browser');
+      }
+      
+      // Try to request position to trigger the browser permission prompt
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          // Success callback - permission granted
+          () => {
+            console.log('Web: Location permission granted');
+            resolve({
+              location: 'granted' as PermissionState,
+              backgroundLocation: 'denied' as PermissionState // Web doesn't support background location
+            });
+          },
+          // Error callback - permission denied or error
+          (error) => {
+            console.log(`Web: Location permission error: ${error.code} - ${error.message}`);
+            
+            // Handle different error codes with detailed messages
+            if (error.code === 1) { // PERMISSION_DENIED
+              resolve({
+                location: 'denied' as PermissionState,
+                backgroundLocation: 'denied' as PermissionState
+              });
+            } else if (error.code === 2) { // POSITION_UNAVAILABLE
+              reject(new Error('Location information is unavailable. Please try again in a different area.'));
+            } else if (error.code === 3) { // TIMEOUT
+              reject(new Error('The request to get your location timed out. Please try again.'));
+            } else {
+              reject(new Error(`An unknown error occurred: ${error.message}`));
+            }
+          },
+          // Options
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      });
+    } catch (error) {
+      console.error('Web: Error requesting permissions', error);
+      throw new Error(`Failed to request location permission: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Forward to requestPermissions for compatibility
+   */
+  async requestLocationPermission(options: { includeBackground?: boolean } = {}): Promise<LocationPermissionStatus> {
+    return this.requestPermissions(options);
   }
 }
 
+// Export a single instance for the plugin to use
 export const LocationPermissionsWebInstance = new LocationPermissionsWeb();
