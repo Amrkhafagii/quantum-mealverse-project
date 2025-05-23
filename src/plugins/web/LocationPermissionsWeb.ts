@@ -4,9 +4,10 @@ import type { LocationPermissionsPlugin, LocationPermissionStatus, PermissionSta
 
 export class LocationPermissionsWeb extends WebPlugin implements LocationPermissionsPlugin {
   constructor() {
-    super({
+    super();
+    this.config = {
       name: 'LocationPermissions'
-    });
+    };
   }
 
   /**
