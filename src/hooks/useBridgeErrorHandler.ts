@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { BridgeError, BridgeErrorType, getUserFriendlyErrorMessage } from '@/utils/errorHandling';
+import { useState, useCallback } from 'react';
+import { BridgeError, getUserFriendlyErrorMessage } from '@/utils/errorHandling';
 import { toast } from 'sonner';
 
 export interface BridgeErrorHandlerOptions {
@@ -33,9 +33,11 @@ export function useBridgeErrorHandler(options: BridgeErrorHandlerOptions = {}) {
       return result;
     } catch (error) {
       // Convert to bridge error if not already
-      const bridgeError = error && (error as any).type 
+      const bridgeError = error && typeof error === 'object' && 'type' in error
         ? error as BridgeError 
-        : new Error(error instanceof Error ? error.message : String(error));
+        : error instanceof Error 
+          ? error 
+          : new Error(String(error));
       
       setLastError(bridgeError);
       

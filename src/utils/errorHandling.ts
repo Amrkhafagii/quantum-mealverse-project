@@ -115,7 +115,7 @@ export function withBridgeErrorHandling<T extends (...args: any[]) => Promise<an
     retryCount?: number;
     retryDelay?: number;
     timeout?: number;
-    fallback?: (...args: Parameters<T>) => ReturnType<T>;
+    fallback?: (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>>;
   } = {}
 ): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
   
@@ -192,7 +192,7 @@ export function withBridgeErrorHandling<T extends (...args: any[]) => Promise<an
 /**
  * Create a bridge safe-caller that handles all errors with detailed messaging
  */
-export function createSafeBridge<T extends Record<string, Function>>(
+export function createSafeBridge<T>(
   bridgeName: string,
   bridge: T,
   defaultOptions: {
@@ -201,17 +201,24 @@ export function createSafeBridge<T extends Record<string, Function>>(
     timeout?: number;
   } = {}
 ): T {
+  // Create a new object with the same shape as the original
   const safeBridge = {} as T;
   
-  // Wrap each method with error handling
-  for (const key of Object.keys(bridge)) {
+  // Iterate over all properties of the original bridge object
+  for (const key in bridge) {
+    // Only process methods (functions)
     if (typeof bridge[key] === 'function') {
+      // Use type assertion to tell TypeScript this is a function
+      const method = bridge[key] as unknown as (...args: any[]) => Promise<any>;
+      
+      // Wrap the method with error handling and assign it to the safe bridge
       safeBridge[key] = withBridgeErrorHandling(
         `${bridgeName}.${key}`,
-        bridge[key] as any,
+        method,
         defaultOptions
       ) as any;
     } else {
+      // Copy non-method properties directly
       safeBridge[key] = bridge[key];
     }
   }

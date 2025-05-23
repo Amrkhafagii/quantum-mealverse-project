@@ -1,7 +1,7 @@
 
 import { registerPlugin } from '@capacitor/core';
 import { Platform } from '@/utils/platform';
-import { createSafeBridge, BridgeErrorType, createBridgeError } from '@/utils/errorHandling';
+import { createBridgeError, BridgeErrorType } from '@/utils/errorHandling';
 
 export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
@@ -28,18 +28,36 @@ const createLocationPermissionsPlugin = (): LocationPermissionsPlugin => {
       web: () => import('./web/LocationPermissionsWeb').then(m => m.LocationPermissionsWebInstance),
     });
     
-    // Create a safe version with detailed error handling
-    const safePlugin = createSafeBridge('LocationPermissions', rawPlugin, {
-      retryCount: 1,
-      retryDelay: 1000,
-      timeout: 15000
-    });
-    
-    // Ensure requestLocationPermission calls requestPermissions for consistency
-    const originalRequestPermissions = safePlugin.requestPermissions;
-    safePlugin.requestLocationPermission = async (options) => {
-      console.log("Forwarding requestLocationPermission to requestPermissions with options:", options);
-      return originalRequestPermissions(options);
+    // Wrap methods with enhanced error handling
+    const safePlugin: LocationPermissionsPlugin = {
+      async requestPermissions(options: { includeBackground?: boolean }) {
+        try {
+          console.log("Calling requestPermissions with options:", options);
+          const result = await rawPlugin.requestPermissions(options);
+          console.log("requestPermissions result:", result);
+          return result;
+        } catch (error) {
+          console.error("Error in requestPermissions:", error);
+          throw new Error(`Failed to request location permissions: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      },
+      
+      async requestLocationPermission(options: { includeBackground?: boolean }) {
+        console.log("Forwarding requestLocationPermission to requestPermissions with options:", options);
+        return this.requestPermissions(options);
+      },
+      
+      async checkPermissionStatus() {
+        try {
+          console.log("Calling checkPermissionStatus");
+          const result = await rawPlugin.checkPermissionStatus();
+          console.log("checkPermissionStatus result:", result);
+          return result;
+        } catch (error) {
+          console.error("Error in checkPermissionStatus:", error);
+          throw new Error(`Failed to check location permissions: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     };
     
     return safePlugin;
@@ -49,31 +67,13 @@ const createLocationPermissionsPlugin = (): LocationPermissionsPlugin => {
     // Return a fallback implementation that provides detailed errors
     return {
       requestPermissions: async () => {
-        const bridgeError = createBridgeError(
-          BridgeErrorType.INITIALIZATION,
-          'LocationPermissions plugin failed to initialize',
-          'plugin_init_failed',
-          error
-        );
-        throw bridgeError;
+        throw new Error(`LocationPermissions plugin failed to initialize: ${error instanceof Error ? error.message : String(error)}`);
       },
       requestLocationPermission: async () => {
-        const bridgeError = createBridgeError(
-          BridgeErrorType.INITIALIZATION,
-          'LocationPermissions plugin failed to initialize',
-          'plugin_init_failed',
-          error
-        );
-        throw bridgeError;
+        throw new Error(`LocationPermissions plugin failed to initialize: ${error instanceof Error ? error.message : String(error)}`);
       },
       checkPermissionStatus: async () => {
-        const bridgeError = createBridgeError(
-          BridgeErrorType.INITIALIZATION,
-          'LocationPermissions plugin failed to initialize',
-          'plugin_init_failed',
-          error
-        );
-        throw bridgeError;
+        throw new Error(`LocationPermissions plugin failed to initialize: ${error instanceof Error ? error.message : String(error)}`);
       }
     };
   }
