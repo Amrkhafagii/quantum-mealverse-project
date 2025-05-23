@@ -15,7 +15,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
         if let id = callbackId {
             permissionCallbacks[id] = call
             
-            // Make sure we're accessing the LocationManager from the LocationManagement folder
+            // Use LocationManager from the LocationManagement folder
             let locationManager = LocationManager.shared
             locationManager.requestLocationPermission(background: backgroundMode) { granted in
                 if let savedCall = self.permissionCallbacks[id] {

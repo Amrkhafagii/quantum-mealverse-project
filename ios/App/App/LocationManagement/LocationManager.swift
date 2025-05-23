@@ -1,3 +1,4 @@
+
 import CoreLocation
 import UIKit
 
@@ -13,17 +14,11 @@ class LocationManager: NSObject {
     private let batteryMonitor = BatteryMonitor()
     private let locationQualityManager = LocationQualityManager()
     private let hybridPositioningManager = HybridPositioningManager()
-    
-    // Configuration
-    private var isTrackingEnabled = false
-    private var useSignificantLocationChanges = false
-    private var desiredAccuracy: CLLocationAccuracy = kCLLocationAccuracyBest
-    private var distanceFilter: CLLocationDistance = 10.0
+    private let trackingManager = LocationTrackingManager()
     
     // State
     private var lastKnownLocation: CLLocation?
-    private var lowPowerModeInitiated = false
-    private var manualLocationRequestInProgress = false
+    private var isTrackingEnabled = false
 
     private override init() {
         super.init()
@@ -42,8 +37,6 @@ class LocationManager: NSObject {
         locationManager = CLLocationManager()
         standardLocationDelegate = StandardLocationDelegate()
         locationManager?.delegate = standardLocationDelegate
-        locationManager?.desiredAccuracy = desiredAccuracy
-        locationManager?.distanceFilter = distanceFilter
         locationManager?.allowsBackgroundLocationUpdates = true
         locationManager?.pausesLocationUpdatesAutomatically = false
         
@@ -68,6 +61,9 @@ class LocationManager: NSObject {
         significantLocationDelegate?.onError = { [weak self] error in
             self?.handleLocationError(error)
         }
+        
+        // Configure initial settings
+        trackingManager.applyTrackingSettings(to: locationManager)
     }
     
     // MARK: - Location Updates
@@ -91,9 +87,7 @@ class LocationManager: NSObject {
         postLocationUpdateNotification(location, source: source)
         
         // End manual location request if in progress
-        if manualLocationRequestInProgress {
-            manualLocationRequestInProgress = false
-        }
+        trackingManager.handleManualRequestCompletion()
     }
     
     private func handleLocationError(_ error: Error) {
@@ -190,72 +184,33 @@ class LocationManager: NSObject {
     func startLocationUpdates() {
         // Start location updates with current settings
         isTrackingEnabled = true
-        startStandardLocationUpdates()
+        trackingManager.startStandardLocationUpdates(locationManager)
     }
     
     func stopLocationUpdates() {
         // Stop all location updates
         isTrackingEnabled = false
-        stopStandardLocationUpdates()
-        stopSignificantLocationChanges()
-    }
-    
-    private func startStandardLocationUpdates() {
-        // Start standard location updates
-        locationManager?.startUpdatingLocation()
-    }
-    
-    private func stopStandardLocationUpdates() {
-        // Stop standard location updates
-        locationManager?.stopUpdatingLocation()
-    }
-    
-    private func startSignificantLocationChanges() {
-        // Start monitoring significant location changes
-        locationManager?.startMonitoringSignificantLocationChanges()
-    }
-    
-    private func stopSignificantLocationChanges() {
-        // Stop monitoring significant location changes
-        locationManager?.stopMonitoringSignificantLocationChanges()
+        trackingManager.stopAllLocationUpdates(locationManager)
     }
     
     // MARK: - Battery Management
     
     func updateLocationSettingsBasedOnBattery() {
-        // Adjust location settings based on battery level
         let batteryLevel = batteryMonitor.getCurrentBatteryLevel()
         let isLowPowerMode = batteryMonitor.isLowPowerModeEnabled()
         
-        if batteryLevel < 0.2 || isLowPowerMode {
-            if !lowPowerModeInitiated {
-                // Reduce accuracy and distance filter to conserve battery
-                desiredAccuracy = kCLLocationAccuracyHundredMeters
-                distanceFilter = 100.0
-                locationManager?.desiredAccuracy = desiredAccuracy
-                locationManager?.distanceFilter = distanceFilter
-                lowPowerModeInitiated = true
-                print("Low power mode: Reducing location accuracy")
-            }
-        } else {
-            if lowPowerModeInitiated {
-                // Restore normal accuracy and distance filter
-                desiredAccuracy = kCLLocationAccuracyBest
-                distanceFilter = 10.0
-                locationManager?.desiredAccuracy = desiredAccuracy
-                locationManager?.distanceFilter = distanceFilter
-                lowPowerModeInitiated = false
-                print("Normal power mode: Restoring location accuracy")
-            }
-        }
+        trackingManager.updateSettingsForBatteryState(
+            batteryLevel: batteryLevel,
+            isLowPowerMode: isLowPowerMode,
+            locationManager: locationManager
+        )
     }
     
     // MARK: - Manual Location Request
     
     func requestLocation() {
         // Request a single location update
-        manualLocationRequestInProgress = true
-        locationManager?.requestLocation()
+        trackingManager.requestSingleLocationUpdate(locationManager)
     }
     
     // MARK: - App Lifecycle Handlers
@@ -263,22 +218,14 @@ class LocationManager: NSObject {
     func handleAppDidBecomeActive() {
         print("App became active - updating location tracking settings")
         if isTrackingEnabled {
-            startStandardLocationUpdates()
+            trackingManager.handleAppActivation(locationManager)
         }
     }
     
     func handleAppDidEnterBackground() {
         print("App entered background - optimizing location tracking for background")
         if isTrackingEnabled {
-            // Switch to lower power tracking when in background
-            if useSignificantLocationChanges {
-                startSignificantLocationChanges()
-                stopStandardLocationUpdates()
-            } else {
-                // Reduce accuracy to save battery when in background
-                locationManager?.desiredAccuracy = kCLLocationAccuracyHundredMeters
-                locationManager?.distanceFilter = 50
-            }
+            trackingManager.handleAppBackground(locationManager)
         }
     }
     
@@ -313,8 +260,7 @@ class LocationManager: NSObject {
     
     func cleanup() {
         if let locationManager = locationManager {
-            locationManager.stopUpdatingLocation()
-            locationManager.stopMonitoringSignificantLocationChanges()
+            trackingManager.stopAllLocationUpdates(locationManager)
         }
         batteryMonitor.stopMonitoring()
     }
