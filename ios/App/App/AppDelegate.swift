@@ -88,8 +88,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         LocationManager.shared.handleAppDidEnterBackground()
         
         // Save the current location state
-        LocationManager.shared.saveCriticalLocationData()
-        
+        LocationManager.shared.requestLocation()
+
         // Schedule background sync when going to background
         if #available(iOS 13.0, *) {
             BackgroundSync.scheduleAppRefresh()

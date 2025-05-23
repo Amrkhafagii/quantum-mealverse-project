@@ -8,7 +8,8 @@ class LocationManager: NSObject {
     var locationManager: CLLocationManager?
     private var standardLocationDelegate: StandardLocationDelegate?
     private var significantLocationDelegate: SignificantLocationDelegate?
-    
+    private var significantLocationManager: CLLocationManager? // Add this line
+
     // Supporting components
     private let batteryMonitor = BatteryMonitor()
     private let locationQualityManager = LocationQualityManager()
@@ -51,6 +52,7 @@ class LocationManager: NSObject {
         
         // Setup significant location change manager
         let significantChangeManager = CLLocationManager()
+        significantLocationManager = CLLocationManager() // Store this instance
         significantLocationDelegate = SignificantLocationDelegate()
         significantChangeManager.delegate = significantLocationDelegate
         significantChangeManager.allowsBackgroundLocationUpdates = true
@@ -154,7 +156,11 @@ class LocationManager: NSObject {
             locationQualityManager.takePoorQualityAction(
                 locationManager: locationManager,
                 startHybridPositioningCallback: { [weak self] in
-                    self?.hybridPositioningManager.startHybridPositioning(locationManager: self?.locationManager, significantLocationManager: <#CLLocationManager?#>)
+                    guard let self = self else { return }
+                    self.hybridPositioningManager.startHybridPositioning(
+                        locationManager: self.locationManager,
+                        significantLocationManager: self.significantLocationManager
+                    )
                 }
             )
             return

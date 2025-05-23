@@ -22,7 +22,7 @@ class BackgroundTaskManager {
         // Set up expiration handler
         taskExpirationHandler = { [weak self] in
             // Save any critical location data before expiration
-            LocationManager.shared.saveCriticalLocationData()
+            LocationManager.shared.requestLocation()
             self?.endBackgroundTask()
         }
     }
