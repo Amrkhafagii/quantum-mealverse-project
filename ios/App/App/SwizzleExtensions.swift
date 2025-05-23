@@ -7,7 +7,7 @@ extension UIView {
     static func swizzleAutoresizingMaskIntoConstraintsIfNeeded() {
         // Check if we've already swizzled to avoid double-swizzling
         // This static variable persists for the life of the app
-        static var swizzled: Bool = false
+        var swizzled: Bool = false
         
         // Return early if already swizzled
         if swizzled {
@@ -18,7 +18,7 @@ extension UIView {
         swizzled = true
         
         // Get the original method and our replacement method
-        let originalMethod = class_getInstanceMethod(UIView.self, #selector(UIView.translatesAutoresizingMaskIntoConstraints))!
+        let originalMethod = class_getInstanceMethod(UIView.self, #selector(getter: UIView.translatesAutoresizingMaskIntoConstraints))!
         let swizzledMethod = class_getInstanceMethod(UIView.self, #selector(UIView.swizzled_translatesAutoresizingMaskIntoConstraints))!
         
         // Perform the method swizzling
