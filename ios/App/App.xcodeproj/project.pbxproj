@@ -22,6 +22,7 @@
 		F604BA632DE0871D00A42053 /* BatteryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA562DE0871D00A42053 /* BatteryMonitor.swift */; };
 		F604BA642DE0871D00A42053 /* .gitkeep in Resources */ = {isa = PBXBuildFile; fileRef = F604BA542DE0871D00A42053 /* .gitkeep */; };
 		F604BA6C2DE0901400A42053 /* LocationTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */; };
+		F604BA6E2DE099CB00A42053 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F604BA6D2DE099CB00A42053 /* Launch Screen.storyboard */; };
 		F60695692DDF310500CD918D /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F60695672DDF310500CD918D /* Launch Screen.storyboard */; };
 		F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4732DDCAA900085D82E /* ActivityManager.swift */; };
 		F62EC4762DDCAAA10085D82E /* BackgroundSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */; };
@@ -57,6 +58,7 @@
 		F604BA5A2DE0871D00A42053 /* SignificantLocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignificantLocationDelegate.swift; sourceTree = "<group>"; };
 		F604BA5B2DE0871D00A42053 /* StandardLocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardLocationDelegate.swift; sourceTree = "<group>"; };
 		F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTrackingManager.swift; sourceTree = "<group>"; };
+		F604BA6D2DE099CB00A42053 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		F60695682DDF310500CD918D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BiometricAuthPlugin.h; sourceTree = "<group>"; };
 		F62B34BA2DDD2C8F000C7FDD /* QrScannerPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QrScannerPlugin.h; sourceTree = "<group>"; };
@@ -145,6 +147,7 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				F62EC4902DDCAAE60085D82E /* App-Bridging-Header.h */,
+				F604BA6D2DE099CB00A42053 /* Launch Screen.storyboard */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -247,6 +250,7 @@
 			files = (
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
+				F604BA6E2DE099CB00A42053 /* Launch Screen.storyboard in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				F6E075492DDD3C6A00C455BC /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
