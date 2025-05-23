@@ -1,194 +1,123 @@
-import UIKit
-import Capacitor
 import CoreLocation
-import CoreMotion
-import BackgroundTasks
-import NetworkExtension
+import UIKit
 
 class LocationManager: NSObject {
     static let shared = LocationManager()
     
-    // Delegate managers
-    private let standardLocationDelegate = StandardLocationDelegate()
-    private let significantLocationDelegate = SignificantLocationDelegate()
-    
-    // Location managers
+    // Core location managers
     var locationManager: CLLocationManager?
-    var significantLocationManager: CLLocationManager?
+    private var standardLocationDelegate: StandardLocationDelegate?
+    private var significantLocationDelegate: SignificantLocationDelegate?
     
-    // Sub-managers
+    // Supporting components
     private let batteryMonitor = BatteryMonitor()
     private let locationQualityManager = LocationQualityManager()
     private let hybridPositioningManager = HybridPositioningManager()
     
-    // State
-    private(set) var isMoving: Bool = true
+    // Configuration
+    private var isTrackingEnabled = false
+    private var useSignificantLocationChanges = false
+    private var desiredAccuracy: CLLocationAccuracy = kCLLocationAccuracyBest
+    private var distanceFilter: CLLocationDistance = 10.0
     
+    // State
+    private var lastKnownLocation: CLLocation?
+    private var lowPowerModeInitiated = false
+    private var manualLocationRequestInProgress = false
+
     private override init() {
         super.init()
         setupLocationManager()
         batteryMonitor.startMonitoring()
-        
-        // Set up delegates
-        standardLocationDelegate.onLocationUpdate = { [weak self] location in
-            self?.handleLocationUpdate(location)
-        }
-        
-        significantLocationDelegate.onLocationUpdate = { [weak self] location in
-            self?.handleLocationUpdate(location)
-        }
     }
     
     deinit {
-        cleanup()
+        batteryMonitor.stopMonitoring()
     }
     
     // MARK: - Setup
     
-    func setupLocationManager() {
-        // Setup main location manager
+    private func setupLocationManager() {
+        // Initialize standard location manager
         locationManager = CLLocationManager()
+        standardLocationDelegate = StandardLocationDelegate()
         locationManager?.delegate = standardLocationDelegate
+        locationManager?.desiredAccuracy = desiredAccuracy
+        locationManager?.distanceFilter = distanceFilter
+        locationManager?.allowsBackgroundLocationUpdates = true
+        locationManager?.pausesLocationUpdatesAutomatically = false
         
-        // Setup separate manager for significant location changes
-        significantLocationManager = CLLocationManager()
-        significantLocationManager?.delegate = significantLocationDelegate
-        
-        // Configure initial settings
-        updateLocationSettingsBasedOnBattery()
-    }
-    
-    // MARK: - Permission Handling
-    
-    func checkLocationPermission() {
-        guard let locationManager = locationManager else { return }
-        
-        let status: CLAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            status = locationManager.authorizationStatus
-        } else {
-            status = CLLocationManager.authorizationStatus()
+        // Set up delegate callbacks
+        standardLocationDelegate?.onLocationUpdate = { [weak self] location in
+            self?.handleLocationUpdate(location, source: "standard")
         }
         
-        switch status {
-        case .notDetermined:
-            // Start with requesting when-in-use first
-            locationManager.requestWhenInUseAuthorization()
-        case .restricted, .denied:
-            // Handle denied permissions - could trigger an event for the JS side
-            print("Location permissions are denied or restricted")
-            NotificationCenter.default.post(name: NSNotification.Name("locationPermissionDenied"), object: nil)
-        case .authorizedWhenInUse:
-            // User has granted when-in-use permission, show dialog for always allow
-            showAlwaysAllowDialog()
-        case .authorizedAlways:
-            // Full permissions granted, enable background updates
-            enableBackgroundLocationUpdates()
-        @unknown default:
-            print("Unknown location authorization status")
+        standardLocationDelegate?.onError = { [weak self] error in
+            self?.handleLocationError(error)
+        }
+        
+        // Initialize significant change location service
+        let significantChangeManager = CLLocationManager()
+        significantLocationDelegate = SignificantLocationDelegate()
+        significantChangeManager.delegate = significantLocationDelegate
+        
+        significantLocationDelegate?.onLocationUpdate = { [weak self] location in
+            self?.handleLocationUpdate(location, source: "significant")
+        }
+        
+        significantLocationDelegate?.onError = { [weak self] error in
+            self?.handleLocationError(error)
         }
     }
     
-    func showAlwaysAllowDialog() {
-        // For simplicity, directly request always authorization after a short delay
-        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
-            self?.locationManager?.requestAlwaysAuthorization()
-        }
-    }
+    // MARK: - Location Updates
     
-    func enableBackgroundLocationUpdates() {
-        guard let locationManager = locationManager else { return }
-        
-        // Enable background location updates
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.pausesLocationUpdatesAutomatically = true // Let system optimize pausing
-        
-        // Start hybrid positioning system
-        hybridPositioningManager.startHybridPositioning(locationManager: locationManager, significantLocationManager: significantLocationManager)
-        
-        // Also start standard updates when in foreground for better accuracy
-        locationManager.startUpdatingLocation()
-        
-        print("Background location updates enabled")
-    }
-    
-    // MARK: - Location Tracking Methods
-    
-    func startSignificantLocationChanges() {
-        guard let significantLocationManager = significantLocationManager,
-              CLLocationManager.significantLocationChangeMonitoringAvailable() else {
-            print("Significant location change monitoring not available")
-            return
-        }
-        
-        // Start monitoring significant location changes
-        significantLocationManager.startMonitoringSignificantLocationChanges()
-        print("Started monitoring significant location changes")
-    }
-    
-    func pauseHighAccuracyLocationUpdates() {
-        guard let locationManager = locationManager else { return }
-        
-        // Stop standard updates to save battery
-        locationManager.stopUpdatingLocation()
-        
-        // Keep significant location changes running for critical updates
-        startSignificantLocationChanges()
-    }
-    
-    func resumeLocationUpdates() {
-        guard let locationManager = locationManager else { return }
-        
-        // If in foreground, restart standard location updates
-        if UIApplication.shared.applicationState != .background {
-            locationManager.startUpdatingLocation()
-        }
-    }
-    
-    // MARK: - Handle Location Updates
-    
-    private func handleLocationUpdate(_ location: CLLocation) {
-        // Process through quality manager first
-        if locationQualityManager.isQualityLocation(location) {
-            // Add to hybrid locations buffer for processing
-            hybridPositioningManager.addToHybridLocationsBuffer(location)
-            
-            // Report the location
-            reportLocationUpdate(location)
-        } else {
-            // Take action if too many poor quality locations
+    private func handleLocationUpdate(_ location: CLLocation, source: String) {
+        // Check if the location is of acceptable quality
+        guard isQualityLocation(location) else {
             locationQualityManager.takePoorQualityAction(
                 locationManager: locationManager,
                 startHybridPositioningCallback: { [weak self] in
-                    guard let self = self else { return }
-                    self.hybridPositioningManager.startHybridPositioning(
-                        locationManager: self.locationManager, 
-                        significantLocationManager: self.significantLocationManager
-                    )
+                    self?.hybridPositioningManager.startHybridPositioning()
                 }
             )
+            return
+        }
+        
+        // Update last known location
+        lastKnownLocation = location
+        
+        // Post location update notification
+        postLocationUpdateNotification(location, source: source)
+        
+        // End manual location request if in progress
+        if manualLocationRequestInProgress {
+            manualLocationRequestInProgress = false
         }
     }
     
-    // MARK: - Reporting Location Updates
+    private func handleLocationError(_ error: Error) {
+        print("Location manager error: \(error.localizedDescription)")
+        
+        // Handle specific error types
+        if let clError = error as? CLError {
+            switch clError.code {
+            case .denied:
+                // Location access denied, handle accordingly
+                print("Location access was denied by the user.")
+                stopLocationUpdates()
+            case .locationUnknown:
+                // Unable to determine location
+                print("Location is unknown.")
+            default:
+                // Handle other errors
+                print("An unexpected location error occurred.")
+            }
+        }
+    }
     
-    private func reportLocationUpdate(_ location: CLLocation) {
-        // When we receive location updates in the background, extend background execution time
-        if UIApplication.shared.applicationState == .background {
-            BackgroundTaskManager.shared.extendBackgroundExecution()
-        }
-        
-        // Determine source
-        let source: String
-        if location.horizontalAccuracy <= 20 {
-            source = "gps" // High accuracy typical of GPS
-        } else if location.horizontalAccuracy <= 65 {
-            source = "wifi" // Medium accuracy typical of WiFi
-        } else {
-            source = "cell_tower" // Lower accuracy typical of cell towers
-        }
-        
-        // Post notification with location data for JS bridge to pick up
+    private func postLocationUpdateNotification(_ location: CLLocation, source: String) {
+        // Post a notification with the location data
         NotificationCenter.default.post(
             name: NSNotification.Name("locationUpdate"),
             object: nil,
@@ -197,13 +126,11 @@ class LocationManager: NSObject {
                 "longitude": location.coordinate.longitude,
                 "accuracy": location.horizontalAccuracy,
                 "timestamp": location.timestamp.timeIntervalSince1970 * 1000,
-                "speed": location.speed,
-                "isMoving": isMoving,
                 "source": source
             ]
         )
         
-        // Also post notification for the single location request system
+        // Post a separate notification for background fetch
         NotificationCenter.default.post(
             name: NSNotification.Name("locationUpdateAvailable"),
             object: nil,
@@ -211,98 +138,184 @@ class LocationManager: NSObject {
         )
     }
     
-    // MARK: - Battery-based Settings
+    // MARK: - Location Permissions
     
-    func updateLocationSettingsBasedOnBattery() {
-        guard let locationManager = locationManager else { return }
-        
-        let batteryLevel = UIDevice.current.batteryLevel
-        
-        // If battery level cannot be determined (-1.0) or is above 50%, use high accuracy
-        if batteryLevel == -1.0 || batteryLevel > 0.50 {
-            locationManager.desiredAccuracy = kCLLocationAccuracyBest
-            locationManager.distanceFilter = 10 // Update location when user moves 10 meters
-        } 
-        // Medium battery (20% - 50%)
-        else if batteryLevel > 0.20 {
-            locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-            locationManager.distanceFilter = 25 // Update location when user moves 25 meters
-        } 
-        // Low battery (below 20%)
-        else {
-            locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
-            locationManager.distanceFilter = 50 // Update location when user moves 50 meters
-        }
-        
-        print("Battery level: \(batteryLevel), accuracy: \(locationManager.desiredAccuracy), filter: \(locationManager.distanceFilter)")
-    }
-    
-    // MARK: - Activity-Based Tracking
-    
-    func setIsMoving(_ moving: Bool) {
-        isMoving = moving
-        
-        if moving {
-            print("Device is moving, resuming regular location updates")
-            resumeLocationUpdates()
-        } else {
-            print("Device is stationary, reducing location updates")
-            pauseHighAccuracyLocationUpdates()
-        }
-    }
-    
-    // MARK: - App State Handling
-    
-    func handleAppDidEnterBackground() {
-        // Make sure we're monitoring significant location changes for battery efficiency
-        startSignificantLocationChanges()
-        
-        // Stop standard location updates in background to save battery
-        locationManager?.stopUpdatingLocation()
-    }
-    
-    func handleAppDidBecomeActive() {
+    func checkLocationPermission() -> CLAuthorizationStatus {
+        // Check current location authorization status
         let authStatus: CLAuthorizationStatus
-        if #available(iOS 14.0, *), let locationManager = locationManager {
-            authStatus = locationManager.authorizationStatus
+        if #available(iOS 14.0, *) {
+            authStatus = locationManager?.authorizationStatus ?? .notDetermined
         } else {
             authStatus = CLLocationManager.authorizationStatus()
         }
         
-        // Switch to standard location updates for better accuracy when foregrounded
-        if authStatus == .authorizedAlways || authStatus == .authorizedWhenInUse {
-            // Update settings based on latest battery level
-            updateLocationSettingsBasedOnBattery()
+        return authStatus
+    }
+    
+    func requestLocationPermission(background: Bool, completion: @escaping (Bool) -> Void) {
+        // Request location permissions based on background usage
+        let authStatus = checkLocationPermission()
+        
+        switch authStatus {
+        case .notDetermined:
+            // Request permission based on background usage
+            if background {
+                locationManager?.requestAlwaysAuthorization()
+            } else {
+                locationManager?.requestWhenInUseAuthorization()
+            }
             
-            // Restart hybrid positioning
-            hybridPositioningManager.startHybridPositioning(
-                locationManager: locationManager, 
-                significantLocationManager: significantLocationManager
-            )
+            // Monitor authorization changes
+            NotificationCenter.default.addObserver(forName: NSNotification.Name.CLLocationManagerDidChangeAuthorization, object: nil, queue: .main) { [weak self] _ in
+                let newAuthStatus = self?.checkLocationPermission() ?? .notDetermined
+                let granted = (newAuthStatus == .authorizedAlways || newAuthStatus == .authorizedWhenInUse)
+                completion(granted)
+                
+                // Remove observer after callback
+                NotificationCenter.default.removeObserver(self as Any, name: NSNotification.Name.CLLocationManagerDidChangeAuthorization, object: nil)
+            }
+        case .restricted, .denied:
+            // Permissions denied or restricted
+            completion(false)
+        case .authorizedAlways, .authorizedWhenInUse:
+            // Permissions already granted
+            completion(true)
+        @unknown default:
+            completion(false)
         }
+    }
+    
+    // MARK: - Location Tracking Control
+    
+    func startLocationUpdates() {
+        // Start location updates with current settings
+        isTrackingEnabled = true
+        startStandardLocationUpdates()
+    }
+    
+    func stopLocationUpdates() {
+        // Stop all location updates
+        isTrackingEnabled = false
+        stopStandardLocationUpdates()
+        stopSignificantLocationChanges()
+    }
+    
+    private func startStandardLocationUpdates() {
+        // Start standard location updates
+        locationManager?.startUpdatingLocation()
+    }
+    
+    private func stopStandardLocationUpdates() {
+        // Stop standard location updates
+        locationManager?.stopUpdatingLocation()
+    }
+    
+    private func startSignificantLocationChanges() {
+        // Start monitoring significant location changes
+        locationManager?.startMonitoringSignificantLocationChanges()
+    }
+    
+    private func stopSignificantLocationChanges() {
+        // Stop monitoring significant location changes
+        locationManager?.stopMonitoringSignificantLocationChanges()
+    }
+    
+    // MARK: - Battery Management
+    
+    func updateLocationSettingsBasedOnBattery() {
+        // Adjust location settings based on battery level
+        let batteryLevel = batteryMonitor.getCurrentBatteryLevel()
+        let isLowPowerMode = batteryMonitor.isLowPowerModeEnabled()
+        
+        if batteryLevel < 0.2 || isLowPowerMode {
+            if !lowPowerModeInitiated {
+                // Reduce accuracy and distance filter to conserve battery
+                desiredAccuracy = kCLLocationAccuracyHundredMeters
+                distanceFilter = 100.0
+                locationManager?.desiredAccuracy = desiredAccuracy
+                locationManager?.distanceFilter = distanceFilter
+                lowPowerModeInitiated = true
+                print("Low power mode: Reducing location accuracy")
+            }
+        } else {
+            if lowPowerModeInitiated {
+                // Restore normal accuracy and distance filter
+                desiredAccuracy = kCLLocationAccuracyBest
+                distanceFilter = 10.0
+                locationManager?.desiredAccuracy = desiredAccuracy
+                locationManager?.distanceFilter = distanceFilter
+                lowPowerModeInitiated = false
+                print("Normal power mode: Restoring location accuracy")
+            }
+        }
+    }
+    
+    // MARK: - Manual Location Request
+    
+    func requestLocation() {
+        // Request a single location update
+        manualLocationRequestInProgress = true
+        locationManager?.requestLocation()
+    }
+    
+    // MARK: - App Lifecycle Handlers
+    
+    func handleAppDidBecomeActive() {
+        print("App became active - updating location tracking settings")
+        if isTrackingEnabled {
+            startStandardLocationUpdates()
+        }
+    }
+    
+    func handleAppDidEnterBackground() {
+        print("App entered background - optimizing location tracking for background")
+        if isTrackingEnabled {
+            // Switch to lower power tracking when in background
+            if useSignificantLocationChanges {
+                startSignificantLocationChanges()
+                stopStandardLocationUpdates()
+            } else {
+                // Reduce accuracy to save battery when in background
+                locationManager?.desiredAccuracy = kCLLocationAccuracyHundredMeters
+                locationManager?.distanceFilter = 50
+            }
+        }
+    }
+    
+    // MARK: - Background Tasks
+    
+    func saveCriticalLocationData() {
+        // Save any critical location data before app termination
+        if let location = lastKnownLocation {
+            print("Saving critical location data: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            
+            // Extend background execution time
+            let taskManager = BackgroundTaskManager.shared
+            taskManager.extendBackgroundExecution()
+            
+            // Perform background save operations
+            // (in a real implementation, persist to storage here)
+            
+            // End background task when complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                taskManager.endBackgroundTask()
+            }
+        }
+    }
+    
+    // MARK: - Location Quality Management
+    
+    func isQualityLocation(_ location: CLLocation) -> Bool {
+        return locationQualityManager.isQualityLocation(location)
     }
     
     // MARK: - Cleanup
     
-    func saveCriticalLocationData() {
-        // Save latest location to UserDefaults for recovery
-        if let lastLocation = hybridPositioningManager.lastSignificantLocation {
-            let locationDict: [String: Any] = [
-                "latitude": lastLocation.coordinate.latitude,
-                "longitude": lastLocation.coordinate.longitude,
-                "timestamp": lastLocation.timestamp.timeIntervalSince1970,
-                "accuracy": lastLocation.horizontalAccuracy
-            ]
-            
-            UserDefaults.standard.set(locationDict, forKey: "lastSavedLocation")
-        }
-    }
-    
     func cleanup() {
+        if let locationManager = locationManager {
+            locationManager.stopUpdatingLocation()
+            locationManager.stopMonitoringSignificantLocationChanges()
+        }
         batteryMonitor.stopMonitoring()
-        saveCriticalLocationData()
     }
 }
-
-// Type alias for location update completion handler
-typealias LocationUpdateCompletion = (CLLocation) -> Void
