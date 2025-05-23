@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/hooks/use-theme';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
 
 export interface DeliveryGoogleMapProps {
   mapId: string;
@@ -25,6 +25,8 @@ export interface DeliveryGoogleMapProps {
   enableAnimation?: boolean;
   enableControls?: boolean;
   onLoad?: () => void;
+  locationAccuracy?: AccuracyLevel; // Added the missing property
+  showAccuracyCircle?: boolean; // Added the missing property
 }
 
 // Default map styles
@@ -126,7 +128,9 @@ const DeliveryGoogleMap = ({
   lowPerformanceMode = false,
   enableAnimation = true,
   enableControls = true,
-  onLoad
+  onLoad,
+  locationAccuracy, // Add the new prop
+  showAccuracyCircle // Add the new prop
 }: DeliveryGoogleMapProps) => {
   const { theme } = useTheme();
   const { isLowQuality } = useNetworkQuality();
@@ -234,6 +238,42 @@ const DeliveryGoogleMap = ({
         return { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(30, 30) };
     }
   };
+
+  // Render accuracy circle if requested
+  const renderAccuracyCircle = () => {
+    if (!map || !showAccuracyCircle || !markers.length) return null;
+    
+    // Find driver marker or use first marker
+    const driverMarker = markers.find(marker => marker.type === 'driver') || markers[0];
+    
+    // Only add accuracy circle if we have a driver location and accuracy level
+    if (driverMarker && locationAccuracy) {
+      // Determine radius based on accuracy level
+      let radius = 100; // Default radius in meters
+      if (locationAccuracy === 'high') radius = 50;
+      else if (locationAccuracy === 'medium') radius = 100;
+      else if (locationAccuracy === 'low') radius = 500;
+      
+      // Create the accuracy circle
+      new google.maps.Circle({
+        strokeColor: '#3388FF',
+        strokeOpacity: 0.6,
+        strokeWeight: 1,
+        fillColor: '#3388FF',
+        fillOpacity: 0.2,
+        map,
+        center: { lat: driverMarker.latitude, lng: driverMarker.longitude },
+        radius: radius,
+      });
+    }
+  };
+
+  // Call renderAccuracyCircle when map and markers are ready
+  useEffect(() => {
+    if (map && markers.length > 0 && showAccuracyCircle) {
+      renderAccuracyCircle();
+    }
+  }, [map, markers, showAccuracyCircle, locationAccuracy]);
 
   return (
     <div 
