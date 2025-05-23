@@ -23,7 +23,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Register Capacitor plugins
      
         // Set up appearance for navigation bars and toolbars
-        configureUIAppearance()
+        UIAppearanceManager.configureUIAppearance()
         
         // Initialize plugins and core services immediately and synchronously
         // This ensures that the LocationPermissionsPlugin is available before any UI components try to use it
@@ -38,32 +38,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         
         return true
-    }
-    
-    // Configure appearance settings for navigation and toolbar
-    private func configureUIAppearance() {
-        if #available(iOS 15.0, *) {
-            // Modern appearance configuration for iOS 15+
-            let navigationBarAppearance = UINavigationBarAppearance()
-            navigationBarAppearance.configureWithDefaultBackground()
-            UINavigationBar.appearance().standardAppearance = navigationBarAppearance
-            UINavigationBar.appearance().compactAppearance = navigationBarAppearance
-            UINavigationBar.appearance().scrollEdgeAppearance = navigationBarAppearance
-            
-            // Ensure toolbar has proper sizing
-            let toolbarAppearance = UIToolbarAppearance()
-            toolbarAppearance.configureWithDefaultBackground()
-            UIToolbar.appearance().standardAppearance = toolbarAppearance
-            UIToolbar.appearance().compactAppearance = toolbarAppearance
-            UIToolbar.appearance().scrollEdgeAppearance = toolbarAppearance
-        } else {
-            // Legacy appearance configuration
-            UINavigationBar.appearance().isTranslucent = false
-            UIToolbar.appearance().isTranslucent = false
-        }
-        
-        // Ensure minimum width for toolbars
-        UIView.swizzleAutoresizingMaskIntoConstraintsIfNeeded()
     }
     
     // Initialize Capacitor's storage system
@@ -250,40 +224,3 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         BackgroundFetchManager.shared.handleBackgroundFetch(task: task)
     }
 }
-
-// Utility extension to fix auto-layout issues with UIToolbar
-extension UIView {
-    static var isSwizzled = false
-    
-    static func swizzleAutoresizingMaskIntoConstraintsIfNeeded() {
-        if isSwizzled { return }
-        isSwizzled = true
-        
-        // Only swizzle if we're on iOS 15+ where the issue is most common
-        if #available(iOS 15.0, *) {
-            let originalSelector = #selector(getter: UIView.translatesAutoresizingMaskIntoConstraints)
-            let swizzledSelector = #selector(UIView.swizzled_translatesAutoresizingMaskIntoConstraints)
-            
-            guard let originalMethod = class_getInstanceMethod(UIView.self, originalSelector),
-                  let swizzledMethod = class_getInstanceMethod(UIView.self, swizzledSelector) else {
-                return
-            }
-            
-            method_exchangeImplementations(originalMethod, swizzledMethod)
-        }
-    }
-    
-    @objc func swizzled_translatesAutoresizingMaskIntoConstraints() -> Bool {
-        // Fix the zero-width issue specifically for toolbar content views
-        if String(describing: type(of: self)).contains("UIToolbarContentView") {
-            // Ensure toolbar content views have proper sizing behavior
-            return false
-        }
-        
-        // For all other views, use the original implementation
-        return self.swizzled_translatesAutoresizingMaskIntoConstraints()
-    }
-}
-
-// Type alias for location update completion handler
-typealias LocationUpdateCompletion = (CLLocation) -> Void
