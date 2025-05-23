@@ -7,7 +7,11 @@ import CoreLocation
 public class LocationPermissionsPlugin: CAPPlugin {
     private var permissionCallbacks: [String: CAPPluginCall] = [:]
     
-    @objc func requestPermissions(_ call: CAPPluginCall) {
+    @objc override public func load() {
+        // Plugin load method if needed
+    }
+    
+    @objc public func requestPermissions(_ call: CAPPluginCall) {
         let backgroundMode = call.getBool("background") ?? false
         let callbackId = call.callbackId
         
@@ -30,7 +34,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
         }
     }
     
-    @objc func checkPermissionStatus(_ call: CAPPluginCall) {
+    @objc public func checkPermissionStatus(_ call: CAPPluginCall) {
         let status = LocationManager.shared.checkLocationPermission()
         
         var statusString: String
