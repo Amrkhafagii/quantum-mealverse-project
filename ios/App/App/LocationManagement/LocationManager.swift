@@ -18,6 +18,17 @@ class LocationManager: NSObject {
     // State
     private var lastKnownLocation: CLLocation?
     private var isTrackingEnabled = false
+    
+    // Movement state (added to fix ActivityManager integration)
+    private(set) var isMoving = false
+    
+    // Method to set movement state from ActivityManager
+    func setIsMoving(_ moving: Bool) {
+        if isMoving != moving {
+            isMoving = moving
+            print("Movement state changed to: \(moving ? "moving" : "stationary")")
+        }
+    }
 
     private override init() {
         super.init()
