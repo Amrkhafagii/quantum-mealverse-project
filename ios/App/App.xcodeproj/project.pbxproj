@@ -13,6 +13,14 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
+		F604BA5D2DE0871D00A42053 /* LocationQualityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA592DE0871D00A42053 /* LocationQualityManager.swift */; };
+		F604BA5E2DE0871D00A42053 /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */; };
+		F604BA5F2DE0871D00A42053 /* HybridPositioningManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA572DE0871D00A42053 /* HybridPositioningManager.swift */; };
+		F604BA602DE0871D00A42053 /* SignificantLocationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA5A2DE0871D00A42053 /* SignificantLocationDelegate.swift */; };
+		F604BA612DE0871D00A42053 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA582DE0871D00A42053 /* LocationManager.swift */; };
+		F604BA622DE0871D00A42053 /* StandardLocationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA5B2DE0871D00A42053 /* StandardLocationDelegate.swift */; };
+		F604BA632DE0871D00A42053 /* BatteryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA562DE0871D00A42053 /* BatteryMonitor.swift */; };
+		F604BA642DE0871D00A42053 /* .gitkeep in Resources */ = {isa = PBXBuildFile; fileRef = F604BA542DE0871D00A42053 /* .gitkeep */; };
 		F60695692DDF310500CD918D /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F60695672DDF310500CD918D /* Launch Screen.storyboard */; };
 		F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4732DDCAA900085D82E /* ActivityManager.swift */; };
 		F62EC4762DDCAAA10085D82E /* BackgroundSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */; };
@@ -41,6 +49,14 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
+		F604BA542DE0871D00A42053 /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
+		F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
+		F604BA562DE0871D00A42053 /* BatteryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMonitor.swift; sourceTree = "<group>"; };
+		F604BA572DE0871D00A42053 /* HybridPositioningManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridPositioningManager.swift; sourceTree = "<group>"; };
+		F604BA582DE0871D00A42053 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		F604BA592DE0871D00A42053 /* LocationQualityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationQualityManager.swift; sourceTree = "<group>"; };
+		F604BA5A2DE0871D00A42053 /* SignificantLocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignificantLocationDelegate.swift; sourceTree = "<group>"; };
+		F604BA5B2DE0871D00A42053 /* StandardLocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardLocationDelegate.swift; sourceTree = "<group>"; };
 		F60695682DDF310500CD918D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BiometricAuthPlugin.h; sourceTree = "<group>"; };
 		F62B34BA2DDD2C8F000C7FDD /* QrScannerPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QrScannerPlugin.h; sourceTree = "<group>"; };
@@ -106,6 +122,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				F604BA5C2DE0871D00A42053 /* LocationManagement */,
 				F661C90F2DDF64B400142AEF /* LocationPermissionsPlugin.h */,
 				F661C9102DDF64B400142AEF /* LocationPermissionsPlugin.m */,
 				F6956E5A2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift */,
@@ -143,6 +160,21 @@
 				AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */,
 			);
 			name = Pods;
+			sourceTree = "<group>";
+		};
+		F604BA5C2DE0871D00A42053 /* LocationManagement */ = {
+			isa = PBXGroup;
+			children = (
+				F604BA542DE0871D00A42053 /* .gitkeep */,
+				F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */,
+				F604BA562DE0871D00A42053 /* BatteryMonitor.swift */,
+				F604BA572DE0871D00A42053 /* HybridPositioningManager.swift */,
+				F604BA582DE0871D00A42053 /* LocationManager.swift */,
+				F604BA592DE0871D00A42053 /* LocationQualityManager.swift */,
+				F604BA5A2DE0871D00A42053 /* SignificantLocationDelegate.swift */,
+				F604BA5B2DE0871D00A42053 /* StandardLocationDelegate.swift */,
+			);
+			path = LocationManagement;
 			sourceTree = "<group>";
 		};
 		F62B34B82DDD2C8F000C7FDD /* Base.lproj */ = {
@@ -222,6 +254,7 @@
 				F6E075492DDD3C6A00C455BC /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				F60695692DDF310500CD918D /* Launch Screen.storyboard in Resources */,
+				F604BA642DE0871D00A42053 /* .gitkeep in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -298,6 +331,13 @@
 				F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */,
 				F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				F604BA5D2DE0871D00A42053 /* LocationQualityManager.swift in Sources */,
+				F604BA5E2DE0871D00A42053 /* BackgroundTaskManager.swift in Sources */,
+				F604BA5F2DE0871D00A42053 /* HybridPositioningManager.swift in Sources */,
+				F604BA602DE0871D00A42053 /* SignificantLocationDelegate.swift in Sources */,
+				F604BA612DE0871D00A42053 /* LocationManager.swift in Sources */,
+				F604BA622DE0871D00A42053 /* StandardLocationDelegate.swift in Sources */,
+				F604BA632DE0871D00A42053 /* BatteryMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
