@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { InfoCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface TDEEResult {
   tdee: number;
@@ -16,6 +18,9 @@ export interface TDEEResult {
   carbsGrams: number;
   fatsGrams: number;
   goal: string;
+  weight?: number;
+  activityLevel?: string;
+  formulaUsed: 'standard' | 'hybrid';
 }
 
 const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (result: TDEEResult) => void }) => {
@@ -45,6 +50,49 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
     return { weightKg, heightCm };
   };
 
+  const validateBodyFat = (bf: string): number | null => {
+    const bfValue = parseFloat(bf);
+    if (!bf || isNaN(bfValue)) {
+      return null;
+    }
+    
+    // Body fat percentage should be between 3% and 50%
+    if (bfValue < 3 || bfValue > 50) {
+      toast({
+        title: "Invalid Body Fat Percentage",
+        description: "Body fat should be between 3% and 50%",
+        variant: "destructive",
+      });
+      return null;
+    }
+    
+    // Convert percentage to decimal
+    return bfValue / 100;
+  };
+
+  const calculateBMR = (weightKg: number, heightCm: number, ageNum: number, isMale: boolean, bodyFatPercentage: number | null): { bmr: number, formulaUsed: 'standard' | 'hybrid' } => {
+    // Sex constant: 5 for male, -161 for female
+    const sexConstant = isMale ? 5 : -161;
+    
+    // Standard Harris-Benedict formula
+    const standardBMR = 10 * weightKg + 6.25 * heightCm - 5 * ageNum + sexConstant;
+    
+    // If body fat percentage is available, use the hybrid formula
+    if (bodyFatPercentage !== null) {
+      // Calculate lean body mass
+      const lbm = weightKg * (1 - bodyFatPercentage);
+      const lbmLbs = lbm * 2.20462; // Convert to lbs
+      
+      // Hybrid formula: [(Standard formula) + (14 × LBM in lbs)] / 2
+      const hybridBMR = (standardBMR + (14 * lbmLbs)) / 2;
+      
+      return { bmr: hybridBMR, formulaUsed: 'hybrid' };
+    }
+    
+    // Return standard BMR if no body fat data
+    return { bmr: standardBMR, formulaUsed: 'standard' };
+  };
+
   const calculateTDEE = () => {
     if (!age || !weight || !height || !activityLevel) {
       toast({
@@ -58,16 +106,18 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
     const { weightKg, heightCm } = convertToMetric();
     const ageNum = parseFloat(age);
     const activityMultiplier = parseFloat(activityLevel);
-
-    // Harris-Benedict formula for BMR calculation
-    let bmr;
-    if (gender === 'female') {
-      // For women: BMR = 447.593 + (9.247 × weight in kg) + (3.098 × height in cm) – (4.330 × age in years)
-      bmr = 447.593 + (9.247 * weightKg) + (3.098 * heightCm) - (4.330 * ageNum);
-    } else {
-      // For men: BMR = 88.362 + (13.397 × weight in kg) + (4.799 × height in cm) – (5.677 × age in years)
-      bmr = 88.362 + (13.397 * weightKg) + (4.799 * heightCm) - (5.677 * ageNum);
-    }
+    
+    // Validate and parse body fat if available
+    const bodyFatPercentage = validateBodyFat(bodyFat);
+    
+    // Calculate BMR using potentially hybrid formula
+    const { bmr, formulaUsed } = calculateBMR(
+      weightKg, 
+      heightCm, 
+      ageNum, 
+      gender === 'male', 
+      bodyFatPercentage
+    );
 
     // Calculate TDEE based on activity level
     const tdee = bmr * activityMultiplier;
@@ -97,7 +147,10 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
       proteinGrams,
       carbsGrams,
       fatsGrams,
-      goal
+      goal,
+      weight: weightKg,
+      activityLevel: getActivityLevelLabel(activityMultiplier),
+      formulaUsed
     };
 
     setResult(resultData);
@@ -106,10 +159,19 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
       onCalculationComplete(resultData);
     }
 
+    const formulaMessage = formulaUsed === 'hybrid' 
+      ? "using enhanced formula with lean body mass" 
+      : "using standard formula";
+
     toast({
       title: "Calculation Complete",
-      description: "Your personalized TDEE and macros have been calculated.",
+      description: `Your personalized TDEE and macros have been calculated ${formulaMessage}.`,
     });
+  };
+
+  const getActivityLevelLabel = (value: number): string => {
+    const level = activityLevels.find(level => parseFloat(level.value) === value);
+    return level ? level.label.split(' ')[0].toLowerCase() : 'moderately-active';
   };
 
   const waterIntake = () => {
@@ -213,7 +275,24 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bodyFat">Body Fat % (optional)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bodyFat" className="flex items-center">
+                  Body Fat % 
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-1 cursor-help">
+                          <InfoCircle className="h-4 w-4 text-muted-foreground" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Adding your body fat % enables our enhanced formula that accounts for lean body mass, providing more accurate results especially for athletic builds.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <span className="text-xs text-muted-foreground">Optional but recommended</span>
+              </div>
               <Input
                 id="bodyFat"
                 type="number"
@@ -221,8 +300,12 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
                 max="50"
                 value={bodyFat}
                 onChange={(e) => setBodyFat(e.target.value)}
-                placeholder="Enter if known"
+                placeholder="Enter if known (3-50%)"
+                className={bodyFat ? "border-quantum-cyan" : ""}
               />
+              {bodyFat && (
+                <p className="text-xs text-quantum-cyan">Enhanced formula will be used</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -272,6 +355,30 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
           <TabsContent value="results">
             {result && (
               <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 mb-4">
+                  <div className="bg-quantum-darkBlue/30 p-4 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-sm text-gray-400">Formula Used</div>
+                        <div className="text-lg font-bold text-quantum-purple">
+                          {result.formulaUsed === 'hybrid' ? 
+                            'Enhanced (Lean Body Mass)' : 
+                            'Standard (Harris-Benedict)'}
+                        </div>
+                      </div>
+                      {result.formulaUsed === 'hybrid' ? (
+                        <span className="bg-quantum-purple/30 text-quantum-purple text-xs px-2 py-1 rounded-full">
+                          More Accurate
+                        </span>
+                      ) : (
+                        <span className="bg-quantum-cyan/30 text-quantum-cyan text-xs px-2 py-1 rounded-full">
+                          Standard
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-quantum-darkBlue/30 p-4 rounded-lg">
                     <div className="text-sm text-gray-400">BMR</div>
