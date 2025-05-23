@@ -1,3 +1,4 @@
+
 import CoreLocation
 import UIKit
 
@@ -8,7 +9,7 @@ class LocationManager: NSObject {
     var locationManager: CLLocationManager?
     private var standardLocationDelegate: StandardLocationDelegate?
     private var significantLocationDelegate: SignificantLocationDelegate?
-    private var significantLocationManager: CLLocationManager? // Add this line
+    private var significantLocationManager: CLLocationManager?
 
     // Supporting components
     private let batteryMonitor = BatteryMonitor()
@@ -21,17 +22,48 @@ class LocationManager: NSObject {
     private var isTrackingEnabled = false
     private(set) var isMoving = false
     
+    // Synchronization
+    private let initializationLock = NSLock()
+    private var isInitialized = false
+    
     private override init() {
         super.init()
-        setupLocationManager()
-        batteryMonitor.startMonitoring()
+        // Do minimal setup in init
+        print("LocationManager instance created")
     }
     
     deinit {
         batteryMonitor.stopMonitoring()
     }
     
+    // New synchronous initialization method
+    func initializeSync() {
+        initializationLock.lock()
+        defer { initializationLock.unlock() }
+        
+        if isInitialized {
+            print("LocationManager already initialized, skipping")
+            return
+        }
+        
+        print("LocationManager performing synchronized initialization")
+        
+        // Setup location managers
+        setupLocationManager()
+        
+        // Start battery monitoring
+        batteryMonitor.startMonitoring()
+        
+        // Check permissions immediately
+        checkLocationPermission()
+        
+        isInitialized = true
+        print("LocationManager initialization complete")
+    }
+    
     private func setupLocationManager() {
+        print("Setting up location manager")
+        
         locationManager = CLLocationManager()
         standardLocationDelegate = StandardLocationDelegate()
         locationManager?.delegate = standardLocationDelegate
@@ -48,11 +80,17 @@ class LocationManager: NSObject {
         
         standardLocationDelegate?.onAuthorizationChange = { [weak self] status in
             self?.handleAuthorizationChange(status)
+            // Notify the plugin that permissions have changed
+            NotificationCenter.default.post(
+                name: NSNotification.Name("locationPermissionChanged"),
+                object: nil,
+                userInfo: ["status": status]
+            )
         }
         
         // Setup significant location change manager
         let significantChangeManager = CLLocationManager()
-        significantLocationManager = CLLocationManager() // Store this instance
+        significantLocationManager = significantChangeManager
         significantLocationDelegate = SignificantLocationDelegate()
         significantChangeManager.delegate = significantLocationDelegate
         significantChangeManager.allowsBackgroundLocationUpdates = true
@@ -70,7 +108,10 @@ class LocationManager: NSObject {
         }
         
         trackingManager.applyTrackingSettings(to: locationManager)
+        
+        print("Location manager setup complete")
     }
+    
     // MARK: - Public Interface
     
     func setIsMoving(_ moving: Bool) {

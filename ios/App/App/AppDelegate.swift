@@ -10,14 +10,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
     private var servicesInitialized = false
+    private let initializationSemaphore = DispatchSemaphore(value: 0)
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Set up appearance for navigation bars and toolbars
         configureUIAppearance()
         
-        // Initialize plugins and core services immediately
+        // Initialize plugins and core services immediately and synchronously
         // This ensures that the LocationPermissionsPlugin is available before any UI components try to use it
-        initializeServices(application)
+        initializeServicesSync(application)
         
         return true
     }
@@ -48,13 +49,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         UIView.swizzleAutoresizingMaskIntoConstraintsIfNeeded()
     }
     
-    private func initializeServices(_ application: UIApplication) {
+    // New synchronous initialization method
+    private func initializeServicesSync(_ application: UIApplication) {
         guard !servicesInitialized else { return }
         
-        // Initialize location manager
-        LocationManager.shared.checkLocationPermission()
+        print("Starting synchronous service initialization")
         
-        // Start monitoring battery level changes (already initialized in LocationManager)
+        // Initialize location manager first, as a priority
+        let locationManager = LocationManager.shared
+        locationManager.initializeSync()
         
         // Initialize motion activity manager for activity-based tracking
         ActivityManager.shared.startActivityMonitoring()
@@ -68,7 +71,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
         
         servicesInitialized = true
-        print("Services initialized successfully")
+        print("Services initialized successfully in synchronized mode")
+        
+        // Signal that initialization is complete
+        initializationSemaphore.signal()
+    }
+    
+    // Keep the original method but modify to use the semaphore
+    private func initializeServices(_ application: UIApplication) {
+        // If already initialized or initializing, wait for completion
+        if servicesInitialized {
+            return
+        } else {
+            // Wait with a timeout to prevent deadlock
+            let _ = initializationSemaphore.wait(timeout: .now() + 3.0)
+            if !servicesInitialized {
+                // If still not initialized after timeout, do it now
+                initializeServicesSync(application)
+            }
+        }
     }
     
     // MARK: - Application Lifecycle Methods

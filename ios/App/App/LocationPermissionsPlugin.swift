@@ -1,4 +1,3 @@
-
 import Foundation
 import Capacitor
 import CoreLocation
@@ -26,8 +25,11 @@ public class LocationPermissionsPlugin: CAPPlugin {
     private let accuracyTimeout: TimeInterval = 15 // 15 seconds timeout for accuracy improvements
     
     @objc override public func load() {
-        // Initialize location manager
-        locationManager = CLLocationManager()
+        // Ensure LocationManager is initialized first
+        LocationManager.shared.initializeSync()
+        
+        // Use LocationManager's already initialized CLLocationManager instance
+        locationManager = LocationManager.shared.locationManager
         
         // Initialize batch processor
         batchProcessor = LocationBatchProcessor()
@@ -43,7 +45,14 @@ public class LocationPermissionsPlugin: CAPPlugin {
             object: nil
         )
         
-        print("LocationPermissionsPlugin loaded")
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePermissionChange(_:)),
+            name: Notification.Name("locationAuthorizationDidChange"),
+            object: nil
+        )
+        
+        print("LocationPermissionsPlugin loaded successfully")
     }
     
     deinit {
