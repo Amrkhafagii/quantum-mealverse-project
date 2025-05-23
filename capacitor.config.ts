@@ -6,8 +6,34 @@ const config: CapacitorConfig = {
   appName: 'quantum-mealverse-project',
   webDir: 'dist',
   server: {
-    url: 'https://117bb8e7-2e6f-4681-9365-55049936510d.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    androidScheme: 'https'
+    // Development URL removed to ensure app loads web assets from bundle
+    // Uncomment the below lines during development only
+    // url: 'http://localhost:8080',
+    // cleartext: true
+  },
+  plugins: {
+    StatusBar: {
+      // Configure status bar for iOS
+      style: 'dark',
+      backgroundColor: '#ffffff',
+      overlaysWebView: true,
+      // Smart status bar handling based on app content (iOS only)
+      iosOverlaysWebView: true
+    },
+    BiometricAuth: {
+      // Plugin-specific configurations would go here
+    },
+    GoogleMaps: {
+      apiKey: "AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs" // Replace with your actual Google Maps API key
+    },
+    SplashScreen: {
+      launchAutoHide: true,
+      showSpinner: false,
+      spinnerColor: '#999999',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP'
+    }
   },
   ios: {
     contentInset: 'always',
@@ -17,14 +43,10 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: true,
     handleApplicationNotifications: true
   },
-  plugins: {
-    SplashScreen: {
-      launchAutoHide: true,
-      showSpinner: false,
-      spinnerColor: '#999999',
-      androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP'
-    }
+  android: {
+    // Android-specific configuration
+    captureInput: true,
+    webContentsDebuggingEnabled: true
   }
 };
 
