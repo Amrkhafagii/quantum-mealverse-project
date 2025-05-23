@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { OrderTracker } from '@/components/orders/OrderTracker';
+import OrderTracker from '@/components/orders/OrderTracker';
 import { ActiveOrdersList } from '@/components/orders/ActiveOrdersList';
 import { PastOrdersList } from '@/components/orders/PastOrdersList';
 import { EmptyOrdersState } from '@/components/orders/EmptyOrdersState';

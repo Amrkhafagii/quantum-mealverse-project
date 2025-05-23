@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { OrderTracker } from '@/components/orders/OrderTracker';
+import OrderTracker from '@/components/orders/OrderTracker';
 import { useOrderData } from '@/hooks/useOrderData';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';

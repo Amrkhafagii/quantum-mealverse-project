@@ -43,6 +43,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapInitialized, setMapInitialized] = useState(false);
+  const googleMapRef = useRef<any>(null);
   
   // Initialize the map when the component mounts
   useEffect(() => {
@@ -69,6 +70,8 @@ const NativeMap: React.FC<NativeMapProps> = ({
           zoom: zoom,
           liteMode: liteMode
         });
+
+        googleMapRef.current = googleMap;
 
         // Add markers to the map
         await addMarkersToMap(googleMap);
@@ -149,10 +152,15 @@ const NativeMap: React.FC<NativeMapProps> = ({
     
     // Cleanup the map when the component unmounts
     return () => {
-      if (googleMap && mapInitialized) {
-        CapacitorGoogleMaps.destroy({
-          id: mapId
-        }).catch(err => console.error('Error removing map:', err));
+      if (googleMapRef.current && mapInitialized) {
+        try {
+          // Use the remove method instead of destroy
+          CapacitorGoogleMaps.remove({
+            id: mapId
+          }).catch(err => console.error('Error removing map:', err));
+        } catch (err) {
+          console.error('Error cleaning up map:', err);
+        }
       }
     };
   }, [mapId, center, zoom, markers, liteMode, locationAccuracy, showAccuracyCircle]);

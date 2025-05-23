@@ -54,11 +54,11 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
     let restaurantLat = null;
     let restaurantLng = null;
     
-    if (typeof restaurant.latitude === 'number') {
+    if (restaurant.latitude !== undefined && typeof restaurant.latitude === 'number') {
       restaurantLat = restaurant.latitude;
     }
     
-    if (typeof restaurant.longitude === 'number') {
+    if (restaurant.longitude !== undefined && typeof restaurant.longitude === 'number') {
       restaurantLng = restaurant.longitude;
     }
     
@@ -73,27 +73,14 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
   }
   
   // Add customer marker - handle both string and object types for coordinates
-  if (showCustomer && customer) {
-    // Handle customer location regardless of property structure
-    let customerLat = null;
-    let customerLng = null;
-    
-    if (typeof customer.latitude === 'number') {
-      customerLat = customer.latitude;
-    }
-    
-    if (typeof customer.longitude === 'number') {
-      customerLng = customer.longitude;
-    }
-    
-    if (customerLat !== null && customerLng !== null) {
-      markers.push({
-        latitude: customerLat,
-        longitude: customerLng,
-        title: 'Delivery Address',
-        type: 'customer'
-      });
-    }
+  if (showCustomer && customer && order.latitude && order.longitude) {
+    // Use the order's coordinates instead of trying to access customer.latitude
+    markers.push({
+      latitude: order.latitude,
+      longitude: order.longitude,
+      title: 'Delivery Address',
+      type: 'customer'
+    });
   }
   
   // Add driver marker

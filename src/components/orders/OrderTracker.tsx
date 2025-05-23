@@ -1,18 +1,20 @@
+
 import React from 'react';
 import OrderLocationMap from './OrderLocationMap';
 import { Button } from '@/components/ui/button';
 
 interface OrderTrackerProps {
-  order: any; // Keep existing type
+  order?: any; // Keep existing type
   driverLocation?: any; // Keep existing type
   onContactDriver?: () => void; // Keep existing type
-  // Add more props as needed
+  orderId?: string; // Add orderId as an optional prop
 }
 
 const OrderTracker: React.FC<OrderTrackerProps> = ({
   order,
   driverLocation,
-  onContactDriver
+  onContactDriver,
+  orderId
 }) => {
   // Update implementation to pass the correct props to OrderLocationMap
   // and handle removing the assignmentId prop that was causing the error

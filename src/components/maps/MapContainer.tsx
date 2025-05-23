@@ -83,8 +83,8 @@ const MapContainer: React.FC<MapContainerProps> = ({
             enableAnimation={enableAnimation}
             zoomLevel={zoomLevel}
             locations={locations}
-            locationAccuracy={locationAccuracy} // Pass through locationAccuracy prop
-            showAccuracyCircle={showAccuracyCircle} // Pass through showAccuracyCircle prop
+            locationAccuracy={locationAccuracy}
+            showAccuracyCircle={showAccuracyCircle}
           />
         )}
         {children}

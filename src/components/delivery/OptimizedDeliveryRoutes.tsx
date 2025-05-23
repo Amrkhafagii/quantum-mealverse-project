@@ -130,6 +130,7 @@ export const OptimizedDeliveryRoutes: React.FC<OptimizedDeliveryRoutesProps> = (
           </div>
         ) : (
           <OptimizedRouteMap
+            mapId={`delivery-route-map-${stops.length}`}
             stops={stops}
             returnToOrigin={returnToOrigin}
             onRouteCalculated={handleRouteCalculated}

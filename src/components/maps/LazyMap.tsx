@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Platform } from '@/utils/platform';
@@ -37,6 +36,8 @@ interface LazyMapProps {
   locations?: any[];
   locationAccuracy?: AccuracyLevel;
   showAccuracyCircle?: boolean;
+  // Add the showRoute prop
+  showRoute?: boolean;
 }
 
 const LazyMap: React.FC<LazyMapProps> = ({
@@ -59,7 +60,9 @@ const LazyMap: React.FC<LazyMapProps> = ({
   zoomLevel,
   locations = [],
   locationAccuracy,
-  showAccuracyCircle
+  showAccuracyCircle,
+  // Handle the showRoute prop (unused for now but needed for type compatibility)
+  showRoute
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { quality, isLowQuality } = useNetworkQuality();
