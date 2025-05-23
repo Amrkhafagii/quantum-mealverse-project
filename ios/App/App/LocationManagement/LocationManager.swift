@@ -1,4 +1,3 @@
-
 import CoreLocation
 import UIKit
 
@@ -74,7 +73,7 @@ class LocationManager: NSObject {
             locationQualityManager.takePoorQualityAction(
                 locationManager: locationManager,
                 startHybridPositioningCallback: { [weak self] in
-                    self?.hybridPositioningManager.startHybridPositioning(locationManager: <#CLLocationManager?#>, significantLocationManager: <#CLLocationManager?#>)
+                    self?.hybridPositioningManager.startHybridPositioning(locationManager: self?.locationManager, significantLocationManager: nil)
                 }
             )
             return
@@ -160,14 +159,17 @@ class LocationManager: NSObject {
             }
             
             // Monitor authorization changes
-            NotificationCenter.default.addObserver(forName: NSNotification.Name.CLLocationManagerDidChangeAuthorization, object: nil, queue: .main) { [weak self] _ in
-                let newAuthStatus = self?.checkLocationPermission() ?? .notDetermined
-                let granted = (newAuthStatus == .authorizedAlways || newAuthStatus == .authorizedWhenInUse)
+            let notificationName = Notification.Name("locationAuthorizationDidChange")
+            
+            // Set up the delegate to respond to authorization changes
+            standardLocationDelegate?.onAuthorizationChange = { [weak self] status in
+                let granted = (status == .authorizedAlways || status == .authorizedWhenInUse)
                 completion(granted)
                 
-                // Remove observer after callback
-                NotificationCenter.default.removeObserver(self as Any, name: NSNotification.Name.CLLocationManagerDidChangeAuthorization, object: nil)
+                // Clean up the callback to avoid multiple calls
+                self?.standardLocationDelegate?.onAuthorizationChange = nil
             }
+            
         case .restricted, .denied:
             // Permissions denied or restricted
             completion(false)

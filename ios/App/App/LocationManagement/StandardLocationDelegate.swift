@@ -4,19 +4,26 @@ import CoreLocation
 class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     var onLocationUpdate: ((CLLocation) -> Void)?
     var onError: ((Error) -> Void)?
+    var onAuthorizationChange: ((CLAuthorizationStatus) -> Void)?
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        onLocationUpdate?(location)
+        if let location = locations.last {
+            onLocationUpdate?(location)
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Standard location manager failed with error: \(error.localizedDescription)")
         onError?(error)
     }
     
+    // Handle authorization changes (iOS 14+)
+    @available(iOS 14.0, *)
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        // Relay to LocationManager
-        LocationManager.shared.checkLocationPermission()
+        onAuthorizationChange?(manager.authorizationStatus)
+    }
+    
+    // Handle authorization changes (pre-iOS 14)
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        onAuthorizationChange?(status)
     }
 }
