@@ -1,4 +1,7 @@
+
 import { registerPlugin } from '@capacitor/core';
+
+export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
 export interface LocationPermissionStatus {
   location: PermissionState;
@@ -91,7 +94,7 @@ const checkPermissionWithGeolocation = async (): Promise<LocationPermissionStatu
       const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
       return {
         location: status.state as PermissionState,
-        backgroundLocation: 'prompt'
+        backgroundLocation: 'prompt' as PermissionState
       };
     }
   } catch (e) {
@@ -144,7 +147,7 @@ const throttledPromiseWithGeolocation = (): Promise<LocationPermissionStatus> =>
     navigator.geolocation.getCurrentPosition(
       () => {
         clearTimeout(timeoutId);
-        const result = { location: 'granted', backgroundLocation: 'prompt' };
+        const result = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
         backoffState.bestLocation = result; // Cache the successful result
         backoffState.attemptCount = 0; // Reset attempt count on success
         resolve(result);
@@ -152,7 +155,7 @@ const throttledPromiseWithGeolocation = (): Promise<LocationPermissionStatus> =>
       (error) => {
         clearTimeout(timeoutId);
         if (error.code === 1) { // PERMISSION_DENIED
-          const result = { location: 'denied', backgroundLocation: 'denied' };
+          const result = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
           backoffState.bestLocation = result; // Cache the result
           resolve(result);
         } else {
@@ -178,12 +181,12 @@ const promiseWithGeolocation = (): Promise<LocationPermissionStatus> => {
     }
     
     navigator.geolocation.getCurrentPosition(
-      () => resolve({ location: 'granted', backgroundLocation: 'prompt' }),
+      () => resolve({ location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState }),
       (error) => {
         if (error.code === 1) { // PERMISSION_DENIED
-          resolve({ location: 'denied', backgroundLocation: 'denied' });
+          resolve({ location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState });
         } else {
-          resolve({ location: 'prompt', backgroundLocation: 'prompt' });
+          resolve({ location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState });
         }
       },
       { timeout: 10000 }

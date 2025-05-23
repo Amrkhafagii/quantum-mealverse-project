@@ -1,5 +1,6 @@
+
 import { WebPlugin } from '@capacitor/core';
-import type { LocationPermissionsPlugin, LocationPermissionStatus } from '../LocationPermissionsPlugin';
+import type { LocationPermissionsPlugin, LocationPermissionStatus, PermissionState } from '../LocationPermissionsPlugin';
 
 // Store the best location result
 let bestLocationResult: LocationPermissionStatus | null = null;
@@ -44,14 +45,14 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
             if (bestLocationResult) {
               resolve(bestLocationResult);
             } else {
-              resolve({ location: 'prompt', backgroundLocation: 'prompt' });
+              resolve({ location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState });
             }
           }, 10000);
           
           navigator.geolocation.getCurrentPosition(
             () => {
               clearTimeout(timeoutId);
-              const result = { location: 'granted', backgroundLocation: 'prompt' };
+              const result = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
               bestLocationResult = result; // Cache the successful result
               resolve(result);
             },
@@ -60,7 +61,7 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
               console.log('Geolocation permission error:', error);
               
               if (error.code === error.PERMISSION_DENIED) {
-                const result = { location: 'denied', backgroundLocation: 'denied' };
+                const result = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
                 bestLocationResult = result;
                 resolve(result);
               } else {
@@ -68,7 +69,7 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
                 if (bestLocationResult) {
                   resolve(bestLocationResult);
                 } else {
-                  resolve({ location: 'prompt', backgroundLocation: 'prompt' });
+                  resolve({ location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState });
                 }
               }
             },
@@ -82,7 +83,7 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
       }
       
       // Fall back to default response
-      return { location: 'prompt', backgroundLocation: 'prompt' };
+      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
     } catch (error) {
       console.error('Error in web implementation of requestLocationPermission:', error);
       
@@ -91,7 +92,7 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
         return bestLocationResult;
       }
       
-      return { location: 'prompt', backgroundLocation: 'prompt' };
+      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
     }
   }
 
@@ -108,10 +109,10 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
           const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
           
           if (status.state === 'granted') {
-            bestLocationResult = { location: 'granted', backgroundLocation: 'prompt' };
+            bestLocationResult = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
             return bestLocationResult;
           } else if (status.state === 'denied') {
-            bestLocationResult = { location: 'denied', backgroundLocation: 'denied' };
+            bestLocationResult = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
             return bestLocationResult;
           }
           
@@ -127,12 +128,12 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
               });
               
               // If successful, permission is granted
-              bestLocationResult = { location: 'granted', backgroundLocation: 'prompt' };
+              bestLocationResult = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
               return bestLocationResult;
             } catch (e) {
               // If this fails, the permission is likely denied
               if (e instanceof GeolocationPositionError && e.code === e.PERMISSION_DENIED) {
-                bestLocationResult = { location: 'denied', backgroundLocation: 'denied' };
+                bestLocationResult = { location: 'denied' as PermissionState, backgroundLocation: 'denied' as PermissionState };
                 return bestLocationResult;
               }
               // Otherwise it's likely still in the prompt state
@@ -143,10 +144,10 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
         }
       }
       
-      return { location: 'prompt', backgroundLocation: 'prompt' };
+      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
     } catch (error) {
       console.error('Error in web implementation of checkPermissionStatus:', error);
-      return { location: 'prompt', backgroundLocation: 'prompt' };
+      return { location: 'prompt' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
     }
   }
 }
