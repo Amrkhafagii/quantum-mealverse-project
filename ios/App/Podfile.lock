@@ -22,6 +22,8 @@ PODS:
     - Capacitor
   - CapacitorNetwork (7.0.1):
     - Capacitor
+  - CapacitorPreferences (7.0.1):
+    - Capacitor
   - CapacitorPushNotifications (5.1.0):
     - Capacitor
   - CapacitorStatusBar (7.0.1):
@@ -45,6 +47,7 @@ DEPENDENCIES:
   - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
+  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
 
@@ -76,6 +79,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/local-notifications"
   CapacitorNetwork:
     :path: "../../node_modules/@capacitor/network"
+  CapacitorPreferences:
+    :path: "../../node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
     :path: "../../node_modules/@capacitor/push-notifications"
   CapacitorStatusBar:
@@ -93,11 +98,12 @@ SPEC CHECKSUMS:
   CapacitorHaptics: 1f1e17041f435d8ead9ff2a34edd592c6aa6a8d6
   CapacitorLocalNotifications: c2212755b33d2513b8bb325096ce3a64d4039ae3
   CapacitorNetwork: 15cb4385f0913a8ceb5e9a4d7af1ec554bdb8de8
+  CapacitorPreferences: 6c98117d4d7508034a4af9db64d6b26fc75d7b94
   CapacitorPushNotifications: b65e9e5ed4caa19d614ee8221b26129f6d506e63
   CapacitorStatusBar: 6e7af040d8fc4dd655999819625cae9c2d74c36f
   GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
   IONGeolocationLib: 81f33f88d025846946de2cf63b0c7628e7c6bc9d
 
-PODFILE CHECKSUM: 79bc36839181e58e2c250ee730539256775592d7
+PODFILE CHECKSUM: 656f6f91f023d5739620522a1376a7a24ee70ddd
 
 COCOAPODS: 1.16.2
