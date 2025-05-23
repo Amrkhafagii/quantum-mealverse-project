@@ -74,7 +74,7 @@ class LocationManager: NSObject {
             locationQualityManager.takePoorQualityAction(
                 locationManager: locationManager,
                 startHybridPositioningCallback: { [weak self] in
-                    self?.hybridPositioningManager.startHybridPositioning()
+                    self?.hybridPositioningManager.startHybridPositioning(locationManager: <#CLLocationManager?#>, significantLocationManager: <#CLLocationManager?#>)
                 }
             )
             return
