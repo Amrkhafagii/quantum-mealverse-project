@@ -19,9 +19,6 @@ interface LazyMapProps {
     description?: string;
     type?: string;
   }>;
-  showRoute?: boolean;
-  routeOrigin?: { lat: number; lng: number };
-  routeDestination?: { lat: number; lng: number };
   height?: string;
   width?: string;
   className?: string;
@@ -38,8 +35,8 @@ interface LazyMapProps {
   isInteractive?: boolean;
   zoomLevel?: number;
   locations?: any[];
-  locationAccuracy?: AccuracyLevel; // Added locationAccuracy prop
-  showAccuracyCircle?: boolean; // Added showAccuracyCircle prop
+  locationAccuracy?: AccuracyLevel;
+  showAccuracyCircle?: boolean;
 }
 
 const LazyMap: React.FC<LazyMapProps> = ({
@@ -47,9 +44,6 @@ const LazyMap: React.FC<LazyMapProps> = ({
   center = { lat: 0, lng: 0 },
   zoom = 14,
   markers = [],
-  showRoute = false,
-  routeOrigin,
-  routeDestination,
   height = '300px',
   width,
   className = '',
@@ -64,8 +58,8 @@ const LazyMap: React.FC<LazyMapProps> = ({
   isInteractive = true,
   zoomLevel,
   locations = [],
-  locationAccuracy, // Added locationAccuracy prop
-  showAccuracyCircle // Added showAccuracyCircle prop
+  locationAccuracy,
+  showAccuracyCircle
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { quality, isLowQuality } = useNetworkQuality();
@@ -161,8 +155,8 @@ const LazyMap: React.FC<LazyMapProps> = ({
             width={width}
             className={className}
             liteMode={useLowPerformanceMode}
-            locationAccuracy={locationAccuracy} // Pass through locationAccuracy prop
-            showAccuracyCircle={showAccuracyCircle} // Pass through showAccuracyCircle prop
+            locationAccuracy={locationAccuracy}
+            showAccuracyCircle={showAccuracyCircle}
           />
         ) : (
           <React.Suspense fallback={<Skeleton className="w-full h-full" />}>
@@ -171,9 +165,6 @@ const LazyMap: React.FC<LazyMapProps> = ({
               center={computedCenter}
               zoom={zoomLevel || zoom}
               markers={computedMarkers}
-              showRoute={showRoute}
-              routeOrigin={routeOrigin}
-              routeDestination={routeDestination}
               height={height}
               width={width}
               className={className}
@@ -181,8 +172,8 @@ const LazyMap: React.FC<LazyMapProps> = ({
               enableAnimation={enableAnimation && !useLowPerformanceMode}
               enableControls={enableControls && !useLowPerformanceMode}
               onLoad={handleMapLoad}
-              locationAccuracy={locationAccuracy} // Pass through locationAccuracy prop
-              showAccuracyCircle={showAccuracyCircle} // Pass through showAccuracyCircle prop
+              locationAccuracy={locationAccuracy}
+              showAccuracyCircle={showAccuracyCircle}
             />
           </React.Suspense>
         )}

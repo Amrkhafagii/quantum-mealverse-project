@@ -24,6 +24,9 @@ interface DeliveryGoogleMapProps {
   locationAccuracy?: AccuracyLevel;
   showAccuracyCircle?: boolean;
   onMapReady?: () => void;
+  // Additional props
+  enableAnimation?: boolean;
+  onLoad?: (map: google.maps.Map) => void;
 }
 
 // Map styling for a cleaner look
@@ -60,7 +63,9 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
   lowPerformanceMode = false,
   locationAccuracy,
   showAccuracyCircle = false,
-  onMapReady
+  onMapReady,
+  enableAnimation = true,
+  onLoad
 }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -106,6 +111,10 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
     
     if (onMapReady) {
       onMapReady();
+    }
+    
+    if (onLoad) {
+      onLoad(map);
     }
   };
 
@@ -184,8 +193,8 @@ const DeliveryGoogleMap: React.FC<DeliveryGoogleMapProps> = ({
             position={{ lat: marker.latitude, lng: marker.longitude }}
             title={marker.title}
             icon={getMarkerIcon(marker.type)}
-            optimized={lowPerformanceMode}
-            animation={google.maps.Animation.DROP}
+            // Removed optimized prop since it doesn't exist in the type definition
+            animation={enableAnimation ? google.maps.Animation.DROP : undefined}
           />
         ))}
       </GoogleMap>

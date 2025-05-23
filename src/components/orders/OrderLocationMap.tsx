@@ -19,6 +19,7 @@ interface OrderLocationMapProps {
   height?: string;
   className?: string;
   showAccuracyCircle?: boolean;
+  // Remove assignmentId from props (not used)
 }
 
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
@@ -47,24 +48,52 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
   // Create markers for the map
   const markers = [];
   
-  // Add restaurant marker
-  if (showRestaurant && restaurant && restaurant.latitude && restaurant.longitude) {
-    markers.push({
-      latitude: restaurant.latitude,
-      longitude: restaurant.longitude,
-      title: restaurant.name || 'Restaurant',
-      type: 'restaurant'
-    });
+  // Add restaurant marker - handle both string and object types for coordinates
+  if (showRestaurant && restaurant) {
+    // Handle restaurant location regardless of property structure
+    let restaurantLat = null;
+    let restaurantLng = null;
+    
+    if (typeof restaurant.latitude === 'number') {
+      restaurantLat = restaurant.latitude;
+    }
+    
+    if (typeof restaurant.longitude === 'number') {
+      restaurantLng = restaurant.longitude;
+    }
+    
+    if (restaurantLat !== null && restaurantLng !== null) {
+      markers.push({
+        latitude: restaurantLat,
+        longitude: restaurantLng,
+        title: restaurant.name || 'Restaurant',
+        type: 'restaurant'
+      });
+    }
   }
   
-  // Add customer marker
-  if (showCustomer && customer && customer.latitude && customer.longitude) {
-    markers.push({
-      latitude: customer.latitude,
-      longitude: customer.longitude,
-      title: 'Delivery Address',
-      type: 'customer'
-    });
+  // Add customer marker - handle both string and object types for coordinates
+  if (showCustomer && customer) {
+    // Handle customer location regardless of property structure
+    let customerLat = null;
+    let customerLng = null;
+    
+    if (typeof customer.latitude === 'number') {
+      customerLat = customer.latitude;
+    }
+    
+    if (typeof customer.longitude === 'number') {
+      customerLng = customer.longitude;
+    }
+    
+    if (customerLat !== null && customerLng !== null) {
+      markers.push({
+        latitude: customerLat,
+        longitude: customerLng,
+        title: 'Delivery Address',
+        type: 'customer'
+      });
+    }
   }
   
   // Add driver marker

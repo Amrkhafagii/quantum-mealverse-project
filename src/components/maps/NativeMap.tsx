@@ -55,17 +55,19 @@ const NativeMap: React.FC<NativeMapProps> = ({
       }
 
       try {
-        // Create the map
+        // Get the element bounds
+        const boundingRect = mapRef.current.getBoundingClientRect();
+
+        // Create the map - fixed by using the correct API parameters
         googleMap = await CapacitorGoogleMaps.create({
-          element: mapRef.current,
-          apiKey: '', // API key is set in capacitor.config.ts
-          config: {
-            center: center,
-            zoom: zoom,
-            disableDefaultUI: liteMode,
-            styles: [], // Can add styles here if needed
-            clickableIcons: !liteMode
-          }
+          width: boundingRect.width,
+          height: boundingRect.height,
+          x: boundingRect.x,
+          y: boundingRect.y,
+          latitude: center.lat,
+          longitude: center.lng,
+          zoom: zoom,
+          liteMode: liteMode
         });
 
         // Add markers to the map
@@ -148,7 +150,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
     // Cleanup the map when the component unmounts
     return () => {
       if (googleMap && mapInitialized) {
-        CapacitorGoogleMaps.deleteMap({
+        CapacitorGoogleMaps.destroy({
           id: mapId
         }).catch(err => console.error('Error removing map:', err));
       }
@@ -161,11 +163,10 @@ const NativeMap: React.FC<NativeMapProps> = ({
       if (mapInitialized && Capacitor.isNativePlatform()) {
         try {
           await CapacitorGoogleMaps.setCamera({
-            config: {
-              coordinate: { lat: center.lat, lng: center.lng },
-              animate: true,
-              animationDuration: 500
-            }
+            latitude: center.lat,
+            longitude: center.lng,
+            animate: true,
+            animationDuration: 500
           });
         } catch (error) {
           console.error('Error updating map center:', error);
