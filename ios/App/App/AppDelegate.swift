@@ -27,6 +27,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Capacitor Storage - Required for Storage plugins to work properly
         initializeCapacitorStorage()
         
+        // Add explicit initialization for Preferences
+        DispatchQueue.main.async {
+            UserDefaults.standard.synchronize()
+            // Ensure Preferences plugin uses the standard UserDefaults
+            if let preferencesPlugin = CAPBridge.bridge()?.plugin(withName: "Preferences") as? CAPPreferencesPlugin {
+                print("Successfully initialized Preferences plugin with UserDefaults")
+            }
+        }
+        
         return true
     }
     

@@ -1,12 +1,34 @@
 
-// Fix the Platform.setInitialized function calls in main.tsx
-// Instead, we should use the proper API provided by the Platform utility
-
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { Platform } from './utils/platform';
+import { locationService } from './services/location/LocationService';
+import { locationPermissionService } from './services/permission/LocationPermissionService';
+
+// App wrapper for initialization logic
+const AppWithInitialization = () => {
+  useEffect(() => {
+    const initializeServices = async () => {
+      try {
+        // Initialize permissions service first
+        await locationPermissionService.initialize();
+        
+        // Then initialize location service
+        await locationService.initialize();
+        
+        console.log('All services initialized successfully');
+      } catch (error) {
+        console.error('Error initializing services:', error);
+      }
+    };
+    
+    initializeServices();
+  }, []);
+  
+  return <App />;
+};
 
 // Initialize platform utilities before rendering
 const initializeApp = async () => {
@@ -85,7 +107,7 @@ const renderApp = () => {
   
   root.render(
     <React.StrictMode>
-      <App />
+      <AppWithInitialization />
     </React.StrictMode>
   );
   
