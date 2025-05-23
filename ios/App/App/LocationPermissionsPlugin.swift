@@ -123,7 +123,7 @@ extension LocationPermissionsPlugin {
 
 // MARK: - Capacitor Plugin Methods
 extension LocationPermissionsPlugin {
-    @objc func requestPermissions(_ call: CAPPluginCall) {
+    @objc public override func requestPermissions(_ call: CAPPluginCall) {
         print("requestPermissions called with options:", call.options)
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)

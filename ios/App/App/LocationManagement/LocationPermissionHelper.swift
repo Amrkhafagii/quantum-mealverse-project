@@ -40,11 +40,4 @@ class LocationPermissionHelper {
 }
 
 // Extension to check if app has background modes configured
-extension Bundle {
-    func hasBackgroundMode(for mode: String) -> Bool {
-        guard let backgroundModes = object(forInfoDictionaryKey: "UIBackgroundModes") as? [String] else {
-            return false
-        }
-        return backgroundModes.contains(mode)
-    }
-}
+
