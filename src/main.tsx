@@ -6,27 +6,45 @@ import './index.css';
 import { Platform } from './utils/platform';
 import { locationService } from './services/location/LocationService';
 import { locationPermissionService } from './services/permission/LocationPermissionService';
+import { Preferences } from '@capacitor/preferences';
+import { useAppInitialization } from './hooks/useAppInitialization';
 
-// App wrapper for initialization logic
+// App wrapper with unified initialization logic
 const AppWithInitialization = () => {
-  useEffect(() => {
-    const initializeServices = async () => {
-      try {
-        // Initialize permissions service first
-        await locationPermissionService.initialize();
-        
-        // Then initialize location service
-        await locationService.initialize();
-        
-        console.log('All services initialized successfully');
-      } catch (error) {
-        console.error('Error initializing services:', error);
-      }
-    };
-    
-    initializeServices();
-  }, []);
+  // Use our custom hook for app initialization which handles permissions and services
+  const { isInitializing, isInitialized, error } = useAppInitialization();
   
+  // Show loading state if still initializing
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center w-full h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Initializing app...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show error state if initialization failed
+  if (error) {
+    return (
+      <div className="flex items-center justify-center w-full h-screen">
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mx-4 max-w-md">
+          <p className="font-bold">Error</p>
+          <p>{error.message || 'Failed to initialize app'}</p>
+          <button 
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Render the app once initialized
   return <App />;
 };
 
