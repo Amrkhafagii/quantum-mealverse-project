@@ -3,8 +3,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Capacitor } from '@capacitor/core';
 import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
-import { GoogleMap } from '@capacitor-community/capacitor-googlemaps-native';
 import { toast } from 'sonner';
+
+// Import the GoogleMap plugin correctly
+import { CapacitorGoogleMaps } from '@capacitor-community/capacitor-googlemaps-native';
 
 interface NativeMapProps {
   mapId: string;
@@ -44,7 +46,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
   
   // Initialize the map when the component mounts
   useEffect(() => {
-    let googleMap: typeof GoogleMap | null = null;
+    let googleMap: any = null;
 
     const initializeMap = async () => {
       if (!mapRef.current || !Capacitor.isNativePlatform()) {
@@ -54,7 +56,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
 
       try {
         // Create the map
-        googleMap = await GoogleMap.create({
+        googleMap = await CapacitorGoogleMaps.create({
           id: mapId,
           element: mapRef.current,
           apiKey: '', // API key is set in capacitor.config.ts
@@ -87,7 +89,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
     };
 
     // Add markers to the map
-    const addMarkersToMap = async (map: typeof GoogleMap) => {
+    const addMarkersToMap = async (map: any) => {
       for (const marker of markers) {
         let markerOptions: any = {
           coordinate: {
@@ -117,7 +119,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
       }
     };
     
-    const addAccuracyCircle = async (map: typeof GoogleMap) => {
+    const addAccuracyCircle = async (map: any) => {
       // Find the user marker (usually of type 'driver')
       const userMarker = markers.find(m => m.type === 'driver');
       
@@ -142,20 +144,12 @@ const NativeMap: React.FC<NativeMapProps> = ({
       });
     };
 
-    // Add map controls
-    const addMapControls = async (map: typeof GoogleMap) => {
-      if (liteMode) return; // Skip controls in lite mode
-      
-      // We don't add UI controls here because the native Google Maps
-      // already has built-in controls that are platform-specific
-    };
-
     initializeMap();
     
     // Cleanup the map when the component unmounts
     return () => {
       if (googleMap) {
-        GoogleMap.remove({ id: mapId });
+        CapacitorGoogleMaps.remove({ id: mapId });
       }
     };
   }, [mapId, center, zoom, markers, liteMode, locationAccuracy, showAccuracyCircle]);
@@ -165,7 +159,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
     const updateMapCenter = async () => {
       if (mapInitialized && Capacitor.isNativePlatform()) {
         try {
-          await GoogleMap.setCamera({
+          await CapacitorGoogleMaps.setCamera({
             id: mapId,
             config: {
               coordinate: { lat: center.lat, lng: center.lng },

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Capacitor } from '@capacitor/core';
 import DeliveryGoogleMap from './DeliveryGoogleMap';
@@ -24,6 +25,7 @@ interface UnifiedMapViewProps {
   forceWebView?: boolean;
   locationAccuracy?: AccuracyLevel;
   showAccuracyCircle?: boolean;
+  onMapReady?: () => void;
 }
 
 const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
@@ -39,7 +41,8 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   lowPerformanceMode = false,
   forceWebView = false,
   locationAccuracy,
-  showAccuracyCircle
+  showAccuracyCircle,
+  onMapReady
 }) => {
   const isNativePlatform = Capacitor.isNativePlatform() && !forceWebView;
 
@@ -90,6 +93,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
             liteMode={!isInteractive || lowPerformanceMode}
             locationAccuracy={locationAccuracy}
             showAccuracyCircle={showAccuracyCircle}
+            onMapReady={onMapReady}
           />
         ) : (
           <DeliveryGoogleMap 
@@ -104,6 +108,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
             lowPerformanceMode={lowPerformanceMode}
             locationAccuracy={locationAccuracy}
             showAccuracyCircle={showAccuracyCircle}
+            onMapReady={onMapReady}
           />
         )}
       </div>

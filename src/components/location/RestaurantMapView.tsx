@@ -1,13 +1,11 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { MapPin, Locate } from 'lucide-react';
 import UnifiedMapView from '@/components/maps/UnifiedMapView';
 import { Button } from '@/components/ui/button';
-import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { NearbyRestaurant } from '@/hooks/useNearestRestaurant';
-import { toast } from 'sonner';
-import { getHighAccuracyLocation, isHighAccuracyLocation } from '@/utils/locationAccuracyManager';
-import { AccuracyLevel } from './LocationAccuracyIndicator';
+import LocationPermissionHandler from './LocationPermissionHandler';
+import { useLocationWithIndicators } from '@/hooks/useLocationWithIndicators';
 
 interface RestaurantMapViewProps {
   restaurants?: NearbyRestaurant[];
@@ -20,34 +18,41 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
   selectedRestaurantId,
   onRestaurantSelect
 }) => {
-  const { lastLocation, getCurrentLocation, isLoadingLocation } = useCurrentLocation();
-  const [userLocation, setUserLocation] = useState<{latitude: number, longitude: number} | null>(null);
-  const [mapCenter, setMapCenter] = useState<{latitude: number, longitude: number} | null>(null);
-  const [locationAccuracy, setLocationAccuracy] = useState<AccuracyLevel>('unknown');
-  const [showAccuracyCircle, setShowAccuracyCircle] = useState(false);
+  const {
+    userLocation,
+    mapCenter,
+    isLoadingLocation,
+    locationAccuracy,
+    showAccuracyCircle,
+    permissionGranted,
+    handleCenterOnMe
+  } = useLocationWithIndicators();
 
   // Convert restaurants to map markers
-  const getMapLocations = useCallback(() => {
+  const getMapLocations = React.useCallback(() => {
     const markers = [];
     
     // Add restaurant markers
     if (restaurants && restaurants.length > 0) {
       for (const restaurant of restaurants) {
-        // Ensure we're accessing restaurant_latitude and restaurant_longitude instead of latitude/longitude
         if (restaurant.restaurant_id && restaurant.restaurant_name) {
           // Check if restaurant has restaurant_latitude/longitude or latitude/longitude
-          const lat = 'restaurant_latitude' in restaurant ? restaurant.restaurant_latitude : 
-                     'latitude' in restaurant ? restaurant.latitude : 0;
-          const lng = 'restaurant_longitude' in restaurant ? restaurant.restaurant_longitude : 
-                     'longitude' in restaurant ? restaurant.longitude : 0;
+          const lat = restaurant.restaurant_latitude !== undefined ? restaurant.restaurant_latitude : 
+                     restaurant.latitude !== undefined ? restaurant.latitude : null;
                      
-          markers.push({
-            latitude: lat,
-            longitude: lng,
-            title: restaurant.restaurant_name,
-            description: `${restaurant.distance_km.toFixed(1)} km away`,
-            type: 'restaurant'
-          });
+          const lng = restaurant.restaurant_longitude !== undefined ? restaurant.restaurant_longitude : 
+                     restaurant.longitude !== undefined ? restaurant.longitude : null;
+          
+          // Only add restaurant to map if it has valid coordinates
+          if (lat !== null && lng !== null) {
+            markers.push({
+              latitude: lat,
+              longitude: lng,
+              title: restaurant.restaurant_name,
+              description: `${restaurant.distance_km.toFixed(1)} km away`,
+              type: 'restaurant'
+            });
+          }
         }
       }
     }
@@ -55,102 +60,24 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     return markers;
   }, [restaurants]);
 
-  // Update user location when lastLocation changes
-  useEffect(() => {
-    if (lastLocation && lastLocation.latitude && lastLocation.longitude) {
-      setUserLocation({
-        latitude: lastLocation.latitude,
-        longitude: lastLocation.longitude
-      });
-      
-      // If we don't have a map center yet, center on user
-      if (!mapCenter) {
-        setMapCenter({
-          latitude: lastLocation.latitude,
-          longitude: lastLocation.longitude
-        });
-      }
-      
-      // Set location accuracy level
-      if (lastLocation.accuracy) {
-        if (lastLocation.accuracy < 50) {
-          setLocationAccuracy('high');
-        } else if (lastLocation.accuracy < 200) {
-          setLocationAccuracy('medium');
-        } else {
-          setLocationAccuracy('low');
-        }
-      }
-    }
-  }, [lastLocation, mapCenter]);
-
-  const handleCenterOnMe = async () => {
+  // Get all markers
+  const getEffectiveMarkers = React.useCallback(() => {
+    const locationMarkers = getMapLocations();
+    
+    // Add user location marker if available
     if (userLocation) {
-      // If we already have a location, center on it immediately
-      setMapCenter({
+      locationMarkers.push({
         latitude: userLocation.latitude,
-        longitude: userLocation.longitude
+        longitude: userLocation.longitude,
+        title: 'Your Location',
+        type: 'driver' // Using 'driver' type as it represents the current user
       });
-      setShowAccuracyCircle(true);
-      
-      // Then try to get a fresh location
-      toast.loading('Updating your location...');
-      try {
-        const freshLocation = await getHighAccuracyLocation();
-        if (freshLocation && isHighAccuracyLocation(freshLocation)) {
-          setUserLocation({
-            latitude: freshLocation.latitude,
-            longitude: freshLocation.longitude
-          });
-          setMapCenter({
-            latitude: freshLocation.latitude,
-            longitude: freshLocation.longitude
-          });
-          
-          // Update accuracy level
-          if (freshLocation.accuracy < 50) {
-            setLocationAccuracy('high');
-          } else if (freshLocation.accuracy < 200) {
-            setLocationAccuracy('medium');
-          } else {
-            setLocationAccuracy('low');
-          }
-          
-          toast.success('Location updated');
-        } else {
-          toast.warning('Could not get a high accuracy location');
-        }
-      } catch (error) {
-        console.error('Error updating location:', error);
-        toast.error('Failed to update location');
-      }
-    } else {
-      // If we don't have a location yet, try to get one
-      toast.loading('Getting your location...');
-      try {
-        const location = await getCurrentLocation();
-        if (location) {
-          setUserLocation({
-            latitude: location.latitude,
-            longitude: location.longitude
-          });
-          setMapCenter({
-            latitude: location.latitude,
-            longitude: location.longitude
-          });
-          setShowAccuracyCircle(true);
-          toast.success('Location found');
-        } else {
-          toast.error('Could not get your location');
-        }
-      } catch (error) {
-        console.error('Error getting location:', error);
-        toast.error('Failed to get location');
-      }
     }
-  };
+    
+    return locationMarkers;
+  }, [getMapLocations, userLocation]);
 
-  // Select a center point based on available data
+  // Get center coordinates for the map
   const getEffectiveCenter = () => {
     // If user has explicitly set a map center, use that
     if (mapCenter) {
@@ -162,24 +89,23 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
       return userLocation;
     }
     
-    // If we have restaurants, use the first one
+    // If we have restaurants, use the first one with valid coordinates
     if (restaurants && restaurants.length > 0) {
-      // Safely check for coordinates in the restaurant object
-      const firstRestaurant = restaurants[0];
-      
-      // Check if restaurant has restaurant_latitude/longitude or latitude/longitude
-      if ('restaurant_latitude' in firstRestaurant && 'restaurant_longitude' in firstRestaurant) {
-        return {
-          latitude: firstRestaurant.restaurant_latitude,
-          longitude: firstRestaurant.restaurant_longitude
-        };
-      }
-      
-      if ('latitude' in firstRestaurant && 'longitude' in firstRestaurant) {
-        return {
-          latitude: firstRestaurant.latitude,
-          longitude: firstRestaurant.longitude
-        };
+      for (const restaurant of restaurants) {
+        // Check for valid coordinates
+        if (restaurant.restaurant_latitude !== undefined && restaurant.restaurant_longitude !== undefined) {
+          return {
+            latitude: restaurant.restaurant_latitude,
+            longitude: restaurant.restaurant_longitude
+          };
+        }
+        
+        if (restaurant.latitude !== undefined && restaurant.longitude !== undefined) {
+          return {
+            latitude: restaurant.latitude,
+            longitude: restaurant.longitude
+          };
+        }
       }
     }
     
@@ -187,19 +113,36 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     return { latitude: 40.7128, longitude: -74.0060 };
   };
 
-  const center = getEffectiveCenter();
-  const locations = getMapLocations();
-
-  // Add user location to markers if available
-  const allMarkers = [...locations];
-  if (userLocation) {
-    allMarkers.push({
-      latitude: userLocation.latitude,
-      longitude: userLocation.longitude,
-      title: 'Your Location',
-      type: 'driver' // Using 'driver' type as it represents the current user in the map component
-    });
+  // If permission is not granted, show permission handler
+  if (permissionGranted === false) {
+    return (
+      <div className="space-y-4">
+        <LocationPermissionHandler 
+          onPermissionGranted={() => {
+            // Permission was granted, now we can show the map
+            handleCenterOnMe();
+          }}
+        />
+        
+        {/* Show limited map without user location */}
+        <div className="rounded-lg overflow-hidden mt-4 opacity-70">
+          <UnifiedMapView 
+            mapId="restaurant-map"
+            height="h-[300px]"
+            className="w-full"
+            additionalMarkers={getMapLocations()}
+            showHeader={true}
+            title="Restaurants Near You"
+            isInteractive={false}
+            zoomLevel={13}
+          />
+        </div>
+      </div>
+    );
   }
+
+  const allMarkers = getEffectiveMarkers();
+  const center = getEffectiveCenter();
   
   return (
     <div className="relative">
