@@ -33,7 +33,7 @@ const EDUCATIONAL_UI_SHOWN_KEY = 'location_educational_ui_shown';
 const INITIAL_PROMPT_SHOWN_KEY = 'location_initial_prompt_shown';
 
 export function useLocationPermission(): LocationPermissionHookResponse {
-  // Use storage hook for persistent data
+  // Use storage hook for persistent data with error handling
   const { value: storedPermission, setValue: setStoredPermission } = useStorage<LocationPermissionState>(
     LOCATION_PERMISSION_KEY, 
     'prompt'
@@ -66,6 +66,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
   const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
   const [hasShownInitialPrompt, setHasShownInitialPrompt] = useState(false);
   const [permissionCheckAttempts, setPermissionCheckAttempts] = useState(0);
+  const [pluginInitialized, setPluginInitialized] = useState(false);
 
   // Initialize state from storage values when available
   useEffect(() => {
@@ -86,44 +87,90 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     }
   }, [storedPermission, storedBackgroundPermission, storedEducationalUiShown, storedInitialPromptShown]);
 
-  // Check permissions on component mount
+  // Initialize the plugin with retry
   useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        // Try to use our plugin to check permissions
-        const permissionStatus = await LocationPermissions.checkPermissionStatus();
-        
-        // Update both state and storage with results that match Capacitor's structure
-        setPermissionStatus(permissionStatus.location as LocationPermissionState);
-        setBackgroundPermissionStatus(permissionStatus.backgroundLocation as LocationPermissionState);
-        setStoredPermission(permissionStatus.location as LocationPermissionState);
-        setStoredBackgroundPermission(permissionStatus.backgroundLocation as LocationPermissionState);
-        
-        // If permission is granted, get the current location
-        if (permissionStatus.location === 'granted') {
-          getCurrentLocation();
-        }
-        
+    const initializePlugin = async () => {
+      if (!Platform.isNative() || pluginInitialized) {
         setHasInitialized(true);
+        return;
+      }
+      
+      try {
+        // Wait before initializing to allow native code to initialize
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setPluginInitialized(true);
+        checkPermissions();
       } catch (error) {
-        console.error('Error checking location permissions:', error);
-        
-        // Only retry up to 3 times to avoid infinite loops
-        if (permissionCheckAttempts < 3) {
-          setPermissionCheckAttempts(prev => prev + 1);
-          // Delay retry to avoid rapid failures
-          setTimeout(checkPermissions, 1000);
-        } else {
-          // After 3 failures, set a default state and continue
-          setPermissionStatus('prompt');
-          setBackgroundPermissionStatus('prompt');
-          setHasInitialized(true);
-        }
+        console.error('Error initializing location plugin:', error);
       }
     };
     
-    checkPermissions();
-  }, [permissionCheckAttempts]);
+    initializePlugin();
+  }, []);
+
+  // Check permissions with retry mechanism
+  const checkPermissions = useCallback(async () => {
+    if (!Platform.isNative()) {
+      setHasInitialized(true);
+      return;
+    }
+    
+    try {
+      // Try to use our plugin to check permissions
+      const permissionStatus = await LocationPermissions.checkPermissionStatus();
+      
+      // Update both state and storage with results that match Capacitor's structure
+      setPermissionStatus(permissionStatus.location as LocationPermissionState);
+      setBackgroundPermissionStatus(permissionStatus.backgroundLocation as LocationPermissionState);
+      
+      // Only update storage if the values actually changed
+      if (storedPermission !== permissionStatus.location) {
+        setStoredPermission(permissionStatus.location as LocationPermissionState);
+      }
+      
+      if (storedBackgroundPermission !== permissionStatus.backgroundLocation) {
+        setStoredBackgroundPermission(permissionStatus.backgroundLocation as LocationPermissionState);
+      }
+      
+      // If permission is granted, get the current location
+      if (permissionStatus.location === 'granted') {
+        getCurrentLocation();
+      }
+      
+      setHasInitialized(true);
+      setPermissionCheckAttempts(0); // Reset attempts on success
+    } catch (error) {
+      console.error('Error checking location permissions:', error);
+      
+      // Only retry up to 3 times to avoid infinite loops
+      if (permissionCheckAttempts < 3) {
+        setPermissionCheckAttempts(prev => prev + 1);
+        // Delay retry to avoid rapid failures
+        setTimeout(() => checkPermissions(), 1000);
+      } else {
+        // After 3 failures, set a default state and continue
+        setPermissionStatus('prompt');
+        setBackgroundPermissionStatus('prompt');
+        setHasInitialized(true);
+        
+        // Try to use Capacitor Geolocation API as a fallback
+        try {
+          const { location } = await Geolocation.checkPermissions();
+          setPermissionStatus(location as LocationPermissionState);
+          setStoredPermission(location as LocationPermissionState);
+        } catch (fallbackError) {
+          console.error('Fallback permission check failed:', fallbackError);
+        }
+      }
+    }
+  }, [permissionCheckAttempts, setStoredPermission, setStoredBackgroundPermission, storedPermission, storedBackgroundPermission]);
+  
+  // Effect to check permissions when plugin is initialized
+  useEffect(() => {
+    if (pluginInitialized) {
+      checkPermissions();
+    }
+  }, [pluginInitialized, checkPermissions]);
   
   // Helper function to get current location
   const getCurrentLocation = async () => {
@@ -153,34 +200,69 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     }
   };
 
-  // Request foreground location permission
+  // Request foreground location permission with better error handling
   const requestPermission = async (): Promise<boolean> => {
     setIsRequesting(true);
     setHasShownInitialPrompt(true);
     setStoredInitialPromptShown(true);
     
     try {
-      // Use our plugin to request permission - Updated to use requestPermissions
-      const result = await LocationPermissions.requestPermissions({
-        includeBackground: false
-      });
-      
-      // Update both state and storage
-      const locationState = result.location as LocationPermissionState;
-      const backgroundState = result.backgroundLocation as LocationPermissionState;
-      
-      setPermissionStatus(locationState);
-      setBackgroundPermissionStatus(backgroundState);
-      setStoredPermission(locationState);
-      setStoredBackgroundPermission(backgroundState);
-      
-      // If permission is granted, get location
-      if (locationState === 'granted') {
-        await getCurrentLocation();
-        return true;
+      if (Platform.isWeb()) {
+        // Web implementation - use Capacitor's Geolocation API directly
+        const { location } = await Geolocation.requestPermissions();
+        const locationState = location as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setStoredPermission(locationState);
+        
+        if (locationState === 'granted') {
+          await getCurrentLocation();
+          return true;
+        }
+        
+        return false;
       }
       
-      return false;
+      // Native implementation - use our plugin
+      try {
+        // Use our plugin to request permission - Updated to use requestPermissions
+        const result = await LocationPermissions.requestPermissions({
+          includeBackground: false
+        });
+        
+        // Update both state and storage
+        const locationState = result.location as LocationPermissionState;
+        const backgroundState = result.backgroundLocation as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setBackgroundPermissionStatus(backgroundState);
+        setStoredPermission(locationState);
+        setStoredBackgroundPermission(backgroundState);
+        
+        // If permission is granted, get location
+        if (locationState === 'granted') {
+          await getCurrentLocation();
+          return true;
+        }
+        
+        return false;
+      } catch (pluginError) {
+        console.error('Plugin permission request failed, trying Capacitor API:', pluginError);
+        
+        // Fallback to Capacitor API
+        const { location } = await Geolocation.requestPermissions();
+        const locationState = location as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setStoredPermission(locationState);
+        
+        if (locationState === 'granted') {
+          await getCurrentLocation();
+          return true;
+        }
+        
+        return false;
+      }
     } catch (error) {
       console.error('Error requesting location permission:', error);
       toast.error('An error occurred while requesting location permissions');

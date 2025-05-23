@@ -1,5 +1,4 @@
 
-// Create the storage manager file that was missing
 import { Platform } from '@/utils/platform';
 
 /**
@@ -10,14 +9,14 @@ export class StorageManager {
   private static instances: Record<string, StorageManager> = {};
   private namespace: string;
   private preferencesModule: any = null;
+  private isPreferencesLoaded = false;
+  private preferencesLoadPromise: Promise<any> | null = null;
   
   private constructor(namespace: string) {
     this.namespace = namespace;
-    // Attempt to load Preferences module if on native platform
+    // Initialize Preferences module if on native platform
     if (Platform.isNative()) {
-      this.loadPreferencesModule().catch(err => 
-        console.warn('Could not load Preferences module:', err)
-      );
+      this.preferencesLoadPromise = this.loadPreferencesModule();
     }
   }
   
@@ -32,21 +31,42 @@ export class StorageManager {
   }
   
   /**
-   * Load Preferences module dynamically to avoid build-time issues
+   * Load Preferences module dynamically with retry mechanism
    */
   private async loadPreferencesModule(): Promise<any> {
-    if (this.preferencesModule) return this.preferencesModule;
-    
-    try {
-      // Using Function constructor to prevent bundlers from analyzing this at build time
-      const importModule = new Function('return import("@capacitor/preferences")')();
-      const module = await importModule;
-      this.preferencesModule = module.Preferences;
+    if (this.isPreferencesLoaded && this.preferencesModule) {
       return this.preferencesModule;
-    } catch (error) {
-      console.error('Error loading Capacitor Preferences:', error);
-      throw error;
     }
+    
+    // Implement retry mechanism for loading preferences
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+      try {
+        // Using dynamic import to avoid build-time analysis
+        const importModule = new Function('return import("@capacitor/preferences")')();
+        const module = await importModule;
+        this.preferencesModule = module.Preferences;
+        this.isPreferencesLoaded = true;
+        console.log('Successfully loaded Capacitor Preferences');
+        return this.preferencesModule;
+      } catch (error) {
+        retries++;
+        console.warn(`Error loading Capacitor Preferences (attempt ${retries}/${maxRetries}):`, error);
+        
+        if (retries >= maxRetries) {
+          console.error('Failed to load Capacitor Preferences after maximum retries');
+          // Don't throw here - we'll fall back to localStorage
+          return null;
+        }
+        
+        // Wait before retrying with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retries)));
+      }
+    }
+    
+    return null;
   }
   
   /**
@@ -57,111 +77,171 @@ export class StorageManager {
   }
   
   /**
-   * Set an item in storage
+   * Check if Preferences module is available
+   */
+  private async isPreferencesAvailable(): Promise<boolean> {
+    if (this.isPreferencesLoaded) return true;
+    if (!Platform.isNative()) return false;
+    
+    try {
+      const module = await this.preferencesLoadPromise;
+      return !!module;
+    } catch {
+      return false;
+    }
+  }
+  
+  /**
+   * Set an item in storage with better error handling
    */
   public async setItem<T>(key: string, value: T): Promise<void> {
     const namespacedKey = this.getNamespacedKey(key);
     const stringifiedValue = JSON.stringify(value);
     
-    if (Platform.isNative()) {
+    // Try native storage first if on native platform
+    if (await this.isPreferencesAvailable()) {
       try {
-        const prefs = await this.loadPreferencesModule();
-        await prefs.set({
+        await this.preferencesModule.set({
           key: namespacedKey,
           value: stringifiedValue
         });
+        return;
       } catch (error) {
-        console.error('Error saving to Preferences:', error);
-        // Fall back to localStorage if native storage fails
-        localStorage.setItem(namespacedKey, stringifiedValue);
+        console.warn('Native storage failed, falling back to localStorage:', error);
       }
-    } else {
+    }
+    
+    // Fallback to localStorage with error handling
+    try {
+      localStorage.setItem(namespacedKey, stringifiedValue);
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+      // If localStorage fails (quota exceeded, private browsing), try to remove some items
+      this.handleStorageError(error);
+      // Try again with localStorage
       try {
         localStorage.setItem(namespacedKey, stringifiedValue);
-      } catch (error) {
-        console.error('Error saving to localStorage:', error);
-        throw error;
+      } catch (retryError) {
+        console.error('Failed to save to localStorage even after cleanup:', retryError);
       }
     }
   }
   
   /**
-   * Get an item from storage
+   * Get an item from storage with better error handling
    */
   public async getItem<T>(key: string): Promise<T | null> {
     const namespacedKey = this.getNamespacedKey(key);
     
-    if (Platform.isNative()) {
+    // Try native storage first if on native platform
+    if (await this.isPreferencesAvailable()) {
       try {
-        const prefs = await this.loadPreferencesModule();
-        const { value } = await prefs.get({ key: namespacedKey });
+        const { value } = await this.preferencesModule.get({ key: namespacedKey });
         if (!value) return null;
         
         try {
           return JSON.parse(value) as T;
-        } catch {
+        } catch (parseError) {
+          console.warn('Failed to parse value from native storage:', parseError);
           return null;
         }
       } catch (error) {
-        console.error('Error getting from Preferences:', error);
-        // Fall back to localStorage if native storage fails
-        const value = localStorage.getItem(namespacedKey);
-        if (!value) return null;
-        
-        try {
-          return JSON.parse(value) as T;
-        } catch {
-          return null;
-        }
+        console.warn('Error getting from native storage, falling back to localStorage:', error);
       }
-    } else {
+    }
+    
+    // Fallback to localStorage with error handling
+    try {
       const value = localStorage.getItem(namespacedKey);
       if (!value) return null;
       
       try {
         return JSON.parse(value) as T;
-      } catch {
+      } catch (parseError) {
+        console.warn('Failed to parse value from localStorage:', parseError);
         return null;
       }
+    } catch (error) {
+      console.error('Error reading from localStorage:', error);
+      return null;
     }
   }
   
   /**
-   * Remove an item from storage
+   * Remove an item from storage with better error handling
    */
   public async removeItem(key: string): Promise<void> {
     const namespacedKey = this.getNamespacedKey(key);
     
-    if (Platform.isNative()) {
+    // Try native storage first if on native platform
+    if (await this.isPreferencesAvailable()) {
       try {
-        const prefs = await this.loadPreferencesModule();
-        await prefs.remove({ key: namespacedKey });
+        await this.preferencesModule.remove({ key: namespacedKey });
+        return;
       } catch (error) {
-        console.error('Error removing from Preferences:', error);
-        // Fall back to localStorage if native storage fails
-        localStorage.removeItem(namespacedKey);
+        console.warn('Error removing from native storage, falling back to localStorage:', error);
       }
-    } else {
+    }
+    
+    // Fallback to localStorage
+    try {
       localStorage.removeItem(namespacedKey);
+    } catch (error) {
+      console.error('Error removing from localStorage:', error);
     }
   }
   
   /**
-   * Clear all items in this namespace
+   * Handle storage errors by cleaning up old data if possible
+   */
+  private handleStorageError(error: any): void {
+    // If we're out of space, try to clean up some old items
+    try {
+      const totalItems = localStorage.length;
+      if (totalItems > 20) {  // If we have more than 20 items
+        // Remove oldest items first (up to 5 items)
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length && keysToRemove.length < 5; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`${this.namespace}:`)) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        // Remove the collected keys
+        keysToRemove.forEach(key => {
+          try {
+            localStorage.removeItem(key);
+            console.log('Removed old storage item:', key);
+          } catch (e) {
+            // Ignore errors during cleanup
+          }
+        });
+      }
+    } catch (cleanupError) {
+      console.error('Error during storage cleanup:', cleanupError);
+    }
+  }
+  
+  /**
+   * Clear all items in this namespace with better error handling
    */
   public async clear(): Promise<void> {
-    if (Platform.isNative()) {
+    if (await this.isPreferencesAvailable()) {
       try {
-        const prefs = await this.loadPreferencesModule();
-        const { keys } = await prefs.keys();
+        const { keys } = await this.preferencesModule.keys();
         const namespacedKeys = keys.filter(k => k.startsWith(`${this.namespace}:`));
         
         for (const key of namespacedKeys) {
-          await prefs.remove({ key });
+          try {
+            await this.preferencesModule.remove({ key });
+          } catch (error) {
+            console.warn(`Failed to remove key ${key} from native storage:`, error);
+          }
         }
       } catch (error) {
-        console.error('Error clearing Preferences:', error);
-        // Fall back to localStorage clearing if native storage fails
+        console.error('Error clearing native storage:', error);
+        // Fall back to localStorage clearing
         this.clearLocalStorage();
       }
     } else {
@@ -170,32 +250,46 @@ export class StorageManager {
   }
   
   private clearLocalStorage(): void {
-    // For localStorage, we iterate through all keys and remove those in our namespace
+    // For localStorage, iterate through all keys and remove those in our namespace
     const namespacedPrefix = `${this.namespace}:`;
     
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(namespacedPrefix)) {
-        localStorage.removeItem(key);
+    try {
+      const keysToRemove = [];
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(namespacedPrefix)) {
+          keysToRemove.push(key);
+        }
       }
+      
+      // Remove keys in a separate pass to avoid index shifting issues
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Failed to remove key ${key} from localStorage:`, e);
+        }
+      });
+    } catch (error) {
+      console.error('Error during localStorage cleanup:', error);
     }
   }
   
   /**
-   * Get all keys in this namespace
+   * Get all keys in this namespace with better error handling
    */
   public async keys(): Promise<string[]> {
     const namespacedPrefix = `${this.namespace}:`;
     
-    if (Platform.isNative()) {
+    if (await this.isPreferencesAvailable()) {
       try {
-        const prefs = await this.loadPreferencesModule();
-        const { keys } = await prefs.keys();
+        const { keys } = await this.preferencesModule.keys();
         return keys
           .filter(k => k.startsWith(namespacedPrefix))
           .map(k => k.slice(namespacedPrefix.length));
       } catch (error) {
-        console.error('Error getting keys from Preferences:', error);
+        console.error('Error getting keys from native storage:', error);
         // Fall back to localStorage if native storage fails
         return this.getLocalStorageKeys();
       }
@@ -208,11 +302,15 @@ export class StorageManager {
     const namespacedPrefix = `${this.namespace}:`;
     const result: string[] = [];
     
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(namespacedPrefix)) {
-        result.push(key.slice(namespacedPrefix.length));
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(namespacedPrefix)) {
+          result.push(key.slice(namespacedPrefix.length));
+        }
       }
+    } catch (error) {
+      console.error('Error getting keys from localStorage:', error);
     }
     
     return result;
@@ -220,7 +318,9 @@ export class StorageManager {
   
   // Storage type detection
   getImplementationType(): string {
-    return Platform.isNative() ? 'Native Storage (Capacitor Preferences)' : 'Web Storage (localStorage)';
+    return Platform.isNative() 
+      ? (this.isPreferencesLoaded ? 'Native Storage (Capacitor Preferences)' : 'Web Storage (localStorage, native fallback)') 
+      : 'Web Storage (localStorage)';
   }
 }
 

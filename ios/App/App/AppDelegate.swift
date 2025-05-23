@@ -20,6 +20,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // This ensures that the LocationPermissionsPlugin is available before any UI components try to use it
         initializeServicesSync(application)
         
+        // Initialize Capacitor Storage - Required for Storage plugins to work properly
+        initializeCapacitorStorage()
+        
         return true
     }
     
@@ -47,6 +50,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Ensure minimum width for toolbars
         UIView.swizzleAutoresizingMaskIntoConstraintsIfNeeded()
+    }
+    
+    // Initialize Capacitor's storage system
+    private func initializeCapacitorStorage() {
+        // This ensures that the Capacitor Preferences plugin is properly initialized 
+        // before being accessed by other components
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                // Create a small test file to verify storage access
+                let fileManager = FileManager.default
+                let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+                let testFilePath = documentDirectory.appendingPathComponent("storage_test.txt")
+                
+                try "Storage test".write(to: testFilePath, atomically: true, encoding: .utf8)
+                try fileManager.removeItem(at: testFilePath)
+                
+                print("Storage system initialized successfully")
+            } catch {
+                print("Error initializing storage system: \(error.localizedDescription)")
+            }
+        }
     }
     
     // New synchronous initialization method

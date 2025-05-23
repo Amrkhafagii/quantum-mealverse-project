@@ -1,3 +1,4 @@
+
 import Foundation
 import Capacitor
 import CoreLocation
@@ -25,16 +26,21 @@ public class LocationPermissionsPlugin: CAPPlugin {
     private let accuracyTimeout: TimeInterval = 15 // 15 seconds timeout for accuracy improvements
     
     @objc override public func load() {
-        // Ensure LocationManager is initialized first
+        // Ensure LocationManager is initialized first - use synchronous initialization
+        print("LocationPermissionsPlugin loading - initializing LocationManager")
         LocationManager.shared.initializeSync()
         
         // Use LocationManager's already initialized CLLocationManager instance
         locationManager = LocationManager.shared.locationManager
         
-        // Initialize batch processor
-        batchProcessor = LocationBatchProcessor()
-        batchProcessor.setBestLocationHandler { [weak self] location in
-            self?.handleBestLocation(location)
+        // Initialize batch processor with error handling
+        do {
+            batchProcessor = LocationBatchProcessor()
+            batchProcessor.setBestLocationHandler { [weak self] location in
+                self?.handleBestLocation(location)
+            }
+        } catch {
+            print("Error initializing LocationBatchProcessor: \(error.localizedDescription)")
         }
         
         // Listen for permission changes from other components
@@ -113,14 +119,14 @@ public class LocationPermissionsPlugin: CAPPlugin {
     
     // Main method to request permissions - this is called from JS via `requestPermissions`
     @objc func requestPermissions(_ call: CAPPluginCall) {
-        print("requestPermissions called")
+        print("requestPermissions called with options:", call.options)
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
     // Alternative method - this is called from JS via `requestLocationPermission`
     @objc func requestLocationPermission(_ call: CAPPluginCall) {
-        print("requestLocationPermission called")
+        print("requestLocationPermission called with options:", call.options)
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
@@ -132,6 +138,15 @@ public class LocationPermissionsPlugin: CAPPlugin {
         if let cache = permissionStatusCache, permissionCacheIsValid() {
             print("Using cached permission status")
             call.resolve(cache)
+            return
+        }
+        
+        guard let locationManager = self.locationManager else {
+            print("LocationManager not initialized, returning denied status")
+            call.resolve([
+                "location": "denied",
+                "backgroundLocation": "denied"
+            ])
             return
         }
         
@@ -169,6 +184,13 @@ public class LocationPermissionsPlugin: CAPPlugin {
         }
         
         lastRequestTime = now
+        
+        // Verify location manager is available
+        guard let locationManager = self.locationManager else {
+            print("LocationManager not initialized, returning error")
+            call.reject("Location manager not initialized")
+            return
+        }
         
         // Store the callback to resolve later
         if let id = callbackId {
