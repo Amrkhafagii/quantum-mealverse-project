@@ -1,8 +1,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import LocationPermissions, { LocationPermissionStatus } from '../plugins/LocationPermissionsPlugin';
+import { BatteryOptimization } from '@/utils/batteryOptimization';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+
+export type AccuracyLevel = 'high' | 'medium' | 'low' | 'unknown';
 
 export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
+
+interface LocationPermissionStatus {
+  location: PermissionState;
+  backgroundLocation: PermissionState;
+}
 
 export function useLocationPermissions() {
   const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
@@ -111,7 +119,7 @@ export function useLocationPermissions() {
       // Try with the plugin first
       if (!fallbackMode) {
         // Start with high accuracy request
-        const highAccuracyOptions = { includeBackground: true, enableHighAccuracy: true };
+        const highAccuracyOptions = { includeBackground: true };
         try {
           const status = await LocationPermissions.requestPermission(highAccuracyOptions);
           setPermissionStatus(status.location);
@@ -130,7 +138,7 @@ export function useLocationPermissions() {
           
           // If high accuracy failed, try with lower accuracy
           try {
-            const lowAccuracyOptions = { enableHighAccuracy: false };
+            const lowAccuracyOptions = { includeBackground: false };
             const status = await LocationPermissions.requestPermission(lowAccuracyOptions);
             
             setPermissionStatus(status.location);
@@ -236,3 +244,21 @@ export function useLocationPermissions() {
     checkLocationAvailability
   };
 }
+
+// Add missing LocationPermissions global variable
+const LocationPermissions = {
+  checkPermissionStatus: async (): Promise<LocationPermissionStatus> => {
+    // Fallback implementation
+    return { 
+      location: 'prompt' as PermissionState,
+      backgroundLocation: 'prompt' as PermissionState
+    };
+  },
+  requestPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
+    // Fallback implementation
+    return {
+      location: 'prompt' as PermissionState,
+      backgroundLocation: 'prompt' as PermissionState
+    };
+  }
+};

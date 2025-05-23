@@ -1,166 +1,162 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { toast } from '@/components/ui/use-toast';
-import { DeliveryLocation } from '@/types/location';
 import { useLocationPermissions } from './useLocationPermissions';
-import { useCurrentLocation } from './useCurrentLocation';
-import { useBackgroundLocationTracking } from './useBackgroundLocationTracking';
-import { useForegroundLocationTracking } from './useForegroundLocationTracking';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation, Position } from '@capacitor/geolocation';
 
-export const useNativeLocationService = (options: {
-  backgroundTracking?: boolean;
-  trackingInterval?: number;
-}) => {
+// Option types for the hook
+interface NativeLocationOptions {
+  watchPosition?: boolean;
+  highAccuracy?: boolean;
+  timeout?: number;
+  maximumAge?: number;
+}
+
+// Result type for location service
+interface LocationResult {
+  position: Position | null;
+  error: Error | null;
+  isLoading: boolean;
+  isWatching: boolean;
+}
+
+export function useNativeLocationService(options: NativeLocationOptions = {}) {
+  const [position, setPosition] = useState<Position | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isWatching, setIsWatching] = useState(false);
+  const [watchId, setWatchId] = useState<string | null>(null);
+  const locationPermissions = useLocationPermissions();
+  const { permissionStatus } = locationPermissions;
+
+  // Default options
   const {
-    backgroundTracking = false,
-    trackingInterval = 10000, // 10 seconds default
+    watchPosition = false,
+    highAccuracy = true,
+    timeout = 10000,
+    maximumAge = 0
   } = options;
-  
-  const [location, setLocation] = useState<DeliveryLocation | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isTracking, setIsTracking] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  
-  // Use the smaller hooks
-  const { permissionStatus, requestPermissions } = useLocationPermissions();
-  const { getCurrentLocation } = useCurrentLocation();
-  
-  // Get the background tracking functions
-  const { 
-    startBackgroundTracking, 
-    stopBackgroundTracking, 
-    isBackgroundTracking 
-  } = useBackgroundLocationTracking({
-    onLocationUpdate: (newLocation) => {
-      setLocation(newLocation);
-      setLastUpdated(new Date());
-    }
-  });
-  
-  // Get the foreground tracking functions - using proper destructuring with renamed variables
-  const foregroundTracker = useForegroundLocationTracking({
-    onLocationUpdate: (newLocation) => {
-      setLocation(newLocation);
-      setLastUpdated(new Date());
-    }
-  });
-  
-  // Destructuring with renamed variables to avoid naming conflicts
-  const { 
-    startTracking: startForegroundTracking,
-    stopTracking: stopForegroundTracking,
-    isTracking: isForegroundTracking
-  } = foregroundTracker;
 
-  // Update tracking state when either type of tracking changes
-  useEffect(() => {
-    setIsTracking(isBackgroundTracking || isForegroundTracking);
-  }, [isBackgroundTracking, isForegroundTracking]);
-  
-  // Get current location with permission handling
-  const getCurrentLocationWithPermission = useCallback(async (): Promise<DeliveryLocation | null> => {
-    try {
-      if (permissionStatus !== 'granted') {
-        const granted = await requestPermissions();
-        if (!granted) {
-          setError('Location permission not granted');
-          return null;
-        }
-      }
-      
-      const locationData = await getCurrentLocation();
-      
-      if (locationData) {
-        setLocation(locationData);
-        setLastUpdated(new Date());
-        setError(null);
-      }
-      
-      return locationData;
-    } catch (err) {
-      console.error('Error getting current location', err);
-      setError('Failed to get location');
-      return null;
+  // Get current position once
+  const getCurrentPosition = useCallback(async () => {
+    if (!Capacitor.isPluginAvailable('Geolocation')) {
+      setError(new Error('Geolocation is not available on this device'));
+      return;
     }
-  }, [permissionStatus, requestPermissions, getCurrentLocation]);
 
-  // Start tracking location with appropriate method based on platform and settings
-  const startTracking = useCallback(async () => {
     if (permissionStatus !== 'granted') {
-      const granted = await requestPermissions();
-      if (!granted) {
-        setError('Location permission not granted');
-        return false;
+      try {
+        await locationPermissions.requestPermission();
+      } catch (err) {
+        setError(new Error('Location permission not granted'));
+        return;
       }
     }
-    
+
+    setIsLoading(true);
+    setError(null);
+
     try {
-      let success = false;
-      
-      // If we're on a native platform and background tracking is enabled
-      if (Capacitor.isNativePlatform() && backgroundTracking) {
-        success = await startBackgroundTracking();
-      } else {
-        success = await startForegroundTracking();
-      }
-      
-      if (success) {
-        setError(null);
-        
-        // Get an initial location
-        await getCurrentLocationWithPermission();
-      }
-      
-      return success;
-    } catch (err) {
-      console.error('Error starting location tracking', err);
-      setError('Failed to start location tracking');
-      
-      toast({
-        title: "Location tracking failed",
-        description: "Could not start tracking your location. Please check your settings.",
-        variant: "destructive"
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: highAccuracy,
+        timeout,
+        maximumAge
       });
       
-      return false;
-    }
-  }, [
-    permissionStatus, 
-    requestPermissions, 
-    backgroundTracking, 
-    startBackgroundTracking, 
-    startForegroundTracking, 
-    getCurrentLocationWithPermission
-  ]);
-
-  // Stop tracking
-  const stopTracking = useCallback(async () => {
-    try {
-      let success = true;
-      
-      if (Capacitor.isNativePlatform() && backgroundTracking) {
-        success = await stopBackgroundTracking();
-      } else {
-        success = await stopForegroundTracking();
-      }
-      
-      return success;
+      setPosition(position);
+      return position;
     } catch (err) {
-      console.error('Error stopping location tracking', err);
-      return false;
+      setError(err as Error);
+      console.error('Error getting location:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
     }
-  }, [backgroundTracking, stopBackgroundTracking, stopForegroundTracking]);
+  }, [permissionStatus, locationPermissions, highAccuracy, timeout, maximumAge]);
+
+  // Start watching position
+  const startWatchingPosition = useCallback(async () => {
+    if (!Capacitor.isPluginAvailable('Geolocation')) {
+      setError(new Error('Geolocation is not available on this device'));
+      return;
+    }
+
+    if (permissionStatus !== 'granted') {
+      try {
+        await locationPermissions.requestPermission();
+      } catch (err) {
+        setError(new Error('Location permission not granted'));
+        return;
+      }
+    }
+
+    if (isWatching) {
+      console.log('Already watching position');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const id = await Geolocation.watchPosition(
+        {
+          enableHighAccuracy: highAccuracy,
+          timeout,
+          maximumAge
+        },
+        (position, err) => {
+          if (err) {
+            setError(err);
+            return;
+          }
+          setPosition(position);
+          setIsLoading(false);
+        }
+      );
+      
+      setWatchId(id);
+      setIsWatching(true);
+    } catch (err) {
+      setError(err as Error);
+      setIsLoading(false);
+      console.error('Error starting location watch:', err);
+    }
+  }, [permissionStatus, locationPermissions, highAccuracy, timeout, maximumAge, isWatching]);
+
+  // Stop watching position
+  const stopWatchingPosition = useCallback(() => {
+    if (watchId !== null) {
+      Geolocation.clearWatch({ id: watchId });
+      setWatchId(null);
+      setIsWatching(false);
+    }
+  }, [watchId]);
+
+  // Start watching if watchPosition is true
+  useEffect(() => {
+    if (watchPosition && !isWatching && permissionStatus === 'granted') {
+      startWatchingPosition();
+    }
+    
+    return () => {
+      if (watchId !== null) {
+        stopWatchingPosition();
+      }
+    };
+  }, [watchPosition, permissionStatus, startWatchingPosition, stopWatchingPosition, isWatching, watchId]);
 
   return {
-    location,
+    position,
     error,
-    isTracking,
-    permissionStatus,
-    lastUpdated,
-    getCurrentLocation: getCurrentLocationWithPermission,
-    startTracking,
-    stopTracking,
-    requestPermissions
+    isLoading,
+    isWatching,
+    getCurrentPosition,
+    startWatchingPosition,
+    stopWatchingPosition
+  } as LocationResult & {
+    getCurrentPosition: () => Promise<Position | null>;
+    startWatchingPosition: () => Promise<void>;
+    stopWatchingPosition: () => void;
   };
-};
+}

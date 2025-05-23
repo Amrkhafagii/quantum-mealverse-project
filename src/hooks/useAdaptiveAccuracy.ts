@@ -61,7 +61,7 @@ export function useAdaptiveAccuracy({
   const [accuracySettings, setAccuracySettings] = useState<AccuracySettings>(accuracyPresets.unknown);
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isLowBattery, setIsLowBattery] = useState(false);
-  const { isOnline, networkType } = useConnectionStatus();
+  const { isOnline, connectionType } = useConnectionStatus();
   
   const isNetworkAvailable = networkRequired ? isOnline : true;
   
@@ -188,7 +188,7 @@ export function useAdaptiveAccuracy({
     accuracySettings,
     batteryLevel,
     isLowBattery,
-    networkType,
+    networkType: connectionType,
     isNetworkAvailable,
     attemptAccuracyRecovery
   };

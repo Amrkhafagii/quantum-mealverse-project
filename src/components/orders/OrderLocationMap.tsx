@@ -15,6 +15,16 @@ interface OrderLocationMapProps {
   assignmentId?: string | null;
 }
 
+// Extend the delivery location type to include accuracy
+interface DeliveryLocation {
+  id: string;
+  assignment_id: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  accuracy?: number;
+}
+
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId }) => {
   const { isOnline } = useConnectionStatus();
   const { quality, isLowQuality } = useNetworkQuality();
@@ -59,13 +69,16 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
         
       if (error) throw error;
       
+      // Cast the data to our interface that includes accuracy
+      const location = data as DeliveryLocation;
+      
       // If we got a location, analyze its accuracy
-      if (data && data.accuracy) {
+      if (location && location.accuracy) {
         // Set accuracy level based on the location accuracy value
         let newAccuracy: AccuracyLevel = 'unknown';
-        if (data.accuracy <= 20) {
+        if (location.accuracy <= 20) {
           newAccuracy = 'high';
-        } else if (data.accuracy <= 100) {
+        } else if (location.accuracy <= 100) {
           newAccuracy = 'medium';
         } else {
           newAccuracy = 'low';
@@ -74,7 +87,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({ order, assignmentId
         setLocationAccuracy(newAccuracy);
       }
       
-      return data;
+      return location;
     },
     enabled: !!assignmentId && isOnline && isMapEnabled,
     refetchInterval: (isOnline && !isLowQuality) ? 10000 : false,

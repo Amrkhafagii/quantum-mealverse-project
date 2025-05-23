@@ -7,6 +7,7 @@ import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Map } from 'lucide-react';
 import { OfflineMapFallback } from './OfflineMapFallback';
+import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
 
 interface MapLocation {
   latitude: number;
@@ -14,6 +15,8 @@ interface MapLocation {
   title?: string;
   description?: string;
   type?: string;
+  accuracy?: number;
+  timestamp?: string;
 }
 
 interface UnifiedMapViewProps {
@@ -31,6 +34,9 @@ interface UnifiedMapViewProps {
   onMapClick?: (location: { latitude: number; longitude: number }) => void;
   isInteractive?: boolean;
   showHeader?: boolean;
+  zoomLevel?: number;
+  locationAccuracy?: AccuracyLevel;
+  showAccuracyCircle?: boolean;
 }
 
 const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
@@ -47,7 +53,10 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   additionalMarkers = [],
   onMapClick,
   isInteractive = true,
-  showHeader = true
+  showHeader = true,
+  zoomLevel = 13,
+  locationAccuracy,
+  showAccuracyCircle = false
 }) => {
   const { isOnline } = useConnectionStatus();
   const { quality, isLowQuality } = useNetworkQuality();
@@ -120,9 +129,11 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
         lowPerformanceMode={isLowQuality}
         enableAnimation={!isLowQuality}
         enableControls={!isLowQuality && isInteractive}
-        zoomLevel={13}
+        zoomLevel={zoomLevel}
         locations={additionalMarkers}
-        forceWebView={false} // Allow native maps on native platforms
+        forceWebView={false}
+        locationAccuracy={locationAccuracy}
+        showAccuracyCircle={showAccuracyCircle}
       />
     </div>
   );

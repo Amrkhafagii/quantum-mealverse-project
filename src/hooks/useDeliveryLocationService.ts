@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { DeliveryLocation } from '@/types/location';
 import { useLocationPermissions } from '@/hooks/useLocationPermissions';
@@ -18,7 +19,8 @@ interface DeliveryLocationMap {
 }
 
 export function useDeliveryLocationService() {
-  const { permissionStatus, requestPermissions } = useLocationPermissions();
+  const locationPermissions = useLocationPermissions();
+  const { permissionStatus } = locationPermissions;
   const cache = useDeliveryLocationCache();
   const [activeDeliveries, setActiveDeliveries] = useState<Set<string>>(new Set());
   const [isUpdating, setIsUpdating] = useState(false);
@@ -163,7 +165,7 @@ export function useDeliveryLocationService() {
   const resetAndRequestLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
     try {
       if (permissionStatus !== 'granted') {
-        await requestPermissions();
+        await locationPermissions.requestPermission();
       }
       
       if (isTracking) {
@@ -180,7 +182,7 @@ export function useDeliveryLocationService() {
       console.error('Error resetting location:', error);
       return null;
     }
-  }, [permissionStatus, requestPermissions, isTracking, startAdaptiveTracking, stopAdaptiveTracking, location]);
+  }, [permissionStatus, locationPermissions, isTracking, startAdaptiveTracking, stopAdaptiveTracking, location]);
 
   // Check if location is valid
   const locationIsValid = useCallback(() => {
