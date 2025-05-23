@@ -1,22 +1,25 @@
 
-import React from 'react';
-import { MapPin, Locate } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { MapPin, Locate, Search } from 'lucide-react';
 import UnifiedMapView from '@/components/maps/UnifiedMapView';
 import { Button } from '@/components/ui/button';
 import { NearbyRestaurant } from '@/hooks/useNearestRestaurant';
 import LocationPermissionHandler from './LocationPermissionHandler';
 import { useLocationWithIndicators } from '@/hooks/useLocationWithIndicators';
+import { toast } from 'sonner';
 
 interface RestaurantMapViewProps {
   restaurants?: NearbyRestaurant[];
   selectedRestaurantId?: string;
   onRestaurantSelect?: (id: string) => void;
+  onFindNearbyRequested?: () => void;
 }
 
 const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
   restaurants = [],
   selectedRestaurantId,
-  onRestaurantSelect
+  onRestaurantSelect,
+  onFindNearbyRequested
 }) => {
   const {
     userLocation,
@@ -25,23 +28,38 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     locationAccuracy,
     showAccuracyCircle,
     permissionGranted,
-    handleCenterOnMe
+    handleCenterOnMe,
+    requestLocationPermission
   } = useLocationWithIndicators();
 
   // Convert restaurants to map markers
-  const getMapLocations = React.useCallback(() => {
+  const getMapLocations = useCallback(() => {
     const markers = [];
     
     // Add restaurant markers
     if (restaurants && restaurants.length > 0) {
       for (const restaurant of restaurants) {
         if (restaurant.restaurant_id && restaurant.restaurant_name) {
-          // Check if restaurant has restaurant_latitude/longitude or latitude/longitude
-          const lat = restaurant.restaurant_latitude !== undefined ? restaurant.restaurant_latitude : 
-                     restaurant.latitude !== undefined ? restaurant.latitude : null;
-                     
-          const lng = restaurant.restaurant_longitude !== undefined ? restaurant.restaurant_longitude : 
-                     restaurant.longitude !== undefined ? restaurant.longitude : null;
+          // Get coordinates from the restaurant object based on available properties
+          let lat = null;
+          let lng = null;
+          
+          // Check all possible coordinate property names
+          if ('restaurant_lat' in restaurant && restaurant.restaurant_lat !== undefined) {
+            lat = restaurant.restaurant_lat;
+          } else if ('lat' in restaurant && restaurant.lat !== undefined) {
+            lat = restaurant.lat;
+          } else if ('latitude' in restaurant && restaurant.latitude !== undefined) {
+            lat = restaurant.latitude;
+          }
+          
+          if ('restaurant_lng' in restaurant && restaurant.restaurant_lng !== undefined) {
+            lng = restaurant.restaurant_lng;
+          } else if ('lng' in restaurant && restaurant.lng !== undefined) {
+            lng = restaurant.lng;
+          } else if ('longitude' in restaurant && restaurant.longitude !== undefined) {
+            lng = restaurant.longitude;
+          }
           
           // Only add restaurant to map if it has valid coordinates
           if (lat !== null && lng !== null) {
@@ -61,7 +79,7 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
   }, [restaurants]);
 
   // Get all markers
-  const getEffectiveMarkers = React.useCallback(() => {
+  const getEffectiveMarkers = useCallback(() => {
     const locationMarkers = getMapLocations();
     
     // Add user location marker if available
@@ -78,7 +96,7 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
   }, [getMapLocations, userLocation]);
 
   // Get center coordinates for the map
-  const getEffectiveCenter = () => {
+  const getEffectiveCenter = useCallback(() => {
     // If user has explicitly set a map center, use that
     if (mapCenter) {
       return mapCenter;
@@ -92,15 +110,31 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     // If we have restaurants, use the first one with valid coordinates
     if (restaurants && restaurants.length > 0) {
       for (const restaurant of restaurants) {
-        // Check for valid coordinates
-        if (restaurant.restaurant_latitude !== undefined && restaurant.restaurant_longitude !== undefined) {
+        // Check all possible coordinate property names
+        if ('restaurant_lat' in restaurant && 
+            'restaurant_lng' in restaurant && 
+            restaurant.restaurant_lat !== undefined && 
+            restaurant.restaurant_lng !== undefined) {
           return {
-            latitude: restaurant.restaurant_latitude,
-            longitude: restaurant.restaurant_longitude
+            latitude: restaurant.restaurant_lat,
+            longitude: restaurant.restaurant_lng
           };
         }
         
-        if (restaurant.latitude !== undefined && restaurant.longitude !== undefined) {
+        if ('lat' in restaurant && 
+            'lng' in restaurant && 
+            restaurant.lat !== undefined && 
+            restaurant.lng !== undefined) {
+          return {
+            latitude: restaurant.lat,
+            longitude: restaurant.lng
+          };
+        }
+        
+        if ('latitude' in restaurant && 
+            'longitude' in restaurant && 
+            restaurant.latitude !== undefined && 
+            restaurant.longitude !== undefined) {
           return {
             latitude: restaurant.latitude,
             longitude: restaurant.longitude
@@ -111,6 +145,21 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     
     // Default center (NYC)
     return { latitude: 40.7128, longitude: -74.0060 };
+  }, [mapCenter, userLocation, restaurants]);
+
+  // Handle find nearby restaurants
+  const handleFindNearby = () => {
+    if (!userLocation) {
+      toast.error("Unable to determine your location. Please enable location services.");
+      return;
+    }
+    
+    if (onFindNearbyRequested) {
+      onFindNearbyRequested();
+      toast.success("Searching for restaurants near you...");
+    } else {
+      toast.info("This feature is not available yet.");
+    }
   };
 
   // If permission is not granted, show permission handler
@@ -175,20 +224,33 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
           zoomLevel={13}
           locationAccuracy={locationAccuracy}
           showAccuracyCircle={showAccuracyCircle}
+          onMapReady={() => console.log("Map is ready")}
         />
       </div>
       
-      {/* Center on me button */}
-      <Button 
-        variant="secondary"
-        size="sm"
-        className="absolute bottom-4 right-4 z-20 shadow-lg flex items-center gap-2"
-        onClick={handleCenterOnMe}
-        disabled={isLoadingLocation}
-      >
-        <Locate className="h-4 w-4" />
-        {isLoadingLocation ? 'Locating...' : 'Center on Me'}
-      </Button>
+      {/* Map Control Buttons */}
+      <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+        <Button 
+          variant="secondary"
+          size="sm"
+          className="shadow-lg flex items-center gap-2"
+          onClick={handleFindNearby}
+        >
+          <Search className="h-4 w-4" />
+          Find Nearby Restaurants
+        </Button>
+        
+        <Button 
+          variant="secondary"
+          size="sm"
+          className="shadow-lg flex items-center gap-2"
+          onClick={handleCenterOnMe}
+          disabled={isLoadingLocation}
+        >
+          <Locate className="h-4 w-4" />
+          {isLoadingLocation ? 'Locating...' : 'Center on Me'}
+        </Button>
+      </div>
     </div>
   );
 };

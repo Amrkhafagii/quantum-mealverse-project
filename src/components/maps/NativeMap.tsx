@@ -57,7 +57,6 @@ const NativeMap: React.FC<NativeMapProps> = ({
       try {
         // Create the map
         googleMap = await CapacitorGoogleMaps.create({
-          id: mapId,
           element: mapRef.current,
           apiKey: '', // API key is set in capacitor.config.ts
           config: {
@@ -148,8 +147,10 @@ const NativeMap: React.FC<NativeMapProps> = ({
     
     // Cleanup the map when the component unmounts
     return () => {
-      if (googleMap) {
-        CapacitorGoogleMaps.remove({ id: mapId });
+      if (googleMap && mapInitialized) {
+        CapacitorGoogleMaps.deleteMap({
+          id: mapId
+        }).catch(err => console.error('Error removing map:', err));
       }
     };
   }, [mapId, center, zoom, markers, liteMode, locationAccuracy, showAccuracyCircle]);
@@ -160,7 +161,6 @@ const NativeMap: React.FC<NativeMapProps> = ({
       if (mapInitialized && Capacitor.isNativePlatform()) {
         try {
           await CapacitorGoogleMaps.setCamera({
-            id: mapId,
             config: {
               coordinate: { lat: center.lat, lng: center.lng },
               animate: true,
@@ -174,7 +174,7 @@ const NativeMap: React.FC<NativeMapProps> = ({
     };
 
     updateMapCenter();
-  }, [center, mapId, mapInitialized]);
+  }, [center, mapInitialized]);
 
   // Render the map container
   return (

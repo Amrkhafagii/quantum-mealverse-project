@@ -1,184 +1,94 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouteOptimization } from '@/hooks/useRouteOptimization';
-import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, RotateCw, X } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { RoutePoint, OptimizedRoute } from '@/plugins/RouteOptimizationPlugin';
-import { hapticFeedback } from '@/utils/hapticFeedback';
-import { Platform } from '@/utils/platform';
-import UnifiedMapView from '@/components/maps/UnifiedMapView';
-import { HapticButton } from '@/components/ui/haptic-button';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import UnifiedMapView from './UnifiedMapView';
 
 interface OptimizedRouteMapProps {
-  stops: RoutePoint[];
-  returnToOrigin?: boolean;
-  className?: string;
-  onRouteCalculated?: (route: OptimizedRoute) => void;
-  showControls?: boolean;
+  mapId: string;
   height?: string;
+  className?: string;
+  waypoints?: {
+    latitude: number;
+    longitude: number;
+    title?: string;
+    type?: string;
+  }[];
+  routeCoordinates?: {
+    latitude: number;
+    longitude: number;
+  }[];
+  isInteractive?: boolean;
 }
 
 const OptimizedRouteMap: React.FC<OptimizedRouteMapProps> = ({
-  stops,
-  returnToOrigin = false,
+  mapId,
+  height = 'h-[400px]',
   className = '',
-  onRouteCalculated,
-  showControls = true,
-  height = 'h-[400px]'
+  waypoints = [],
+  routeCoordinates = [],
+  isInteractive = true
 }) => {
-  const [locations, setLocations] = useState<RoutePoint[]>([]);
-  const { isLowQuality } = useNetworkQuality();
-  const { 
-    calculateMultiStopRoute, 
-    cancelCalculation, 
-    isCalculating, 
-    currentRoute, 
-    error 
-  } = useRouteOptimization({
-    onRouteCalculated
-  });
+  const [markers, setMarkers] = useState<any[]>([]);
   
-  // Prepare locations for the map
-  useEffect(() => {
-    setLocations(stops);
-  }, [stops]);
-  
-  // Calculate the route when stops change
-  useEffect(() => {
-    if (stops.length >= 2) {
-      calculateMultiStopRoute(stops, returnToOrigin);
+  // Convert waypoints and routes to markers
+  const processWaypoints = useCallback(() => {
+    const newMarkers = [];
+    
+    // Add waypoint markers
+    for (let i = 0; i < waypoints.length; i++) {
+      const waypoint = waypoints[i];
+      
+      // Determine marker type and description based on position in array
+      let type = waypoint.type || 'default';
+      let description = '';
+      
+      if (i === 0) {
+        type = waypoint.type || 'restaurant';
+        description = 'Pickup';
+      } else if (i === waypoints.length - 1) {
+        type = waypoint.type || 'customer';
+        description = 'Delivery';
+      } else {
+        description = `Stop ${i}`;
+      }
+      
+      newMarkers.push({
+        latitude: waypoint.latitude,
+        longitude: waypoint.longitude,
+        title: waypoint.title || description,
+        description: description,
+        type: type
+      });
     }
-  }, [stops, returnToOrigin, calculateMultiStopRoute]);
-  
-  // Format the optimized route for display
-  const formatRouteInfo = useCallback((route: OptimizedRoute | null) => {
-    if (!route) return null;
     
-    const totalDistance = route.distance;
-    const totalDuration = route.duration;
+    // Add route points as invisible markers (we can't draw polylines in UnifiedMapView yet)
+    // This is a temporary solution until proper polyline support is added
+    if (routeCoordinates && routeCoordinates.length > 0) {
+      // Only add selected route points to avoid overcrowding the map
+      // e.g., every 5th point for a simplified route representation
+      for (let i = 0; i < routeCoordinates.length; i += 5) {
+        const point = routeCoordinates[i];
+        
+        // Skip adding route markers in current implementation
+        // We'll implement proper route display in future updates
+      }
+    }
     
-    // Format distance in km if > 1000m
-    const formattedDistance = totalDistance >= 1000 
-      ? `${(totalDistance / 1000).toFixed(1)} km` 
-      : `${totalDistance.toFixed(0)} m`;
-      
-    // Format duration in hours if > 60 min
-    const hours = Math.floor(totalDuration / 3600);
-    const minutes = Math.floor((totalDuration % 3600) / 60);
-    
-    const formattedDuration = hours > 0 
-      ? `${hours} hr ${minutes} min` 
-      : `${minutes} min`;
-      
-    return { formattedDistance, formattedDuration };
-  }, []);
+    setMarkers(newMarkers);
+  }, [waypoints, routeCoordinates]);
   
-  const routeInfo = formatRouteInfo(currentRoute);
+  // Process waypoints when they change
+  useEffect(() => {
+    processWaypoints();
+  }, [processWaypoints]);
   
-  // Convert locations for map display
-  const mapLocations = locations.map((location, index) => ({
-    latitude: location.latitude,
-    longitude: location.longitude,
-    title: location.name || `Stop ${index + 1}`,
-    description: location.stopType || (index === 0 ? 'Start' : index === locations.length - 1 ? 'End' : 'Waypoint'),
-    type: location.stopType === 'pickup' ? 'restaurant' : 
-          location.stopType === 'delivery' ? 'customer' : 
-          index === 0 ? 'driver' : 'generic'
-  }));
-
   return (
-    <div className={`${className}`}>
-      {showControls && (
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            <h3 className="text-sm font-medium">Optimized Route</h3>
-            {routeInfo && !isCalculating && (
-              <p className="text-xs text-muted-foreground">
-                {routeInfo.formattedDistance} • {routeInfo.formattedDuration}
-              </p>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {isCalculating ? (
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => {
-                  hapticFeedback.light();
-                  cancelCalculation();
-                }}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
-            ) : (
-              <HapticButton
-                size="sm"
-                variant="outline"
-                onClick={() => calculateMultiStopRoute(stops, returnToOrigin)}
-                disabled={locations.length < 2}
-                hapticEffect="medium"
-              >
-                <RotateCw className="h-4 w-4 mr-1" />
-                Recalculate
-              </HapticButton>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {locations.length < 2 ? (
-        <Card className={`flex items-center justify-center ${height}`}>
-          <div className="text-center p-4">
-            <MapPin className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-muted-foreground">At least 2 stops are needed</p>
-          </div>
-        </Card>
-      ) : (
-        <div className="relative">
-          <UnifiedMapView
-            height={height}
-            mapId="optimized-route-map"
-            showRoute={true}
-            additionalMarkers={mapLocations}
-            showHeader={false}
-            isInteractive={!isCalculating}
-          />
-          
-          {isCalculating && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center backdrop-blur-sm">
-              <div className="bg-background p-4 rounded-md shadow-lg text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                <p className="text-sm font-medium">Calculating optimal route...</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Finding the fastest path between {locations.length} stops
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-3" 
-                  onClick={() => {
-                    hapticFeedback.light();
-                    cancelCalculation();
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          {error && !isCalculating && (
-            <div className="absolute bottom-2 right-2 left-2 bg-destructive/90 text-destructive-foreground p-2 rounded text-sm">
-              {error.message}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <UnifiedMapView
+      mapId={mapId}
+      height={height}
+      additionalMarkers={markers}
+      showHeader={false}
+      isInteractive={isInteractive}
+    />
   );
 };
 
