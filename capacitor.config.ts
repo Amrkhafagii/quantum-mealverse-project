@@ -25,7 +25,7 @@ const config: CapacitorConfig = {
       // Plugin-specific configurations would go here
     },
     GoogleMaps: {
-      apiKey: "AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs" // Replace with your actual Google Maps API key
+      apiKey: "AIzaSyBKQztvlSSaT-kjpzWBHIZ1uzgRh8rPlVs" // Keep existing API key
     },
     SplashScreen: {
       launchAutoHide: true,
@@ -33,6 +33,18 @@ const config: CapacitorConfig = {
       spinnerColor: '#999999',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP'
+    },
+    // Add the following plugin configurations
+    Preferences: {},
+    Geolocation: {
+      // Set GPS as high accuracy source
+      requireAccuratePermissions: true
+    },
+    BackgroundGeolocation: {
+      // Background geolocation configuration
+      backgroundMessage: "Location tracking for meal deliveries",
+      backgroundTitle: "Tracking Location",
+      requestPermissions: true
     }
   },
   ios: {
