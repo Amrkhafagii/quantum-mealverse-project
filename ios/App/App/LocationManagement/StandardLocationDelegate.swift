@@ -25,13 +25,24 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     private let highAccuracyThreshold: CLLocationAccuracy = 20.0  // meters
     private let mediumAccuracyThreshold: CLLocationAccuracy = 100.0 // meters
     
+    // Reference to the location manager
+    private weak var locationManager: CLLocationManager?
+    
     enum AccuracyState {
         case high
         case medium
         case low
     }
     
+    // Initialize with a reference to the location manager
+    func setup(with manager: CLLocationManager) {
+        self.locationManager = manager
+    }
+    
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        // Store the manager reference for later use
+        self.locationManager = manager
+        
         // Process locations from most recent to oldest
         if let location = locations.sorted(by: { $0.timestamp > $1.timestamp }).first {
             // Add to update buffer instead of processing immediately
@@ -93,7 +104,9 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
         
         // If we're in lower accuracy modes, schedule a recovery attempt
         if currentAccuracyState != .high {
-            scheduleAccuracyRecovery(manager: bestBufferedLocation.timestamp > Date().addingTimeInterval(-300) ? nil : manager)
+            // Check if the location is recent enough (not older than 5 minutes)
+            let isRecent = bestBufferedLocation.timestamp > Date().addingTimeInterval(-300)
+            scheduleAccuracyRecovery(manager: isRecent ? nil : locationManager)
         }
     }
     
@@ -157,6 +170,9 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Store the manager reference for later use
+        self.locationManager = manager
+        
         // Filter out common location errors that don't need to be propagated
         if let clError = error as? CLError {
             switch clError.code {
@@ -192,6 +208,9 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     // Handle authorization changes (iOS 14+)
     @available(iOS 14.0, *)
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        // Store the manager reference for later use
+        self.locationManager = manager
+        
         let status = manager.authorizationStatus
         onAuthorizationChange?(status)
         
@@ -205,6 +224,9 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     
     // Handle authorization changes (pre-iOS 14)
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        // Store the manager reference for later use
+        self.locationManager = manager
+        
         onAuthorizationChange?(status)
         
         // Post notification for other components that need to respond to permission changes
