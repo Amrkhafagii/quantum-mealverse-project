@@ -26,9 +26,7 @@
 		F62EC4762DDCAAA10085D82E /* BackgroundSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */; };
 		F62EC4852DDCAAE00085D82E /* RouteOptimizationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */; };
 		F62EC4862DDCAAE00085D82E /* QrScannerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4822DDCAAE00085D82E /* QrScannerPlugin.swift */; };
-		F62EC4872DDCAAE00085D82E /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47F2DDCAAE00085D82E /* LocationManager.swift */; };
 		F62EC4882DDCAAE00085D82E /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4802DDCAAE00085D82E /* NotificationManager.swift */; };
-		F62EC4892DDCAAE00085D82E /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4772DDCAAE00085D82E /* BackgroundTaskManager.swift */; };
 		F62EC48A2DDCAAE00085D82E /* QrScannerPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4812DDCAAE00085D82E /* QrScannerPlugin.m */; };
 		F62EC48B2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC47E2DDCAAE00085D82E /* BiometricAuthPlugin.swift */; };
 		F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4832DDCAAE00085D82E /* QrScannerViewController.swift */; };
@@ -62,11 +60,9 @@
 		F62B34BA2DDD2C8F000C7FDD /* QrScannerPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QrScannerPlugin.h; sourceTree = "<group>"; };
 		F62EC4732DDCAA900085D82E /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
 		F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSync.swift; sourceTree = "<group>"; };
-		F62EC4772DDCAAE00085D82E /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
 		F62EC47C2DDCAAE00085D82E /* RouteOptimizationPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RouteOptimizationPlugin.m; sourceTree = "<group>"; };
 		F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BiometricAuthPlugin.m; sourceTree = "<group>"; };
 		F62EC47E2DDCAAE00085D82E /* BiometricAuthPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthPlugin.swift; sourceTree = "<group>"; };
-		F62EC47F2DDCAAE00085D82E /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		F62EC4802DDCAAE00085D82E /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		F62EC4812DDCAAE00085D82E /* QrScannerPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = QrScannerPlugin.m; sourceTree = "<group>"; };
 		F62EC4822DDCAAE00085D82E /* QrScannerPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QrScannerPlugin.swift; sourceTree = "<group>"; };
@@ -129,10 +125,8 @@
 				F62B34B82DDD2C8F000C7FDD /* Base.lproj */,
 				F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */,
 				F62B34BA2DDD2C8F000C7FDD /* QrScannerPlugin.h */,
-				F62EC4772DDCAAE00085D82E /* BackgroundTaskManager.swift */,
 				F62EC47D2DDCAAE00085D82E /* BiometricAuthPlugin.m */,
 				F62EC47E2DDCAAE00085D82E /* BiometricAuthPlugin.swift */,
-				F62EC47F2DDCAAE00085D82E /* LocationManager.swift */,
 				F62EC4802DDCAAE00085D82E /* NotificationManager.swift */,
 				F62EC4812DDCAAE00085D82E /* QrScannerPlugin.m */,
 				F62EC4822DDCAAE00085D82E /* QrScannerPlugin.swift */,
@@ -321,11 +315,10 @@
 				F6956E5C2DDF591F005AB8A2 /* LocationPermissionsPlugin.swift in Sources */,
 				F62EC4862DDCAAE00085D82E /* QrScannerPlugin.swift in Sources */,
 				F661C9112DDF64B400142AEF /* LocationPermissionsPlugin.m in Sources */,
-				F62EC4872DDCAAE00085D82E /* LocationManager.swift in Sources */,
 				F62EC4882DDCAAE00085D82E /* NotificationManager.swift in Sources */,
-				F62EC48A2DDCAAE00085D82E /* BackgroundTaskManager.swift in Sources */,
-				F62EC48B2DDCAAE00085D82E /* QrScannerPlugin.m in Sources */,
-				F62EC48C2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */,
+				F62EC48A2DDCAAE00085D82E /* QrScannerPlugin.m in Sources */,
+				F62EC48B2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */,
+				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
 				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
 				F62EC48D2DDCAAE00085D82E /* BiometricAuthPlugin.m in Sources */,
 				F62EC48E2DDCAAE00085D82E /* RouteOptimizationPlugin.m in Sources */,
