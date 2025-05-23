@@ -1,4 +1,3 @@
-
 import CoreLocation
 import UIKit
 
@@ -178,6 +177,9 @@ class LocationManager: NSObject {
     func handleAppDidEnterBackground() {
         if isTrackingEnabled {
             trackingManager.handleAppBackground(locationManager)
+            
+            // Use location-specific background task manager
+            LocationBackgroundTaskManager.shared.extendBackgroundExecution()
         }
     }
     
@@ -188,6 +190,9 @@ class LocationManager: NSObject {
     func cleanup() {
         trackingManager.stopAllLocationUpdates(locationManager)
         batteryMonitor.stopMonitoring()
+        
+        // End any background tasks
+        LocationBackgroundTaskManager.shared.endBackgroundTask()
     }
     
     // MARK: - Private Methods

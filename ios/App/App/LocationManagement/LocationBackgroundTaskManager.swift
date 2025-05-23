@@ -2,8 +2,8 @@
 import UIKit
 import BackgroundTasks
 
-class BackgroundTaskManager {
-    static let shared = BackgroundTaskManager()
+class LocationBackgroundTaskManager {
+    static let shared = LocationBackgroundTaskManager()
     
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var taskExpirationHandler: (() -> Void)?
