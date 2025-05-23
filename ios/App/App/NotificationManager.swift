@@ -1,6 +1,5 @@
 
 import UIKit
-import UserNotifications
 
 class NotificationManager {
     static let shared = NotificationManager()
@@ -8,13 +7,38 @@ class NotificationManager {
     private init() {}
     
     func registerForPushNotifications(_ application: UIApplication) {
-        UNUserNotificationCenter.current().requestAuthorization(
-            options: [.alert, .sound, .badge]
-        ) { granted, _ in
-            guard granted else { return }
+        let notificationCenter = UNUserNotificationCenter.current()
+        
+        notificationCenter.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                self.requestNotificationPermission()
+            case .authorized, .provisional:
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            case .denied:
+                print("Push notification permission denied")
+            case .ephemeral:
+                print("Push notification permission is ephemeral")
+            @unknown default:
+                print("Unknown push notification permission status")
+            }
+        }
+    }
+    
+    private func requestNotificationPermission() {
+        let notificationCenter = UNUserNotificationCenter.current()
+        notificationCenter.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error = error {
+                print("Error requesting notification permission: \(error.localizedDescription)")
+                return
+            }
             
-            DispatchQueue.main.async {
-                application.registerForRemoteNotifications()
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
             }
         }
     }

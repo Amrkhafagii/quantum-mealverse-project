@@ -14,6 +14,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private var servicesInitialized = false
     private let initializationSemaphore = DispatchSemaphore(value: 0)
     
+    // Singleton instance for access from static contexts
+    static var shared: AppDelegate {
+        return UIApplication.shared.delegate as! AppDelegate
+    }
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Register Capacitor plugins
      
@@ -29,10 +34,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Register background task for iOS 13+
         if #available(iOS 13.0, *) {
-            BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.lovable.background.refresh", 
-                                          using: nil) { task in
-                self.handleBackgroundRefresh(task: task as! BGAppRefreshTask)
-            }
+            BackgroundSync.register()
         }
         
         return true
@@ -244,9 +246,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     @available(iOS 13.0, *)
-    private func handleBackgroundRefresh(task: BGAppRefreshTask) {
+    func handleBackgroundRefresh(task: BGAppRefreshTask) {
         // Schedule the next refresh
-        scheduleAppRefresh()
+        BackgroundSync.scheduleAppRefresh()
         
         // Create a task request that expires if we take too long
         let expirationTime = 30.0 // 30 seconds
@@ -264,7 +266,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: Notification.Name("backgroundSyncStarted"), object: nil)
         
         // Perform the actual sync operations
-        performBackgroundSync { success in
+        BackgroundSync.performBackgroundSync { success in
             // Mark the task complete
             task.setTaskCompleted(success: success)
             
@@ -273,33 +275,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             
             // Notify that sync is complete
             NotificationCenter.default.post(name: Notification.Name("backgroundSyncCompleted"), object: nil)
-        }
-    }
-    
-    @available(iOS 13.0, *)
-    private func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: "com.lovable.background.refresh")
-        // Request refresh after 15 minutes
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("Background refresh scheduled successfully")
-        } catch {
-            print("Failed to schedule background refresh: \(error)")
-        }
-    }
-    
-    private func performBackgroundSync(completion: @escaping (Bool) -> Void) {
-        // 1. Request location update
-        LocationManager.shared.locationManager?.requestLocation()
-        
-        // 2. Any additional sync operations would go here
-        
-        // 3. Simulate completion after 5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            print("Background sync completed")
-            completion(true)
         }
     }
     
