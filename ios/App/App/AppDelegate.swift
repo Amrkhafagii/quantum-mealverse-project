@@ -27,11 +27,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Capacitor Storage - Required for Storage plugins to work properly
         initializeCapacitorStorage()
         
-        // Add explicit initialization for Preferences
-        DispatchQueue.main.async {
-            Preferences.preferencesStorage = UserDefaults.standard
-        }
-        
         // Register background task for iOS 13+
         if #available(iOS 13.0, *) {
             BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.lovable.background.refresh", 
@@ -71,8 +66,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     // Initialize Capacitor's storage system
     private func initializeCapacitorStorage() {
-        // This ensures that the Capacitor Preferences plugin is properly initialized 
-        // before being accessed by other components
+        // Capacitor automatically uses UserDefaults.standard
+        // This test is just to verify storage access
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 // Create a small test file to verify storage access
