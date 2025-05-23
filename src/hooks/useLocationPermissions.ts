@@ -1,110 +1,238 @@
 
-import { useState, useCallback, useEffect } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
-import { Capacitor } from '@capacitor/core';
+import { useState, useEffect, useCallback } from 'react';
+import LocationPermissions, { LocationPermissionStatus } from '../plugins/LocationPermissionsPlugin';
 
-type PermissionStatus = 'granted' | 'denied' | 'prompt';
+export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
 export function useLocationPermissions() {
-  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('prompt');
-  const [backgroundPermission, setBackgroundPermission] = useState<PermissionStatus>('prompt');
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState>('prompt');
+  const [backgroundPermissionStatus, setBackgroundPermissionStatus] = useState<PermissionState>('prompt');
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [lastChecked, setLastChecked] = useState<number | null>(null);
+  const [locationAvailable, setLocationAvailable] = useState<boolean | null>(null);
+  const [highAccuracyAvailable, setHighAccuracyAvailable] = useState<boolean | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const [recoveryAttempts, setRecoveryAttempts] = useState(0);
 
-  const checkPermissions = useCallback(async () => {
-    try {
-      if (!Capacitor.isPluginAvailable('Geolocation')) {
-        // No geolocation available, set to prompt
-        setPermissionStatus('prompt');
-        return permissionStatus;
+  // Initialize permission status
+  useEffect(() => {
+    const checkInitialStatus = async () => {
+      try {
+        const status = await LocationPermissions.checkPermissionStatus();
+        setPermissionStatus(status.location);
+        setBackgroundPermissionStatus(status.backgroundLocation);
+        setLastChecked(Date.now());
+        
+        // After checking permissions, also check if location services are available
+        await checkLocationAvailability();
+        
+        setHasInitialized(true);
+      } catch (error) {
+        console.error('Error checking initial permission status:', error);
+        // Enter fallback mode if plugin fails
+        setFallbackMode(true);
+        setHasInitialized(true);
+        
+        // Use browser APIs as fallback
+        checkBrowserLocation();
       }
-
-      // On the web, we can check permissions through the browser
-      if (Capacitor.getPlatform() === 'web') {
-        if ('permissions' in navigator) {
-          const permResult = await navigator.permissions.query({ name: 'geolocation' });
-          if (permResult.state === 'granted') {
-            setPermissionStatus('granted');
-          } else if (permResult.state === 'denied') {
-            setPermissionStatus('denied');
-          } else {
-            setPermissionStatus('prompt');
-          }
-        } else {
-          // Older browsers - can only check by trying to get location
-          try {
-            await new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                timeout: 10000,
-                maximumAge: 3600000 // 1 hour
-              });
-            });
-            setPermissionStatus('granted');
-          } catch (error) {
-            if ((error as GeolocationPositionError).code === (error as GeolocationPositionError).PERMISSION_DENIED) {
-              setPermissionStatus('denied');
-            } else {
-              // Something else went wrong, might be timeout
-              setPermissionStatus('prompt');
-            }
-          }
-        }
-      } else {
-        // On native platforms, use Capacitor
+    };
+    
+    checkInitialStatus();
+  }, []);
+  
+  // Check if location services are enabled and high accuracy is available
+  const checkLocationAvailability = useCallback(async () => {
+    try {
+      // In a real implementation, we would use a native plugin to check this
+      // Here we'll simulate with geolocation API
+      
+      // Check if location is available at all
+      if ('geolocation' in navigator) {
+        setLocationAvailable(true);
+        
+        // Try to get a high accuracy position with short timeout
         try {
-          // This will prompt for permission if not yet granted
-          await Geolocation.checkPermissions();
-          setPermissionStatus('granted');
-        } catch (error) {
-          console.error('Error checking permissions:', error);
-          setPermissionStatus('denied');
+          await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              reject,
+              { 
+                timeout: 5000,
+                enableHighAccuracy: true
+              }
+            );
+          });
+          
+          setHighAccuracyAvailable(true);
+        } catch (e) {
+          console.warn('High accuracy location not available:', e);
+          setHighAccuracyAvailable(false);
         }
-      }
-      
-      setLastChecked(new Date());
-      return permissionStatus;
-    } catch (error) {
-      console.error('Error checking location permissions:', error);
-      setPermissionStatus('prompt');
-      return permissionStatus;
-    }
-  }, [permissionStatus]);
-
-  // Request permissions
-  const requestPermissions = useCallback(async (): Promise<boolean> => {
-    try {
-      if (!Capacitor.isPluginAvailable('Geolocation')) {
-        return false;
-      }
-
-      const result = await Geolocation.requestPermissions();
-      
-      if (result.location === 'granted') {
-        setPermissionStatus('granted');
-        setLastChecked(new Date());
-        return true;
       } else {
-        setPermissionStatus('denied');
-        setLastChecked(new Date());
-        return false;
+        setLocationAvailable(false);
+        setHighAccuracyAvailable(false);
       }
-    } catch (error) {
-      console.error('Error requesting location permissions:', error);
-      setPermissionStatus('denied');
-      setLastChecked(new Date());
-      return false;
+    } catch (e) {
+      console.error('Error checking location availability:', e);
+      setLocationAvailable(false);
     }
   }, []);
-
-  // Check permissions on component mount
-  useEffect(() => {
-    checkPermissions();
-  }, [checkPermissions]);
+  
+  // Use browser geolocation API as fallback
+  const checkBrowserLocation = useCallback(async () => {
+    if ('geolocation' in navigator && 'permissions' in navigator) {
+      try {
+        const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        
+        if (status.state === 'granted') {
+          setPermissionStatus('granted');
+        } else if (status.state === 'denied') {
+          setPermissionStatus('denied');
+        } else {
+          setPermissionStatus('prompt');
+        }
+        
+        setLastChecked(Date.now());
+      } catch (e) {
+        console.error('Error checking browser location permission:', e);
+      }
+    }
+  }, []);
+  
+  // Request permissions with graceful degradation strategy
+  const requestPermission = useCallback(async () => {
+    if (isRequesting) return { location: permissionStatus, backgroundLocation: backgroundPermissionStatus };
+    
+    setIsRequesting(true);
+    
+    try {
+      // Try with the plugin first
+      if (!fallbackMode) {
+        // Start with high accuracy request
+        const highAccuracyOptions = { includeBackground: true, enableHighAccuracy: true };
+        try {
+          const status = await LocationPermissions.requestPermission(highAccuracyOptions);
+          setPermissionStatus(status.location);
+          setBackgroundPermissionStatus(status.backgroundLocation);
+          setLastChecked(Date.now());
+          
+          // If granted, check if high accuracy is actually available
+          if (status.location === 'granted') {
+            await checkLocationAvailability();
+          }
+          
+          setIsRequesting(false);
+          return status;
+        } catch (error) {
+          console.warn('High accuracy permission request failed, trying with lower accuracy:', error);
+          
+          // If high accuracy failed, try with lower accuracy
+          try {
+            const lowAccuracyOptions = { enableHighAccuracy: false };
+            const status = await LocationPermissions.requestPermission(lowAccuracyOptions);
+            
+            setPermissionStatus(status.location);
+            setBackgroundPermissionStatus(status.backgroundLocation);
+            setLastChecked(Date.now());
+            setHighAccuracyAvailable(false);
+            
+            setIsRequesting(false);
+            return status;
+          } catch (lowAccError) {
+            console.error('Both high and low accuracy requests failed:', lowAccError);
+            throw lowAccError;
+          }
+        }
+      } else {
+        // Use browser APIs as fallback
+        return new Promise<LocationPermissionStatus>((resolve) => {
+          if (!('geolocation' in navigator)) {
+            setPermissionStatus('denied');
+            setIsRequesting(false);
+            resolve({ location: 'denied', backgroundLocation: 'denied' });
+            return;
+          }
+          
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setPermissionStatus('granted');
+              setLastChecked(Date.now());
+              setIsRequesting(false);
+              resolve({ location: 'granted', backgroundLocation: 'prompt' });
+            },
+            (error) => {
+              if (error.code === 1) { // PERMISSION_DENIED
+                setPermissionStatus('denied');
+              } else {
+                setPermissionStatus('prompt');
+              }
+              setLastChecked(Date.now());
+              setIsRequesting(false);
+              resolve({ 
+                location: error.code === 1 ? 'denied' : 'prompt', 
+                backgroundLocation: 'prompt' 
+              });
+            },
+            { timeout: 10000 }
+          );
+        });
+      }
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      setIsRequesting(false);
+      
+      // Fall back to browser API if plugin fails
+      setFallbackMode(true);
+      return requestPermission(); // Retry with fallback mode
+    }
+  }, [isRequesting, permissionStatus, backgroundPermissionStatus, fallbackMode, checkLocationAvailability]);
+  
+  // Attempt to recover high accuracy if it's not available
+  const attemptHighAccuracyRecovery = useCallback(async () => {
+    if (highAccuracyAvailable || recoveryAttempts >= 3) return highAccuracyAvailable;
+    
+    setRecoveryAttempts(prev => prev + 1);
+    
+    try {
+      // In a real implementation, we would use platform-specific APIs to prompt
+      // for high-accuracy location. Here we'll simulate it.
+      
+      // Request with high accuracy option
+      await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          { 
+            timeout: 10000,
+            enableHighAccuracy: true,
+            maximumAge: 0
+          }
+        );
+      });
+      
+      setHighAccuracyAvailable(true);
+      return true;
+    } catch (e) {
+      console.warn('High accuracy recovery attempt failed:', e);
+      setHighAccuracyAvailable(false);
+      return false;
+    }
+  }, [highAccuracyAvailable, recoveryAttempts]);
 
   return {
     permissionStatus,
-    backgroundPermission,
+    backgroundPermissionStatus,
+    requestPermission,
+    isRequesting,
     lastChecked,
-    checkPermissions,
-    requestPermissions
+    hasInitialized,
+    locationAvailable,
+    highAccuracyAvailable,
+    attemptHighAccuracyRecovery,
+    recoveryAttempts,
+    fallbackMode,
+    checkLocationAvailability
   };
 }

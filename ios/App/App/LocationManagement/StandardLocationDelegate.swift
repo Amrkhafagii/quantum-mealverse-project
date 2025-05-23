@@ -1,3 +1,4 @@
+
 import CoreLocation
 
 class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
@@ -13,6 +14,22 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     private var locationUpdateBuffer: [CLLocation] = []
     private var debounceTimer: Timer?
     private let debounceInterval: TimeInterval = 0.5 // 500ms
+    
+    // Track accuracy levels for degradation features
+    private var currentAccuracyState: AccuracyState = .high
+    private var recoveryAttemptCount: Int = 0
+    private var lastRecoveryAttempt: Date?
+    private let recoveryInterval: TimeInterval = 30.0 // 30 seconds between recovery attempts
+    
+    // Accuracy thresholds for determining location quality
+    private let highAccuracyThreshold: CLLocationAccuracy = 20.0  // meters
+    private let mediumAccuracyThreshold: CLLocationAccuracy = 100.0 // meters
+    
+    enum AccuracyState {
+        case high
+        case medium
+        case low
+    }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         // Process locations from most recent to oldest
@@ -49,17 +66,94 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
         
         if isBetterLocation {
             bestLocation = bestBufferedLocation
+            
+            // Determine accuracy state before sending update
+            updateAccuracyState(for: bestBufferedLocation)
+            
+            // Send location update with accuracy state info
             onLocationUpdate?(bestBufferedLocation)
+            
+            // Post notification about accuracy state changes
+            NotificationCenter.default.post(
+                name: Notification.Name("locationAccuracyChanged"),
+                object: nil,
+                userInfo: ["state": currentAccuracyState, "accuracy": bestBufferedLocation.horizontalAccuracy]
+            )
         } else {
             print("Ignoring buffered location update - not significantly better: \(bestBufferedLocation.coordinate), accuracy: \(bestBufferedLocation.horizontalAccuracy)m")
             // We still cache it if it's the best we have
             if bestLocation == nil {
                 bestLocation = bestBufferedLocation
+                updateAccuracyState(for: bestBufferedLocation)
             }
         }
         
         // Clear buffer
         locationUpdateBuffer.removeAll()
+        
+        // If we're in lower accuracy modes, schedule a recovery attempt
+        if currentAccuracyState != .high {
+            scheduleAccuracyRecovery(manager: bestBufferedLocation.timestamp > Date().addingTimeInterval(-300) ? nil : manager)
+        }
+    }
+    
+    // Update the current accuracy state based on location accuracy
+    private func updateAccuracyState(for location: CLLocation) {
+        let accuracy = location.horizontalAccuracy
+        
+        let newState: AccuracyState
+        if accuracy <= highAccuracyThreshold {
+            newState = .high
+        } else if accuracy <= mediumAccuracyThreshold {
+            newState = .medium
+        } else {
+            newState = .low
+        }
+        
+        // Only notify if state has changed
+        if newState != currentAccuracyState {
+            currentAccuracyState = newState
+            print("Location accuracy state changed to: \(newState), accuracy: \(accuracy)m")
+            
+            // Reset recovery attempts on accuracy state change
+            if newState == .high {
+                recoveryAttemptCount = 0
+                lastRecoveryAttempt = nil
+            }
+        }
+    }
+    
+    // Schedule an attempt to recover higher accuracy
+    private func scheduleAccuracyRecovery(manager: CLLocationManager?) {
+        // Check if enough time has passed since last attempt
+        if let lastAttempt = lastRecoveryAttempt, Date().timeIntervalSince(lastAttempt) < recoveryInterval {
+            return
+        }
+        
+        // Increment attempt count and update timestamp
+        recoveryAttemptCount += 1
+        lastRecoveryAttempt = Date()
+        
+        // Try to recover better accuracy by adjusting settings
+        if let locationManager = manager {
+            // Try to get better accuracy based on the current state
+            switch currentAccuracyState {
+            case .low:
+                // If in low accuracy, first try with a balanced accuracy setting
+                locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            case .medium:
+                // If in medium accuracy, try to get to high accuracy
+                locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            case .high:
+                // Already in high accuracy, nothing to do
+                return
+            }
+            
+            // Request a new location with adjusted settings
+            locationManager.requestLocation()
+            
+            print("Attempting to recover better location accuracy: attempt \(recoveryAttemptCount)")
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -73,6 +167,18 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
                 if let cached = bestLocation {
                     print("Using cached location due to transient error")
                     onLocationUpdate?(cached)
+                    
+                    // If error persists, degrade accuracy state
+                    if currentAccuracyState == .high {
+                        currentAccuracyState = .medium
+                        
+                        // Notify about accuracy degradation due to error
+                        NotificationCenter.default.post(
+                            name: Notification.Name("locationAccuracyChanged"),
+                            object: nil,
+                            userInfo: ["state": currentAccuracyState, "accuracy": cached.horizontalAccuracy, "reason": "error"]
+                        )
+                    }
                 }
                 return
             default:

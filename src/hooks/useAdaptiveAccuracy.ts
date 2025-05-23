@@ -1,194 +1,195 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Device } from '@capacitor/device';
-import { Network } from '@capacitor/network';
-import { Capacitor } from '@capacitor/core';
-import { NetworkType } from '@/types/unifiedLocation';
 
-interface AccuracySettings {
-  enableHighAccuracy: boolean;
-  timeout: number;
-  maximumAge: number;
-  minimumDistance?: number; // meters
-  updateInterval?: number;  // milliseconds
+import { useState, useEffect, useCallback } from 'react';
+import { BatteryOptimization } from '@/utils/batteryOptimization';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+
+export type AccuracyLevel = 'high' | 'medium' | 'low' | 'unknown';
+
+export interface AccuracySettings {
+  desiredAccuracy: 'best' | 'balanced' | 'low';
+  updateInterval: number; // milliseconds
+  distanceFilter: number; // meters
+  timeout: number; // milliseconds
+  maxAge: number; // milliseconds
 }
 
 interface AdaptiveAccuracyOptions {
   activityContext?: 'stationary' | 'walking' | 'driving' | 'unknown';
-  batteryThreshold?: number; // percentage below which to reduce accuracy
-  networkRequired?: boolean; // whether network is required for the feature
+  batteryThreshold?: number; // Below this percentage we reduce accuracy demands
+  networkRequired?: boolean;
 }
 
-export const useAdaptiveAccuracy = (options: AdaptiveAccuracyOptions = {}) => {
-  const {
-    activityContext = 'unknown',
-    batteryThreshold = 15,
-    networkRequired = false
-  } = options;
-  
-  const [accuracySettings, setAccuracySettings] = useState<AccuracySettings>({
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 0
-  });
-  
+// Default settings for different accuracy levels
+const accuracyPresets: Record<AccuracyLevel, AccuracySettings> = {
+  high: {
+    desiredAccuracy: 'best',
+    updateInterval: 10000, // 10 seconds
+    distanceFilter: 10, // 10 meters
+    timeout: 15000, // 15 seconds
+    maxAge: 60000 // 1 minute
+  },
+  medium: {
+    desiredAccuracy: 'balanced',
+    updateInterval: 20000, // 20 seconds
+    distanceFilter: 50, // 50 meters
+    timeout: 10000, // 10 seconds
+    maxAge: 180000 // 3 minutes
+  },
+  low: {
+    desiredAccuracy: 'low',
+    updateInterval: 60000, // 1 minute
+    distanceFilter: 100, // 100 meters
+    timeout: 5000, // 5 seconds
+    maxAge: 300000 // 5 minutes
+  },
+  unknown: {
+    desiredAccuracy: 'balanced',
+    updateInterval: 30000, // 30 seconds
+    distanceFilter: 50, // 50 meters
+    timeout: 10000, // 10 seconds
+    maxAge: 120000 // 2 minutes
+  }
+};
+
+export function useAdaptiveAccuracy({
+  activityContext = 'unknown',
+  batteryThreshold = 20,
+  networkRequired = true
+}: AdaptiveAccuracyOptions = {}) {
+  const [accuracyLevel, setAccuracyLevel] = useState<AccuracyLevel>('unknown');
+  const [accuracyValue, setAccuracyValue] = useState<number | null>(null);
+  const [accuracySettings, setAccuracySettings] = useState<AccuracySettings>(accuracyPresets.unknown);
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isLowBattery, setIsLowBattery] = useState(false);
-  const [networkType, setNetworkType] = useState<NetworkType>('unknown');
-  const [isNetworkAvailable, setIsNetworkAvailable] = useState(true);
+  const { isOnline, networkType } = useConnectionStatus();
   
-  // Monitor battery level
-  const checkBatteryLevel = useCallback(async () => {
-    try {
-      const info = await Device.getBatteryInfo();
-      const level = Math.round(info.batteryLevel * 100);
-      setBatteryLevel(level);
-      setIsLowBattery(level <= batteryThreshold);
-    } catch (error) {
-      console.warn('Error checking battery level:', error);
-    }
-  }, [batteryThreshold]);
+  const isNetworkAvailable = networkRequired ? isOnline : true;
   
-  // Monitor network status
-  const checkNetworkStatus = useCallback(async () => {
-    try {
-      const status = await Network.getStatus();
-      setIsNetworkAvailable(status.connected);
-      
-      if (status.connectionType === 'wifi') {
-        setNetworkType('wifi');
-      } else if (status.connectionType === 'cellular') {
-        // This is a simplification; in a real app you might want to detect cellular generation
-        setNetworkType('cellular_4g');
-      } else {
-        setNetworkType('unknown');
+  // Check battery level
+  useEffect(() => {
+    const checkBattery = async () => {
+      try {
+        const level = await BatteryOptimization.getBatteryLevel();
+        setBatteryLevel(level);
+        setIsLowBattery(level < batteryThreshold);
+      } catch (e) {
+        console.error('Error checking battery level:', e);
       }
-    } catch (error) {
-      console.warn('Error checking network status:', error);
-    }
-  }, []);
-  
-  // Update accuracy settings based on context
-  const updateAccuracySettings = useCallback(() => {
-    // Start with default settings
-    let settings: AccuracySettings = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
     };
     
-    // Adjust based on battery level
-    if (isLowBattery) {
-      settings = {
-        ...settings,
-        enableHighAccuracy: false,
-        timeout: 15000,
-        maximumAge: 60000, // 1 minute
-        updateInterval: 60000 // 1 minute
-      };
-    }
+    checkBattery();
     
-    // Adjust based on network availability if network is required for the feature
-    if (networkRequired && !isNetworkAvailable) {
-      settings = {
-        ...settings,
-        enableHighAccuracy: false,
-        maximumAge: 300000, // 5 minutes
-        updateInterval: 300000 // 5 minutes
-      };
-    }
+    // Check battery level every minute
+    const interval = setInterval(checkBattery, 60000);
+    return () => clearInterval(interval);
+  }, [batteryThreshold]);
+  
+  // Update accuracy settings based on context and constraints
+  useEffect(() => {
+    let targetLevel: AccuracyLevel = 'high';
     
+    // If network is required but not available, degrade
+    if (networkRequired && !isOnline) {
+      targetLevel = 'low';
+    } 
+    // If battery is low, degrade accuracy
+    else if (isLowBattery) {
+      targetLevel = 'medium';
+    }
     // Adjust based on activity context
-    switch (activityContext) {
-      case 'stationary':
-        settings = {
-          ...settings,
-          minimumDistance: 50, // Only update if moved 50 meters
-          updateInterval: settings.updateInterval || 60000 // 1 minute
-        };
-        break;
-      
-      case 'walking':
-        settings = {
-          ...settings,
-          minimumDistance: 10, // Update if moved 10 meters
-          updateInterval: settings.updateInterval || 15000 // 15 seconds
-        };
-        break;
-      
-      case 'driving':
-        settings = {
-          ...settings,
-          minimumDistance: 100, // Update if moved 100 meters
-          updateInterval: settings.updateInterval || 5000 // 5 seconds
-        };
-        break;
-      
-      default:
-        // For unknown activity, use moderate settings
-        settings = {
-          ...settings,
-          minimumDistance: 25, // Update if moved 25 meters
-          updateInterval: settings.updateInterval || 30000 // 30 seconds
-        };
+    else if (activityContext === 'stationary') {
+      targetLevel = 'medium'; // Less frequent updates when not moving
     }
     
-    // Platform-specific optimizations
-    if (Capacitor.isNativePlatform()) {
-      // Native platforms can handle more frequent updates efficiently
-      if (!isLowBattery) {
-        settings.updateInterval = Math.max(settings.updateInterval || 0, 3000);
+    // Set the new accuracy level
+    setAccuracyLevel(targetLevel);
+    
+    // Apply the corresponding settings
+    setAccuracySettings({
+      ...accuracyPresets[targetLevel],
+      // When driving, we want to update more frequently
+      updateInterval: activityContext === 'driving' 
+        ? Math.min(accuracyPresets[targetLevel].updateInterval, 15000) 
+        : accuracyPresets[targetLevel].updateInterval
+    });
+    
+  }, [isLowBattery, isOnline, activityContext, networkRequired]);
+  
+  // Try to improve accuracy
+  const attemptAccuracyRecovery = useCallback(async () => {
+    // If we're already at high accuracy, nothing to do
+    if (accuracyLevel === 'high') return true;
+    
+    try {
+      // Try to get a high-accuracy location
+      const highAccuracySettings = accuracyPresets.high;
+      
+      // In a real implementation, this would request a high-accuracy location
+      // For this demo, we'll simulate success or failure based on constraints
+      
+      // If battery is too low or offline, recovery will likely fail
+      if (isLowBattery || !isNetworkAvailable) {
+        console.log('Recovery attempt unlikely to succeed due to constraints');
+        return false;
       }
-    } else {
-      // Web platform - be more conservative with updates
-      settings.updateInterval = Math.max(settings.updateInterval || 0, 10000);
+      
+      // Simulate successful recovery with 70% chance
+      const recoverySuccessful = Math.random() > 0.3;
+      
+      if (recoverySuccessful) {
+        // In a real implementation, we would get the new accuracy level
+        // from the actual location result
+        const newAccuracyLevel: AccuracyLevel = 'high';
+        setAccuracyLevel(newAccuracyLevel);
+        setAccuracySettings(accuracyPresets[newAccuracyLevel]);
+        setAccuracyValue(15); // Simulate 15m accuracy
+      }
+      
+      return recoverySuccessful;
+    } catch (e) {
+      console.error('Error recovering accuracy:', e);
+      return false;
     }
-    
-    // Update the settings state
-    setAccuracySettings(settings);
-  }, [activityContext, isLowBattery, isNetworkAvailable, networkRequired]);
+  }, [accuracyLevel, isLowBattery, isNetworkAvailable]);
   
-  // Check status when component mounts and set up listeners
+  // Simulate getting location accuracy from system
   useEffect(() => {
-    checkBatteryLevel();
-    checkNetworkStatus();
-    updateAccuracySettings();
+    const simulateAccuracyValue = () => {
+      let baseAccuracy: number;
+      
+      switch (accuracyLevel) {
+        case 'high':
+          baseAccuracy = 10 + (Math.random() * 10); // 10-20m
+          break;
+        case 'medium':
+          baseAccuracy = 50 + (Math.random() * 50); // 50-100m
+          break;
+        case 'low':
+          baseAccuracy = 500 + (Math.random() * 1000); // 500-1500m
+          break;
+        default:
+          baseAccuracy = 100 + (Math.random() * 200); // 100-300m
+      }
+      
+      setAccuracyValue(baseAccuracy);
+    };
     
-    // Set up event listeners if on native platform
-    if (Capacitor.isNativePlatform()) {
-      Network.addListener('networkStatusChange', () => {
-        checkNetworkStatus();
-        updateAccuracySettings();
-      });
-      
-      // Set up interval for battery checks (batteries drain over time)
-      const batteryInterval = setInterval(checkBatteryLevel, 60000); // Check battery every minute
-      
-      return () => {
-        clearInterval(batteryInterval);
-        Network.removeAllListeners();
-      };
-    } else {
-      // Browser environment
-      window.addEventListener('online', checkNetworkStatus);
-      window.addEventListener('offline', checkNetworkStatus);
-      
-      return () => {
-        window.removeEventListener('online', checkNetworkStatus);
-        window.removeEventListener('offline', checkNetworkStatus);
-      };
-    }
-  }, [checkBatteryLevel, checkNetworkStatus, updateAccuracySettings]);
-  
-  // Update settings when dependencies change
-  useEffect(() => {
-    updateAccuracySettings();
-  }, [activityContext, isLowBattery, isNetworkAvailable, updateAccuracySettings]);
+    // Set initial accuracy value
+    simulateAccuracyValue();
+    
+    // Update simulated accuracy every 30 seconds
+    const interval = setInterval(simulateAccuracyValue, 30000);
+    return () => clearInterval(interval);
+  }, [accuracyLevel]);
   
   return {
+    accuracyLevel,
+    accuracyValue,
     accuracySettings,
     batteryLevel,
     isLowBattery,
     networkType,
-    isNetworkAvailable
+    isNetworkAvailable,
+    attemptAccuracyRecovery
   };
-};
+}
