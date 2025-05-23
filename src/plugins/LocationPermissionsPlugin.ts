@@ -7,6 +7,7 @@ export interface LocationPermissionStatus {
 }
 
 export interface LocationPermissionsPlugin {
+  requestPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus>;
   requestLocationPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus>;
   checkPermissionStatus(): Promise<LocationPermissionStatus>;
 }
@@ -23,32 +24,66 @@ const createSafeLocationPermissions = () => {
     
     // Return a fallback implementation that won't crash the app
     return {
+      requestPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
+        console.warn('LocationPermissions plugin not available, using fallback');
+        return promiseWithGeolocation();
+      },
+      
       requestLocationPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
         console.warn('LocationPermissions plugin not available, using fallback');
-        try {
-          // Try to use Geolocation API directly as fallback
-          return new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              () => resolve({ location: 'granted', backgroundLocation: 'prompt' }),
-              (err) => {
-                console.log('Geolocation permission error:', err);
-                resolve({ location: 'denied', backgroundLocation: 'denied' });
-              },
-              { timeout: 10000 }
-            );
-          });
-        } catch (fallbackError) {
-          console.error('Fallback location permission check failed:', fallbackError);
-          return { location: 'prompt', backgroundLocation: 'prompt' };
-        }
+        return promiseWithGeolocation();
       },
+      
       checkPermissionStatus: async (): Promise<LocationPermissionStatus> => {
         console.warn('LocationPermissions plugin not available, using fallback');
         // Default to prompt when plugin is unavailable
-        return { location: 'prompt', backgroundLocation: 'prompt' };
+        return checkPermissionWithGeolocation();
       }
     } as LocationPermissionsPlugin;
   }
+};
+
+// Helper function to check permission with standard geolocation API
+const checkPermissionWithGeolocation = async (): Promise<LocationPermissionStatus> => {
+  if (!navigator.geolocation) {
+    return { location: 'prompt', backgroundLocation: 'prompt' };
+  }
+  
+  try {
+    if ('permissions' in navigator) {
+      const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+      return {
+        location: status.state as PermissionState,
+        backgroundLocation: 'prompt'
+      };
+    }
+  } catch (e) {
+    console.warn('Permission API not available, permission status unknown');
+  }
+  
+  return { location: 'prompt', backgroundLocation: 'prompt' };
+};
+
+// Helper function to get permission using standard geolocation API
+const promiseWithGeolocation = (): Promise<LocationPermissionStatus> => {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({ location: 'prompt', backgroundLocation: 'prompt' });
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      () => resolve({ location: 'granted', backgroundLocation: 'prompt' }),
+      (error) => {
+        if (error.code === 1) { // PERMISSION_DENIED
+          resolve({ location: 'denied', backgroundLocation: 'denied' });
+        } else {
+          resolve({ location: 'prompt', backgroundLocation: 'prompt' });
+        }
+      },
+      { timeout: 10000 }
+    );
+  });
 };
 
 const LocationPermissions = createSafeLocationPermissions();
