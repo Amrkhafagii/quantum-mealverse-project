@@ -7,6 +7,7 @@ import { Platform } from '@/utils/platform';
 import LazyMap from './LazyMap';
 import { Loader2 } from 'lucide-react';
 import { useMapView } from '@/contexts/MapViewContext';
+import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
 
 interface MapContainerProps {
   className?: string;
@@ -24,6 +25,8 @@ interface MapContainerProps {
   zoomLevel?: number;
   locations?: any[]; // Support the old locations prop for backward compatibility
   forceWebView?: boolean; // Force web view even on native platforms
+  locationAccuracy?: AccuracyLevel; // Added the location accuracy prop
+  showAccuracyCircle?: boolean; // Added the show accuracy circle prop
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -41,7 +44,9 @@ const MapContainer: React.FC<MapContainerProps> = ({
   enableAnimation = true,
   zoomLevel = 13,
   locations = [],
-  forceWebView = false
+  forceWebView = false,
+  locationAccuracy, // Added the locationAccuracy prop
+  showAccuracyCircle // Added the showAccuracyCircle prop
 }) => {
   const { googleMapsApiKey } = useGoogleMaps();
   const { lowPerformanceMode: contextLowPerformanceMode } = useMapView();
@@ -78,6 +83,8 @@ const MapContainer: React.FC<MapContainerProps> = ({
             enableAnimation={enableAnimation}
             zoomLevel={zoomLevel}
             locations={locations}
+            locationAccuracy={locationAccuracy} // Pass through locationAccuracy prop
+            showAccuracyCircle={showAccuracyCircle} // Pass through showAccuracyCircle prop
           />
         )}
         {children}

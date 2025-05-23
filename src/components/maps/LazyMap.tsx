@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Platform } from '@/utils/platform';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import NativeMap from './NativeMap';
+import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
 
 const GoogleMap = React.lazy(() => import('./DeliveryGoogleMap'));
 
@@ -37,6 +38,8 @@ interface LazyMapProps {
   isInteractive?: boolean;
   zoomLevel?: number;
   locations?: any[];
+  locationAccuracy?: AccuracyLevel; // Added locationAccuracy prop
+  showAccuracyCircle?: boolean; // Added showAccuracyCircle prop
 }
 
 const LazyMap: React.FC<LazyMapProps> = ({
@@ -60,7 +63,9 @@ const LazyMap: React.FC<LazyMapProps> = ({
   restaurantLocation,
   isInteractive = true,
   zoomLevel,
-  locations = []
+  locations = [],
+  locationAccuracy, // Added locationAccuracy prop
+  showAccuracyCircle // Added showAccuracyCircle prop
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { quality, isLowQuality } = useNetworkQuality();
@@ -156,6 +161,8 @@ const LazyMap: React.FC<LazyMapProps> = ({
             width={width}
             className={className}
             liteMode={useLowPerformanceMode}
+            locationAccuracy={locationAccuracy} // Pass through locationAccuracy prop
+            showAccuracyCircle={showAccuracyCircle} // Pass through showAccuracyCircle prop
           />
         ) : (
           <React.Suspense fallback={<Skeleton className="w-full h-full" />}>
@@ -174,6 +181,8 @@ const LazyMap: React.FC<LazyMapProps> = ({
               enableAnimation={enableAnimation && !useLowPerformanceMode}
               enableControls={enableControls && !useLowPerformanceMode}
               onLoad={handleMapLoad}
+              locationAccuracy={locationAccuracy} // Pass through locationAccuracy prop
+              showAccuracyCircle={showAccuracyCircle} // Pass through showAccuracyCircle prop
             />
           </React.Suspense>
         )}

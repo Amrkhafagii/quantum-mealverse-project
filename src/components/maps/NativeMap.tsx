@@ -1,14 +1,11 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { CapacitorGoogleMaps } from '@capacitor-community/capacitor-googlemaps-native';
-import { Platform } from '@/utils/platform';
+import React from 'react';
+import { Card } from '@/components/ui/card';
+import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
 
 interface NativeMapProps {
   mapId: string;
   center: { lat: number; lng: number };
-  height: string;
-  width?: string;
   zoom?: number;
   markers?: Array<{
     latitude: number;
@@ -17,111 +14,51 @@ interface NativeMapProps {
     description?: string;
     type?: string;
   }>;
+  height?: string;
+  width?: string;
   className?: string;
   liteMode?: boolean;
+  locationAccuracy?: AccuracyLevel; // Added locationAccuracy prop
+  showAccuracyCircle?: boolean; // Added showAccuracyCircle prop
 }
 
+// This is a placeholder component for native map implementation
+// In a real app, this would use the Capacitor Google Maps plugin or similar
 const NativeMap: React.FC<NativeMapProps> = ({
   mapId,
   center,
-  height,
-  width = '100%',
   zoom = 14,
   markers = [],
+  height = '300px',
+  width,
   className = '',
-  liteMode = false
+  liteMode = false,
+  locationAccuracy, // Added locationAccuracy prop
+  showAccuracyCircle // Added showAccuracyCircle prop
 }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [mapInitialized, setMapInitialized] = useState(false);
-  
-  useEffect(() => {
-    const initMap = async () => {
-      if (!mapRef.current || !Platform.isNative()) return;
-      
-      try {
-        // Get bounds of the mapRef element
-        const bounds = mapRef.current.getBoundingClientRect();
-        
-        // Initialize the map
-        await CapacitorGoogleMaps.create({
-          width: bounds.width,
-          height: bounds.height,
-          x: bounds.x,
-          y: bounds.y,
-          latitude: center.lat,
-          longitude: center.lng,
-          zoom: zoom,
-          liteMode: liteMode
-        });
-        
-        setMapInitialized(true);
-        
-        // Add markers if provided
-        if (markers && markers.length > 0) {
-          await Promise.all(
-            markers.map(async (marker) => {
-              await CapacitorGoogleMaps.addMarker({
-                latitude: marker.latitude,
-                longitude: marker.longitude,
-                title: marker.title || '',
-                snippet: marker.description || '',
-                opacity: 1.0,
-                isFlat: false,
-                iconUrl: marker.type === 'restaurant' 
-                  ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
-                  : marker.type === 'customer'
-                  ? 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                  : marker.type === 'driver'
-                  ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                  : undefined
-              });
-            })
-          );
-        }
-      } catch (err) {
-        console.error('Failed to initialize native map:', err);
-      }
-    };
-    
-    initMap();
-    
-    return () => {
-      // Clean up the map when component unmounts
-      if (mapInitialized) {
-        try {
-          // Handle map destruction with type safety
-          // Use any type casting to bypass TypeScript error when the method exists at runtime
-          const mapPlugin = CapacitorGoogleMaps as any;
-          if (typeof mapPlugin.destroy === 'function') {
-            mapPlugin.destroy();
-          } else {
-            console.warn("Destroy method not found on CapacitorGoogleMaps, attempting alternative cleanup");
-            // Fall back to other potential cleanup methods if needed
-          }
-        } catch (err) {
-          console.error('Error cleaning up map:', err);
-        }
-      }
-    };
-  }, [center, zoom, markers, liteMode]);
+  // In a real implementation, these props would be used to configure the native map
 
   return (
-    <div 
-      ref={mapRef} 
-      id={mapId}
-      className={`native-map ${className}`}
+    <Card 
+      className={`${className} overflow-hidden flex items-center justify-center bg-muted/20`}
       style={{
-        height,
         width: width || '100%',
-        background: '#f0f0f0',
+        height: height || '300px'
       }}
     >
-      {!Platform.isNative() && (
-        <div className="flex items-center justify-center h-full bg-gray-100 text-gray-500">
-          Native map only available on iOS/Android
-        </div>
-      )}
-    </div>
+      <div className="text-center p-4">
+        <p className="text-sm font-medium">Native Map View</p>
+        <p className="text-xs text-muted-foreground mt-1">Map ID: {mapId}</p>
+        {markers.length > 0 && (
+          <p className="text-xs text-muted-foreground mt-1">Markers: {markers.length}</p>
+        )}
+        {locationAccuracy && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Accuracy: {locationAccuracy} {showAccuracyCircle ? '(circle visible)' : ''}
+          </p>
+        )}
+      </div>
+    </Card>
   );
 };
 
