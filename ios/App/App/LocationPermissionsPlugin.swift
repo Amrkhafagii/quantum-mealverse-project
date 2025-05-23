@@ -10,7 +10,19 @@ public class LocationPermissionsPlugin: CAPPlugin {
     private var bestAvailableLocation: CLLocation?
     private var accuracyTimer: Timer?
     private var requestAttempts: Int = 0
+    private var lastRequestTime: Date = Date.distantPast
     private let maxRequestAttempts: Int = 3
+    
+    // Batching support
+    private var pendingLocationUpdates: [CLLocation] = []
+    private var batchProcessingTimer: Timer?
+    private let batchSize = 5
+    private let batchProcessingInterval: TimeInterval = 3.0 // seconds
+    
+    // Cache for permission status
+    private var permissionStatusCache: [String: Any]?
+    private var permissionCacheExpiry: Date = Date.distantPast
+    private let cacheTTL: TimeInterval = 60.0 // Cache permission status for 60 seconds
     
     // Accuracy and timeout settings
     private let desiredAccuracy: CLLocationAccuracy = 100 // 100 meters
@@ -31,6 +43,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
     
     deinit {
         stopAccuracyTimer()
+        stopBatchProcessingTimer()
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -38,6 +51,9 @@ public class LocationPermissionsPlugin: CAPPlugin {
         // When permissions change elsewhere in the app, update any pending callbacks
         if let status = notification.userInfo?["status"] as? CLAuthorizationStatus {
             resolveAllPendingCallbacks(with: status)
+            
+            // Invalidate permission cache when permissions change
+            invalidatePermissionCache()
         }
     }
     
@@ -52,13 +68,50 @@ public class LocationPermissionsPlugin: CAPPlugin {
             permissionCallbacks.removeValue(forKey: id)
         }
         
+        // Update permission cache with new status
+        updatePermissionCache(status: status)
+        
         // Reset request attempts when permissions change
         requestAttempts = 0
+    }
+    
+    // Cache permission status to reduce redundant checks
+    private func updatePermissionCache(status: CLAuthorizationStatus) {
+        let formattedStatus = formatPermissionStatus(status)
+        permissionStatusCache = [
+            "location": formattedStatus.foreground,
+            "backgroundLocation": formattedStatus.background
+        ]
+        permissionCacheExpiry = Date().addingTimeInterval(cacheTTL)
+    }
+    
+    private func invalidatePermissionCache() {
+        permissionStatusCache = nil
+        permissionCacheExpiry = Date.distantPast
+    }
+    
+    private func permissionCacheIsValid() -> Bool {
+        guard let _ = permissionStatusCache else { return false }
+        return Date() < permissionCacheExpiry
     }
     
     @objc override public func requestPermissions(_ call: CAPPluginCall) {
         let backgroundMode = call.getBool("background") ?? false
         let callbackId = call.callbackId
+        
+        // Check for rapid repeat calls
+        let now = Date()
+        let timeSinceLastRequest = now.timeIntervalSince(lastRequestTime)
+        
+        if timeSinceLastRequest < 1.0 && requestAttempts > 0 {
+            // Too frequent, use cached result if available
+            if let cache = permissionStatusCache, permissionCacheIsValid() {
+                call.resolve(cache)
+                return
+            }
+        }
+        
+        lastRequestTime = now
         
         // Store the callback to resolve later
         if let id = callbackId {
@@ -77,6 +130,9 @@ public class LocationPermissionsPlugin: CAPPlugin {
                     self.permissionCallbacks.removeValue(forKey: id)
                 }
                 
+                // Update cache
+                self.updatePermissionCache(status: status)
+                
                 // Reset attempts after successful resolution
                 self.requestAttempts = 0
             }
@@ -86,13 +142,24 @@ public class LocationPermissionsPlugin: CAPPlugin {
     }
     
     @objc public func checkPermissionStatus(_ call: CAPPluginCall) {
+        // Check cache first to avoid bridge calls
+        if let cache = permissionStatusCache, permissionCacheIsValid() {
+            call.resolve(cache)
+            return
+        }
+        
         let status = checkLocationPermission()
         let formattedStatus = formatPermissionStatus(status)
-        
-        call.resolve([
+        let result = [
             "location": formattedStatus.foreground,
             "backgroundLocation": formattedStatus.background
-        ])
+        ]
+        
+        // Update cache
+        permissionStatusCache = result
+        permissionCacheExpiry = Date().addingTimeInterval(cacheTTL)
+        
+        call.resolve(result)
     }
     
     private func requestLocationPermissionWithBackoff(background: Bool, completion: @escaping (CLAuthorizationStatus) -> Void) {
@@ -129,6 +196,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
             // Set up location update handler to check for accuracy
             delegate.onLocationUpdate = { [weak self] location in
                 self?.handleLocationForAccuracy(location)
+                self?.addToBatch(location)
             }
             
             locationManager.delegate = delegate
@@ -158,6 +226,62 @@ public class LocationPermissionsPlugin: CAPPlugin {
         }
     }
     
+    // Add location to batch for processing
+    private func addToBatch(_ location: CLLocation) {
+        pendingLocationUpdates.append(location)
+        
+        if batchProcessingTimer == nil {
+            startBatchProcessingTimer()
+        }
+        
+        // Process immediately if we reach batch size
+        if pendingLocationUpdates.count >= batchSize {
+            processBatchedLocations()
+        }
+    }
+    
+    private func startBatchProcessingTimer() {
+        batchProcessingTimer = Timer.scheduledTimer(
+            withTimeInterval: batchProcessingInterval,
+            repeats: false
+        ) { [weak self] _ in
+            self?.processBatchedLocations()
+        }
+    }
+    
+    private func stopBatchProcessingTimer() {
+        batchProcessingTimer?.invalidate()
+        batchProcessingTimer = nil
+    }
+    
+    private func processBatchedLocations() {
+        guard !pendingLocationUpdates.isEmpty else { return }
+        
+        stopBatchProcessingTimer()
+        
+        // Find the best location in the batch
+        let bestLocation = pendingLocationUpdates.reduce(pendingLocationUpdates[0]) { (best, current) in
+            // Prefer newer locations
+            if current.timestamp.timeIntervalSince(best.timestamp) > 5.0 {
+                return current
+            }
+            
+            // If timestamps are close, prefer more accurate
+            return current.horizontalAccuracy < best.horizontalAccuracy ? current : best
+        }
+        
+        // Update the best available location
+        handleBestLocation(bestLocation)
+        
+        // Clear the batch
+        pendingLocationUpdates.removeAll()
+    }
+    
+    private func handleBestLocation(_ location: CLLocation) {
+        bestAvailableLocation = location
+        print("Best batched location: \(location.coordinate), accuracy: \(location.horizontalAccuracy)m")
+    }
+    
     private func handleLocationForAccuracy(_ location: CLLocation) {
         // Cache this location if it's better than what we have
         if bestAvailableLocation == nil || 
@@ -165,7 +289,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
             bestAvailableLocation = location
             print("Updated best location: \(location.coordinate), accuracy: \(location.horizontalAccuracy)m")
             
-            // If accuracy meets our threshold, stop the timer and use this location
+            // If accuracy meets our threshold, stop the timer
             if location.horizontalAccuracy <= desiredAccuracy {
                 stopAccuracyTimer()
             }
@@ -182,6 +306,11 @@ public class LocationPermissionsPlugin: CAPPlugin {
             
             print("Accuracy timeout reached, using best available location")
             self.stopAccuracyTimer()
+            
+            // Process any pending batched locations
+            if !self.pendingLocationUpdates.isEmpty {
+                self.processBatchedLocations()
+            }
             
             // Use the best available location or timeout
             if self.bestAvailableLocation != nil {

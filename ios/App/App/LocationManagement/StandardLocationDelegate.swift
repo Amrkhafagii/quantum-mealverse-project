@@ -9,23 +9,57 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
     private var bestLocation: CLLocation?
     private let significantAccuracyImprovement: CLLocationAccuracy = 50.0 // meters
     
+    // Buffer for debouncing frequent location updates
+    private var locationUpdateBuffer: [CLLocation] = []
+    private var debounceTimer: Timer?
+    private let debounceInterval: TimeInterval = 0.5 // 500ms
+    
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         // Process locations from most recent to oldest
         if let location = locations.sorted(by: { $0.timestamp > $1.timestamp }).first {
-            // Check if this is significantly better than what we have
-            let isBetterLocation = shouldUpdateLocation(newLocation: location)
+            // Add to update buffer instead of processing immediately
+            locationUpdateBuffer.append(location)
             
-            if isBetterLocation {
-                bestLocation = location
-                onLocationUpdate?(location)
-            } else {
-                print("Ignoring location update - not significantly better: \(location.coordinate), accuracy: \(location.horizontalAccuracy)m")
-                // We still cache it if it's the best we have
-                if bestLocation == nil {
-                    bestLocation = location
+            // Start debounce timer if not already running
+            if debounceTimer == nil {
+                debounceTimer = Timer.scheduledTimer(
+                    withTimeInterval: debounceInterval,
+                    repeats: false
+                ) { [weak self] _ in
+                    self?.processBufferedLocations()
                 }
             }
         }
+    }
+    
+    private func processBufferedLocations() {
+        // Clear timer
+        debounceTimer?.invalidate()
+        debounceTimer = nil
+        
+        guard !locationUpdateBuffer.isEmpty else { return }
+        
+        // Find the best location in the buffer
+        let bestBufferedLocation = locationUpdateBuffer.reduce(locationUpdateBuffer[0]) { (best, current) in
+            return shouldUpdateLocation(newLocation: current, against: best) ? current : best
+        }
+        
+        // Check if this is significantly better than our overall best
+        let isBetterLocation = shouldUpdateLocation(newLocation: bestBufferedLocation)
+        
+        if isBetterLocation {
+            bestLocation = bestBufferedLocation
+            onLocationUpdate?(bestBufferedLocation)
+        } else {
+            print("Ignoring buffered location update - not significantly better: \(bestBufferedLocation.coordinate), accuracy: \(bestBufferedLocation.horizontalAccuracy)m")
+            // We still cache it if it's the best we have
+            if bestLocation == nil {
+                bestLocation = bestBufferedLocation
+            }
+        }
+        
+        // Clear buffer
+        locationUpdateBuffer.removeAll()
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -82,6 +116,10 @@ class StandardLocationDelegate: NSObject, CLLocationManagerDelegate {
             return true
         }
         
+        return shouldUpdateLocation(newLocation: newLocation, against: currentBest)
+    }
+    
+    private func shouldUpdateLocation(newLocation: CLLocation, against currentBest: CLLocation) -> Bool {
         // Check if the new location is more accurate by a significant margin
         let accuracyImprovement = currentBest.horizontalAccuracy - newLocation.horizontalAccuracy
         

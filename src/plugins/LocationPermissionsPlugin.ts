@@ -1,5 +1,6 @@
 
 import { registerPlugin } from '@capacitor/core';
+import { debounce, BatchCollector, BridgeStateCache } from '../utils/bridgeOptimization';
 
 export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
@@ -23,13 +24,53 @@ const backoffState = {
   maxAttempts: 3
 };
 
+// Permission status cache to reduce bridge calls
+const permissionStatusCache = new BridgeStateCache<LocationPermissionStatus>(60000); // 1 minute TTL
+
 // Create a safely initialized plugin with proper error handling
 const createSafeLocationPermissions = () => {
   try {
     // Register the plugin with a web fallback
-    return registerPlugin<LocationPermissionsPlugin>('LocationPermissions', {
+    const plugin = registerPlugin<LocationPermissionsPlugin>('LocationPermissions', {
       web: () => import('./web/LocationPermissionsWeb').then(m => m.LocationPermissionsWebInstance),
     });
+    
+    // Wrap original methods with optimized versions
+    const originalRequestPermission = plugin.requestPermission.bind(plugin);
+    const originalCheckPermissionStatus = plugin.checkPermissionStatus.bind(plugin);
+    
+    // Debounced version of checkPermissionStatus to prevent rapid calls
+    const debouncedCheckStatus = debounce(async () => {
+      const result = await originalCheckPermissionStatus();
+      permissionStatusCache.set('status', result);
+      return result;
+    }, 500);
+    
+    // Override methods with optimized versions
+    plugin.checkPermissionStatus = async () => {
+      // Try to use cached value first
+      const cached = permissionStatusCache.get('status');
+      if (cached) {
+        return cached;
+      }
+      
+      // Fall back to actual call
+      const result = await originalCheckPermissionStatus();
+      permissionStatusCache.set('status', result);
+      return result;
+    };
+    
+    plugin.requestPermission = async (options) => {
+      // Invalidate cache when requesting permissions
+      permissionStatusCache.clear();
+      const result = await originalRequestPermission(options);
+      
+      // Update cache with new permission status
+      permissionStatusCache.set('status', result);
+      return result;
+    };
+    
+    return plugin;
   } catch (error) {
     console.error('Error initializing LocationPermissions plugin:', error);
     
@@ -104,6 +145,37 @@ const checkPermissionWithGeolocation = async (): Promise<LocationPermissionStatu
   return { location: 'prompt', backgroundLocation: 'prompt' };
 };
 
+// Batch collector for location updates
+const locationUpdateBatch = new BatchCollector<GeolocationPosition>({
+  batchSize: 5,
+  flushInterval: 3000, // 3 seconds
+  onFlush: (positions) => {
+    if (positions.length === 0) return;
+    
+    // Use the most recent position with best accuracy
+    const bestPosition = positions.reduce((best, current) => {
+      if (!best) return current;
+      
+      // Prefer more recent positions
+      if (current.timestamp > best.timestamp + 5000) return current;
+      
+      // If timestamps are close, prefer more accurate positions
+      return current.coords.accuracy < best.coords.accuracy ? current : best;
+    }, positions[0]);
+    
+    // Process this position
+    console.log('Processing batched location update with best position:', bestPosition);
+    
+    // Cache it for future use
+    if (bestPosition) {
+      backoffState.bestLocation = { 
+        location: 'granted' as PermissionState, 
+        backgroundLocation: 'prompt' as PermissionState 
+      };
+    }
+  }
+});
+
 // Helper function to get permission using standard geolocation API with throttling
 const throttledPromiseWithGeolocation = (): Promise<LocationPermissionStatus> => {
   return new Promise((resolve) => {
@@ -145,8 +217,12 @@ const throttledPromiseWithGeolocation = (): Promise<LocationPermissionStatus> =>
     }, 10000);
     
     navigator.geolocation.getCurrentPosition(
-      () => {
+      (position) => {
         clearTimeout(timeoutId);
+        
+        // Add to batch collector instead of processing immediately
+        locationUpdateBatch.add(position);
+        
         const result = { location: 'granted' as PermissionState, backgroundLocation: 'prompt' as PermissionState };
         backoffState.bestLocation = result; // Cache the successful result
         backoffState.attemptCount = 0; // Reset attempt count on success
@@ -199,6 +275,10 @@ export const resetLocationBackoff = () => {
   backoffState.attemptCount = 0;
   backoffState.lastAttemptTime = 0;
   backoffState.throttled = false;
+  
+  // Also clear caches when resetting
+  permissionStatusCache.clear();
+  locationUpdateBatch.clear();
 };
 
 const LocationPermissions = createSafeLocationPermissions();
