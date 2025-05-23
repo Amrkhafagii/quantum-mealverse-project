@@ -97,14 +97,14 @@ public class LocationPermissionsPlugin: CAPPlugin {
     }
     
     // Main method to request permissions - this is called from JS via `requestPermissions`
-    @objc public func requestPermissions(_ call: CAPPluginCall) {
+    @objc override public func requestPermissions(_ call: CAPPluginCall) {
         print("requestPermissions called")
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
     // Alternative method - this is called from JS via `requestLocationPermission`
-    @objc public func requestLocationPermission(_ call: CAPPluginCall) {
+    @objc override public func requestLocationPermission(_ call: CAPPluginCall) {
         print("requestLocationPermission called")
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
@@ -159,7 +159,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
         }
     }
     
-    @objc public func checkPermissionStatus(_ call: CAPPluginCall) {
+    @objc override public func checkPermissionStatus(_ call: CAPPluginCall) {
         print("checkPermissionStatus called")
         // Check cache first to avoid bridge calls
         if let cache = permissionStatusCache, permissionCacheIsValid() {
