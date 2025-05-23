@@ -33,13 +33,16 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     // Add restaurant markers
     if (restaurants && restaurants.length > 0) {
       for (const restaurant of restaurants) {
-        markers.push({
-          latitude: restaurant.latitude,
-          longitude: restaurant.longitude,
-          title: restaurant.restaurant_name,
-          description: `${restaurant.distance_km.toFixed(1)} km away`,
-          type: 'restaurant'
-        });
+        // Ensure we're accessing restaurant_latitude and restaurant_longitude instead of latitude/longitude
+        if (restaurant.restaurant_id) {
+          markers.push({
+            latitude: restaurant.latitude || 0,
+            longitude: restaurant.longitude || 0,
+            title: restaurant.restaurant_name,
+            description: `${restaurant.distance_km.toFixed(1)} km away`,
+            type: 'restaurant'
+          });
+        }
       }
     }
     
@@ -154,7 +157,7 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     }
     
     // If we have restaurants, use the first one
-    if (restaurants && restaurants.length > 0) {
+    if (restaurants && restaurants.length > 0 && 'latitude' in restaurants[0] && 'longitude' in restaurants[0]) {
       return {
         latitude: restaurants[0].latitude,
         longitude: restaurants[0].longitude
