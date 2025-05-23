@@ -34,10 +34,16 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     if (restaurants && restaurants.length > 0) {
       for (const restaurant of restaurants) {
         // Ensure we're accessing restaurant_latitude and restaurant_longitude instead of latitude/longitude
-        if (restaurant.restaurant_id) {
+        if (restaurant.restaurant_id && restaurant.restaurant_name) {
+          // Check if restaurant has restaurant_latitude/longitude or latitude/longitude
+          const lat = 'restaurant_latitude' in restaurant ? restaurant.restaurant_latitude : 
+                     'latitude' in restaurant ? restaurant.latitude : 0;
+          const lng = 'restaurant_longitude' in restaurant ? restaurant.restaurant_longitude : 
+                     'longitude' in restaurant ? restaurant.longitude : 0;
+                     
           markers.push({
-            latitude: restaurant.latitude || 0,
-            longitude: restaurant.longitude || 0,
+            latitude: lat,
+            longitude: lng,
             title: restaurant.restaurant_name,
             description: `${restaurant.distance_km.toFixed(1)} km away`,
             type: 'restaurant'
@@ -157,11 +163,24 @@ const RestaurantMapView: React.FC<RestaurantMapViewProps> = ({
     }
     
     // If we have restaurants, use the first one
-    if (restaurants && restaurants.length > 0 && 'latitude' in restaurants[0] && 'longitude' in restaurants[0]) {
-      return {
-        latitude: restaurants[0].latitude,
-        longitude: restaurants[0].longitude
-      };
+    if (restaurants && restaurants.length > 0) {
+      // Safely check for coordinates in the restaurant object
+      const firstRestaurant = restaurants[0];
+      
+      // Check if restaurant has restaurant_latitude/longitude or latitude/longitude
+      if ('restaurant_latitude' in firstRestaurant && 'restaurant_longitude' in firstRestaurant) {
+        return {
+          latitude: firstRestaurant.restaurant_latitude,
+          longitude: firstRestaurant.restaurant_longitude
+        };
+      }
+      
+      if ('latitude' in firstRestaurant && 'longitude' in firstRestaurant) {
+        return {
+          latitude: firstRestaurant.latitude,
+          longitude: firstRestaurant.longitude
+        };
+      }
     }
     
     // Default center (NYC)
