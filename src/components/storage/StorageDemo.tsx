@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,17 +26,7 @@ export function StorageDemo() {
   const { clearAllPendingActions, getLastSyncTimestamp, manualSync } = useSyncManager();
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   
-  // Get the last sync time on component mount
-  useEffect(() => {
-    const updateLastSyncTime = async () => {
-      const timestamp = await getLastSyncTimestamp();
-      if (timestamp) {
-        setLastSyncTime(new Date(timestamp).toLocaleString());
-      }
-    };
-    
-    updateLastSyncTime();
-  }, [getLastSyncTimestamp]);
+  
 
   const handleSetValue = () => {
     if (inputValue) {
@@ -149,7 +138,20 @@ export function StorageDemo() {
     }
   };
 
+  // Get the last sync time on component mount
+  useEffect(() => {
+    const updateLastSyncTime = async () => {
+      const timestamp = await getLastSyncTimestamp();
+      if (timestamp) {
+        setLastSyncTime(new Date(timestamp).toLocaleString());
+      }
+    };
+    
+    updateLastSyncTime();
+  }, [getLastSyncTimestamp]);
+
   return (
+    
     <div className="container px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Storage Demo</h1>

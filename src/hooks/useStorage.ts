@@ -1,6 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Preferences } from '@capacitor/preferences';
+import { Platform } from '@/utils/platform';
 
 /**
  * Hook for accessing and updating values in Capacitor Preferences storage
@@ -9,12 +10,21 @@ export function useStorage<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(initialValue);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [storageType, setStorageType] = useState<string>('Preferences');
 
   // Load the value from storage when the component mounts
   useEffect(() => {
     const loadStoredValue = async () => {
       try {
         setIsLoading(true);
+        
+        // Set storage type based on platform
+        if (Platform.isNative()) {
+          setStorageType('Native Preferences');
+        } else {
+          setStorageType('Browser LocalStorage');
+        }
+        
         const result = await Preferences.get({ key });
         
         if (result.value !== null) {
@@ -89,6 +99,94 @@ export function useStorage<T>(key: string, initialValue: T) {
     setValue: updateValue,
     removeValue,
     isLoading,
-    error
+    error,
+    storageType
+  };
+}
+
+/**
+ * Hook for migrating storage data (export/import functionality)
+ */
+export function useStorageMigration() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  
+  /**
+   * Export all storage data as a JSON string
+   */
+  const exportStorageData = useCallback(async (): Promise<string | null> => {
+    try {
+      setIsExporting(true);
+      // Get all keys
+      const { keys } = await Preferences.keys();
+      
+      if (!keys || keys.length === 0) {
+        return JSON.stringify({ data: {}, timestamp: Date.now() });
+      }
+      
+      // Get all values
+      const data: Record<string, any> = {};
+      for (const key of keys) {
+        const result = await Preferences.get({ key });
+        if (result.value !== null) {
+          // Try to parse JSON values
+          try {
+            data[key] = JSON.parse(result.value);
+          } catch {
+            data[key] = result.value;
+          }
+        }
+      }
+      
+      return JSON.stringify({
+        data,
+        timestamp: Date.now(),
+        version: '1.0'
+      });
+    } catch (error) {
+      console.error('Error exporting storage data:', error);
+      return null;
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+  
+  /**
+   * Import storage data from a JSON string
+   */
+  const importStorageData = useCallback(async (jsonData: string): Promise<boolean> => {
+    try {
+      setIsImporting(true);
+      
+      // Parse the input JSON
+      const parsedData = JSON.parse(jsonData);
+      
+      if (!parsedData.data || typeof parsedData.data !== 'object') {
+        throw new Error('Invalid import data format');
+      }
+      
+      // Clear existing data first
+      await Preferences.clear();
+      
+      // Import all key-value pairs
+      for (const [key, value] of Object.entries(parsedData.data)) {
+        const valueToStore = typeof value === 'string' ? value : JSON.stringify(value);
+        await Preferences.set({ key, value: valueToStore });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error importing storage data:', error);
+      return false;
+    } finally {
+      setIsImporting(false);
+    }
+  }, []);
+  
+  return {
+    exportStorageData,
+    importStorageData,
+    isExporting,
+    isImporting
   };
 }
