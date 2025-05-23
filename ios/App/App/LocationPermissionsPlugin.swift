@@ -11,7 +11,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
         // Plugin load method if needed
     }
     
-    @objc public func requestPermissions(_ call: CAPPluginCall) {
+    @objc override public func requestPermissions(_ call: CAPPluginCall) {
         let backgroundMode = call.getBool("background") ?? false
         let callbackId = call.callbackId
         
