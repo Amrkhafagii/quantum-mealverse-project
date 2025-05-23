@@ -16,10 +16,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Register Capacitor plugins
-        Capacitor.addPlugin(PreferencesPlugin.self)
-        Capacitor.addPlugin(GeolocationPlugin.self)
-        Capacitor.addPlugin(LocationPermissionsPlugin.self)
-        
+     
         // Set up appearance for navigation bars and toolbars
         configureUIAppearance()
         
