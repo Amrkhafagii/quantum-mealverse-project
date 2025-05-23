@@ -3,6 +3,9 @@ import UIKit
 import CoreLocation
 import BackgroundTasks
 
+// Define the typealias for location update completion handler
+typealias LocationUpdateCompletion = (CLLocation) -> Void
+
 @available(iOS 13.0, *)
 class BackgroundFetchManager {
     static let shared = BackgroundFetchManager()
@@ -134,3 +137,4 @@ class BackgroundFetchManager {
         }
     }
 }
+
