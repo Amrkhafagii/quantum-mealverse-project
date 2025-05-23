@@ -23,6 +23,8 @@
 		F604BA642DE0871D00A42053 /* .gitkeep in Resources */ = {isa = PBXBuildFile; fileRef = F604BA542DE0871D00A42053 /* .gitkeep */; };
 		F604BA6C2DE0901400A42053 /* LocationTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */; };
 		F60695692DDF310500CD918D /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F60695672DDF310500CD918D /* Launch Screen.storyboard */; };
+		F62819912DE0B60700D98D82 /* LocationPermissionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62819902DE0B60700D98D82 /* LocationPermissionHelper.swift */; };
+		F62819922DE0B60700D98D82 /* LocationBatchProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F628198F2DE0B60700D98D82 /* LocationBatchProcessor.swift */; };
 		F62EC4742DDCAA900085D82E /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4732DDCAA900085D82E /* ActivityManager.swift */; };
 		F62EC4762DDCAAA10085D82E /* BackgroundSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4752DDCAAA10085D82E /* BackgroundSync.swift */; };
 		F62EC4852DDCAAE00085D82E /* RouteOptimizationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62EC4842DDCAAE00085D82E /* RouteOptimizationPlugin.swift */; };
@@ -58,6 +60,8 @@
 		F604BA5B2DE0871D00A42053 /* StandardLocationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardLocationDelegate.swift; sourceTree = "<group>"; };
 		F604BA6B2DE0901400A42053 /* LocationTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTrackingManager.swift; sourceTree = "<group>"; };
 		F60695682DDF310500CD918D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		F628198F2DE0B60700D98D82 /* LocationBatchProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationBatchProcessor.swift; sourceTree = "<group>"; };
+		F62819902DE0B60700D98D82 /* LocationPermissionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPermissionHelper.swift; sourceTree = "<group>"; };
 		F62B34B92DDD2C8F000C7FDD /* BiometricAuthPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BiometricAuthPlugin.h; sourceTree = "<group>"; };
 		F62B34BA2DDD2C8F000C7FDD /* QrScannerPlugin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QrScannerPlugin.h; sourceTree = "<group>"; };
 		F62EC4732DDCAA900085D82E /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
@@ -161,6 +165,8 @@
 		F604BA5C2DE0871D00A42053 /* LocationManagement */ = {
 			isa = PBXGroup;
 			children = (
+				F628198F2DE0B60700D98D82 /* LocationBatchProcessor.swift */,
+				F62819902DE0B60700D98D82 /* LocationPermissionHelper.swift */,
 				F604BA542DE0871D00A42053 /* .gitkeep */,
 				F604BA552DE0871D00A42053 /* BackgroundTaskManager.swift */,
 				F604BA562DE0871D00A42053 /* BatteryMonitor.swift */,
@@ -320,6 +326,8 @@
 				F661C9112DDF64B400142AEF /* LocationPermissionsPlugin.m in Sources */,
 				F62EC4882DDCAAE00085D82E /* NotificationManager.swift in Sources */,
 				F62EC48A2DDCAAE00085D82E /* QrScannerPlugin.m in Sources */,
+				F62819912DE0B60700D98D82 /* LocationPermissionHelper.swift in Sources */,
+				F62819922DE0B60700D98D82 /* LocationBatchProcessor.swift in Sources */,
 				F62EC48B2DDCAAE00085D82E /* BiometricAuthPlugin.swift in Sources */,
 				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
 				F62EC48C2DDCAAE00085D82E /* QrScannerViewController.swift in Sources */,
