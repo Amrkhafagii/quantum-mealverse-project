@@ -1,4 +1,3 @@
-
 import { WebPlugin } from '@capacitor/core';
 import type { LocationPermissionsPlugin, LocationPermissionStatus, PermissionState } from '../LocationPermissionsPlugin';
 import { debounce, BridgeStateCache } from '../../utils/bridgeOptimization';
@@ -52,7 +51,8 @@ export class LocationPermissionsWeb extends WebPlugin implements LocationPermiss
     }
   }, 200);
   
-  async requestPermission(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
+  async requestPermissions(options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> {
+    console.log('Web implementation of requestPermissions');
     return this.requestLocationPermission(options);
   }
   

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { Platform } from '@/utils/platform';
@@ -161,8 +160,8 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     setStoredInitialPromptShown(true);
     
     try {
-      // Use our plugin to request permission
-      const result = await LocationPermissions.requestPermission({
+      // Use our plugin to request permission - Updated to use requestPermissions
+      const result = await LocationPermissions.requestPermissions({
         includeBackground: false
       });
       
@@ -207,8 +206,8 @@ export function useLocationPermission(): LocationPermissionHookResponse {
         return false;
       }
       
-      // Use our plugin for requesting background permission
-      const result = await LocationPermissions.requestPermission({
+      // Use our plugin for requesting background permission - Updated to use requestPermissions
+      const result = await LocationPermissions.requestPermissions({
         includeBackground: true
       });
       
