@@ -41,6 +41,11 @@ export const MainContent: React.FC<MainContentProps> = ({
     nearbyRestaurantsCount: nearbyRestaurants?.length
   });
 
+  // Filter restaurants that have distance_km for map view
+  const restaurantsWithDistance = nearbyRestaurants.filter(restaurant => 
+    restaurant.distance_km !== undefined
+  );
+
   // Show error state if there's an error
   if (error && !isLoading) {
     return (
@@ -90,7 +95,7 @@ export const MainContent: React.FC<MainContentProps> = ({
                 </div>
               }>
                 <RestaurantMapView 
-                  restaurants={nearbyRestaurants}
+                  restaurants={restaurantsWithDistance as any}
                 />
               </Suspense>
             </ErrorBoundary>
