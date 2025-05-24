@@ -13,7 +13,7 @@ export type Restaurant = {
 };
 
 export const useRestaurantAuth = () => {
-  const { user, loading, logout } = useAuth(); // Now properly typed
+  const { user, loading, logout } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRestaurantOwner, setIsRestaurantOwner] = useState(false);

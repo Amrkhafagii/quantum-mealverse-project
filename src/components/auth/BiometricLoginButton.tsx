@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Fingerprint } from 'lucide-react';
@@ -33,7 +32,7 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({
   useEffect(() => {
     let isMounted = true;
     let platformCheckTimer: number | undefined;
-
+    
     const checkPlatform = async () => {
       try {
         // Use safer platform check
@@ -83,21 +82,18 @@ export const BiometricLoginButton: React.FC<BiometricLoginButtonProps> = ({
   }
   
   const handleBiometricLogin = async () => {
-    if (loading) return; // Prevent multiple attempts
+    if (loading) return;
     
     try {
       setLoading(true);
       const authenticated = await authenticateWithBiometrics("Sign in to your account");
       
       if (authenticated) {
-        // In a real implementation, this would retrieve a stored token
-        // and validate it with the server
         const storedUserId = localStorage.getItem('biometric_user_id');
         
         if (storedUserId) {
           try {
             // Mock login to simulate success for the demo
-            // This would actually retrieve the stored token and use it instead
             await login('user@example.com', 'password');
             
             toast({

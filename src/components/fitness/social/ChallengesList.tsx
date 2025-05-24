@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,16 +111,24 @@ export const ChallengesList: React.FC = () => {
 
       if (error) throw error;
 
-      // Update participants count manually
-      const { error: updateError } = await supabase
+      // Update participants count by fetching current count and incrementing
+      const { data: currentChallenge } = await supabase
         .from('fitness_challenges')
-        .update({
-          participants_count: supabase.raw('participants_count + 1')
-        })
-        .eq('id', challengeId);
+        .select('participants_count')
+        .eq('id', challengeId)
+        .single();
 
-      if (updateError) {
-        console.error('Error updating participants count:', updateError);
+      if (currentChallenge) {
+        const { error: updateError } = await supabase
+          .from('fitness_challenges')
+          .update({
+            participants_count: (currentChallenge.participants_count || 0) + 1
+          })
+          .eq('id', challengeId);
+
+        if (updateError) {
+          console.error('Error updating participants count:', updateError);
+        }
       }
 
       toast({
