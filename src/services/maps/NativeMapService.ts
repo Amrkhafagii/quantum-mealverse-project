@@ -10,7 +10,6 @@ export class NativeMapService implements IMapService {
   async initializeMap(containerId: string, options: any = {}): Promise<void> {
     try {
       this.map = await CapacitorGoogleMaps.create({
-        id: 'map',
         element: document.getElementById(containerId),
         apiKey: 'your-google-maps-api-key',
         config: {
