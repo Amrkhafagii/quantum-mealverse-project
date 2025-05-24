@@ -12,33 +12,56 @@ import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
+import { ResponsiveProvider } from "./contexts/ResponsiveContext";
+import { SkipToContent } from "./components/accessibility/SkipToContent";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors
+        if (error && typeof error === 'object' && 'status' in error) {
+          const status = (error as any).status;
+          if (status >= 400 && status < 500) return false;
+        }
+        return failureCount < 2;
+      },
+      refetchOnWindowFocus: false,
+    }
+  }
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/customer" element={
-                <ProtectedRoute allowedUserTypes={['customer']}>
-                  <Customer />
-                </ProtectedRoute>
-              } />
-              <Route path="/fitness" element={<Fitness />} />
-              <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
-              {/* Add more routes as needed */}
-            </Routes>
-          </BrowserRouter>
-        </CartProvider>
-      </AuthProvider>
-    </TooltipProvider>
+    <ResponsiveProvider>
+      <TooltipProvider>
+        <AuthProvider>
+          <CartProvider>
+            <SkipToContent />
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div id="main-content">
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/customer" element={
+                    <ProtectedRoute allowedUserTypes={['customer']}>
+                      <Customer />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/fitness" element={<Fitness />} />
+                  <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
+                  {/* Add more routes as needed */}
+                </Routes>
+              </div>
+            </BrowserRouter>
+          </CartProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </ResponsiveProvider>
   </QueryClientProvider>
 );
 

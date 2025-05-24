@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -11,6 +11,7 @@ import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBounda
 import { CustomerBreadcrumbs } from '@/components/customer/CustomerBreadcrumbs';
 import { CustomerNavigation } from '@/components/customer/CustomerNavigation';
 import { CustomerJourneyGuide } from '@/components/customer/CustomerJourneyGuide';
+import { AnimatedContainer } from '@/components/performance/AnimatedContainer';
 import { useCustomerState } from '@/hooks/useCustomerState';
 import { useCart } from '@/contexts/CartContext';
 
@@ -37,18 +38,18 @@ const CustomerPage = () => {
     clearErrors
   } = useCustomerState();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       // Note: logout logic should be handled by auth context
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
+  }, [navigate]);
 
-  const toggleMapView = () => {
-    setIsMapView(!isMapView);
-  };
+  const toggleMapView = useCallback(() => {
+    setIsMapView(prev => !prev);
+  }, []);
 
   const hasLocationIssue = locationError && permissionStatus !== 'granted';
   const hasLocation = !!location && permissionStatus === 'granted';
@@ -71,51 +72,63 @@ const CustomerPage = () => {
         <ParticleBackground />
         <Navbar />
         
-        <main className="relative z-10 pt-20">
+        <main className="relative z-10 pt-20" role="main" aria-label="Customer Dashboard">
           <div className="container mx-auto px-4 py-8">
-            <CustomerBreadcrumbs />
+            <AnimatedContainer animation="slideUp">
+              <CustomerBreadcrumbs />
+            </AnimatedContainer>
             
-            <CustomerHeader 
-              userEmail={user?.email}
-              onLogout={handleLogout}
-            />
+            <AnimatedContainer animation="slideUp" delay={0.1}>
+              <CustomerHeader 
+                userEmail={user?.email}
+                onLogout={handleLogout}
+              />
+            </AnimatedContainer>
             
             {/* Navigation Section */}
-            <div className="mb-8">
-              <CustomerNavigation />
-            </div>
+            <AnimatedContainer animation="slideUp" delay={0.2}>
+              <div className="mb-8">
+                <CustomerNavigation />
+              </div>
+            </AnimatedContainer>
             
             {/* Journey Guide - show when user hasn't completed the flow */}
             {(!hasLocation || !hasRestaurants || cart.length === 0) && (
-              <div className="mb-8">
-                <CustomerJourneyGuide
-                  hasLocation={hasLocation}
-                  hasRestaurants={hasRestaurants}
-                  cartItems={cart.length}
-                  isAuthenticated={!!user}
-                />
-              </div>
+              <AnimatedContainer animation="slideUp" delay={0.3}>
+                <div className="mb-8">
+                  <CustomerJourneyGuide
+                    hasLocation={hasLocation}
+                    hasRestaurants={hasRestaurants}
+                    cartItems={cart.length}
+                    isAuthenticated={!!user}
+                  />
+                </div>
+              </AnimatedContainer>
             )}
             
             {/* Location prompt - only show if there's an issue or permission not requested */}
             {(hasLocationIssue || !hasRequestedPermission) && (
-              <LocationPrompt
-                onRequestLocation={requestLocation}
-                isLoading={isLoading}
-                error={locationError}
-                hasRequestedPermission={hasRequestedPermission}
-              />
+              <AnimatedContainer animation="slideUp" delay={0.4}>
+                <LocationPrompt
+                  onRequestLocation={requestLocation}
+                  isLoading={isLoading}
+                  error={locationError}
+                  hasRequestedPermission={hasRequestedPermission}
+                />
+              </AnimatedContainer>
             )}
             
-            <MainContent 
-              isMapView={isMapView}
-              menuItems={menuItems}
-              isLoading={isLoading}
-              error={hasError ? errorMessage : null}
-              nearbyRestaurants={restaurants}
-              toggleMapView={toggleMapView}
-              onLocationRequest={requestLocation}
-            />
+            <AnimatedContainer animation="slideUp" delay={0.5}>
+              <MainContent 
+                isMapView={isMapView}
+                menuItems={menuItems}
+                isLoading={isLoading}
+                error={hasError ? errorMessage : null}
+                nearbyRestaurants={restaurants}
+                toggleMapView={toggleMapView}
+                onLocationRequest={requestLocation}
+              />
+            </AnimatedContainer>
           </div>
         </main>
         
