@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/contexts/CartContext';
 import { OrderStatus } from '@/types/webhook';
@@ -58,23 +57,104 @@ export const createOrder = async (
 };
 
 /**
- * Creates order items for a given order
+ * Creates order items for a given order with defensive programming
  */
 export const createOrderItems = async (orderId: string, items: CartItem[]) => {
-  const orderItems = items.map(item => ({
-    order_id: orderId,
-    meal_id: item.id, // Use flat structure
-    quantity: item.quantity,
-    price: item.price, // Use flat structure
-    name: item.name // Use flat structure
-  }));
-  
   try {
+    console.log('Creating order items for order:', {
+      orderId,
+      itemsCount: items.length,
+      itemsStructure: items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        hasNestedMeal: item.hasOwnProperty('meal'),
+        structure: item.hasOwnProperty('meal') ? 'nested' : 'flat'
+      }))
+    });
+
+    // Map items with defensive programming to handle both nested and flat structures
+    const orderItems = items.map((item, index) => {
+      try {
+        // Handle both nested (legacy) and flat (current) structures
+        let mealId: string;
+        let price: number;
+        let name: string;
+        let quantity: number;
+
+        // Check if this is a nested structure (legacy format)
+        if (item.hasOwnProperty('meal') && (item as any).meal) {
+          console.log(`Item ${index} has nested structure (legacy format)`);
+          const nestedItem = item as any;
+          mealId = nestedItem.meal?.id || nestedItem.id;
+          price = nestedItem.meal?.price || nestedItem.price;
+          name = nestedItem.meal?.name || nestedItem.name;
+          quantity = nestedItem.quantity;
+        } else {
+          // Flat structure (current format)
+          console.log(`Item ${index} has flat structure (current format)`);
+          mealId = item.id;
+          price = item.price;
+          name = item.name;
+          quantity = item.quantity;
+        }
+
+        // Validate required fields
+        if (!mealId) {
+          throw new Error(`Missing meal ID for item at index ${index}`);
+        }
+        if (!name) {
+          throw new Error(`Missing name for item at index ${index}`);
+        }
+        if (typeof price !== 'number' || price < 0) {
+          throw new Error(`Invalid price for item at index ${index}: ${price}`);
+        }
+        if (typeof quantity !== 'number' || quantity <= 0) {
+          throw new Error(`Invalid quantity for item at index ${index}: ${quantity}`);
+        }
+
+        console.log(`Successfully mapped item ${index}:`, {
+          meal_id: mealId,
+          name,
+          price,
+          quantity,
+          order_id: orderId
+        });
+
+        return {
+          order_id: orderId,
+          meal_id: mealId,
+          quantity,
+          price,
+          name
+        };
+      } catch (itemError) {
+        console.error(`Error mapping item at index ${index}:`, {
+          error: itemError,
+          item,
+          itemKeys: Object.keys(item)
+        });
+        throw new Error(`Failed to map item at index ${index}: ${itemError instanceof Error ? itemError.message : String(itemError)}`);
+      }
+    });
+
+    console.log('Final order items to insert:', orderItems);
+    
     const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems);
       
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Database insertion error for order items:', {
+        error: itemsError,
+        orderId,
+        itemsCount: orderItems.length
+      });
+      throw itemsError;
+    }
+    
+    console.log(`Successfully created ${orderItems.length} order items for order ${orderId}`);
     
     // Record the items in order history
     await recordOrderHistory(
@@ -84,6 +164,12 @@ export const createOrderItems = async (orderId: string, items: CartItem[]) => {
       { items_count: items.length }
     );
   } catch (error) {
+    console.error('Critical error in createOrderItems:', {
+      error,
+      orderId,
+      itemsReceived: items.length,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
     throw error;
   }
 };

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { useCart } from '@/contexts/CartContext';
+import { useCart, CartItem } from '@/contexts/CartContext';
 
 export const OrderSummary = () => {
   const { items, totalAmount } = useCart();
@@ -13,7 +13,7 @@ export const OrderSummary = () => {
       <h2 className="text-xl font-bold text-quantum-cyan mb-4">Order Summary</h2>
       
       <div className="space-y-4 mb-6">
-        {items.map((item) => (
+        {items.map((item: CartItem) => (
           <div key={item.id} className="flex gap-2 border-b border-quantum-cyan/20 pb-2">
             <div className="w-16 h-16">
               <img 

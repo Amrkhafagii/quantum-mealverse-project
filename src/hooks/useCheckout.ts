@@ -16,7 +16,7 @@ export const useCheckout = () => {
   
   const { isSubmitting, handleSubmit } = useOrderSubmission(
     loggedInUser?.id,
-    items, // Now correctly typed as CartItem[] from CartContext
+    items, // CartItem[] from CartContext - unified structure
     totalAmount,
     hasDeliveryInfo,
     clearCart

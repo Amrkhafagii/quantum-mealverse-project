@@ -59,6 +59,17 @@ export const useOrderSubmission = (
         throw new Error("You must be logged in to place an order");
       }
 
+      console.log('Processing order with cart items:', {
+        itemsCount: items.length,
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          structure: 'flat'
+        }))
+      });
+
       // Save delivery information
       await saveDeliveryInfo(userId, data, hasDeliveryInfo);
       
@@ -69,7 +80,13 @@ export const useOrderSubmission = (
         throw new Error("Failed to create order - no order ID returned");
       }
       
-      // Create order items
+      console.log('Order created successfully:', {
+        orderId: insertedOrder.id,
+        totalAmount: insertedOrder.total,
+        itemsToProcess: items.length
+      });
+      
+      // Create order items with enhanced error logging
       await createOrderItems(insertedOrder.id, items);
       
       // Save user location if provided
@@ -119,6 +136,13 @@ export const useOrderSubmission = (
       navigate(`/order-confirmation/${insertedOrder.id}`);
     } catch (error: any) {
       console.error("Order submission error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        userId,
+        itemsCount: items.length,
+        totalAmount
+      });
       setIsSubmitting(false);
       toast({
         title: "Error placing order",
