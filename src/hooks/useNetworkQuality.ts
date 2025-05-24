@@ -50,8 +50,8 @@ export function useNetworkQuality(): NetworkQualityResult {
         }
         
         setQuality(detectedQuality);
-        // Fix: Use proper NetworkQuality values for comparison
-        setIsLowQuality(detectedQuality === 'low' || detectedQuality === 'poor' || detectedQuality === 'very-poor' || detectedQuality === 'offline');
+        // Fix: Check against all low quality values properly
+        setIsLowQuality(detectedQuality === 'low' || detectedQuality === 'offline' || detectedQuality === 'poor' || detectedQuality === 'very-poor');
         
         return detectedQuality;
       }

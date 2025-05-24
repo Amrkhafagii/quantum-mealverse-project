@@ -4,8 +4,10 @@ import { DeliveryLocation, LocationSource } from '@/types/location';
 
 export function useCurrentLocation() {
   const [currentLocation, setCurrentLocation] = useState<DeliveryLocation | null>(null);
+  const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [locationSource, setLocationSource] = useState<LocationSource>('manual');
 
   const getPositionFromNavigator = (): Promise<GeolocationPosition> => {
@@ -40,6 +42,7 @@ export function useCurrentLocation() {
 
   const getCurrentLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
     setIsLoading(true);
+    setIsLoadingLocation(true);
     setErrorMessage(null);
 
     try {
@@ -58,6 +61,7 @@ export function useCurrentLocation() {
       };
       
       setCurrentLocation(location);
+      setLastLocation(location);
       return location;
     } catch (error: any) {
       console.error('Location retrieval failed:', error);
@@ -65,6 +69,7 @@ export function useCurrentLocation() {
       return null;
     } finally {
       setIsLoading(false);
+      setIsLoadingLocation(false);
     }
   }, []);
 
@@ -75,7 +80,9 @@ export function useCurrentLocation() {
 
   return {
     currentLocation,
+    lastLocation,
     isLoading,
+    isLoadingLocation,
     locationError: errorMessage,
     locationSource,
     getCurrentLocation

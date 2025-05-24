@@ -108,9 +108,29 @@ const Customer: React.FC = () => {
     }
   };
 
+  // Convert restaurants to proper format for RestaurantSummary
   const nearbyRestaurants = restaurants?.map(restaurant => ({
-    ...restaurant,
-    distance: calculateDistanceToRestaurant(restaurant)
+    restaurant_id: restaurant.id,
+    restaurant_name: restaurant.name,
+    restaurant_address: restaurant.address,
+    restaurant_email: restaurant.email || '',
+    distance_km: calculateDistanceToRestaurant(restaurant) || 0
+  })) || [];
+
+  // Convert Menu to MealType for CustomerMealGrid
+  const mealTypeMenus = menus?.map(menu => ({
+    id: menu.id,
+    name: menu.name,
+    description: menu.description || '',
+    price: menu.price,
+    image_url: menu.image_url,
+    calories: menu.nutritional_info?.calories || 0,
+    protein: menu.nutritional_info?.protein || 0,
+    carbs: menu.nutritional_info?.carbs || 0,
+    fat: menu.nutritional_info?.fat || 0,
+    category: menu.category || 'other',
+    preparation_time: menu.preparation_time || 15,
+    is_available: menu.is_available ?? true
   })) || [];
 
   return (
@@ -129,15 +149,13 @@ const Customer: React.FC = () => {
 
       <LocationStateManager>
         <LocationStatusIndicator 
-          trackingMode="automatic" 
+          trackingMode="manual" 
           isTracking={!!currentLocation} 
         />
         <LocationPromptBanner />
 
-        {permissionStatus !== 'granted' && (
+        {(permissionStatus === 'denied' || permissionStatus === 'prompt') && (
           <LocationPermissionsPrompt
-            isOpen={permissionStatus !== 'granted'}
-            onClose={() => {}}
             onRequestPermission={requestPermission}
             isLoading={permissionLoading}
           />
@@ -155,12 +173,7 @@ const Customer: React.FC = () => {
               <p className="text-red-500">Error: {restaurantsError.message}</p>
             ) : restaurants && restaurants.length > 0 ? (
               <RestaurantSummary 
-                restaurants={nearbyRestaurants.map(r => ({
-                  restaurant_id: r.id,
-                  name: r.name,
-                  address: r.address,
-                  distance: r.distance || 0
-                }))}
+                restaurants={nearbyRestaurants}
               />
             ) : (
               <EmptyState message="No restaurants found." />
@@ -187,7 +200,7 @@ const Customer: React.FC = () => {
                 <p className="text-red-500">Error: {menusError.message}</p>
               ) : menus && menus.length > 0 ? (
                 <CustomerMealGrid 
-                  menuItems={menus} 
+                  menuItems={mealTypeMenus} 
                   isLoading={menusLoading}
                   error={menusError}
                   onLocationRequest={() => requestPermission()}
@@ -206,10 +219,7 @@ const Customer: React.FC = () => {
               <CardDescription>Personalized recommendations based on your location.</CardDescription>
             </CardHeader>
             <CardContent>
-              <RecommendedMeals
-                latitude={currentLocation.latitude}
-                longitude={currentLocation.longitude}
-              />
+              <RecommendedMeals />
             </CardContent>
           </Card>
         )}
