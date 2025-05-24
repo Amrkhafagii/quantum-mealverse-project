@@ -139,19 +139,21 @@ export abstract class BaseLocationService implements ILocationService {
  * Factory for creating the appropriate location service based on platform
  */
 export class LocationServiceFactory {
-  static getLocationService(): ILocationService {
-    // Dynamic imports to avoid bundling unused code
-    if (Platform.isNative()) {
-      // Lazy load the native service
-      return import('./NativeLocationService').then(
-        module => new module.NativeLocationService()
-      ) as unknown as ILocationService;
-    } else {
-      // Lazy load the web service
-      return import('./WebLocationService').then(
-        module => new module.WebLocationService()
-      ) as unknown as ILocationService;
+  private static instance: ILocationService | null = null;
+  
+  static async getLocationService(): Promise<ILocationService> {
+    if (!this.instance) {
+      if (Platform.isNative()) {
+        // Lazy load the native service
+        const module = await import('./NativeLocationService');
+        this.instance = new module.NativeLocationService();
+      } else {
+        // Lazy load the web service
+        const module = await import('./WebLocationService');
+        this.instance = new module.WebLocationService();
+      }
     }
+    return this.instance;
   }
 }
 

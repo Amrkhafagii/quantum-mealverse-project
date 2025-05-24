@@ -103,18 +103,21 @@ export interface IMapService {
  * Factory for creating the appropriate map service based on platform
  */
 export class MapServiceFactory {
-  static getMapService(): IMapService {
-    if (Platform.isNative()) {
-      // Lazy load the native map service
-      return import('./NativeMapService').then(
-        module => new module.NativeMapService()
-      ) as unknown as IMapService;
-    } else {
-      // Lazy load the web map service
-      return import('./WebMapService').then(
-        module => new module.WebMapService()
-      ) as unknown as IMapService;
+  private static mapInstance: IMapService | null = null;
+  
+  static async getMapService(): Promise<IMapService> {
+    if (!this.mapInstance) {
+      if (Platform.isNative()) {
+        // Lazy load the native map service
+        const module = await import('./NativeMapService');
+        this.mapInstance = new module.NativeMapService();
+      } else {
+        // Lazy load the web map service
+        const module = await import('./WebMapService');
+        this.mapInstance = new module.WebMapService();
+      }
     }
+    return this.mapInstance;
   }
 }
 

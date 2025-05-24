@@ -67,7 +67,7 @@ export function useGoogleMaps(options: GoogleMapsOptions = {}): GoogleMapsHook {
         setIsLoading(true);
         
         // Initialize map service
-        const ms = await MapServiceFactory.getLocationService();
+        const ms = await MapServiceFactory.getMapService();
         mapService.current = ms;
         
         // Initialize location service
@@ -109,7 +109,7 @@ export function useGoogleMaps(options: GoogleMapsOptions = {}): GoogleMapsHook {
         locationService.current.stopTracking().catch(console.error);
       }
     };
-  }, [options.enableTracking]);
+  }, [options.enableTracking, options.trackingOptions]);
   
   // Set up location listener
   useEffect(() => {
@@ -170,9 +170,9 @@ export function useGoogleMaps(options: GoogleMapsOptions = {}): GoogleMapsHook {
     
     const accuracy = location.accuracy;
     
-    if (accuracy < 50) {
+    if (accuracy && accuracy < 50) {
       setLocationAccuracyLevel('high');
-    } else if (accuracy < 200) {
+    } else if (accuracy && accuracy < 200) {
       setLocationAccuracyLevel('medium');
     } else {
       setLocationAccuracyLevel('low');
@@ -395,3 +395,5 @@ export function useGoogleMaps(options: GoogleMapsOptions = {}): GoogleMapsHook {
     error
   };
 }
+
+export default useGoogleMaps;

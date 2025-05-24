@@ -142,6 +142,7 @@ export class NativeMapService implements IMapService {
   
   async updateMarker(mapId: string, markerId: string, marker: Partial<MapMarker>): Promise<void> {
     try {
+      const map = this.getMap(mapId);
       const options: any = { id: markerId };
       
       if (marker.latitude !== undefined && marker.longitude !== undefined) {
@@ -167,7 +168,8 @@ export class NativeMapService implements IMapService {
         options.zIndex = marker.zIndex;
       }
       
-      await CapacitorGoogleMaps.updateMarker(options);
+      // Use the map instance to update the marker
+      await map.updateMarker(options);
     } catch (error) {
       console.error('Error updating native marker:', error);
       throw error;
@@ -176,7 +178,8 @@ export class NativeMapService implements IMapService {
   
   async removeMarker(mapId: string, markerId: string): Promise<void> {
     try {
-      await CapacitorGoogleMaps.removeMarker({ id: markerId });
+      const map = this.getMap(mapId);
+      await map.removeMarker({ id: markerId });
     } catch (error) {
       console.error('Error removing native marker:', error);
       throw error;
@@ -211,7 +214,8 @@ export class NativeMapService implements IMapService {
   
   async removeCircle(mapId: string, circleId: string): Promise<void> {
     try {
-      await CapacitorGoogleMaps.removeCircle({ id: circleId });
+      const map = this.getMap(mapId);
+      await map.removeCircle({ id: circleId });
     } catch (error) {
       console.error('Error removing native circle:', error);
       throw error;
@@ -246,7 +250,8 @@ export class NativeMapService implements IMapService {
   
   async removePolyline(mapId: string, polylineId: string): Promise<void> {
     try {
-      await CapacitorGoogleMaps.removePolyline({ id: polylineId });
+      const map = this.getMap(mapId);
+      await map.removePolyline({ id: polylineId });
     } catch (error) {
       console.error('Error removing native polyline:', error);
       throw error;

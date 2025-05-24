@@ -185,10 +185,13 @@ export class WebMapService implements IMapService {
     const googleMarker = this.getMarker(markerId);
     
     if (marker.latitude !== undefined || marker.longitude !== undefined) {
-      const position = googleMarker.getPosition() || { lat: 0, lng: 0 };
+      const position = googleMarker.getPosition();
+      const lat = position ? position.lat() : 0;
+      const lng = position ? position.lng() : 0;
+      
       googleMarker.setPosition({
-        lat: marker.latitude !== undefined ? marker.latitude : position.lat(),
-        lng: marker.longitude !== undefined ? marker.longitude : position.lng()
+        lat: marker.latitude !== undefined ? marker.latitude : lat,
+        lng: marker.longitude !== undefined ? marker.longitude : lng
       });
     }
     
@@ -280,6 +283,8 @@ export class WebMapService implements IMapService {
     const map = this.getMap(mapId);
     
     const googleListener = map.addListener('click', (event: google.maps.MapMouseEvent) => {
+      if (!event.latLng) return;
+      
       const mapEvent: MapClickEvent = {
         latitude: event.latLng.lat(),
         longitude: event.latLng.lng(),
@@ -305,6 +310,8 @@ export class WebMapService implements IMapService {
     markersForMap.forEach(([markerId, googleMarker]) => {
       const googleListener = googleMarker.addListener('click', () => {
         const position = googleMarker.getPosition();
+        if (!position) return;
+        
         const mapEvent: MapMarkerClickEvent = {
           markerId,
           latitude: position.lat(),

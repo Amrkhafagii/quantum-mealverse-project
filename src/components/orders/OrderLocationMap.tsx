@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import UnifiedMapView from '../maps/UnifiedMapView';
+import StandardMap from '../maps/StandardMap';
 import { Order } from '@/types/order';
+import { MapMarker } from '@/services/maps/MapService';
 
 interface OrderLocationMapProps {
   order?: Order;
@@ -19,7 +20,6 @@ interface OrderLocationMapProps {
   height?: string;
   className?: string;
   showAccuracyCircle?: boolean;
-  // Remove assignmentId from props (not used)
 }
 
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
@@ -46,7 +46,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
   const customer = order.delivery_address;
   
   // Create markers for the map
-  const markers = [];
+  const markers: MapMarker[] = [];
   
   // Add restaurant marker - handle both string and object types for coordinates
   if (showRestaurant && restaurant) {
@@ -102,7 +102,7 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
     );
   }
   
-  // Determine center coordinates and zoom level
+  // Determine center coordinates
   let centerMarker = null;
   
   // If driver is visible, center on driver
@@ -126,12 +126,13 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
   }
   
   return (
-    <UnifiedMapView
+    <StandardMap
       mapId={`order-map-${order.id}`}
       height={height}
       className={className}
-      additionalMarkers={markers}
-      showHeader={false}
+      markers={markers}
+      center={centerMarker ? { latitude: centerMarker.latitude, longitude: centerMarker.longitude } : undefined}
+      showUserLocation={false}
       showAccuracyCircle={showAccuracyCircle}
     />
   );
