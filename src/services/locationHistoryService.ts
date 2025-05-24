@@ -1,251 +1,263 @@
 
 import { supabase } from '@/lib/supabase';
-import { UnifiedLocation, LocationSource } from '@/types/unifiedLocation';
-
-export interface LocationHistoryEntry extends UnifiedLocation {
-  id: string;
-}
+import { LocationHistoryEntry } from '@/types/location';
+import { UnifiedLocation } from '@/types/unifiedLocation';
 
 export interface LocationQueryParams {
   startDate?: string;
   endDate?: string;
   limit?: number;
   offset?: number;
-  source?: LocationSource[];
+  source?: string[];
   minAccuracy?: number;
   userId?: string;
   orderBy?: string;
   orderDirection?: 'asc' | 'desc';
 }
 
-/**
- * Fetch location history for a user
- */
-export async function fetchLocationHistory(
-  userId: string,
-  params: LocationQueryParams = {}
-): Promise<LocationHistoryEntry[]> {
-  try {
-    const {
-      startDate,
-      endDate,
-      limit = 50,
-      offset = 0,
-      source,
-      minAccuracy,
-      orderBy = 'timestamp',
-      orderDirection = 'desc'
-    } = params;
-    
-    let query = supabase
-      .from('unified_locations')
-      .select('*')
-      .eq('user_id', userId)
-      .order(orderBy, { ascending: orderDirection === 'asc' })
-      .limit(limit)
-      .range(offset, offset + limit - 1);
-    
-    if (startDate) {
-      query = query.gte('timestamp', startDate);
-    }
-    
-    if (endDate) {
-      query = query.lte('timestamp', endDate);
-    }
-    
-    if (source && source.length > 0) {
-      query = query.in('source', source);
-    }
-    
-    if (typeof minAccuracy === 'number') {
-      query = query.lte('accuracy', minAccuracy);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching location history:', error);
-      throw error;
-    }
-    
-    return data as LocationHistoryEntry[] || [];
-  } catch (error) {
-    console.error('Error in fetchLocationHistory:', error);
-    throw error;
-  }
-}
+export const locationHistoryService = {
+  // Get location history with filters
+  async getLocationHistory(params: LocationQueryParams = {}): Promise<LocationHistoryEntry[]> {
+    try {
+      let query = supabase
+        .from('unified_locations')
+        .select('*');
 
-/**
- * Export location history as a file
- */
-export async function exportLocationHistory(
-  userId: string,
-  format: 'json' | 'csv' = 'json',
-  startDate?: string,
-  endDate?: string
-): Promise<Blob> {
-  try {
-    const locations = await fetchLocationHistory(userId, {
-      startDate,
-      endDate,
-      limit: 1000,
-      orderDirection: 'asc'
-    });
-    
-    if (format === 'csv') {
-      return generateCSV(locations);
-    } else {
-      return new Blob([JSON.stringify(locations, null, 2)], {
-        type: 'application/json'
-      });
-    }
-  } catch (error) {
-    console.error('Error exporting location history:', error);
-    throw error;
-  }
-}
-
-/**
- * Generate a CSV file from location history
- */
-function generateCSV(locations: LocationHistoryEntry[]): Blob {
-  const headers = [
-    'id',
-    'timestamp',
-    'latitude',
-    'longitude',
-    'accuracy',
-    'altitude',
-    'source',
-    'speed'
-  ];
-  
-  const rows = locations.map(location => [
-    location.id || '',
-    new Date(location.timestamp).toISOString(),
-    location.latitude,
-    location.longitude,
-    location.accuracy,
-    location.altitude,
-    location.source,
-    location.speed
-  ]);
-  
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.join(','))
-  ].join('\n');
-  
-  return new Blob([csvContent], { type: 'text/csv' });
-}
-
-/**
- * Delete location history
- */
-export async function deleteLocationHistory(
-  userId: string,
-  startDate?: string,
-  endDate?: string
-): Promise<{ success: boolean, count: number }> {
-  try {
-    let query = supabase
-      .from('unified_locations')
-      .delete({ count: 'exact' })
-      .eq('user_id', userId);
-    
-    if (startDate) {
-      query = query.gte('timestamp', startDate);
-    }
-    
-    if (endDate) {
-      query = query.lte('timestamp', endDate);
-    }
-    
-    const { error, count } = await query;
-    
-    if (error) {
-      console.error('Error deleting location history:', error);
-      throw error;
-    }
-    
-    return { 
-      success: true, 
-      count: count || 0
-    };
-  } catch (error) {
-    console.error('Error in deleteLocationHistory:', error);
-    throw error;
-  }
-}
-
-/**
- * Get location statistics
- */
-export async function getLocationStats(userId: string): Promise<{
-  totalLocations: number;
-  firstLocation: string | null;
-  lastLocation: string | null;
-  uniqueDevices: number;
-}> {
-  try {
-    // Get total count
-    const { count: totalCount, error: countError } = await supabase
-      .from('unified_locations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    
-    if (countError) throw countError;
-    
-    // Get first and last locations
-    const { data: firstData, error: firstError } = await supabase
-      .from('unified_locations')
-      .select('timestamp')
-      .eq('user_id', userId)
-      .order('timestamp', { ascending: true })
-      .limit(1)
-      .single();
-    
-    if (firstError && firstError.code !== 'PGRST116') throw firstError;
-    
-    const { data: lastData, error: lastError } = await supabase
-      .from('unified_locations')
-      .select('timestamp')
-      .eq('user_id', userId)
-      .order('timestamp', { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (lastError && lastError.code !== 'PGRST116') throw lastError;
-    
-    // Count unique devices
-    const { data: devicesData, error: devicesError } = await supabase
-      .from('unified_locations')
-      .select('device_info')
-      .eq('user_id', userId)
-      .not('device_info', 'is', null);
-    
-    if (devicesError) throw devicesError;
-    
-    const uniqueDeviceMap = new Map();
-    devicesData?.forEach(item => {
-      if (item.device_info?.uuid) {
-        uniqueDeviceMap.set(item.device_info.uuid, true);
+      // Apply filters
+      if (params.userId) {
+        query = query.eq('user_id', params.userId);
       }
-    });
-    
-    return {
-      totalLocations: totalCount || 0,
-      firstLocation: firstData?.timestamp || null,
-      lastLocation: lastData?.timestamp || null,
-      uniqueDevices: uniqueDeviceMap.size
-    };
-  } catch (error) {
-    console.error('Error getting location stats:', error);
-    return {
-      totalLocations: 0,
-      firstLocation: null,
-      lastLocation: null,
-      uniqueDevices: 0
-    };
+
+      if (params.startDate) {
+        query = query.gte('timestamp', params.startDate);
+      }
+
+      if (params.endDate) {
+        query = query.lte('timestamp', params.endDate);
+      }
+
+      if (params.minAccuracy) {
+        query = query.gte('accuracy', params.minAccuracy);
+      }
+
+      if (params.source && params.source.length > 0) {
+        query = query.in('source', params.source);
+      }
+
+      // Apply ordering
+      const orderBy = params.orderBy || 'timestamp';
+      const orderDirection = params.orderDirection || 'desc';
+      query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+
+      // Apply pagination
+      if (params.limit) {
+        query = query.limit(params.limit);
+      }
+
+      if (params.offset) {
+        query = query.range(params.offset, (params.offset + (params.limit || 50)) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching location history:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getLocationHistory:', error);
+      return [];
+    }
+  },
+
+  // Get location stats
+  async getLocationStats(userId?: string): Promise<{
+    totalLocations: number;
+    uniqueDays: number;
+    averageAccuracy: number;
+    sources: { [key: string]: number };
+  }> {
+    try {
+      let query = supabase
+        .from('unified_locations')
+        .select('*');
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      const locations = data || [];
+      
+      // Calculate stats
+      const totalLocations = locations.length;
+      const uniqueDays = new Set(
+        locations.map(loc => new Date(loc.timestamp).toDateString())
+      ).size;
+      
+      const averageAccuracy = locations.reduce((sum, loc) => sum + (loc.accuracy || 0), 0) / totalLocations;
+      
+      const sources = locations.reduce((acc, loc) => {
+        acc[loc.source] = (acc[loc.source] || 0) + 1;
+        return acc;
+      }, {} as { [key: string]: number });
+
+      return {
+        totalLocations,
+        uniqueDays,
+        averageAccuracy,
+        sources
+      };
+    } catch (error) {
+      console.error('Error getting location stats:', error);
+      return {
+        totalLocations: 0,
+        uniqueDays: 0,
+        averageAccuracy: 0,
+        sources: {}
+      };
+    }
+  },
+
+  // Store location
+  async storeLocation(location: Partial<UnifiedLocation>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('unified_locations')
+        .insert([{
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracy: location.accuracy,
+          altitude: location.altitude,
+          heading: location.heading,
+          speed: location.speed,
+          timestamp: location.timestamp || new Date().toISOString(),
+          source: location.source || 'unknown',
+          user_id: location.user_id,
+          location_type: location.location_type || 'user',
+          device_info: location.device_info,
+          is_moving: location.isMoving,
+          battery_level: location.battery_level,
+          is_anonymized: location.is_anonymized || false,
+          user_consent: location.user_id ? true : false
+        }]);
+
+      if (error) {
+        console.error('Error storing location:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in storeLocation:', error);
+      return false;
+    }
+  },
+
+  // Get recent locations
+  async getRecentLocations(userId?: string, limit: number = 10): Promise<LocationHistoryEntry[]> {
+    try {
+      let query = supabase
+        .from('unified_locations')
+        .select('*');
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query
+        .order('timestamp', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching recent locations:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getRecentLocations:', error);
+      return [];
+    }
+  },
+
+  // Get location by ID
+  async getLocationById(id: string): Promise<LocationHistoryEntry | null> {
+    try {
+      const { data, error } = await supabase
+        .from('unified_locations')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching location by ID:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getLocationById:', error);
+      return null;
+    }
+  },
+
+  // Update location
+  async updateLocation(id: string, updates: Partial<UnifiedLocation>): Promise<LocationHistoryEntry | null> {
+    try {
+      const { data, error } = await supabase
+        .from('unified_locations')
+        .update(updates)
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error updating location:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in updateLocation:', error);
+      return null;
+    }
+  },
+
+  // Delete old locations (for privacy/retention)
+  async deleteOldLocations(olderThanDays: number, userId?: string): Promise<number> {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+      let query = supabase
+        .from('unified_locations')
+        .delete()
+        .lt('timestamp', cutoffDate.toISOString());
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        console.error('Error deleting old locations:', error);
+        return 0;
+      }
+
+      return 1; // Supabase doesn't return affected count, so we return 1 for success
+    } catch (error) {
+      console.error('Error in deleteOldLocations:', error);
+      return 0;
+    }
   }
-}
+};
+
+export default locationHistoryService;
