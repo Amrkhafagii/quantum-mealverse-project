@@ -1,9 +1,41 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/contexts/CartContext';
 import { OrderStatus } from '@/types/webhook';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { recordOrderHistory } from './webhook/orderHistoryService';
+
+/**
+ * Safely extracts meal properties from CartItem, handling both flat and nested structures
+ */
+const extractMealData = (item: CartItem) => {
+  console.log('Processing cart item:', JSON.stringify(item, null, 2));
+  
+  // Handle flat structure (current CartContext format)
+  if (typeof item.id === 'string' && typeof item.name === 'string' && typeof item.price === 'number') {
+    return {
+      meal_id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity
+    };
+  }
+  
+  // Handle legacy nested structure if it exists
+  const meal = (item as any).meal;
+  if (meal && typeof meal.id === 'string') {
+    console.log('Using nested meal structure for item:', item);
+    return {
+      meal_id: meal.id,
+      name: meal.name,
+      price: meal.price,
+      quantity: item.quantity
+    };
+  }
+  
+  // Log error for debugging
+  console.error('Invalid cart item structure:', item);
+  throw new Error(`Invalid cart item structure: missing required fields (id, name, price) in item: ${JSON.stringify(item)}`);
+};
 
 /**
  * Creates a new order in the database
@@ -16,8 +48,29 @@ export const createOrder = async (
   initialStatus: string = OrderStatus.PENDING
 ) => {
   try {
+    console.log('Creating order with items:', items);
+    
+    // Validate items before processing
+    if (!items || items.length === 0) {
+      throw new Error('Cannot create order: cart is empty');
+    }
+    
+    // Validate each item has required fields
+    items.forEach((item, index) => {
+      if (!item.id || !item.name || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
+        console.error(`Invalid item at index ${index}:`, item);
+        throw new Error(`Invalid cart item at position ${index + 1}: missing required fields`);
+      }
+    });
+    
     // Create subtotal from items - using flat structure
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = items.reduce((sum, item) => {
+      const price = typeof item.price === 'number' ? item.price : 0;
+      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+      return sum + (price * quantity);
+    }, 0);
+    
+    console.log('Calculated subtotal:', subtotal, 'Total amount:', totalAmount);
     
     // Calculate delivery fee based on delivery method
     const deliveryFee = deliveryInfo.deliveryMethod === 'delivery' ? 2.99 : 0;
@@ -49,7 +102,12 @@ export const createOrder = async (
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Database error creating order:', error);
+      throw error;
+    }
+    
+    console.log('Order created successfully:', insertedOrder);
     return insertedOrder;
   } catch (error) {
     console.error('Error creating order:', error);
@@ -58,32 +116,52 @@ export const createOrder = async (
 };
 
 /**
- * Creates order items for a given order
+ * Creates order items for a given order with improved error handling
  */
 export const createOrderItems = async (orderId: string, items: CartItem[]) => {
-  const orderItems = items.map(item => ({
-    order_id: orderId,
-    meal_id: item.id, // Use flat structure
-    quantity: item.quantity,
-    price: item.price, // Use flat structure
-    name: item.name // Use flat structure
-  }));
-  
   try {
+    console.log('Creating order items for order:', orderId, 'with items:', items);
+    
+    if (!items || items.length === 0) {
+      throw new Error('Cannot create order items: no items provided');
+    }
+    
+    const orderItems = items.map((item, index) => {
+      try {
+        const mealData = extractMealData(item);
+        console.log(`Processed item ${index + 1}:`, mealData);
+        return {
+          order_id: orderId,
+          ...mealData
+        };
+      } catch (error) {
+        console.error(`Error processing item ${index + 1}:`, error);
+        throw new Error(`Failed to process cart item ${index + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    });
+    
+    console.log('Final order items to insert:', orderItems);
+    
     const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItems);
       
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Database error creating order items:', itemsError);
+      throw itemsError;
+    }
+    
+    console.log('Order items created successfully');
     
     // Record the items in order history
     await recordOrderHistory(
       orderId,
       OrderStatus.PENDING,
       null,
-      { items_count: items.length }
+      { items_count: items.length, items: orderItems }
     );
   } catch (error) {
+    console.error('Error in createOrderItems:', error);
     throw error;
   }
 };

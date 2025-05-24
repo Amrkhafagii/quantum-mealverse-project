@@ -59,6 +59,11 @@ export const useOrderSubmission = (
         throw new Error("You must be logged in to place an order");
       }
 
+      console.log('Starting order submission for user:', userId);
+      console.log('Cart items:', JSON.stringify(items, null, 2));
+      console.log('Total amount:', totalAmount);
+      console.log('Delivery info:', JSON.stringify(data, null, 2));
+
       // Save delivery information
       await saveDeliveryInfo(userId, data, hasDeliveryInfo);
       
@@ -68,6 +73,8 @@ export const useOrderSubmission = (
       if (!insertedOrder || !insertedOrder.id) {
         throw new Error("Failed to create order - no order ID returned");
       }
+      
+      console.log('Order created with ID:', insertedOrder.id);
       
       // Create order items
       await createOrderItems(insertedOrder.id, items);
@@ -120,6 +127,18 @@ export const useOrderSubmission = (
     } catch (error: any) {
       console.error("Order submission error:", error);
       setIsSubmitting(false);
+      
+      // Enhanced error logging for debugging
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        userId,
+        itemsCount: items.length,
+        totalAmount,
+        platform: navigator.platform,
+        userAgent: navigator.userAgent
+      });
+      
       toast({
         title: "Error placing order",
         description: error.message || "An unexpected error occurred",

@@ -18,6 +18,7 @@ const Cart = () => {
   const { displayPrice } = useCurrencyConverter();
 
   const handleCheckout = () => {
+    console.log('Navigating to checkout with items:', items);
     navigate('/checkout');
   };
 
