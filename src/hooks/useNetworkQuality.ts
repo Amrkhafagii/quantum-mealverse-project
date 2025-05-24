@@ -1,157 +1,118 @@
 
 import { useState, useEffect } from 'react';
-import { getNetworkInfo, monitorNetworkQuality } from '@/utils/networkInfoUtils';
-import { NetworkType, NetworkQuality, NetworkMetrics } from '@/types/unifiedLocation';
+import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
+import { NetworkMetrics, NetworkQualityResult } from '@/types/networkQuality';
 
-interface NetworkQualityOptions {
-  monitorChanges?: boolean;
-  updateInterval?: number; // milliseconds
-}
+export function useNetworkQuality(): NetworkQualityResult {
+  const [quality, setQuality] = useState<NetworkQuality>('unknown');
+  const [isLowQuality, setIsLowQuality] = useState(false);
+  const [metrics, setMetrics] = useState<NetworkMetrics>({
+    latency: null,
+    bandwidth: null,
+    jitter: null,
+    packetLoss: null,
+    effectiveType: undefined
+  });
 
-export interface NetworkQualityResult {
-  quality: NetworkQuality;
-  isLowQuality: boolean;
-  isOffline: boolean;
-  networkType: NetworkType;
-  latency?: number; // milliseconds
-  bandwidth?: number; // Mbps
-  hasTransitioned?: boolean;
-  isFlaky?: boolean;
-  metrics?: NetworkMetrics;
-  checkQuality?: () => Promise<NetworkQuality>;
-}
-
-export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQualityResult {
-  const {
-    monitorChanges = true,
-    updateInterval = 30000
-  } = options;
-  
-  const [quality, setQuality] = useState<NetworkQuality>('medium');
-  const [isLowQuality, setIsLowQuality] = useState<boolean>(false);
-  const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
-  const [networkType, setNetworkType] = useState<NetworkType>('unknown');
-  const [latency, setLatency] = useState<number | undefined>(undefined);
-  const [bandwidth, setBandwidth] = useState<number | undefined>(undefined);
-  const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
-  const [isFlaky, setIsFlaky] = useState<boolean>(false);
-  const [metrics, setMetrics] = useState<NetworkMetrics | undefined>(undefined);
-  
-  // Update network quality information
-  const updateNetworkQuality = () => {
-    const info = getNetworkInfo();
-    
-    // Update offline status
-    setIsOffline(!info.connected);
-    
-    // Update network type
-    setNetworkType(info.type);
-    
-    // Determine quality based on type
-    if (!info.connected) {
-      setQuality('offline');
-      setIsLowQuality(true);
-    } else {
-      let newQuality: NetworkQuality = 'medium';
+  const checkQuality = async (): Promise<NetworkQuality> => {
+    try {
+      // Check navigator connection API
+      const connection = (navigator as any).connection || 
+                        (navigator as any).mozConnection || 
+                        (navigator as any).webkitConnection;
       
-      switch (info.type) {
-        case 'wifi':
-        case '5g':
-          newQuality = 'high';
-          break;
-        case '4g':
-          newQuality = 'medium';
-          break;
-        case '3g':
-        case '2g':
-        case 'cellular':
-          newQuality = 'low';
-          break;
-        default:
-          if ('connection' in navigator) {
-            const conn = (navigator as any).connection;
-            if (conn && conn.downlink) {
-              if (conn.downlink > 5) newQuality = 'high';
-              else if (conn.downlink > 2) newQuality = 'medium';
-              else newQuality = 'low';
-            }
-          }
-      }
-      
-      setQuality(newQuality);
-      setIsLowQuality(newQuality === 'low');
-    }
-    
-    // Update latency and bandwidth if available
-    if ('connection' in navigator) {
-      const conn = (navigator as any).connection;
-      if (conn) {
-        if (conn.downlink) setBandwidth(conn.downlink);
-        if (conn.rtt) setLatency(conn.rtt);
+      if (connection) {
+        const effectiveType = connection.effectiveType;
+        const downlink = connection.downlink;
+        const rtt = connection.rtt;
         
         // Update metrics
-        setMetrics({
-          latency: conn.rtt || 0,
-          bandwidth: conn.downlink || 0,
-          connectionType: info.type,
-          effectiveType: conn.effectiveType
-        });
+        setMetrics(prev => ({
+          ...prev,
+          latency: rtt || null,
+          bandwidth: downlink || null,
+          effectiveType: effectiveType
+        }));
+        
+        // Determine quality based on effective type and metrics
+        let detectedQuality: NetworkQuality = 'medium';
+        
+        if (effectiveType === '4g' && downlink > 10) {
+          detectedQuality = 'high';
+        } else if (effectiveType === '3g' || (downlink >= 1.5 && downlink <= 10)) {
+          detectedQuality = 'medium';
+        } else if (effectiveType === '2g' || downlink < 1.5) {
+          detectedQuality = 'low';
+        }
+        
+        setQuality(detectedQuality);
+        setIsLowQuality(detectedQuality === 'low' || detectedQuality === 'offline');
+        
+        return detectedQuality;
       }
+      
+      // Fallback: check online status
+      if (!navigator.onLine) {
+        setQuality('offline');
+        setIsLowQuality(true);
+        return 'offline';
+      }
+      
+      // Default to medium quality if we can't determine
+      setQuality('medium');
+      setIsLowQuality(false);
+      return 'medium';
+      
+    } catch (error) {
+      console.error('Error checking network quality:', error);
+      setQuality('unknown');
+      setIsLowQuality(true);
+      return 'unknown';
     }
   };
-  
-  // Check quality method for components
-  const checkQuality = async (): Promise<NetworkQuality> => {
-    updateNetworkQuality();
-    return quality;
-  };
-  
-  // Initial update and setup monitoring
+
   useEffect(() => {
-    updateNetworkQuality();
+    // Initial check
+    checkQuality();
     
-    let intervalId: number | undefined;
-    let cleanup: (() => void) | undefined;
+    // Listen for online/offline events
+    const handleOnline = () => checkQuality();
+    const handleOffline = () => {
+      setQuality('offline');
+      setIsLowQuality(true);
+    };
     
-    if (monitorChanges) {
-      // Monitor network changes using event listeners
-      cleanup = monitorNetworkQuality(() => {
-        const prevQuality = quality;
-        updateNetworkQuality();
-        
-        // Set transition flag if quality changed
-        if (prevQuality !== quality) {
-          setHasTransitioned(true);
-          
-          // Reset after a delay
-          setTimeout(() => {
-            setHasTransitioned(false);
-          }, 5000);
-        }
-      });
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Listen for connection changes if supported
+    const connection = (navigator as any).connection || 
+                      (navigator as any).mozConnection || 
+                      (navigator as any).webkitConnection;
+    
+    if (connection) {
+      const handleConnectionChange = () => checkQuality();
+      connection.addEventListener('change', handleConnectionChange);
       
-      // Periodically check for more subtle changes
-      intervalId = window.setInterval(() => {
-        updateNetworkQuality();
-      }, updateInterval);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        connection.removeEventListener('change', handleConnectionChange);
+      };
     }
     
     return () => {
-      if (cleanup) cleanup();
-      if (intervalId) clearInterval(intervalId);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
-  }, [monitorChanges, updateInterval]);
-  
+  }, []);
+
   return {
     quality,
     isLowQuality,
-    isOffline,
-    networkType,
-    latency,
-    bandwidth,
-    hasTransitioned,
-    isFlaky,
     metrics,
+    hasTransitioned: false,
+    isFlaky: false,
     checkQuality
   };
 }

@@ -18,11 +18,20 @@ export class WebLocationService extends BaseLocationService {
       
       const location = await getBrowserLocation();
       if (location) {
-        this.updateLocation({
-          ...location,
+        const deliveryLocation: DeliveryLocation = {
+          latitude: location.latitude,
+          longitude: location.longitude,
           accuracy: location.accuracy || 0, // Ensure accuracy is not undefined
-        });
-        return location;
+          altitude: location.altitude || null,
+          altitudeAccuracy: location.altitudeAccuracy || null,
+          heading: location.heading || null,
+          speed: location.speed || undefined,
+          timestamp: location.timestamp,
+          source: 'gps' as const // Ensure correct type
+        };
+        
+        this.updateLocation(deliveryLocation);
+        return deliveryLocation;
       }
       return null;
     } catch (error) {
@@ -53,10 +62,19 @@ export class WebLocationService extends BaseLocationService {
       this._clearWatchFn = watchBrowserLocation(
         (location) => {
           if (location) {
-            this.updateLocation({
-              ...location,
+            const deliveryLocation: DeliveryLocation = {
+              latitude: location.latitude,
+              longitude: location.longitude,
               accuracy: location.accuracy || 0, // Ensure accuracy is not undefined
-            });
+              altitude: location.altitude || null,
+              altitudeAccuracy: location.altitudeAccuracy || null,
+              heading: location.heading || null,
+              speed: location.speed || undefined,
+              timestamp: location.timestamp,
+              source: 'gps' as const // Ensure correct type
+            };
+            
+            this.updateLocation(deliveryLocation);
           }
         },
         (error) => console.error('Error watching location:', error)

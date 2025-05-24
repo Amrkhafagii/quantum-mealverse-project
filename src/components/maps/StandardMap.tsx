@@ -65,7 +65,7 @@ export const StandardMap: React.FC<StandardMapProps> = ({
     return () => clearInterval(intervalId);
   }, [refreshInterval, mapInstance, isMapReady]);
   
-  // Determine map center
+  // Determine map center - fix coordinate format
   const mapCenter = center || 
     (showUserLocation && currentLocation ? 
       { lat: currentLocation.latitude, lng: currentLocation.longitude } : 
@@ -145,12 +145,9 @@ export const StandardMap: React.FC<StandardMapProps> = ({
       try {
         setIsInitializing(true);
         
-        // Create map with options
+        // Create map with options - use consistent coordinate format
         const mapOptions: MapViewOptions = {
-          center: {
-            lat: mapCenter.lat,
-            lng: mapCenter.lng
-          },
+          center: mapCenter,
           zoom,
           markers: getAllMarkers(),
           enableControls,
@@ -170,8 +167,8 @@ export const StandardMap: React.FC<StandardMapProps> = ({
           
           await addCircle(id, {
             center: {
-              latitude: currentLocation.latitude,
-              longitude: currentLocation.longitude
+              lat: currentLocation.latitude,
+              lng: currentLocation.longitude
             },
             radius,
             strokeColor: '#3388FF',

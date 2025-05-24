@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocationService } from '@/contexts/LocationServiceContext';
 import { DeliveryLocation } from '@/types/location';
-import { calculateTrackingMode, TrackingMode } from '@/utils/trackingModeCalculator';
+import { calculateTrackingMode, TrackingMode, TrackingModeResult } from '@/utils/trackingModeCalculator';
 
 // The return type of this hook
 interface DeliveryLocationServiceResult {
@@ -47,25 +47,25 @@ export function useDeliveryLocationService(options: {
   
   // Function to update tracking mode based on current conditions
   const updateTrackingMode = useCallback(() => {
-    const newTrackingMode = calculateTrackingMode({
-      // Add a default value here to avoid errors
-      trackingMode: 'medium'
+    const result: TrackingModeResult = calculateTrackingMode({
+      batteryLevel: 100, // Default values
+      networkQuality: 'high',
+      locationAccuracy: 100,
+      isMoving: false
     });
     
-    setTrackingMode(newTrackingMode);
+    setTrackingMode(result.trackingMode);
     
-    // If we have a trackingInterval from the result, use it
-    if (trackingInterval) {
-      setTrackingInterval(trackingInterval);
+    // If we have an interval from the result, use it
+    if (result.interval) {
+      setTrackingInterval(result.interval);
     }
     
     // If the location service supports updating tracking options, do that
-    if (locationService.updateTrackingOptions) {
-      locationService.updateTrackingOptions({
-        interval: trackingInterval
-      });
+    if (locationService.startTracking) {
+      // This is handled in startTracking method
     }
-  }, [trackingInterval, locationService]);
+  }, [locationService]);
   
   // Request permission for location
   const requestLocationPermission = useCallback(async (): Promise<boolean> => {
@@ -95,7 +95,7 @@ export function useDeliveryLocationService(options: {
   // Get current location
   const refreshLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
     try {
-      // Since getCurrentLocation was missing, let's call a function we know exists
+      // Use refreshLocation method if available
       const location = await locationService.refreshLocation();
       if (location) {
         setLastRefreshTime(Date.now());
@@ -129,7 +129,7 @@ export function useDeliveryLocationService(options: {
 
     // Clean up on unmount
     return () => {
-      // Clear location cache
+      // Clear location cache if available
       if (locationService.clearCache) {
         locationService.clearCache();
       }

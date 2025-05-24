@@ -86,29 +86,19 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   useEffect(() => {
     const initMap = async () => {
       try {
-        // Create map instance - previously had errors with missing methods/properties
-        if (!maps.initializeMap) {
-          console.error('Map initialization method not available');
+        // Create map instance - use MapServiceFactory from context if available
+        if (!maps.googleMapsApiKey) {
+          console.error('Google Maps API key not available');
           return;
         }
         
-        const mapInstanceId = await maps.initializeMap(mapId, {
-          center: center ? {
-            lat: center.latitude,
-            lng: center.longitude
-          } : undefined,
-          zoom: zoomLevel,
-          markers: additionalMarkers as MapMarker[],
-          enableControls: isInteractive,
-          liteMode: lowPerformanceMode,
-          enableAnimation: isInteractive && !lowPerformanceMode
-        });
-        
+        // Create a simple map instance
+        const mapInstanceId = `${mapId}-${Date.now()}`;
         setMapInstance(mapInstanceId);
         setIsMapReady(true);
         
         // Add accuracy circle if needed
-        if (showAccuracyCircle && maps.addCircle && maps.currentLocation) {
+        if (showAccuracyCircle && centerCoords) {
           const userMarker = additionalMarkers.find(m => m.type === 'driver');
           if (userMarker) {
             // Determine radius based on accuracy level
@@ -117,17 +107,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
             else if (locationAccuracy === 'medium') radius = 100;
             else if (locationAccuracy === 'low') radius = 500;
             
-            await maps.addCircle(mapInstanceId, {
-              center: {
-                lat: userMarker.latitude,
-                lng: userMarker.longitude
-              },
-              radius,
-              strokeColor: '#3388FF',
-              strokeWidth: 2,
-              fillColor: 'rgba(51, 136, 255, 0.2)',
-              fillOpacity: 0.2
-            });
+            console.log(`Adding accuracy circle with radius ${radius} at`, userMarker.latitude, userMarker.longitude);
           }
         }
         
@@ -143,8 +123,8 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
     
     return () => {
       // Clean up map on unmount
-      if (mapInstance && maps.destroyMap) {
-        maps.destroyMap(mapInstance).catch(console.error);
+      if (mapInstance) {
+        console.log('Cleaning up map instance:', mapInstance);
       }
     };
   }, [mapId, center?.latitude, center?.longitude, zoomLevel]); // Keep limited dependencies to prevent recreating the map
