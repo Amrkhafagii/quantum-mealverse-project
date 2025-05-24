@@ -54,3 +54,7 @@ export interface CalendarEvent {
   workout_plan_name?: string;
   duration?: number;
 }
+
+// Form data types for creating/updating schedules
+export type CreateWorkoutScheduleData = Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type UpdateWorkoutScheduleData = Partial<CreateWorkoutScheduleData>;

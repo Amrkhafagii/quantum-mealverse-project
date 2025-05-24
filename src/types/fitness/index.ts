@@ -1,3 +1,4 @@
+
 // Re-export all fitness types from their specific files
 export * from './goals';
 export * from './achievements';
@@ -6,9 +7,8 @@ export * from './nutrition';
 export * from './profile';
 export * from './workouts';
 export * from './logs';
-export * from './schedules';
 
-// Export scheduling types
+// Export scheduling types (remove duplicate WorkoutSchedule export)
 export * from './scheduling';
 
 // Additional types related to hydration tracking

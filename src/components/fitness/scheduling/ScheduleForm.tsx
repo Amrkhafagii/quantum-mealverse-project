@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { X } from 'lucide-react';
-import { WorkoutSchedule } from '@/types/fitness/scheduling';
+import { WorkoutSchedule, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
 import { WorkoutPlan } from '@/types/fitness/workouts';
 
 const scheduleSchema = z.object({
@@ -24,13 +24,14 @@ const scheduleSchema = z.object({
   timezone: z.string().default('UTC'),
   reminder_enabled: z.boolean().default(true),
   reminder_minutes_before: z.number().min(5).max(1440).default(30),
+  is_active: z.boolean().default(true),
 });
 
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 interface ScheduleFormProps {
   workoutPlans: WorkoutPlan[];
-  onSubmit: (data: Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => void;
+  onSubmit: (data: CreateWorkoutScheduleData) => void;
   onCancel: () => void;
   initialData?: WorkoutSchedule;
   isLoading?: boolean;
@@ -67,6 +68,7 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
       timezone: initialData?.timezone || 'UTC',
       reminder_enabled: initialData?.reminder_enabled ?? true,
       reminder_minutes_before: initialData?.reminder_minutes_before || 30,
+      is_active: initialData?.is_active ?? true,
     },
   });
 
@@ -80,10 +82,21 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
   };
 
   const handleFormSubmit = (data: ScheduleFormData) => {
-    onSubmit({
-      ...data,
-      is_active: true,
-    });
+    // Ensure required fields are present for CreateWorkoutScheduleData
+    const scheduleData: CreateWorkoutScheduleData = {
+      name: data.name,
+      workout_plan_id: data.workout_plan_id,
+      days_of_week: data.days_of_week,
+      start_date: data.start_date,
+      end_date: data.end_date || undefined,
+      preferred_time: data.preferred_time || undefined,
+      timezone: data.timezone,
+      is_active: data.is_active,
+      reminder_enabled: data.reminder_enabled,
+      reminder_minutes_before: data.reminder_minutes_before,
+    };
+    
+    onSubmit(scheduleData);
   };
 
   return (

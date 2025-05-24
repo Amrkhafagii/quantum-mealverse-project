@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { WorkoutCalendar } from './WorkoutCalendar';
 import { ScheduleForm } from './ScheduleForm';
 import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
-import { WorkoutSchedule, WorkoutSession, CalendarEvent } from '@/types/fitness/scheduling';
+import { WorkoutSchedule, WorkoutSession, CalendarEvent, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
@@ -33,7 +32,7 @@ export const WorkoutScheduler: React.FC = () => {
 
   const { workoutPlans } = useWorkoutData();
 
-  const handleCreateSchedule = async (scheduleData: Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const handleCreateSchedule = async (scheduleData: CreateWorkoutScheduleData) => {
     const result = await createSchedule(scheduleData);
     if (result) {
       setShowCreateForm(false);
@@ -41,7 +40,7 @@ export const WorkoutScheduler: React.FC = () => {
     }
   };
 
-  const handleEditSchedule = async (scheduleData: Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const handleEditSchedule = async (scheduleData: CreateWorkoutScheduleData) => {
     if (!editingSchedule) return;
     
     await updateSchedule(editingSchedule.id, scheduleData);
