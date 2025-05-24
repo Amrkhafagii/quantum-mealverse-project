@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clearLocationStorage, exportLocationLogs } from '@/utils/locationDebug';
@@ -144,14 +143,14 @@ const Customer: React.FC = () => {
 
       <LocationStateManager>
         <LocationStatusIndicator 
-          trackingMode="high-accuracy" 
+          trackingMode="automatic" 
           isTracking={!!currentLocation} 
         />
         <LocationPromptBanner />
 
         {permissionStatus !== 'granted' && (
           <LocationPermissionsPrompt
-            requestPermission={requestPermission}
+            onRequestPermission={requestPermission}
             isLoading={permissionLoading}
           />
         )}
