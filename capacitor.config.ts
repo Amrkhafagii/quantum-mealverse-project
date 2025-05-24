@@ -45,6 +45,10 @@ const config: CapacitorConfig = {
       backgroundMessage: "Location tracking for meal deliveries",
       backgroundTitle: "Tracking Location",
       requestPermissions: true
+    },
+    // Register our custom LocationPermissions plugin
+    LocationPermissions: {
+      // Custom plugin configuration
     }
   },
   ios: {

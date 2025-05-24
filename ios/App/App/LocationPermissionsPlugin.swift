@@ -1,4 +1,3 @@
-
 import Foundation
 import Capacitor
 import CoreLocation
@@ -37,7 +36,7 @@ public class LocationPermissionsPlugin: CAPPlugin {
         initializeBatchProcessor()
         registerForNotifications()
         
-        print("LocationPermissionsPlugin loaded successfully")
+        print("LocationPermissionsPlugin loaded successfully and registered with Capacitor")
     }
     
     deinit {
@@ -121,7 +120,7 @@ extension LocationPermissionsPlugin {
     }
 }
 
-// MARK: - Capacitor Plugin Methods
+// MARK: - Capacitor Plugin Methods - Ensure method signatures match TypeScript interface exactly
 extension LocationPermissionsPlugin {
     @objc public override func requestPermissions(_ call: CAPPluginCall) {
         print("requestPermissions called with options:", call.options)
@@ -129,14 +128,16 @@ extension LocationPermissionsPlugin {
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
+    // This method signature must match the TypeScript interface exactly
     @objc func requestLocationPermission(_ call: CAPPluginCall) {
         print("requestLocationPermission called with options:", call.options)
         let includeBackground = call.getBool("includeBackground") ?? false
         requestLocationPermissionInternal(call: call, background: includeBackground)
     }
     
+    // This method signature must match the TypeScript interface exactly
     @objc func checkPermissionStatus(_ call: CAPPluginCall) {
-        print("checkPermissionStatus called")
+        print("checkPermissionStatus called - plugin is properly registered")
         
         // Check cache first to avoid bridge calls
         if let cache = permissionStatusCache, permissionCacheIsValid() {
@@ -161,7 +162,7 @@ extension LocationPermissionsPlugin {
             "backgroundLocation": formattedStatus.background
         ]
         
-        print("Permission status: \(result)")
+        print("Permission status retrieved successfully: \(result)")
         
         // Update cache
         permissionStatusCache = result

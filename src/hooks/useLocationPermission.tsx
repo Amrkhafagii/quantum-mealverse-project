@@ -84,7 +84,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     }
   }, [storedPermission, storedBackgroundPermission, storedEducationalUiShown, storedInitialPromptShown]);
 
-  // Fallback function to use standard Capacitor Geolocation API
+  // Enhanced fallback function with better error handling for iOS
   const checkPermissionsWithFallback = async () => {
     try {
       console.log('Attempting to check permissions with custom plugin');
@@ -100,6 +100,17 @@ export function useLocationPermission(): LocationPermissionHookResponse {
       return true;
     } catch (error) {
       console.warn('Custom LocationPermissions plugin failed, falling back to standard Geolocation API:', error);
+      
+      // Enhanced error handling - check if it's an "UNIMPLEMENTED" or plugin registration error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isPluginNotRegistered = errorMessage.includes('UNIMPLEMENTED') || 
+                                   errorMessage.includes('not implemented') ||
+                                   errorMessage.includes('not found') ||
+                                   errorMessage.includes('No implementation found');
+      
+      if (isPluginNotRegistered) {
+        console.log('Plugin not properly registered on iOS, using fallback implementation');
+      }
       
       try {
         // Fallback to standard Capacitor Geolocation
@@ -154,7 +165,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     return null;
   };
 
-  // Request foreground location permission with fallback
+  // Enhanced request permission with better iOS fallback handling
   const requestPermission = async (): Promise<boolean> => {
     setIsRequesting(true);
     setHasShownInitialPrompt(true);
@@ -187,6 +198,17 @@ export function useLocationPermission(): LocationPermissionHookResponse {
           return result.location === 'granted';
         } catch (error) {
           console.warn('Custom plugin permission request failed, falling back to standard API:', error);
+          
+          // Enhanced error handling for iOS plugin registration issues
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const isPluginNotRegistered = errorMessage.includes('UNIMPLEMENTED') || 
+                                       errorMessage.includes('not implemented') ||
+                                       errorMessage.includes('not found') ||
+                                       errorMessage.includes('No implementation found');
+          
+          if (isPluginNotRegistered && Platform.isIOS()) {
+            console.log('iOS plugin not registered properly, using standard Geolocation API');
+          }
           
           // Fallback to standard Capacitor Geolocation
           const result = await Geolocation.requestPermissions();
