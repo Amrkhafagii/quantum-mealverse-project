@@ -2731,34 +2731,90 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          reminder_time: string
+          sent_at: string | null
+          status: string
+          user_id: string
+          workout_session_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reminder_time: string
+          sent_at?: string | null
+          status?: string
+          user_id: string
+          workout_session_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reminder_time?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+          workout_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_reminders_workout_session_id_fkey"
+            columns: ["workout_session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_schedules: {
         Row: {
-          active: boolean
+          created_at: string | null
           days_of_week: number[]
           end_date: string | null
           id: string
+          is_active: boolean
+          name: string
           preferred_time: string | null
+          reminder_enabled: boolean
+          reminder_minutes_before: number
           start_date: string
+          timezone: string
+          updated_at: string | null
           user_id: string
           workout_plan_id: string
         }
         Insert: {
-          active?: boolean
+          created_at?: string | null
           days_of_week: number[]
           end_date?: string | null
           id?: string
+          is_active?: boolean
+          name?: string
           preferred_time?: string | null
+          reminder_enabled?: boolean
+          reminder_minutes_before?: number
           start_date: string
+          timezone?: string
+          updated_at?: string | null
           user_id: string
           workout_plan_id: string
         }
         Update: {
-          active?: boolean
+          created_at?: string | null
           days_of_week?: number[]
           end_date?: string | null
           id?: string
+          is_active?: boolean
+          name?: string
           preferred_time?: string | null
+          reminder_enabled?: boolean
+          reminder_minutes_before?: number
           start_date?: string
+          timezone?: string
+          updated_at?: string | null
           user_id?: string
           workout_plan_id?: string
         }
@@ -2768,6 +2824,68 @@ export type Database = {
             columns: ["workout_plan_id"]
             isOneToOne: false
             referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_sessions: {
+        Row: {
+          calories_burned: number | null
+          completed_at: string | null
+          created_at: string | null
+          duration_minutes: number | null
+          id: string
+          notes: string | null
+          scheduled_date: string
+          scheduled_time: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          workout_data: Json | null
+          workout_plan_id: string
+          workout_schedule_id: string | null
+        }
+        Insert: {
+          calories_burned?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          scheduled_date: string
+          scheduled_time?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          workout_data?: Json | null
+          workout_plan_id: string
+          workout_schedule_id?: string | null
+        }
+        Update: {
+          calories_burned?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          scheduled_date?: string
+          scheduled_time?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          workout_data?: Json | null
+          workout_plan_id?: string
+          workout_schedule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sessions_workout_schedule_id_fkey"
+            columns: ["workout_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "workout_schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -3198,6 +3316,14 @@ export type Database = {
       generate_order_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      generate_workout_sessions: {
+        Args: {
+          p_schedule_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: number
       }
       geography: {
         Args: { "": string } | { "": unknown }

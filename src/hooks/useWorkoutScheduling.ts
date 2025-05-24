@@ -25,20 +25,20 @@ export function useWorkoutScheduling() {
 
       if (error) throw error;
       
-      // Map database fields to our interface, providing defaults for missing fields
+      // Map database fields to our interface - now all fields should exist
       const mappedSchedules: WorkoutSchedule[] = (data || []).map(item => ({
         id: item.id,
         user_id: item.user_id,
         workout_plan_id: item.workout_plan_id,
-        name: item.name || '',
+        name: item.name,
         days_of_week: item.days_of_week || [],
-        start_date: item.start_date || '',
+        start_date: item.start_date,
         end_date: item.end_date || undefined,
         preferred_time: item.preferred_time || undefined,
-        timezone: item.timezone || 'UTC',
-        is_active: item.is_active ?? item.active ?? true,
-        reminder_enabled: item.reminder_enabled ?? true,
-        reminder_minutes_before: item.reminder_minutes_before || 30,
+        timezone: item.timezone,
+        is_active: item.is_active,
+        reminder_enabled: item.reminder_enabled,
+        reminder_minutes_before: item.reminder_minutes_before,
         created_at: item.created_at,
         updated_at: item.updated_at
       }));
@@ -62,9 +62,8 @@ export function useWorkoutScheduling() {
     try {
       setIsLoading(true);
       
-      // Use direct SQL query since workout_sessions might not be in generated types yet
       let query = supabase
-        .from('workout_sessions' as any)
+        .from('workout_sessions')
         .select(`
           *,
           workout_plans!inner(name),
@@ -202,8 +201,7 @@ export function useWorkoutScheduling() {
 
   const generateSessions = async (scheduleId: string, startDate?: string, endDate?: string) => {
     try {
-      // Use direct RPC call with proper typing
-      const { data, error } = await supabase.rpc('generate_workout_sessions' as any, {
+      const { data, error } = await supabase.rpc('generate_workout_sessions', {
         p_schedule_id: scheduleId,
         p_start_date: startDate || new Date().toISOString().split('T')[0],
         p_end_date: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -245,7 +243,7 @@ export function useWorkoutScheduling() {
       }
 
       const { error } = await supabase
-        .from('workout_sessions' as any)
+        .from('workout_sessions')
         .update(updates)
         .eq('id', sessionId)
         .eq('user_id', user?.id);
