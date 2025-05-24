@@ -21,15 +21,19 @@ export function useLocationTracker() {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Update location when permission location changes
   useEffect(() => {
     if (permissionLocation?.coords) {
-      setLocation({
+      const newLocation = {
         latitude: permissionLocation.coords.latitude,
         longitude: permissionLocation.coords.longitude,
         timestamp: Date.now()
-      });
+      };
+      setLocation(newLocation);
+      setLastUpdated(new Date());
       // Clear any previous errors when we get a valid location
       setError(null);
     }
@@ -104,6 +108,7 @@ export function useLocationTracker() {
 
             console.log('Got fresh location:', newLocation);
             setLocation(newLocation);
+            setLastUpdated(new Date());
             setError(null);
             resolve(newLocation);
           },
@@ -142,6 +147,17 @@ export function useLocationTracker() {
     }
   }, [permissionStatus, requestPermission, locationIsValid, isLocationStale, location]);
 
+  // Start tracking location
+  const startTracking = useCallback(() => {
+    setIsTracking(true);
+    getCurrentLocation();
+  }, [getCurrentLocation]);
+
+  // Stop tracking location
+  const stopTracking = useCallback(() => {
+    setIsTracking(false);
+  }, []);
+
   return {
     location,
     error,
@@ -150,6 +166,10 @@ export function useLocationTracker() {
     getCurrentLocation,
     locationIsValid,
     isLocationStale,
-    hasInitialized
+    hasInitialized,
+    isTracking,
+    startTracking,
+    stopTracking,
+    lastUpdated
   };
 }
