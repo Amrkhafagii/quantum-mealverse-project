@@ -68,7 +68,7 @@ export const StandardGoogleMap: React.FC<StandardGoogleMapProps> = ({
   const [mapLoadError, setMapLoadError] = useState<Error | null>(null);
   
   // Use network retry for loading operations
-  const { execute: loadMap, isLoading: isLoadingMap } = useNetworkRetry(async () => {
+  const { execute: loadMap, isRetrying } = useNetworkRetry(async () => {
     // This is a dummy function that represents map loading operations
     // Real loading happens in the GoogleMap component onLoad callback
     return true;

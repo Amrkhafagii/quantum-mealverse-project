@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import DeliveryGoogleMap from './DeliveryGoogleMap';
 import NativeMap from './NativeMap';
-import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
-import { useGoogleMaps } from '@/hooks/useGoogleMaps';
+import { AccuracyLevel } from '../location/LocationStatusIndicator';
+import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MapMarker } from '@/services/maps/MapService';
@@ -14,6 +14,10 @@ interface UnifiedMapViewProps {
   width?: string;
   className?: string;
   title?: string;
+  center?: { 
+    latitude: number; 
+    longitude: number; 
+  };
   additionalMarkers?: Array<{
     latitude: number;
     longitude: number;
@@ -37,6 +41,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   width,
   className = '',
   title = '',
+  center,
   additionalMarkers = [],
   showHeader = false,
   isInteractive = true,
@@ -52,8 +57,13 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   const [isMapReady, setIsMapReady] = useState(false);
   const maps = useGoogleMaps();
   
-  // Determine center coordinates based on markers
+  // Determine center coordinates based on markers or provided center
   const determineCenter = () => {
+    // If center is provided, use it
+    if (center) {
+      return center;
+    }
+    
     // If we have user location in markers (type=driver), use it as center
     const userLocation = additionalMarkers.find(marker => marker.type === 'driver');
     if (userLocation) {
@@ -70,7 +80,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   };
 
   // Get center coordinates
-  const center = determineCenter();
+  const centerCoords = determineCenter();
   
   // Initialize map
   useEffect(() => {
@@ -129,7 +139,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
         maps.destroyMap(mapInstance).catch(console.error);
       }
     };
-  }, [mapId, center.latitude, center.longitude, zoomLevel]); // Keep limited dependencies to prevent recreating the map
+  }, [mapId, center?.latitude, center?.longitude, zoomLevel]); // Keep limited dependencies to prevent recreating the map
   
   // Update markers when they change
   useEffect(() => {
@@ -167,7 +177,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
           isNativePlatform ? (
             <NativeMap 
               mapId={mapId}
-              center={{ lat: center.latitude, lng: center.longitude }}
+              center={{ lat: centerCoords.latitude, lng: centerCoords.longitude }}
               zoom={zoomLevel}
               markers={additionalMarkers}
               height={height}
@@ -181,7 +191,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
           ) : (
             <DeliveryGoogleMap 
               mapId={mapId}
-              center={{ lat: center.latitude, lng: center.longitude }}
+              center={{ lat: centerCoords.latitude, lng: centerCoords.longitude }}
               zoom={zoomLevel}
               markers={additionalMarkers}
               height={height}

@@ -143,7 +143,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'unified' && (
           <UnifiedMapView
             mapId={id}
-            center={center}
+            center={{
+              latitude: center?.lat || 0, 
+              longitude: center?.lng || 0
+            }}
             zoomLevel={zoom}
             additionalMarkers={markers.map(m => ({
               latitude: m.position.lat,

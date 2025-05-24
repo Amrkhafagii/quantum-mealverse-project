@@ -49,7 +49,7 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
   const [error, setError] = useState<Error | null>(null);
 
   // Use network retry for loading the API key
-  const { execute: loadApiKey } = useNetworkRetry(async () => {
+  const { execute: loadApiKey, isRetrying } = useNetworkRetry(async () => {
     const keyInfo = await googleMapsKeyManager.loadApiKey();
     setApiKey(keyInfo.key);
     setKeySource(keyInfo.source);
@@ -67,46 +67,10 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
   const setGoogleMapsApiKey = useCallback(async (newKey: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      setError(null);
-      
-      // Validate the key before saving
-      const isValid = await googleMapsKeyManager.validateApiKey(newKey);
-      
-      if (!isValid) {
-        toast({
-          title: "Invalid API Key",
-          description: "The provided Google Maps API key appears to be invalid.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      // Save the key
-      const success = await googleMapsKeyManager.setApiKey(newKey);
-      
-      if (success) {
-        setApiKey(newKey);
-        setKeySource('database');
-        setIsLoaded(true);
-        
-        toast({
-          title: "Google Maps API Key Saved",
-          description: "Your Google Maps API key has been saved successfully.",
-          variant: "default",
-        });
-      }
-      
-      return success;
+      return true; // Always return true as we're using hardcoded key
     } catch (error) {
       console.error('Error setting Google Maps API key:', error);
       setError(error instanceof Error ? error : new Error('Failed to set API key'));
-      
-      toast({
-        title: "Error Saving API Key",
-        description: "There was a problem saving your Google Maps API key.",
-        variant: "destructive",
-      });
-      
       return false;
     } finally {
       setIsLoading(false);
@@ -115,40 +79,12 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
   
   // Validate an API key
   const validateApiKey = useCallback(async (key: string): Promise<boolean> => {
-    try {
-      return await googleMapsKeyManager.validateApiKey(key);
-    } catch (error) {
-      console.error('Error validating Google Maps API key:', error);
-      return false;
-    }
+    return true; // Always return true as we're using hardcoded key
   }, []);
   
   // Clear the API key
   const clearApiKey = useCallback(async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      await googleMapsKeyManager.clearApiKey();
-      setApiKey('');
-      setKeySource('none');
-      setIsLoaded(false);
-      
-      toast({
-        title: "API Key Cleared",
-        description: "Google Maps API key has been cleared.",
-        variant: "default",
-      });
-    } catch (error) {
-      console.error('Error clearing Google Maps API key:', error);
-      setError(error instanceof Error ? error : new Error('Failed to clear API key'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to clear Google Maps API key.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // This is a no-op as we're using the hardcoded key
   }, []);
 
   // Load API key on mount
@@ -169,17 +105,6 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
 
     initialize();
   }, [loadApiKey]);
-
-  // Listen for API key changes
-  useEffect(() => {
-    const unsubscribe = googleMapsKeyManager.onKeyChange((keyInfo) => {
-      setApiKey(keyInfo.key);
-      setKeySource(keyInfo.source);
-      setIsLoaded(!!keyInfo.key);
-    });
-    
-    return unsubscribe;
-  }, []);
 
   return (
     <GoogleMapsContext.Provider

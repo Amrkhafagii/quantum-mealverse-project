@@ -1,22 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleMapFactory } from '../maps/GoogleMapFactory';
-import { LazyGoogleMapsLoader } from '../maps/LazyGoogleMapsLoader';
 import { MapComponent } from '../maps/MapComponent';
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { useMapView } from '@/contexts/MapViewContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { OfflineMapFallback } from '@/components/maps/OfflineMapFallback';
 import { DeliveryLocationControls } from './DeliveryLocationControls';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import BatteryEfficientTracker from './BatteryEfficientTracker';
 import { Order } from '@/types/order';
-import { Loader2 } from 'lucide-react';
-import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
 import { useNetworkRetry } from '@/hooks/useNetworkRetry';
 
 interface DeliveryMapViewProps {
@@ -78,7 +73,7 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
   };
   
   // Use network retry for loading operations
-  const { execute: retryLoadingMap, isLoading: isRetrying } = useNetworkRetry(
+  const { execute: retryLoadingMap, isRetrying } = useNetworkRetry(
     async () => {
       setMapLoadError(null);
       return true;

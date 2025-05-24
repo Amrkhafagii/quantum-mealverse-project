@@ -82,7 +82,7 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
   // Get battery color
   const getBatteryColor = () => {
     if (isLowBattery) return 'text-red-500';
-    if (batteryLevel && batteryLevel < 0.3) return 'text-yellow-500';
+    if (batteryLevel && batteryLevel < 30) return 'text-yellow-500';
     return 'text-green-500';
   };
   
@@ -100,7 +100,7 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
         <div className="flex items-center space-x-1">
           <Battery size={14} className={getBatteryColor()} />
           <span>
-            {batteryLevel ? `${Math.round(batteryLevel * 100)}%` : 'Unknown'}
+            {batteryLevel ? `${Math.round(batteryLevel)}%` : 'Unknown'}
             {isLowBattery ? ' (Low)' : ''}
           </span>
         </div>

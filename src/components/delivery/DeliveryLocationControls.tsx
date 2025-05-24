@@ -7,6 +7,7 @@ import { MapPin, RefreshCw, Zap, AlertTriangle, CheckCircle2 } from 'lucide-reac
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { LocationStatusIndicator } from '@/components/location/LocationStatusIndicator';
 import { useMapView } from '@/contexts/MapViewContext';
+import { TrackingMode } from '@/utils/trackingModeCalculator';
 
 interface DeliveryLocationControlsProps {
   className?: string;
@@ -25,8 +26,8 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
     trackOnLoad: true
   });
   const { lastLocation, refreshLocation, isTracking, trackingMode } = locationService;
-  const { setCenter } = useMapView();
-
+  const mapViewContext = useMapView();
+  
   // Calculate freshness based on lastRefreshTime
   const getFreshness = (): 'fresh' | 'stale' | 'invalid' => {
     if (!lastLocation) return 'invalid';
@@ -49,9 +50,9 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
     try {
       const location = await refreshLocation();
       
-      if (location) {
+      if (location && mapViewContext.setCenter) {
         // Center map on new location
-        setCenter({
+        mapViewContext.setCenter({
           lat: location.latitude,
           lng: location.longitude
         });
@@ -91,7 +92,9 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
   
   // Get tracking mode badge info
   const getTrackingModeBadge = () => {
-    switch (trackingMode) {
+    const mode = trackingMode as string;
+    
+    switch (mode) {
       case 'passive':
         return {
           text: 'Battery Saving',
@@ -164,7 +167,7 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
       {lastLocation && showAccuracy && (
         <LocationStatusIndicator
           accuracy={lastLocation.accuracy || undefined}
-          trackingMode={trackingMode}
+          trackingMode={trackingMode as TrackingMode}
           isTracking={isTracking}
         />
       )}

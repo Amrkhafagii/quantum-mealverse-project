@@ -1,5 +1,8 @@
 
-import { supabase } from '@/lib/supabase';
+/**
+ * Configuration service that manages app configuration values
+ * with graceful fallbacks to localStorage
+ */
 
 // Configuration key-value schema
 export interface ConfigItem {
@@ -7,6 +10,15 @@ export interface ConfigItem {
   value: string;
   last_updated: string; // ISO date string
   description?: string;
+}
+
+// Check if supabase is available
+let supabase: any;
+try {
+  supabase = require('@/lib/supabase').supabase;
+} catch (error) {
+  console.log('Supabase not available, using localStorage only for config');
+  supabase = null;
 }
 
 /**
@@ -131,7 +143,7 @@ export async function getAllConfigValues(): Promise<Record<string, string>> {
         console.error('Error fetching config from database:', error);
       } else if (data) {
         // Convert array to object
-        data.forEach((item) => {
+        data.forEach((item: ConfigItem) => {
           configValues[item.key] = item.value;
         });
       }
