@@ -1,5 +1,4 @@
 
-
 export interface Menu {
   id: string;
   name: string;
@@ -18,6 +17,8 @@ export interface Menu {
   preparation_time?: number;
   ingredients?: string[];
   steps?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface MenuCategory {
@@ -29,7 +30,10 @@ export interface MenuCategory {
 }
 
 // Add missing MenuItem interface (alias for Menu)
-export interface MenuItem extends Menu {}
+export interface MenuItem extends Menu {
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Add missing NutritionalInfo interface
 export interface NutritionalInfo {
@@ -41,6 +45,7 @@ export interface NutritionalInfo {
   sugar?: number;
   sodium?: number;
   allergens?: string[];
+  health_score?: number;
 }
 
 // Add parseNutritionalInfo utility function
@@ -99,4 +104,3 @@ export function calculateHealthScore(item: MenuItem): number {
   
   return Math.max(0, Math.min(100, score));
 }
-

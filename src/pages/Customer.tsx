@@ -19,7 +19,7 @@ import { DeliveryLocation } from '@/types/location';
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { calculateDistance } from '@/utils/locationUtils';
 import { downloadJsonFile } from '@/utils/fileDownloads';
-import { Menu } from '@/types/menu';
+import { MenuItem } from '@/types/menu';
 import { Restaurant } from '@/types/restaurant';
 import LogDisplayModal from '@/components/LogDisplayModal';
 import LocationPermissionsPrompt from '@/components/location/LocationPermissionsPrompt';
@@ -56,7 +56,7 @@ const Customer: React.FC = () => {
     },
   });
 
-  const { data: menus, isLoading: menusLoading, error: menusError } = useQuery<Menu[]>({
+  const { data: menus, isLoading: menusLoading, error: menusError } = useQuery<MenuItem[]>({
     queryKey: ['menus', selectedRestaurant],
     queryFn: async () => {
       if (!selectedRestaurant) return [];
@@ -117,7 +117,7 @@ const Customer: React.FC = () => {
     distance_km: calculateDistanceToRestaurant(restaurant) || 0
   })) || [];
 
-  // Convert Menu to MealType for CustomerMealGrid
+  // Convert MenuItem to MealType for CustomerMealGrid
   const mealTypeMenus = menus?.map(menu => ({
     id: menu.id,
     name: menu.name,
@@ -130,7 +130,11 @@ const Customer: React.FC = () => {
     fat: menu.nutritional_info?.fat || 0,
     category: menu.category || 'other',
     preparation_time: menu.preparation_time || 15,
-    is_available: menu.is_available ?? true
+    is_available: menu.is_available ?? true,
+    is_active: menu.is_available ?? true,
+    restaurant_id: menu.restaurant_id,
+    created_at: menu.created_at || new Date().toISOString(),
+    updated_at: menu.updated_at || new Date().toISOString()
   })) || [];
 
   return (
@@ -154,7 +158,7 @@ const Customer: React.FC = () => {
         />
         <LocationPromptBanner />
 
-        {(permissionStatus === 'denied' || permissionStatus === 'prompt') && (
+        {permissionStatus !== 'granted' && (
           <LocationPermissionsPrompt
             onRequestPermission={requestPermission}
             isLoading={permissionLoading}
