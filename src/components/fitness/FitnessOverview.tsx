@@ -15,7 +15,6 @@ import { EnhancedWorkoutHistory } from './analytics/EnhancedWorkoutHistory';
 import { SmartRecommendations } from './recommendations/SmartRecommendations';
 import { AdaptiveDifficulty } from './recommendations/AdaptiveDifficulty';
 import { WorkoutVariations } from './recommendations/WorkoutVariations';
-import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
 
 interface FitnessOverviewProps {
   userId?: string;
@@ -25,13 +24,11 @@ interface FitnessOverviewProps {
 export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workoutStats }) => {
   const { user } = useAuth();
   const { history, isLoading: workoutLoading, fetchWorkoutHistory } = useWorkoutData();
-  const { updateAnalytics } = useWorkoutAnalytics();
   const [activeUserId] = useState(userId || user?.id);
 
   useEffect(() => {
     if (activeUserId) {
       fetchWorkoutHistory(activeUserId);
-      updateAnalytics();
     }
   }, [activeUserId]);
 

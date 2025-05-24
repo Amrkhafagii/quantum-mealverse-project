@@ -10,7 +10,7 @@ import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
 import { format } from 'date-fns';
 
 export const ProgressCharts: React.FC = () => {
-  const { analytics, exerciseProgress, getProgressChartData, getPerformanceMetrics } = useWorkoutAnalytics();
+  const { exerciseProgress, getProgressChartData, getPerformanceMetrics } = useWorkoutAnalytics();
   const [selectedExercise, setSelectedExercise] = useState<string>('');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
 
@@ -41,7 +41,7 @@ export const ProgressCharts: React.FC = () => {
         <div className="bg-quantum-darkBlue/90 p-3 border border-quantum-cyan/20 rounded-md shadow-lg">
           <p className="text-sm font-medium">{format(new Date(label), 'MMM dd, yyyy')}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
+            <p key={`tooltip-${index}`} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {entry.value}
             </p>
           ))}

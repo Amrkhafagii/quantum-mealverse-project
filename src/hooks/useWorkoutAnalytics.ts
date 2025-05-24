@@ -5,11 +5,25 @@ import { useToast } from '@/hooks/use-toast';
 import { WorkoutGoal } from '@/types/fitness/analytics';
 import { supabase } from '@/integrations/supabase/client';
 
+interface PerformanceMetrics {
+  totalWorkouts: number;
+  totalVolume: number;
+  averageDuration: number;
+  strongestExercise: string;
+}
+
+interface ProgressChartData {
+  date: string;
+  value: number;
+}
+
 export function useWorkoutAnalytics() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [goals, setGoals] = useState<WorkoutGoal[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [exerciseProgress, setExerciseProgress] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>({});
 
   const fetchGoals = async () => {
     if (!user) return;
@@ -23,7 +37,14 @@ export function useWorkoutAnalytics() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGoals(data || []);
+      
+      // Type cast the data to match WorkoutGoal interface
+      const typedGoals = (data || []).map(goal => ({
+        ...goal,
+        goal_type: goal.goal_type as WorkoutGoal['goal_type']
+      }));
+      
+      setGoals(typedGoals);
     } catch (error) {
       console.error('Error fetching goals:', error);
       toast({
@@ -51,7 +72,12 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      setGoals(prev => [data, ...prev]);
+      const typedGoal = {
+        ...data,
+        goal_type: data.goal_type as WorkoutGoal['goal_type']
+      };
+
+      setGoals(prev => [typedGoal, ...prev]);
       toast({
         title: "Success",
         description: "Goal created successfully",
@@ -80,7 +106,12 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      setGoals(prev => prev.map(goal => goal.id === goalId ? data : goal));
+      const typedGoal = {
+        ...data,
+        goal_type: data.goal_type as WorkoutGoal['goal_type']
+      };
+
+      setGoals(prev => prev.map(goal => goal.id === goalId ? typedGoal : goal));
       toast({
         title: "Success",
         description: "Goal updated successfully",
@@ -122,18 +153,92 @@ export function useWorkoutAnalytics() {
     }
   };
 
+  const fetchExerciseProgress = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('exercise_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('recorded_date', { ascending: false });
+
+      if (error) throw error;
+      setExerciseProgress(data || []);
+    } catch (error) {
+      console.error('Error fetching exercise progress:', error);
+    }
+  };
+
+  const getPerformanceMetrics = (): PerformanceMetrics => {
+    const totalWorkouts = exerciseProgress.length;
+    const totalVolume = exerciseProgress.reduce((sum, ep) => sum + (ep.total_volume || 0), 0);
+    const averageDuration = 45; // Mock data for now
+    
+    // Find strongest exercise based on max weight
+    const strongestExercise = exerciseProgress.reduce((strongest, current) => {
+      return (current.max_weight || 0) > (strongest.max_weight || 0) ? current : strongest;
+    }, exerciseProgress[0] || {})?.exercise_name || 'None';
+
+    return {
+      totalWorkouts,
+      totalVolume,
+      averageDuration,
+      strongestExercise
+    };
+  };
+
+  const getProgressChartData = (type: 'weekly_volume' | 'weekly_frequency'): ProgressChartData[] => {
+    // Mock implementation for now
+    const mockData: ProgressChartData[] = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      mockData.push({
+        date: date.toISOString(),
+        value: Math.floor(Math.random() * 100) + 50
+      });
+    }
+    
+    return mockData;
+  };
+
+  const updateAnalytics = async () => {
+    if (!user) return;
+    
+    try {
+      await fetchExerciseProgress();
+      
+      // Update analytics data
+      setAnalytics({
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating analytics:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchGoals();
+      fetchExerciseProgress();
     }
   }, [user]);
 
   return {
     goals,
     isLoading,
+    exerciseProgress,
+    analytics,
     createGoal,
     updateGoal,
     deleteGoal,
+    getPerformanceMetrics,
+    getProgressChartData,
+    updateAnalytics,
     refetch: fetchGoals
   };
 }
