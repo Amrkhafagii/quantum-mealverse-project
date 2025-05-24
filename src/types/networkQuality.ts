@@ -1,5 +1,5 @@
 
-import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
+import { NetworkQuality } from '@/types/unifiedLocation';
 
 export interface NetworkMetrics {
   latency: number | null;
@@ -7,35 +7,16 @@ export interface NetworkMetrics {
   jitter?: number | null;
   packetLoss?: number | null;
   effectiveType?: string;
+  connectionType?: string;
 }
 
-export interface NetworkQualityState {
+export interface NetworkQualityResult {
   quality: NetworkQuality;
   isLowQuality: boolean;
   metrics: NetworkMetrics;
   hasTransitioned: boolean;
   isFlaky: boolean;
   latency: number | null;
-  bandwidth?: number;
+  bandwidth: number | null;
   checkQuality: () => Promise<NetworkQuality>;
-}
-
-export interface NetworkStatusState {
-  isOnline: boolean;
-  wasOffline: boolean;
-  lastChecked: Date;
-  nextCheck: Date | null;
-  isMetered: boolean;
-  networkType: string;
-}
-
-export interface NetworkQualityResult {
-  quality: NetworkQuality;
-  isLowQuality: boolean;
-  hasTransitioned?: boolean;
-  isFlaky?: boolean;
-  metrics?: NetworkMetrics;
-  latency?: number | null;
-  bandwidth?: number | null;
-  checkQuality?: () => Promise<NetworkQuality>;
 }

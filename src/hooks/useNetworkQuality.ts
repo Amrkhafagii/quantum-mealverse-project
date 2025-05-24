@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 import { NetworkMetrics, NetworkQualityResult } from '@/types/networkQuality';
 
-export { NetworkQuality } from '@/types/unifiedLocation';
+export type { NetworkQuality } from '@/types/unifiedLocation';
 
 export function useNetworkQuality(): NetworkQualityResult {
   const [quality, setQuality] = useState<NetworkQuality>('unknown');
