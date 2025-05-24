@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { Platform } from '@/utils/platform';
@@ -85,56 +84,56 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     }
   }, [storedPermission, storedBackgroundPermission, storedEducationalUiShown, storedInitialPromptShown]);
 
-  // Check permissions on component mount
-  useEffect(() => {
-    checkPermissions();
-    // Simulate getting the current location
-    getCurrentLocation();
-    setHasInitialized(true);
-  }, []);
-  
-  // Check both foreground and background permissions
-  const checkPermissions = async () => {
-    if (Platform.isNative()) {
+  // Fallback function to use standard Capacitor Geolocation API
+  const checkPermissionsWithFallback = async () => {
+    try {
+      console.log('Attempting to check permissions with custom plugin');
+      const permissionStatus = await LocationPermissions.checkPermissionStatus();
+      
+      // Update both state and storage
+      setPermissionStatus(permissionStatus.location as LocationPermissionState);
+      setBackgroundPermissionStatus(permissionStatus.backgroundLocation as LocationPermissionState);
+      setStoredPermission(permissionStatus.location as LocationPermissionState);
+      setStoredBackgroundPermission(permissionStatus.backgroundLocation as LocationPermissionState);
+      
+      console.log('Custom plugin permission check successful:', permissionStatus);
+      return true;
+    } catch (error) {
+      console.warn('Custom LocationPermissions plugin failed, falling back to standard Geolocation API:', error);
+      
       try {
-        // Use custom plugin for checking both permissions
-        const permissionStatus = await LocationPermissions.checkPermissionStatus();
-        
-        // Update both state and storage
-        setPermissionStatus(permissionStatus.location as LocationPermissionState);
-        setBackgroundPermissionStatus(permissionStatus.backgroundLocation as LocationPermissionState);
-        setStoredPermission(permissionStatus.location as LocationPermissionState);
-        setStoredBackgroundPermission(permissionStatus.backgroundLocation as LocationPermissionState);
-      } catch (error) {
-        console.error('Error checking location permissions:', error);
-        
-        // Fallback to standard Capacitor Geolocation for foreground permission
-        try {
-          const status = await Geolocation.checkPermissions();
-          const permState = status.location as LocationPermissionState;
-          setPermissionStatus(permState);
-          setStoredPermission(permState);
-        } catch (fallbackError) {
-          console.error('Fallback permission check failed:', fallbackError);
-          setPermissionStatus('denied');
-          setStoredPermission('denied');
-        }
-      }
-    } else {
-      try {
-        // Web permission check
+        // Fallback to standard Capacitor Geolocation
         const status = await Geolocation.checkPermissions();
         const permState = status.location as LocationPermissionState;
         setPermissionStatus(permState);
         setStoredPermission(permState);
-      } catch (error) {
-        console.error('Error checking web location permission:', error);
+        
+        // For fallback, we don't have background permission info, so set to prompt
+        setBackgroundPermissionStatus('prompt');
+        setStoredBackgroundPermission('prompt');
+        
+        console.log('Fallback permission check successful:', status);
+        return true;
+      } catch (fallbackError) {
+        console.error('Both custom plugin and fallback permission check failed:', fallbackError);
         setPermissionStatus('denied');
         setStoredPermission('denied');
+        return false;
       }
     }
   };
 
+  // Check permissions on component mount
+  useEffect(() => {
+    const initializePermissions = async () => {
+      await checkPermissionsWithFallback();
+      await getCurrentLocation();
+      setHasInitialized(true);
+    };
+    
+    initializePermissions();
+  }, []);
+  
   // Helper function to get current location
   const getCurrentLocation = async () => {
     if (permissionStatus === 'granted') {
@@ -155,7 +154,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     return null;
   };
 
-  // Request foreground location permission
+  // Request foreground location permission with fallback
   const requestPermission = async (): Promise<boolean> => {
     setIsRequesting(true);
     setHasShownInitialPrompt(true);
@@ -163,26 +162,47 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     
     try {
       if (Platform.isNative()) {
-        // Use custom plugin for requesting foreground permission only
-        const result = await LocationPermissions.requestLocationPermission({
-          includeBackground: false
-        });
-        
-        // Update both state and storage
-        const locationState = result.location as LocationPermissionState;
-        const backgroundState = result.backgroundLocation as LocationPermissionState;
-        
-        setPermissionStatus(locationState);
-        setBackgroundPermissionStatus(backgroundState);
-        setStoredPermission(locationState);
-        setStoredBackgroundPermission(backgroundState);
-        
-        // If permission is granted, get location
-        if (result.location === 'granted') {
-          await getCurrentLocation();
+        try {
+          console.log('Attempting to request permissions with custom plugin');
+          // Use custom plugin for requesting foreground permission only
+          const result = await LocationPermissions.requestLocationPermission({
+            includeBackground: false
+          });
+          
+          // Update both state and storage
+          const locationState = result.location as LocationPermissionState;
+          const backgroundState = result.backgroundLocation as LocationPermissionState;
+          
+          setPermissionStatus(locationState);
+          setBackgroundPermissionStatus(backgroundState);
+          setStoredPermission(locationState);
+          setStoredBackgroundPermission(backgroundState);
+          
+          // If permission is granted, get location
+          if (result.location === 'granted') {
+            await getCurrentLocation();
+          }
+          
+          console.log('Custom plugin permission request successful:', result);
+          return result.location === 'granted';
+        } catch (error) {
+          console.warn('Custom plugin permission request failed, falling back to standard API:', error);
+          
+          // Fallback to standard Capacitor Geolocation
+          const result = await Geolocation.requestPermissions();
+          const locationState = result.location as LocationPermissionState;
+          
+          setPermissionStatus(locationState);
+          setStoredPermission(locationState);
+          
+          // If permission is granted, get location
+          if (result.location === 'granted') {
+            await getCurrentLocation();
+          }
+          
+          console.log('Fallback permission request successful:', result);
+          return result.location === 'granted';
         }
-        
-        return result.location === 'granted';
       } else {
         // Web permission request
         const result = await Geolocation.requestPermissions();
@@ -221,21 +241,28 @@ export function useLocationPermission(): LocationPermissionHookResponse {
         return false;
       }
       
-      // Use custom plugin for requesting both permissions
-      const result = await LocationPermissions.requestLocationPermission({
-        includeBackground: true
-      });
-      
-      // Update both state and storage
-      const locationState = result.location as LocationPermissionState;
-      const backgroundState = result.backgroundLocation as LocationPermissionState;
-      
-      setPermissionStatus(locationState);
-      setBackgroundPermissionStatus(backgroundState);
-      setStoredPermission(locationState);
-      setStoredBackgroundPermission(backgroundState);
-      
-      return result.backgroundLocation === 'granted';
+      try {
+        // Use custom plugin for requesting both permissions
+        const result = await LocationPermissions.requestLocationPermission({
+          includeBackground: true
+        });
+        
+        // Update both state and storage
+        const locationState = result.location as LocationPermissionState;
+        const backgroundState = result.backgroundLocation as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setBackgroundPermissionStatus(backgroundState);
+        setStoredPermission(locationState);
+        setStoredBackgroundPermission(backgroundState);
+        
+        return result.backgroundLocation === 'granted';
+      } catch (error) {
+        console.warn('Custom plugin background permission request failed:', error);
+        // For background permissions, we can't fallback to standard API
+        // so we just return false
+        return false;
+      }
     } catch (error) {
       console.error('Error requesting background location permission:', error);
       return false;
