@@ -21,7 +21,7 @@ const MigrationDashboard = () => {
       <h1 className="text-2xl font-bold mb-6">Google Maps Migration Dashboard</h1>
       
       {!googleMapsApiKey && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Google Maps API Key Missing</AlertTitle>
           <AlertDescription>

@@ -1,307 +1,286 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { DeliveryLocation } from '@/types/location';
-import { updateDeliveryLocation, getDeliveryLocationHistory } from '@/services/delivery/deliveryLocationService';
 import { useLocationService } from '@/contexts/LocationServiceContext';
-import { calculateTrackingMode, getTrackingInterval, TrackingMode } from '@/utils/trackingModeCalculator';
-import { useBatteryMonitor } from '@/utils/batteryMonitor';
-import { Platform } from '@/utils/platform';
-import { retryWithBackoff } from '@/utils/retryWithExponentialBackoff';
-import { toast } from 'sonner';
+import { useMapService } from '@/contexts/MapServiceContext';
+import { DeliveryLocation } from '@/types/location';
+import { withGoogleMapsErrorHandling } from '@/utils/googleMapsErrorHandler';
+import { retryWithBackoff } from '@/utils/retryWithBackoff';
+import { toast } from '@/hooks/use-toast';
+import { TrackingMode, calculateTrackingMode } from '@/utils/trackingModeCalculator';
+import { useBatteryStatus } from './useBatteryStatus';
+import { useNetworkQuality } from './useNetworkQuality';
 
-interface DeliveryLocationServiceOptions {
-  assignmentId?: string;
-  orderId?: string;
-  orderStatus?: string;
-  energyEfficient?: boolean;
-  dataEfficient?: boolean;
-  minimumBatteryLevel?: number;
-  onLocationUpdate?: (location: DeliveryLocation) => void;
+export interface DeliveryLocationServiceOptions {
+  enableHighAccuracy?: boolean;
+  trackingInterval?: number;
+  enableEnergyEfficiency?: boolean;
+  persistLocationHistory?: boolean;
+  maxHistoryItems?: number;
+  trackOnLoad?: boolean;
 }
 
+/**
+ * Hook for accessing delivery location services with optimized tracking
+ */
 export function useDeliveryLocationService(options: DeliveryLocationServiceOptions = {}) {
-  const { 
-    assignmentId, 
-    orderId, 
-    orderStatus = 'pending', 
-    energyEfficient = true,
-    dataEfficient = true,
-    minimumBatteryLevel = 15,
-    onLocationUpdate 
+  const locationService = useLocationService();
+  const mapService = useMapService();
+  const { lastLocation } = locationService;
+  const { isLowBattery } = useBatteryStatus();
+  const { isLowQuality } = useNetworkQuality();
+  
+  // Default options
+  const {
+    enableHighAccuracy = true,
+    trackingInterval = 10000,
+    enableEnergyEfficiency = true,
+    persistLocationHistory = true,
+    maxHistoryItems = 100,
+    trackOnLoad = false,
   } = options;
-  
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackingMode, setTrackingMode] = useState<TrackingMode>('medium');
-  const [trackingInterval, setTrackingInterval] = useState(30000); // Default: 30 seconds
-  const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
-  const [locationHistory, setLocationHistory] = useState<DeliveryLocation[]>([]);
-  const [isLowQuality, setIsLowQuality] = useState(false);
-  const [freshness, setFreshness] = useState<'fresh'|'stale'|'invalid'>('invalid');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'prompt'>('prompt');
-  
-  // Get current location from LocationService context
-  const { currentLocation, startTracking: startLocationTracking, stopTracking: stopLocationTracking, getPermissionStatus } = useLocationService();
-  
-  // Get battery status
-  const { batteryLevel, isLowBattery } = useBatteryMonitor({ 
-    minimumBatteryLevel 
-  });
 
-  // Get permission status on mount
+  // State
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackingMode, setTrackingMode] = useState<TrackingMode>('standard');
+  const [currentTrackingInterval, setCurrentTrackingInterval] = useState(trackingInterval);
+  const [locationHistory, setLocationHistory] = useState<DeliveryLocation[]>([]);
+  const [lastKnownLocation, setLastKnownLocation] = useState<DeliveryLocation | null>(null);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+  const [lastProcessedLocation, setLastProcessedLocation] = useState<DeliveryLocation | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Initialize tracking on load if requested
   useEffect(() => {
+    if (trackOnLoad) {
+      startTracking().catch(console.error);
+    }
+    
+    // Get initial location permission status
     const checkPermission = async () => {
       try {
-        const status = await getPermissionStatus();
-        setPermissionStatus(status);
+        await locationService.requestPermission();
+        // Now we have a permission status
       } catch (err) {
-        console.error('Failed to get permission status:', err);
+        console.error('Error checking location permission:', err);
       }
     };
     
     checkPermission();
-  }, [getPermissionStatus]);
-  
-  // Load location history when assignment ID changes
-  useEffect(() => {
-    if (!assignmentId) return;
     
-    const loadLocationHistory = async () => {
-      try {
-        setIsUpdating(true);
-        setError(null);
-        // Use retry with backoff for resilient loading
-        const history = await retryWithBackoff(
-          async () => getDeliveryLocationHistory(assignmentId),
-          {
-            initialDelayMs: 1000,
-            maxRetries: 3,
-            maxDelayMs: 10000,
-            jitterFactor: 0.1
-          }
-        );
-        setLocationHistory(history as DeliveryLocation[]);
-      } catch (error) {
-        console.error('Error loading location history:', error);
-        setError(error instanceof Error ? error : new Error('Failed to load location history'));
-        toast.error('Failed to load location history. Please try again.');
-      } finally {
-        setIsUpdating(false);
-      }
-    };
-    
-    loadLocationHistory();
-  }, [assignmentId]);
-  
-  // Determine network quality
-  useEffect(() => {
-    const checkNetworkQuality = () => {
-      try {
-        // @ts-ignore - connection is not in standard TypeScript definitions
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        
-        if (connection) {
-          const isLow = connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g';
-          setIsLowQuality(isLow);
-        } else {
-          setIsLowQuality(false);
-        }
-      } catch (error) {
-        console.warn('Network quality check failed:', error);
-      }
-    };
-    
-    checkNetworkQuality();
-    
-    // Try to listen for connection changes
-    try {
-      // @ts-ignore - connection is not in standard TypeScript definitions
-      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      
-      if (connection) {
-        connection.addEventListener('change', checkNetworkQuality);
-        
-        return () => {
-          connection.removeEventListener('change', checkNetworkQuality);
-        };
-      }
-    } catch (error) {
-      console.warn('Network monitoring setup failed:', error);
-    }
-  }, []);
-  
-  // Calculate optimal tracking mode based on conditions
-  useEffect(() => {
-    if (!currentLocation) return;
-    
-    const { trackingMode: calculatedMode } = calculateTrackingMode({
-      isLowBattery,
-      isLowQuality,
-      orderStatus,
-      location: currentLocation,
-      forceLowPowerMode: energyEfficient && Platform.isLowEndDevice() 
-    });
-    
-    setTrackingMode(calculatedMode);
-    setTrackingInterval(getTrackingInterval(calculatedMode));
-    setLastLocation(currentLocation);
-    setLastUpdated(new Date());
-    setFreshness('fresh');
-    
-    // Call onLocationUpdate callback if provided
-    if (onLocationUpdate) {
-      onLocationUpdate(currentLocation);
-    }
-    
-    // Update location in backend if tracking is active and assignmentId is provided
-    if (isTracking && assignmentId) {
-      updateLocationWithRetry(assignmentId, currentLocation);
-    }
-  }, [currentLocation, isLowBattery, isLowQuality, orderStatus, energyEfficient, isTracking, assignmentId, onLocationUpdate]);
-  
-  // Helper function to update location with retry logic
-  const updateLocationWithRetry = useCallback(async (assignmentId: string, location: DeliveryLocation) => {
-    try {
-      await retryWithBackoff(
-        () => updateDeliveryLocation(assignmentId, location.latitude, location.longitude),
-        {
-          initialDelayMs: 500,
-          maxRetries: 2,
-          maxDelayMs: 5000,
-          jitterFactor: 0.1
-        }
-      );
-    } catch (error) {
-      console.error('Error updating delivery location:', error);
-      // Don't show toast for every failed update to avoid spamming the user
-      // Only log to console for debugging
-    }
-  }, []);
-  
-  // Update freshness based on last update time
-  useEffect(() => {
-    if (!lastUpdated) return;
-    
-    const updateFreshness = () => {
-      const now = new Date();
-      const diff = now.getTime() - lastUpdated.getTime();
-      
-      if (diff > 300000) { // 5 minutes
-        setFreshness('invalid');
-      } else if (diff > 60000) { // 1 minute
-        setFreshness('stale');
-      }
-    };
-    
-    const interval = setInterval(updateFreshness, 10000); // Check every 10 seconds
-    
+    // Clean up tracking on unmount
     return () => {
-      clearInterval(interval);
+      stopTracking().catch(console.error);
     };
-  }, [lastUpdated]);
+  }, [trackOnLoad]);
   
-  // Function to manually update location
-  const updateLocation = useCallback(async () => {
-    if (!currentLocation) return null;
-    
-    setIsUpdating(true);
-    setError(null);
-    
-    try {
-      if (assignmentId) {
-        await updateLocationWithRetry(assignmentId, currentLocation);
+  // Process location updates
+  useEffect(() => {
+    if (lastLocation && (!lastProcessedLocation || lastLocation.timestamp !== lastProcessedLocation.timestamp)) {
+      setLastProcessedLocation(lastLocation);
+      setLastKnownLocation(lastLocation);
+      setLastRefreshTime(Date.now());
+      
+      // Update location history
+      if (persistLocationHistory) {
+        setLocationHistory(prev => {
+          const newHistory = [lastLocation, ...prev];
+          return newHistory.slice(0, maxHistoryItems);
+        });
       }
       
-      setFreshness('fresh');
-      setLastUpdated(new Date());
-      
-      return currentLocation;
-    } catch (error) {
-      setError(error instanceof Error ? error : new Error('Failed to update location'));
-      return null;
-    } finally {
-      setIsUpdating(false);
+      // Calculate tracking mode based on current conditions
+      updateTrackingMode();
     }
-  }, [currentLocation, assignmentId, updateLocationWithRetry]);
+  }, [lastLocation, persistLocationHistory, maxHistoryItems]);
   
-  // Function to request location permission and try to get location
-  const resetAndRequestLocation = useCallback(async () => {
-    try {
-      setError(null);
-      setIsUpdating(true);
-      
-      const status = await getPermissionStatus();
-      setPermissionStatus(status);
-      
-      if (status !== 'granted') {
-        return null;
-      }
-      
-      return await updateLocation();
-    } catch (error) {
-      setError(error instanceof Error ? error : new Error('Failed to get location permission'));
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [getPermissionStatus, updateLocation]);
-  
-  // Start tracking function
+  // Start location tracking
   const startTracking = useCallback(async () => {
-    if (!startLocationTracking) return false;
-    
     try {
+      setIsLoading(true);
       setError(null);
       
-      const started = await startLocationTracking({
-        enableHighAccuracy: trackingMode === 'high',
-        maximumAge: trackingInterval * 2,
-        timeout: trackingInterval / 2
+      // Request permission first
+      await locationService.requestPermission();
+      
+      // Start tracking with energy efficiency in mind
+      const trackingIntervalMs = enableEnergyEfficiency && isLowBattery ? trackingInterval * 2 : trackingInterval;
+      const success = await locationService.startTracking({
+        enableHighAccuracy: enableHighAccuracy,
+        interval: trackingIntervalMs,
       });
       
-      setIsTracking(started);
-      return started;
-    } catch (error) {
-      console.error('Error starting tracking:', error);
-      setError(error instanceof Error ? error : new Error('Failed to start tracking'));
+      setIsTracking(success);
+      updateTrackingMode();
+      setCurrentTrackingInterval(trackingIntervalMs);
+      setIsLoading(false);
+      
+      return success;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to start location tracking');
+      setError(error);
+      setIsLoading(false);
+      setIsTracking(false);
+      
+      toast({
+        variant: "destructive",
+        title: "Location Tracking Error",
+        description: error.message,
+      });
+      
       return false;
     }
-  }, [startLocationTracking, trackingMode, trackingInterval]);
+  }, [enableHighAccuracy, trackingInterval, enableEnergyEfficiency, isLowBattery]);
   
-  // Stop tracking function
+  // Stop location tracking
   const stopTracking = useCallback(async () => {
-    if (!stopLocationTracking) return;
-    
     try {
-      await stopLocationTracking();
+      await locationService.stopTracking();
       setIsTracking(false);
-    } catch (error) {
-      console.error('Error stopping tracking:', error);
-      setError(error instanceof Error ? error : new Error('Failed to stop tracking'));
+    } catch (err) {
+      console.error('Error stopping location tracking:', err);
     }
-  }, [stopLocationTracking]);
+  }, []);
   
+  // Refresh current location on demand
+  const refreshLocation = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Use retry with backoff for resilience
+      const location = await retryWithBackoff(
+        async () => locationService.getCurrentLocation(),
+        { 
+          initialDelayMs: 1000, 
+          maxRetries: 3, 
+          backoffFactor: 1.5, 
+          maxDelayMs: 10000, 
+          jitterFactor: 0.2 
+        }
+      );
+      
+      if (location) {
+        setLastKnownLocation(location);
+        setLastRefreshTime(Date.now());
+        
+        if (persistLocationHistory) {
+          setLocationHistory(prev => {
+            const newHistory = [location, ...prev];
+            return newHistory.slice(0, maxHistoryItems);
+          });
+        }
+        
+        return location;
+      }
+      
+      return null;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to refresh location');
+      setError(error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [persistLocationHistory, maxHistoryItems]);
+  
+  // Get address from coordinates using geocoding
+  const getAddressFromCoordinates = useCallback(async (location: DeliveryLocation): Promise<string | null> => {
+    return withGoogleMapsErrorHandling(
+      async () => {
+        return retryWithBackoff(
+          async () => {
+            if (!mapService.mapService) {
+              throw new Error('Map service not initialized');
+            }
+            
+            // This assumes that mapService has a geocodeReverse method
+            // Implement or modify as needed
+            const address = await mapService.mapService.geocodeReverse({
+              latitude: location.latitude,
+              longitude: location.longitude
+            });
+            
+            return address;
+          },
+          { 
+            initialDelayMs: 1000, 
+            maxRetries: 2, 
+            backoffFactor: 1.5, 
+            maxDelayMs: 5000,
+            jitterFactor: 0.1 
+          }
+        );
+      },
+      {
+        showToast: false,
+        fallback: null,
+        context: 'Geocoding'
+      }
+    );
+  }, [mapService]);
+  
+  // Update tracking mode based on current conditions
+  const updateTrackingMode = useCallback(() => {
+    const newMode = calculateTrackingMode({
+      isLowBattery,
+      isLowQuality,
+      forceLowPowerMode: enableEnergyEfficiency,
+      orderStatus: 'active', // Can be dynamic based on actual order status
+      location: lastKnownLocation
+    });
+    
+    setTrackingMode(newMode.trackingMode);
+    
+    // Update tracking interval if needed
+    if (isTracking && newMode.trackingInterval !== currentTrackingInterval) {
+      setCurrentTrackingInterval(newMode.trackingInterval);
+      
+      // Update tracking parameters on the fly
+      locationService.updateTrackingOptions({
+        enableHighAccuracy: enableHighAccuracy,
+        interval: newMode.trackingInterval
+      }).catch(console.error);
+    }
+  }, [isLowBattery, isLowQuality, enableEnergyEfficiency, lastKnownLocation, isTracking, currentTrackingInterval, enableHighAccuracy]);
+  
+  // Reset and request a fresh location
+  const resetAndRequestLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
+    // Stop tracking temporarily
+    const wasTracking = isTracking;
+    if (wasTracking) {
+      await stopTracking();
+    }
+    
+    // Clear any cached locations
+    locationService.clearCache();
+    
+    // Restart tracking if needed
+    if (wasTracking) {
+      await startTracking();
+    }
+    
+    // Get fresh location
+    return refreshLocation();
+  }, [isTracking, stopTracking, startTracking, refreshLocation]);
+
   return {
     isTracking,
     trackingMode,
-    trackingInterval,
-    lastLocation,
+    trackingInterval: currentTrackingInterval,
+    lastLocation: lastKnownLocation,
     locationHistory,
-    batteryLevel,
-    isLowBattery,
-    isLowQuality,
+    
     startTracking,
     stopTracking,
-    // Additional properties for the TypeScript errors
-    permissionStatus,
-    freshness,
-    lastUpdated,
-    isUpdating,
+    refreshLocation,
+    getAddressFromCoordinates,
+    resetAndRequestLocation,
+    
+    isLoading,
     error,
-    updateLocation,
-    resetAndRequestLocation
+    
+    // Timestamp of last location update
+    lastRefreshTime
   };
 }
 

@@ -1,130 +1,112 @@
 
-import React, { useState, useEffect } from 'react';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
-import { MapPin, WifiOff, Clock, Battery, BatteryLow } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LocationFreshness } from '@/types/unifiedLocation';
+import React from 'react';
+import { TrackingMode } from '@/utils/trackingModeCalculator';
+import { Card } from '@/components/ui/card';
+import { Battery, Signal, MapPin } from 'lucide-react';
+import { useBatteryStatus } from '@/hooks/useBatteryStatus';
+
+export type AccuracyLevel = 'high' | 'medium' | 'low' | 'unknown';
 
 interface LocationStatusIndicatorProps {
+  accuracy?: number;
+  trackingMode: TrackingMode;
+  isTracking: boolean;
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
   showBatteryStatus?: boolean;
-  showTooltip?: boolean;
 }
 
 export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({
-  className,
-  size = 'md',
-  showBatteryStatus = true,
-  showTooltip = false
+  accuracy,
+  trackingMode,
+  isTracking,
+  className = '',
+  showBatteryStatus = true
 }) => {
-  const { isOnline, connectionType } = useConnectionStatus();
-  const locationService = useDeliveryLocationService();
-  const [currentFreshness, setCurrentFreshness] = useState<LocationFreshness>('fresh');
+  const { isLowBattery, batteryLevel } = useBatteryStatus();
   
-  // Extract required properties from the location service
-  const { 
-    isTracking = false,
-    freshness = 'fresh', 
-    isBatteryLow = false, 
-    batteryLevel = null 
-  } = locationService;
-
-  // Use freshness from the service when available
-  useEffect(() => {
-    if (freshness) {
-      // Use type assertion to ensure TypeScript understands this is a valid LocationFreshness
-      setCurrentFreshness(freshness as LocationFreshness);
+  // Determine accuracy level based on accuracy value
+  const getAccuracyLevel = (): AccuracyLevel => {
+    if (accuracy === undefined) return 'unknown';
+    if (accuracy < 50) return 'high';
+    if (accuracy < 200) return 'medium';
+    return 'low';
+  };
+  
+  const accuracyLevel = getAccuracyLevel();
+  
+  // Get color for accuracy indicator
+  const getAccuracyColor = () => {
+    switch (accuracyLevel) {
+      case 'high':
+        return 'text-green-500';
+      case 'medium':
+        return 'text-yellow-500';
+      case 'low':
+        return 'text-red-500';
+      case 'unknown':
+      default:
+        return 'text-gray-500';
     }
-  }, [freshness]);
-  
-  const sizeClasses = {
-    sm: 'h-6 text-xs',
-    md: 'h-8 text-sm',
-    lg: 'h-10 text-base'
   };
   
-  const iconSize = {
-    sm: 12,
-    md: 16,
-    lg: 20
+  // Get number of bars for accuracy visualization
+  const getAccuracyBars = () => {
+    switch (accuracyLevel) {
+      case 'high':
+        return 3;
+      case 'medium':
+        return 2;
+      case 'low':
+        return 1;
+      case 'unknown':
+      default:
+        return 0;
+    }
   };
+  
+  // Get text description of accuracy
+  const getAccuracyText = () => {
+    switch (accuracyLevel) {
+      case 'high':
+        return `High (±${accuracy?.toFixed(0)}m)`;
+      case 'medium':
+        return `Medium (±${accuracy?.toFixed(0)}m)`;
+      case 'low':
+        return `Low (±${accuracy?.toFixed(0)}m)`;
+      case 'unknown':
+      default:
+        return 'Unknown';
+    }
+  };
+  
+  // Get battery color
+  const getBatteryColor = () => {
+    if (isLowBattery) return 'text-red-500';
+    if (batteryLevel && batteryLevel < 0.3) return 'text-yellow-500';
+    return 'text-green-500';
+  };
+  
+  // No need to render if not tracking
+  if (!isTracking) return null;
 
-  const statusIndicator = (
-    <div className={cn(
-      'flex items-center gap-2 px-3 rounded-full bg-background/80 backdrop-blur-sm border',
-      sizeClasses[size],
-      !isOnline ? 'border-red-500' : isTracking ? 'border-green-500' : 'border-yellow-500',
-      className
-    )}>
-      {!isOnline ? (
-        <>
-          <WifiOff size={iconSize[size]} className="text-red-500" />
-          <span className="text-red-500 font-medium">Offline</span>
-        </>
-      ) : !isTracking ? (
-        <>
-          <MapPin size={iconSize[size]} className="text-yellow-500" />
-          <span className="text-yellow-500 font-medium">Location Off</span>
-        </>
-      ) : currentFreshness === 'stale' ? (
-        <>
-          <Clock size={iconSize[size]} className="text-yellow-500" />
-          <span className="text-yellow-500 font-medium">Stale</span>
-        </>
-      ) : (
-        <>
-          <MapPin size={iconSize[size]} className="text-green-500" />
-          <span className="text-green-500 font-medium">
-            {connectionType ? `${connectionType}` : 'Connected'}
-          </span>
-        </>
-      )}
+  return (
+    <div className={`text-xs text-muted-foreground flex justify-between px-2 ${className}`}>
+      <div className="flex items-center space-x-1">
+        <Signal size={14} className={getAccuracyColor()} />
+        <span>{getAccuracyText()}</span>
+      </div>
       
-      {showBatteryStatus && batteryLevel !== null && (
-        <div className="border-l pl-2 ml-2 flex items-center gap-1">
-          {isBatteryLow ? (
-            <BatteryLow size={iconSize[size]} className="text-red-500" />
-          ) : (
-            <Battery size={iconSize[size]} className="text-green-500" />
-          )}
-          <span className={cn(
-            "font-medium",
-            isBatteryLow ? "text-red-500" : "text-green-500"
-          )}>
-            {batteryLevel}%
+      {showBatteryStatus && (
+        <div className="flex items-center space-x-1">
+          <Battery size={14} className={getBatteryColor()} />
+          <span>
+            {batteryLevel ? `${Math.round(batteryLevel * 100)}%` : 'Unknown'}
+            {isLowBattery ? ' (Low)' : ''}
           </span>
         </div>
       )}
     </div>
   );
-
-  if (showTooltip) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {statusIndicator}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>
-              {!isOnline 
-                ? "Device is currently offline" 
-                : !isTracking 
-                ? "Location tracking is disabled" 
-                : currentFreshness === 'stale' 
-                ? "Location data may be outdated" 
-                : "Location tracking is active"}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return statusIndicator;
 };
 
 export default LocationStatusIndicator;

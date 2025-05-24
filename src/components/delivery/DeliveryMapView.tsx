@@ -1,5 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { LoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMapFactory } from '../maps/GoogleMapFactory';
+import { LazyGoogleMapsLoader } from '../maps/LazyGoogleMapsLoader';
+import { MapComponent } from '../maps/MapComponent';
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
@@ -14,16 +17,7 @@ import BatteryEfficientTracker from './BatteryEfficientTracker';
 import { Order } from '@/types/order';
 import { Loader2 } from 'lucide-react';
 import { useDeliveryMap } from '@/contexts/DeliveryMapContext';
-
-const containerStyle = {
-  width: '100%',
-  height: '400px'
-};
-
-const defaultCenter = {
-  lat: 37.7749,
-  lng: -122.4194
-};
+import { useNetworkRetry } from '@/hooks/useNetworkRetry';
 
 interface DeliveryMapViewProps {
   showControls?: boolean;
@@ -47,8 +41,7 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
   // Map state
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [center, setCenter] = useState(defaultCenter);
-  const [retryCount, setRetryCount] = useState(0);
+  const [center, setCenter] = useState({ lat: 37.7749, lng: -122.4194 });
   const [mapLoadError, setMapLoadError] = useState<string | null>(null);
 
   // Extract hasPermission and location from locationPermission
@@ -74,82 +67,32 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
   }, [savedPosition, location]);
   
   // When map is loaded successfully
-  const handleMapLoad = (map: google.maps.Map) => {
-    mapRef.current = map;
+  const handleMapLoad = () => {
     setMapLoaded(true);
     setMapLoadError(null);
-    
-    // Set initial bounds to fit all markers
-    if (activeAssignment && mapRef.current) {
-      const bounds = new google.maps.LatLngBounds();
-      
-      // Add driver location to bounds
-      if (location) {
-        bounds.extend(new google.maps.LatLng(
-          location.coords.latitude,
-          location.coords.longitude
-        ));
-      }
-      
-      // Add restaurant location to bounds
-      if (activeAssignment.restaurant) {
-        bounds.extend(new google.maps.LatLng(
-          activeAssignment.restaurant.latitude,
-          activeAssignment.restaurant.longitude
-        ));
-      }
-      
-      // Add delivery location to bounds
-      if (activeAssignment.latitude && activeAssignment.longitude) {
-        bounds.extend(new google.maps.LatLng(
-          activeAssignment.latitude,
-          activeAssignment.longitude
-        ));
-      }
-      
-      // Fix the padding error
-      mapRef.current.fitBounds(bounds);
-    }
   };
   
   // Handle map errors
-  const handleMapError = () => {
-    setMapLoadError("Failed to load Google Maps");
-    setRetryCount(prevCount => prevCount + 1);
+  const handleMapError = (error: Error) => {
+    setMapLoadError(error.message || "Failed to load Google Maps");
   };
-
-  // Save map position when it changes
-  const handleCenterChanged = () => {
-    if (mapRef.current) {
-      const newCenter = mapRef.current.getCenter();
-      const zoom = mapRef.current.getZoom();
-      
-      if (newCenter && zoom) {
-        savePosition('delivery-map', {
-          center: {
-            lat: newCenter.lat(),
-            lng: newCenter.lng()
-          },
-          zoom
-        });
-      }
+  
+  // Use network retry for loading operations
+  const { execute: retryLoadingMap, isLoading: isRetrying } = useNetworkRetry(
+    async () => {
+      setMapLoadError(null);
+      return true;
     }
-  };
-  
-  // Handle retry attempts
-  const retryLoadingMap = () => {
-    setMapLoadError(null);
-    setRetryCount(prevCount => prevCount + 1);
-  };
-  
+  );
+
   // If offline, show offline fallback
   if (!isOnline) {
     return (
       <OfflineMapFallback 
         title="Map Unavailable Offline"
         description="You are currently offline. The delivery map will be available when your connection is restored."
-        retry={retryLoadingMap}
-        isRetrying={false}
+        retry={() => retryLoadingMap()}
+        isRetrying={isRetrying}
         showLocationData={true}
         locationData={location ? {
           latitude: location.coords.latitude,
@@ -165,9 +108,9 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
     return (
       <OfflineMapFallback 
         title="Map Loading Error"
-        description="There was a problem loading the map. This might be due to network issues or an invalid API key."
-        retry={retryLoadingMap}
-        isRetrying={false}
+        description={`There was a problem loading the map: ${mapLoadError}`}
+        retry={() => retryLoadingMap()}
+        isRetrying={isRetrying}
       />
     );
   }
@@ -192,9 +135,65 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
     );
   }
 
-  // Convert delivery assignment to a format suitable for the map
-  const mapMarkers = activeAssignment ? [activeAssignment] : [];
+  // Prepare markers for the map
+  const markers = [];
   
+  // Add driver marker
+  if (location) {
+    markers.push({
+      id: 'driver',
+      position: { 
+        lat: location.coords.latitude, 
+        lng: location.coords.longitude 
+      },
+      title: 'Your Location',
+      type: 'driver',
+      icon: {
+        url: '/assets/driver-marker.png',
+        scaledSize: { width: 40, height: 40 }
+      }
+    });
+  }
+  
+  // Add restaurant and customer markers from active assignment
+  if (activeAssignment) {
+    // Restaurant marker
+    if (activeAssignment.restaurant && activeAssignment.restaurant.latitude) {
+      markers.push({
+        id: `restaurant-${activeAssignment.id}`,
+        position: { 
+          lat: activeAssignment.restaurant.latitude, 
+          lng: activeAssignment.restaurant.longitude 
+        },
+        title: activeAssignment.restaurant.name || 'Restaurant',
+        type: 'restaurant',
+        icon: {
+          url: '/assets/restaurant-marker.png',
+          scaledSize: { width: 32, height: 32 }
+        },
+        onClick: () => setSelectedOrder(activeAssignment)
+      });
+    }
+    
+    // Customer marker
+    if (activeAssignment.latitude && activeAssignment.longitude) {
+      markers.push({
+        id: `customer-${activeAssignment.id}`,
+        position: { 
+          lat: activeAssignment.latitude, 
+          lng: activeAssignment.longitude 
+        },
+        title: activeAssignment.customer?.name || 'Customer',
+        type: 'customer',
+        icon: {
+          url: '/assets/customer-marker.png',
+          scaledSize: { width: 32, height: 32 }
+        },
+        onClick: () => setSelectedOrder(activeAssignment)
+      });
+    }
+  }
+
   return (
     <div className={`relative w-full ${className}`}>
       {showControls && (
@@ -205,110 +204,18 @@ export const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
       
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          {!isGoogleMapsLoaded ? (
-            <div className="h-[400px] flex items-center justify-center bg-slate-800">
-              <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
-            </div>
-          ) : (
-            <LoadScript
-              googleMapsApiKey={googleMapsApiKey}
-              onError={handleMapError}
-              loadingElement={
-                <div className="h-[400px] flex items-center justify-center bg-slate-800">
-                  <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
-                </div>
-              }
-            >
-              <GoogleMap
-                mapContainerStyle={containerStyle}
-                center={center}
-                zoom={12}
-                onLoad={handleMapLoad}
-                onCenterChanged={handleCenterChanged}
-                options={{
-                  fullscreenControl: false,
-                  mapTypeControl: false,
-                  streetViewControl: false,
-                  // Use less demanding map rendering for low quality connections
-                  disableDefaultUI: lowPerformanceMode || isLowQuality,
-                  gestureHandling: 'greedy',
-                }}
-              >
-                {/* Driver marker */}
-                {location && (
-                  <Marker
-                    position={{ 
-                      lat: location.coords.latitude, 
-                      lng: location.coords.longitude 
-                    }}
-                    icon={{
-                      url: '/assets/driver-marker.png',
-                      scaledSize: new google.maps.Size(40, 40)
-                    }}
-                  />
-                )}
-                
-                {/* Customer and restaurant markers */}
-                {mapMarkers.map((order) => (
-                  <React.Fragment key={order.id}>
-                    {/* Restaurant marker */}
-                    {order.restaurant && order.restaurant.latitude && (
-                      <Marker
-                        position={{ 
-                          lat: order.restaurant.latitude, 
-                          lng: order.restaurant.longitude 
-                        }}
-                        icon={{
-                          url: '/assets/restaurant-marker.png',
-                          scaledSize: new google.maps.Size(32, 32)
-                        }}
-                        onClick={() => setSelectedOrder(order)}
-                      />
-                    )}
-                    
-                    {/* Delivery location marker */}
-                    {order.latitude && order.longitude && (
-                      <Marker
-                        position={{ lat: order.latitude, lng: order.longitude }}
-                        icon={{
-                          url: '/assets/customer-marker.png',
-                          scaledSize: new google.maps.Size(32, 32)
-                        }}
-                        onClick={() => setSelectedOrder(order)}
-                      />
-                    )}
-                  </React.Fragment>
-                ))}
-                
-                {/* Info window for selected location */}
-                {selectedOrder && (
-                  <InfoWindow
-                    position={{ 
-                      lat: selectedOrder.latitude || 0, 
-                      lng: selectedOrder.longitude || 0 
-                    }}
-                    onCloseClick={() => setSelectedOrder(null)}
-                  >
-                    <div className="p-2">
-                      <h3 className="font-semibold">Order #{selectedOrder.id.slice(-6)}</h3>
-                      <p className="text-sm">Status: {selectedOrder.status}</p>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="mt-2 text-xs"
-                        onClick={() => {
-                          // Navigate to order details
-                          window.location.href = `/orders/${selectedOrder.id}`;
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  </InfoWindow>
-                )}
-              </GoogleMap>
-            </LoadScript>
-          )}
+          <MapComponent
+            id="delivery-map"
+            center={center}
+            zoom={12}
+            markers={markers}
+            showRoute={true}
+            isInteractive={true}
+            height="400px"
+            width="100%"
+            onMapReady={handleMapLoad}
+            className="rounded-none"
+          />
         </CardContent>
       </Card>
     </div>

@@ -157,7 +157,7 @@ export const GoogleMapsKeyForm: React.FC<GoogleMapsKeyFormProps> = ({
         <CardContent>
           <div className="space-y-4">
             {googleMapsApiKey && (
-              <Alert variant={keySource === 'database' ? 'default' : 'warning'}>
+              <Alert variant={keySource === 'database' ? 'default' : 'destructive'}>
                 <InfoIcon className="h-4 w-4" />
                 <AlertTitle>Current Key Source: {keySource}</AlertTitle>
                 <AlertDescription>
