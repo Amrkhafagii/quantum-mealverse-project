@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -6,44 +7,34 @@ import ParticleBackground from '@/components/ParticleBackground';
 import { CustomerHeader } from '@/components/customer/CustomerHeader';
 import { MainContent } from '@/components/customer/MainContent';
 import { LocationPrompt } from '@/components/customer/LocationPrompt';
-import { useAuth } from '@/hooks/useAuth';
-import { useSimpleLocation } from '@/hooks/useSimpleLocation';
-import { useRestaurantsData } from '@/hooks/useRestaurantsData';
-import { useMenuData } from '@/hooks/useMenuData';
+import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBoundary';
+import { useCustomerState } from '@/hooks/useCustomerState';
 
 const CustomerPage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [isMapView, setIsMapView] = useState(false);
   
-  // Location handling
+  // Use centralized state management
   const {
+    user,
     location,
-    isLoading: locationLoading,
-    error: locationError,
+    locationError,
     permissionStatus,
     hasRequestedPermission,
-    requestLocation
-  } = useSimpleLocation();
-  
-  // Restaurant data
-  const {
     restaurants,
-    loading: restaurantsLoading,
-    error: restaurantsError,
-    refetch: refetchRestaurants
-  } = useRestaurantsData(location);
-  
-  // Menu data
-  const { 
-    data: menuItems = [], 
-    isLoading: menuLoading, 
-    error: menuError 
-  } = useMenuData(restaurants);
+    restaurantsError,
+    menuItems,
+    menuError,
+    isLoading,
+    hasError,
+    errorMessage,
+    requestLocation,
+    clearErrors
+  } = useCustomerState();
 
   const handleLogout = async () => {
     try {
-      await logout();
+      // Note: logout logic should be handled by auth context
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -54,14 +45,6 @@ const CustomerPage = () => {
     setIsMapView(!isMapView);
   };
 
-  const handleLocationRequest = async () => {
-    const success = await requestLocation();
-    if (success) {
-      refetchRestaurants();
-    }
-  };
-
-  const isLoading = locationLoading || restaurantsLoading || menuLoading;
   const hasLocationIssue = locationError && permissionStatus !== 'granted';
 
   console.log('Customer page state:', {
@@ -70,46 +53,49 @@ const CustomerPage = () => {
     restaurantsCount: restaurants?.length || 0,
     menuItemsCount: menuItems?.length || 0,
     isLoading,
-    locationError,
+    hasError,
+    errorMessage,
     permissionStatus
   });
 
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative">
-      <ParticleBackground />
-      <Navbar />
-      
-      <main className="relative z-10 pt-20">
-        <CustomerHeader 
-          userEmail={user?.email}
-          onLogout={handleLogout}
-        />
+    <CustomerErrorBoundary onRetry={clearErrors}>
+      <div className="min-h-screen bg-quantum-black text-white relative">
+        <ParticleBackground />
+        <Navbar />
         
-        <div className="container mx-auto px-4 py-8">
-          {/* Location prompt - only show if there's an issue or permission not requested */}
-          {(hasLocationIssue || !hasRequestedPermission) && (
-            <LocationPrompt
-              onRequestLocation={handleLocationRequest}
-              isLoading={locationLoading}
-              error={locationError}
-              hasRequestedPermission={hasRequestedPermission}
-            />
-          )}
-          
-          <MainContent 
-            isMapView={isMapView}
-            menuItems={menuItems}
-            isLoading={isLoading}
-            error={restaurantsError || menuError}
-            nearbyRestaurants={restaurants}
-            toggleMapView={toggleMapView}
-            onLocationRequest={handleLocationRequest}
+        <main className="relative z-10 pt-20">
+          <CustomerHeader 
+            userEmail={user?.email}
+            onLogout={handleLogout}
           />
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
+          
+          <div className="container mx-auto px-4 py-8">
+            {/* Location prompt - only show if there's an issue or permission not requested */}
+            {(hasLocationIssue || !hasRequestedPermission) && (
+              <LocationPrompt
+                onRequestLocation={requestLocation}
+                isLoading={isLoading}
+                error={locationError}
+                hasRequestedPermission={hasRequestedPermission}
+              />
+            )}
+            
+            <MainContent 
+              isMapView={isMapView}
+              menuItems={menuItems}
+              isLoading={isLoading}
+              error={hasError ? errorMessage : null}
+              nearbyRestaurants={restaurants}
+              toggleMapView={toggleMapView}
+              onLocationRequest={requestLocation}
+            />
+          </div>
+        </main>
+        
+        <Footer />
+      </div>
+    </CustomerErrorBoundary>
   );
 };
 

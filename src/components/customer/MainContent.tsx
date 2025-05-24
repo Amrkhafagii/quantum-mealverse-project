@@ -42,20 +42,20 @@ export const MainContent: React.FC<MainContentProps> = ({
     nearbyRestaurantsCount: nearbyRestaurants?.length
   });
 
-  // Show error state if there's an error
+  // Show error state if there's an error and not loading
   if (error && !isLoading) {
     return (
       <Alert className="bg-red-900/20 border-red-600/30 mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription className="text-red-200">
-          Error loading restaurants and menu items. Please try again later.
+          {typeof error === 'string' ? error : 'Error loading restaurants and menu items. Please try again later.'}
         </AlertDescription>
       </Alert>
     );
   }
 
-  // Show loading state
-  if (isLoading) {
+  // Optimized loading state - only show spinner during meaningful loading
+  if (isLoading && nearbyRestaurants.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan mr-2" />
@@ -194,8 +194,8 @@ export const MainContent: React.FC<MainContentProps> = ({
           >
             <CustomerMealGrid 
               menuItems={menuItems}
-              isLoading={false}
-              error={null}
+              isLoading={isLoading}
+              error={error}
               onLocationRequest={onLocationRequest}
               hasRestaurants={nearbyRestaurants.length > 0}
             />
