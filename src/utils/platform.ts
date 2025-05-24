@@ -1,4 +1,5 @@
 
+
 export const Platform = {
   isNative: () => !!(window as any).Capacitor,
   isMobileDevice: () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
@@ -29,6 +30,11 @@ export const Platform = {
 
   isMobileBrowser: () => {
     return Platform.isMobileDevice() && Platform.isWeb();
+  },
+
+  // Add missing isMobile method
+  isMobile: () => {
+    return Platform.isMobileDevice();
   },
 
   isTablet: () => {
@@ -98,6 +104,17 @@ export const Platform = {
     return hardwareConcurrency <= 2 || deviceMemory <= 2;
   },
 
+  // Add missing platform methods
+  isSaveDataEnabled: () => {
+    return (navigator as any).connection?.saveData === true;
+  },
+
+  isBatterySavingMode: () => {
+    // This is not easily detectable in web browsers
+    // Return false as default for web platform
+    return false;
+  },
+
   // Initialization and utility methods
   isInitialized: () => {
     try {
@@ -123,3 +140,4 @@ export const Platform = {
     console.log('Platform cache reset (placeholder)');
   }
 };
+

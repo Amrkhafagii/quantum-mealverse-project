@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { NetworkQuality } from '@/hooks/useNetworkQuality';
+import { NetworkQuality } from '@/types/unifiedLocation';
 
 export type ContentQuality = 'high' | 'medium' | 'low' | 'minimal';
 
@@ -174,3 +173,96 @@ export function getAdaptivePollingInterval(
   
   return Math.round(baseInterval * intervalMultiplier);
 }
+
+export interface AdaptationSettings {
+  pollingInterval: number;
+  requestTimeout: number;
+  retryAttempts: number;
+  enableOptimizations: boolean;
+}
+
+export const getAdaptationSettings = (quality: NetworkQuality): AdaptationSettings => {
+  switch (quality) {
+    case 'high':
+    case 'excellent':
+      return {
+        pollingInterval: 5000,
+        requestTimeout: 10000,
+        retryAttempts: 3,
+        enableOptimizations: false
+      };
+    case 'medium':
+    case 'good':
+    case 'fair':
+      return {
+        pollingInterval: 10000,
+        requestTimeout: 15000,
+        retryAttempts: 2,
+        enableOptimizations: true
+      };
+    case 'low':
+    case 'poor':
+    case 'very-poor':
+      return {
+        pollingInterval: 30000,
+        requestTimeout: 30000,
+        retryAttempts: 1,
+        enableOptimizations: true
+      };
+    case 'offline':
+      return {
+        pollingInterval: 60000,
+        requestTimeout: 60000,
+        retryAttempts: 0,
+        enableOptimizations: true
+      };
+    default:
+      return {
+        pollingInterval: 15000,
+        requestTimeout: 20000,
+        retryAttempts: 2,
+        enableOptimizations: true
+      };
+  }
+};
+
+export const shouldReduceAnimations = (quality: NetworkQuality): boolean => {
+  return quality === 'low' || quality === 'poor' || quality === 'very-poor' || quality === 'offline';
+};
+
+export const getImageQuality = (quality: NetworkQuality): 'low' | 'medium' | 'high' => {
+  switch (quality) {
+    case 'high':
+    case 'excellent':
+      return 'high';
+    case 'medium':
+    case 'good':
+    case 'fair':
+      return 'medium';
+    case 'low':
+    case 'poor':
+    case 'very-poor':
+    case 'offline':
+    default:
+      return 'low';
+  }
+};
+
+export const getOptimalBatchSize = (quality: NetworkQuality): number => {
+  switch (quality) {
+    case 'high':
+    case 'excellent':
+      return 50;
+    case 'medium':
+    case 'good':
+    case 'fair':
+      return 25;
+    case 'low':
+    case 'poor':
+    case 'very-poor':
+      return 10;
+    case 'offline':
+    default:
+      return 5;
+  }
+};
