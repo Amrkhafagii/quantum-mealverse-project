@@ -12,7 +12,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
 
 interface AdaptationSuggestion {
   id: string;
@@ -25,7 +24,6 @@ interface AdaptationSuggestion {
 }
 
 export const AdaptiveDifficulty: React.FC = () => {
-  const { exerciseProgress } = useWorkoutAnalytics();
   const [adaptations, setAdaptations] = useState<AdaptationSuggestion[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
