@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { motion } from 'framer-motion';
 import { RestTimer } from '../RestTimer';
 import { ExerciseInstructions } from '../ExerciseInstructions';
 import { WorkoutSharing } from '../social/WorkoutSharing';
-import { WorkoutSession } from '../workout/WorkoutSession';
+import WorkoutSession from '../workout/WorkoutSession';
 
 interface EnhancedWorkoutSessionProps {
   plan: any;

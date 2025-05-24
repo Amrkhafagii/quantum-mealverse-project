@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 
 interface ExportRecord {
   id: string;
@@ -28,7 +28,7 @@ export const WorkoutDataExport: React.FC = () => {
   const { toast } = useToast();
   const [exportType, setExportType] = useState<'full' | 'plans' | 'logs' | 'progress'>('full');
   const [fileFormat, setFileFormat] = useState<'json' | 'csv' | 'pdf'>('json');
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: undefined, to: undefined });
   const [isExporting, setIsExporting] = useState(false);
   const [exportHistory, setExportHistory] = useState<ExportRecord[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -65,8 +65,8 @@ export const WorkoutDataExport: React.FC = () => {
         user_id: user.id,
         export_type: exportType,
         file_format: fileFormat,
-        date_range_start: dateRange.from?.toISOString().split('T')[0] || null,
-        date_range_end: dateRange.to?.toISOString().split('T')[0] || null,
+        date_range_start: dateRange?.from?.toISOString().split('T')[0] || null,
+        date_range_end: dateRange?.to?.toISOString().split('T')[0] || null,
         status: 'pending'
       };
 
@@ -222,7 +222,7 @@ export const WorkoutDataExport: React.FC = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange.from ? (
+                  {dateRange?.from ? (
                     dateRange.to ? (
                       `${format(dateRange.from, "MMM dd, yyyy")} - ${format(dateRange.to, "MMM dd, yyyy")}`
                     ) : (
@@ -237,7 +237,7 @@ export const WorkoutDataExport: React.FC = () => {
                 <Calendar
                   mode="range"
                   selected={dateRange}
-                  onSelect={(range) => setDateRange(range || {})}
+                  onSelect={setDateRange}
                   numberOfMonths={2}
                 />
               </PopoverContent>

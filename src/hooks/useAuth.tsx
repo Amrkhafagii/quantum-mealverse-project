@@ -7,4 +7,4 @@ const useAuth = () => {
   return useContext(AuthContext);
 };
 
-export { useAuth };
+export { useAuth, AuthProvider } from '@/contexts/AuthContext';

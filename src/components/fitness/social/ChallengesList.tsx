@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,10 +110,17 @@ export const ChallengesList: React.FC = () => {
 
       if (error) throw error;
 
-      // Update participants count
-      await supabase.rpc('increment_challenge_participants', {
-        challenge_id: challengeId
-      });
+      // Update participants count manually
+      const { error: updateError } = await supabase
+        .from('fitness_challenges')
+        .update({
+          participants_count: supabase.raw('participants_count + 1')
+        })
+        .eq('id', challengeId);
+
+      if (updateError) {
+        console.error('Error updating participants count:', updateError);
+      }
 
       toast({
         title: "Challenge joined!",
@@ -275,7 +281,7 @@ export const ChallengesList: React.FC = () => {
                         <span>{challenge.user_progress}/{challenge.target_value} {challenge.target_unit}</span>
                       </div>
                       <Progress 
-                        value={(challenge.user_progress / challenge.target_value) * 100} 
+                        value={(challenge.user_progress || 0) / challenge.target_value * 100} 
                         className="h-2"
                       />
                     </div>

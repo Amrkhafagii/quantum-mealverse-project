@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,7 +55,17 @@ export const ExerciseInstructions: React.FC<ExerciseInstructionsProps> = ({
         .order('order_index');
 
       if (error) throw error;
-      setInstructions(data || []);
+      
+      // Type assertion with proper validation
+      const typedInstructions = (data || []).map(item => ({
+        id: item.id,
+        instruction_type: item.instruction_type as 'video' | 'image' | 'text',
+        content_url: item.content_url,
+        instruction_text: item.instruction_text,
+        order_index: item.order_index
+      }));
+      
+      setInstructions(typedInstructions);
     } catch (error) {
       console.error('Error fetching exercise instructions:', error);
     } finally {

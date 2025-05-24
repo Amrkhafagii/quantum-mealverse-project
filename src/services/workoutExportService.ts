@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ExportOptions {
@@ -278,11 +277,12 @@ const generateProgressReport = (progress: any[]): string => {
   }, {} as Record<string, any[]>);
 
   Object.entries(exerciseGroups).forEach(([exercise, records]) => {
-    const latest = records.sort((a, b) => new Date(b.recorded_date).getTime() - new Date(a.recorded_date).getTime())[0];
-    const earliest = records.sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime())[0];
+    const sortedRecords = Array.isArray(records) ? records : [];
+    const latest = sortedRecords.sort((a, b) => new Date(b.recorded_date).getTime() - new Date(a.recorded_date).getTime())[0];
+    const earliest = sortedRecords.sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime())[0];
     
     report += `${exercise}:\n`;
-    report += `  Records: ${records.length}\n`;
+    report += `  Records: ${sortedRecords.length}\n`;
     report += `  Current Max Weight: ${latest?.max_weight || 0}kg\n`;
     report += `  Starting Weight: ${earliest?.max_weight || 0}kg\n`;
     report += `  Progress: +${((latest?.max_weight || 0) - (earliest?.max_weight || 0))}kg\n\n`;
