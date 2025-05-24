@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from 'react';
 import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 import { NetworkMetrics, NetworkQualityResult } from '@/types/networkQuality';
@@ -51,8 +49,8 @@ export function useNetworkQuality(): NetworkQualityResult {
         }
         
         setQuality(detectedQuality);
-        // Fix: Compare against valid NetworkQuality values
-        setIsLowQuality(detectedQuality === 'low' || detectedQuality === 'poor' || detectedQuality === 'very-poor');
+        // Fix: Use proper NetworkQuality values for comparison
+        setIsLowQuality(detectedQuality === 'low' || detectedQuality === 'poor' || detectedQuality === 'very-poor' || detectedQuality === 'offline');
         
         return detectedQuality;
       }
@@ -124,4 +122,3 @@ export function useNetworkQuality(): NetworkQualityResult {
     checkQuality
   };
 }
-

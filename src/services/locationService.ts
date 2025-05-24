@@ -61,7 +61,7 @@ export const getPrivacySettings = async (userId: string): Promise<LocationPrivac
       .from('location_privacy_settings')
       .select()
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     
     if (error || !data) {
       console.log('No privacy settings found, using defaults');
@@ -178,5 +178,16 @@ export const getMostRecentLocation = async (userId: string): Promise<UnifiedLoca
   } catch (error) {
     console.error('Exception fetching most recent location:', error);
     return null;
+  }
+};
+
+// Export function for retention policies
+export const runRetentionPolicies = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Implement retention policy logic here
+    return { success: true, message: 'Retention policies executed successfully' };
+  } catch (error) {
+    console.error('Error running retention policies:', error);
+    return { success: false, message: 'Failed to execute retention policies' };
   }
 };

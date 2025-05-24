@@ -20,7 +20,7 @@ export function useContentAdaptation() {
     } else if (quality === 'poor' || quality === 'very-poor') {
       setContentQuality('low');
       setShouldEnableAnimations(false);
-    } else if (quality === 'fair' || quality === 'moderate') {
+    } else if (quality === 'fair' || quality === 'low') {
       setContentQuality('medium');
       setShouldEnableAnimations(true);
     } else {
@@ -54,7 +54,7 @@ export function useRequestBatching<T, R>(
     } else if (quality === 'very-poor' || quality === 'poor') {
       setBatchSize(Math.max(1, Math.floor(options.maxBatchSize / 5)));
       setAdaptiveInterval(15000); // 15 seconds for poor connection
-    } else if (quality === 'fair' || quality === 'moderate') {
+    } else if (quality === 'fair' || quality === 'low') {
       setBatchSize(Math.max(2, Math.floor(options.maxBatchSize / 2)));
       setAdaptiveInterval(10000); // 10 seconds for fair connection
     } else {
@@ -111,7 +111,7 @@ export function getAdaptiveImageDimensions(
       scale = 0.5;
       qualityPercent = 50;
       break;
-    case 'moderate':
+    case 'low':
     case 'fair':
       scale = 0.7;
       qualityPercent = 70;

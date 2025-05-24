@@ -28,8 +28,8 @@ export class WebLocationService implements ILocationService {
             altitudeAccuracy: position.coords.altitudeAccuracy,
             heading: position.coords.heading,
             speed: position.coords.speed,
-            // Fix: Ensure timestamp is number
-            timestamp: typeof position.timestamp === 'number' ? position.timestamp : Date.now()
+            // Fix: Ensure timestamp is always number
+            timestamp: Date.now()
           };
           
           this.lastKnownLocation = locationData;
@@ -64,8 +64,8 @@ export class WebLocationService implements ILocationService {
           altitudeAccuracy: position.coords.altitudeAccuracy,
           heading: position.coords.heading,
           speed: position.coords.speed,
-          // Fix: Ensure timestamp is number
-          timestamp: typeof position.timestamp === 'number' ? position.timestamp : Date.now()
+          // Fix: Ensure timestamp is always number
+          timestamp: Date.now()
         };
         
         this.lastKnownLocation = locationData;

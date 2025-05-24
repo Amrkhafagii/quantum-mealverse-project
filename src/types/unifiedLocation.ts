@@ -1,4 +1,3 @@
-
 /**
  * Unified location types that standardize location data across different components
  */
@@ -11,7 +10,7 @@ export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt';
 
 export type NetworkType = 'wifi' | 'cellular' | '4g' | '5g' | '3g' | '2g' | 'unknown' | 'none';
 
-export type NetworkQuality = 'high' | 'medium' | 'low' | 'offline' | 'poor' | 'very-poor' | 'fair' | 'excellent' | 'good' | 'unknown';
+export type NetworkQuality = 'high' | 'medium' | 'low' | 'offline' | 'poor' | 'very-poor' | 'fair' | 'moderate' | 'excellent' | 'good' | 'unknown';
 
 export interface NetworkInfo {
   type: NetworkType;
