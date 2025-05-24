@@ -100,16 +100,23 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
         const { data: allRestaurants, error: allError } = await supabase
           .from('restaurants')
           .select(`
-            restaurant_id,
-            restaurant_name,
-            restaurant_address,
-            restaurant_email
+            id,
+            name,
+            address,
+            email
           `)
+          .eq('is_active', true)
           .limit(20); // Limit to first 20 restaurants for performance
 
         if (allError) throw allError;
         
-        finalData = allRestaurants || [];
+        // Map the restaurant data to match the expected interface
+        finalData = (allRestaurants || []).map(restaurant => ({
+          restaurant_id: restaurant.id,
+          restaurant_name: restaurant.name,
+          restaurant_address: restaurant.address,
+          restaurant_email: restaurant.email
+        }));
       }
 
       if (abortControllerRef.current?.signal.aborted) return;
