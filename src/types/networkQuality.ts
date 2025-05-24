@@ -17,6 +17,6 @@ export interface NetworkQualityResult {
   hasTransitioned: boolean;
   isFlaky: boolean;
   latency: number | null;
-  bandwidth: number | null;
+  bandwidth?: number | null;
   checkQuality: () => Promise<NetworkQuality>;
 }

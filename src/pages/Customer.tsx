@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -8,8 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MainContent } from '@/components/customer/MainContent';
 import { RestaurantSummary } from '@/components/customer/RestaurantSummary';
 import { ViewToggle } from '@/components/customer/ViewToggle';
-import { EmptyState } from '@/components/EmptyState';
-import { RecommendedMeals } from '@/components/recommendations/RecommendedMeals';
+import EmptyState from '@/components/EmptyState';
+import RecommendedMeals from '@/components/recommendations/RecommendedMeals';
 import { CustomerMealGrid } from '@/components/customer/CustomerMealGrid';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
@@ -18,18 +19,18 @@ import { DeliveryLocation } from '@/types/location';
 import { UnifiedLocation } from '@/types/unifiedLocation';
 import { calculateDistance } from '@/utils/locationUtils';
 import { downloadJsonFile } from '@/utils/fileDownloads';
-import { Menu, MenuItem } from '@/types/menu';
+import { Menu } from '@/types/menu';
 import { Restaurant } from '@/types/restaurant';
-import { LogDisplayModal } from '@/components/LogDisplayModal';
-import { LocationPermissionsPrompt } from '@/components/location/LocationPermissionsPrompt';
+import LogDisplayModal from '@/components/LogDisplayModal';
+import LocationPermissionsPrompt from '@/components/location/LocationPermissionsPrompt';
 import { LocationStateManager } from '@/components/location/LocationStateManager';
 import { LocationStatusIndicator } from '@/components/location/LocationStatusIndicator';
-import { LocationHistoryDashboard } from '@/components/location/LocationHistoryDashboard';
+import LocationHistoryDashboard from '@/components/location/LocationHistoryDashboard';
 import { AdaptiveLocationTracker } from '@/components/location/AdaptiveLocationTracker';
-import { LocationPromptBanner } from '@/components/location/LocationPromptBanner';
+import LocationPromptBanner from '@/components/location/LocationPromptBanner';
 
 const Customer: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const [selectedRestaurant, setSelectedRestaurant] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [showLocationLogs, setShowLocationLogs] = useState(false);
@@ -41,7 +42,7 @@ const Customer: React.FC = () => {
   const { 
     permissionStatus, 
     requestPermission, 
-    isLoading: permissionLoading 
+    isRequesting: permissionLoading 
   } = useLocationPermission();
 
   const { data: restaurants, isLoading: restaurantsLoading, error: restaurantsError } = useQuery<Restaurant[]>({
@@ -60,7 +61,7 @@ const Customer: React.FC = () => {
     queryFn: async () => {
       if (!selectedRestaurant) return [];
       const { data, error } = await supabase
-        .from('menus')
+        .from('menu_items')
         .select('*')
         .eq('restaurant_id', selectedRestaurant);
       if (error) {
@@ -107,8 +108,13 @@ const Customer: React.FC = () => {
     }
   };
 
+  const nearbyRestaurants = restaurants?.map(restaurant => ({
+    ...restaurant,
+    distance: calculateDistanceToRestaurant(restaurant)
+  })) || [];
+
   return (
-    <MainContent>
+    <div className="container mx-auto px-4 py-8 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Customer Dashboard</CardTitle>
@@ -117,128 +123,142 @@ const Customer: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => signOut()}>Sign Out</Button>
+          <Button onClick={() => logout()}>Sign Out</Button>
         </CardContent>
       </Card>
 
-      <LocationStateManager />
-      <LocationStatusIndicator />
-      <LocationPromptBanner />
-
-      {permissionStatus !== 'granted' && (
-        <LocationPermissionsPrompt
-          isOpen={permissionStatus !== 'granted'}
-          onClose={() => {}}
-          onRequestPermission={requestPermission}
-          isLoading={permissionLoading}
+      <LocationStateManager>
+        <LocationStatusIndicator 
+          trackingMode="automatic" 
+          isTracking={!!currentLocation} 
         />
-      )}
+        <LocationPromptBanner />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Restaurants</CardTitle>
-          <CardDescription>Select a restaurant to view its menu.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {restaurantsLoading ? (
-            <p>Loading restaurants...</p>
-          ) : restaurantsError ? (
-            <p className="text-red-500">Error: {restaurantsError.message}</p>
-          ) : restaurants && restaurants.length > 0 ? (
-            restaurants.map((restaurant) => (
-              <RestaurantSummary
-                key={restaurant.id}
-                restaurant={restaurant}
-                onSelect={handleRestaurantSelect}
-                distance={calculateDistanceToRestaurant(restaurant)}
-              />
-            ))
-          ) : (
-            <EmptyState message="No restaurants found." />
-          )}
-        </CardContent>
-      </Card>
+        {permissionStatus !== 'granted' && (
+          <LocationPermissionsPrompt
+            isOpen={permissionStatus !== 'granted'}
+            onClose={() => {}}
+            onRequestPermission={requestPermission}
+            isLoading={permissionLoading}
+          />
+        )}
 
-      {selectedRestaurant && (
         <Card>
           <CardHeader>
-            <CardTitle>Menu</CardTitle>
-            <CardDescription>
-              View the menu for the selected restaurant.
-              <ViewToggle viewMode={viewMode} onViewToggle={handleViewToggle} />
-            </CardDescription>
+            <CardTitle>Restaurants</CardTitle>
+            <CardDescription>Select a restaurant to view its menu.</CardDescription>
           </CardHeader>
           <CardContent>
-            {menusLoading ? (
-              <p>Loading menu...</p>
-            ) : menusError ? (
-              <p className="text-red-500">Error: {menusError.message}</p>
-            ) : menus && menus.length > 0 ? (
-              <CustomerMealGrid meals={menus} viewMode={viewMode} />
+            {restaurantsLoading ? (
+              <p>Loading restaurants...</p>
+            ) : restaurantsError ? (
+              <p className="text-red-500">Error: {restaurantsError.message}</p>
+            ) : restaurants && restaurants.length > 0 ? (
+              <RestaurantSummary 
+                restaurants={nearbyRestaurants.map(r => ({
+                  restaurant_id: r.id,
+                  name: r.name,
+                  address: r.address,
+                  distance: r.distance || 0
+                }))}
+              />
             ) : (
-              <EmptyState message="No menu items found." />
+              <EmptyState message="No restaurants found." />
             )}
           </CardContent>
         </Card>
-      )}
 
-      {currentLocation && (
+        {selectedRestaurant && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Menu</CardTitle>
+              <CardDescription>
+                View the menu for the selected restaurant.
+                <ViewToggle 
+                  currentView={viewMode} 
+                  onToggle={handleViewToggle} 
+                />
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {menusLoading ? (
+                <p>Loading menu...</p>
+              ) : menusError ? (
+                <p className="text-red-500">Error: {menusError.message}</p>
+              ) : menus && menus.length > 0 ? (
+                <CustomerMealGrid 
+                  menuItems={menus} 
+                  isLoading={menusLoading}
+                  error={menusError}
+                  onLocationRequest={() => requestPermission()}
+                />
+              ) : (
+                <EmptyState message="No menu items found." />
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {currentLocation && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recommended Meals</CardTitle>
+              <CardDescription>Personalized recommendations based on your location.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecommendedMeals
+                latitude={currentLocation.latitude}
+                longitude={currentLocation.longitude}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
-            <CardTitle>Recommended Meals</CardTitle>
-            <CardDescription>Personalized recommendations based on your location.</CardDescription>
+            <CardTitle>Location Debugging</CardTitle>
+            <CardDescription>Tools for testing and debugging location services.</CardDescription>
           </CardHeader>
           <CardContent>
-            <RecommendedMeals
-              latitude={currentLocation.latitude}
-              longitude={currentLocation.longitude}
-            />
+            <div className="space-x-2">
+              <Button onClick={() => setShowLocationLogs(true)}>Show Location Logs</Button>
+              <Button onClick={handleClearLocationStorage}>Clear Location Storage</Button>
+              <Button onClick={handleExportLogs}>Export Location Logs</Button>
+              <Button onClick={() => setShowLocationHistory(true)}>Show Location History</Button>
+              <Button onClick={() => setShowAdaptiveTracker(true)}>
+                Show Adaptive Location Tracker
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Location Debugging</CardTitle>
-          <CardDescription>Tools for testing and debugging location services.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={() => setShowLocationLogs(true)}>Show Location Logs</Button>
-          <Button onClick={handleClearLocationStorage}>Clear Location Storage</Button>
-          <Button onClick={handleExportLogs}>Export Location Logs</Button>
-          <Button onClick={() => setShowLocationHistory(true)}>Show Location History</Button>
-          <Button onClick={() => setShowAdaptiveTracker(true)}>
-            Show Adaptive Location Tracker
-          </Button>
-        </CardContent>
-      </Card>
+        <LogDisplayModal
+          isOpen={showLocationLogs}
+          onClose={() => setShowLocationLogs(false)}
+        />
 
-      <LogDisplayModal
-        isOpen={showLocationLogs}
-        onClose={() => setShowLocationLogs(false)}
-      />
+        <LocationHistoryDashboard
+          isOpen={showLocationHistory}
+          onClose={() => setShowLocationHistory(false)}
+          locationHistory={locationHistory}
+        />
 
-      <LocationHistoryDashboard
-        isOpen={showLocationHistory}
-        onClose={() => setShowLocationHistory(false)}
-        locationHistory={locationHistory}
-      />
-
-      {showAdaptiveTracker && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Adaptive Location Tracker</CardTitle>
-            <CardDescription>
-              Demonstrates adaptive location tracking based on various factors.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AdaptiveLocationTracker />
-            <Button onClick={() => setShowAdaptiveTracker(false)}>Close Tracker</Button>
-          </CardContent>
-        </Card>
-      )}
-    </MainContent>
+        {showAdaptiveTracker && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Adaptive Location Tracker</CardTitle>
+              <CardDescription>
+                Demonstrates adaptive location tracking based on various factors.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdaptiveLocationTracker />
+              <Button onClick={() => setShowAdaptiveTracker(false)}>Close Tracker</Button>
+            </CardContent>
+          </Card>
+        )}
+      </LocationStateManager>
+    </div>
   );
 };
 

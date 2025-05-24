@@ -3,9 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { DeliveryLocation, LocationSource } from '@/types/location';
 
 export function useCurrentLocation() {
-  const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<DeliveryLocation | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [locationSource, setLocationSource] = useState<LocationSource>('manual');
 
   const getPositionFromNavigator = (): Promise<GeolocationPosition> => {
@@ -39,7 +39,7 @@ export function useCurrentLocation() {
   };
 
   const getCurrentLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
-    setIsLoadingLocation(true);
+    setIsLoading(true);
     setErrorMessage(null);
 
     try {
@@ -57,14 +57,14 @@ export function useCurrentLocation() {
         source: 'gps'
       };
       
-      setLastLocation(location);
+      setCurrentLocation(location);
       return location;
     } catch (error: any) {
       console.error('Location retrieval failed:', error);
       setErrorMessage(error.message || 'Could not get your location. Please check your device settings.');
       return null;
     } finally {
-      setIsLoadingLocation(false);
+      setIsLoading(false);
     }
   }, []);
 
@@ -74,8 +74,8 @@ export function useCurrentLocation() {
   }, []);
 
   return {
-    lastLocation,
-    isLoadingLocation,
+    currentLocation,
+    isLoading,
     locationError: errorMessage,
     locationSource,
     getCurrentLocation
