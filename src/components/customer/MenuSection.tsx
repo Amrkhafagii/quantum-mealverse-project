@@ -37,8 +37,9 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
         <CardDescription>
           View the menu for the selected restaurant.
           <ViewToggle 
-            currentView={viewMode} 
-            onToggle={onViewToggle} 
+            isMapView={viewMode === 'map'} 
+            onToggle={() => onViewToggle(viewMode === 'map' ? 'grid' : 'map')}
+            showToggle={true}
           />
         </CardDescription>
       </CardHeader>

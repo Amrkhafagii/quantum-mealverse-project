@@ -12,6 +12,7 @@ export interface DeliveryLocation {
   speed?: number;
   timestamp: number;
   source?: LocationSource;
+  isMoving?: boolean;
 }
 
 export interface LocationHistoryEntry {

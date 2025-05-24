@@ -129,6 +129,12 @@ const Customer: React.FC = () => {
     updated_at: menu.updated_at || new Date().toISOString()
   })) || [];
 
+  // Convert location history to correct format
+  const convertedLocationHistory = locationHistory.map(entry => ({
+    ...entry,
+    timestamp: typeof entry.timestamp === 'string' ? Date.parse(entry.timestamp) : entry.timestamp
+  }));
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       <CustomerHeader 
@@ -174,7 +180,7 @@ const Customer: React.FC = () => {
           showLocationLogs={showLocationLogs}
           showLocationHistory={showLocationHistory}
           showAdaptiveTracker={showAdaptiveTracker}
-          locationHistory={locationHistory}
+          locationHistory={convertedLocationHistory}
           onToggleLocationLogs={() => setShowLocationLogs(!showLocationLogs)}
           onToggleLocationHistory={() => setShowLocationHistory(!showLocationHistory)}
           onToggleAdaptiveTracker={() => setShowAdaptiveTracker(!showAdaptiveTracker)}

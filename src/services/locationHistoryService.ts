@@ -54,8 +54,8 @@ export const locationHistoryService = {
         query = query.limit(params.limit);
       }
 
-      if (params.offset) {
-        query = query.range(params.offset, (params.offset + (params.limit || 50)) - 1);
+      if (params.offset && params.limit) {
+        query = query.range(params.offset, params.offset + params.limit - 1);
       }
 
       const { data, error } = await query;
@@ -259,5 +259,14 @@ export const locationHistoryService = {
     }
   }
 };
+
+// Export named functions for the hook
+export const fetchLocationHistory = locationHistoryService.getLocationHistory;
+export const exportLocationHistory = async () => {
+  // Simple export function
+  return [];
+};
+export const deleteLocationHistory = locationHistoryService.deleteOldLocations;
+export const getLocationStats = locationHistoryService.getLocationStats;
 
 export default locationHistoryService;

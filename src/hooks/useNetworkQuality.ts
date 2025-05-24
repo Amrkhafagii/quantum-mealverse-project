@@ -50,8 +50,9 @@ export function useNetworkQuality(): NetworkQualityResult {
         }
         
         setQuality(detectedQuality);
-        // Fix: Check against all low quality values properly
-        setIsLowQuality(detectedQuality === 'low' || detectedQuality === 'offline' || detectedQuality === 'poor' || detectedQuality === 'very-poor');
+        // Fixed: Check against all possible low quality values
+        const lowQualityValues: NetworkQuality[] = ['low', 'offline', 'poor', 'very-poor'];
+        setIsLowQuality(lowQualityValues.includes(detectedQuality));
         
         return detectedQuality;
       }
