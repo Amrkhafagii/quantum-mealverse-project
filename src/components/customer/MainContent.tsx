@@ -1,4 +1,3 @@
-
 import React, { Suspense, memo, useMemo } from 'react';
 import { MealType } from '@/types/meal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -135,6 +134,20 @@ export const MainContent: React.FC<MainContentProps> = memo(({
     [nearbyRestaurants]
   );
 
+  // Convert unknown error to Error type or null
+  const processedError = useMemo(() => {
+    if (!error) return null;
+    if (error instanceof Error) return error;
+    if (typeof error === 'string') {
+      const err = new Error(error);
+      err.name = 'CustomerError';
+      return err;
+    }
+    const err = new Error('An unknown error occurred');
+    err.name = 'UnknownError';
+    return err;
+  }, [error]);
+
   console.log('MainContent rendering with:', {
     isMapView,
     menuItemsCount: menuItems?.length,
@@ -144,8 +157,8 @@ export const MainContent: React.FC<MainContentProps> = memo(({
   });
 
   // Show error state if there's an error and not loading
-  if (error && !isLoading) {
-    return <ErrorAlert error={error} />;
+  if (processedError && !isLoading) {
+    return <ErrorAlert error={processedError} />;
   }
 
   // Optimized loading state - only show spinner during meaningful loading
@@ -198,9 +211,8 @@ export const MainContent: React.FC<MainContentProps> = memo(({
             <CustomerMealGrid 
               menuItems={menuItems}
               isLoading={isLoading}
-              error={error}
+              error={processedError}
               onLocationRequest={onLocationRequest}
-              hasRestaurants={nearbyRestaurants.length > 0}
             />
           </motion.div>
         )}
