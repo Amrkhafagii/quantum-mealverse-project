@@ -38,15 +38,15 @@ export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurant
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {restaurants.map((restaurant, index) => (
             <div 
-              key={restaurant.id || index}
+              key={restaurant.restaurant_id || index}
               className="border border-gray-600/30 rounded-lg p-4 bg-gray-800/30 hover:bg-gray-700/30 transition-colors"
             >
-              <h4 className="font-semibold text-white mb-2">{restaurant.name}</h4>
+              <h4 className="font-semibold text-white mb-2">{restaurant.restaurant_name}</h4>
               
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-gray-300">
                   <MapPin className="w-4 h-4" />
-                  <span>{restaurant.distance ? `${restaurant.distance.toFixed(1)} km away` : 'Distance unknown'}</span>
+                  <span>{restaurant.distance_km ? `${restaurant.distance_km.toFixed(1)} km away` : 'Distance unknown'}</span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-gray-300">
