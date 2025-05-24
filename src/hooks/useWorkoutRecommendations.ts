@@ -41,8 +41,8 @@ export function useWorkoutRecommendations() {
     if (!user) return;
     
     try {
-      // For now, create some sample recommendations until the database function is available
-      const sampleRecommendations = [
+      // Create sample recommendations with all required properties
+      const sampleRecommendations: Omit<WorkoutRecommendation, 'id' | 'created_at' | 'updated_at'>[] = [
         {
           user_id: user.id,
           title: "Increase Your Cardio",
