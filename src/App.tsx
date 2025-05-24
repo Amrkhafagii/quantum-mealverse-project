@@ -11,7 +11,7 @@ import { ResponsiveProvider } from './contexts/ResponsiveContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Import all page components
-import Home from './pages/Home';
+import Index from './pages/Index';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
@@ -57,8 +57,8 @@ function App() {
               <CartProvider>
                 <Router>
                   <Routes>
-                    {/* Main routes */}
-                    <Route path="/" element={<Home />} />
+                    {/* Main routes - using Index instead of Home */}
+                    <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/auth" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />

@@ -18,8 +18,8 @@ const CustomerPage = () => {
   // Get nearby restaurants data
   const { nearbyRestaurants, loading: isLoadingRestaurants } = useNearestRestaurant();
   
-  // Get menu items data
-  const { data: menuItems, isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems({});
+  // Get menu items data - pass the nearbyRestaurants array instead of empty object
+  const { data: menuItems, isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems(nearbyRestaurants || []);
 
   const handleLogout = async () => {
     try {
