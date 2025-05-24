@@ -10,7 +10,7 @@ import { useMapView } from '@/contexts/MapViewContext';
 import { TrackingMode } from '@/utils/trackingModeCalculator';
 import { DeliveryLocation } from '@/types/location';
 
-interface DeliveryLocationControlsProps {
+export interface DeliveryLocationControlsProps {
   className?: string;
   showAccuracy?: boolean;
   showBatteryOptimization?: boolean;

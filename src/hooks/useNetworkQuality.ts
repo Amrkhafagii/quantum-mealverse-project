@@ -1,20 +1,24 @@
 
 import { useState, useEffect } from 'react';
 import { getNetworkInfo, monitorNetworkQuality } from '@/utils/networkInfoUtils';
-import { NetworkType } from '@/types/unifiedLocation';
+import { NetworkType, NetworkQuality, NetworkMetrics } from '@/types/unifiedLocation';
 
 interface NetworkQualityOptions {
   monitorChanges?: boolean;
   updateInterval?: number; // milliseconds
 }
 
-interface NetworkQualityResult {
-  quality: 'high' | 'medium' | 'low' | 'offline';
+export interface NetworkQualityResult {
+  quality: NetworkQuality;
   isLowQuality: boolean;
   isOffline: boolean;
   networkType: NetworkType;
   latency?: number; // milliseconds
   bandwidth?: number; // Mbps
+  hasTransitioned?: boolean;
+  isFlaky?: boolean;
+  metrics?: NetworkMetrics;
+  checkQuality?: () => Promise<NetworkQuality>;
 }
 
 export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQualityResult {
@@ -23,12 +27,15 @@ export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQ
     updateInterval = 30000
   } = options;
   
-  const [quality, setQuality] = useState<'high' | 'medium' | 'low' | 'offline'>('medium');
+  const [quality, setQuality] = useState<NetworkQuality>('medium');
   const [isLowQuality, setIsLowQuality] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
   const [networkType, setNetworkType] = useState<NetworkType>('unknown');
   const [latency, setLatency] = useState<number | undefined>(undefined);
   const [bandwidth, setBandwidth] = useState<number | undefined>(undefined);
+  const [hasTransitioned, setHasTransitioned] = useState<boolean>(false);
+  const [isFlaky, setIsFlaky] = useState<boolean>(false);
+  const [metrics, setMetrics] = useState<NetworkMetrics | undefined>(undefined);
   
   // Update network quality information
   const updateNetworkQuality = () => {
@@ -45,7 +52,7 @@ export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQ
       setQuality('offline');
       setIsLowQuality(true);
     } else {
-      let newQuality: 'high' | 'medium' | 'low' = 'medium';
+      let newQuality: NetworkQuality = 'medium';
       
       switch (info.type) {
         case 'wifi':
@@ -81,8 +88,22 @@ export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQ
       if (conn) {
         if (conn.downlink) setBandwidth(conn.downlink);
         if (conn.rtt) setLatency(conn.rtt);
+        
+        // Update metrics
+        setMetrics({
+          latency: conn.rtt || 0,
+          bandwidth: conn.downlink || 0,
+          connectionType: info.type,
+          effectiveType: conn.effectiveType
+        });
       }
     }
+  };
+  
+  // Check quality method for components
+  const checkQuality = async (): Promise<NetworkQuality> => {
+    updateNetworkQuality();
+    return quality;
   };
   
   // Initial update and setup monitoring
@@ -95,7 +116,18 @@ export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQ
     if (monitorChanges) {
       // Monitor network changes using event listeners
       cleanup = monitorNetworkQuality(() => {
+        const prevQuality = quality;
         updateNetworkQuality();
+        
+        // Set transition flag if quality changed
+        if (prevQuality !== quality) {
+          setHasTransitioned(true);
+          
+          // Reset after a delay
+          setTimeout(() => {
+            setHasTransitioned(false);
+          }, 5000);
+        }
       });
       
       // Periodically check for more subtle changes
@@ -116,6 +148,10 @@ export function useNetworkQuality(options: NetworkQualityOptions = {}): NetworkQ
     isOffline,
     networkType,
     latency,
-    bandwidth
+    bandwidth,
+    hasTransitioned,
+    isFlaky,
+    metrics,
+    checkQuality
   };
 }

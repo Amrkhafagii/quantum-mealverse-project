@@ -37,12 +37,12 @@ export function useIntelligentTracking({
   const locationService = useDeliveryLocationService();
   
   // Extract only the properties we need
-  const location = locationService.location;
+  const location = locationService.lastLocation;
   const isTracking = locationService.isTracking || false;
   
   // Define wrapper methods for location tracking
   const updateLocation = async () => {
-    const result = await locationService.updateLocation?.();
+    const result = await locationService.refreshLocation?.();
     if (result && onLocationUpdate) {
       onLocationUpdate(result);
       setCurrentLocation(result);

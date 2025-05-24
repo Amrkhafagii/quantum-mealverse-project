@@ -11,6 +11,8 @@ export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt';
 
 export type NetworkType = 'wifi' | 'cellular' | '4g' | '5g' | '3g' | '2g' | 'unknown' | 'none';
 
+export type NetworkQuality = 'high' | 'medium' | 'low' | 'offline' | 'poor' | 'very-poor' | 'fair' | 'excellent' | 'good' | 'unknown';
+
 export interface NetworkInfo {
   type: NetworkType;
   connected: boolean;
@@ -89,6 +91,9 @@ export interface NetworkMetrics {
   bandwidth: number;
   connectionType: NetworkType;
   signalStrength?: number;
+  jitter?: number;
+  packetLoss?: number;
+  effectiveType?: string;
 }
 
 export type LocationType = 'user' | 'restaurant' | 'driver' | 'customer' | 'order' | 'delivery' | 'unknown';

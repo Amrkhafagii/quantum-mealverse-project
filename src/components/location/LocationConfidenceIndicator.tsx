@@ -110,13 +110,6 @@ export function LocationConfidenceIndicator({
               <span className="font-medium">{location.accuracy.toFixed(1)}m</span>
             </div>
           )}
-          
-          {location.networkInfo?.type && (
-            <div className="flex justify-between">
-              <span>Network:</span>
-              <span className="font-medium">{location.networkInfo.type}</span>
-            </div>
-          )}
         </div>
       )}
     </div>

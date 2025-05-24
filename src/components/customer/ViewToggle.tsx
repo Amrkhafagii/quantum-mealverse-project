@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import MapViewToggle from '@/components/location/MapViewToggle';
 import { LocationStatusIndicator } from '@/components/location/LocationStatusIndicator';
+import { TrackingMode } from '@/utils/trackingModeCalculator';
 
 interface ViewToggleProps {
   isMapView: boolean;
@@ -24,7 +25,12 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({
       transition={{ delay: 0.3 }}
     >
       <div className="flex items-center gap-2">
-        <LocationStatusIndicator showTooltip={true} />
+        <LocationStatusIndicator 
+          showTooltip={true}
+          accuracy={50} 
+          trackingMode={'medium' as TrackingMode} 
+          isTracking={true} 
+        />
         <MapViewToggle isMapView={isMapView} onToggle={onToggle} />
       </div>
     </motion.div>

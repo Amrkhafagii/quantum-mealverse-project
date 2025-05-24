@@ -1,18 +1,18 @@
 
-import { UnifiedLocation, ConfidenceScore, LocationSource, NetworkType } from '@/types/unifiedLocation';
+import { UnifiedLocation, ConfidenceScore, LocationSource } from '@/types/unifiedLocation';
 
 // Source confidence scores (0-100)
 const SOURCE_CONFIDENCE: Record<LocationSource, number> = {
   'gps': 90,
-  'network': 60,
-  'wifi': 70,
-  'passive': 40,
-  'manual': 50,
-  'cached': 30,
-  'unknown': 10
+  'network': 70,
+  'passive': 50,
+  'manual': 80,
+  'cached': 40,
+  'unknown': 30,
+  'wifi': 80
 };
 
-// Calculate confidence score based on multiple factors
+// Function to calculate confidence score for a location
 export function calculateLocationConfidence(location: UnifiedLocation): ConfidenceScore {
   if (!location) {
     return {
@@ -24,28 +24,28 @@ export function calculateLocationConfidence(location: UnifiedLocation): Confiden
     };
   }
   
-  // Calculate accuracy confidence (0-100)
-  const accuracyScore = calculateAccuracyConfidence(location.accuracy);
+  // Calculate accuracy score (0-100)
+  const accuracyScore = calculateAccuracyScore(location.accuracy);
   
-  // Calculate recency confidence (0-100)
-  const recencyScore = calculateRecencyConfidence(location.timestamp);
+  // Calculate recency score (0-100)
+  const recencyScore = calculateRecencyScore(location.timestamp);
   
-  // Calculate source confidence (0-100)
-  const sourceScore = calculateSourceConfidence(location.source);
+  // Calculate source score (0-100)
+  const sourceScore = calculateSourceScore(location.source);
   
-  // Calculate network quality confidence (0-100)
-  const networkScore = calculateNetworkConfidence(location);
+  // Calculate network score (0-100)
+  const networkScore = 70; // Default medium confidence
   
-  // Overall confidence is weighted average
+  // Calculate overall score (weighted average)
   const overall = Math.round(
-    (accuracyScore * 0.35) + 
-    (recencyScore * 0.30) + 
-    (sourceScore * 0.25) + 
-    (networkScore * 0.10)
+    accuracyScore * 0.4 +
+    recencyScore * 0.3 +
+    sourceScore * 0.2 +
+    networkScore * 0.1
   );
   
   return {
-    overall: Math.min(100, Math.max(0, overall)),
+    overall,
     accuracy: accuracyScore,
     recency: recencyScore,
     source: sourceScore,
@@ -53,71 +53,43 @@ export function calculateLocationConfidence(location: UnifiedLocation): Confiden
   };
 }
 
-// Calculate confidence based on accuracy
-function calculateAccuracyConfidence(accuracy?: number): number {
+// Calculate accuracy score based on accuracy in meters
+function calculateAccuracyScore(accuracy: number | undefined): number {
   if (accuracy === undefined) return 0;
   
-  if (accuracy < 10) return 100;
-  if (accuracy < 50) return 80;
-  if (accuracy < 100) return 60;
-  if (accuracy < 500) return 40;
-  if (accuracy < 1000) return 20;
-  return 10;
+  // Higher accuracy (lower number) should result in higher score
+  if (accuracy < 10) return 100;   // Extremely accurate
+  if (accuracy < 25) return 90;    // Very accurate
+  if (accuracy < 50) return 80;    // Accurate
+  if (accuracy < 100) return 70;   // Moderately accurate
+  if (accuracy < 500) return 50;   // Somewhat accurate
+  if (accuracy < 1000) return 30;  // Not very accurate
+  
+  return 10; // Poor accuracy
 }
 
-// Calculate confidence based on timestamp recency
-function calculateRecencyConfidence(timestamp: number): number {
-  const ageInSeconds = (Date.now() - timestamp) / 1000;
+// Calculate recency score based on timestamp
+function calculateRecencyScore(timestamp: number): number {
+  const now = Date.now();
+  const ageInSeconds = (now - timestamp) / 1000;
   
-  if (ageInSeconds < 5) return 100;
-  if (ageInSeconds < 30) return 90;
-  if (ageInSeconds < 60) return 80;
-  if (ageInSeconds < 300) return 60;
-  if (ageInSeconds < 900) return 40;
-  if (ageInSeconds < 3600) return 20;
-  return 10;
+  // More recent locations should have higher scores
+  if (ageInSeconds < 10) return 100;    // Almost real-time
+  if (ageInSeconds < 30) return 95;     // Very recent
+  if (ageInSeconds < 60) return 90;     // Less than a minute old
+  if (ageInSeconds < 300) return 80;    // Less than 5 minutes old
+  if (ageInSeconds < 600) return 70;    // Less than 10 minutes old
+  if (ageInSeconds < 1800) return 50;   // Less than 30 minutes old
+  if (ageInSeconds < 3600) return 30;   // Less than an hour old
+  if (ageInSeconds < 7200) return 20;   // Less than 2 hours old
+  
+  return 10; // Old data
 }
 
-// Calculate confidence based on location source
-function calculateSourceConfidence(source?: LocationSource): number {
-  if (!source || !(source in SOURCE_CONFIDENCE)) return 10;
-  return SOURCE_CONFIDENCE[source];
-}
-
-// Calculate confidence based on network status
-function calculateNetworkConfidence(location: UnifiedLocation): number {
-  // Default confidence if no network info
-  if (!location.networkInfo) return 50;
-  
-  // Base score on connection status
-  let score = location.networkInfo.connected ? 80 : 30;
-  
-  // Adjust based on connection type
-  if (location.networkInfo && location.networkInfo.type) {
-    switch (location.networkInfo.type) {
-      case '5g': 
-        score += 20;
-        break;
-      case '4g':
-      case 'wifi':
-        score += 15;
-        break;
-      case '3g':
-        score += 5;
-        break;
-      case '2g':
-        score -= 10;
-        break;
-      case 'none':
-        score = 10;
-        break;
-      default:
-        // No adjustment
-        break;
-    }
-  }
-  
-  return Math.min(100, Math.max(0, score));
+// Calculate source score based on the source of the location data
+function calculateSourceScore(source: LocationSource | undefined): number {
+  if (!source) return SOURCE_CONFIDENCE.unknown;
+  return SOURCE_CONFIDENCE[source] || 30; // Default to low confidence if source is unknown
 }
 
 // Get confidence category based on score
@@ -125,26 +97,36 @@ export function getConfidenceCategory(score: number): 'high' | 'medium' | 'low' 
   if (score >= 80) return 'high';
   if (score >= 60) return 'medium';
   if (score >= 40) return 'low';
-  if (score >= 10) return 'very-low';
+  if (score >= 20) return 'very-low';
   return 'unknown';
 }
 
-// Get human-readable location quality description
+// Get a readable description of location quality
 export function getLocationQualityDescription(location: UnifiedLocation): string {
   const confidence = calculateLocationConfidence(location);
-  const category = getConfidenceCategory(confidence.overall);
+  const confidenceCategory = getConfidenceCategory(confidence.overall);
   
-  switch (category) {
+  switch (confidenceCategory) {
     case 'high':
-      return 'High accuracy location';
+      return 'High-confidence location';
     case 'medium':
-      return 'Moderate accuracy location';
+      return 'Medium-confidence location';
     case 'low':
-      return 'Low accuracy location';
+      return 'Low-confidence location';
     case 'very-low':
-      return 'Very low accuracy location';
+      return 'Very low confidence location';
     case 'unknown':
     default:
       return 'Unknown location quality';
   }
+}
+
+// Check if location is fresh enough for the given use case
+export function isLocationFresh(location: UnifiedLocation, maxAgeSeconds = 300): boolean {
+  if (!location || !location.timestamp) return false;
+  
+  const now = Date.now();
+  const ageInSeconds = (now - location.timestamp) / 1000;
+  
+  return ageInSeconds <= maxAgeSeconds;
 }

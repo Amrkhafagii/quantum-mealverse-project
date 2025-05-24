@@ -1,5 +1,5 @@
 
-import { NetworkQuality } from '@/hooks/useNetworkQuality';
+import { NetworkQuality } from '@/types/unifiedLocation';
 
 export interface NetworkMetrics {
   latency: number | null;

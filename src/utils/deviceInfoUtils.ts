@@ -1,5 +1,21 @@
 
-import { DeviceInfo, Platform } from '@/types/unifiedLocation';
+import { UnifiedLocation } from '@/types/unifiedLocation';
+
+// Define DeviceInfo interface
+export interface DeviceInfo {
+  platform: string;
+  model?: string;
+  manufacturer?: string;
+  version?: string;
+  uuid?: string;
+}
+
+// Define Platform interface
+export interface Platform {
+  os: string;
+  version: string;
+  isNative: boolean;
+}
 
 // Get device information
 export function getDeviceInfo(): DeviceInfo {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { InfoIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface GoogleMapsKeyFormProps {
+export interface GoogleMapsKeyFormProps {
   className?: string;
   variant?: 'default' | 'compact' | 'inline';
   onKeySubmit?: (success: boolean) => void;

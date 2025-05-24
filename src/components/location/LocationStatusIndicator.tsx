@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export type AccuracyLevel = 'high' | 'medium' | 'low' | 'unknown';
 
-interface LocationStatusIndicatorProps {
+export interface LocationStatusIndicatorProps {
   accuracy?: number;
   trackingMode: TrackingMode;
   isTracking: boolean;
