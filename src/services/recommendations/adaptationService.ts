@@ -15,22 +15,26 @@ export interface WorkoutAdaptation {
 }
 
 export const createWorkoutAdaptation = async (adaptation: Omit<WorkoutAdaptation, 'id' | 'created_at'>) => {
-  const { data, error } = await supabase
-    .from('workout_adaptations')
-    .insert(adaptation)
-    .select()
-    .single();
+  // Use rpc function to insert into custom table
+  const { data, error } = await supabase.rpc('insert_workout_adaptation', {
+    p_user_id: adaptation.user_id,
+    p_workout_plan_id: adaptation.workout_plan_id,
+    p_exercise_name: adaptation.exercise_name,
+    p_adaptation_type: adaptation.adaptation_type,
+    p_old_value: adaptation.old_value,
+    p_new_value: adaptation.new_value,
+    p_reason: adaptation.reason,
+    p_applied_at: adaptation.applied_at
+  });
 
   if (error) throw error;
   return data;
 };
 
 export const getUserAdaptations = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('workout_adaptations')
-    .select('*')
-    .eq('user_id', userId)
-    .order('applied_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_user_adaptations', {
+    p_user_id: userId
+  });
 
   if (error) throw error;
   return data as WorkoutAdaptation[];

@@ -22,15 +22,15 @@ export const fetchUserRecommendations = async (userId: string): Promise<WorkoutR
     type: item.type,
     reason: item.reason,
     confidence_score: item.confidence_score,
-    metadata: item.metadata,
+    metadata: item.metadata || {},
     suggested_at: item.suggested_at,
     applied: item.applied,
     applied_at: item.applied_at,
     dismissed: item.dismissed,
-    dismissed_at: item.dismissed_at,
-    expires_at: item.expires_at,
-    created_at: item.created_at,
-    updated_at: item.updated_at
+    dismissed_at: item.dismissed_at || '',
+    expires_at: item.expires_at || '',
+    created_at: item.created_at || '',
+    updated_at: item.updated_at || ''
   })) as WorkoutRecommendation[];
 };
 

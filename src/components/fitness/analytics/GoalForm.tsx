@@ -15,7 +15,7 @@ import { WorkoutGoal } from '@/types/fitness/analytics';
 const goalSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  goal_type: z.enum(['weight_loss', 'weight_gain', 'muscle_gain', 'strength', 'endurance', 'custom']),
+  goal_type: z.enum(['weight_loss', 'muscle_gain', 'strength', 'endurance', 'general_fitness']),
   target_value: z.number().positive().optional(),
   current_value: z.number().min(0).default(0),
   unit: z.string().optional(),
@@ -34,11 +34,10 @@ interface GoalFormProps {
 
 const GOAL_TYPES = [
   { value: 'weight_loss', label: 'Weight Loss' },
-  { value: 'weight_gain', label: 'Weight Gain' },
   { value: 'muscle_gain', label: 'Muscle Gain' },
   { value: 'strength', label: 'Strength' },
   { value: 'endurance', label: 'Endurance' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'general_fitness', label: 'General Fitness' },
 ] as const;
 
 export const GoalForm: React.FC<GoalFormProps> = ({
@@ -52,7 +51,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
     defaultValues: {
       title: initialData?.title || '',
       description: initialData?.description || '',
-      goal_type: initialData?.goal_type || 'custom',
+      goal_type: initialData?.goal_type || 'general_fitness',
       target_value: initialData?.target_value || undefined,
       current_value: initialData?.current_value || 0,
       unit: initialData?.unit || '',

@@ -31,13 +31,19 @@ export class IntelligentRecommendationEngine {
     const recoveryRecommendation = this.analyzeRecoveryPatterns(context);
     if (recoveryRecommendation) recommendations.push(recoveryRecommendation);
 
-    // Save recommendations to database
+    // Save recommendations to database using RPC
     if (recommendations.length > 0) {
-      const { error } = await supabase
-        .from('workout_recommendations')
-        .insert(recommendations);
-
-      if (error) throw error;
+      for (const rec of recommendations) {
+        await supabase.rpc('insert_workout_recommendation', {
+          p_user_id: rec.user_id,
+          p_title: rec.title,
+          p_description: rec.description,
+          p_type: rec.type,
+          p_reason: rec.reason,
+          p_confidence_score: rec.confidence_score,
+          p_metadata: rec.metadata
+        });
+      }
     }
 
     return recommendations;
@@ -59,19 +65,17 @@ export class IntelligentRecommendationEngine {
       .eq('user_id', userId)
       .gte('recorded_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-    // Get user preferences
-    const { data: userPreferences } = await supabase
-      .from('user_workout_preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    // Get user preferences (use RPC since table may not be in types yet)
+    const { data: userPreferences } = await supabase.rpc('get_user_workout_preferences', {
+      p_user_id: userId
+    });
 
     // Get fitness goals
     const { data: fitnessGoals } = await supabase
-      .from('fitness_goals')
+      .from('workout_goals')
       .select('*')
       .eq('user_id', userId)
-      .eq('status', 'active');
+      .eq('is_active', true);
 
     // Get current workout plan
     const { data: currentWorkoutPlan } = await supabase
@@ -94,8 +98,8 @@ export class IntelligentRecommendationEngine {
 
   private static analyzeWorkoutFrequency(context: RecommendationContext) {
     const { workoutHistory, userPreferences } = context;
-    const targetFrequency = userPreferences.preferred_workout_frequency || 3;
-    const actualFrequency = workoutHistory.length;
+    const targetFrequency = userPreferences?.preferred_workout_frequency || 3;
+    const actualFrequency = Array.isArray(workoutHistory) ? workoutHistory.length : 0;
     const weeklyTarget = targetFrequency;
 
     if (actualFrequency < weeklyTarget * 0.7) { // Less than 70% of target
@@ -135,6 +139,10 @@ export class IntelligentRecommendationEngine {
 
   private static analyzeMuscleGroupBalance(context: RecommendationContext) {
     const { exerciseProgress } = context;
+    
+    if (!Array.isArray(exerciseProgress) || exerciseProgress.length === 0) {
+      return null;
+    }
     
     // Categorize exercises by muscle groups
     const muscleGroups = {
@@ -186,6 +194,10 @@ export class IntelligentRecommendationEngine {
   private static analyzeProgressionPatterns(context: RecommendationContext) {
     const { exerciseProgress } = context;
     
+    if (!Array.isArray(exerciseProgress) || exerciseProgress.length === 0) {
+      return null;
+    }
+    
     // Group by exercise and check for stagnation
     const exerciseGroups = exerciseProgress.reduce((acc, record) => {
       if (!acc[record.exercise_name]) {
@@ -232,7 +244,7 @@ export class IntelligentRecommendationEngine {
   private static analyzeRecoveryPatterns(context: RecommendationContext) {
     const { workoutHistory } = context;
     
-    if (workoutHistory.length < 3) return null;
+    if (!Array.isArray(workoutHistory) || workoutHistory.length < 3) return null;
 
     // Check for consecutive workout days without rest
     const workoutDates = workoutHistory

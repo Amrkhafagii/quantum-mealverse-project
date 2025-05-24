@@ -9,26 +9,23 @@ export const submitRecommendationFeedback = async (
   rating?: number,
   comments?: string
 ) => {
-  const { error } = await supabase
-    .from('recommendation_feedback')
-    .insert({
-      user_id: userId,
-      recommendation_id: recommendationId,
-      feedback_type: feedbackType,
-      rating,
-      comments
-    });
+  // Use rpc function to insert feedback
+  const { error } = await supabase.rpc('insert_recommendation_feedback', {
+    p_user_id: userId,
+    p_recommendation_id: recommendationId,
+    p_feedback_type: feedbackType,
+    p_rating: rating,
+    p_comments: comments
+  });
 
   if (error) throw error;
 };
 
 export const getRecommendationFeedback = async (userId: string, recommendationId: string) => {
-  const { data, error } = await supabase
-    .from('recommendation_feedback')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('recommendation_id', recommendationId)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_recommendation_feedback', {
+    p_user_id: userId,
+    p_recommendation_id: recommendationId
+  });
 
   if (error) throw error;
   return data;
