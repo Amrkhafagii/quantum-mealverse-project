@@ -3,10 +3,10 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Clock, Star } from 'lucide-react';
-import { NearbyRestaurant } from '@/hooks/useNearestRestaurant';
+import { Restaurant } from '@/hooks/useRestaurantsData';
 
 interface RestaurantSummaryProps {
-  restaurants: NearbyRestaurant[];
+  restaurants: Restaurant[];
 }
 
 export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurants }) => {
@@ -17,7 +17,7 @@ export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurant
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 mb-8">
         <CardContent className="text-center py-8">
           <MapPin className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No nearby restaurants found</h3>
+          <h3 className="text-lg font-semibold mb-2">No restaurants found</h3>
           <p className="text-gray-400">
             We're working to expand our service in your area. Please check back soon!
           </p>
@@ -31,7 +31,7 @@ export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurant
       <CardHeader>
         <CardTitle className="text-quantum-cyan flex items-center gap-2">
           <MapPin className="w-5 h-5" />
-          Nearby Restaurants ({restaurants.length})
+          Available Restaurants ({restaurants.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -46,7 +46,12 @@ export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurant
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-gray-300">
                   <MapPin className="w-4 h-4" />
-                  <span>{restaurant.distance_km ? `${restaurant.distance_km.toFixed(1)} km away` : 'Distance unknown'}</span>
+                  <span>
+                    {restaurant.distance_km 
+                      ? `${restaurant.distance_km.toFixed(1)} km away` 
+                      : restaurant.restaurant_address
+                    }
+                  </span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-gray-300">
