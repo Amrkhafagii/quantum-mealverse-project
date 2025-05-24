@@ -14,7 +14,8 @@ import {
   X,
   Lightbulb,
   Activity,
-  Calendar
+  Calendar,
+  Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useWorkoutRecommendations } from '@/hooks/useWorkoutRecommendations';
@@ -42,6 +43,8 @@ export const SmartRecommendations: React.FC = () => {
         return <Calendar className="w-5 h-5" />;
       case 'difficulty_adjustment':
         return <Target className="w-5 h-5" />;
+      case 'exercise_variation':
+        return <Zap className="w-5 h-5" />;
       default:
         return <Lightbulb className="w-5 h-5" />;
     }
@@ -57,6 +60,8 @@ export const SmartRecommendations: React.FC = () => {
         return 'bg-yellow-500';
       case 'difficulty_adjustment':
         return 'bg-purple-500';
+      case 'exercise_variation':
+        return 'bg-orange-500';
       default:
         return 'bg-gray-500';
     }
@@ -88,9 +93,12 @@ export const SmartRecommendations: React.FC = () => {
             size="sm"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            Generate
           </Button>
         </div>
+        <p className="text-sm text-gray-400">
+          AI-powered workout suggestions based on your progress and goals
+        </p>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="active" className="w-full">
@@ -109,13 +117,14 @@ export const SmartRecommendations: React.FC = () => {
                 <Brain className="mx-auto h-12 w-12 text-quantum-cyan/50 mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Active Recommendations</h3>
                 <p className="text-gray-400 mb-4">
-                  Click refresh to generate personalized workout recommendations
+                  Generate personalized workout recommendations based on your data
                 </p>
                 <Button
                   onClick={generateRecommendations}
                   className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
+                  disabled={isLoading}
                 >
-                  Generate Recommendations
+                  {isLoading ? 'Generating...' : 'Generate Recommendations'}
                 </Button>
               </div>
             ) : (

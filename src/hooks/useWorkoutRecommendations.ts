@@ -6,10 +6,11 @@ import { WorkoutRecommendation, RecommendationFeedback } from '@/types/fitness/r
 import { 
   fetchUserRecommendations, 
   applyRecommendation as applyRecommendationService, 
-  dismissRecommendation as dismissRecommendationService 
+  dismissRecommendation as dismissRecommendationService,
+  generateRecommendations as generateRecommendationsService
 } from '@/services/recommendations/recommendationService';
-import { generateMockRecommendations } from '@/services/recommendations/mockRecommendationGenerator';
 import { submitRecommendationFeedback } from '@/services/recommendations/feedbackService';
+import { IntelligentRecommendationEngine } from '@/services/recommendations/intelligentRecommendationEngine';
 
 export function useWorkoutRecommendations() {
   const { user } = useAuth();
@@ -40,21 +41,33 @@ export function useWorkoutRecommendations() {
     if (!user) return;
     
     try {
-      await generateMockRecommendations(user.id);
+      // Use intelligent recommendation engine for personalized suggestions
+      await IntelligentRecommendationEngine.generatePersonalizedRecommendations(user.id);
       
       toast({
         title: "Success",
-        description: "New recommendations generated!",
+        description: "New personalized recommendations generated!",
       });
       
       fetchRecommendations();
     } catch (error) {
       console.error('Error generating recommendations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate recommendations",
-        variant: "destructive"
-      });
+      
+      // Fallback to simple recommendations
+      try {
+        await generateRecommendationsService(user.id);
+        toast({
+          title: "Success",
+          description: "New recommendations generated!",
+        });
+        fetchRecommendations();
+      } catch (fallbackError) {
+        toast({
+          title: "Error",
+          description: "Failed to generate recommendations",
+          variant: "destructive"
+        });
+      }
     }
   };
 

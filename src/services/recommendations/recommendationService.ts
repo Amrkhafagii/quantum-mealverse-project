@@ -14,24 +14,23 @@ export const fetchUserRecommendations = async (userId: string): Promise<WorkoutR
   if (error) throw error;
   
   // Map the database fields to match the WorkoutRecommendation interface
-  // Provide defaults for fields that don't exist in the database
   return (data || []).map(item => ({
     id: item.id,
     user_id: item.user_id,
-    title: item.title || 'Workout Recommendation',
-    description: item.description || null,
-    type: item.type || 'general',
-    reason: item.reason || null,
-    confidence_score: item.confidence_score || 0.5,
-    metadata: null, // Not in database schema
-    suggested_at: item.suggested_at || new Date().toISOString(),
-    applied: item.applied || false,
-    applied_at: item.applied_at || null,
-    dismissed: item.dismissed || false,
-    dismissed_at: null, // Not in database schema
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default to 7 days from now
-    created_at: null, // Not in database schema
-    updated_at: null // Not in database schema
+    title: item.title,
+    description: item.description,
+    type: item.type,
+    reason: item.reason,
+    confidence_score: item.confidence_score,
+    metadata: item.metadata,
+    suggested_at: item.suggested_at,
+    applied: item.applied,
+    applied_at: item.applied_at,
+    dismissed: item.dismissed,
+    dismissed_at: item.dismissed_at,
+    expires_at: item.expires_at,
+    created_at: item.created_at,
+    updated_at: item.updated_at
   })) as WorkoutRecommendation[];
 };
 
@@ -57,6 +56,46 @@ export const dismissRecommendation = async (recommendationId: string, userId: st
     })
     .eq('id', recommendationId)
     .eq('user_id', userId);
+
+  if (error) throw error;
+};
+
+export const generateRecommendations = async (userId: string) => {
+  // This would be called by a background service or edge function
+  // For now, let's create some sample recommendations
+  const sampleRecommendations = [
+    {
+      user_id: userId,
+      title: "Increase Your Cardio",
+      description: "Based on your recent workouts, adding more cardio could help improve your endurance.",
+      type: 'workout_plan' as const,
+      reason: "Low cardio activity detected in recent sessions",
+      confidence_score: 0.8,
+      metadata: { workout_type: 'cardio', duration: 30 }
+    },
+    {
+      user_id: userId,
+      title: "Try Upper Body Focus",
+      description: "Your lower body workouts are consistent. Let's balance with more upper body exercises.",
+      type: 'exercise_variation' as const,
+      reason: "Muscle group balance analysis",
+      confidence_score: 0.75,
+      metadata: { focus: 'upper_body', exercises: ['push_ups', 'pull_ups', 'rows'] }
+    },
+    {
+      user_id: userId,
+      title: "Progressive Overload Suggestion",
+      description: "You've been consistent with your current weights. Time to increase the challenge!",
+      type: 'progression' as const,
+      reason: "Performance plateau detected",
+      confidence_score: 0.85,
+      metadata: { suggested_increase: '5-10%' }
+    }
+  ];
+
+  const { error } = await supabase
+    .from('workout_recommendations')
+    .insert(sampleRecommendations);
 
   if (error) throw error;
 };

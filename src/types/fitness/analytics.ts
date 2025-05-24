@@ -4,12 +4,12 @@ export interface WorkoutGoal {
   user_id: string;
   title: string;
   description?: string;
-  goal_type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'strength' | 'endurance' | 'custom';
+  goal_type: 'weight_loss' | 'muscle_gain' | 'strength' | 'endurance' | 'general_fitness';
   target_value?: number;
-  current_value: number;
+  current_value?: number;
   unit?: string;
   target_date?: string;
-  is_active: boolean;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -40,7 +40,7 @@ export interface ExerciseProgress {
 export interface ProgressChartData {
   date: string;
   value: number;
-  label?: string;
+  label: string;
 }
 
 export interface WorkoutPerformanceMetrics {
