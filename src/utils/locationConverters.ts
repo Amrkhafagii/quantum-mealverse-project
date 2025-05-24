@@ -8,12 +8,12 @@ export const convertToDeliveryLocation = (unifiedLocation: UnifiedLocation): Del
     longitude: unifiedLocation.longitude,
     accuracy: unifiedLocation.accuracy,
     altitude: unifiedLocation.altitude,
-    altitudeAccuracy: unifiedLocation.altitude_accuracy,
+    altitudeAccuracy: unifiedLocation.altitudeAccuracy,
     heading: unifiedLocation.heading,
     speed: unifiedLocation.speed,
     timestamp: new Date(unifiedLocation.timestamp).getTime(),
     source: unifiedLocation.source as any,
-    isMoving: unifiedLocation.is_moving
+    isMoving: unifiedLocation.isMoving
   };
 };
 
@@ -23,12 +23,12 @@ export const convertToUnifiedLocation = (deliveryLocation: DeliveryLocation): Pa
     longitude: deliveryLocation.longitude,
     accuracy: deliveryLocation.accuracy,
     altitude: deliveryLocation.altitude,
-    altitude_accuracy: deliveryLocation.altitudeAccuracy,
+    altitudeAccuracy: deliveryLocation.altitudeAccuracy,
     heading: deliveryLocation.heading,
     speed: deliveryLocation.speed,
     timestamp: new Date(deliveryLocation.timestamp).toISOString(),
     source: deliveryLocation.source as any,
-    is_moving: deliveryLocation.isMoving,
+    isMoving: deliveryLocation.isMoving,
     location_type: 'delivery'
   };
 };

@@ -97,3 +97,51 @@ export const enhanceLocationWithAccuracy = (
     source: location.source || (config.highAccuracy ? 'gps' : 'network')
   };
 };
+
+// Add the missing exports
+export const getHighAccuracyLocation = async (): Promise<DeliveryLocation | null> => {
+  try {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location: DeliveryLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            altitude: position.coords.altitude || undefined,
+            heading: position.coords.heading || undefined,
+            speed: position.coords.speed || undefined,
+            timestamp: position.timestamp,
+            source: 'gps'
+          };
+          resolve(location);
+        },
+        (error) => {
+          reject(error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    });
+  } catch (error) {
+    console.error('Error getting high accuracy location:', error);
+    return null;
+  }
+};
+
+export const isHighAccuracyLocation = (location: DeliveryLocation | null): boolean => {
+  if (!location || !location.accuracy) {
+    return false;
+  }
+  
+  // Consider location high accuracy if accuracy is better than 50 meters
+  return location.accuracy <= 50;
+};

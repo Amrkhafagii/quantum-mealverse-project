@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -251,6 +250,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   if (showLocationPrompt) {
     return (
       <LocationPermissionsPrompt
+        onRequestPermission={requestPermission}
+        isLoading={false}
         onPermissionGranted={handlePermissionGranted}
         onPermissionDenied={handlePermissionDenied}
         onDismiss={handleDismiss}
