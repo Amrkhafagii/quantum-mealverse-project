@@ -8,6 +8,7 @@ export * from './profile';
 export * from './workouts';
 export * from './logs';
 export * from './analytics';
+export * from './recommendations';
 
 // Export scheduling types (remove duplicate WorkoutSchedule export)
 export * from './scheduling';

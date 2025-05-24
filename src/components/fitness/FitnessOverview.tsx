@@ -12,6 +12,9 @@ import UserProgressJourney from './UserProgressJourney';
 import { WorkoutGoalsManager } from './analytics/WorkoutGoalsManager';
 import { ProgressCharts } from './analytics/ProgressCharts';
 import { EnhancedWorkoutHistory } from './analytics/EnhancedWorkoutHistory';
+import { SmartRecommendations } from './recommendations/SmartRecommendations';
+import { AdaptiveDifficulty } from './recommendations/AdaptiveDifficulty';
+import { WorkoutVariations } from './recommendations/WorkoutVariations';
 import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
 
 interface FitnessOverviewProps {
@@ -119,6 +122,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="bg-quantum-darkBlue/50 mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="recommendations">Smart Recommendations</TabsTrigger>
           <TabsTrigger value="goals">Goals</TabsTrigger>
           <TabsTrigger value="progress">Progress Charts</TabsTrigger>
           <TabsTrigger value="history">Workout History</TabsTrigger>
@@ -136,6 +140,16 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             />
           </div>
           <ProgressAnalytics userId={activeUserId} />
+        </TabsContent>
+
+        <TabsContent value="recommendations" className="space-y-6">
+          <SmartRecommendations />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AdaptiveDifficulty />
+            <div className="space-y-6">
+              <WorkoutVariations />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="goals">
