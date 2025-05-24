@@ -85,26 +85,63 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     }
   }, [storedPermission, storedBackgroundPermission, storedEducationalUiShown, storedInitialPromptShown]);
 
-  // Simple fallback function using standard Capacitor Geolocation
+  // Enhanced fallback function with better web support
   const checkPermissionsWithFallback = async () => {
     try {
-      console.log('Checking permissions with standard Geolocation API');
+      // For web, use standard Geolocation API directly
+      if (!Platform.isNative()) {
+        console.log('Web environment detected, using standard Geolocation API');
+        
+        if (!navigator.geolocation) {
+          setPermissionStatus('denied');
+          setStoredPermission('denied');
+          return false;
+        }
+
+        // Check if permissions API is available (newer browsers)
+        if ('permissions' in navigator) {
+          try {
+            const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+            const status = result.state === 'granted' ? 'granted' : 
+                          result.state === 'denied' ? 'denied' : 'prompt';
+            
+            setPermissionStatus(status);
+            setStoredPermission(status);
+            setBackgroundPermissionStatus('denied'); // Web doesn't support background
+            setStoredBackgroundPermission('denied');
+            
+            console.log('Web permission status:', status);
+            return true;
+          } catch (permError) {
+            console.warn('Permissions API not fully supported, will request on first use');
+          }
+        }
+        
+        // For browsers without permissions API, assume prompt state
+        setPermissionStatus('prompt');
+        setStoredPermission('prompt');
+        setBackgroundPermissionStatus('denied');
+        setStoredBackgroundPermission('denied');
+        return true;
+      }
+
+      // For native apps, try Capacitor Geolocation
+      console.log('Native environment, checking Capacitor permissions');
       const status = await Geolocation.checkPermissions();
       const permState = status.location as LocationPermissionState;
       
       setPermissionStatus(permState);
       setStoredPermission(permState);
-      
-      // For standard API, we don't have background permission info, so set to prompt
       setBackgroundPermissionStatus('prompt');
       setStoredBackgroundPermission('prompt');
       
-      console.log('Permission check successful:', status);
+      console.log('Native permission check successful:', status);
       return true;
     } catch (error) {
       console.error('Permission check failed:', error);
-      setPermissionStatus('denied');
-      setStoredPermission('denied');
+      // Set to prompt state so user can try to request
+      setPermissionStatus('prompt');
+      setStoredPermission('prompt');
       return false;
     }
   };
@@ -113,7 +150,6 @@ export function useLocationPermission(): LocationPermissionHookResponse {
   useEffect(() => {
     const initializePermissions = async () => {
       await checkPermissionsWithFallback();
-      await getCurrentLocation();
       setHasInitialized(true);
     };
     
@@ -124,13 +160,20 @@ export function useLocationPermission(): LocationPermissionHookResponse {
   const getCurrentLocation = async () => {
     if (permissionStatus === 'granted') {
       try {
-        const position = await Geolocation.getCurrentPosition();
-        setLocation({
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
+        });
+        
+        const locationData = {
           coords: {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           }
-        });
+        };
+        
+        setLocation(locationData);
         setLastLocationUpdate(new Date());
         return position;
       } catch (error) {
@@ -140,27 +183,80 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     return null;
   };
 
-  // Request permission using standard Geolocation API
+  // Enhanced request permission with better web handling
   const requestPermission = async (): Promise<boolean> => {
+    if (isRequesting) return permissionStatus === 'granted';
+    
     setIsRequesting(true);
     setHasShownInitialPrompt(true);
     setStoredInitialPromptShown(true);
     
     try {
-      console.log('Requesting permissions with standard Geolocation API');
-      const result = await Geolocation.requestPermissions();
-      const locationState = result.location as LocationPermissionState;
-      
-      setPermissionStatus(locationState);
-      setStoredPermission(locationState);
-      
-      // If permission is granted, get location
-      if (result.location === 'granted') {
-        await getCurrentLocation();
+      if (!Platform.isNative()) {
+        // Web permission request using standard API
+        console.log('Requesting web location permission');
+        
+        if (!navigator.geolocation) {
+          setPermissionStatus('denied');
+          setStoredPermission('denied');
+          return false;
+        }
+
+        return new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              console.log('Web location permission granted');
+              setPermissionStatus('granted');
+              setStoredPermission('granted');
+              
+              // Set the location immediately
+              setLocation({
+                coords: {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude
+                }
+              });
+              setLastLocationUpdate(new Date());
+              
+              resolve(true);
+            },
+            (error) => {
+              console.log('Web location permission error:', error.code, error.message);
+              
+              if (error.code === 1) { // PERMISSION_DENIED
+                setPermissionStatus('denied');
+                setStoredPermission('denied');
+              } else {
+                setPermissionStatus('prompt');
+                setStoredPermission('prompt');
+              }
+              
+              resolve(error.code !== 1); // Return true for non-permission errors
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
+        });
+      } else {
+        // Native permission request
+        console.log('Requesting native location permission');
+        const result = await Geolocation.requestPermissions();
+        const locationState = result.location as LocationPermissionState;
+        
+        setPermissionStatus(locationState);
+        setStoredPermission(locationState);
+        
+        // If permission is granted, get location
+        if (result.location === 'granted') {
+          await getCurrentLocation();
+        }
+        
+        console.log('Native permission request result:', result);
+        return result.location === 'granted';
       }
-      
-      console.log('Permission request successful:', result);
-      return result.location === 'granted';
     } catch (error) {
       console.error('Error requesting location permission:', error);
       return false;
@@ -169,7 +265,7 @@ export function useLocationPermission(): LocationPermissionHookResponse {
     }
   };
   
-  // Request background location permission (limited on iOS)
+  // Request background location permission (only relevant for native Android)
   const requestBackgroundPermission = async (): Promise<boolean> => {
     if (permissionStatus !== 'granted') {
       console.warn('Foreground location permission must be granted before requesting background permission');
@@ -181,8 +277,9 @@ export function useLocationPermission(): LocationPermissionHookResponse {
       return false;
     }
     
-    // On Android, try to request permissions again (may include background)
-    return await requestPermission();
+    // For background permissions, we would need a more advanced plugin
+    // For now, return false as it's not implemented
+    return false;
   };
   
   // Request both foreground and background permissions (if needed)
