@@ -1,240 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Order } from '@/types/order';
-import { Store, Clock, Timer, X, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { OrderTimer } from '../status/OrderTimer';
-import { toast } from '@/hooks/use-toast';
 
 interface OrderRestaurantStatusProps {
-  order?: Order;
-  status?: string;
+  status: string;
   restaurantName?: string;
   assignmentStatus?: any;
-  isCancelling?: boolean;
-  onCancel?: () => Promise<void>;
-  orderId?: string;
-  onStatusChange?: (status: string) => void;
-  onCloseModal?: () => void;
+  isCancelling: boolean;
+  onCancel: () => void;
+  orderId: string;
 }
 
 export const OrderRestaurantStatus: React.FC<OrderRestaurantStatusProps> = ({
-  order,
   status,
   restaurantName,
   assignmentStatus,
   isCancelling,
   onCancel,
-  orderId,
-  onStatusChange,
-  onCloseModal
+  orderId
 }) => {
-  const [isTimerExpired, setIsTimerExpired] = useState(false);
-  const [timerExpiryDate, setTimerExpiryDate] = useState<Date | null>(null);
-  
-  const initialTimerDuration = 60 * 5; // 5 minutes
-  
-  // Get status either from order object or direct status prop
-  const orderStatus = order ? order.status : status;
-  
-  useEffect(() => {
-    // Set initial expiry date
-    if (order?.updated_at) {
-      const initialExpiry = new Date(order.updated_at);
-      initialExpiry.setSeconds(initialExpiry.getSeconds() + initialTimerDuration);
-      setTimerExpiryDate(initialExpiry);
-      
-      // Check if timer has already expired on mount
-      if (new Date() > initialExpiry) {
-        setIsTimerExpired(true);
-      }
-      
-      // Setup interval to check expiry every second
-      const intervalId = setInterval(() => {
-        if (timerExpiryDate && new Date() > timerExpiryDate) {
-          setIsTimerExpired(true);
-          clearInterval(intervalId);
+  const getStatusContent = () => {
+    switch (status) {
+      case 'pending':
+      case 'awaiting_restaurant':
+        if (assignmentStatus?.restaurant_name) {
+          return {
+            icon: <CheckCircle className="w-8 h-8 text-green-500" />,
+            title: "Restaurant Found!",
+            description: `${assignmentStatus.restaurant_name} will prepare your order`,
+            color: "border-green-500/20 bg-green-500/10",
+            showActions: false
+          };
         }
-      }, 1000);
-      
-      return () => clearInterval(intervalId);
-    }
-  }, [order?.updated_at, initialTimerDuration, timerExpiryDate]);
-  
-  const handleTimerExpire = () => {
-    setIsTimerExpired(true);
-  };
-  
-  const handleExtendTimer = () => {
-    const extendedExpiry = new Date();
-    extendedExpiry.setSeconds(extendedExpiry.getSeconds() + initialTimerDuration);
-    setTimerExpiryDate(extendedExpiry);
-    setIsTimerExpired(false);
-    
-    toast({
-      title: "Timer Extended",
-      description: "You have extended the restaurant's response time",
-    });
-  };
-  
-  const handleCancelOrder = async () => {
-    if (onCancel) {
-      await onCancel();
-    }
-    
-    if (onStatusChange) {
-      onStatusChange('cancelled');
-    }
-    
-    toast({
-      title: "Order Cancelled",
-      description: "Your order has been cancelled",
-    });
-    
-    if (onCloseModal) {
-      onCloseModal();
+        
+        if (assignmentStatus?.error || assignmentStatus?.status === 'no_restaurants_available') {
+          return {
+            icon: <AlertCircle className="w-8 h-8 text-yellow-500" />,
+            title: "Looking for Restaurants",
+            description: "We're having trouble finding available restaurants in your area. Our team is working to resolve this.",
+            color: "border-yellow-500/20 bg-yellow-500/10",
+            showActions: true
+          };
+        }
+        
+        return {
+          icon: <Loader2 className="w-8 h-8 text-quantum-cyan animate-spin" />,
+          title: "Finding Your Restaurant",
+          description: "We're looking for the best restaurant to prepare your order...",
+          color: "border-quantum-cyan/20 bg-quantum-cyan/10",
+          showActions: true
+        };
+        
+      case 'no_restaurant_accepted':
+        return {
+          icon: <XCircle className="w-8 h-8 text-red-500" />,
+          title: "Restaurant Assignment Issue",
+          description: "We're having difficulty assigning your order to a restaurant. Please contact support for assistance.",
+          color: "border-red-500/20 bg-red-500/10",
+          showActions: true
+        };
+        
+      default:
+        if (restaurantName) {
+          return {
+            icon: <CheckCircle className="w-8 h-8 text-green-500" />,
+            title: "Restaurant Assigned",
+            description: `${restaurantName} is preparing your order`,
+            color: "border-green-500/20 bg-green-500/10",
+            showActions: false
+          };
+        }
+        
+        return {
+          icon: <Clock className="w-8 h-8 text-blue-500" />,
+          title: "Order Processing",
+          description: "Your order is being processed",
+          color: "border-blue-500/20 bg-blue-500/10",
+          showActions: false
+        };
     }
   };
 
+  const statusContent = getStatusContent();
+
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/30">
+    <Card className={`${statusContent.color} border-2`}>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Store className="mr-2 h-5 w-5 text-quantum-cyan" /> 
-            Restaurant Status
-          </div>
-          {(!isTimerExpired && orderStatus === 'pending') && (
-            <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
-              <Clock className="mr-1 h-3 w-3" /> Awaiting Response
+        <CardTitle className="flex items-center gap-3">
+          {statusContent.icon}
+          <div>
+            <h3 className="text-lg font-semibold">{statusContent.title}</h3>
+            <Badge variant="outline" className="mt-1">
+              Order #{orderId.substring(0, 8)}
             </Badge>
-          )}
+          </div>
         </CardTitle>
-        <CardDescription>
-          {(order?.restaurant?.name || restaurantName || 'Restaurant')} needs to confirm your order
-        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {orderStatus === 'pending' && (
-            <>
-              {isTimerExpired ? (
-                <div className="bg-amber-500/20 rounded-md p-3 text-amber-200">
-                  <div className="flex items-center mb-2">
-                    <AlertTriangle className="mr-2 h-5 w-5 text-amber-400" />
-                    <span className="font-medium">Restaurant Response Time Exceeded</span>
-                  </div>
-                  <p className="text-sm opacity-80">
-                    The restaurant hasn't responded to your order yet. You can choose to wait longer or try another restaurant.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-amber-500/50 text-amber-200 hover:bg-amber-500/20"
-                      onClick={handleExtendTimer}
-                    >
-                      <Timer className="mr-1 h-4 w-4" />
-                      Wait Longer
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-red-500/50 text-red-300 hover:bg-red-500/20"
-                      onClick={handleCancelOrder}
-                      disabled={isCancelling}
-                    >
-                      <X className="mr-1 h-4 w-4" />
-                      {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-                    </Button>
-                  </div>
-                </div>
+        <p className="text-gray-300 mb-4">{statusContent.description}</p>
+        
+        {statusContent.showActions && (
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={onCancel}
+              disabled={isCancelling}
+              className="border-red-500/50 text-red-300 hover:bg-red-500/20"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
               ) : (
-                order?.updated_at && timerExpiryDate && (
-                  <OrderTimer 
-                    updatedAt={order.updated_at} 
-                    expiresAt={timerExpiryDate} 
-                    orderId={order.id || orderId || ''} 
-                    onTimerExpire={handleTimerExpire}
-                  />
-                )
+                'Cancel Order'
               )}
-            </>
-          )}
-          
-          {orderStatus === 'confirmed' && (
-            <div className="bg-green-500/10 rounded-md p-3 text-green-300">
-              <div className="flex items-center mb-2">
-                <Clock className="mr-2 h-5 w-5 text-green-400" />
-                <span className="font-medium">Order Confirmed</span>
-              </div>
-              <p className="text-sm opacity-80">
-                Your order has been confirmed and is being prepared.
-              </p>
-            </div>
-          )}
-          
-          {orderStatus === 'preparing' && (
-            <div className="bg-blue-500/10 rounded-md p-3 text-blue-300">
-              <div className="flex items-center mb-2">
-                <Clock className="mr-2 h-5 w-5 text-blue-400" />
-                <span className="font-medium">Preparing Order</span>
-              </div>
-              <p className="text-sm opacity-80">
-                Your order is being prepared by the restaurant.
-              </p>
-            </div>
-          )}
-          
-          {orderStatus === 'ready' && (
-            <div className="bg-purple-500/10 rounded-md p-3 text-purple-300">
-              <div className="flex items-center mb-2">
-                <Clock className="mr-2 h-5 w-5 text-purple-400" />
-                <span className="font-medium">Order Ready</span>
-              </div>
-              <p className="text-sm opacity-80">
-                Your order is ready for pickup or is awaiting delivery.
-              </p>
-            </div>
-          )}
-          
-          {orderStatus === 'out_for_delivery' && (
-            <div className="bg-orange-500/10 rounded-md p-3 text-orange-300">
-              <div className="flex items-center mb-2">
-                <Clock className="mr-2 h-5 w-5 text-orange-400" />
-                <span className="font-medium">Out for Delivery</span>
-              </div>
-              <p className="text-sm opacity-80">
-                Your order is out for delivery.
-              </p>
-            </div>
-          )}
-          
-          {orderStatus === 'delivered' && (
-            <div className="bg-green-500/10 rounded-md p-3 text-green-300">
-              <div className="flex items-center mb-2">
-                <Clock className="mr-2 h-5 w-5 text-green-400" />
-                <span className="font-medium">Delivered</span>
-              </div>
-              <p className="text-sm opacity-80">
-                Your order has been delivered.
-              </p>
-            </div>
-          )}
-          
-          {orderStatus === 'cancelled' && (
-            <div className="bg-red-500/10 rounded-md p-3 text-red-300">
-              <div className="flex items-center mb-2">
-                <Clock className="mr-2 h-5 w-5 text-red-400" />
-                <span className="font-medium">Cancelled</span>
-              </div>
-              <p className="text-sm opacity-80">
-                This order has been cancelled.
-              </p>
-            </div>
-          )}
-        </div>
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="border-quantum-cyan/50 text-quantum-cyan hover:bg-quantum-cyan/20"
+            >
+              Refresh Status
+            </Button>
+          </div>
+        )}
+        
+        {status === 'no_restaurant_accepted' && (
+          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-sm text-blue-300">
+              <strong>What happens next?</strong> Our team will manually assign your order to a restaurant and contact you with an update within 15 minutes.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
