@@ -78,6 +78,9 @@ export interface IMapService {
   geocodeReverse(lat: number, lng: number): Promise<string | null>;
 }
 
+// Re-export MapServiceFactory from the factory file
+export { MapServiceFactory } from './MapServiceFactory';
+
 // Helper function to get accuracy level from location
 export function getAccuracyLevelFromLocation(location: any): 'high' | 'medium' | 'low' | 'unknown' {
   if (!location || !location.accuracy) return 'unknown';

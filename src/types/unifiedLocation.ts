@@ -5,7 +5,7 @@
 
 export type LocationFreshness = 'invalid' | 'fresh' | 'stale' | 'moderate' | 'expired';
 
-export type LocationSource = 'gps' | 'network' | 'passive' | 'manual' | 'cached' | 'wifi' | 'cell' | 'unknown';
+export type LocationSource = 'gps' | 'network' | 'passive' | 'manual' | 'cached' | 'wifi' | 'cell' | 'unknown' | 'fusion';
 
 export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt';
 
@@ -42,7 +42,7 @@ export interface UnifiedLocation {
   altitudeAccuracy?: number | null;
   heading?: number | null;
   speed?: number | null;
-  timestamp: number;
+  timestamp: number | string;
   source?: LocationSource;
   id?: string;
   networkInfo?: NetworkInfo;
@@ -96,16 +96,18 @@ export interface LocationPrivacySettings {
   automaticallyAnonymize?: boolean;
   collectDeviceInfo?: boolean;
   allowPreciseLocation?: boolean;
+  allowBackgroundTracking?: boolean;
   precisionLevel?: number | string;
   retentionDays?: number; // Alias for retentionPeriodDays for backward compatibility
 }
 
 export interface NetworkMetrics {
-  latency: number;
-  bandwidth?: number;
-  jitter?: number;
-  packetLoss?: number;
+  latency: number | null;
+  bandwidth?: number | null;
+  jitter?: number | null;
+  packetLoss?: number | null;
   effectiveType?: string;
+  connectionType?: string;
 }
 
 export type LocationType = 'user' | 'restaurant' | 'driver' | 'customer' | 'order' | 'delivery' | 'unknown';

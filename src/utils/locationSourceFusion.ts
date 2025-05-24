@@ -71,7 +71,9 @@ export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | n
     }
     
     // Keep the most recent timestamp
-    const timestamp = new Date(location.timestamp).getTime();
+    const timestamp = typeof location.timestamp === 'string' 
+      ? new Date(location.timestamp).getTime()
+      : location.timestamp;
     if (timestamp > mostRecentTimestamp) {
       mostRecentTimestamp = timestamp;
     }
@@ -83,7 +85,7 @@ export function fuseLocations(locations: UnifiedLocation[]): UnifiedLocation | n
     longitude: weightedLng / totalWeight,
     accuracy: bestAccuracy !== Number.MAX_VALUE ? bestAccuracy : undefined,
     timestamp: new Date(mostRecentTimestamp).toISOString(),
-    source: 'fusion',
+    source: 'fusion' as any,
   };
   
   return fusedLocation;

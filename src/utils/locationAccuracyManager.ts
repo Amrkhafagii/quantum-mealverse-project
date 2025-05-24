@@ -1,3 +1,4 @@
+
 import { DeliveryLocation, LocationSource } from '@/types/location';
 import { capacitorGeolocation } from './capacitorGeolocation';
 import { UnifiedLocation } from '@/types/unifiedLocation';
@@ -9,6 +10,43 @@ let webWarmupStartTime = 0;
 let webWarmupFixCount = 0;
 const WEB_WARMUP_THRESHOLD_COUNT = 3;
 const WEB_WARMUP_TIMEOUT_MS = 15000; // 15 seconds max for warmup
+
+// Add missing method to capacitor stub
+const enhancedCapacitorGeolocation = {
+  ...capacitorGeolocation,
+  getCapacitorLocation: async (): Promise<DeliveryLocation | null> => {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        return null;
+      }
+      
+      // Fallback to browser geolocation
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+      
+      return {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        altitude: position.coords.altitude,
+        altitudeAccuracy: position.coords.altitudeAccuracy,
+        heading: position.coords.heading,
+        speed: position.coords.speed,
+        timestamp: position.timestamp,
+        source: 'gps',
+        isMoving: false
+      };
+    } catch (error) {
+      console.error('Error getting capacitor location:', error);
+      return null;
+    }
+  }
+};
 
 /**
  * Attempts to get the most accurate location using multiple high-accuracy sources
@@ -39,7 +77,7 @@ export const getHighAccuracyLocation = async (): Promise<DeliveryLocation | null
   try {
     // Try Capacitor Geolocation first (for native apps)
     if ((window as any).Capacitor) {
-      const capacitorLocation = await capacitorGeolocation.getCapacitorLocation();
+      const capacitorLocation = await enhancedCapacitorGeolocation.getCapacitorLocation();
       
       if (capacitorLocation) {
         logLocationDebug('high-accuracy-location-result', { 
@@ -109,7 +147,8 @@ export const getHighAccuracyLocation = async (): Promise<DeliveryLocation | null
       speed: position.coords.speed || undefined,
       altitude: position.coords.altitude || undefined,
       heading: position.coords.heading !== null ? position.coords.heading : undefined,
-      source: 'gps'
+      source: 'gps',
+      isMoving: false
     };
     
     logLocationDebug('high-accuracy-location-result', { 
@@ -202,7 +241,7 @@ const mapLocationSource = (source: LocationSource): 'gps' | 'wifi' | 'network' |
       return 'gps';
     case 'wifi':
       return 'wifi';
-    case 'cell':
+    case 'network':
       return 'network';
     case 'manual':
       return 'manual';
