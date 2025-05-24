@@ -107,7 +107,7 @@ export class PerformanceOptimizer {
       // Check for memory constraints
       if (typeof window !== 'undefined' && 'deviceMemory' in navigator) {
         // @ts-ignore - deviceMemory is not in the standard TypeScript definitions
-        const deviceMemory = navigator.deviceMemory;
+        const deviceMemory = navigator.deviceMemory as number | undefined;
         
         if (deviceMemory && deviceMemory <= 2) {
           this.performanceLevel = 'low';

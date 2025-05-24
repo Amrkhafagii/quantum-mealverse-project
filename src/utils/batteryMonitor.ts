@@ -1,108 +1,136 @@
 
 import { useState, useEffect } from 'react';
-import { Device } from '@capacitor/device';
-import { Capacitor } from '@capacitor/core';
+import { Platform } from '@/utils/platform';
 
-interface BatteryMonitorOptions {
-  minimumBatteryLevel?: number;
-  interval?: number;
+interface BatteryStatus {
+  batteryLevel: number;
+  isCharging: boolean;
+  isLowBattery: boolean;
+  batteryTemperature?: number; // in Celsius
 }
 
-export function useBatteryMonitor({
-  minimumBatteryLevel = 15,
-  interval = 60000
-}: BatteryMonitorOptions = {}) {
-  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
-  const [isCharging, setIsCharging] = useState<boolean>(false);
-  const [isLowBattery, setIsLowBattery] = useState(false);
+interface BatteryMonitorOptions {
+  minimumBatteryLevel?: number; // Percentage threshold for low battery
+  pollingInterval?: number; // How often to check battery (ms)
+}
 
+/**
+ * Hook to monitor battery status with optimizations
+ */
+export function useBatteryMonitor(options: BatteryMonitorOptions = {}) {
+  const { 
+    minimumBatteryLevel = 15, 
+    pollingInterval = 60000 // Default to checking every minute
+  } = options;
+  
+  const [batteryStatus, setBatteryStatus] = useState<BatteryStatus>({
+    batteryLevel: 100,
+    isCharging: true,
+    isLowBattery: false
+  });
+  
   useEffect(() => {
-    let intervalId: number;
+    let batteryManager: any = null;
+    let intervalId: number | null = null;
     
-    const checkBattery = async () => {
+    const updateBatteryStatus = (battery: any) => {
+      const newStatus: BatteryStatus = {
+        batteryLevel: Math.floor(battery.level * 100),
+        isCharging: battery.charging,
+        isLowBattery: battery.level * 100 <= minimumBatteryLevel
+      };
+      
+      setBatteryStatus(newStatus);
+    };
+    
+    const initBattery = async () => {
       try {
-        if (Capacitor.isNativePlatform()) {
-          const batteryInfo = await Device.getBatteryInfo();
-          setBatteryLevel(batteryInfo.batteryLevel ? Math.round(batteryInfo.batteryLevel * 100) : null);
-          setIsCharging(batteryInfo.isCharging || false);
+        // Try to use the Battery API if available
+        if ('getBattery' in navigator) {
+          // @ts-ignore - getBattery is not in the standard TypeScript definitions
+          batteryManager = await navigator.getBattery();
           
-          if (batteryInfo.batteryLevel !== null) {
-            setIsLowBattery(batteryInfo.batteryLevel * 100 < minimumBatteryLevel);
-          }
+          // Update initial status
+          updateBatteryStatus(batteryManager);
+          
+          // Add event listeners for battery changes
+          batteryManager.addEventListener('levelchange', () => {
+            updateBatteryStatus(batteryManager);
+          });
+          
+          batteryManager.addEventListener('chargingchange', () => {
+            updateBatteryStatus(batteryManager);
+          });
+        } else if (Platform.isNative()) {
+          // For native platforms, we would use a native plugin
+          // This is placeholder code - in a real app would integrate with Capacitor/Cordova
+          console.log('Using native battery API on mobile device');
+          
+          // Set up polling instead for native platforms
+          intervalId = window.setInterval(() => {
+            // Mock implementation - in real app would call native API
+            const mockBatteryLevel = localStorage.getItem('mockBatteryLevel');
+            const level = mockBatteryLevel ? parseInt(mockBatteryLevel, 10) : 75;
+            
+            setBatteryStatus({
+              batteryLevel: level,
+              isCharging: false,
+              isLowBattery: level <= minimumBatteryLevel
+            });
+          }, pollingInterval);
         } else {
-          // Web environment or simulator - provide mock data
-          const mockBatteryLevel = Math.floor(Math.random() * 100);
-          setBatteryLevel(mockBatteryLevel);
-          setIsCharging(Math.random() > 0.8); // 20% chance of charging
-          setIsLowBattery(mockBatteryLevel < minimumBatteryLevel);
+          // Fallback for platforms without battery API
+          console.log('Battery API not available, using default values');
+          setBatteryStatus({
+            batteryLevel: 100,
+            isCharging: true,
+            isLowBattery: false
+          });
         }
       } catch (error) {
-        console.error('Failed to get battery info:', error);
-        // Provide default values if we can't access the battery
-        setBatteryLevel(70); // Arbitrary default
-        setIsCharging(false);
-        setIsLowBattery(false);
+        console.error('Error initializing battery monitor:', error);
+        
+        // Fallback to a safe default
+        setBatteryStatus({
+          batteryLevel: 100,
+          isCharging: true,
+          isLowBattery: false
+        });
       }
     };
     
-    // Check initially
-    checkBattery();
+    initBattery();
     
-    // Set up interval to check battery regularly
-    intervalId = window.setInterval(checkBattery, interval);
-    
+    // Clean up
     return () => {
-      window.clearInterval(intervalId);
+      if (batteryManager) {
+        batteryManager.removeEventListener('levelchange', updateBatteryStatus);
+        batteryManager.removeEventListener('chargingchange', updateBatteryStatus);
+      }
+      
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
-  }, [minimumBatteryLevel, interval]);
-
-  return {
-    batteryLevel,
-    isCharging,
-    isLowBattery
+  }, [minimumBatteryLevel, pollingInterval]);
+  
+  // Utility function for setting mock battery level (for testing)
+  const setMockBatteryLevel = (level: number) => {
+    if (level < 0 || level > 100) return;
+    localStorage.setItem('mockBatteryLevel', level.toString());
+    
+    // Immediately update the state as well
+    setBatteryStatus(prev => ({
+      ...prev,
+      batteryLevel: level,
+      isLowBattery: level <= minimumBatteryLevel
+    }));
+  };
+  
+  return { 
+    ...batteryStatus, 
+    setMockBatteryLevel // Expose this for testing purposes
   };
 }
 
-// Static version of the functions for non-hook usage
-export const BatteryOptimization = {
-  async getBatteryLevel(): Promise<number> {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        const batteryInfo = await Device.getBatteryInfo();
-        return batteryInfo.batteryLevel !== null ? Math.round(batteryInfo.batteryLevel * 100) : 100;
-      }
-      return 100; // Default for non-native platforms
-    } catch (error) {
-      console.error('Failed to get battery level:', error);
-      return 100; // Default on error
-    }
-  },
-  
-  async isChargingNow(): Promise<boolean> {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        const batteryInfo = await Device.getBatteryInfo();
-        return batteryInfo.isCharging || false;
-      }
-      return false; // Default for non-native platforms
-    } catch (error) {
-      console.error('Failed to get charging status:', error);
-      return false; // Default on error
-    }
-  },
-  
-  async isLowPowerModeEnabled(): Promise<boolean> {
-    // This is a mock implementation as there's no direct way to check
-    // low power mode in Capacitor currently
-    try {
-      if (Capacitor.isNativePlatform()) {
-        const batteryInfo = await Device.getBatteryInfo();
-        return (batteryInfo.batteryLevel || 1) < 0.2; // Consider low power if < 20%
-      }
-      return false;
-    } catch (error) {
-      console.error('Failed to check low power mode:', error);
-      return false;
-    }
-  }
-};
+export default useBatteryMonitor;

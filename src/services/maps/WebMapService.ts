@@ -1,4 +1,3 @@
-
 import { IMapService, MapViewOptions, MapMarker, MapCircle, MapPolyline, MapType, MapClickEvent, MapMarkerClickEvent } from './MapService';
 
 export class WebMapService implements IMapService {
@@ -615,7 +614,7 @@ export class WebMapService implements IMapService {
     }
     
     // Cache the icon
-    this.markerIconCache.set(cacheKey, icon);
+    this.markerIconCache.set(cacheKey, icon as google.maps.Icon | string);
     
     return icon;
   }
