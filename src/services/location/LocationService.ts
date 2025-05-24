@@ -1,304 +1,158 @@
 
-import { Geolocation } from '@capacitor/geolocation';
-import { locationPermissionService } from '../permission/LocationPermissionService';
-import { Preferences } from '@capacitor/preferences';
+import { DeliveryLocation } from '@/types/location';
+import { LocationFreshness } from '@/types/unifiedLocation';
+import { Platform } from '@/utils/platform';
+import { LocationPermissionService } from '@/services/permission/LocationPermissionService';
 
-export interface LocationOptions {
+export type LocationSource = 'gps' | 'network' | 'manual' | 'cached';
+export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt';
+export type LocationTrackingMode = 'high' | 'balanced' | 'low-power' | 'passive';
+export type LocationCallback = (location: DeliveryLocation) => void;
+
+/**
+ * LocationService interface - defines the contract for location services
+ */
+export interface ILocationService {
+  // Core location methods
+  getCurrentLocation(): Promise<DeliveryLocation | null>;
+  startTracking(options?: LocationTrackingOptions): Promise<boolean>;
+  stopTracking(): Promise<void>;
+  
+  // Permission methods
+  getPermissionStatus(): Promise<LocationPermissionStatus>;
+  requestPermission(): Promise<LocationPermissionStatus>;
+  
+  // Location state
+  isTracking(): boolean;
+  getLastKnownLocation(): DeliveryLocation | null;
+  getFreshness(): LocationFreshness;
+  
+  // Events
+  addLocationListener(callback: LocationCallback): string;
+  removeLocationListener(id: string): boolean;
+}
+
+/**
+ * Options for location tracking
+ */
+export interface LocationTrackingOptions {
+  mode?: LocationTrackingMode;
+  interval?: number; // milliseconds
+  fastestInterval?: number; // milliseconds
+  distanceFilter?: number; // meters
   enableHighAccuracy?: boolean;
-  timeout?: number;
-  maximumAge?: number;
+  timeout?: number; // milliseconds
+  maximumAge?: number; // milliseconds
+  backgroundTracking?: boolean;
 }
 
-export interface LocationWatchOptions extends LocationOptions {
-  distanceFilter?: number; // minimum distance in meters between position updates
-}
+/**
+ * Abstract base class for location services
+ */
+export abstract class BaseLocationService implements ILocationService {
+  protected _isTracking: boolean = false;
+  protected _lastLocation: DeliveryLocation | null = null;
+  protected _freshness: LocationFreshness = 'invalid';
+  protected _listeners: Map<string, LocationCallback> = new Map();
+  protected _permissionService: LocationPermissionService;
+  
+  constructor() {
+    this._permissionService = LocationPermissionService.getInstance();
+  }
 
-export class LocationService {
-  private static instance: LocationService;
-  private watchId: string | null = null;
-  private isTracking = false;
-  private lastLocation: { latitude: number; longitude: number; timestamp: number } | null = null;
-  private callbacks: Set<(location: { latitude: number; longitude: number }) => void> = new Set();
-  private errorCallbacks: Set<(error: any) => void> = new Set();
+  abstract getCurrentLocation(): Promise<DeliveryLocation | null>;
+  abstract startTracking(options?: LocationTrackingOptions): Promise<boolean>;
+  abstract stopTracking(): Promise<void>;
   
-  // Storage keys
-  private readonly LAST_LOCATION_KEY = 'last_tracked_location';
-  
-  private constructor() {}
-  
-  public static getInstance(): LocationService {
-    if (!LocationService.instance) {
-      LocationService.instance = new LocationService();
-    }
-    return LocationService.instance;
+  async getPermissionStatus(): Promise<LocationPermissionStatus> {
+    const status = await this._permissionService.checkPermissions();
+    return this.mapPermissionStatus(status.location);
   }
   
-  /**
-   * Initialize location service
-   */
-  public async initialize(): Promise<void> {
-    try {
-      console.log('Initializing location service');
-      
-      // Initialize permissions service first
-      await locationPermissionService.initialize();
-      
-      // Load last known location from storage
-      await this.loadLastLocation();
-      
-      console.log('Location service initialized successfully');
-    } catch (error) {
-      console.error('Error initializing location service:', error);
-    }
+  async requestPermission(): Promise<LocationPermissionStatus> {
+    const status = await this._permissionService.requestPermissions();
+    return this.mapPermissionStatus(status.location);
   }
   
-  /**
-   * Start tracking location
-   */
-  public async startTracking(options: LocationWatchOptions = {}): Promise<boolean> {
-    try {
-      if (this.isTracking) {
-        console.log('Location tracking is already active');
-        return true;
-      }
-      
-      // Ensure we have permissions
-      const status = await locationPermissionService.checkPermissions();
-      if (status.location !== 'granted') {
-        console.log('No location permission, requesting...');
-        const requestResult = await locationPermissionService.requestPermissions();
-        if (requestResult.location !== 'granted') {
-          console.error('Location permission denied');
-          return false;
-        }
-      }
-      
-      // Default options
-      const watchOptions: LocationWatchOptions = {
-        enableHighAccuracy: true, 
-        timeout: 10000,
-        maximumAge: 3000,
-        distanceFilter: 5, // 5 meters
-        ...options
-      };
-      
-      console.log('Starting location tracking with options:', watchOptions);
-      
-      // Start watching position
-      this.watchId = await Geolocation.watchPosition(watchOptions, (position) => {
-        if (!position) return;
-        
-        const location = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          timestamp: position.timestamp
-        };
-        
-        // Cache the location
-        this.lastLocation = location;
-        this.saveLastLocation(location);
-        
-        // Notify callbacks
-        this.notifyLocationUpdate(location);
-      });
-      
-      this.isTracking = true;
-      return true;
-    } catch (error) {
-      console.error('Error starting location tracking:', error);
-      this.notifyError(error);
-      return false;
-    }
+  isTracking(): boolean {
+    return this._isTracking;
   }
   
-  /**
-   * Stop tracking location
-   */
-  public async stopTracking(): Promise<void> {
-    try {
-      if (this.watchId) {
-        await Geolocation.clearWatch({ id: this.watchId });
-        this.watchId = null;
-        this.isTracking = false;
-        console.log('Location tracking stopped');
-      }
-    } catch (error) {
-      console.error('Error stopping location tracking:', error);
-      this.notifyError(error);
-    }
+  getLastKnownLocation(): DeliveryLocation | null {
+    return this._lastLocation;
   }
   
-  /**
-   * Get current location once
-   */
-  public async getCurrentLocation(options: LocationOptions = {}): Promise<{ latitude: number; longitude: number }> {
-    try {
-      // Check permissions first
-      const status = await locationPermissionService.checkPermissions();
-      if (status.location !== 'granted') {
-        await locationPermissionService.requestPermissions();
-      }
-      
-      // Default options
-      const locationOptions: LocationOptions = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 5000,
-        ...options
-      };
-      
-      const position = await Geolocation.getCurrentPosition(locationOptions);
-      
-      const location = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude
-      };
-      
-      // Update last location
-      this.lastLocation = {
-        ...location,
-        timestamp: position.timestamp
-      };
-      
-      // Save to storage
-      this.saveLastLocation(this.lastLocation);
-      
-      return location;
-    } catch (error) {
-      console.error('Error getting current location:', error);
-      this.notifyError(error);
-      throw error;
-    }
+  getFreshness(): LocationFreshness {
+    return this._freshness;
   }
   
-  /**
-   * Get last known location
-   */
-  public getLastLocation(): { latitude: number; longitude: number } | null {
-    if (!this.lastLocation) return null;
+  addLocationListener(callback: LocationCallback): string {
+    const id = Math.random().toString(36).substring(2, 9);
+    this._listeners.set(id, callback);
+    return id;
+  }
+  
+  removeLocationListener(id: string): boolean {
+    return this._listeners.delete(id);
+  }
+  
+  protected updateLocation(location: DeliveryLocation): void {
+    this._lastLocation = location;
+    this.updateFreshness(location);
     
-    return {
-      latitude: this.lastLocation.latitude,
-      longitude: this.lastLocation.longitude
-    };
-  }
-  
-  /**
-   * Add location update listener
-   */
-  public addLocationListener(callback: (location: { latitude: number; longitude: number }) => void): void {
-    this.callbacks.add(callback);
-    
-    // If we have a cached location, notify immediately
-    if (this.lastLocation) {
-      callback({
-        latitude: this.lastLocation.latitude,
-        longitude: this.lastLocation.longitude
-      });
-    }
-  }
-  
-  /**
-   * Remove location update listener
-   */
-  public removeLocationListener(callback: (location: { latitude: number; longitude: number }) => void): void {
-    this.callbacks.delete(callback);
-  }
-  
-  /**
-   * Add error listener
-   */
-  public addErrorListener(callback: (error: any) => void): void {
-    this.errorCallbacks.add(callback);
-  }
-  
-  /**
-   * Remove error listener
-   */
-  public removeErrorListener(callback: (error: any) => void): void {
-    this.errorCallbacks.delete(callback);
-  }
-  
-  /**
-   * Check if tracking is active
-   */
-  public isTrackingActive(): boolean {
-    return this.isTracking;
-  }
-  
-  /**
-   * Save last location to storage
-   */
-  private async saveLastLocation(location: { latitude: number; longitude: number; timestamp: number }): Promise<void> {
-    try {
-      await Preferences.set({
-        key: this.LAST_LOCATION_KEY,
-        value: JSON.stringify(location)
-      });
-    } catch (error) {
-      console.error('Error saving location to storage:', error);
-    }
-  }
-  
-  /**
-   * Load last location from storage
-   */
-  private async loadLastLocation(): Promise<void> {
-    try {
-      const { value } = await Preferences.get({ key: this.LAST_LOCATION_KEY });
-      if (value) {
-        this.lastLocation = JSON.parse(value);
-        console.log('Loaded last location from storage:', this.lastLocation);
-      }
-    } catch (error) {
-      console.error('Error loading location from storage:', error);
-    }
-  }
-  
-  /**
-   * Notify all registered callbacks about location update
-   */
-  private notifyLocationUpdate(location: { latitude: number; longitude: number; timestamp: number }): void {
-    const locationData = {
-      latitude: location.latitude,
-      longitude: location.longitude
-    };
-    
-    this.callbacks.forEach(callback => {
+    // Notify all listeners
+    this._listeners.forEach(callback => {
       try {
-        callback(locationData);
+        callback(location);
       } catch (error) {
-        console.error('Error in location callback:', error);
+        console.error('Error in location listener:', error);
       }
     });
   }
   
-  /**
-   * Notify all registered error callbacks
-   */
-  private notifyError(error: any): void {
-    this.errorCallbacks.forEach(callback => {
-      try {
-        callback(error);
-      } catch (callbackError) {
-        console.error('Error in error callback:', callbackError);
-      }
-    });
+  protected updateFreshness(location: DeliveryLocation): void {
+    const now = Date.now();
+    const locationTime = location.timestamp;
+    const diff = now - locationTime;
+    
+    if (diff < 60000) { // Less than 1 minute
+      this._freshness = 'fresh';
+    } else if (diff < 300000) { // Less than 5 minutes
+      this._freshness = 'moderate';
+    } else if (diff < 1800000) { // Less than 30 minutes
+      this._freshness = 'stale';
+    } else {
+      this._freshness = 'invalid';
+    }
   }
   
-  /**
-   * Clear storage (for development/testing)
-   */
-  public async clearStorage(): Promise<void> {
-    try {
-      await Preferences.remove({ key: this.LAST_LOCATION_KEY });
-      this.lastLocation = null;
-      console.log('Location storage cleared');
-    } catch (error) {
-      console.error('Error clearing location storage:', error);
+  protected mapPermissionStatus(status: string): LocationPermissionStatus {
+    switch (status) {
+      case 'granted': return 'granted';
+      case 'denied': return 'denied';
+      default: return 'prompt';
     }
   }
 }
 
-// Export singleton instance
-export const locationService = LocationService.getInstance();
+/**
+ * Factory for creating the appropriate location service based on platform
+ */
+export class LocationServiceFactory {
+  static getLocationService(): ILocationService {
+    // Dynamic imports to avoid bundling unused code
+    if (Platform.isNative()) {
+      // Lazy load the native service
+      return import('./NativeLocationService').then(
+        module => new module.NativeLocationService()
+      ) as unknown as ILocationService;
+    } else {
+      // Lazy load the web service
+      return import('./WebLocationService').then(
+        module => new module.WebLocationService()
+      ) as unknown as ILocationService;
+    }
+  }
+}
+
+export default LocationServiceFactory;
