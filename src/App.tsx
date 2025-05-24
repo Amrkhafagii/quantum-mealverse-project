@@ -19,6 +19,7 @@ import Restaurant from './pages/Restaurant';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Fitness from './pages/Fitness';
+import Nutrition from './pages/Nutrition';
 import Admin from './pages/Admin';
 import Settings from './pages/Settings';
 import Subscription from './pages/Subscription';
@@ -80,8 +81,9 @@ function App() {
                     <Route path="/meal/:id" element={<MealDetail />} />
                     <Route path="/meals/:id" element={<MealDetailsPage />} />
                     
-                    {/* Fitness routes */}
+                    {/* Fitness and Nutrition routes */}
                     <Route path="/fitness" element={<Fitness />} />
+                    <Route path="/nutrition" element={<Nutrition />} />
                     
                     {/* Admin routes */}
                     <Route path="/admin" element={<Admin />} />
