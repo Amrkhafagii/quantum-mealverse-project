@@ -3,13 +3,13 @@ import React, { Suspense } from 'react';
 import { MealType } from '@/types/meal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Restaurant } from '@/hooks/useRestaurantsData';
-import { Loader2, AlertCircle, MapPin } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin, Globe, Navigation, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RestaurantSummary } from './RestaurantSummary';
 import { CustomerMealGrid } from './CustomerMealGrid';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const RestaurantMapView = React.lazy(() => 
   import('@/components/location/RestaurantMapView')
@@ -64,28 +64,83 @@ export const MainContent: React.FC<MainContentProps> = ({
     );
   }
 
-  // Show location required message if no restaurants are found
+  // Show helpful content when no location is available
   if (nearbyRestaurants.length === 0 && !isLoading) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center py-12"
+        className="space-y-8"
       >
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 max-w-md mx-auto">
+        {/* Main CTA Card */}
+        <Card className="bg-gradient-to-r from-quantum-darkBlue/40 to-quantum-cyan/20 border-quantum-cyan/30 shadow-lg">
           <CardContent className="p-8">
-            <MapPin className="h-16 w-16 text-quantum-cyan mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-3">Location Required</h3>
-            <p className="text-gray-300 mb-6">
-              Please enable location access to discover restaurants and menu items near you.
-            </p>
-            <Button 
-              onClick={onLocationRequest}
-              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Enable Location
-            </Button>
+            <div className="text-center">
+              <MapPin className="h-16 w-16 text-quantum-cyan mx-auto mb-4" />
+              <h3 className="text-2xl font-semibold text-white mb-3">Enable Location to Get Started</h3>
+              <p className="text-gray-300 mb-6 max-w-md mx-auto">
+                We need your location to find nearby restaurants and show you available menu items for delivery.
+              </p>
+              <Button 
+                onClick={onLocationRequest}
+                size="lg"
+                className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black font-semibold px-8 py-3"
+              >
+                <MapPin className="h-5 w-5 mr-2" />
+                Enable Location Access
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* How It Works Section */}
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardHeader>
+            <CardTitle className="text-white text-xl text-center">How Quantum Mealverse Works</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="bg-quantum-cyan/20 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Navigation className="h-8 w-8 text-quantum-cyan" />
+                </div>
+                <h4 className="font-semibold text-white mb-2">1. Find Restaurants</h4>
+                <p className="text-gray-400 text-sm">
+                  We locate restaurants near you based on your current location
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-quantum-cyan/20 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Globe className="h-8 w-8 text-quantum-cyan" />
+                </div>
+                <h4 className="font-semibold text-white mb-2">2. Browse Menus</h4>
+                <p className="text-gray-400 text-sm">
+                  Explore menu items from multiple restaurants in one place
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-quantum-cyan/20 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-quantum-cyan" />
+                </div>
+                <h4 className="font-semibold text-white mb-2">3. Quick Delivery</h4>
+                <p className="text-gray-400 text-sm">
+                  Get accurate delivery times and track your order in real-time
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Privacy Information */}
+        <Card className="bg-quantum-darkBlue/20 border-quantum-cyan/10">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h4 className="font-semibold text-white mb-2">Your Privacy Matters</h4>
+              <p className="text-gray-400 text-sm max-w-2xl mx-auto">
+                Your location data is only used to find nearby restaurants and calculate delivery times. 
+                We never share your location with third parties or store it permanently on our servers.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -142,6 +197,7 @@ export const MainContent: React.FC<MainContentProps> = ({
               isLoading={false}
               error={null}
               onLocationRequest={onLocationRequest}
+              hasRestaurants={nearbyRestaurants.length > 0}
             />
           </motion.div>
         )}
