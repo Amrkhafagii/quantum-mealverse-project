@@ -13,7 +13,7 @@ import { useDeliveryStatusSync } from '@/hooks/useDeliveryStatusSync';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
-import { OrderStatusDisplay } from '@/components/orders/status/OrderStatusDisplay';
+import OrderStatusDisplay from '@/components/orders/status/OrderStatusDisplay';
 import OrderLocationMap from '@/components/orders/OrderLocationMap';
 import OrderTracker from '@/components/orders/OrderTracker';
 import { Badge } from '@/components/ui/badge';
