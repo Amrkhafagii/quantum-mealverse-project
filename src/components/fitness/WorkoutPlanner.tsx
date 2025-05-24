@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +10,8 @@ import { WorkoutPlanForm } from './workout/WorkoutPlanForm';
 import { useWorkoutTemplates } from '@/hooks/useWorkoutTemplates';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
 import { useAuth } from '@/hooks/useAuth';
-import { WorkoutPlan, WorkoutTemplate } from '@/types/fitness/workouts';
+import { WorkoutPlan } from '@/types/fitness/workouts';
+import { WorkoutTemplate } from '@/types/fitness/exercises';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 

@@ -13,6 +13,21 @@ export interface WorkoutPlan {
   updated_at?: string;
 }
 
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  duration_weeks?: number;
+  frequency_per_week?: number;
+  goal?: string;
+  workout_days: WorkoutDay[];
+  is_public: boolean;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface WorkoutDay {
   id: string;
   name: string;

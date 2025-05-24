@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutTemplate } from '@/types/fitness/exercises';
+import { WorkoutDay } from '@/types/fitness/workouts';
 import { useToast } from '@/hooks/use-toast';
 
 export function useWorkoutTemplates() {
@@ -20,11 +21,13 @@ export function useWorkoutTemplates() {
 
       if (error) throw error;
       
-      // Type cast the data to match our interface
+      // Type cast the data to match our interface with proper JSON parsing
       const typedTemplates: WorkoutTemplate[] = (data || []).map(template => ({
         ...template,
         difficulty: template.difficulty as 'beginner' | 'intermediate' | 'advanced',
-        workout_days: Array.isArray(template.workout_days) ? template.workout_days : []
+        workout_days: Array.isArray(template.workout_days) 
+          ? template.workout_days as WorkoutDay[]
+          : JSON.parse(template.workout_days as string) as WorkoutDay[]
       }));
       
       setTemplates(typedTemplates);
