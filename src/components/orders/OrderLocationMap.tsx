@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import StandardMap from '../maps/StandardMap';
 import { Order } from '@/types/order';
 import { MapMarker } from '@/services/maps/MapService';
+import { useMapService } from '@/contexts/MapServiceContext';
+import { Platform } from '@/utils/platform';
 
 interface OrderLocationMapProps {
   order?: Order;
@@ -20,6 +22,8 @@ interface OrderLocationMapProps {
   height?: string;
   className?: string;
   showAccuracyCircle?: boolean;
+  refreshInterval?: number;
+  onMapReady?: () => void;
 }
 
 const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
@@ -30,8 +34,73 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
   showDriver = true,
   height = 'h-[300px]',
   className = '',
-  showAccuracyCircle = false
+  showAccuracyCircle = false,
+  refreshInterval = 0,
+  onMapReady
 }) => {
+  const { performanceLevel } = useMapService();
+  const [markers, setMarkers] = useState<MapMarker[]>([]);
+  
+  // Enable low performance mode based on platform and performance level
+  const shouldUseLowPerformanceMode = () => {
+    if (performanceLevel === 'low') return true;
+    if (Platform.isLowEndDevice()) return true;
+    return false;
+  };
+  
+  // Generate markers based on props
+  useEffect(() => {
+    if (!order) return;
+    
+    const newMarkers: MapMarker[] = [];
+    
+    // Add restaurant marker - handle both string and object types for coordinates
+    if (showRestaurant && order.restaurant) {
+      // Handle restaurant location regardless of property structure
+      let restaurantLat = null;
+      let restaurantLng = null;
+      
+      if (order.restaurant.latitude !== undefined && typeof order.restaurant.latitude === 'number') {
+        restaurantLat = order.restaurant.latitude;
+      }
+      
+      if (order.restaurant.longitude !== undefined && typeof order.restaurant.longitude === 'number') {
+        restaurantLng = order.restaurant.longitude;
+      }
+      
+      if (restaurantLat !== null && restaurantLng !== null) {
+        newMarkers.push({
+          latitude: restaurantLat,
+          longitude: restaurantLng,
+          title: order.restaurant.name || 'Restaurant',
+          type: 'restaurant'
+        });
+      }
+    }
+    
+    // Add customer marker
+    if (showCustomer && order.latitude && order.longitude) {
+      newMarkers.push({
+        latitude: order.latitude,
+        longitude: order.longitude,
+        title: 'Delivery Address',
+        type: 'customer'
+      });
+    }
+    
+    // Add driver marker
+    if (showDriver && driver && driver.latitude && driver.longitude) {
+      newMarkers.push({
+        latitude: driver.latitude,
+        longitude: driver.longitude,
+        title: driver.title || 'Driver',
+        type: 'driver'
+      });
+    }
+    
+    setMarkers(newMarkers);
+  }, [order, driver, showRestaurant, showCustomer, showDriver]);
+  
   // Return empty state if there's no order
   if (!order) {
     return (
@@ -39,58 +108,6 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
         <p className="text-muted-foreground">Order information not available</p>
       </Card>
     );
-  }
-  
-  // Extract restaurant, customer, and delivery locations from the order
-  const restaurant = order.restaurant;
-  const customer = order.delivery_address;
-  
-  // Create markers for the map
-  const markers: MapMarker[] = [];
-  
-  // Add restaurant marker - handle both string and object types for coordinates
-  if (showRestaurant && restaurant) {
-    // Handle restaurant location regardless of property structure
-    let restaurantLat = null;
-    let restaurantLng = null;
-    
-    if (restaurant.latitude !== undefined && typeof restaurant.latitude === 'number') {
-      restaurantLat = restaurant.latitude;
-    }
-    
-    if (restaurant.longitude !== undefined && typeof restaurant.longitude === 'number') {
-      restaurantLng = restaurant.longitude;
-    }
-    
-    if (restaurantLat !== null && restaurantLng !== null) {
-      markers.push({
-        latitude: restaurantLat,
-        longitude: restaurantLng,
-        title: restaurant.name || 'Restaurant',
-        type: 'restaurant'
-      });
-    }
-  }
-  
-  // Add customer marker - handle both string and object types for coordinates
-  if (showCustomer && customer && order.latitude && order.longitude) {
-    // Use the order's coordinates instead of trying to access customer.latitude
-    markers.push({
-      latitude: order.latitude,
-      longitude: order.longitude,
-      title: 'Delivery Address',
-      type: 'customer'
-    });
-  }
-  
-  // Add driver marker
-  if (showDriver && driver && driver.latitude && driver.longitude) {
-    markers.push({
-      latitude: driver.latitude,
-      longitude: driver.longitude,
-      title: driver.title || 'Driver',
-      type: 'driver'
-    });
   }
   
   // If no valid markers, show empty state
@@ -111,12 +128,12 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
   }
   
   // If no driver or driver not visible, center on restaurant
-  if (!centerMarker && showRestaurant && restaurant) {
+  if (!centerMarker && showRestaurant && order.restaurant) {
     centerMarker = markers.find(marker => marker.type === 'restaurant');
   }
   
   // If no restaurant or restaurant not visible, center on customer
-  if (!centerMarker && showCustomer && customer) {
+  if (!centerMarker && showCustomer) {
     centerMarker = markers.find(marker => marker.type === 'customer');
   }
   
@@ -134,6 +151,9 @@ const OrderLocationMap: React.FC<OrderLocationMapProps> = ({
       center={centerMarker ? { latitude: centerMarker.latitude, longitude: centerMarker.longitude } : undefined}
       showUserLocation={false}
       showAccuracyCircle={showAccuracyCircle}
+      lowPerformanceMode={shouldUseLowPerformanceMode()}
+      refreshInterval={refreshInterval}
+      onMapReady={onMapReady}
     />
   );
 };

@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { MapServiceFactory, IMapService, MapViewOptions, MapMarker, MapCircle, MapPolyline } from '@/services/maps/MapService';
+import performanceOptimizer from '@/utils/performanceOptimizer';
 
 interface MapServiceContextType {
   mapService: IMapService | null;
@@ -16,6 +17,9 @@ interface MapServiceContextType {
   removeCircle: (mapId: string, circleId: string) => Promise<void>;
   addPolyline: (mapId: string, polyline: MapPolyline) => Promise<string>;
   removePolyline: (mapId: string, polylineId: string) => Promise<void>;
+  addMapClickListener: (mapId: string, listener: (event: any) => void) => string;
+  performanceLevel: 'high' | 'medium' | 'low';
+  setPerformanceLevel: (level: 'high' | 'medium' | 'low') => void;
 }
 
 const MapServiceContext = createContext<MapServiceContextType>({
@@ -32,6 +36,9 @@ const MapServiceContext = createContext<MapServiceContextType>({
   removeCircle: async () => {},
   addPolyline: async () => '',
   removePolyline: async () => {},
+  addMapClickListener: () => '',
+  performanceLevel: 'high',
+  setPerformanceLevel: () => {},
 });
 
 export const MapServiceProvider: React.FC<{
@@ -40,11 +47,17 @@ export const MapServiceProvider: React.FC<{
   const [mapService, setMapService] = useState<IMapService | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [performanceLevel, setPerformanceLevel] = useState<'high' | 'medium' | 'low'>(
+    performanceOptimizer.getPerformanceLevel()
+  );
   
   // Initialize map service
   useEffect(() => {
     const initMapService = async () => {
       try {
+        // Initialize performance optimizer
+        performanceOptimizer.initialize();
+        
         const service = await MapServiceFactory.getMapService();
         setMapService(service);
         setIsLoading(false);
@@ -58,9 +71,21 @@ export const MapServiceProvider: React.FC<{
     initMapService();
   }, []);
   
+  // Update performance optimizer when level changes
+  useEffect(() => {
+    performanceOptimizer.setPerformanceLevel(performanceLevel);
+  }, [performanceLevel]);
+  
   const createMap = async (elementId: string, options: MapViewOptions): Promise<string> => {
     if (!mapService) throw new Error('Map service not initialized');
-    return mapService.createMap(elementId, options);
+    
+    // Apply performance optimizations
+    const optimizedOptions = {
+      ...options,
+      liteMode: options.liteMode || performanceOptimizer.shouldUseLowPerformanceMode()
+    };
+    
+    return mapService.createMap(elementId, optimizedOptions);
   };
   
   const destroyMap = async (mapId: string): Promise<void> => {
@@ -70,7 +95,11 @@ export const MapServiceProvider: React.FC<{
   
   const setCamera = async (mapId: string, center: { latitude: number; longitude: number }, zoom?: number, animate?: boolean): Promise<void> => {
     if (!mapService) return;
-    return mapService.setCamera(mapId, center, zoom, animate);
+    
+    // Disable animation in low performance mode
+    const shouldAnimate = animate && !performanceOptimizer.shouldUseLowPerformanceMode();
+    
+    return mapService.setCamera(mapId, center, zoom, shouldAnimate);
   };
   
   const addMarker = async (mapId: string, marker: MapMarker): Promise<string> => {
@@ -108,6 +137,15 @@ export const MapServiceProvider: React.FC<{
     return mapService.removePolyline(mapId, polylineId);
   };
   
+  const addMapClickListener = (mapId: string, listener: (event: any) => void): string => {
+    if (!mapService) throw new Error('Map service not initialized');
+    return mapService.addMapClickListener(mapId, listener);
+  };
+  
+  const handlePerformanceLevelChange = (level: 'high' | 'medium' | 'low') => {
+    setPerformanceLevel(level);
+  };
+  
   return (
     <MapServiceContext.Provider
       value={{
@@ -124,6 +162,9 @@ export const MapServiceProvider: React.FC<{
         removeCircle,
         addPolyline,
         removePolyline,
+        addMapClickListener,
+        performanceLevel,
+        setPerformanceLevel: handlePerformanceLevelChange,
       }}
     >
       {children}
