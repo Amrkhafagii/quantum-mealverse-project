@@ -25,7 +25,14 @@ export function useWorkoutAnalytics() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGoals(data || []);
+      
+      // Type cast the data to ensure proper typing
+      const typedGoals: WorkoutGoal[] = (data || []).map(goal => ({
+        ...goal,
+        goal_type: goal.goal_type as WorkoutGoal['goal_type']
+      }));
+      
+      setGoals(typedGoals);
     } catch (error) {
       console.error('Error fetching goals:', error);
       toast({

@@ -26,7 +26,7 @@ const goalSchema = z.object({
 type GoalFormData = z.infer<typeof goalSchema>;
 
 interface GoalFormProps {
-  onSubmit: (data: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => void;
+  onSubmit: (data: GoalFormData) => void;
   onCancel: () => void;
   initialData?: WorkoutGoal;
   isLoading?: boolean;
@@ -39,7 +39,7 @@ const GOAL_TYPES = [
   { value: 'strength', label: 'Strength' },
   { value: 'endurance', label: 'Endurance' },
   { value: 'custom', label: 'Custom' },
-];
+] as const;
 
 export const GoalForm: React.FC<GoalFormProps> = ({
   onSubmit,
