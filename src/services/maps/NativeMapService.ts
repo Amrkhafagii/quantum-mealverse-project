@@ -9,16 +9,21 @@ export class NativeMapService implements IMapService {
 
   async initializeMap(containerId: string, options: any = {}): Promise<void> {
     try {
+      const element = document.getElementById(containerId);
+      if (!element) {
+        throw new Error(`Element with id ${containerId} not found`);
+      }
+
+      const rect = element.getBoundingClientRect();
+      
       this.map = await CapacitorGoogleMaps.create({
-        element: document.getElementById(containerId),
-        apiKey: 'your-google-maps-api-key',
-        config: {
-          center: {
-            lat: options.center?.lat || 33.6,
-            lng: options.center?.lng || -117.9,
-          },
-          zoom: options.zoom || 8,
-        },
+        width: rect.width,
+        height: rect.height,
+        x: rect.left,
+        y: rect.top,
+        latitude: options.center?.lat || 33.6,
+        longitude: options.center?.lng || -117.9,
+        zoom: options.zoom || 8,
       });
     } catch (error) {
       console.error('Error initializing native map:', error);
