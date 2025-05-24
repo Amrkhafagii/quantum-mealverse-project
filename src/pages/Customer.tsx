@@ -8,11 +8,16 @@ import { CustomerHeader } from '@/components/customer/CustomerHeader';
 import { MainContent } from '@/components/customer/MainContent';
 import { LocationPrompt } from '@/components/customer/LocationPrompt';
 import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBoundary';
+import { CustomerBreadcrumbs } from '@/components/customer/CustomerBreadcrumbs';
+import { CustomerNavigation } from '@/components/customer/CustomerNavigation';
+import { CustomerJourneyGuide } from '@/components/customer/CustomerJourneyGuide';
 import { useCustomerState } from '@/hooks/useCustomerState';
+import { useCart } from '@/contexts/CartContext';
 
 const CustomerPage = () => {
   const navigate = useNavigate();
   const [isMapView, setIsMapView] = useState(false);
+  const { cart } = useCart();
   
   // Use centralized state management
   const {
@@ -46,6 +51,8 @@ const CustomerPage = () => {
   };
 
   const hasLocationIssue = locationError && permissionStatus !== 'granted';
+  const hasLocation = !!location && permissionStatus === 'granted';
+  const hasRestaurants = restaurants && restaurants.length > 0;
 
   console.log('Customer page state:', {
     user: user?.email,
@@ -65,12 +72,31 @@ const CustomerPage = () => {
         <Navbar />
         
         <main className="relative z-10 pt-20">
-          <CustomerHeader 
-            userEmail={user?.email}
-            onLogout={handleLogout}
-          />
-          
           <div className="container mx-auto px-4 py-8">
+            <CustomerBreadcrumbs />
+            
+            <CustomerHeader 
+              userEmail={user?.email}
+              onLogout={handleLogout}
+            />
+            
+            {/* Navigation Section */}
+            <div className="mb-8">
+              <CustomerNavigation />
+            </div>
+            
+            {/* Journey Guide - show when user hasn't completed the flow */}
+            {(!hasLocation || !hasRestaurants || cart.length === 0) && (
+              <div className="mb-8">
+                <CustomerJourneyGuide
+                  hasLocation={hasLocation}
+                  hasRestaurants={hasRestaurants}
+                  cartItems={cart.length}
+                  isAuthenticated={!!user}
+                />
+              </div>
+            )}
+            
             {/* Location prompt - only show if there's an issue or permission not requested */}
             {(hasLocationIssue || !hasRequestedPermission) && (
               <LocationPrompt
