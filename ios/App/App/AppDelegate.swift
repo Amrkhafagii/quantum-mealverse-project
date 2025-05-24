@@ -1,3 +1,4 @@
+
 import UIKit
 import Capacitor
 import CapacitorPreferences
@@ -18,17 +19,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Register Capacitor plugins - including our custom LocationPermissionsPlugin
-        self.registerCustomPlugins()
-     
+        
         // Set up appearance for navigation bars and toolbars
         UIAppearanceManager.configureUIAppearance()
         
         // Initialize plugins and core services immediately and synchronously
-        // This ensures that the LocationPermissionsPlugin is available before any UI components try to use it
         AppInitializer.shared.initializeServicesSync(application)
         
-        // Initialize Capacitor Storage - Required for Storage plugins to work properly
+        // Initialize Capacitor Storage
         AppInitializer.shared.initializeCapacitorStorage()
         
         // Register background task for iOS 13+
@@ -39,23 +37,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
     
-    // MARK: - Custom Plugin Registration
-    private func registerCustomPlugins() {
-        print("Registering custom LocationPermissionsPlugin")
-        
-        guard let bridgeViewController = self.window?.rootViewController as? CAPBridgeViewController,
-              let pluginInstance = bridgeViewController.bridge?.plugin(withName: "LocationPermissions") else {
-            print("Warning: LocationPermissionsPlugin not found in plugin registry")
-            return
-        }
-        
-        print("LocationPermissionsPlugin successfully registered: \(pluginInstance)")
-    }
     // MARK: - Application Lifecycle Methods
     
     func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
+        // Sent when the application is about to move from active to inactive state
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
@@ -63,7 +48,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
+        // Called as part of the transition from the background to the active state
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
@@ -77,22 +62,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - URL and User Activity Handling
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Called when the app was launched with an activity, including Universal Links.
-        // Feel free to add additional processing here, but if you want the App API to support
-        // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
     
     // MARK: - Push Notifications
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        // Forward to Capacitor
         NotificationCenter.default.post(
             name: Notification.Name(CAPNotifications.DidRegisterForRemoteNotificationsWithDeviceToken.name()),
             object: deviceToken
@@ -100,7 +79,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        // Forward to Capacitor
         NotificationCenter.default.post(
             name: Notification.Name(CAPNotifications.DidFailToRegisterForRemoteNotificationsWithError.name()),
             object: error
@@ -115,32 +93,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             return
         }
         
-        // This is called when the system wakes up the app for a background fetch
         print("Background fetch initiated")
         
         if #available(iOS 13.0, *) {
-            // For iOS 13+, we use the BGTask framework registered in didFinishLaunchingWithOptions
-            // Just forward to the notification-based sync if needed
             NotificationCenter.default.post(name: Notification.Name("backgroundSyncStarted"), object: nil)
             
-            // Set a timeout to ensure we call the completion handler
             DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
                 completionHandler(.noData)
             }
             
-            // Declare the observer variable before the closure
             var observer: NSObjectProtocol?
             
-            // Now set the observer
             observer = NotificationCenter.default.addObserver(forName: Notification.Name("backgroundSyncCompleted"), object: nil, queue: .main) { _ in
-                // Use optional binding to safely remove the observer
                 if let observerToRemove = observer {
                     NotificationCenter.default.removeObserver(observerToRemove)
                 }
                 completionHandler(.newData)
             }
         } else {
-            // Legacy background fetch handling
             BackgroundFetchManager.shared.handleLegacyBackgroundFetch(application, completionHandler: completionHandler)
         }
     }

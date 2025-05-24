@@ -1,7 +1,5 @@
 
 import { registerPlugin } from '@capacitor/core';
-import { Platform } from '@/utils/platform';
-import { createBridgeError, BridgeErrorType } from '@/utils/errorHandling';
 
 export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
@@ -17,65 +15,41 @@ export interface LocationPermissionsPlugin {
 }
 
 /**
- * Create the LocationPermissions plugin with enhanced error handling
+ * Create the LocationPermissions plugin with simple fallback
  */
 const createLocationPermissionsPlugin = (): LocationPermissionsPlugin => {
-  try {
-    console.log("Initializing LocationPermissions plugin");
+  console.log("Initializing LocationPermissions plugin");
+  
+  // Simple fallback implementation that always throws UNIMPLEMENTED
+  // This will force the useLocationPermission hook to use standard Geolocation API
+  const fallbackPlugin: LocationPermissionsPlugin = {
+    async requestPermissions() {
+      console.log("LocationPermissions plugin not available, using fallback");
+      throw new Error('UNIMPLEMENTED: LocationPermissions plugin not available');
+    },
     
-    // Register the plugin with a web fallback
+    async requestLocationPermission(options: { includeBackground?: boolean }) {
+      console.log("LocationPermissions plugin not available, using fallback");
+      throw new Error('UNIMPLEMENTED: LocationPermissions plugin not available');
+    },
+    
+    async checkPermissionStatus() {
+      console.log("LocationPermissions plugin not available, using fallback");
+      throw new Error('UNIMPLEMENTED: LocationPermissions plugin not available');
+    }
+  };
+  
+  try {
+    // Try to register the plugin, but always return fallback for now
     const rawPlugin = registerPlugin<LocationPermissionsPlugin>('LocationPermissions', {
-      web: () => import('./web/LocationPermissionsWeb').then(m => m.LocationPermissionsWebInstance),
+      web: () => Promise.resolve(fallbackPlugin),
     });
     
-    // Wrap methods with enhanced error handling
-    const safePlugin: LocationPermissionsPlugin = {
-      async requestPermissions(options: { includeBackground?: boolean }) {
-        try {
-          console.log("Calling requestPermissions with options:", options);
-          const result = await rawPlugin.requestPermissions(options);
-          console.log("requestPermissions result:", result);
-          return result;
-        } catch (error) {
-          console.error("Error in requestPermissions:", error);
-          throw new Error(`Failed to request location permissions: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      },
-      
-      async requestLocationPermission(options: { includeBackground?: boolean }) {
-        console.log("Forwarding requestLocationPermission to requestPermissions with options:", options);
-        return this.requestPermissions(options);
-      },
-      
-      async checkPermissionStatus() {
-        try {
-          console.log("Calling checkPermissionStatus");
-          const result = await rawPlugin.checkPermissionStatus();
-          console.log("checkPermissionStatus result:", result);
-          return result;
-        } catch (error) {
-          console.error("Error in checkPermissionStatus:", error);
-          throw new Error(`Failed to check location permissions: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-    };
-    
-    return safePlugin;
+    // Return fallback to force standard Geolocation API usage
+    return fallbackPlugin;
   } catch (error) {
-    console.error('Critical error initializing LocationPermissions plugin:', error);
-    
-    // Return a fallback implementation that provides detailed errors
-    return {
-      requestPermissions: async () => {
-        throw new Error(`LocationPermissions plugin failed to initialize: ${error instanceof Error ? error.message : String(error)}`);
-      },
-      requestLocationPermission: async () => {
-        throw new Error(`LocationPermissions plugin failed to initialize: ${error instanceof Error ? error.message : String(error)}`);
-      },
-      checkPermissionStatus: async () => {
-        throw new Error(`LocationPermissions plugin failed to initialize: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    };
+    console.error('Error initializing LocationPermissions plugin:', error);
+    return fallbackPlugin;
   }
 };
 
