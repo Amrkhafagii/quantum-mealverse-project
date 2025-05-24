@@ -1,6 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutRecommendation } from '@/types/fitness/recommendations';
+import { IntelligentRecommendationEngine } from './intelligentRecommendationEngine';
+import { AdaptiveWorkoutEngine } from './adaptiveWorkoutEngine';
 
 export const fetchUserRecommendations = async (userId: string): Promise<WorkoutRecommendation[]> => {
   const { data, error } = await supabase
@@ -9,24 +11,24 @@ export const fetchUserRecommendations = async (userId: string): Promise<WorkoutR
     .eq('user_id', userId)
     .eq('dismissed', false)
     .eq('applied', false)
+    .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
     .order('confidence_score', { ascending: false });
 
   if (error) throw error;
   
-  // Map the database fields to match the WorkoutRecommendation interface
   return (data || []).map(item => ({
     id: item.id,
     user_id: item.user_id,
     title: item.title,
-    description: item.description,
+    description: item.description || '',
     type: item.type,
-    reason: item.reason,
-    confidence_score: item.confidence_score,
+    reason: item.reason || '',
+    confidence_score: item.confidence_score || 0,
     metadata: item.metadata || {},
-    suggested_at: item.suggested_at,
-    applied: item.applied,
-    applied_at: item.applied_at,
-    dismissed: item.dismissed,
+    suggested_at: item.suggested_at || '',
+    applied: item.applied || false,
+    applied_at: item.applied_at || '',
+    dismissed: item.dismissed || false,
     dismissed_at: item.dismissed_at || '',
     expires_at: item.expires_at || '',
     created_at: item.created_at || '',
@@ -45,6 +47,125 @@ export const applyRecommendation = async (recommendationId: string, userId: stri
     .eq('user_id', userId);
 
   if (error) throw error;
+
+  // Get the recommendation to see what type it is and apply the changes
+  const { data: recommendation } = await supabase
+    .from('workout_recommendations')
+    .select('*')
+    .eq('id', recommendationId)
+    .single();
+
+  if (recommendation) {
+    await handleRecommendationApplication(recommendation, userId);
+  }
+};
+
+const handleRecommendationApplication = async (recommendation: any, userId: string) => {
+  const { type, metadata } = recommendation;
+
+  switch (type) {
+    case 'difficulty_adjustment':
+      await applyDifficultyAdjustment(userId, metadata);
+      break;
+    case 'exercise_variation':
+      await createExerciseVariation(userId, metadata);
+      break;
+    case 'workout_plan':
+      await createWorkoutPlanFromRecommendation(userId, metadata);
+      break;
+    case 'recovery':
+      await scheduleRecoveryDays(userId, metadata);
+      break;
+    default:
+      console.log('Recommendation type not handled:', type);
+  }
+};
+
+const applyDifficultyAdjustment = async (userId: string, metadata: any) => {
+  // Create workout adaptation record
+  await supabase
+    .from('workout_adaptations')
+    .insert({
+      user_id: userId,
+      adaptation_type: metadata.suggestion || 'general_adjustment',
+      reason: 'Applied from recommendation',
+      metadata: metadata,
+      applied_at: new Date().toISOString()
+    });
+};
+
+const createExerciseVariation = async (userId: string, metadata: any) => {
+  // Get current workout plan
+  const { data: currentPlan } = await supabase
+    .from('workout_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (currentPlan) {
+    // Create variation of current plan
+    const variation = await AdaptiveWorkoutEngine.createWorkoutVariation(userId, currentPlan);
+    
+    await supabase
+      .from('workout_plans')
+      .insert({
+        user_id: userId,
+        name: variation.name,
+        description: `Variation focusing on ${metadata.underworked_groups?.join(', ')}`,
+        workout_days: variation.workout_days,
+        goal: currentPlan.goal,
+        difficulty: currentPlan.difficulty,
+        frequency: currentPlan.frequency,
+        duration_weeks: currentPlan.duration_weeks,
+        template_id: currentPlan.id
+      });
+  }
+};
+
+const createWorkoutPlanFromRecommendation = async (userId: string, metadata: any) => {
+  // Get user preferences to create appropriate plan
+  const { data: userPreferences } = await supabase
+    .from('user_workout_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  const frequency = userPreferences?.preferred_workout_frequency || 3;
+  const duration = userPreferences?.preferred_workout_duration || 45;
+
+  // Create basic workout plan based on recommendation
+  const workoutPlan = await AdaptiveWorkoutEngine.createWorkoutVariation(userId, null);
+
+  await supabase
+    .from('workout_plans')
+    .insert({
+      user_id: userId,
+      name: 'Recommended Workout Plan',
+      description: 'Generated from AI recommendation',
+      workout_days: workoutPlan.workout_days,
+      goal: metadata.primary_goal || 'general_fitness',
+      difficulty: userPreferences?.fitness_level || 'beginner',
+      frequency: frequency,
+      duration_weeks: 4
+    });
+};
+
+const scheduleRecoveryDays = async (userId: string, metadata: any) => {
+  // Update user preferences to include recovery recommendations
+  await supabase
+    .from('workout_adaptations')
+    .insert({
+      user_id: userId,
+      adaptation_type: 'add_rest',
+      reason: 'Recovery recommendation applied',
+      metadata: {
+        recovery_strategies: metadata.recovery_strategies,
+        consecutive_days: metadata.consecutive_days
+      },
+      applied_at: new Date().toISOString()
+    });
 };
 
 export const dismissRecommendation = async (recommendationId: string, userId: string) => {
@@ -61,41 +182,18 @@ export const dismissRecommendation = async (recommendationId: string, userId: st
 };
 
 export const generateRecommendations = async (userId: string) => {
-  // This would be called by a background service or edge function
-  // For now, let's create some sample recommendations
-  const sampleRecommendations = [
-    {
-      user_id: userId,
-      title: "Increase Your Cardio",
-      description: "Based on your recent workouts, adding more cardio could help improve your endurance.",
-      type: 'workout_plan' as const,
-      reason: "Low cardio activity detected in recent sessions",
-      confidence_score: 0.8,
-      metadata: { workout_type: 'cardio', duration: 30 }
-    },
-    {
-      user_id: userId,
-      title: "Try Upper Body Focus",
-      description: "Your lower body workouts are consistent. Let's balance with more upper body exercises.",
-      type: 'exercise_variation' as const,
-      reason: "Muscle group balance analysis",
-      confidence_score: 0.75,
-      metadata: { focus: 'upper_body', exercises: ['push_ups', 'pull_ups', 'rows'] }
-    },
-    {
-      user_id: userId,
-      title: "Progressive Overload Suggestion",
-      description: "You've been consistent with your current weights. Time to increase the challenge!",
-      type: 'progression' as const,
-      reason: "Performance plateau detected",
-      confidence_score: 0.85,
-      metadata: { suggested_increase: '5-10%' }
-    }
-  ];
+  try {
+    return await IntelligentRecommendationEngine.generatePersonalizedRecommendations(userId);
+  } catch (error) {
+    console.error('Error generating intelligent recommendations:', error);
+    throw error;
+  }
+};
 
-  const { error } = await supabase
-    .from('workout_recommendations')
-    .insert(sampleRecommendations);
+export const getDifficultyAdjustments = async (userId: string) => {
+  return await AdaptiveWorkoutEngine.analyzeDifficultyAdjustments(userId);
+};
 
-  if (error) throw error;
+export const createPersonalizedVariation = async (userId: string, baseWorkoutPlan?: any) => {
+  return await AdaptiveWorkoutEngine.createWorkoutVariation(userId, baseWorkoutPlan);
 };
