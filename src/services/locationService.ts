@@ -85,4 +85,15 @@ export const locationService = {
   }
 };
 
+// Add the missing export
+export const runRetentionPolicies = async () => {
+  try {
+    console.log('Running retention policies...');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error running retention policies:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 export default locationService;

@@ -143,7 +143,7 @@ const Customer: React.FC = () => {
 
       <LocationStateManager>
         <LocationStatusIndicator 
-          trackingMode="automatic" 
+          trackingMode="medium" 
           isTracking={!!currentLocation} 
         />
         <LocationPromptBanner />

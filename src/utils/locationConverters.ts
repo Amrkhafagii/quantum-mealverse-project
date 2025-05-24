@@ -1,54 +1,43 @@
 
 import { DeliveryLocation, LocationFreshness } from '@/types/location';
+import { UnifiedLocation } from '@/types/unifiedLocation';
 
-// Convert Capacitor position to our DeliveryLocation format
-export function createDeliveryLocation(position: any): DeliveryLocation {
+export const convertToDeliveryLocation = (unifiedLocation: UnifiedLocation): DeliveryLocation => {
   return {
-    latitude: position.coords.latitude,
-    longitude: position.coords.longitude,
-    timestamp: position.timestamp || Date.now(),
-    accuracy: position.coords.accuracy,
-    speed: position.coords.speed || 0,
-    isMoving: (position.coords.speed || 0) > 0.5,
-    source: 'gps'
+    latitude: unifiedLocation.latitude,
+    longitude: unifiedLocation.longitude,
+    accuracy: unifiedLocation.accuracy,
+    altitude: unifiedLocation.altitude,
+    altitudeAccuracy: unifiedLocation.altitude_accuracy,
+    heading: unifiedLocation.heading,
+    speed: unifiedLocation.speed,
+    timestamp: new Date(unifiedLocation.timestamp).getTime(),
+    source: unifiedLocation.source as any,
+    isMoving: unifiedLocation.is_moving
   };
-}
+};
 
-// Determine location freshness based on timestamp
-export function getLocationFreshness(timestamp: number | null): LocationFreshness {
-  if (!timestamp) return 'invalid';
-  
+export const convertToUnifiedLocation = (deliveryLocation: DeliveryLocation): Partial<UnifiedLocation> => {
+  return {
+    latitude: deliveryLocation.latitude,
+    longitude: deliveryLocation.longitude,
+    accuracy: deliveryLocation.accuracy,
+    altitude: deliveryLocation.altitude,
+    altitude_accuracy: deliveryLocation.altitudeAccuracy,
+    heading: deliveryLocation.heading,
+    speed: deliveryLocation.speed,
+    timestamp: new Date(deliveryLocation.timestamp).toISOString(),
+    source: deliveryLocation.source as any,
+    is_moving: deliveryLocation.isMoving,
+    location_type: 'delivery'
+  };
+};
+
+export const getFreshnessLevel = (timestamp: number): LocationFreshness => {
   const now = Date.now();
   const ageInMinutes = (now - timestamp) / (1000 * 60);
   
-  if (ageInMinutes < 1) return 'fresh';
-  if (ageInMinutes < 5) return 'moderate';
-  if (ageInMinutes < 30) return 'stale';
+  if (ageInMinutes <= 5) return 'fresh';
+  if (ageInMinutes <= 30) return 'stale';
   return 'invalid';
-}
-
-// Calculate distance between two points in kilometers using Haversine formula
-export function calculateDistance(
-  lat1: number, 
-  lon1: number, 
-  lat2: number, 
-  lon2: number
-): number {
-  const R = 6371; // Earth radius in kilometers
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1); 
-  
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-    
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const d = R * c;
-  return d;
-}
-
-// Convert degrees to radians
-function toRad(degrees: number): number {
-  return degrees * Math.PI / 180;
-}
+};
