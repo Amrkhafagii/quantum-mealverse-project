@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,17 +52,7 @@ const FitnessPage = () => {
             </TabsContent>
             
             <TabsContent value="scheduler" className="mt-2">
-              <WorkoutScheduler 
-                userId={user?.id} 
-                schedules={workoutData.schedules}
-                onScheduleCreated={workoutData.fetchWorkoutPlans}
-                refreshSchedules={workoutData.fetchWorkoutSchedules}
-                refreshHistory={workoutData.fetchWorkoutHistory}
-                logWorkout={async (workoutLog) => {
-                  const result = await workoutData.logWorkout(workoutLog);
-                  return result.success;
-                }}
-              />
+              <WorkoutScheduler />
             </TabsContent>
             
             <TabsContent value="history" className="mt-2">
