@@ -18,8 +18,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Register the custom LocationPermissions plugin
-        self.registerLocationPermissionsPlugin()
+        // Register Capacitor plugins - including our custom LocationPermissionsPlugin
+        self.registerCustomPlugins()
      
         // Set up appearance for navigation bars and toolbars
         UIAppearanceManager.configureUIAppearance()
@@ -40,21 +40,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     // MARK: - Custom Plugin Registration
-    private func registerLocationPermissionsPlugin() {
+    private func registerCustomPlugins() {
         print("Registering custom LocationPermissionsPlugin")
         
-        // Register the plugin class with Capacitor
-        guard let bridgeViewController = self.window?.rootViewController as? CAPBridgeViewController else {
-            print("Error: Could not get bridge view controller for plugin registration")
+        guard let bridgeViewController = self.window?.rootViewController as? CAPBridgeViewController,
+              let pluginInstance = bridgeViewController.bridge?.plugin(withName: "LocationPermissions") else {
+            print("Warning: LocationPermissionsPlugin not found in plugin registry")
             return
         }
         
-        // Register the plugin manually
-        bridgeViewController.bridge?.registerPlugin(LocationPermissionsPlugin.self)
-        
-        print("LocationPermissionsPlugin successfully registered")
+        print("LocationPermissionsPlugin successfully registered: \(pluginInstance)")
     }
-    
     // MARK: - Application Lifecycle Methods
     
     func applicationWillResignActive(_ application: UIApplication) {
