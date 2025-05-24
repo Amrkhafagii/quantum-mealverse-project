@@ -49,7 +49,7 @@ export const WorkoutPlanForm: React.FC<WorkoutPlanFormProps> = ({
       name: initialData?.name || '',
       description: initialData?.description || '',
       goal: initialData?.goal || '',
-      difficulty: initialData?.difficulty || 'beginner',
+      difficulty: (initialData?.difficulty as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
       frequency: initialData?.frequency || 3,
       duration_weeks: initialData?.duration_weeks || 8,
     },
@@ -150,7 +150,12 @@ export const WorkoutPlanForm: React.FC<WorkoutPlanFormProps> = ({
 
   const handleFormSubmit = (data: WorkoutPlanFormData) => {
     const planData: Omit<WorkoutPlan, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
-      ...data,
+      name: data.name,
+      description: data.description,
+      goal: data.goal,
+      difficulty: data.difficulty,
+      frequency: data.frequency,
+      duration_weeks: data.duration_weeks,
       workout_days: workoutDays
     };
     onSubmit(planData);

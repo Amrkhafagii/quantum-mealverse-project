@@ -19,7 +19,15 @@ export function useWorkoutTemplates() {
         .order('difficulty', { ascending: true });
 
       if (error) throw error;
-      setTemplates(data || []);
+      
+      // Type cast the data to match our interface
+      const typedTemplates: WorkoutTemplate[] = (data || []).map(template => ({
+        ...template,
+        difficulty: template.difficulty as 'beginner' | 'intermediate' | 'advanced',
+        workout_days: Array.isArray(template.workout_days) ? template.workout_days : []
+      }));
+      
+      setTemplates(typedTemplates);
     } catch (error) {
       console.error('Error fetching workout templates:', error);
       toast({

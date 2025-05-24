@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,7 @@ import { WorkoutPlanForm } from './workout/WorkoutPlanForm';
 import { useWorkoutTemplates } from '@/hooks/useWorkoutTemplates';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
 import { useAuth } from '@/hooks/useAuth';
-import { WorkoutPlan } from '@/types/fitness/workouts';
+import { WorkoutPlan, WorkoutTemplate } from '@/types/fitness/workouts';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,12 +27,17 @@ const WorkoutPlanner = () => {
 
     try {
       setIsSubmitting(true);
+      
+      // Convert workout_days to JSON for database storage
+      const dbData = {
+        ...planData,
+        user_id: user.id,
+        workout_days: JSON.parse(JSON.stringify(planData.workout_days)) // Ensure proper JSON serialization
+      };
+      
       const { error } = await supabase
         .from('workout_plans')
-        .insert({
-          ...planData,
-          user_id: user.id
-        });
+        .insert(dbData);
 
       if (error) throw error;
 
@@ -61,9 +65,16 @@ const WorkoutPlanner = () => {
 
     try {
       setIsSubmitting(true);
+      
+      // Convert workout_days to JSON for database storage
+      const dbData = {
+        ...planData,
+        workout_days: JSON.parse(JSON.stringify(planData.workout_days))
+      };
+      
       const { error } = await supabase
         .from('workout_plans')
-        .update(planData)
+        .update(dbData)
         .eq('id', editingPlan.id)
         .eq('user_id', user.id);
 
@@ -116,25 +127,28 @@ const WorkoutPlanner = () => {
     }
   };
 
-  const handleUseTemplate = async (template: any) => {
+  const handleUseTemplate = async (template: WorkoutTemplate) => {
     if (!user) return;
 
     try {
       setIsSubmitting(true);
+      
+      const dbData = {
+        name: `${template.name} (Copy)`,
+        description: template.description,
+        goal: template.goal,
+        difficulty: template.difficulty,
+        frequency: template.frequency_per_week,
+        duration_weeks: template.duration_weeks,
+        workout_days: JSON.parse(JSON.stringify(template.workout_days)),
+        template_id: template.id,
+        is_custom: false,
+        user_id: user.id
+      };
+      
       const { error } = await supabase
         .from('workout_plans')
-        .insert({
-          name: `${template.name} (Copy)`,
-          description: template.description,
-          goal: template.goal,
-          difficulty: template.difficulty,
-          frequency: template.frequency_per_week,
-          duration_weeks: template.duration_weeks,
-          workout_days: template.workout_days,
-          template_id: template.id,
-          is_custom: false,
-          user_id: user.id
-        });
+        .insert(dbData);
 
       if (error) throw error;
 

@@ -18,7 +18,14 @@ export function useExercises() {
         .order('name');
 
       if (error) throw error;
-      setExercises(data || []);
+      
+      // Type cast the difficulty field to ensure it matches our interface
+      const typedExercises: Exercise[] = (data || []).map(exercise => ({
+        ...exercise,
+        difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced'
+      }));
+      
+      setExercises(typedExercises);
     } catch (error) {
       console.error('Error fetching exercises:', error);
       toast({

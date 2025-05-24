@@ -1,4 +1,6 @@
 
+import { WorkoutDay } from '../fitness/workouts';
+
 export interface Exercise {
   id: string;
   name: string;
