@@ -856,6 +856,47 @@ export type Database = {
           },
         ]
       }
+      exercise_instructions: {
+        Row: {
+          content_url: string | null
+          created_at: string | null
+          exercise_id: string | null
+          id: string
+          instruction_text: string | null
+          instruction_type: string
+          order_index: number
+          updated_at: string | null
+        }
+        Insert: {
+          content_url?: string | null
+          created_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          instruction_text?: string | null
+          instruction_type: string
+          order_index?: number
+          updated_at?: string | null
+        }
+        Update: {
+          content_url?: string | null
+          created_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          instruction_text?: string | null
+          instruction_type?: string
+          order_index?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_instructions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_progress: {
         Row: {
           created_at: string | null
@@ -934,6 +975,101 @@ export type Database = {
           name?: string
           updated_at?: string | null
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      fitness_challenge_participants: {
+        Row: {
+          challenge_id: string | null
+          completed_at: string | null
+          current_progress: number | null
+          id: string
+          is_completed: boolean | null
+          joined_at: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge_id?: string | null
+          completed_at?: string | null
+          current_progress?: number | null
+          id?: string
+          is_completed?: boolean | null
+          joined_at?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string | null
+          completed_at?: string | null
+          current_progress?: number | null
+          id?: string
+          is_completed?: boolean | null
+          joined_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitness_challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "fitness_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fitness_challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          is_public: boolean | null
+          is_team_challenge: boolean | null
+          max_participants: number | null
+          participants_count: number | null
+          prize_description: string | null
+          start_date: string
+          target_unit: string
+          target_value: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          challenge_type: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_public?: boolean | null
+          is_team_challenge?: boolean | null
+          max_participants?: number | null
+          participants_count?: number | null
+          prize_description?: string | null
+          start_date: string
+          target_unit: string
+          target_value: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_public?: boolean | null
+          is_team_challenge?: boolean | null
+          max_participants?: number | null
+          participants_count?: number | null
+          prize_description?: string | null
+          start_date?: string
+          target_unit?: string
+          target_value?: number
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1694,6 +1830,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rest_timer_sessions: {
+        Row: {
+          actual_rest_seconds: number | null
+          completed_at: string | null
+          exercise_name: string
+          id: string
+          planned_rest_seconds: number
+          set_number: number
+          started_at: string | null
+          user_id: string
+          was_skipped: boolean | null
+          workout_log_id: string | null
+        }
+        Insert: {
+          actual_rest_seconds?: number | null
+          completed_at?: string | null
+          exercise_name: string
+          id?: string
+          planned_rest_seconds: number
+          set_number: number
+          started_at?: string | null
+          user_id: string
+          was_skipped?: boolean | null
+          workout_log_id?: string | null
+        }
+        Update: {
+          actual_rest_seconds?: number | null
+          completed_at?: string | null
+          exercise_name?: string
+          id?: string
+          planned_rest_seconds?: number
+          set_number?: number
+          started_at?: string | null
+          user_id?: string
+          was_skipped?: boolean | null
+          workout_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rest_timer_sessions_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurant_assignments: {
         Row: {
@@ -2731,6 +2914,48 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_data_exports: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          date_range_end: string | null
+          date_range_start: string | null
+          error_message: string | null
+          export_type: string
+          file_format: string
+          file_path: string | null
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          export_type: string
+          file_format: string
+          file_path?: string | null
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          date_range_end?: string | null
+          date_range_start?: string | null
+          error_message?: string | null
+          export_type?: string
+          file_format?: string
+          file_path?: string | null
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_goals: {
         Row: {
           created_at: string | null
@@ -3144,6 +3369,130 @@ export type Database = {
             columns: ["workout_schedule_id"]
             isOneToOne: false
             referencedRelation: "workout_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_share_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          share_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          share_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          share_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_share_comments_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "workout_shares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_share_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          share_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          share_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          share_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_share_likes_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "workout_shares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_shares: {
+        Row: {
+          comments_count: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          likes_count: number | null
+          share_type: string
+          title: string
+          updated_at: string | null
+          user_id: string
+          workout_log_id: string | null
+          workout_plan_id: string | null
+        }
+        Insert: {
+          comments_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          likes_count?: number | null
+          share_type: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+          workout_log_id?: string | null
+          workout_plan_id?: string | null
+        }
+        Update: {
+          comments_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          likes_count?: number | null
+          share_type?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          workout_log_id?: string | null
+          workout_plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_shares_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_shares_workout_plan_id_fkey"
+            columns: ["workout_plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
             referencedColumns: ["id"]
           },
         ]
