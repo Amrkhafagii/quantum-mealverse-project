@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
-import { CustomerHeader } from '@/components/customer/CustomerHeader';
 import { MainContent } from '@/components/customer/MainContent';
 import { LocationPrompt } from '@/components/customer/LocationPrompt';
 import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBoundary';
@@ -77,15 +76,8 @@ const CustomerPage = () => {
               <CustomerBreadcrumbs />
             </AnimatedContainer>
             
-            <AnimatedContainer animation="slideUp" delay={0.1}>
-              <CustomerHeader 
-                userEmail={user?.email}
-                onLogout={handleLogout}
-              />
-            </AnimatedContainer>
-            
             {/* Navigation Section */}
-            <AnimatedContainer animation="slideUp" delay={0.2}>
+            <AnimatedContainer animation="slideUp" delay={0.1}>
               <div className="mb-8">
                 <CustomerNavigation />
               </div>
@@ -93,7 +85,7 @@ const CustomerPage = () => {
             
             {/* Location prompt - only show if there's an issue or permission not requested */}
             {(hasLocationIssue || !hasRequestedPermission) && (
-              <AnimatedContainer animation="slideUp" delay={0.3}>
+              <AnimatedContainer animation="slideUp" delay={0.2}>
                 <LocationPrompt
                   onRequestLocation={requestLocation}
                   isLoading={isLoading}
@@ -103,7 +95,7 @@ const CustomerPage = () => {
               </AnimatedContainer>
             )}
             
-            <AnimatedContainer animation="slideUp" delay={0.4}>
+            <AnimatedContainer animation="slideUp" delay={0.3}>
               <MainContent 
                 isMapView={isMapView}
                 menuItems={menuItems}
