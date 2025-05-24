@@ -3,12 +3,13 @@ import React, { Suspense } from 'react';
 import { MealType } from '@/types/meal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Restaurant } from '@/hooks/useRestaurantsData';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RestaurantSummary } from './RestaurantSummary';
 import { CustomerMealGrid } from './CustomerMealGrid';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
 
 const RestaurantMapView = React.lazy(() => 
   import('@/components/location/RestaurantMapView')
@@ -41,11 +42,6 @@ export const MainContent: React.FC<MainContentProps> = ({
     nearbyRestaurantsCount: nearbyRestaurants?.length
   });
 
-  // Filter restaurants that have distance_km for map view
-  const restaurantsWithDistance = nearbyRestaurants.filter(restaurant => 
-    restaurant.distance_km !== undefined
-  );
-
   // Show error state if there's an error
   if (error && !isLoading) {
     return (
@@ -67,6 +63,39 @@ export const MainContent: React.FC<MainContentProps> = ({
       </div>
     );
   }
+
+  // Show location required message if no restaurants are found
+  if (nearbyRestaurants.length === 0 && !isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-12"
+      >
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 max-w-md mx-auto">
+          <CardContent className="p-8">
+            <MapPin className="h-16 w-16 text-quantum-cyan mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-3">Location Required</h3>
+            <p className="text-gray-300 mb-6">
+              Please enable location access to discover restaurants and menu items near you.
+            </p>
+            <Button 
+              onClick={onLocationRequest}
+              className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black"
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Enable Location
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  // Filter restaurants that have distance_km for map view
+  const restaurantsWithDistance = nearbyRestaurants.filter(restaurant => 
+    restaurant.distance_km !== undefined
+  );
 
   return (
     <>

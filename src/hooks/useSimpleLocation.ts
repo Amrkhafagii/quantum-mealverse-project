@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
 
 export interface SimpleLocation {
   latitude: number;
@@ -34,7 +33,7 @@ export const useSimpleLocation = () => {
     if (!isSupported) {
       setState(prev => ({ 
         ...prev, 
-        error: 'Geolocation is not supported by this browser',
+        error: 'Location services are not supported by this browser',
         permissionStatus: 'denied'
       }));
       return null;
@@ -75,22 +74,22 @@ export const useSimpleLocation = () => {
 
       return location;
     } catch (error: any) {
-      let errorMessage = 'Unable to get your location';
+      let errorMessage = 'Unable to access your location';
       let permissionStatus: 'denied' | 'prompt' = 'denied';
 
       switch (error.code) {
         case 1: // PERMISSION_DENIED
-          errorMessage = 'Location access denied';
+          errorMessage = 'Location access was denied. Please enable location services to find nearby restaurants.';
           permissionStatus = 'denied';
           break;
         case 2: // POSITION_UNAVAILABLE
-          errorMessage = 'Location information is unavailable';
+          errorMessage = 'Your location is currently unavailable. Please try again.';
           break;
         case 3: // TIMEOUT
-          errorMessage = 'Location request timed out';
+          errorMessage = 'Location request timed out. Please try again.';
           break;
         default:
-          errorMessage = 'An error occurred while getting your location';
+          errorMessage = 'An error occurred while getting your location. Please try again.';
       }
 
       setState(prev => ({
@@ -119,8 +118,8 @@ export const useSimpleLocation = () => {
         const parsed = JSON.parse(cachedLocation);
         const age = Date.now() - parsed.timestamp;
         
-        // Use cached location if less than 1 hour old
-        if (age < 3600000) {
+        // Use cached location if less than 30 minutes old
+        if (age < 1800000) {
           setState(prev => ({
             ...prev,
             location: parsed,
@@ -129,6 +128,7 @@ export const useSimpleLocation = () => {
         }
       } catch (e) {
         console.warn('Failed to parse cached location');
+        localStorage.removeItem('lastKnownLocation');
       }
     }
   }, []);

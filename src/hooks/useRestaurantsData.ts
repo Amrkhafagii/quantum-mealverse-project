@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,52 +48,23 @@ export const useRestaurantsData = (location: SimpleLocation | null) => {
     }
   }, [user]);
 
-  const fetchAllRestaurants = useCallback(async () => {
-    if (!user) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('id, name, address, email')
-        .eq('is_active', true)
-        .limit(20);
-
-      if (error) throw error;
-
-      const formattedData = data?.map(restaurant => ({
-        restaurant_id: restaurant.id,
-        restaurant_name: restaurant.name,
-        restaurant_address: restaurant.address,
-        restaurant_email: restaurant.email
-      })) || [];
-
-      setRestaurants(formattedData);
-    } catch (err: any) {
-      console.error('Error fetching all restaurants:', err);
-      setError('Failed to load restaurants');
-      setRestaurants([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
   useEffect(() => {
-    if (user) {
-      if (location?.latitude && location?.longitude) {
-        fetchNearbyRestaurants(location);
-      } else {
-        fetchAllRestaurants();
+    if (user && location?.latitude && location?.longitude) {
+      fetchNearbyRestaurants(location);
+    } else {
+      // Clear restaurants if no location is available
+      setRestaurants([]);
+      setLoading(false);
+      if (user && !location) {
+        setError('Location access is required to find nearby restaurants');
       }
     }
-  }, [user, location, fetchNearbyRestaurants, fetchAllRestaurants]);
+  }, [user, location, fetchNearbyRestaurants]);
 
   return {
     restaurants,
     loading,
     error,
-    refetch: location ? () => fetchNearbyRestaurants(location) : fetchAllRestaurants
+    refetch: location ? () => fetchNearbyRestaurants(location) : undefined
   };
 };
