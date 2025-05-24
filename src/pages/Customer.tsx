@@ -15,11 +15,11 @@ const CustomerPage = () => {
   const { user, logout } = useAuth();
   const [isMapView, setIsMapView] = useState(false);
   
-  // Get nearby restaurants data with error handling
-  const { nearbyRestaurants = [], loading: isLoadingRestaurants } = useNearestRestaurant() || {};
+  // Get nearby restaurants data
+  const { nearbyRestaurants, loading: isLoadingRestaurants, error: restaurantError } = useNearestRestaurant();
   
-  // Get menu items data - pass the nearbyRestaurants array with fallback
-  const { data: menuItems = [], isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems(nearbyRestaurants || []);
+  // Get menu items data
+  const { data: menuItems = [], isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems(nearbyRestaurants);
 
   const handleLogout = async () => {
     try {
@@ -35,19 +35,19 @@ const CustomerPage = () => {
   };
 
   const handleLocationRequest = () => {
-    // This would trigger location permission request
     console.log('Location permission requested');
   };
 
   const isLoading = isLoadingRestaurants || isLoadingMenuItems;
+  const error = restaurantError || menuItemsError;
 
-  // Add console logs for debugging
-  console.log('Customer page rendering with:', {
+  // Debug logging
+  console.log('Customer page state:', {
     user: user?.email,
-    nearbyRestaurants: nearbyRestaurants?.length,
-    menuItems: menuItems?.length,
+    nearbyRestaurants: nearbyRestaurants?.length || 0,
+    menuItems: menuItems?.length || 0,
     isLoading,
-    error: menuItemsError
+    error
   });
 
   return (
@@ -64,8 +64,8 @@ const CustomerPage = () => {
           isMapView={isMapView}
           menuItems={menuItems}
           isLoading={isLoading}
-          error={menuItemsError}
-          nearbyRestaurants={nearbyRestaurants || []}
+          error={error}
+          nearbyRestaurants={nearbyRestaurants}
           toggleMapView={toggleMapView}
           onLocationRequest={handleLocationRequest}
         />

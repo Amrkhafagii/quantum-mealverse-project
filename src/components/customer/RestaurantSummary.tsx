@@ -9,8 +9,8 @@ interface RestaurantSummaryProps {
   restaurants: NearbyRestaurant[];
 }
 
-export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurants = [] }) => {
-  console.log('RestaurantSummary rendering with restaurants:', restaurants.length);
+export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurants }) => {
+  console.log('RestaurantSummary rendering with restaurants:', restaurants?.length || 0);
 
   if (!restaurants || restaurants.length === 0) {
     return (

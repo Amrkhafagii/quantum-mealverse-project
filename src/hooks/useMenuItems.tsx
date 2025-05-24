@@ -2,25 +2,37 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MealType } from '@/types/meal';
-import { getMenuItems } from '@/services/restaurant/menuService';
 import { NearbyRestaurant } from '@/hooks/useNearestRestaurant';
 
 export const useMenuItems = (nearbyRestaurants: NearbyRestaurant[]) => {
   return useQuery({
     queryKey: ['menuItems', nearbyRestaurants],
     queryFn: async () => {
-      if (!nearbyRestaurants.length) return [];
+      if (!nearbyRestaurants.length) {
+        console.log('No nearby restaurants, returning empty menu items');
+        return [];
+      }
       
-      console.log('Finding menu items for restaurants:', nearbyRestaurants);
+      console.log('Fetching menu items for restaurants:', nearbyRestaurants);
       
       const restaurantIds = nearbyRestaurants.map(restaurant => restaurant.restaurant_id);
       console.log('Restaurant IDs:', restaurantIds);
       
-      const items = await getMenuItems(restaurantIds as unknown as string, undefined, true);
-      console.log('Menu items fetched using service:', items?.length, items);
+      const { data: menuItems, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .in('restaurant_id', restaurantIds)
+        .eq('is_available', true);
+
+      if (error) {
+        console.error('Error fetching menu items:', error);
+        throw error;
+      }
+
+      console.log('Menu items fetched:', menuItems?.length, menuItems);
       
       // Transform menu items to MealType
-      let transformedItems = items?.map(item => {
+      const transformedItems = menuItems?.map(item => {
         let nutritionalInfo = {
           calories: 0,
           protein: 0,
@@ -43,14 +55,14 @@ export const useMenuItems = (nearbyRestaurants: NearbyRestaurant[]) => {
           console.error("Error parsing nutritional info:", e);
         }
 
-        // Generate mock dietary tags for demonstration (would come from database in real app)
+        // Generate basic dietary tags
         const mockDietaryTags = [];
-        if (item.id.charCodeAt(0) % 2 === 0) mockDietaryTags.push('vegetarian');
-        if (item.id.charCodeAt(1) % 3 === 0) mockDietaryTags.push('gluten-free');
-        if (item.id.charCodeAt(2) % 4 === 0) mockDietaryTags.push('dairy-free');
-        if (item.id.charCodeAt(3) % 5 === 0) mockDietaryTags.push('vegan');
-        if (item.id.charCodeAt(4) % 6 === 0) mockDietaryTags.push('keto');
-        if (item.id.charCodeAt(5) % 7 === 0) mockDietaryTags.push('high-protein');
+        if (item.name.toLowerCase().includes('vegetarian') || item.description?.toLowerCase().includes('vegetarian')) {
+          mockDietaryTags.push('vegetarian');
+        }
+        if (item.name.toLowerCase().includes('gluten') || item.description?.toLowerCase().includes('gluten')) {
+          mockDietaryTags.push('gluten-free');
+        }
 
         return {
           id: item.id,
@@ -70,9 +82,6 @@ export const useMenuItems = (nearbyRestaurants: NearbyRestaurant[]) => {
         } as MealType;
       }) || [];
 
-      // Apply random sort to simulate rating-based sorting
-      transformedItems.sort(() => Math.random() - 0.5);
-      
       return transformedItems;
     },
     enabled: nearbyRestaurants.length > 0
