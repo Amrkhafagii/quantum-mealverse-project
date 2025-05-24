@@ -27,21 +27,27 @@ export const PlatformSpecific: React.FC<PlatformSpecificProps> = ({
     // If no platform is specified, always render
     if (!platform) return true;
 
-    switch (platform) {
-      case 'ios':
-        return isPlatformIOS;
-      case 'android':
-        return isPlatformAndroid;
-      case 'native':
-        return Platform.isNative();
-      case 'web':
-        return isPlatformWeb;
-      case 'mobile-web':
-        return isPlatformWeb && isMobile;
-      case 'tablet':
-        return isTablet;
-      default:
-        return false;
+    try {
+      switch (platform) {
+        case 'ios':
+          return isPlatformIOS;
+        case 'android':
+          return isPlatformAndroid;
+        case 'native':
+          return Platform.isNative();
+        case 'web':
+          return isPlatformWeb;
+        case 'mobile-web':
+          return isPlatformWeb && isMobile;
+        case 'tablet':
+          return isTablet;
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error('Error in platform detection:', error);
+      // Default to showing content if there's an error
+      return true;
     }
   };
 
