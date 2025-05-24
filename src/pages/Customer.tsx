@@ -16,10 +16,10 @@ const CustomerPage = () => {
   const [isMapView, setIsMapView] = useState(false);
   
   // Get nearby restaurants data
-  const { nearbyRestaurants, isLoading: isLoadingRestaurants } = useNearestRestaurant();
+  const { nearbyRestaurants, loading: isLoadingRestaurants } = useNearestRestaurant();
   
   // Get menu items data
-  const { data: menuItems, isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems();
+  const { data: menuItems, isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems({});
 
   const handleLogout = async () => {
     try {
