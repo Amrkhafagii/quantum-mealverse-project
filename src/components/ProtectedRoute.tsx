@@ -1,11 +1,8 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader } from 'lucide-react';
-import { useLocationPermission } from '@/hooks/useLocationPermission';
-import { toast } from 'sonner';
-import { useUserType } from '@/hooks/useUserType';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,47 +17,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectPath = '/auth',
   requiresLocation = false
 }) => {
-  const { user, loading: authLoading } = useAuth();
-  const { userType, loading: userTypeLoading } = useUserType();
-  const { 
-    permissionStatus, 
-    isLocationStale, 
-    hasInitialized, 
-    requestPermission 
-  } = useLocationPermission();
+  const { user, loading } = useAuth();
 
-  const isDeliveryPath = window.location.pathname.includes('/delivery/');
-  const isSettingsPath = window.location.pathname.includes('/delivery/settings');
-  const shouldCheckLocation = requiresLocation || (isDeliveryPath && !isSettingsPath);
-  
-  // For delivery paths, check if we need to request location permission
-  useEffect(() => {
-    const checkAndRequestLocationForDelivery = async () => {
-      if (isDeliveryPath && permissionStatus === 'prompt' && hasInitialized) {
-        try {
-          // Wait a moment for page to load before requesting
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          toast.info("Location required", {
-            description: "Delivery services need your location to function properly",
-            duration: 5000
-          });
-          
-          // Try to request permission
-          await requestPermission();
-        } catch (error) {
-          console.error('Error requesting location permission:', error);
-        }
-      }
-    };
-    
-    checkAndRequestLocationForDelivery();
-  }, [isDeliveryPath, permissionStatus, hasInitialized, requestPermission]);
-
-  // Combined loading state for auth and user type
-  const loading = authLoading || userTypeLoading;
-
-  if (loading || !hasInitialized) {
+  if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-quantum-black">
         <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
@@ -75,24 +34,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If allowedUserTypes is specified, check if the user type is allowed
   if (allowedUserTypes && allowedUserTypes.length > 0) {
-    if (!userType || !allowedUserTypes.includes(userType)) {
+    const userType = user.user_metadata?.user_type || 'customer'; // Default to customer if no type set
+    
+    if (!allowedUserTypes.includes(userType)) {
       // Redirect to appropriate dashboard based on user type
       if (userType === 'delivery') {
         return <Navigate to="/delivery/dashboard" replace />;
       } else if (userType === 'restaurant') {
         return <Navigate to="/restaurant/dashboard" replace />;
       } else {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/customer" replace />;
       }
-    }
-  }
-
-  // Check if we need to verify location for delivery users
-  if (shouldCheckLocation && userType === 'delivery') {
-    // For delivery paths that require location access
-    if (permissionStatus === 'denied') {
-      // Redirect to settings page with query param
-      return <Navigate to="/delivery/settings?locationDenied=true" replace />;
     }
   }
 

@@ -7,7 +7,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Fitness from "./pages/Fitness";
 import FitnessEnhanced from "./pages/FitnessEnhanced";
-import { AuthProvider } from "./hooks/useAuth";
+import Customer from "./pages/Customer";
+import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +23,12 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/customer" element={
+              <ProtectedRoute allowedUserTypes={['customer']}>
+                <Customer />
+              </ProtectedRoute>
+            } />
             <Route path="/fitness" element={<Fitness />} />
             <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
           </Routes>
