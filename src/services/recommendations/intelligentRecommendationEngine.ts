@@ -144,6 +144,7 @@ export class IntelligentRecommendationEngine {
   private static analyzeMuscleGroupBalance(context: RecommendationContext) {
     const { exerciseProgress } = context;
     
+    // Add proper type checking
     if (!Array.isArray(exerciseProgress) || exerciseProgress.length === 0) {
       return null;
     }
@@ -163,7 +164,7 @@ export class IntelligentRecommendationEngine {
     }, {} as Record<string, number>);
 
     exerciseProgress.forEach(exercise => {
-      const exerciseName = exercise.exercise_name.toLowerCase();
+      const exerciseName = exercise.exercise_name?.toLowerCase() || '';
       Object.entries(muscleGroups).forEach(([group, exercises]) => {
         if (exercises.some(ex => exerciseName.includes(ex))) {
           groupActivity[group]++;
@@ -198,16 +199,20 @@ export class IntelligentRecommendationEngine {
   private static analyzeProgressionPatterns(context: RecommendationContext) {
     const { exerciseProgress } = context;
     
+    // Add proper type checking
     if (!Array.isArray(exerciseProgress) || exerciseProgress.length === 0) {
       return null;
     }
     
     // Group by exercise and check for stagnation
     const exerciseGroups = exerciseProgress.reduce((acc, record) => {
-      if (!acc[record.exercise_name]) {
-        acc[record.exercise_name] = [];
+      const exerciseName = record.exercise_name;
+      if (!exerciseName) return acc;
+      
+      if (!acc[exerciseName]) {
+        acc[exerciseName] = [];
       }
-      acc[record.exercise_name].push(record);
+      acc[exerciseName].push(record);
       return acc;
     }, {} as Record<string, any[]>);
 
