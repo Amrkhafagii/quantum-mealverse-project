@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { useToast } from "@/components/ui/use-toast";
-import { MapPin, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { MapPin, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LocationSectionProps {
@@ -12,33 +12,22 @@ interface LocationSectionProps {
 }
 
 export const LocationSection = ({ onLocationUpdate, required = true }: LocationSectionProps) => {
-  const { 
-    location, 
-    error, 
-    isGettingLocation, 
-    getCurrentLocation, 
-    locationIsValid, 
-    isLocationStale, 
-    permissionStatus,
-    hasInitialized 
-  } = useLocationTracker();
-  
-  const [hasAttemptedLocation, setHasAttemptedLocation] = useState(false);
+  const { location, getCurrentLocation, locationIsValid, isLocationStale, permissionStatus } = useLocationTracker();
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { toast } = useToast();
 
-  // Update parent when location changes
+  // Use a more efficient useEffect implementation
   useEffect(() => {
     if (location && locationIsValid() && !isGettingLocation) {
       onLocationUpdate(location);
     }
   }, [location, locationIsValid, onLocationUpdate, isGettingLocation]);
 
-  // Handle location button click
+  // Memoize handler to prevent unnecessary rerenders
   const handleGetLocation = useCallback(async () => {
     if (isGettingLocation) return;
     
-    setHasAttemptedLocation(true);
-    
+    setIsGettingLocation(true);
     try {
       const newLocation = await getCurrentLocation();
       if (newLocation && newLocation.latitude && newLocation.longitude) {
@@ -46,6 +35,12 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         toast({
           title: "Location updated",
           description: "Your current location has been saved.",
+        });
+      } else {
+        toast({
+          title: "Location error",
+          description: "Could not get valid location coordinates. Please try again.",
+          variant: "destructive"
         });
       }
     } catch (error: any) {
@@ -55,13 +50,10 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         description: error.message || "We couldn't get your location. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsGettingLocation(false);
     }
   }, [getCurrentLocation, onLocationUpdate, toast, isGettingLocation]);
-
-  // Determine what to show
-  const hasValidLocation = locationIsValid();
-  const shouldShowError = hasAttemptedLocation && error && !hasValidLocation;
-  const shouldShowPermissionDenied = permissionStatus === 'denied' && hasAttemptedLocation;
 
   return (
     <div className="mb-6 space-y-4">
@@ -69,14 +61,14 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
         <h3 className="text-lg font-semibold flex items-center">
           <MapPin className="mr-1 h-5 w-5" />
           Location
-          {required && !hasValidLocation && <span className="text-red-500 ml-1">*</span>}
+          {required && !locationIsValid() && <span className="text-red-500 ml-1">*</span>}
         </h3>
         <Button
           onClick={handleGetLocation}
           className="cyber-button"
           type="button"
           size="lg"
-          disabled={isGettingLocation || !hasInitialized}
+          disabled={isGettingLocation}
         >
           {isGettingLocation ? (
             <span className="flex items-center">
@@ -84,52 +76,40 @@ export const LocationSection = ({ onLocationUpdate, required = true }: LocationS
               Getting Location...
             </span>
           ) : (
-            hasValidLocation ? "Update Location" : "Get Current Location"
+            location && locationIsValid() ? "Update Location" : "Get Current Location"
           )}
         </Button>
       </div>
       
-      {shouldShowPermissionDenied && (
+      {permissionStatus === 'denied' && (
         <Alert variant="destructive" className="border-red-500 bg-red-500/10">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="font-medium">
-            Location access denied. Please enable location services in your browser settings and refresh the page.
+            Location access denied. Please enable location services in your browser settings.
           </AlertDescription>
         </Alert>
       )}
       
-      {shouldShowError && !shouldShowPermissionDenied && (
-        <Alert variant="destructive" className="border-red-500 bg-red-500/10">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="font-medium">
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {hasValidLocation ? (
-        <div className="flex items-center space-x-2">
-          <CheckCircle className="h-4 w-4 text-green-400" />
-          <div>
-            <p className="text-sm text-green-400">
-              Location saved: {location!.latitude.toFixed(6)}, {location!.longitude.toFixed(6)}
+      {location && locationIsValid() ? (
+        <div>
+          <p className="text-sm text-green-400">
+            Location saved: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+          </p>
+          {isLocationStale() && (
+            <p className="text-sm text-yellow-400 mt-1">
+              Warning: Your location data is outdated. Consider updating.
             </p>
-            {isLocationStale() && (
-              <p className="text-sm text-yellow-400 mt-1">
-                Warning: Your location data is outdated. Consider updating.
-              </p>
-            )}
-          </div>
+          )}
         </div>
       ) : (
-        required && hasAttemptedLocation && !shouldShowError && !shouldShowPermissionDenied && (
+        required ? (
           <Alert variant="destructive" className="border-red-500 bg-red-500/10">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="font-medium">
-              Location is required to continue with delivery
+              {required ? "Location is required to continue with delivery" : "Please set your current location"}
             </AlertDescription>
           </Alert>
-        )
+        ) : null
       )}
     </div>
   );

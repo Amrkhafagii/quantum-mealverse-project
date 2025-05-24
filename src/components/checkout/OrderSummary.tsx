@@ -8,8 +8,6 @@ export const OrderSummary = () => {
   const deliveryFee = 50; // This could be made dynamic later if needed
   const finalTotal = totalAmount + deliveryFee;
 
-  console.log('OrderSummary items:', items);
-
   return (
     <Card className="holographic-card p-6 sticky top-24">
       <h2 className="text-xl font-bold text-quantum-cyan mb-4">Order Summary</h2>
