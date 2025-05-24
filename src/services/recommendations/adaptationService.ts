@@ -15,26 +15,31 @@ export interface WorkoutAdaptation {
 }
 
 export const createWorkoutAdaptation = async (adaptation: Omit<WorkoutAdaptation, 'id' | 'created_at'>) => {
-  // Use rpc function to insert into custom table
-  const { data, error } = await supabase.rpc('insert_workout_adaptation', {
-    p_user_id: adaptation.user_id,
-    p_workout_plan_id: adaptation.workout_plan_id,
-    p_exercise_name: adaptation.exercise_name,
-    p_adaptation_type: adaptation.adaptation_type,
-    p_old_value: adaptation.old_value,
-    p_new_value: adaptation.new_value,
-    p_reason: adaptation.reason,
-    p_applied_at: adaptation.applied_at
-  });
+  const { data, error } = await supabase
+    .from('workout_adaptations')
+    .insert({
+      user_id: adaptation.user_id,
+      workout_plan_id: adaptation.workout_plan_id,
+      exercise_name: adaptation.exercise_name,
+      adaptation_type: adaptation.adaptation_type,
+      old_value: adaptation.old_value,
+      new_value: adaptation.new_value,
+      reason: adaptation.reason,
+      applied_at: adaptation.applied_at
+    })
+    .select()
+    .single();
 
   if (error) throw error;
   return data;
 };
 
 export const getUserAdaptations = async (userId: string) => {
-  const { data, error } = await supabase.rpc('get_user_adaptations', {
-    p_user_id: userId
-  });
+  const { data, error } = await supabase
+    .from('workout_adaptations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('applied_at', { ascending: false });
 
   if (error) throw error;
   return data as WorkoutAdaptation[];
@@ -78,7 +83,8 @@ export const analyzePerformanceAndSuggestAdaptations = async (userId: string) =>
           adaptation_type: 'increase_weight',
           old_value: { weight: avgWeight },
           new_value: { weight: avgWeight * 1.05 },
-          reason: 'Performance plateau detected - time to increase challenge'
+          reason: 'Performance plateau detected - time to increase challenge',
+          applied_at: new Date().toISOString()
         });
       }
     }

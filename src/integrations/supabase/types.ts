@@ -1665,6 +1665,36 @@ export type Database = {
           },
         ]
       }
+      recommendation_feedback: {
+        Row: {
+          comments: string | null
+          created_at: string | null
+          feedback_type: string
+          id: string
+          rating: number | null
+          recommendation_id: string
+          user_id: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string | null
+          feedback_type: string
+          id?: string
+          rating?: number | null
+          recommendation_id: string
+          user_id: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string | null
+          feedback_type?: string
+          id?: string
+          rating?: number | null
+          recommendation_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       restaurant_assignments: {
         Row: {
           created_at: string
@@ -2501,6 +2531,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_workout_preferences: {
+        Row: {
+          auto_progression: boolean | null
+          available_equipment: string[] | null
+          created_at: string | null
+          fitness_level: string | null
+          id: string
+          injury_history: string[] | null
+          intensity_preference: string | null
+          preferred_workout_duration: number | null
+          preferred_workout_frequency: number | null
+          preferred_workout_types: string[] | null
+          time_constraints: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_progression?: boolean | null
+          available_equipment?: string[] | null
+          created_at?: string | null
+          fitness_level?: string | null
+          id?: string
+          injury_history?: string[] | null
+          intensity_preference?: string | null
+          preferred_workout_duration?: number | null
+          preferred_workout_frequency?: number | null
+          preferred_workout_types?: string[] | null
+          time_constraints?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_progression?: boolean | null
+          available_equipment?: string[] | null
+          created_at?: string | null
+          fitness_level?: string | null
+          id?: string
+          injury_history?: string[] | null
+          intensity_preference?: string | null
+          preferred_workout_duration?: number | null
+          preferred_workout_frequency?: number | null
+          preferred_workout_types?: string[] | null
+          time_constraints?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_workout_stats: {
         Row: {
           calories_burned: number | null
@@ -2583,6 +2661,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workout_adaptations: {
+        Row: {
+          adaptation_type: string
+          applied_at: string | null
+          created_at: string | null
+          exercise_name: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          reason: string | null
+          user_id: string
+          workout_plan_id: string | null
+        }
+        Insert: {
+          adaptation_type: string
+          applied_at?: string | null
+          created_at?: string | null
+          exercise_name?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+          user_id: string
+          workout_plan_id?: string | null
+        }
+        Update: {
+          adaptation_type?: string
+          applied_at?: string | null
+          created_at?: string | null
+          exercise_name?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+          user_id?: string
+          workout_plan_id?: string | null
+        }
+        Relationships: []
       }
       workout_analytics: {
         Row: {
@@ -2820,39 +2937,54 @@ export type Database = {
           applied: boolean | null
           applied_at: string | null
           confidence_score: number | null
+          created_at: string | null
           description: string | null
           dismissed: boolean | null
+          dismissed_at: string | null
+          expires_at: string | null
           id: string
+          metadata: Json | null
           reason: string | null
           suggested_at: string | null
           title: string | null
           type: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
           applied?: boolean | null
           applied_at?: string | null
           confidence_score?: number | null
+          created_at?: string | null
           description?: string | null
           dismissed?: boolean | null
+          dismissed_at?: string | null
+          expires_at?: string | null
           id?: string
+          metadata?: Json | null
           reason?: string | null
           suggested_at?: string | null
           title?: string | null
           type?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           applied?: boolean | null
           applied_at?: string | null
           confidence_score?: number | null
+          created_at?: string | null
           description?: string | null
           dismissed?: boolean | null
+          dismissed_at?: string | null
+          expires_at?: string | null
           id?: string
+          metadata?: Json | null
           reason?: string | null
           suggested_at?: string | null
           title?: string | null
           type?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -3712,6 +3844,51 @@ export type Database = {
         Args: { "": number }
         Returns: string
       }
+      get_recommendation_feedback: {
+        Args: { p_user_id: string; p_recommendation_id: string }
+        Returns: {
+          id: string
+          user_id: string
+          recommendation_id: string
+          feedback_type: string
+          rating: number
+          comments: string
+          created_at: string
+        }[]
+      }
+      get_user_adaptations: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          user_id: string
+          workout_plan_id: string
+          exercise_name: string
+          adaptation_type: string
+          old_value: Json
+          new_value: Json
+          reason: string
+          applied_at: string
+          created_at: string
+        }[]
+      }
+      get_user_workout_preferences: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          user_id: string
+          preferred_workout_duration: number
+          preferred_workout_frequency: number
+          preferred_workout_types: string[]
+          fitness_level: string
+          available_equipment: string[]
+          injury_history: string[]
+          time_constraints: Json
+          intensity_preference: string
+          auto_progression: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
       gettransactionid: {
         Args: Record<PropertyKey, never>
         Returns: unknown
@@ -3723,6 +3900,41 @@ export type Database = {
       gidx_out: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      insert_recommendation_feedback: {
+        Args: {
+          p_user_id: string
+          p_recommendation_id: string
+          p_feedback_type: string
+          p_rating?: number
+          p_comments?: string
+        }
+        Returns: string
+      }
+      insert_workout_adaptation: {
+        Args: {
+          p_user_id: string
+          p_adaptation_type: string
+          p_workout_plan_id?: string
+          p_exercise_name?: string
+          p_old_value?: Json
+          p_new_value?: Json
+          p_reason?: string
+          p_applied_at?: string
+        }
+        Returns: string
+      }
+      insert_workout_recommendation: {
+        Args: {
+          p_user_id: string
+          p_title: string
+          p_type: string
+          p_description?: string
+          p_reason?: string
+          p_confidence_score?: number
+          p_metadata?: Json
+        }
+        Returns: string
       }
       is_admin: {
         Args: { user_id: string }

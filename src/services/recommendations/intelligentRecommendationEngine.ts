@@ -31,18 +31,20 @@ export class IntelligentRecommendationEngine {
     const recoveryRecommendation = this.analyzeRecoveryPatterns(context);
     if (recoveryRecommendation) recommendations.push(recoveryRecommendation);
 
-    // Save recommendations to database using RPC
+    // Save recommendations to database
     if (recommendations.length > 0) {
       for (const rec of recommendations) {
-        await supabase.rpc('insert_workout_recommendation', {
-          p_user_id: rec.user_id,
-          p_title: rec.title,
-          p_description: rec.description,
-          p_type: rec.type,
-          p_reason: rec.reason,
-          p_confidence_score: rec.confidence_score,
-          p_metadata: rec.metadata
-        });
+        await supabase
+          .from('workout_recommendations')
+          .insert({
+            user_id: rec.user_id,
+            title: rec.title,
+            description: rec.description,
+            type: rec.type,
+            reason: rec.reason,
+            confidence_score: rec.confidence_score,
+            metadata: rec.metadata
+          });
       }
     }
 
@@ -65,10 +67,12 @@ export class IntelligentRecommendationEngine {
       .eq('user_id', userId)
       .gte('recorded_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-    // Get user preferences (use RPC since table may not be in types yet)
-    const { data: userPreferences } = await supabase.rpc('get_user_workout_preferences', {
-      p_user_id: userId
-    });
+    // Get user preferences
+    const { data: userPreferences } = await supabase
+      .from('user_workout_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
     // Get fitness goals
     const { data: fitnessGoals } = await supabase
