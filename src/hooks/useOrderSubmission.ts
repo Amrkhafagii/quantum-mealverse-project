@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { OrderStatus } from '@/types/webhook';
+import { CartItem } from '@/contexts/CartContext';
 import { 
   saveDeliveryInfo, 
   createOrder, 
@@ -16,7 +17,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 
 export const useOrderSubmission = (
   userId: string | undefined,
-  items: any[],
+  items: CartItem[],
   totalAmount: number,
   hasDeliveryInfo: boolean,
   clearCart: () => void

@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { CartItem } from '@/types/cart';
+import { CartItem } from '@/contexts/CartContext';
 import { OrderStatus } from '@/types/webhook';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { recordOrderHistory } from './webhook/orderHistoryService';
@@ -15,8 +16,8 @@ export const createOrder = async (
   initialStatus: string = OrderStatus.PENDING
 ) => {
   try {
-    // Create subtotal from items
-    const subtotal = items.reduce((sum, item) => sum + (item.meal.price * item.quantity), 0);
+    // Create subtotal from items - using flat structure
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // Calculate delivery fee based on delivery method
     const deliveryFee = deliveryInfo.deliveryMethod === 'delivery' ? 2.99 : 0;
@@ -62,10 +63,10 @@ export const createOrder = async (
 export const createOrderItems = async (orderId: string, items: CartItem[]) => {
   const orderItems = items.map(item => ({
     order_id: orderId,
-    meal_id: item.meal.id,
+    meal_id: item.id, // Use flat structure
     quantity: item.quantity,
-    price: item.meal.price,
-    name: item.meal.name
+    price: item.price, // Use flat structure
+    name: item.name // Use flat structure
   }));
   
   try {
