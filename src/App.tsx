@@ -9,6 +9,12 @@ import Fitness from "./pages/Fitness";
 import FitnessEnhanced from "./pages/FitnessEnhanced";
 import Customer from "./pages/Customer";
 import Auth from "./pages/Auth";
+import About from "./pages/About";
+import Nutrition from "./pages/Nutrition";
+import Orders from "./pages/Orders";
+import QrScannerDemo from "./pages/QrScannerDemo";
+import Dashboard from "./pages/Dashboard";
+import Cart from "./pages/Cart";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -47,9 +53,23 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/qr-scanner" element={<QrScannerDemo />} />
+                  <Route path="/nutrition" element={<Nutrition />} />
                   <Route path="/customer" element={
                     <ProtectedRoute allowedUserTypes={['customer']}>
                       <Customer />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute allowedUserTypes={['customer']}>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/orders" element={
+                    <ProtectedRoute allowedUserTypes={['customer']}>
+                      <Orders />
                     </ProtectedRoute>
                   } />
                   <Route path="/fitness" element={<Fitness />} />
