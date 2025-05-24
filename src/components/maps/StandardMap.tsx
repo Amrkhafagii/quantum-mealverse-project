@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMapService } from '@/contexts/MapServiceContext';
@@ -49,6 +50,14 @@ export const StandardMap: React.FC<StandardMapProps> = ({
   const mapClickListenerId = useRef<string | null>(null);
   const markersRef = useRef(markers);
   
+  // Helper function to normalize coordinates
+  const normalizeToLatLng = (coords: { latitude: number; longitude: number } | { lat: number; lng: number }) => {
+    if ('latitude' in coords) {
+      return { lat: coords.latitude, lng: coords.longitude };
+    }
+    return coords;
+  };
+  
   // Update markers ref when markers prop changes
   useEffect(() => {
     markersRef.current = markers;
@@ -65,8 +74,9 @@ export const StandardMap: React.FC<StandardMapProps> = ({
     return () => clearInterval(intervalId);
   }, [refreshInterval, mapInstance, isMapReady]);
   
-  // Determine map center - fix coordinate format
-  const mapCenter = center || 
+  // Determine map center - normalize coordinate format
+  const mapCenter = center ? 
+    normalizeToLatLng(center) : 
     (showUserLocation && currentLocation ? 
       { lat: currentLocation.latitude, lng: currentLocation.longitude } : 
       { lat: 40.7128, lng: -74.0060 }); // Default to NYC
@@ -166,10 +176,10 @@ export const StandardMap: React.FC<StandardMapProps> = ({
           else if (locationAccuracy === 'low') radius = 500;
           
           await addCircle(id, {
-            center: {
-              lat: currentLocation.latitude,
-              lng: currentLocation.longitude
-            },
+            center: normalizeToLatLng({
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude
+            }),
             radius,
             strokeColor: '#3388FF',
             strokeWidth: 2,

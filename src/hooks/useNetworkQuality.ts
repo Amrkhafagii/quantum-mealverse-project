@@ -13,6 +13,8 @@ export function useNetworkQuality(): NetworkQualityResult {
     packetLoss: null,
     effectiveType: undefined
   });
+  const [hasTransitioned, setHasTransitioned] = useState(false);
+  const [isFlaky, setIsFlaky] = useState(false);
 
   const checkQuality = async (): Promise<NetworkQuality> => {
     try {
@@ -111,8 +113,10 @@ export function useNetworkQuality(): NetworkQualityResult {
     quality,
     isLowQuality,
     metrics,
-    hasTransitioned: false,
-    isFlaky: false,
+    hasTransitioned,
+    isFlaky,
+    latency: metrics.latency,
+    bandwidth: metrics.bandwidth,
     checkQuality
   };
 }

@@ -15,6 +15,16 @@ export const supabase = {
         data: [],
         error: null
       }),
+      not: (column: string, value: any) => ({
+        order: (column: string, options?: any) => ({
+          limit: (count: number) => ({
+            data: [],
+            error: null
+          })
+        }),
+        data: [],
+        error: null
+      }),
       gte: (column: string, value: any) => ({
         lte: (column: string, value: any) => ({
           order: (column: string, options?: any) => ({
@@ -26,6 +36,22 @@ export const supabase = {
           data: [],
           error: null
         })
+      }),
+      range: (column: string, from: any, to: any) => ({
+        data: [],
+        error: null
+      }),
+      count: (options?: any) => ({
+        data: 0,
+        error: null
+      }),
+      single: () => ({
+        data: null,
+        error: null
+      }),
+      maybeSingle: () => ({
+        data: null,
+        error: null
       }),
       data: [],
       error: null

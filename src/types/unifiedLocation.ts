@@ -5,7 +5,7 @@
 
 export type LocationFreshness = 'invalid' | 'fresh' | 'stale' | 'moderate' | 'expired';
 
-export type LocationSource = 'gps' | 'network' | 'passive' | 'manual' | 'cached' | 'wifi' | 'unknown';
+export type LocationSource = 'gps' | 'network' | 'passive' | 'manual' | 'cached' | 'wifi' | 'cell' | 'unknown';
 
 export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt';
 
@@ -96,7 +96,7 @@ export interface LocationPrivacySettings {
   automaticallyAnonymize?: boolean;
   collectDeviceInfo?: boolean;
   allowPreciseLocation?: boolean;
-  precisionLevel?: number;
+  precisionLevel?: number | string;
   retentionDays?: number; // Alias for retentionPeriodDays for backward compatibility
 }
 

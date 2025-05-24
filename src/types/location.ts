@@ -11,4 +11,5 @@ export interface DeliveryLocation {
   speed?: number | undefined;
   timestamp: number;
   source?: LocationSource;
+  isMoving?: boolean;
 }
