@@ -16,6 +16,7 @@ import QrScannerDemo from "./pages/QrScannerDemo";
 import Dashboard from "./pages/Dashboard";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -57,6 +58,11 @@ const App = () => (
                   <Route path="/about" element={<About />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/order-confirmation/:id" element={
+                    <ProtectedRoute allowedUserTypes={['customer']}>
+                      <OrderConfirmation />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/qr-scanner" element={<QrScannerDemo />} />
                   <Route path="/nutrition" element={<Nutrition />} />
                   <Route path="/customer" element={
