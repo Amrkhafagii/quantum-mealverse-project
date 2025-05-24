@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, Star } from 'lucide-react';
+import { MapPin, Clock, Star, Navigation } from 'lucide-react';
 import { Restaurant } from '@/hooks/useRestaurantsData';
 
 interface RestaurantSummaryProps {
@@ -44,13 +44,21 @@ export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurant
               <h4 className="font-semibold text-white mb-2">{restaurant.restaurant_name}</h4>
               
               <div className="space-y-2 text-sm">
+                {/* Distance Information */}
+                {restaurant.distance_km !== undefined ? (
+                  <div className="flex items-center gap-2 text-quantum-cyan">
+                    <Navigation className="w-4 h-4" />
+                    <span className="font-medium">
+                      {restaurant.distance_km.toFixed(1)} km away
+                    </span>
+                  </div>
+                ) : null}
+                
+                {/* Address Information */}
                 <div className="flex items-center gap-2 text-gray-300">
                   <MapPin className="w-4 h-4" />
-                  <span>
-                    {restaurant.distance_km 
-                      ? `${restaurant.distance_km.toFixed(1)} km away` 
-                      : restaurant.restaurant_address
-                    }
+                  <span className="text-xs">
+                    {restaurant.restaurant_address}
                   </span>
                 </div>
                 
