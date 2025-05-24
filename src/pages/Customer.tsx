@@ -10,7 +10,6 @@ import { LocationPrompt } from '@/components/customer/LocationPrompt';
 import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBoundary';
 import { CustomerBreadcrumbs } from '@/components/customer/CustomerBreadcrumbs';
 import { CustomerNavigation } from '@/components/customer/CustomerNavigation';
-import { CustomerJourneyGuide } from '@/components/customer/CustomerJourneyGuide';
 import { AnimatedContainer } from '@/components/performance/AnimatedContainer';
 import { useCustomerState } from '@/hooks/useCustomerState';
 import { useCart } from '@/contexts/CartContext';
@@ -92,23 +91,9 @@ const CustomerPage = () => {
               </div>
             </AnimatedContainer>
             
-            {/* Journey Guide - show when user hasn't completed the flow */}
-            {(!hasLocation || !hasRestaurants || cart.length === 0) && (
-              <AnimatedContainer animation="slideUp" delay={0.3}>
-                <div className="mb-8">
-                  <CustomerJourneyGuide
-                    hasLocation={hasLocation}
-                    hasRestaurants={hasRestaurants}
-                    cartItems={cart.length}
-                    isAuthenticated={!!user}
-                  />
-                </div>
-              </AnimatedContainer>
-            )}
-            
             {/* Location prompt - only show if there's an issue or permission not requested */}
             {(hasLocationIssue || !hasRequestedPermission) && (
-              <AnimatedContainer animation="slideUp" delay={0.4}>
+              <AnimatedContainer animation="slideUp" delay={0.3}>
                 <LocationPrompt
                   onRequestLocation={requestLocation}
                   isLoading={isLoading}
@@ -118,7 +103,7 @@ const CustomerPage = () => {
               </AnimatedContainer>
             )}
             
-            <AnimatedContainer animation="slideUp" delay={0.5}>
+            <AnimatedContainer animation="slideUp" delay={0.4}>
               <MainContent 
                 isMapView={isMapView}
                 menuItems={menuItems}
