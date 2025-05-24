@@ -82,9 +82,9 @@ export const useCustomerState = (): CustomerState => {
   const isLoadingMenu = menuLoading;
   const isLoading = isInitializing || isLoadingLocation || isLoadingRestaurants || isLoadingMenu;
 
-  // Calculate combined error state
+  // Calculate combined error state with proper string conversion
   const hasError = !!(restaurantsError || menuError);
-  const errorMessage = restaurantsError || menuError || null;
+  const errorMessage = restaurantsError || (menuError ? String(menuError) : null);
 
   // Clear errors action
   const clearErrors = useCallback(() => {
@@ -117,7 +117,7 @@ export const useCustomerState = (): CustomerState => {
     
     // Menu state
     menuItems,
-    menuError,
+    menuError: menuError ? String(menuError) : null,
     
     // Combined loading states
     isInitializing,
