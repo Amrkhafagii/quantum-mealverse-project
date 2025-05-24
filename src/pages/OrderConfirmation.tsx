@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ArrowLeft, Share2, Download, Printer, CircleCheck } from 'lucide-react';
@@ -290,7 +289,7 @@ const OrderConfirmation = () => {
             <CardFooter className="pt-0 pb-6 flex-col space-y-4 print:hidden">
               <ActionButtons 
                 orderId={id}
-                onTrackOrder={(orderId) => navigate(`/orders/${orderId}`)}
+                onTrackOrder={(orderId) => navigate(`/track-order/${orderId}`)}
                 onContinueShopping={() => navigate('/customer')}
               />
               
