@@ -1,27 +1,50 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { LocationHistoryEntry, LocationQueryParams } from '@/types/unifiedLocation';
-import { toast } from 'sonner';
-import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
+import { supabase } from '@/lib/supabase';
+import { UnifiedLocation, LocationSource } from '@/types/unifiedLocation';
+
+export interface LocationHistoryEntry extends UnifiedLocation {
+  id: string;
+}
+
+export interface LocationQueryParams {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+  source?: LocationSource[];
+  minAccuracy?: number;
+  userId?: string;
+  orderBy?: string;
+  orderDirection?: 'asc' | 'desc';
+}
 
 /**
- * Fetch a user's location history
+ * Fetch location history for a user
  */
-export const fetchLocationHistory = async (
+export async function fetchLocationHistory(
   userId: string,
-  params: Partial<LocationQueryParams> = {}
-): Promise<LocationHistoryEntry[]> => {
+  params: LocationQueryParams = {}
+): Promise<LocationHistoryEntry[]> {
   try {
-    const { startDate, endDate, limit = 50, includeExpired = false } = params;
+    const {
+      startDate,
+      endDate,
+      limit = 50,
+      offset = 0,
+      source,
+      minAccuracy,
+      orderBy = 'timestamp',
+      orderDirection = 'desc'
+    } = params;
     
     let query = supabase
       .from('unified_locations')
       .select('*')
       .eq('user_id', userId)
-      .eq('location_type', 'user')
-      .order('timestamp', { ascending: false });
+      .order(orderBy, { ascending: orderDirection === 'asc' })
+      .limit(limit)
+      .range(offset, offset + limit - 1);
     
-    // Apply date filters if provided
     if (startDate) {
       query = query.gte('timestamp', startDate);
     }
@@ -30,14 +53,13 @@ export const fetchLocationHistory = async (
       query = query.lte('timestamp', endDate);
     }
     
-    // Exclude expired locations unless explicitly requested
-    if (!includeExpired) {
-      const now = new Date().toISOString();
-      query = query.or(`retention_expires_at.gt.${now},retention_expires_at.is.null`);
+    if (source && source.length > 0) {
+      query = query.in('source', source);
     }
     
-    // Apply limit
-    query = query.limit(limit);
+    if (typeof minAccuracy === 'number') {
+      query = query.lte('accuracy', minAccuracy);
+    }
     
     const { data, error } = await query;
     
@@ -46,65 +68,91 @@ export const fetchLocationHistory = async (
       throw error;
     }
     
-    return data as unknown as LocationHistoryEntry[];
+    return data as LocationHistoryEntry[] || [];
   } catch (error) {
     console.error('Error in fetchLocationHistory:', error);
-    return [];
-  }
-};
-
-/**
- * Export a user's location history
- */
-export const exportLocationHistory = async (
-  userId: string,
-  format: 'json' | 'csv' = 'json', 
-  startDate?: string,
-  endDate?: string
-): Promise<Blob> => {
-  try {
-    const locations = await fetchLocationHistory(userId, { 
-      startDate,
-      endDate,
-      includeExpired: true,
-      limit: 1000 // Higher limit for exports
-    });
-    
-    let content: string;
-    let mimeType: string;
-    
-    if (format === 'csv') {
-      content = convertToCSV(locations);
-      mimeType = 'text/csv';
-    } else {
-      content = JSON.stringify(locations, null, 2);
-      mimeType = 'application/json';
-    }
-    
-    return new Blob([content], { type: mimeType });
-  } catch (error) {
-    console.error('Error exporting location history:', error);
-    toast.error('Failed to export location history');
     throw error;
   }
-};
+}
 
 /**
- * Delete a user's location history
+ * Export location history as a file
  */
-export const deleteLocationHistory = async (
+export async function exportLocationHistory(
+  userId: string,
+  format: 'json' | 'csv' = 'json',
+  startDate?: string,
+  endDate?: string
+): Promise<Blob> {
+  try {
+    const locations = await fetchLocationHistory(userId, {
+      startDate,
+      endDate,
+      limit: 1000,
+      orderDirection: 'asc'
+    });
+    
+    if (format === 'csv') {
+      return generateCSV(locations);
+    } else {
+      return new Blob([JSON.stringify(locations, null, 2)], {
+        type: 'application/json'
+      });
+    }
+  } catch (error) {
+    console.error('Error exporting location history:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a CSV file from location history
+ */
+function generateCSV(locations: LocationHistoryEntry[]): Blob {
+  const headers = [
+    'id',
+    'timestamp',
+    'latitude',
+    'longitude',
+    'accuracy',
+    'altitude',
+    'source',
+    'speed'
+  ];
+  
+  const rows = locations.map(location => [
+    location.id || '',
+    new Date(location.timestamp).toISOString(),
+    location.latitude,
+    location.longitude,
+    location.accuracy,
+    location.altitude,
+    location.source,
+    location.speed
+  ]);
+  
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n');
+  
+  return new Blob([csvContent], { type: 'text/csv' });
+}
+
+/**
+ * Delete location history
+ */
+export async function deleteLocationHistory(
   userId: string,
   startDate?: string,
   endDate?: string
-): Promise<{ success: boolean, count: number }> => {
+): Promise<{ success: boolean, count: number }> {
   try {
     let query = supabase
       .from('unified_locations')
-      .delete()
-      .eq('user_id', userId)
-      .eq('location_type', 'user');
+      .delete({ count: 'exact' })
+      .eq('user_id', userId);
     
-    // Apply date filters if provided
     if (startDate) {
       query = query.gte('timestamp', startDate);
     }
@@ -113,142 +161,86 @@ export const deleteLocationHistory = async (
       query = query.lte('timestamp', endDate);
     }
     
-    // Get count before deletion
-    const { count } = await supabase
-      .from('unified_locations')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('location_type', 'user')
-      .gte(startDate ? 'timestamp' : 'id', startDate || '')
-      .lte(endDate ? 'timestamp' : 'id', endDate || '');
-    
-    // Execute deletion
-    const { error } = await query;
+    const { error, count } = await query;
     
     if (error) {
       console.error('Error deleting location history:', error);
       throw error;
     }
     
-    return { success: true, count: count || 0 };
+    return { 
+      success: true, 
+      count: count || 0
+    };
   } catch (error) {
     console.error('Error in deleteLocationHistory:', error);
-    return { success: false, count: 0 };
+    throw error;
   }
-};
+}
 
 /**
- * Convert location data to CSV format
+ * Get location statistics
  */
-const convertToCSV = (locations: LocationHistoryEntry[]): string => {
-  if (locations.length === 0) return '';
-  
-  // Define headers
-  const headers = [
-    'timestamp',
-    'latitude',
-    'longitude',
-    'accuracy',
-    'speed',
-    'source',
-    'address',
-    'place_name',
-    'activity'
-  ];
-  
-  // Create CSV content
-  const csvRows = [];
-  csvRows.push(headers.join(','));
-  
-  for (const location of locations) {
-    const row = [
-      location.timestamp,
-      location.latitude,
-      location.longitude,
-      location.accuracy || '',
-      location.speed || '',
-      location.source,
-      location.address || '',  // Fixed: Handle when address is a string
-      location.place_name || '',
-      location.metadata?.activityType || 'unknown'
-    ];
-    
-    csvRows.push(row.join(','));
-  }
-  
-  return csvRows.join('\n');
-};
-
-/**
- * Get location statistics for a user
- */
-export const getLocationStats = async (userId: string): Promise<{
+export async function getLocationStats(userId: string): Promise<{
   totalLocations: number;
   firstLocation: string | null;
   lastLocation: string | null;
   uniqueDevices: number;
-}> => {
+}> {
   try {
-    // Total locations
-    const { count } = await supabase
+    // Get total count
+    const { count: totalCount, error: countError } = await supabase
       .from('unified_locations')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('location_type', 'user');
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
     
-    // First location
-    const { data: firstLocationData } = await supabase
+    if (countError) throw countError;
+    
+    // Get first and last locations
+    const { data: firstData, error: firstError } = await supabase
       .from('unified_locations')
       .select('timestamp')
       .eq('user_id', userId)
-      .eq('location_type', 'user')
       .order('timestamp', { ascending: true })
       .limit(1)
       .single();
     
-    // Last location
-    const { data: lastLocationData } = await supabase
+    if (firstError && firstError.code !== 'PGRST116') throw firstError;
+    
+    const { data: lastData, error: lastError } = await supabase
       .from('unified_locations')
       .select('timestamp')
       .eq('user_id', userId)
-      .eq('location_type', 'user')
       .order('timestamp', { ascending: false })
       .limit(1)
       .single();
     
-    // Unique devices
-    const { data: devicesData } = await supabase
+    if (lastError && lastError.code !== 'PGRST116') throw lastError;
+    
+    // Count unique devices
+    const { data: devicesData, error: devicesError } = await supabase
       .from('unified_locations')
       .select('device_info')
       .eq('user_id', userId)
-      .eq('location_type', 'user')
       .not('device_info', 'is', null);
     
-    const uniqueDevices = new Set();
-    if (devicesData) {
-      devicesData.forEach(item => {
-        // Need to check if device_info exists and has the required properties
-        const deviceInfo = item.device_info as any;
-        if (deviceInfo && typeof deviceInfo === 'object') {
-          // Check if platform and model exist as properties
-          const platform = deviceInfo.platform;
-          const model = deviceInfo.model;
-          
-          if (platform && model) {
-            uniqueDevices.add(`${platform}:${model}`);
-          }
-        }
-      });
-    }
+    if (devicesError) throw devicesError;
+    
+    const uniqueDeviceMap = new Map();
+    devicesData?.forEach(item => {
+      if (item.device_info?.uuid) {
+        uniqueDeviceMap.set(item.device_info.uuid, true);
+      }
+    });
     
     return {
-      totalLocations: count || 0,
-      firstLocation: firstLocationData?.timestamp || null,
-      lastLocation: lastLocationData?.timestamp || null,
-      uniqueDevices: uniqueDevices.size
+      totalLocations: totalCount || 0,
+      firstLocation: firstData?.timestamp || null,
+      lastLocation: lastData?.timestamp || null,
+      uniqueDevices: uniqueDeviceMap.size
     };
   } catch (error) {
-    console.error('Error in getLocationStats:', error);
+    console.error('Error getting location stats:', error);
     return {
       totalLocations: 0,
       firstLocation: null,
@@ -256,75 +248,4 @@ export const getLocationStats = async (userId: string): Promise<{
       uniqueDevices: 0
     };
   }
-};
-
-/**
- * Enrich a location with address information
- * 
- * @param location The location entry to enrich with address data
- * @returns The location with added address information
- */
-const enrichLocationWithAddress = async (location: LocationHistoryEntry): Promise<LocationHistoryEntry> => {
-  try {
-    // If we already have an address, skip the geocoding
-    if (location.address) {
-      return location;
-    }
-    
-    // Get Google Maps API key from context or environment
-    const { googleMapsApiKey } = await import('@/contexts/GoogleMapsContext').then(
-      module => ({ googleMapsApiKey: module.useGoogleMaps().googleMapsApiKey })
-    ).catch(() => ({ googleMapsApiKey: '' }));
-    
-    if (!googleMapsApiKey) {
-      console.warn('No Google Maps API key available for geocoding');
-      return location;
-    }
-    
-    // Use geocoding service to get address
-    const geocodeResponse = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${googleMapsApiKey}`
-    );
-    
-    const geocodeData = await geocodeResponse.json();
-    
-    if (geocodeData.status === 'OK' && geocodeData.results.length > 0) {
-      // Get the first result which is usually the most accurate
-      const addressResult = geocodeData.results[0];
-      
-      // Extract formatted address
-      const formattedAddress = addressResult.formatted_address;
-      
-      // Extract place name from the address components
-      const extractPlaceName = (addressComponents: any[]): string => {
-        const locality = addressComponents.find(component => 
-          component.types.includes('locality')
-        );
-        
-        const sublocality = addressComponents.find(component => 
-          component.types.includes('sublocality') || 
-          component.types.includes('neighborhood')
-        );
-        
-        return (locality?.long_name || sublocality?.long_name || 'Unknown Location');
-      };
-      
-      // Return the enriched location
-      return {
-        ...location,
-        address: formattedAddress,
-        place_name: extractPlaceName(addressResult.address_components),
-        metadata: {
-          ...location.metadata,
-          placeId: addressResult.place_id,
-          addressComponents: addressResult.address_components
-        }
-      };
-    }
-    
-    return location;
-  } catch (error) {
-    console.error('Error enriching location with address:', error);
-    return location;
-  }
-};
+}

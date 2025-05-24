@@ -8,11 +8,13 @@ import { cn } from '@/lib/utils';
 interface GoogleMapsKeyFormProps {
   className?: string;
   variant?: 'default' | 'compact' | 'inline';
+  onKeySubmit?: (success: boolean) => void;
 }
 
 export const GoogleMapsKeyForm: React.FC<GoogleMapsKeyFormProps> = ({ 
   className = '',
-  variant = 'default'
+  variant = 'default',
+  onKeySubmit
 }) => {
   const { googleMapsApiKey, keySource } = useGoogleMaps();
 

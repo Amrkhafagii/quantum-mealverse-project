@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy } from 'react';
 import { useGoogleMaps } from '@/contexts/GoogleMapsContext';
 import { Card } from '@/components/ui/card';
@@ -124,7 +125,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'lazy' && (
           <LazyMap
             mapId={id}
-            center={center}
+            center={center ? {
+              latitude: center.lat, 
+              longitude: center.lng
+            } : undefined}
             zoom={zoom}
             markers={markers.map(m => ({
               latitude: m.position.lat,
@@ -143,10 +147,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'unified' && (
           <UnifiedMapView
             mapId={id}
-            center={{
-              latitude: center?.lat || 0, 
-              longitude: center?.lng || 0
-            }}
+            center={center ? {
+              latitude: center.lat, 
+              longitude: center.lng
+            } : undefined}
             zoomLevel={zoom}
             additionalMarkers={markers.map(m => ({
               latitude: m.position.lat,
@@ -165,10 +169,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'native' && (
           <NativeMap
             mapId={id}
-            center={{
-              latitude: center?.lat || 0,
-              longitude: center?.lng || 0
-            }}
+            center={center ? {
+              latitude: center.lat,
+              longitude: center.lng
+            } : undefined}
             zoom={zoom}
             markers={markers.map(m => ({
               latitude: m.position.lat,

@@ -1,77 +1,98 @@
 
 import { NetworkInfo, NetworkType } from '@/types/unifiedLocation';
 
-/**
- * Get information about the current network connection
- */
-export const getNetworkInfo = async (): Promise<NetworkInfo> => {
-  // Default network info
-  const networkInfo: NetworkInfo = {
-    type: 'unknown',
-    connected: navigator.onLine
+// Get network information
+export function getNetworkInfo(): NetworkInfo {
+  const connected = navigator.onLine;
+  const type = getNetworkType();
+  const strength = getNetworkStrength();
+  
+  return {
+    connected,
+    type,
+    strength
+  };
+}
+
+// Get network type
+function getNetworkType(): NetworkType {
+  // Check if the Network Information API is available
+  if ('connection' in navigator) {
+    const connection = (navigator as any).connection;
+    
+    if (connection) {
+      const effectiveType = connection.effectiveType;
+      const type = connection.type;
+      
+      if (type === 'wifi') return 'wifi';
+      if (type === 'cellular') {
+        // Map effective type to our network types
+        if (effectiveType === '4g') return '4g';
+        if (effectiveType === '3g') return '3g';
+        if (effectiveType === '2g') return '2g';
+        if (effectiveType === 'slow-2g') return '2g';
+        return 'cellular';
+      }
+      
+      return 'unknown';
+    }
+  }
+  
+  // Fallback to online/offline status
+  return navigator.onLine ? 'unknown' : 'none';
+}
+
+// Get network strength (0-100)
+function getNetworkStrength(): number | undefined {
+  // This is not easily available in browsers
+  // In a real app, you could measure RTT or throughput
+  
+  // Check if the Network Information API with downlink is available
+  if ('connection' in navigator) {
+    const connection = (navigator as any).connection;
+    
+    if (connection && 'downlink' in connection) {
+      // Convert downlink (Mbps) to a strength percentage
+      // Assuming max practical downlink is 100 Mbps for 100% strength
+      const downlink = connection.downlink;
+      return Math.min(100, Math.round((downlink / 100) * 100));
+    }
+  }
+  
+  return undefined;
+}
+
+// Monitor network quality changes
+export function monitorNetworkQuality(
+  callback: (info: NetworkInfo) => void
+): () => void {
+  const handleChange = () => {
+    callback(getNetworkInfo());
   };
   
-  // Try to get more detailed network information if available
-  try {
-    // Check for Network Information API
+  window.addEventListener('online', handleChange);
+  window.addEventListener('offline', handleChange);
+  
+  // Use Network Information API if available
+  if ('connection' in navigator) {
+    const connection = (navigator as any).connection;
+    
+    if (connection) {
+      connection.addEventListener('change', handleChange);
+    }
+  }
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('online', handleChange);
+    window.removeEventListener('offline', handleChange);
+    
     if ('connection' in navigator) {
       const connection = (navigator as any).connection;
       
       if (connection) {
-        let type: NetworkType = 'unknown';
-        
-        // Map connection type to our NetworkType enum
-        switch (connection.type) {
-          case 'wifi':
-            type = 'wifi';
-            break;
-          case 'cellular':
-            // Try to determine cellular generation from effectiveType
-            if (connection.effectiveType === '4g') {
-              type = 'cellular_4g';
-            } else if (connection.effectiveType === '3g') {
-              type = 'cellular_3g';
-            } else if (connection.effectiveType === '2g') {
-              type = 'cellular_2g';
-            } else {
-              type = 'cellular_3g'; // Default to 3G if unknown
-            }
-            break;
-          case 'ethernet':
-            type = 'ethernet';
-            break;
-          case 'none':
-            type = 'none';
-            break;
-          default:
-            type = 'unknown';
-        }
-        
-        networkInfo.type = type;
-        networkInfo.connectionType = connection.effectiveType || connection.type;
-        networkInfo.estimatedBandwidth = connection.downlink ? connection.downlink * 1000 : undefined;
-        networkInfo.metered = connection.metered;
+        connection.removeEventListener('change', handleChange);
       }
     }
-    
-    // Check for Capacitor for native apps
-    if ((window as any).Capacitor) {
-      const { Network } = (window as any).Capacitor.Plugins;
-      const status = await Network.getStatus();
-      
-      networkInfo.connected = status.connected;
-      
-      if (status.connectionType === 'wifi') {
-        networkInfo.type = 'wifi';
-      } else if (status.connectionType === 'cellular') {
-        networkInfo.type = 'cellular_4g'; // Default to 4G as we can't easily determine cellular type in Capacitor
-      } else if (status.connectionType === 'none') {
-        networkInfo.type = 'none';
-      }
-    }
-  } catch (error) {
-    console.error('Error getting network info:', error);
-  }
-  
-  return networkInfo;
-};
+  };
+}

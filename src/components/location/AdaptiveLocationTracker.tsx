@@ -53,8 +53,7 @@ export function AdaptiveLocationTracker({
       longitude: location.longitude,
       accuracy: location.accuracy || undefined,
       speed: location.speed || undefined,
-      timestamp: new Date().toISOString(),
-      device_info: { platform: 'web' },
+      timestamp: Date.now(),
       source: (location.source || 'unknown') as LocationSource,
       isMoving: location.isMoving || false,
       networkInfo: { 

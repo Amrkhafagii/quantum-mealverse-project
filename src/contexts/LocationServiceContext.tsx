@@ -3,12 +3,13 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { LocationServiceFactory, ILocationService, LocationTrackingOptions } from '@/services/location/LocationService';
 import { DeliveryLocation } from '@/types/location';
 import { LocationFreshness } from '@/types/unifiedLocation';
-import { AccuracyLevel } from '@/components/location/LocationAccuracyIndicator';
+import { AccuracyLevel } from '@/components/location/LocationStatusIndicator';
 import { getAccuracyLevelFromLocation } from '@/services/maps/MapService';
 
 interface LocationServiceContextType {
   locationService: ILocationService | null;
   currentLocation: DeliveryLocation | null;
+  lastLocation: DeliveryLocation | null;
   locationPermissionStatus: 'granted' | 'denied' | 'prompt';
   locationFreshness: LocationFreshness;
   locationAccuracy: AccuracyLevel;
@@ -19,11 +20,15 @@ interface LocationServiceContextType {
   stopTracking: () => Promise<void>;
   requestPermission: () => Promise<boolean>;
   refreshLocation: () => Promise<DeliveryLocation | null>;
+  getCurrentLocation: () => Promise<DeliveryLocation | null>;
+  updateTrackingOptions: (options: LocationTrackingOptions) => Promise<boolean>;
+  clearCache: () => void;
 }
 
 const LocationServiceContext = createContext<LocationServiceContextType>({
   locationService: null,
   currentLocation: null,
+  lastLocation: null,
   locationPermissionStatus: 'prompt',
   locationFreshness: 'invalid',
   locationAccuracy: 'unknown',
@@ -34,6 +39,9 @@ const LocationServiceContext = createContext<LocationServiceContextType>({
   stopTracking: async () => {},
   requestPermission: async () => false,
   refreshLocation: async () => null,
+  getCurrentLocation: async () => null,
+  updateTrackingOptions: async () => false,
+  clearCache: () => {},
 });
 
 export const LocationServiceProvider: React.FC<{
@@ -148,6 +156,10 @@ export const LocationServiceProvider: React.FC<{
   };
   
   const refreshLocation = async (): Promise<DeliveryLocation | null> => {
+    return getCurrentLocation();
+  };
+  
+  const getCurrentLocation = async (): Promise<DeliveryLocation | null> => {
     if (!locationService) return null;
     
     try {
@@ -164,11 +176,32 @@ export const LocationServiceProvider: React.FC<{
     }
   };
   
+  const updateTrackingOptions = async (options: LocationTrackingOptions): Promise<boolean> => {
+    if (!locationService) return false;
+    
+    try {
+      return await locationService.updateTrackingOptions(options);
+    } catch (err) {
+      console.error('Error updating tracking options:', err);
+      return false;
+    }
+  };
+  
+  const clearCache = () => {
+    if (!locationService) return;
+    try {
+      locationService.clearLocationCache();
+    } catch (err) {
+      console.error('Error clearing location cache:', err);
+    }
+  };
+  
   return (
     <LocationServiceContext.Provider
       value={{
         locationService,
         currentLocation,
+        lastLocation: currentLocation,
         locationPermissionStatus,
         locationFreshness,
         locationAccuracy,
@@ -179,6 +212,9 @@ export const LocationServiceProvider: React.FC<{
         stopTracking,
         requestPermission,
         refreshLocation,
+        getCurrentLocation,
+        updateTrackingOptions,
+        clearCache,
       }}
     >
       {children}

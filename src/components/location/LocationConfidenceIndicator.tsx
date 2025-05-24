@@ -17,7 +17,7 @@ export function LocationConfidenceIndicator({
   size = 'md'
 }: LocationConfidenceIndicatorProps) {
   const confidenceScore = calculateLocationConfidence(location);
-  const category = getConfidenceCategory(confidenceScore);
+  const category = getConfidenceCategory(confidenceScore.overall);
   
   const getIcon = () => {
     switch (category) {
@@ -94,7 +94,7 @@ export function LocationConfidenceIndicator({
           
           <div className="flex justify-between">
             <span>Source:</span>
-            <span className="font-medium">{location.source}</span>
+            <span className="font-medium">{location.source || 'unknown'}</span>
           </div>
           
           <div className="flex justify-between">

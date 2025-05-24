@@ -1,143 +1,138 @@
 
 import { DeliveryLocation } from '@/types/location';
 
-// Define tracking modes
-export type TrackingMode = 'high' | 'medium' | 'low' | 'minimal';
+export type TrackingMode = 'passive' | 'balanced' | 'high-precision' | 'standard' | 'medium';
 
-interface TrackingModeCalculatorOptions {
-  isLowBattery: boolean;
-  isLowQuality: boolean;
-  orderStatus: string;
-  location: DeliveryLocation | null;
+export interface TrackingModeResult {
+  trackingMode: TrackingMode;
+  trackingInterval: number; // milliseconds
+  enableHighAccuracy: boolean;
+  distanceToDestination: number | null;
+  distanceFilter: number; // meters
+}
+
+interface TrackingModeOptions {
+  isLowBattery?: boolean;
+  isLowQuality?: boolean;
+  orderStatus?: string;
+  location?: DeliveryLocation | null;
   customerLocation?: { latitude: number; longitude: number } | null;
   restaurantLocation?: { latitude: number; longitude: number } | null;
-  forceLowPowerMode: boolean;
+  forceLowPowerMode?: boolean;
 }
 
-interface TrackingModeResult {
-  trackingMode: TrackingMode;
-  distanceToDestination: number | null;
-}
-
-/**
- * Calculate optimal tracking mode based on various factors
- */
-export function calculateTrackingMode(options: TrackingModeCalculatorOptions): TrackingModeResult {
+// Calculate the optimal tracking mode based on various factors
+export function calculateTrackingMode(options: TrackingModeOptions = {}): TrackingModeResult {
   const {
-    isLowBattery,
-    isLowQuality,
-    orderStatus,
-    location,
-    customerLocation,
-    restaurantLocation,
-    forceLowPowerMode
+    isLowBattery = false,
+    isLowQuality = false,
+    orderStatus = 'pending',
+    location = null,
+    customerLocation = null,
+    restaurantLocation = null,
+    forceLowPowerMode = false,
   } = options;
-  
-  // Force low power mode overrides all other factors
-  if (forceLowPowerMode) {
-    return { trackingMode: 'low', distanceToDestination: null };
-  }
-  
-  // Default to medium tracking
-  let trackingMode: TrackingMode = 'medium';
+
+  let trackingMode: TrackingMode = 'standard';
   let distanceToDestination: number | null = null;
   
-  // Calculate distance to destination if possible
-  if (location && (customerLocation || restaurantLocation)) {
-    let targetLocation;
+  // Check if we should force low power mode
+  if (forceLowPowerMode) {
+    trackingMode = 'passive';
+  }
+  // If battery is low, use passive mode
+  else if (isLowBattery) {
+    trackingMode = 'passive';
+  }
+  // If network quality is low, use balanced mode
+  else if (isLowQuality) {
+    trackingMode = 'balanced';
+  }
+  // If order is active and we're close to destination, use high precision
+  else if (orderStatus === 'active' && location && customerLocation) {
+    // Calculate distance to customer
+    distanceToDestination = calculateDistance(
+      location.latitude, 
+      location.longitude,
+      customerLocation.latitude,
+      customerLocation.longitude
+    );
     
-    // Determine target location based on order status
-    if (orderStatus === 'preparing' || orderStatus === 'ready_for_pickup') {
-      targetLocation = restaurantLocation;
+    if (distanceToDestination < 1000) {
+      trackingMode = 'high-precision';
+    } else if (distanceToDestination < 5000) {
+      trackingMode = 'balanced';
     } else {
-      targetLocation = customerLocation;
-    }
-    
-    // Calculate distance if target location exists
-    if (targetLocation) {
-      distanceToDestination = calculateDistance(
-        location.latitude,
-        location.longitude,
-        targetLocation.latitude,
-        targetLocation.longitude
-      );
+      trackingMode = 'standard';
     }
   }
-  
-  // Adjust tracking mode based on order status
-  if (orderStatus === 'delivered' || orderStatus === 'cancelled') {
-    // Minimal tracking for completed orders
-    trackingMode = 'minimal';
-  } else if (orderStatus === 'on_the_way') {
-    // High tracking when actively delivering
-    trackingMode = 'high';
-    
-    // But still adjust based on distance if available
-    if (distanceToDestination !== null) {
-      if (distanceToDestination < 0.5) { // Within 500m
-        // High frequency updates when close to destination
-        trackingMode = 'high';
-      } else if (distanceToDestination > 5) { // More than 5km away
-        // Medium frequency updates when far from destination
-        trackingMode = 'medium';
-      }
-    }
+  // Default to standard mode for other cases
+  else {
+    trackingMode = 'standard';
   }
   
-  // Adjust for low battery
-  if (isLowBattery) {
-    // Step down tracking intensity by one level
-    if (trackingMode === 'high') trackingMode = 'medium';
-    else if (trackingMode === 'medium') trackingMode = 'low';
-    else trackingMode = 'minimal';
-  }
-  
-  // Adjust for poor network quality
-  if (isLowQuality) {
-    // Reduce tracking frequency when network is poor
-    if (trackingMode === 'high') trackingMode = 'medium';
-    else if (trackingMode === 'medium') trackingMode = 'low';
-  }
-  
-  return { trackingMode, distanceToDestination };
+  return {
+    trackingMode,
+    trackingInterval: getTrackingInterval(trackingMode),
+    enableHighAccuracy: trackingMode === 'high-precision',
+    distanceToDestination,
+    distanceFilter: getDistanceFilter(trackingMode),
+  };
 }
 
-/**
- * Get tracking interval in milliseconds based on tracking mode
- */
-export function getTrackingInterval(trackingMode: TrackingMode): number {
-  switch (trackingMode) {
-    case 'high':
+// Get tracking interval based on mode
+export function getTrackingInterval(mode: TrackingMode): number {
+  switch (mode) {
+    case 'high-precision':
       return 10000; // 10 seconds
-    case 'medium':
+    case 'balanced':
       return 30000; // 30 seconds
-    case 'low':
+    case 'standard':
       return 60000; // 1 minute
-    case 'minimal':
-      return 300000; // 5 minutes
+    case 'passive':
+      return 120000; // 2 minutes
+    case 'medium':
+      return 45000; // 45 seconds
     default:
-      return 30000; // Default to medium
+      return 60000; // 1 minute default
   }
 }
 
-/**
- * Calculate distance between two points in kilometers
- */
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+// Get distance filter based on mode (minimum distance in meters before updates)
+function getDistanceFilter(mode: TrackingMode): number {
+  switch (mode) {
+    case 'high-precision':
+      return 10; // 10 meters
+    case 'balanced':
+      return 50; // 50 meters
+    case 'standard':
+      return 100; // 100 meters
+    case 'passive':
+      return 500; // 500 meters
+    case 'medium':
+      return 75; // 75 meters
+    default:
+      return 100;
+  }
 }
 
-/**
- * Convert degrees to radians
- */
-function toRadians(degrees: number): number {
-  return degrees * Math.PI / 180;
+// Calculate distance between two points in meters
+function calculateDistance(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c; // Distance in meters
 }

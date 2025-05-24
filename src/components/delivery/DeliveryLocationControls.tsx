@@ -8,17 +8,22 @@ import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { LocationStatusIndicator } from '@/components/location/LocationStatusIndicator';
 import { useMapView } from '@/contexts/MapViewContext';
 import { TrackingMode } from '@/utils/trackingModeCalculator';
+import { DeliveryLocation } from '@/types/location';
 
 interface DeliveryLocationControlsProps {
   className?: string;
   showAccuracy?: boolean;
   showBatteryOptimization?: boolean;
+  onLocationUpdate?: (location: DeliveryLocation) => void;
+  showHelp?: boolean;
 }
 
 export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> = ({
   className = '',
   showAccuracy = true,
-  showBatteryOptimization = true
+  showBatteryOptimization = true,
+  onLocationUpdate,
+  showHelp = false
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const locationService = useDeliveryLocationService({ 
@@ -56,6 +61,10 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
           lat: location.latitude,
           lng: location.longitude
         });
+      }
+      
+      if (location && onLocationUpdate) {
+        onLocationUpdate(location);
       }
     } catch (error) {
       console.error('Error refreshing location:', error);
@@ -170,6 +179,13 @@ export const DeliveryLocationControls: React.FC<DeliveryLocationControlsProps> =
           trackingMode={trackingMode as TrackingMode}
           isTracking={isTracking}
         />
+      )}
+      
+      {/* Help text if needed */}
+      {showHelp && (
+        <div className="text-xs text-muted-foreground mt-2 px-2">
+          <p>Tap the refresh button to update your location.</p>
+        </div>
       )}
     </div>
   );

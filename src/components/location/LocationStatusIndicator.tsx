@@ -4,6 +4,7 @@ import { TrackingMode } from '@/utils/trackingModeCalculator';
 import { Card } from '@/components/ui/card';
 import { Battery, Signal, MapPin } from 'lucide-react';
 import { useBatteryStatus } from '@/hooks/useBatteryStatus';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type AccuracyLevel = 'high' | 'medium' | 'low' | 'unknown';
 
@@ -13,6 +14,7 @@ interface LocationStatusIndicatorProps {
   isTracking: boolean;
   className?: string;
   showBatteryStatus?: boolean;
+  showTooltip?: boolean;
 }
 
 export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = ({
@@ -20,7 +22,8 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
   trackingMode,
   isTracking,
   className = '',
-  showBatteryStatus = true
+  showBatteryStatus = true,
+  showTooltip = false
 }) => {
   const { isLowBattery, batteryLevel } = useBatteryStatus();
   
@@ -89,7 +92,7 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
   // No need to render if not tracking
   if (!isTracking) return null;
 
-  return (
+  const statusContent = (
     <div className={`text-xs text-muted-foreground flex justify-between px-2 ${className}`}>
       <div className="flex items-center space-x-1">
         <Signal size={14} className={getAccuracyColor()} />
@@ -107,6 +110,26 @@ export const LocationStatusIndicator: React.FC<LocationStatusIndicatorProps> = (
       )}
     </div>
   );
+  
+  // Wrap with tooltip if showTooltip is true
+  if (showTooltip) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="cursor-help">
+              <Signal size={16} className={getAccuracyColor()} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            {statusContent}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  
+  return statusContent;
 };
 
 export default LocationStatusIndicator;

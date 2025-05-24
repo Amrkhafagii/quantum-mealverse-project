@@ -1,21 +1,28 @@
 
-import { DeliveryLocation } from '@/types/location';
-import { LocationFreshness } from '@/types/unifiedLocation';
-import { Platform } from '@/utils/platform';
-import { AccuracyLevel } from '@/components/location/LocationAccuracyIndicator';
+/**
+ * Interface for map service methods
+ */
 
-export type MapType = 'standard' | 'satellite' | 'hybrid' | 'terrain';
-export type MarkerType = 'restaurant' | 'customer' | 'driver' | 'default';
+export interface MapViewOptions {
+  center?: {
+    latitude: number;
+    longitude: number;
+  };
+  zoom?: number;
+  markers?: MapMarker[];
+  enableControls?: boolean;
+  liteMode?: boolean;
+  enableAnimation?: boolean;
+}
 
 export interface MapMarker {
-  id?: string;
   latitude: number;
   longitude: number;
   title?: string;
   description?: string;
-  type?: MarkerType;
+  type?: string;
   icon?: string;
-  zIndex?: number;
+  id?: string;
 }
 
 export interface MapCircle {
@@ -24,114 +31,91 @@ export interface MapCircle {
     longitude: number;
   };
   radius: number;
-  strokeColor: string;
-  strokeWidth: number;
-  fillColor: string;
-  fillOpacity: number;
+  strokeColor?: string;
+  strokeWidth?: number;
+  fillColor?: string;
+  fillOpacity?: number;
+  id?: string;
 }
 
 export interface MapPolyline {
-  points: Array<{
+  path: Array<{
     latitude: number;
     longitude: number;
   }>;
-  strokeColor: string;
-  strokeWidth: number;
-  geodesic?: boolean;
+  strokeColor?: string;
+  strokeWidth?: number;
+  id?: string;
 }
 
-export interface MapViewOptions {
-  center: {
-    latitude: number;
-    longitude: number;
-  };
-  zoom: number;
-  markers?: MapMarker[];
-  circles?: MapCircle[];
-  polylines?: MapPolyline[];
-  mapType?: MapType;
-  showTraffic?: boolean;
-  enableControls?: boolean;
-  enableAnimation?: boolean;
-  liteMode?: boolean;
-}
-
-export interface MapClickEvent {
-  latitude: number;
-  longitude: number;
-  timestamp: number;
-}
-
-export interface MapMarkerClickEvent {
-  markerId: string;
-  latitude: number;
-  longitude: number;
-}
-
-export type MapEventListener = (event: any) => void;
-
-/**
- * Map Service interface - defines the contract for map services
- */
 export interface IMapService {
-  // Map creation and destruction
-  createMap(elementId: string, options: MapViewOptions): Promise<string>;
+  initializeMap(elementId: string, options: MapViewOptions): Promise<string>;
   destroyMap(mapId: string): Promise<void>;
-  
-  // Map manipulation
-  setCamera(mapId: string, center: { latitude: number; longitude: number }, zoom?: number, animate?: boolean): Promise<void>;
-  setMapType(mapId: string, type: MapType): Promise<void>;
-  
-  // Markers
+  setCenter(mapId: string, center: { latitude: number; longitude: number }, zoom?: number): Promise<void>;
   addMarker(mapId: string, marker: MapMarker): Promise<string>;
   updateMarker(mapId: string, markerId: string, marker: Partial<MapMarker>): Promise<void>;
   removeMarker(mapId: string, markerId: string): Promise<void>;
-  
-  // Shapes
   addCircle(mapId: string, circle: MapCircle): Promise<string>;
-  removeCircle(mapId: string, circleId: string): Promise<void>;
   addPolyline(mapId: string, polyline: MapPolyline): Promise<string>;
-  removePolyline(mapId: string, polylineId: string): Promise<void>;
-  
-  // Events
-  addMapClickListener(mapId: string, listener: (event: MapClickEvent) => void): string;
-  addMarkerClickListener(mapId: string, listener: (event: MapMarkerClickEvent) => void): string;
-  removeEventListener(listenerId: string): void;
+  geocodeReverse(coords: { latitude: number; longitude: number }): Promise<string | null>;
 }
 
-/**
- * Factory for creating the appropriate map service based on platform
- */
 export class MapServiceFactory {
-  private static mapInstance: IMapService | null = null;
-  
-  static async getMapService(): Promise<IMapService> {
-    if (!this.mapInstance) {
-      if (Platform.isNative()) {
-        // Lazy load the native map service
-        const module = await import('./NativeMapService');
-        this.mapInstance = new module.NativeMapService();
-      } else {
-        // Lazy load the web map service
-        const module = await import('./WebMapService');
-        this.mapInstance = new module.WebMapService();
-      }
+  private static instance: IMapService | null = null;
+
+  public static async getMapService(): Promise<IMapService> {
+    if (!MapServiceFactory.instance) {
+      // Implementation placeholder - would instantiate real service
+      MapServiceFactory.instance = {
+        initializeMap: async (elementId: string, options: MapViewOptions): Promise<string> => {
+          console.log("Initializing map", elementId, options);
+          return elementId;
+        },
+        destroyMap: async (mapId: string): Promise<void> => {
+          console.log("Destroying map", mapId);
+        },
+        setCenter: async (mapId: string, center: { latitude: number; longitude: number }, zoom?: number): Promise<void> => {
+          console.log("Setting center for map", mapId, center, zoom);
+        },
+        addMarker: async (mapId: string, marker: MapMarker): Promise<string> => {
+          const id = `marker-${Date.now()}`;
+          console.log("Adding marker to map", mapId, marker);
+          return id;
+        },
+        updateMarker: async (mapId: string, markerId: string, marker: Partial<MapMarker>): Promise<void> => {
+          console.log("Updating marker", mapId, markerId, marker);
+        },
+        removeMarker: async (mapId: string, markerId: string): Promise<void> => {
+          console.log("Removing marker", mapId, markerId);
+        },
+        addCircle: async (mapId: string, circle: MapCircle): Promise<string> => {
+          const id = `circle-${Date.now()}`;
+          console.log("Adding circle to map", mapId, circle);
+          return id;
+        },
+        addPolyline: async (mapId: string, polyline: MapPolyline): Promise<string> => {
+          const id = `polyline-${Date.now()}`;
+          console.log("Adding polyline to map", mapId, polyline);
+          return id;
+        },
+        geocodeReverse: async (coords: { latitude: number; longitude: number }): Promise<string | null> => {
+          console.log("Reverse geocoding", coords);
+          return "Sample Address";
+        }
+      };
     }
-    return this.mapInstance;
+
+    return MapServiceFactory.instance;
   }
 }
 
-/**
- * Helper function to determine map accuracy level based on location accuracy
- */
-export function getAccuracyLevelFromLocation(location: DeliveryLocation | null): AccuracyLevel {
-  if (!location) return 'unknown';
+// Utility function
+export function getAccuracyLevelFromLocation(location: any): 'high' | 'medium' | 'low' | 'unknown' {
+  if (!location || typeof location.accuracy !== 'number') {
+    return 'unknown';
+  }
   
-  const accuracy = location.accuracy;
-  
-  if (accuracy < 50) return 'high';
-  if (accuracy < 200) return 'medium';
+  if (location.accuracy < 50) return 'high';
+  if (location.accuracy < 200) return 'medium';
   return 'low';
 }
-
-export default MapServiceFactory;
