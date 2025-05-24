@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Fingerprint } from 'lucide-react';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 import { Platform } from '@/utils/platform';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 

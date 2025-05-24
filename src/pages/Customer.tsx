@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -7,7 +6,7 @@ import ParticleBackground from '@/components/ParticleBackground';
 import { CustomerHeader } from '@/components/customer/CustomerHeader';
 import { MainContent } from '@/components/customer/MainContent';
 import { LocationPrompt } from '@/components/customer/LocationPrompt';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useSimpleLocation } from '@/hooks/useSimpleLocation';
 import { useRestaurantsData } from '@/hooks/useRestaurantsData';
 import { useMenuData } from '@/hooks/useMenuData';
