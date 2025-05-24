@@ -22,7 +22,7 @@ interface RestaurantsState {
 export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => {
   const [state, setState] = useState<RestaurantsState>({
     restaurants: [],
-    loading: false,
+    loading: true, // Start with loading true to fetch all restaurants initially
     error: null,
     lastFetchLocation: null
   });
@@ -43,9 +43,98 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
     return latDiff > 0.001 || lngDiff > 0.001;
   }, [location, state.lastFetchLocation]);
 
-  const getCacheKey = useCallback((userLocation: SimpleLocation) => {
+  const getCacheKey = useCallback((userLocation: SimpleLocation | null) => {
+    if (!userLocation) return 'all_restaurants';
     return `${Math.round(userLocation.latitude * 1000)}_${Math.round(userLocation.longitude * 1000)}`;
   }, []);
+
+  const fetchAllRestaurants = useCallback(async () => {
+    if (!user) {
+      setState(prev => ({ 
+        ...prev, 
+        loading: false,
+        error: 'Authentication required'
+      }));
+      return;
+    }
+
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+
+    // Check cache first for all restaurants
+    const cacheKey = getCacheKey(null);
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setState(prev => ({
+        ...prev,
+        restaurants: cached.data,
+        loading: false,
+        error: cached.data.length === 0 ? 'No restaurants available' : null,
+        lastFetchLocation: null
+      }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, loading: true, error: null }));
+
+    try {
+      // Fetch all active restaurants with their basic info
+      const { data: allRestaurants, error: allError } = await supabase
+        .from('restaurants')
+        .select(`
+          id,
+          name,
+          address,
+          email
+        `)
+        .eq('is_active', true)
+        .order('name');
+
+      if (allError) throw allError;
+      
+      if (abortControllerRef.current?.signal.aborted) return;
+
+      // Map the restaurant data to match the expected interface
+      const finalData = (allRestaurants || []).map(restaurant => ({
+        restaurant_id: restaurant.id,
+        restaurant_name: restaurant.name,
+        restaurant_address: restaurant.address,
+        restaurant_email: restaurant.email,
+        distance_km: undefined // No distance when location isn't available
+      }));
+
+      // Cache the result
+      cacheRef.current.set(cacheKey, {
+        data: finalData,
+        timestamp: Date.now()
+      });
+
+      setState(prev => ({
+        ...prev,
+        restaurants: finalData,
+        loading: false,
+        error: finalData.length === 0 ? 'No restaurants available' : null,
+        lastFetchLocation: null
+      }));
+
+      console.log(`Found ${finalData.length} restaurants (all available)`);
+    } catch (err: any) {
+      if (abortControllerRef.current?.signal.aborted) return;
+      
+      console.error('Error fetching restaurants:', err);
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Failed to load restaurants',
+        restaurants: []
+      }));
+    }
+  }, [user, getCacheKey]);
 
   const fetchNearbyRestaurants = useCallback(async (userLocation: SimpleLocation) => {
     if (!user) {
@@ -82,7 +171,7 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // First try to fetch nearby restaurants
+      // Try to fetch nearby restaurants first
       const { data: nearbyData, error: nearbyError } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: userLocation.latitude,
         order_lng: userLocation.longitude,
@@ -93,26 +182,27 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
 
       let finalData = nearbyData || [];
 
-      // If no nearby restaurants found, fallback to fetch all restaurants
+      // If no nearby restaurants found, fallback to all restaurants
       if (!nearbyData || nearbyData.length === 0) {
         console.log('No nearby restaurants found, fetching all restaurants as fallback');
         
         const { data: allRestaurants, error: allError } = await supabase
           .from('restaurants')
           .select(`
-            restaurant_id,
+            id,
             name,
             address,
             email
           `)
           .eq('is_active', true)
-          .limit(20); // Limit to first 20 restaurants for performance
+          .order('name')
+          .limit(20);
 
         if (allError) throw allError;
         
         // Map the restaurant data to match the expected interface
         finalData = (allRestaurants || []).map(restaurant => ({
-          restaurant_id: restaurant.restaurant_id,
+          restaurant_id: restaurant.id,
           restaurant_name: restaurant.name,
           restaurant_address: restaurant.address,
           restaurant_email: restaurant.email,
@@ -132,44 +222,41 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
         ...prev,
         restaurants: finalData,
         loading: false,
-        error: finalData.length === 0 ? 'No restaurants found in your area' : null,
+        error: finalData.length === 0 ? 'No restaurants found' : null,
         lastFetchLocation: userLocation
       }));
 
-      console.log(`Found ${finalData.length} restaurants`);
+      console.log(`Found ${finalData.length} restaurants near location`);
     } catch (err: any) {
       if (abortControllerRef.current?.signal.aborted) return;
       
       console.error('Error fetching restaurants:', err);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Failed to load restaurants',
-        restaurants: []
-      }));
+      // Fallback to all restaurants on error
+      await fetchAllRestaurants();
     }
-  }, [user, getCacheKey]);
+  }, [user, getCacheKey, fetchAllRestaurants]);
 
   const refetch = useCallback(() => {
     if (location) {
       fetchNearbyRestaurants(location);
+    } else {
+      fetchAllRestaurants();
     }
-  }, [location, fetchNearbyRestaurants]);
+  }, [location, fetchNearbyRestaurants, fetchAllRestaurants]);
 
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
   useEffect(() => {
-    if (user && location?.latitude && location?.longitude && locationChanged) {
-      fetchNearbyRestaurants(location);
-    } else if (user && !location) {
-      setState(prev => ({
-        ...prev,
-        restaurants: [],
-        loading: false,
-        error: 'Location access is required to find nearby restaurants'
-      }));
+    if (user) {
+      if (location?.latitude && location?.longitude && locationChanged) {
+        // User has location, fetch nearby restaurants
+        fetchNearbyRestaurants(location);
+      } else if (!location) {
+        // No location available, fetch all restaurants
+        fetchAllRestaurants();
+      }
     }
 
     return () => {
@@ -177,7 +264,7 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
         abortControllerRef.current.abort();
       }
     };
-  }, [user, location, locationChanged, fetchNearbyRestaurants]);
+  }, [user, location, locationChanged, fetchNearbyRestaurants, fetchAllRestaurants]);
 
   // Cleanup cache on unmount
   useEffect(() => {

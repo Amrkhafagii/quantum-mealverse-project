@@ -44,7 +44,7 @@ export const useCustomerState = (): CustomerState => {
   const { user } = useAuth();
   const [isInitializing, setIsInitializing] = useState(true);
   
-  // Location management
+  // Location management - but don't require it
   const {
     location,
     isLoading: locationLoading,
@@ -54,13 +54,13 @@ export const useCustomerState = (): CustomerState => {
     requestLocation
   } = useSimpleLocation();
   
-  // Restaurant management
+  // Restaurant management - works with or without location
   const {
     restaurants,
     loading: restaurantsLoading,
     error: restaurantsError,
     refetch: refetchRestaurants
-  } = useRestaurantsData(location);
+  } = useRestaurantsData(location); // Pass location if available, null if not
   
   // Menu management
   const { 
@@ -80,9 +80,10 @@ export const useCustomerState = (): CustomerState => {
   const isLoadingLocation = locationLoading;
   const isLoadingRestaurants = restaurantsLoading;
   const isLoadingMenu = menuLoading;
-  const isLoading = isInitializing || isLoadingLocation || isLoadingRestaurants || isLoadingMenu;
+  const isLoading = isInitializing || isLoadingRestaurants || isLoadingMenu;
 
   // Calculate combined error state with proper string conversion
+  // Don't treat location error as a blocking error since location is now optional
   const hasError = !!(restaurantsError || menuError);
   const errorMessage = restaurantsError || (menuError ? String(menuError) : null);
 
