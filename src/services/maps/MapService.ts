@@ -1,13 +1,14 @@
 
-/**
- * Interface for map service methods
- */
+export interface MapMarker {
+  latitude: number;
+  longitude: number;
+  title?: string;
+  description?: string;
+  type?: string;
+}
 
 export interface MapViewOptions {
-  center?: {
-    lat: number;
-    lng: number;
-  };
+  center?: { lat: number; lng: number };
   zoom?: number;
   markers?: MapMarker[];
   enableControls?: boolean;
@@ -15,127 +16,58 @@ export interface MapViewOptions {
   enableAnimation?: boolean;
 }
 
-export interface MapMarker {
-  latitude: number;
-  longitude: number;
-  title?: string;
-  description?: string;
-  type?: string;
-  icon?: string;
-  id?: string;
-}
-
 export interface MapCircle {
-  center: {
-    lat: number;
-    lng: number;
-  };
+  center: { lat: number; lng: number } | { latitude: number; longitude: number };
   radius: number;
-  strokeColor?: string;
-  strokeWidth?: number;
-  fillColor?: string;
+  strokeColor: string;
+  strokeWidth: number;
+  fillColor: string;
   fillOpacity?: number;
-  id?: string;
 }
 
 export interface MapPolyline {
-  path: Array<{
-    lat: number;
-    lng: number;
-  }>;
-  strokeColor?: string;
-  strokeWidth?: number;
-  id?: string;
+  path: Array<{ lat: number; lng: number } | { latitude: number; longitude: number }>;
+  color: string;
+  width: number;
 }
+
+export interface MapClickEvent {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
+
+export interface MapMarkerClickEvent {
+  markerId: string;
+  latitude: number;
+  longitude: number;
+  title?: string;
+}
+
+export type MapType = 'standard' | 'satellite' | 'hybrid' | 'terrain';
 
 export interface IMapService {
   initializeMap(elementId: string, options: MapViewOptions): Promise<string>;
   destroyMap(mapId: string): Promise<void>;
-  setCenter(mapId: string, center: { latitude: number; longitude: number }, zoom?: number): Promise<void>;
-  setCamera(mapId: string, center: { latitude: number; longitude: number }, zoom?: number, animate?: boolean): Promise<void>;
+  setCenter(mapId: string, center: { lat: number; lng: number } | { latitude: number; longitude: number }): Promise<void>;
   addMarker(mapId: string, marker: MapMarker): Promise<string>;
-  updateMarker(mapId: string, markerId: string, marker: Partial<MapMarker>): Promise<void>;
   removeMarker(mapId: string, markerId: string): Promise<void>;
   addCircle(mapId: string, circle: MapCircle): Promise<string>;
   removeCircle(mapId: string, circleId: string): Promise<void>;
   addPolyline(mapId: string, polyline: MapPolyline): Promise<string>;
   removePolyline(mapId: string, polylineId: string): Promise<void>;
-  geocodeReverse(coords: { latitude: number; longitude: number }): Promise<string | null>;
-  createMap(elementId: string, options: MapViewOptions): Promise<string>;
-  addMapClickListener(mapId: string, listener: (event: any) => void): string;
+  setZoom(mapId: string, zoom: number): Promise<void>;
+  fitBounds(mapId: string, bounds: any): Promise<void>;
+  addMapClickListener(mapId: string, listener: (event: MapClickEvent) => void): string;
+  removeMapClickListener(mapId: string, listenerId: string): void;
+  addMarkerClickListener(mapId: string, listener: (event: MapMarkerClickEvent) => void): string;
+  removeMarkerClickListener(mapId: string, listenerId: string): void;
+  geocodeReverse(lat: number, lng: number): Promise<string | null>;
 }
 
-export class MapServiceFactory {
-  private static instance: IMapService | null = null;
-
-  public static async getMapService(): Promise<IMapService> {
-    if (!MapServiceFactory.instance) {
-      // Implementation placeholder - would instantiate real service
-      MapServiceFactory.instance = {
-        initializeMap: async (elementId: string, options: MapViewOptions): Promise<string> => {
-          console.log("Initializing map", elementId, options);
-          return elementId;
-        },
-        createMap: async (elementId: string, options: MapViewOptions): Promise<string> => {
-          console.log("Creating map", elementId, options);
-          return elementId;
-        },
-        destroyMap: async (mapId: string): Promise<void> => {
-          console.log("Destroying map", mapId);
-        },
-        setCenter: async (mapId: string, center: { latitude: number; longitude: number }, zoom?: number): Promise<void> => {
-          console.log("Setting center for map", mapId, center, zoom);
-        },
-        setCamera: async (mapId: string, center: { latitude: number; longitude: number }, zoom?: number, animate?: boolean): Promise<void> => {
-          console.log("Setting camera for map", mapId, center, zoom, animate);
-        },
-        addMarker: async (mapId: string, marker: MapMarker): Promise<string> => {
-          const id = `marker-${Date.now()}`;
-          console.log("Adding marker to map", mapId, marker);
-          return id;
-        },
-        updateMarker: async (mapId: string, markerId: string, marker: Partial<MapMarker>): Promise<void> => {
-          console.log("Updating marker", mapId, markerId, marker);
-        },
-        removeMarker: async (mapId: string, markerId: string): Promise<void> => {
-          console.log("Removing marker", mapId, markerId);
-        },
-        addCircle: async (mapId: string, circle: MapCircle): Promise<string> => {
-          const id = `circle-${Date.now()}`;
-          console.log("Adding circle to map", mapId, circle);
-          return id;
-        },
-        removeCircle: async (mapId: string, circleId: string): Promise<void> => {
-          console.log("Removing circle", mapId, circleId);
-        },
-        addPolyline: async (mapId: string, polyline: MapPolyline): Promise<string> => {
-          const id = `polyline-${Date.now()}`;
-          console.log("Adding polyline to map", mapId, polyline);
-          return id;
-        },
-        removePolyline: async (mapId: string, polylineId: string): Promise<void> => {
-          console.log("Removing polyline", mapId, polylineId);
-        },
-        geocodeReverse: async (coords: { latitude: number; longitude: number }): Promise<string | null> => {
-          console.log("Reverse geocoding", coords);
-          return "Sample Address";
-        },
-        addMapClickListener: (mapId: string, listener: (event: any) => void): string => {
-          console.log("Adding map click listener", mapId);
-          return `listener-${Date.now()}`;
-        }
-      };
-    }
-
-    return MapServiceFactory.instance;
-  }
-}
-
-// Utility function
+// Helper function to get accuracy level from location
 export function getAccuracyLevelFromLocation(location: any): 'high' | 'medium' | 'low' | 'unknown' {
-  if (!location || typeof location.accuracy !== 'number') {
-    return 'unknown';
-  }
+  if (!location || !location.accuracy) return 'unknown';
   
   if (location.accuracy < 50) return 'high';
   if (location.accuracy < 200) return 'medium';

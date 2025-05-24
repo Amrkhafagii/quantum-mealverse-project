@@ -1,5 +1,5 @@
 
-import { NetworkQuality } from '@/types/unifiedLocation';
+import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
 
 export interface NetworkMetrics {
   latency: number | null;
@@ -27,4 +27,13 @@ export interface NetworkStatusState {
   nextCheck: Date | null;
   isMetered: boolean;
   networkType: string;
+}
+
+export interface NetworkQualityResult {
+  quality: NetworkQuality;
+  isLowQuality: boolean;
+  hasTransitioned?: boolean;
+  isFlaky?: boolean;
+  metrics?: NetworkMetrics;
+  checkQuality?: () => Promise<NetworkQuality>;
 }

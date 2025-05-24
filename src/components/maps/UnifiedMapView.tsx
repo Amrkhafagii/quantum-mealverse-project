@@ -86,9 +86,17 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   useEffect(() => {
     const initMap = async () => {
       try {
-        // Create map instance
+        // Create map instance - previously had errors with missing methods/properties
+        if (!maps.initializeMap) {
+          console.error('Map initialization method not available');
+          return;
+        }
+        
         const mapInstanceId = await maps.initializeMap(mapId, {
-          center,
+          center: center ? {
+            lat: center.latitude,
+            lng: center.longitude
+          } : undefined,
           zoom: zoomLevel,
           markers: additionalMarkers as MapMarker[],
           enableControls: isInteractive,
@@ -100,7 +108,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
         setIsMapReady(true);
         
         // Add accuracy circle if needed
-        if (showAccuracyCircle && maps.currentLocation) {
+        if (showAccuracyCircle && maps.addCircle && maps.currentLocation) {
           const userMarker = additionalMarkers.find(m => m.type === 'driver');
           if (userMarker) {
             // Determine radius based on accuracy level
@@ -111,8 +119,8 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
             
             await maps.addCircle(mapInstanceId, {
               center: {
-                latitude: userMarker.latitude,
-                longitude: userMarker.longitude
+                lat: userMarker.latitude,
+                lng: userMarker.longitude
               },
               radius,
               strokeColor: '#3388FF',
@@ -135,7 +143,7 @@ const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
     
     return () => {
       // Clean up map on unmount
-      if (mapInstance) {
+      if (mapInstance && maps.destroyMap) {
         maps.destroyMap(mapInstance).catch(console.error);
       }
     };

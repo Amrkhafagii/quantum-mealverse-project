@@ -124,7 +124,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'lazy' && (
           <LazyMap
             mapId={id}
-            center={center}
+            center={center ? {
+              lat: center.lat,
+              lng: center.lng
+            } : undefined}
             zoom={zoom}
             markers={markers.map(m => ({
               latitude: m.position.lat,
@@ -143,7 +146,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'unified' && (
           <UnifiedMapView
             mapId={id}
-            center={center}
+            center={center ? {
+              latitude: center.lat,
+              longitude: center.lng
+            } : undefined}
             zoomLevel={zoom}
             additionalMarkers={markers.map(m => ({
               latitude: m.position.lat,
@@ -162,10 +168,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         {implementation === 'native' && (
           <NativeMap
             mapId={id}
-            center={center ? {
-              lat: center.lat,
-              lng: center.lng
-            } : undefined}
+            center={{
+              lat: center ? center.lat : 0,
+              lng: center ? center.lng : 0
+            }}
             zoom={zoom}
             markers={markers.map(m => ({
               latitude: m.position.lat,

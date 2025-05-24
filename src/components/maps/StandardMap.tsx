@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,8 +68,8 @@ export const StandardMap: React.FC<StandardMapProps> = ({
   // Determine map center
   const mapCenter = center || 
     (showUserLocation && currentLocation ? 
-      { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : 
-      { latitude: 40.7128, longitude: -74.0060 }); // Default to NYC
+      { lat: currentLocation.latitude, lng: currentLocation.longitude } : 
+      { lat: 40.7128, lng: -74.0060 }); // Default to NYC
   
   // Create all markers including user location if needed
   const getAllMarkers = useCallback(() => {
@@ -148,7 +147,10 @@ export const StandardMap: React.FC<StandardMapProps> = ({
         
         // Create map with options
         const mapOptions: MapViewOptions = {
-          center: mapCenter,
+          center: {
+            lat: mapCenter.lat,
+            lng: mapCenter.lng
+          },
           zoom,
           markers: getAllMarkers(),
           enableControls,

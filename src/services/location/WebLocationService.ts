@@ -1,5 +1,6 @@
 
-import { BaseLocationService, LocationTrackingOptions } from './LocationService';
+import { LocationTrackingOptions } from './LocationService';
+import { BaseLocationService } from './BaseLocationService';
 import { DeliveryLocation } from '@/types/location';
 import { getBrowserLocation, watchBrowserLocation } from '@/utils/webGeolocation';
 
@@ -17,9 +18,13 @@ export class WebLocationService extends BaseLocationService {
       
       const location = await getBrowserLocation();
       if (location) {
-        this.updateLocation(location);
+        this.updateLocation({
+          ...location,
+          accuracy: location.accuracy || 0, // Ensure accuracy is not undefined
+        });
+        return location;
       }
-      return location;
+      return null;
     } catch (error) {
       console.error('Error getting current location:', error);
       return null;
@@ -46,7 +51,14 @@ export class WebLocationService extends BaseLocationService {
       
       // Start watching location
       this._clearWatchFn = watchBrowserLocation(
-        (location) => this.updateLocation(location),
+        (location) => {
+          if (location) {
+            this.updateLocation({
+              ...location,
+              accuracy: location.accuracy || 0, // Ensure accuracy is not undefined
+            });
+          }
+        },
         (error) => console.error('Error watching location:', error)
       );
       

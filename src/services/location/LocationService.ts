@@ -8,6 +8,8 @@ export interface LocationTrackingOptions {
   distanceFilter?: number;
   useSignificantChanges?: boolean;
   persistLocations?: boolean;
+  timeout?: number;
+  maximumAge?: number;
 }
 
 export interface ILocationService {

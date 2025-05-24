@@ -1,8 +1,8 @@
 
-import { BaseLocationService, LocationTrackingOptions } from './LocationService';
+import { LocationTrackingOptions } from './LocationService';
+import { BaseLocationService } from './BaseLocationService';
 import { DeliveryLocation } from '@/types/location';
 import { Geolocation } from '@capacitor/geolocation';
-import { Platform } from '@/utils/platform';
 
 export class NativeLocationService extends BaseLocationService {
   private _watchId: string | null = null;
@@ -26,7 +26,7 @@ export class NativeLocationService extends BaseLocationService {
         const location: DeliveryLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+          accuracy: position.coords.accuracy || 0,
           altitude: position.coords.altitude || null,
           heading: position.coords.heading || null,
           speed: position.coords.speed || undefined,
@@ -63,8 +63,8 @@ export class NativeLocationService extends BaseLocationService {
       // Configure tracking options
       const watchOptions = {
         enableHighAccuracy: options.enableHighAccuracy !== false,
-        timeout: options.timeout || 30000,
-        maximumAge: options.maximumAge || 0
+        timeout: 30000, // Default timeout
+        maximumAge: 0 // Default maximumAge
       };
       
       // Start watching position
@@ -75,7 +75,7 @@ export class NativeLocationService extends BaseLocationService {
             const location: DeliveryLocation = {
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
+              accuracy: position.coords.accuracy || 0,
               altitude: position.coords.altitude || null,
               heading: position.coords.heading || null,
               speed: position.coords.speed || undefined,

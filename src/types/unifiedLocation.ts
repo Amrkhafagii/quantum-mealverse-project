@@ -17,6 +17,7 @@ export interface NetworkInfo {
   type: NetworkType;
   connected: boolean;
   strength?: number;
+  quality?: NetworkQuality;
 }
 
 export interface DeviceInfo {
@@ -51,6 +52,9 @@ export interface UnifiedLocation {
   location_type?: string;
   isMoving?: boolean;
   battery_level?: number;
+  orderId?: string;
+  restaurantId?: string;
+  deliveryAssignmentId?: string;
 }
 
 export interface ConfidenceScore {
@@ -77,6 +81,11 @@ export interface LocationQueryParams {
   userId?: string;
   orderBy?: string;
   orderDirection?: 'asc' | 'desc';
+  orderId?: string;
+  deliveryAssignmentId?: string;
+  restaurantId?: string;
+  locationType?: string;
+  includeExpired?: boolean;
 }
 
 export interface LocationPrivacySettings {
@@ -84,13 +93,16 @@ export interface LocationPrivacySettings {
   anonymizeData: boolean;
   retentionPeriodDays: number;
   shareWithThirdParties: boolean;
+  automaticallyAnonymize?: boolean;
+  collectDeviceInfo?: boolean;
+  allowPreciseLocation?: boolean;
+  precisionLevel?: number;
+  retentionDays?: number; // Alias for retentionPeriodDays for backward compatibility
 }
 
 export interface NetworkMetrics {
   latency: number;
-  bandwidth: number;
-  connectionType: NetworkType;
-  signalStrength?: number;
+  bandwidth?: number;
   jitter?: number;
   packetLoss?: number;
   effectiveType?: string;

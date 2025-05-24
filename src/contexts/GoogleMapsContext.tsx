@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { googleMapsKeyManager } from '@/services/maps/GoogleMapsKeyManager';
 import { toast } from '@/hooks/use-toast';
@@ -23,10 +22,10 @@ type GoogleMapsContextType = {
   error: Error | null;
   clearApiKey: () => Promise<void>;
   updateDriverLocation?: (location: MapLocation) => void;
-  // Additional map-related methods
-  initializeMap?: (elementId: string, options: any) => Promise<string>;
-  destroyMap?: (mapId: string) => Promise<void>;
-  addCircle?: (mapId: string, circle: MapCircle) => Promise<string>;
+  // Added explicit methods that were accessed but missing in the type
+  initializeMap: (elementId: string, options: any) => Promise<string>;
+  destroyMap: (mapId: string) => Promise<void>;
+  addCircle: (mapId: string, circle: MapCircle) => Promise<string>;
   currentLocation?: MapLocation | null;
 };
 
@@ -40,6 +39,11 @@ const GoogleMapsContext = createContext<GoogleMapsContextType>({
   error: null,
   clearApiKey: async () => {},
   updateDriverLocation: undefined,
+  // Add implementations for the new methods
+  initializeMap: async () => '',
+  destroyMap: async () => {},
+  addCircle: async () => '',
+  currentLocation: null,
 });
 
 interface GoogleMapsProviderProps {
