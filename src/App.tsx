@@ -15,6 +15,7 @@ import Orders from "./pages/Orders";
 import QrScannerDemo from "./pages/QrScannerDemo";
 import Dashboard from "./pages/Dashboard";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -55,6 +56,7 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
                   <Route path="/qr-scanner" element={<QrScannerDemo />} />
                   <Route path="/nutrition" element={<Nutrition />} />
                   <Route path="/customer" element={
