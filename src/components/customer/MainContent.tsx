@@ -26,15 +26,23 @@ interface MainContentProps {
 
 export const MainContent: React.FC<MainContentProps> = ({
   isMapView,
-  menuItems,
+  menuItems = [],
   isLoading,
   error,
-  nearbyRestaurants,
+  nearbyRestaurants = [],
   toggleMapView,
   onLocationRequest
 }) => {
+  console.log('MainContent rendering with:', {
+    isMapView,
+    menuItemsCount: menuItems?.length,
+    isLoading,
+    error,
+    nearbyRestaurantsCount: nearbyRestaurants?.length
+  });
+
   return (
-    <>
+    <div className="container mx-auto px-4 py-8">
       <RestaurantSummary restaurants={nearbyRestaurants} />
 
       <AnimatePresence mode="wait">
@@ -82,6 +90,6 @@ export const MainContent: React.FC<MainContentProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 };

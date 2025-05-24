@@ -1,42 +1,77 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Clock, Star } from 'lucide-react';
 import { NearbyRestaurant } from '@/hooks/useNearestRestaurant';
 
 interface RestaurantSummaryProps {
   restaurants: NearbyRestaurant[];
 }
 
-export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ 
-  restaurants 
-}) => {
-  if (!restaurants || restaurants.length === 0) return null;
+export const RestaurantSummary: React.FC<RestaurantSummaryProps> = ({ restaurants = [] }) => {
+  console.log('RestaurantSummary rendering with restaurants:', restaurants.length);
+
+  if (!restaurants || restaurants.length === 0) {
+    return (
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 mb-8">
+        <CardContent className="text-center py-8">
+          <MapPin className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No nearby restaurants found</h3>
+          <p className="text-gray-400">
+            We're working to expand our service in your area. Please check back soon!
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <motion.div 
-      className="mb-8"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <h2 className="text-2xl font-semibold mb-4 text-quantum-purple">
-        {restaurants.length} {restaurants.length === 1 ? 'Restaurant' : 'Restaurants'} Found Nearby
-      </h2>
-      <div className="flex flex-wrap gap-4">
-        {restaurants.map((restaurant, index) => (
-          <motion.div 
-            key={restaurant.restaurant_id} 
-            className="bg-quantum-darkBlue/70 rounded-lg p-3 inline-flex items-center"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            whileHover={{ scale: 1.05, backgroundColor: 'rgba(108, 92, 231, 0.2)' }}
-          >
-            <span className="text-quantum-cyan mr-2">{restaurant.restaurant_name}</span>
-            <span className="text-xs text-gray-400">{restaurant.distance_km.toFixed(2)} km away</span>
-          </motion.div>
-        ))}
-      </div>
-    </motion.div>
+    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 mb-8">
+      <CardHeader>
+        <CardTitle className="text-quantum-cyan flex items-center gap-2">
+          <MapPin className="w-5 h-5" />
+          Nearby Restaurants ({restaurants.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {restaurants.map((restaurant, index) => (
+            <div 
+              key={restaurant.id || index}
+              className="border border-gray-600/30 rounded-lg p-4 bg-gray-800/30 hover:bg-gray-700/30 transition-colors"
+            >
+              <h4 className="font-semibold text-white mb-2">{restaurant.name}</h4>
+              
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-gray-300">
+                  <MapPin className="w-4 h-4" />
+                  <span>{restaurant.distance ? `${restaurant.distance.toFixed(1)} km away` : 'Distance unknown'}</span>
+                </div>
+                
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Clock className="w-4 h-4" />
+                  <span>15-30 min delivery</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="text-gray-300">4.5 (120+ reviews)</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 mt-3">
+                <Badge variant="secondary" className="text-xs">
+                  Fast Delivery
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  Healthy Options
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

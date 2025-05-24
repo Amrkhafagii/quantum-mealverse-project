@@ -4,8 +4,13 @@ import { AuthContext } from '@/contexts/AuthContext';
 
 // This hook simply uses the context from AuthContext.tsx
 const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
 export { useAuth };
-export { AuthProvider, useAuth as default } from '@/contexts/AuthContext';
+export { AuthProvider } from '@/contexts/AuthContext';
+export default useAuth;

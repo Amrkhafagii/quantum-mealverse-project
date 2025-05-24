@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
 import { CustomerHeader } from '@/components/customer/CustomerHeader';
 import { MainContent } from '@/components/customer/MainContent';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNearestRestaurant } from '@/hooks/useNearestRestaurant';
 import { useMenuItems } from '@/hooks/useMenuItems';
 
@@ -15,11 +15,11 @@ const CustomerPage = () => {
   const { user, logout } = useAuth();
   const [isMapView, setIsMapView] = useState(false);
   
-  // Get nearby restaurants data
-  const { nearbyRestaurants, loading: isLoadingRestaurants } = useNearestRestaurant();
+  // Get nearby restaurants data with error handling
+  const { nearbyRestaurants = [], loading: isLoadingRestaurants } = useNearestRestaurant() || {};
   
-  // Get menu items data - pass the nearbyRestaurants array instead of empty object
-  const { data: menuItems, isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems(nearbyRestaurants || []);
+  // Get menu items data - pass the nearbyRestaurants array with fallback
+  const { data: menuItems = [], isLoading: isLoadingMenuItems, error: menuItemsError } = useMenuItems(nearbyRestaurants || []);
 
   const handleLogout = async () => {
     try {
@@ -40,6 +40,15 @@ const CustomerPage = () => {
   };
 
   const isLoading = isLoadingRestaurants || isLoadingMenuItems;
+
+  // Add console logs for debugging
+  console.log('Customer page rendering with:', {
+    user: user?.email,
+    nearbyRestaurants: nearbyRestaurants?.length,
+    menuItems: menuItems?.length,
+    isLoading,
+    error: menuItemsError
+  });
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
