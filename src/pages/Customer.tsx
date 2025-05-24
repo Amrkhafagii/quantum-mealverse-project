@@ -83,18 +83,6 @@ const CustomerPage = () => {
               </div>
             </AnimatedContainer>
             
-            {/* Location prompt - only show if there's an issue or permission not requested */}
-            {(hasLocationIssue || !hasRequestedPermission) && (
-              <AnimatedContainer animation="slideUp" delay={0.2}>
-                <LocationPrompt
-                  onRequestLocation={requestLocation}
-                  isLoading={isLoading}
-                  error={locationError}
-                  hasRequestedPermission={hasRequestedPermission}
-                />
-              </AnimatedContainer>
-            )}
-            
             <AnimatedContainer animation="slideUp" delay={0.3}>
               <MainContent 
                 isMapView={isMapView}
