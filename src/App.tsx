@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Fitness from "./pages/Fitness";
 import FitnessEnhanced from "./pages/FitnessEnhanced";
@@ -61,6 +61,11 @@ const App = () => (
                   <Route path="/order-confirmation/:id" element={
                     <ProtectedRoute allowedUserTypes={['customer']}>
                       <OrderConfirmation />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/orders/:id" element={
+                    <ProtectedRoute allowedUserTypes={['customer']}>
+                      <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
                     </ProtectedRoute>
                   } />
                   <Route path="/qr-scanner" element={<QrScannerDemo />} />
