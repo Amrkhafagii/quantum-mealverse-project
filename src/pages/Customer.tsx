@@ -1,33 +1,25 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { clearLocationStorage, exportLocationLogs } from '@/utils/locationDebug';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MainContent } from '@/components/customer/MainContent';
-import { RestaurantSummary } from '@/components/customer/RestaurantSummary';
-import { ViewToggle } from '@/components/customer/ViewToggle';
-import EmptyState from '@/components/EmptyState';
-import RecommendedMeals from '@/components/recommendations/RecommendedMeals';
-import { CustomerMealGrid } from '@/components/customer/CustomerMealGrid';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { useLocationHistory } from '@/hooks/useLocationHistory';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
-import { DeliveryLocation } from '@/types/location';
-import { UnifiedLocation } from '@/types/unifiedLocation';
 import { calculateDistance } from '@/utils/locationUtils';
 import { downloadJsonFile } from '@/utils/fileDownloads';
 import { MenuItem } from '@/types/menu';
 import { Restaurant } from '@/types/restaurant';
-import LogDisplayModal from '@/components/LogDisplayModal';
-import LocationPermissionsPrompt from '@/components/location/LocationPermissionsPrompt';
 import { LocationStateManager } from '@/components/location/LocationStateManager';
 import { LocationStatusIndicator } from '@/components/location/LocationStatusIndicator';
-import LocationHistoryDashboard from '@/components/location/LocationHistoryDashboard';
-import { AdaptiveLocationTracker } from '@/components/location/AdaptiveLocationTracker';
+import LocationPermissionsPrompt from '@/components/location/LocationPermissionsPrompt';
 import LocationPromptBanner from '@/components/location/LocationPromptBanner';
+import { CustomerHeader } from '@/components/customer/CustomerHeader';
+import { RestaurantSection } from '@/components/customer/RestaurantSection';
+import { MenuSection } from '@/components/customer/MenuSection';
+import { RecommendationsSection } from '@/components/customer/RecommendationsSection';
+import { DebugSection } from '@/components/customer/DebugSection';
 
 const Customer: React.FC = () => {
   const { user, logout } = useAuth();
@@ -37,7 +29,7 @@ const Customer: React.FC = () => {
   const [showLocationHistory, setShowLocationHistory] = useState(false);
   const [showAdaptiveTracker, setShowAdaptiveTracker] = useState(false);
   
-  const { currentLocation, isLoading: locationLoading } = useCurrentLocation();
+  const { currentLocation } = useCurrentLocation();
   const { locationHistory } = useLocationHistory();
   const { 
     permissionStatus, 
@@ -139,138 +131,56 @@ const Customer: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Customer Dashboard</CardTitle>
-          <CardDescription>
-            Welcome, {user?.email}! Explore restaurants and view recommendations.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={() => logout()}>Sign Out</Button>
-        </CardContent>
-      </Card>
+      <CustomerHeader 
+        userEmail={user?.email}
+        onLogout={logout}
+      />
 
       <LocationStateManager>
         <LocationStatusIndicator 
-          trackingMode="automatic" 
+          trackingMode="high-accuracy" 
           isTracking={!!currentLocation} 
         />
         <LocationPromptBanner />
 
         {permissionStatus !== 'granted' && (
           <LocationPermissionsPrompt
-            onRequestPermission={requestPermission}
+            requestPermission={requestPermission}
             isLoading={permissionLoading}
           />
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Restaurants</CardTitle>
-            <CardDescription>Select a restaurant to view its menu.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {restaurantsLoading ? (
-              <p>Loading restaurants...</p>
-            ) : restaurantsError ? (
-              <p className="text-red-500">Error: {restaurantsError.message}</p>
-            ) : restaurants && restaurants.length > 0 ? (
-              <RestaurantSummary 
-                restaurants={nearbyRestaurants}
-              />
-            ) : (
-              <EmptyState message="No restaurants found." />
-            )}
-          </CardContent>
-        </Card>
-
-        {selectedRestaurant && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Menu</CardTitle>
-              <CardDescription>
-                View the menu for the selected restaurant.
-                <ViewToggle 
-                  currentView={viewMode} 
-                  onToggle={handleViewToggle} 
-                />
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {menusLoading ? (
-                <p>Loading menu...</p>
-              ) : menusError ? (
-                <p className="text-red-500">Error: {menusError.message}</p>
-              ) : menus && menus.length > 0 ? (
-                <CustomerMealGrid 
-                  menuItems={mealTypeMenus} 
-                  isLoading={menusLoading}
-                  error={menusError}
-                  onLocationRequest={() => requestPermission()}
-                />
-              ) : (
-                <EmptyState message="No menu items found." />
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {currentLocation && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Recommended Meals</CardTitle>
-              <CardDescription>Personalized recommendations based on your location.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecommendedMeals />
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Location Debugging</CardTitle>
-            <CardDescription>Tools for testing and debugging location services.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-x-2">
-              <Button onClick={() => setShowLocationLogs(true)}>Show Location Logs</Button>
-              <Button onClick={handleClearLocationStorage}>Clear Location Storage</Button>
-              <Button onClick={handleExportLogs}>Export Location Logs</Button>
-              <Button onClick={() => setShowLocationHistory(true)}>Show Location History</Button>
-              <Button onClick={() => setShowAdaptiveTracker(true)}>
-                Show Adaptive Location Tracker
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <LogDisplayModal
-          isOpen={showLocationLogs}
-          onClose={() => setShowLocationLogs(false)}
+        <RestaurantSection
+          restaurants={restaurants}
+          nearbyRestaurants={nearbyRestaurants}
+          isLoading={restaurantsLoading}
+          error={restaurantsError}
         />
 
-        <LocationHistoryDashboard
-          isOpen={showLocationHistory}
-          onClose={() => setShowLocationHistory(false)}
+        <MenuSection
+          selectedRestaurant={selectedRestaurant}
+          menus={menus}
+          mealTypeMenus={mealTypeMenus}
+          viewMode={viewMode}
+          onViewToggle={handleViewToggle}
+          isLoading={menusLoading}
+          error={menusError}
+          onLocationRequest={requestPermission}
+        />
+
+        <RecommendationsSection currentLocation={currentLocation} />
+
+        <DebugSection
+          showLocationLogs={showLocationLogs}
+          showLocationHistory={showLocationHistory}
+          showAdaptiveTracker={showAdaptiveTracker}
           locationHistory={locationHistory}
+          onToggleLocationLogs={() => setShowLocationLogs(!showLocationLogs)}
+          onToggleLocationHistory={() => setShowLocationHistory(!showLocationHistory)}
+          onToggleAdaptiveTracker={() => setShowAdaptiveTracker(!showAdaptiveTracker)}
+          onClearLocationStorage={handleClearLocationStorage}
+          onExportLogs={handleExportLogs}
         />
-
-        {showAdaptiveTracker && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Adaptive Location Tracker</CardTitle>
-              <CardDescription>
-                Demonstrates adaptive location tracking based on various factors.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdaptiveLocationTracker />
-              <Button onClick={() => setShowAdaptiveTracker(false)}>Close Tracker</Button>
-            </CardContent>
-          </Card>
-        )}
       </LocationStateManager>
     </div>
   );

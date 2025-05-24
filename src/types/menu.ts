@@ -12,6 +12,7 @@ export interface Menu {
     protein?: number;
     carbs?: number;
     fat?: number;
+    health_score?: number;
   };
   is_available?: boolean;
   preparation_time?: number;
