@@ -856,6 +856,45 @@ export type Database = {
           },
         ]
       }
+      exercise_progress: {
+        Row: {
+          created_at: string | null
+          exercise_name: string
+          id: string
+          max_reps: number | null
+          max_weight: number | null
+          one_rep_max: number | null
+          recorded_date: string
+          total_volume: number | null
+          user_id: string
+          workout_log_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_name: string
+          id?: string
+          max_reps?: number | null
+          max_weight?: number | null
+          one_rep_max?: number | null
+          recorded_date: string
+          total_volume?: number | null
+          user_id: string
+          workout_log_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exercise_name?: string
+          id?: string
+          max_reps?: number | null
+          max_weight?: number | null
+          one_rep_max?: number | null
+          recorded_date?: string
+          total_volume?: number | null
+          user_id?: string
+          workout_log_id?: string | null
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string | null
@@ -2545,6 +2584,81 @@ export type Database = {
           },
         ]
       }
+      workout_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          metric_date: string
+          metric_type: string
+          metric_value: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_date: string
+          metric_type: string
+          metric_value: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_date?: string
+          metric_type?: string
+          metric_value?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workout_goals: {
+        Row: {
+          created_at: string | null
+          current_value: number | null
+          description: string | null
+          goal_type: string
+          id: string
+          is_active: boolean | null
+          target_date: string | null
+          target_value: number | null
+          title: string
+          unit: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_value?: number | null
+          description?: string | null
+          goal_type: string
+          id?: string
+          is_active?: boolean | null
+          target_date?: string | null
+          target_value?: number | null
+          title: string
+          unit?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_value?: number | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          is_active?: boolean | null
+          target_date?: string | null
+          target_value?: number | null
+          title?: string
+          unit?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_history: {
         Row: {
           calories_burned: number | null
@@ -2594,32 +2708,44 @@ export type Database = {
       }
       workout_logs: {
         Row: {
+          avg_heart_rate: number | null
           calories_burned: number | null
           completed_exercises: Json
           date: string | null
           duration: number
           id: string
+          max_heart_rate: number | null
           notes: string | null
+          perceived_exertion: number | null
+          total_volume: number | null
           user_id: string
           workout_plan_id: string
         }
         Insert: {
+          avg_heart_rate?: number | null
           calories_burned?: number | null
           completed_exercises: Json
           date?: string | null
           duration: number
           id?: string
+          max_heart_rate?: number | null
           notes?: string | null
+          perceived_exertion?: number | null
+          total_volume?: number | null
           user_id: string
           workout_plan_id: string
         }
         Update: {
+          avg_heart_rate?: number | null
           calories_burned?: number | null
           completed_exercises?: Json
           date?: string | null
           duration?: number
           id?: string
+          max_heart_rate?: number | null
           notes?: string | null
+          perceived_exertion?: number | null
+          total_volume?: number | null
           user_id?: string
           workout_plan_id?: string
         }
@@ -3173,6 +3299,10 @@ export type Database = {
       bytea: {
         Args: { "": unknown } | { "": unknown }
         Returns: string
+      }
+      calculate_exercise_progress: {
+        Args: { p_user_id: string; p_workout_log_id: string }
+        Returns: undefined
       }
       calculate_health_score: {
         Args: {
@@ -4897,6 +5027,10 @@ export type Database = {
       }
       update_meal_rating_cache: {
         Args: { p_meal_id: string; p_restaurant_id: string }
+        Returns: undefined
+      }
+      update_workout_analytics: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
       updategeometrysrid: {

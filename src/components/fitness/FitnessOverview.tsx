@@ -1,125 +1,165 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserWorkoutStats } from '@/types/fitness';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dumbbell, Calendar, Trophy } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Activity, Target, TrendingUp, BarChart3 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
+import { useWorkoutData } from '@/hooks/useWorkoutData';
+import FitnessAnalyticsDashboard from './stats/FitnessAnalyticsDashboard';
+import ProgressAnalytics from './stats/ProgressAnalytics';
+import UserProgressJourney from './UserProgressJourney';
+import { WorkoutGoalsManager } from './analytics/WorkoutGoalsManager';
+import { ProgressCharts } from './analytics/ProgressCharts';
+import { EnhancedWorkoutHistory } from './analytics/EnhancedWorkoutHistory';
+import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
 
 interface FitnessOverviewProps {
   userId?: string;
-  workoutStats?: UserWorkoutStats;
+  workoutStats: any;
 }
 
-export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workoutStats = {} }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workoutStats }) => {
+  const { user } = useAuth();
+  const { history, isLoading: workoutLoading, fetchWorkoutHistory } = useWorkoutData();
+  const { updateAnalytics } = useWorkoutAnalytics();
+  const [activeUserId] = useState(userId || user?.id);
 
   useEffect(() => {
-    if (userId) {
-      fetchUserProfile(userId);
+    if (activeUserId) {
+      fetchWorkoutHistory(activeUserId);
+      updateAnalytics();
     }
-  }, [userId]);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('fitness_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // not found is okay
-        throw error;
-      }
-
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching fitness profile:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Safely access potentially undefined properties
-  const { total_workouts = 0, streak_days = 0, streak = 0, most_active_day = 'N/A' } = workoutStats || {};
-  const achievementsCount = workoutStats?.achievements || 0;
-  const recentWorkouts = workoutStats?.recent_workouts || [];
+  }, [activeUserId]);
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-quantum-darkBlue/30 rounded-lg border border-quantum-cyan/20 p-6">
-        <h2 className="text-2xl font-bold text-quantum-cyan mb-4">
-          Welcome, {profile?.display_name || 'Fitness Enthusiast'}!
-        </h2>
-        <p className="text-gray-300">
-          Track your fitness journey, set goals, and monitor your progress all in one place.
-        </p>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20">
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="rounded-full bg-purple-500/10 p-3">
-              <Dumbbell className="h-6 w-6 text-purple-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-300">Total Workouts</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{total_workouts}</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="rounded-full bg-cyan-500/10 p-3">
-              <Calendar className="h-6 w-6 text-cyan-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-300">Current Streak</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{streak_days || streak || 0} days</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-quantum-darkBlue/30 border-quantum-purple/20">
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="rounded-full bg-amber-500/10 p-3">
-              <Trophy className="h-6 w-6 text-amber-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-300">Achievements</h3>
-              <p className="text-2xl font-bold text-quantum-cyan">{achievementsCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity */}
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardHeader>
-          <CardTitle className="text-quantum-cyan">Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {(recentWorkouts && recentWorkouts.length > 0) ? (
-            <div className="space-y-4">
-              {recentWorkouts.map((workout, index) => (
-                <div key={index} className="flex items-center justify-between border-b border-gray-800 pb-2">
-                  <div>
-                    <p className="font-medium">{workout.name || `Workout ${index + 1}`}</p>
-                    <p className="text-sm text-gray-400">{workout.date}</p>
-                  </div>
-                  <span className="text-quantum-purple">{workout.duration} min</span>
+      {/* Quick Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Activity className="h-8 w-8 text-quantum-cyan" />
+                <div className="ml-3">
+                  <p className="text-sm text-gray-400">Total Workouts</p>
+                  <p className="text-2xl font-bold">{workoutStats?.total_workouts || 0}</p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400">No recent workouts found. Start your fitness journey today!</p>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Target className="h-8 w-8 text-green-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-gray-400">Current Streak</p>
+                  <p className="text-2xl font-bold">{workoutStats?.streak || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-yellow-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-gray-400">Most Active Day</p>
+                  <p className="text-lg font-bold">{workoutStats?.most_active_day || 'N/A'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <BarChart3 className="h-8 w-8 text-purple-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-gray-400">This Week</p>
+                  <p className="text-2xl font-bold">
+                    {history.filter(h => {
+                      const weekAgo = new Date();
+                      weekAgo.setDate(weekAgo.getDate() - 7);
+                      return new Date(h.date) >= weekAgo;
+                    }).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Main Analytics Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="bg-quantum-darkBlue/50 mb-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="goals">Goals</TabsTrigger>
+          <TabsTrigger value="progress">Progress Charts</TabsTrigger>
+          <TabsTrigger value="history">Workout History</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <FitnessAnalyticsDashboard userId={activeUserId} />
+            <UserProgressJourney
+              userId={activeUserId}
+              achievements={[]}
+              userAchievements={[]}
+              points={workoutStats?.total_workouts * 10 || 0}
+            />
+          </div>
+          <ProgressAnalytics userId={activeUserId} />
+        </TabsContent>
+
+        <TabsContent value="goals">
+          <WorkoutGoalsManager />
+        </TabsContent>
+
+        <TabsContent value="progress">
+          <ProgressCharts />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <EnhancedWorkoutHistory 
+            workoutHistory={history} 
+            isLoading={workoutLoading}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <div className="space-y-6">
+            <FitnessAnalyticsDashboard userId={activeUserId} />
+            <ProgressAnalytics userId={activeUserId} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
