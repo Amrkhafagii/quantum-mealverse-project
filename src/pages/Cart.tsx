@@ -7,28 +7,17 @@ import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/hooks/useAuth';
-import { Trash2, Plus, Minus, ArrowRight, User } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, totalAmount, clearCart } = useCart();
-  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { displayPrice } = useCurrencyConverter();
 
   const handleCheckout = () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to proceed with checkout.",
-        variant: "destructive"
-      });
-      navigate('/auth');
-      return;
-    }
     navigate('/checkout');
   };
 
@@ -38,24 +27,7 @@ const Cart = () => {
       <Navbar toggleDarkMode={() => {}} isDarkMode={false} />
       
       <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-quantum-cyan neon-text">Your Cart</h1>
-          {!user && (
-            <Card className="p-4 bg-quantum-darkBlue/30 border-quantum-cyan/20">
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-quantum-cyan" />
-                <div>
-                  <p className="text-sm text-gray-300">Sign in to save your cart</p>
-                  <Link to="/auth">
-                    <Button variant="link" className="p-0 h-auto text-quantum-cyan">
-                      Log in or Sign up
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </Card>
-          )}
-        </div>
+        <h1 className="text-4xl font-bold text-quantum-cyan mb-8 neon-text">Your Cart</h1>
         
         {items.length === 0 ? (
           <Card className="p-8 text-center holographic-card">
@@ -165,14 +137,9 @@ const Cart = () => {
                   className="cyber-button w-full flex gap-2 items-center justify-center"
                   onClick={handleCheckout}
                 >
-                  {user ? 'Proceed to Checkout' : 'Sign in to Checkout'}
+                  Proceed to Checkout
                   <ArrowRight className="h-4 w-4" />
                 </Button>
-                {!user && (
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    You'll need to sign in to complete your order
-                  </p>
-                )}
               </Card>
             </div>
           </div>
