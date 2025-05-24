@@ -856,6 +856,48 @@ export type Database = {
           },
         ]
       }
+      exercises: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          difficulty: string
+          equipment_needed: string[] | null
+          id: string
+          image_url: string | null
+          instructions: string[] | null
+          muscle_groups: string[]
+          name: string
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          difficulty: string
+          equipment_needed?: string[] | null
+          id?: string
+          image_url?: string | null
+          instructions?: string[] | null
+          muscle_groups: string[]
+          name: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string
+          equipment_needed?: string[] | null
+          id?: string
+          image_url?: string | null
+          instructions?: string[] | null
+          muscle_groups?: string[]
+          name?: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       fitness_goals: {
         Row: {
           created_at: string
@@ -2600,7 +2642,9 @@ export type Database = {
           frequency: number
           goal: string
           id: string
+          is_custom: boolean | null
           name: string
+          template_id: string | null
           updated_at: string | null
           user_id: string
           workout_days: Json
@@ -2613,7 +2657,9 @@ export type Database = {
           frequency: number
           goal: string
           id?: string
+          is_custom?: boolean | null
           name: string
+          template_id?: string | null
           updated_at?: string | null
           user_id: string
           workout_days: Json
@@ -2626,12 +2672,22 @@ export type Database = {
           frequency?: number
           goal?: string
           id?: string
+          is_custom?: boolean | null
           name?: string
+          template_id?: string | null
           updated_at?: string | null
           user_id?: string
           workout_days?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workout_plans_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workout_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workout_recommendations: {
         Row: {
@@ -2715,6 +2771,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workout_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          difficulty: string
+          duration_weeks: number | null
+          frequency_per_week: number | null
+          goal: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          updated_at: string | null
+          workout_days: Json
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty: string
+          duration_weeks?: number | null
+          frequency_per_week?: number | null
+          goal?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          updated_at?: string | null
+          workout_days: Json
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty?: string
+          duration_weeks?: number | null
+          frequency_per_week?: number | null
+          goal?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          updated_at?: string | null
+          workout_days?: Json
+        }
+        Relationships: []
       }
     }
     Views: {

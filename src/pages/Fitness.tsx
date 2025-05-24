@@ -7,7 +7,6 @@ import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FitnessOverview } from '@/components/fitness/FitnessOverview';
-// Import components correctly
 import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
 import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
@@ -50,12 +49,7 @@ const FitnessPage = () => {
             </TabsContent>
             
             <TabsContent value="planner" className="mt-2">
-              <WorkoutPlanner 
-                userId={user?.id} 
-                workoutPlans={workoutData.workoutPlans} 
-                isLoading={workoutData.isLoading}
-                onWorkoutPlanCreated={workoutData.fetchWorkoutPlans} 
-              />
+              <WorkoutPlanner />
             </TabsContent>
             
             <TabsContent value="scheduler" className="mt-2">
