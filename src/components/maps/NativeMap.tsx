@@ -154,12 +154,11 @@ const NativeMap: React.FC<NativeMapProps> = ({
     return () => {
       if (googleMapRef.current && mapInitialized) {
         try {
-          // Use the correct method to destroy/remove the map
-          // The error was here - 'remove' doesn't exist on the type
-          // Let's use the correct method: deleteMap
-          CapacitorGoogleMaps.deleteMap({
-            id: mapId
-          }).catch(err => console.error('Error removing map:', err));
+          // The correct method to destroy the map according to the Capacitor Google Maps plugin
+          // Using the destroy method on the map instance itself, not the plugin
+          if (googleMapRef.current) {
+            googleMapRef.current.destroy();
+          }
         } catch (err) {
           console.error('Error cleaning up map:', err);
         }
