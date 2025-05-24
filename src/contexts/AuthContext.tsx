@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface UserWithMetadata extends User {
-  user_metadata?: {
+  user_metadata: {
     user_type?: string;
     [key: string]: any;
   };
