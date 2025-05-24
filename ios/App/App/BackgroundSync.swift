@@ -1,39 +1,27 @@
-
-import UIKit
+import Foundation
 import BackgroundTasks
 
 @available(iOS 13.0, *)
 class BackgroundSync {
     static func register() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.lovable.background.refresh", 
-                                      using: nil) { task in
-            AppDelegate.shared.handleBackgroundRefresh(task: task as! BGAppRefreshTask)
+        print("Registering background tasks")
+        
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.quantummealverse.backgroundsync", using: nil) { task in
+            handleBackgroundSync(task: task as! BGAppRefreshTask)
         }
     }
     
-    static func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: "com.lovable.background.refresh")
-        // Request refresh after 15 minutes
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+    static func handleBackgroundSync(task: BGAppRefreshTask) {
+        print("Handling background sync task")
         
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("Background refresh scheduled successfully")
-        } catch {
-            print("Failed to schedule background refresh: \(error)")
+        task.expirationHandler = {
+            task.setTaskCompleted(success: false)
         }
-    }
-    
-    static func performBackgroundSync(completion: @escaping (Bool) -> Void) {
-        // 1. Request location update
-        LocationManager.shared.requestLocation()
         
-        // 2. Any additional sync operations would go here
-        
-        // 3. Simulate completion after 5 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            print("Background sync completed")
-            completion(true)
+        // Perform background sync operations
+        DispatchQueue.global(qos: .utility).async {
+            // Background sync logic here
+            task.setTaskCompleted(success: true)
         }
     }
 }

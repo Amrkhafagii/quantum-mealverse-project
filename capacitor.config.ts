@@ -46,9 +46,18 @@ const config: CapacitorConfig = {
       backgroundTitle: "Tracking Location",
       requestPermissions: true
     },
-    // Register our custom LocationPermissions plugin
+    // Register our custom LocationPermissions plugin with proper configuration
     LocationPermissions: {
-      // Custom plugin configuration
+      // Custom plugin for enhanced location permission handling
+      iosPermissions: {
+        whenInUse: true,
+        always: false
+      },
+      androidPermissions: {
+        fine: true,
+        coarse: true,
+        background: true
+      }
     }
   },
   ios: {
