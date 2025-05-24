@@ -13,17 +13,25 @@ export const fetchUserRecommendations = async (userId: string): Promise<WorkoutR
 
   if (error) throw error;
   
-  // Ensure data matches WorkoutRecommendation type by providing defaults for missing fields
+  // Map the database fields to match the WorkoutRecommendation interface
+  // Provide defaults for fields that don't exist in the database
   return (data || []).map(item => ({
-    ...item,
-    expires_at: item.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: item.metadata || null,
+    id: item.id,
+    user_id: item.user_id,
+    title: item.title || 'Workout Recommendation',
     description: item.description || null,
+    type: item.type || 'general',
     reason: item.reason || null,
+    confidence_score: item.confidence_score || 0.5,
+    metadata: null, // Not in database schema
+    suggested_at: item.suggested_at || new Date().toISOString(),
+    applied: item.applied || false,
     applied_at: item.applied_at || null,
-    dismissed_at: item.dismissed_at || null,
-    created_at: item.created_at || null,
-    updated_at: item.updated_at || null
+    dismissed: item.dismissed || false,
+    dismissed_at: null, // Not in database schema
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default to 7 days from now
+    created_at: null, // Not in database schema
+    updated_at: null // Not in database schema
   })) as WorkoutRecommendation[];
 };
 
