@@ -1,8 +1,15 @@
+
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { WorkoutRecommendation, RecommendationFeedback } from '@/types/fitness/recommendations';
+import { 
+  fetchUserRecommendations, 
+  applyRecommendation as applyRecommendationService, 
+  dismissRecommendation as dismissRecommendationService 
+} from '@/services/recommendations/recommendationService';
+import { generateMockRecommendations } from '@/services/recommendations/mockRecommendationGenerator';
+import { submitRecommendationFeedback } from '@/services/recommendations/feedbackService';
 
 export function useWorkoutRecommendations() {
   const { user } = useAuth();
@@ -15,16 +22,8 @@ export function useWorkoutRecommendations() {
     
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('workout_recommendations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('dismissed', false)
-        .eq('applied', false)
-        .order('confidence_score', { ascending: false });
-
-      if (error) throw error;
-      setRecommendations(data || []);
+      const data = await fetchUserRecommendations(user.id);
+      setRecommendations(data);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       toast({
@@ -41,42 +40,7 @@ export function useWorkoutRecommendations() {
     if (!user) return;
     
     try {
-      // Create sample recommendations with all required properties
-      const sampleRecommendations: Omit<WorkoutRecommendation, 'id' | 'created_at' | 'updated_at'>[] = [
-        {
-          user_id: user.id,
-          title: "Increase Your Cardio",
-          description: "Based on your recent workouts, adding more cardio could help improve your endurance.",
-          type: 'workout_plan' as const,
-          reason: "Low cardio activity detected in recent sessions",
-          confidence_score: 0.8,
-          metadata: { workout_type: 'cardio', duration: 30 },
-          suggested_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          applied: false,
-          dismissed: false
-        },
-        {
-          user_id: user.id,
-          title: "Try Upper Body Focus",
-          description: "Your lower body workouts are consistent. Let's balance with more upper body exercises.",
-          type: 'exercise_variation' as const,
-          reason: "Muscle group balance analysis",
-          confidence_score: 0.75,
-          metadata: { focus: 'upper_body', exercises: ['push_ups', 'pull_ups', 'rows'] },
-          suggested_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          applied: false,
-          dismissed: false
-        }
-      ];
-
-      // Insert sample recommendations
-      const { error } = await supabase
-        .from('workout_recommendations')
-        .insert(sampleRecommendations);
-
-      if (error) throw error;
+      await generateMockRecommendations(user.id);
       
       toast({
         title: "Success",
@@ -95,17 +59,10 @@ export function useWorkoutRecommendations() {
   };
 
   const applyRecommendation = async (recommendationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('workout_recommendations')
-        .update({ 
-          applied: true,
-          applied_at: new Date().toISOString()
-        })
-        .eq('id', recommendationId)
-        .eq('user_id', user?.id);
+    if (!user) return;
 
-      if (error) throw error;
+    try {
+      await applyRecommendationService(recommendationId, user.id);
 
       toast({
         title: "Recommendation Applied",
@@ -124,17 +81,10 @@ export function useWorkoutRecommendations() {
   };
 
   const dismissRecommendation = async (recommendationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('workout_recommendations')
-        .update({ 
-          dismissed: true,
-          dismissed_at: new Date().toISOString()
-        })
-        .eq('id', recommendationId)
-        .eq('user_id', user?.id);
+    if (!user) return;
 
-      if (error) throw error;
+    try {
+      await dismissRecommendationService(recommendationId, user.id);
 
       toast({
         title: "Recommendation Dismissed",
@@ -161,14 +111,7 @@ export function useWorkoutRecommendations() {
     if (!user) return;
 
     try {
-      // For now, just log the feedback since the table might not exist yet
-      console.log('Feedback submitted:', {
-        user_id: user.id,
-        recommendation_id: recommendationId,
-        feedback_type: feedbackType,
-        rating,
-        comments
-      });
+      await submitRecommendationFeedback(user.id, recommendationId, feedbackType, rating, comments);
 
       toast({
         title: "Feedback Submitted",
