@@ -1,4 +1,3 @@
-
 import UIKit
 
 class UIAppearanceManager {
@@ -11,7 +10,11 @@ class UIAppearanceManager {
         
         UINavigationBar.appearance().standardAppearance = navigationBarAppearance
         UINavigationBar.appearance().compactAppearance = navigationBarAppearance
-        UINavigationBar.appearance().scrollEdgeAppearance = navigationBarAppearance
+        
+        // Apply scrollEdgeAppearance only if running iOS 15+
+        if #available(iOS 15.0, *) {
+            UINavigationBar.appearance().scrollEdgeAppearance = navigationBarAppearance
+        }
         
         // Configure tab bar appearance
         let tabBarAppearance = UITabBarAppearance()
@@ -19,6 +22,10 @@ class UIAppearanceManager {
         tabBarAppearance.backgroundColor = UIColor.systemBackground
         
         UITabBar.appearance().standardAppearance = tabBarAppearance
-        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        
+        // Apply scrollEdgeAppearance only if running iOS 15+
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
     }
 }
