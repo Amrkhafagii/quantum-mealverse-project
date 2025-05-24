@@ -27,19 +27,26 @@ export const useNearestRestaurant = () => {
       return;
     }
 
-    // Use default location if no location available (for testing)
-    const lat = location?.latitude || 37.7749; // San Francisco default
-    const lng = location?.longitude || -122.4194;
+    if (!location?.latitude || !location?.longitude) {
+      console.log('No location available, cannot find restaurants');
+      setError('Location is required to find nearby restaurants');
+      setLoading(false);
+      return;
+    }
 
-    console.log('Finding nearest restaurants with location:', { lat, lng, maxDistance });
+    console.log('Finding nearest restaurants with location:', { 
+      lat: location.latitude, 
+      lng: location.longitude, 
+      maxDistance 
+    });
     
     setLoading(true);
     setError(null);
     
     try {
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
-        order_lat: lat,
-        order_lng: lng,
+        order_lat: location.latitude,
+        order_lng: location.longitude,
         max_distance_km: maxDistance
       });
 
@@ -57,6 +64,7 @@ export const useNearestRestaurant = () => {
       } else {
         console.log('No restaurants found in the area');
         setNearbyRestaurants([]);
+        setError('No restaurants found in your area');
       }
     } catch (error) {
       console.error('Error finding nearest restaurants:', error);
@@ -68,9 +76,13 @@ export const useNearestRestaurant = () => {
   }, [location, user]);
 
   useEffect(() => {
-    if (user) {
-      console.log('User authenticated, finding nearest restaurants');
+    if (user && location?.latitude && location?.longitude) {
+      console.log('User authenticated and location available, finding nearest restaurants');
       findNearestRestaurants();
+    } else if (user && !location?.latitude) {
+      console.log('User authenticated but no location available');
+      setError('Please enable location access to find nearby restaurants');
+      setLoading(false);
     }
   }, [user, findNearestRestaurants]);
 
