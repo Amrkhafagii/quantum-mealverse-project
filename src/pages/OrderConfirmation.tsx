@@ -5,6 +5,7 @@ import { Loader2, ArrowLeft, Share2, Download, Printer, CircleCheck } from 'luci
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useOrderData } from '@/hooks/useOrderData';
 import { useInterval } from '@/hooks/use-interval';
@@ -14,11 +15,30 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
 import { OrderHeader } from '@/components/orders/thank-you/OrderHeader';
+import OrderStatusDisplay from '@/components/orders/OrderStatusDisplay'; // Fixed import
 import { OrderItemsList } from '@/components/orders/OrderItemsList';
 import { OrderRestaurantStatus } from '@/components/orders/thank-you/OrderRestaurantStatus';
 import { ActionButtons } from '@/components/orders/thank-you/ActionButtons';
 import { OrderDetailsGrid } from '@/components/orders/OrderDetailsGrid';
 import OrderLocationMap from '@/components/orders/OrderLocationMap';
+import { format } from 'date-fns';
+
+// Create proper interface for components with className prop
+interface ComponentProps {
+  className?: string;
+}
+
+const OrderProgressSteps: React.FC<ComponentProps> = ({ className }) => (
+  <div className={className}>
+    {/* Progress steps content */}
+  </div>
+);
+
+const PaymentStatusMessage: React.FC<ComponentProps> = ({ className }) => (
+  <div className={className}>
+    {/* Payment status message content */}
+  </div>
+);
 
 const OrderConfirmation = () => {
   const { id } = useParams<{ id: string }>();
@@ -89,6 +109,7 @@ const OrderConfirmation = () => {
         console.error('Error sharing:', err);
       }
     } else {
+      // Fallback for browsers that don't support the Web Share API
       navigator.clipboard.writeText(window.location.href);
       toast({
         title: "Link copied",
@@ -99,6 +120,7 @@ const OrderConfirmation = () => {
 
   // Handle receipt download
   const handleDownloadReceipt = () => {
+    // This is a placeholder - would typically generate a PDF receipt
     toast({
         title: "Receipt downloaded",
         description: "Your receipt has been downloaded"
@@ -138,16 +160,11 @@ const OrderConfirmation = () => {
           <Card className="max-w-xl mx-auto">
             <CardContent className="pt-6">
               <div className="text-center py-8">
-                <h2 className="text-2xl font-bold mb-4">Order Not Found</h2>
+                <h2 className="text-2xl font-bold mb-4">Oops! Something went wrong</h2>
                 <p className="mb-6">We couldn't find the order information you're looking for.</p>
-                <div className="space-y-3">
-                  <Button asChild className="w-full">
-                    <Link to="/orders">View Your Orders</Link>
-                  </Button>
-                  <Button variant="outline" asChild className="w-full">
-                    <Link to="/customer">Continue Shopping</Link>
-                  </Button>
-                </div>
+                <Button asChild>
+                  <Link to="/orders">View Your Orders</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -168,6 +185,7 @@ const OrderConfirmation = () => {
       return 'Pending restaurant assignment';
     }
     
+    // This would be replaced with actual estimated times from the backend
     const baseTimeMap: Record<string, number> = {
       'accepted': 30,
       'processing': 25,
@@ -212,6 +230,7 @@ const OrderConfirmation = () => {
           {/* Order confirmation card */}
           <Card className="max-w-4xl mx-auto holographic-card print:shadow-none print:border-0">
             <CardHeader className="print:pb-2">
+              {/* Order confirmation header with success icon */}
               <OrderHeader 
                 orderId={id}
                 formattedOrderId={order?.formatted_order_id}
@@ -220,7 +239,7 @@ const OrderConfirmation = () => {
             
             <CardContent className="space-y-8 print:space-y-4">
               {/* Restaurant assignment status for pending orders */}
-              {order && ['pending', 'awaiting_restaurant', 'no_restaurant_accepted'].includes(order.status) && (
+              {order && ['pending', 'awaiting_restaurant'].includes(order.status) && (
                 <OrderRestaurantStatus
                   status={order.status}
                   restaurantName={assignmentStatus?.restaurant_name}
@@ -275,7 +294,7 @@ const OrderConfirmation = () => {
                 onContinueShopping={() => navigate('/customer')}
               />
               
-              {/* Additional actions */}
+              {/* Additional actions (share, download, print) */}
               <div className="flex flex-wrap justify-center gap-3 w-full mt-4">
                 <Button 
                   variant="outline" 
@@ -307,6 +326,24 @@ const OrderConfirmation = () => {
               </div>
             </CardFooter>
           </Card>
+          
+          {/* Schema data for search engines */}
+          {order && (
+            <script type="application/ld+json" dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "OrderConfirmation",
+                "orderNumber": order.formatted_order_id || id,
+                "orderDate": order.created_at,
+                "orderStatus": order.status,
+                "totalPrice": {
+                  "@type": "MonetaryAmount",
+                  "currency": "EGP",
+                  "value": order.total
+                }
+              })
+            }} />
+          )}
         </main>
       </div>
       
