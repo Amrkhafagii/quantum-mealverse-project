@@ -41,24 +41,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     // MARK: - Custom Plugin Registration
     private func registerCustomPlugins() {
-        // Explicitly register our custom LocationPermissionsPlugin
-        // This ensures Capacitor knows about our plugin and can route calls to it
         print("Registering custom LocationPermissionsPlugin")
         
-        // The plugin is automatically registered via the CAP_PLUGIN macro in LocationPermissionsPlugin.m
-        // But we can add additional initialization here if needed
-        
-        // Verify the plugin is available
-        if let bridge = CAPBridge.getDefault() {
-            let pluginManager = bridge.pluginManager
-            if let _ = pluginManager?.getPlugin("LocationPermissions") {
-                print("LocationPermissionsPlugin successfully registered")
-            } else {
-                print("Warning: LocationPermissionsPlugin not found in plugin registry")
-            }
+        guard let bridgeViewController = self.window?.rootViewController as? CAPBridgeViewController,
+              let pluginInstance = bridgeViewController.bridge?.plugin(withName: "LocationPermissions") else {
+            print("Warning: LocationPermissionsPlugin not found in plugin registry")
+            return
         }
+        
+        print("LocationPermissionsPlugin successfully registered: \(pluginInstance)")
     }
-    
     // MARK: - Application Lifecycle Methods
     
     func applicationWillResignActive(_ application: UIApplication) {
