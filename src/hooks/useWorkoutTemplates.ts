@@ -26,7 +26,7 @@ export function useWorkoutTemplates() {
         ...template,
         difficulty: template.difficulty as 'beginner' | 'intermediate' | 'advanced',
         workout_days: Array.isArray(template.workout_days) 
-          ? template.workout_days as WorkoutDay[]
+          ? (template.workout_days as unknown) as WorkoutDay[]
           : JSON.parse(template.workout_days as string) as WorkoutDay[]
       }));
       
