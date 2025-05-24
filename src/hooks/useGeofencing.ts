@@ -18,8 +18,8 @@ export function useGeofencing(options: GeofencingOptions = {}) {
   const [lastEvent, setLastEvent] = useState<GeofenceEvent | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
   
-  // Get location from context
-  const { location } = useLocationService();
+  // Get location from context - fix by accessing currentLocation property
+  const { currentLocation } = useLocationService();
   
   // Default options
   const {
@@ -145,10 +145,10 @@ export function useGeofencing(options: GeofencingOptions = {}) {
   
   // Process location updates if monitoring is active
   useEffect(() => {
-    if (isMonitoring && location) {
-      geofencingService.processLocation(location);
+    if (isMonitoring && currentLocation) {
+      geofencingService.processLocation(currentLocation);
     }
-  }, [isMonitoring, location]);
+  }, [isMonitoring, currentLocation]);
   
   // Initialize monitoring based on activeOnly option
   useEffect(() => {

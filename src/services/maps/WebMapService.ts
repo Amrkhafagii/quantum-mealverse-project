@@ -601,20 +601,28 @@ export class WebMapService implements IMapService {
     
     switch (type) {
       case 'restaurant':
-        icon = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+        icon = {
+          url: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
+        };
         break;
       case 'customer':
-        icon = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+        icon = {
+          url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+        };
         break;
       case 'driver':
-        icon = 'https://maps.google.com/mapfiles/ms/icons/green-dot.png';
+        icon = {
+          url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        };
         break;
       default:
-        icon = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+        icon = {
+          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        };
     }
     
     // Cache the icon
-    this.markerIconCache.set(cacheKey, icon as google.maps.Icon | string);
+    this.markerIconCache.set(cacheKey, icon);
     
     return icon;
   }

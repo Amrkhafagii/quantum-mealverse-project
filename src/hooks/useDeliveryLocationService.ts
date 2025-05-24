@@ -1,233 +1,177 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DeliveryLocation } from '@/types/location';
-import { useLocationPermissions } from '@/hooks/useLocationPermissions';
-import { useAdaptiveLocationTracking } from '@/hooks/useAdaptiveLocationTracking';
-import { useDeliveryLocationCache } from '@/hooks/useDeliveryLocationCache';
+import { updateDeliveryLocation, getDeliveryLocationHistory } from '@/services/delivery/deliveryLocationService';
+import { useLocationService } from '@/contexts/LocationServiceContext';
+import { calculateTrackingMode, getTrackingInterval, TrackingMode } from '@/utils/trackingModeCalculator';
 import { useBatteryMonitor } from '@/utils/batteryMonitor';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { calculateTrackingMode } from '@/utils/trackingModeCalculator';
+import { Platform } from '@/utils/platform';
 
-// Import LocationFreshness from unifiedLocation
-import { LocationFreshness } from '@/types/unifiedLocation';
-
-interface DeliveryLocationMap {
-  [key: string]: {
-    location: DeliveryLocation;
-    freshness: LocationFreshness;
-  };
+interface DeliveryLocationServiceOptions {
+  assignmentId?: string;
+  orderId?: string;
+  orderStatus?: string;
+  energyEfficient?: boolean;
+  dataEfficient?: boolean;
+  minimumBatteryLevel?: number;
+  onLocationUpdate?: (location: DeliveryLocation) => void;
 }
 
-export function useDeliveryLocationService() {
-  const locationPermissions = useLocationPermissions();
-  const { permissionStatus } = locationPermissions;
-  const cache = useDeliveryLocationCache();
-  const [activeDeliveries, setActiveDeliveries] = useState<Set<string>>(new Set());
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateInterval, setUpdateInterval] = useState(30000); // 30 seconds default
-  const [error, setError] = useState<string>('');
-  const [isTracking, setIsTracking] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const [freshness, setFreshness] = useState<LocationFreshness>('fresh');
-  const { batteryLevel, isLowBattery } = useBatteryMonitor();
-  const { isOnline } = useConnectionStatus();
-  const [location, setLocation] = useState<DeliveryLocation | null>(null);
+export function useDeliveryLocationService(options: DeliveryLocationServiceOptions = {}) {
+  const { 
+    assignmentId, 
+    orderId, 
+    orderStatus = 'pending', 
+    energyEfficient = true,
+    dataEfficient = true,
+    minimumBatteryLevel = 15,
+    onLocationUpdate 
+  } = options;
   
-  // Use adaptive location tracking
-  const adaptiveTracking = useAdaptiveLocationTracking({
-    onLocationUpdate: (loc) => {
-      setLocation(loc);
-      setLastUpdated(Date.now());
-      setFreshness('fresh');
-      
-      // Update all active deliveries with this location
-      activeDeliveries.forEach(id => {
-        cache.cacheLocation(id, loc);
-      });
-    },
-    batteryAware: true,
-    enableAdaptiveSampling: true
+  const [isTracking, setIsTracking] = useState(false);
+  const [trackingMode, setTrackingMode] = useState<TrackingMode>('medium');
+  const [trackingInterval, setTrackingInterval] = useState(30000); // Default: 30 seconds
+  const [lastLocation, setLastLocation] = useState<DeliveryLocation | null>(null);
+  const [locationHistory, setLocationHistory] = useState<DeliveryLocation[]>([]);
+  const [isLowQuality, setIsLowQuality] = useState(false);
+  
+  // Get current location from LocationService context
+  const { currentLocation, startTracking: startLocationTracking, stopTracking: stopLocationTracking } = useLocationService();
+  
+  // Get battery status
+  const { batteryLevel, isLowBattery } = useBatteryMonitor({ 
+    minimumBatteryLevel 
   });
   
-  // Extract methods from adaptiveTracking
-  const { 
-    startTracking: startAdaptiveTracking, 
-    stopTracking: stopAdaptiveTracking,
-    isBackgroundTracking
-  } = adaptiveTracking;
-  
-  // Update all locations
-  const updateLocations = useCallback(async () => {
-    if (isUpdating || activeDeliveries.size === 0) return [];
-    
-    try {
-      setIsUpdating(true);
-      
-      // In a real implementation, you would fetch actual location data here
-      // For demo purposes, we'll simulate an update with the current location
-      if (location) {
-        activeDeliveries.forEach(id => {
-          cache.cacheLocation(id, location);
-        });
-        setLastUpdated(Date.now());
-        setFreshness('fresh');
-      }
-      
-      return Array.from(activeDeliveries);
-    } catch (err) {
-      setError('Failed to update locations');
-      console.error('Failed to update locations:', err);
-      return [];
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [isUpdating, activeDeliveries, cache, location]);
-  
-  // Start tracking when needed
+  // Load location history when assignment ID changes
   useEffect(() => {
-    if (activeDeliveries.size > 0 && !isTracking && permissionStatus === 'granted') {
-      startAdaptiveTracking();
-      setIsTracking(true);
-    } else if (activeDeliveries.size === 0 && isTracking) {
-      stopAdaptiveTracking();
-      setIsTracking(false);
-    }
-  }, [activeDeliveries, isTracking, permissionStatus, startAdaptiveTracking, stopAdaptiveTracking]);
+    if (!assignmentId) return;
+    
+    const loadLocationHistory = async () => {
+      try {
+        const history = await getDeliveryLocationHistory(assignmentId);
+        setLocationHistory(history);
+      } catch (error) {
+        console.error('Error loading location history:', error);
+      }
+    };
+    
+    loadLocationHistory();
+  }, [assignmentId]);
   
-  // Calculate update interval based on conditions
+  // Determine network quality
   useEffect(() => {
-    const { trackingMode } = calculateTrackingMode({
-      isLowBattery,
-      isLowQuality: !isOnline,
-      orderStatus: activeDeliveries.size > 0 ? 'pickedup' : 'accepted',
-      location
-    });
+    const checkNetworkQuality = () => {
+      try {
+        // @ts-ignore - connection is not in standard TypeScript definitions
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        
+        if (connection) {
+          const isLow = connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g';
+          setIsLowQuality(isLow);
+        } else {
+          setIsLowQuality(false);
+        }
+      } catch (error) {
+        console.warn('Network quality check failed:', error);
+      }
+    };
     
-    let interval = 30000; // Default 30 seconds
+    checkNetworkQuality();
     
-    switch (trackingMode) {
-      case 'high':
-        interval = 10000; // 10 seconds
-        break;
-      case 'medium':
-        interval = 30000; // 30 seconds
-        break;
-      case 'low':
-        interval = 60000; // 1 minute
-        break;
-      case 'minimal':
-        interval = 120000; // 2 minutes
-        break;
-    }
-    
-    setUpdateInterval(interval);
-  }, [isOnline, isLowBattery, activeDeliveries, location]);
-  
-  // Register a delivery for tracking
-  const registerDelivery = useCallback((deliveryId: string) => {
-    setActiveDeliveries(prev => {
-      const updated = new Set(prev);
-      updated.add(deliveryId);
-      return updated;
-    });
-  }, []);
-  
-  // Unregister a delivery
-  const unregisterDelivery = useCallback((deliveryId: string) => {
-    setActiveDeliveries(prev => {
-      const updated = new Set(prev);
-      updated.delete(deliveryId);
-      return updated;
-    });
-  }, []);
-  
-  // Get location for a specific delivery
-  const getDeliveryLocation = useCallback((deliveryId: string) => {
-    return cache.getLocation(deliveryId);
-  }, [cache]);
-  
-  // Update location manually
-  const updateLocation = useCallback(async () => {
-    if (!location) return null;
-    setLastUpdated(Date.now());
-    setFreshness('fresh');
-    return location;
-  }, [location]);
-
-  // Check if location is stale
-  const isLocationStale = useCallback(() => {
-    if (!lastUpdated) return true;
-    const now = Date.now();
-    return now - lastUpdated > 300000; // 5 minutes
-  }, [lastUpdated]);
-
-  // Reset and request a new location
-  const resetAndRequestLocation = useCallback(async (): Promise<DeliveryLocation | null> => {
+    // Try to listen for connection changes
     try {
-      if (permissionStatus !== 'granted') {
-        await locationPermissions.requestPermission();
-      }
+      // @ts-ignore - connection is not in standard TypeScript definitions
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       
-      if (isTracking) {
-        await stopAdaptiveTracking();
-        await startAdaptiveTracking();
-      } else {
-        await startAdaptiveTracking();
-        setIsTracking(true);
+      if (connection) {
+        connection.addEventListener('change', checkNetworkQuality);
+        
+        return () => {
+          connection.removeEventListener('change', checkNetworkQuality);
+        };
       }
-      
-      // Return the current location or null
-      return location;
     } catch (error) {
-      console.error('Error resetting location:', error);
-      return null;
+      console.warn('Network monitoring setup failed:', error);
     }
-  }, [permissionStatus, locationPermissions, isTracking, startAdaptiveTracking, stopAdaptiveTracking, location]);
-
-  // Check if location is valid
-  const locationIsValid = useCallback(() => {
-    return location !== null && !isLocationStale();
-  }, [location, isLocationStale]);
+  }, []);
   
-  // Add startTracking and stopTracking methods for API consistency
+  // Calculate optimal tracking mode based on conditions
+  useEffect(() => {
+    if (!currentLocation) return;
+    
+    const { trackingMode: calculatedMode } = calculateTrackingMode({
+      isLowBattery,
+      isLowQuality,
+      orderStatus,
+      location: currentLocation,
+      forceLowPowerMode: energyEfficient && Platform.isLowEndDevice() // Add the missing property
+    });
+    
+    setTrackingMode(calculatedMode);
+    setTrackingInterval(getTrackingInterval(calculatedMode));
+    setLastLocation(currentLocation);
+    
+    // Call onLocationUpdate callback if provided
+    if (onLocationUpdate) {
+      onLocationUpdate(currentLocation);
+    }
+    
+    // Update location in backend if tracking is active and assignmentId is provided
+    if (isTracking && assignmentId) {
+      updateDeliveryLocation(
+        assignmentId, 
+        currentLocation.latitude, 
+        currentLocation.longitude
+      ).catch(error => {
+        console.error('Error updating delivery location:', error);
+      });
+    }
+  }, [currentLocation, isLowBattery, isLowQuality, orderStatus, energyEfficient, isTracking, assignmentId, onLocationUpdate]);
+  
+  // Start tracking function
   const startTracking = useCallback(async () => {
-    await startAdaptiveTracking();
-    setIsTracking(true);
-  }, [startAdaptiveTracking]);
+    if (!startLocationTracking) return false;
+    
+    try {
+      const started = await startLocationTracking({
+        enableHighAccuracy: trackingMode === 'high',
+        maximumAge: trackingInterval * 2,
+        timeout: trackingInterval / 2
+      });
+      
+      setIsTracking(started);
+      return started;
+    } catch (error) {
+      console.error('Error starting tracking:', error);
+      return false;
+    }
+  }, [startLocationTracking, trackingMode, trackingInterval]);
   
-  const stopTracking = useCallback(() => {
-    stopAdaptiveTracking();
-    setIsTracking(false);
-  }, [stopAdaptiveTracking]);
+  // Stop tracking function
+  const stopTracking = useCallback(async () => {
+    if (!stopLocationTracking) return;
+    
+    try {
+      await stopLocationTracking();
+      setIsTracking(false);
+    } catch (error) {
+      console.error('Error stopping tracking:', error);
+    }
+  }, [stopLocationTracking]);
   
   return {
-    // For the DeliveryLocationService
-    registerDelivery,
-    unregisterDelivery,
-    getDeliveryLocation,
-    updateLocations,
-    isUpdating,
-    updateInterval,
-    
-    // Location data
-    location,
-    permissionStatus,
-    isStale: isLocationStale(),
-    freshness,
-    lastUpdated,
-    
-    // Location methods
-    updateLocation,
-    resetAndRequestLocation,
-    startTracking,
-    stopTracking,
-    
-    // Status
-    error,
     isTracking,
-    isBackgroundTracking,
-    locationIsValid,
-    isBatteryLow: isLowBattery,
-    batteryLevel
+    trackingMode,
+    trackingInterval,
+    lastLocation,
+    locationHistory,
+    batteryLevel,
+    isLowBattery,
+    isLowQuality,
+    startTracking,
+    stopTracking
   };
 }
+
+export default useDeliveryLocationService;
