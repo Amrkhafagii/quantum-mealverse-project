@@ -25,7 +25,7 @@ export function useWorkoutScheduling() {
 
       if (error) throw error;
       
-      // Map database fields to our interface
+      // Map database fields to our interface, providing defaults for missing fields
       const mappedSchedules: WorkoutSchedule[] = (data || []).map(item => ({
         id: item.id,
         user_id: item.user_id,
@@ -36,7 +36,7 @@ export function useWorkoutScheduling() {
         end_date: item.end_date || undefined,
         preferred_time: item.preferred_time || undefined,
         timezone: item.timezone || 'UTC',
-        is_active: item.is_active ?? true,
+        is_active: item.is_active ?? item.active ?? true,
         reminder_enabled: item.reminder_enabled ?? true,
         reminder_minutes_before: item.reminder_minutes_before || 30,
         created_at: item.created_at,
