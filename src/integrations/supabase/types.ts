@@ -1414,6 +1414,44 @@ export type Database = {
         }
         Relationships: []
       }
+      food_item_prices: {
+        Row: {
+          created_at: string | null
+          food_name: string
+          id: string
+          is_active: boolean | null
+          price_per_100g: number
+          restaurant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          food_name: string
+          id?: string
+          is_active?: boolean | null
+          price_per_100g: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          food_name?: string
+          id?: string
+          is_active?: boolean | null
+          price_per_100g?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_item_prices_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_meal_ratings: {
         Row: {
           avg_rating: number
@@ -1543,6 +1581,44 @@ export type Database = {
             columns: ["tag_id"]
             isOneToOne: false
             referencedRelation: "dietary_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_cart_items: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          meal_plan_data: Json
+          restaurant_id: string | null
+          total_price: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          meal_plan_data: Json
+          restaurant_id?: string | null
+          total_price: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          meal_plan_data?: Json
+          restaurant_id?: string | null
+          total_price?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_cart_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]

@@ -1,17 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { TDEEResult } from '@/components/fitness/TDEECalculator'; 
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Droplets, Utensils } from 'lucide-react';
+import { TDEEResult } from './TDEECalculator';
 import { MealPlan } from '@/types/food';
-import { shuffleMeal } from '@/services/mealPlan/mealCreationService';
-import { toast } from 'sonner';
-
-// Import the newly created components
-import MacroSummary from './nutrition/MacroSummary';
-import NutritionControlPanel from './nutrition/NutritionControlPanel';
 import MealCardGrid from './nutrition/MealCardGrid';
-import ProteinWarning from './nutrition/ProteinWarning';
-import SavePlanButton from './nutrition/SavePlanButton';
+import { shuffleMeal } from '@/services/mealPlan/mealCreationService';
 
 interface NutritionDashboardProps {
   calculationResult: TDEEResult;
@@ -19,167 +16,164 @@ interface NutritionDashboardProps {
   onUpdateMealPlan: (updatedPlan: MealPlan) => void;
 }
 
-const NutritionDashboard: React.FC<NutritionDashboardProps> = ({ 
+const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   calculationResult,
   mealPlan,
   onUpdateMealPlan
 }) => {
-  const { toast: uiToast } = useToast();
-  const [isAutoOptimizeProtein, setIsAutoOptimizeProtein] = useState(true);
-  const [waterIntake, setWaterIntake] = useState(0);
+  const [activeTab, setActiveTab] = useState("overview");
   
-  const isProteinSufficient = (mealPlan.actualProtein || 0) >= mealPlan.targetProtein * 0.95;
-
-  // Load water intake from localStorage on mount
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const savedIntake = localStorage.getItem(`water_intake_${today}`);
-    if (savedIntake) {
-      setWaterIntake(parseInt(savedIntake));
-    }
-  }, []);
-
-  // Distribution percentages for each meal
+  // Calculate meal distribution (protein/carbs/fat ratios for each meal)
   const mealDistribution = [
-    { name: 'Breakfast', protein: 0.25, carbs: 0.25, fat: 0.25 },
-    { name: 'Lunch', protein: 0.3, carbs: 0.3, fat: 0.3 },
-    { name: 'Snack', protein: 0.15, carbs: 0.15, fat: 0.15 },
-    { name: 'Dinner', protein: 0.3, carbs: 0.3, fat: 0.3 }
+    { name: 'Breakfast', protein: 0.25, carbs: 0.30, fat: 0.25 },
+    { name: 'Lunch', protein: 0.35, carbs: 0.35, fat: 0.35 },
+    { name: 'Dinner', protein: 0.30, carbs: 0.25, fat: 0.30 },
+    { name: 'Snack', protein: 0.10, carbs: 0.10, fat: 0.10 }
   ];
 
-  // Calculate recommended daily water intake based on weight and activity level
-  const calculateRecommendedWaterIntake = () => {
-    // Default values if calculationResult doesn't have the required properties
-    const weightInKg = calculationResult && 'weight' in calculationResult ? Number(calculationResult.weight) : 70;
-    let baseIntake = weightInKg * 35;
+  const handleShuffleMeal = (mealIndex: number) => {
+    const mealNames = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+    const mealName = mealNames[mealIndex];
+    const distribution = mealDistribution[mealIndex];
     
-    // Adjust for activity level if available
-    if (calculationResult && 'activityLevel' in calculationResult) {
-      const activityLevel = calculationResult.activityLevel;
-      if (activityLevel === 'sedentary') {
-        baseIntake *= 0.9;
-      } else if (activityLevel === 'very-active' || activityLevel === 'extremely-active') {
-        baseIntake *= 1.2;
-      }
-    }
-    
-    return Math.round(baseIntake);
-  };
+    // Calculate targets for this specific meal
+    const targetCalories = calculationResult.adjustedCalories * (mealIndex === 0 ? 0.25 : mealIndex === 1 ? 0.35 : mealIndex === 2 ? 0.30 : 0.10);
+    const targetProtein = calculationResult.proteinGrams * distribution.protein;
+    const targetCarbs = calculationResult.carbsGrams * distribution.carbs;
+    const targetFat = calculationResult.fatsGrams * distribution.fat;
 
-  useEffect(() => {
-    // Update the hydration target in the meal plan with the calculated value
-    if (mealPlan && (!mealPlan.hydrationTarget || mealPlan.hydrationTarget === 0)) {
-      const hydrationTarget = calculateRecommendedWaterIntake();
-      const updatedMealPlan = {
-        ...mealPlan,
-        hydrationTarget
-      };
-      onUpdateMealPlan(updatedMealPlan);
-    }
-  }, [calculationResult, mealPlan]);
-
-  const handleShuffleMeal = (index: number) => {
-    const meal = mealPlan.meals[index];
-    const distribution = mealDistribution[index];
+    // Get the current meal
+    const currentMeal = mealPlan.meals[mealIndex];
     
-    const targetCaloriesPerMeal = mealPlan.totalCalories * (distribution.protein + distribution.carbs + distribution.fat) / 4; // Rough estimation
-    const targetProteinPerMeal = mealPlan.targetProtein * distribution.protein;
-    const targetCarbsPerMeal = mealPlan.targetCarbs * distribution.carbs;
-    const targetFatPerMeal = mealPlan.targetFat * distribution.fat;
+    // Shuffle the meal
+    const newMeal = shuffleMeal(currentMeal, targetCalories, targetProtein, targetCarbs, targetFat);
     
-    // If auto-optimize is on, ensure protein is prioritized
-    const ensureProtein = isAutoOptimizeProtein;
-    
-    const newMeal = shuffleMeal(
-      meal, 
-      targetCaloriesPerMeal,
-      targetProteinPerMeal, 
-      targetCarbsPerMeal, 
-      targetFatPerMeal
-    );
-    
+    // Update the meal plan
     const updatedMeals = [...mealPlan.meals];
-    updatedMeals[index] = newMeal;
+    updatedMeals[mealIndex] = newMeal;
     
-    // Recalculate actual totals
-    const actualProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
-    const actualCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
-    const actualFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
-    
-    // Calculate calories based on macronutrients using the standard conversion factors
-    const calculatedCalories = Math.round((actualProtein * 4) + (actualCarbs * 4) + (actualFat * 9));
-    
-    const updatedMealPlan = {
+    const updatedPlan: MealPlan = {
       ...mealPlan,
       meals: updatedMeals,
-      totalCalories: calculatedCalories,
-      actualProtein: Math.round(actualProtein),
-      actualCarbs: Math.round(actualCarbs),
-      actualFat: Math.round(actualFat)
+      totalCalories: updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0),
+      totalProtein: updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0),
+      totalCarbs: updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0),
+      totalFat: updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0)
     };
     
-    onUpdateMealPlan(updatedMealPlan);
-    
-    const proteinPercentage = Math.round((actualProtein / mealPlan.targetProtein) * 100);
-    if (proteinPercentage < 95 && isAutoOptimizeProtein) {
-      uiToast({
-        title: "Protein Warning",
-        description: `New protein level at ${proteinPercentage}% of target. Consider reshuffling.`,
-        variant: "destructive"
-      });
-    } else {
-      // Use the sonner toast API correctly
-      toast(`${meal.name} updated with new meal options.`);
-    }
-  };
-
-  const handleWaterIntakeChange = (newIntake: number) => {
-    setWaterIntake(newIntake);
-    // Save to localStorage for persistence
-    const today = new Date().toISOString().split('T')[0];
-    localStorage.setItem(`water_intake_${today}`, newIntake.toString());
+    onUpdateMealPlan(updatedPlan);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Nutritional Overview Header using MacroSummary component */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="w-full">
-          <MacroSummary
-            totalCalories={mealPlan.totalCalories}
-            targetProtein={mealPlan.targetProtein}
-            targetCarbs={mealPlan.targetCarbs}
-            targetFat={mealPlan.targetFat}
-            actualProtein={mealPlan.actualProtein || 0}
-            actualCarbs={mealPlan.actualCarbs || 0}
-            actualFat={mealPlan.actualFat || 0}
-          />
-        </div>
-        <div className="w-full md:w-1/3">
-          <NutritionControlPanel
-            isAutoOptimizeProtein={isAutoOptimizeProtein}
-            setIsAutoOptimizeProtein={setIsAutoOptimizeProtein}
-            hydrationTarget={mealPlan.hydrationTarget || calculateRecommendedWaterIntake()}
-            waterIntake={waterIntake}
-            onWaterIntakeChange={handleWaterIntakeChange}
-          />
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-7xl mx-auto space-y-6"
+    >
+      {/* Header with key metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Daily Calories</p>
+                <p className="text-2xl font-bold text-quantum-cyan">{calculationResult.adjustedCalories}</p>
+              </div>
+              <Badge variant="outline" className="bg-quantum-cyan/10 text-quantum-cyan border-quantum-cyan/30">
+                {calculationResult.goal}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-quantum-darkBlue/30 border-green-500/20">
+          <CardContent className="p-4">
+            <div>
+              <p className="text-sm text-gray-400">Protein</p>
+              <p className="text-2xl font-bold text-green-400">{calculationResult.proteinGrams}g</p>
+              <p className="text-xs text-gray-500">Current: {Math.round(mealPlan.totalProtein)}g</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-quantum-darkBlue/30 border-blue-500/20">
+          <CardContent className="p-4">
+            <div>
+              <p className="text-sm text-gray-400">Carbs</p>
+              <p className="text-2xl font-bold text-blue-400">{calculationResult.carbsGrams}g</p>
+              <p className="text-xs text-gray-500">Current: {Math.round(mealPlan.totalCarbs)}g</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-quantum-darkBlue/30 border-yellow-500/20">
+          <CardContent className="p-4">
+            <div>
+              <p className="text-sm text-gray-400">Fats</p>
+              <p className="text-2xl font-bold text-yellow-400">{calculationResult.fatsGrams}g</p>
+              <p className="text-xs text-gray-500">Current: {Math.round(mealPlan.totalFat)}g</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      
-      {/* Protein Warning */}
-      <ProteinWarning show={!isProteinSufficient} />
-      
-      {/* Meal Cards Grid */}
-      <MealCardGrid
-        meals={mealPlan.meals}
-        onShuffleMeal={handleShuffleMeal}
-        mealDistribution={mealDistribution}
-        targetProtein={mealPlan.targetProtein}
-      />
-      
-      {/* Save Meal Plan Button */}
-      <SavePlanButton />
-    </div>
+
+      {/* Main content tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-quantum-darkBlue/50 w-full justify-start">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Utensils className="h-4 w-4" />
+            Meal Plan
+          </TabsTrigger>
+          <TabsTrigger value="hydration" className="flex items-center gap-2">
+            <Droplets className="h-4 w-4" />
+            Hydration
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-6">
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle className="text-quantum-cyan">Your Personalized Meal Plan</CardTitle>
+              <p className="text-gray-400">
+                Meals optimized for your {calculationResult.goal.toLowerCase()} goal with enhanced protein portions and food compatibility
+              </p>
+            </CardHeader>
+            <CardContent>
+              <MealCardGrid
+                meals={mealPlan.meals}
+                onShuffleMeal={handleShuffleMeal}
+                mealDistribution={mealDistribution}
+                targetProtein={calculationResult.proteinGrams}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="hydration" className="mt-6">
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle className="text-quantum-cyan flex items-center gap-2">
+                <Droplets className="h-5 w-5 text-blue-400" />
+                Daily Hydration Target
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center p-8">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-blue-400 mb-2">
+                    {mealPlan.hydrationTarget} ml
+                  </div>
+                  <p className="text-gray-400">
+                    Recommended daily water intake based on your activity level and goals
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </motion.div>
   );
 };
 
