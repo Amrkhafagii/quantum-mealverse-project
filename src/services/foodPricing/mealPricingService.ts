@@ -45,13 +45,13 @@ export class MealPricingService {
           food_name: mealFood.food.name,
           quantity: mealFood.portionSize,
           unit: foodPricing.base_unit,
-          price_per_unit: foodPricing.price_per_unit,
-          total_price: foodPricing.total_price,
+          price_per_unit: foodPricing.calculated_price / mealFood.portionSize,
+          total_price: foodPricing.calculated_price,
           nutritional_info: foodPricing.nutritional_info
         };
 
         foodsWithPricing.push(foodWithPricing);
-        totalPrice += foodPricing.total_price;
+        totalPrice += foodPricing.calculated_price;
       } else {
         // Handle case where no pricing is found
         console.warn(`No pricing found for ${mealFood.food.name} at restaurant ${restaurantId}`);
@@ -80,40 +80,6 @@ export class MealPricingService {
       restaurant_id: restaurantId,
       restaurant_name: restaurantName
     };
-  }
-
-  /**
-   * Calculate meal price using database queries
-   */
-  static async calculateMealPriceDB(
-    mealFoods: Array<{ food_name: string; quantity: number; unit: string }>,
-    restaurantId: string
-  ): Promise<number> {
-    try {
-      let totalPrice = 0;
-
-      for (const mealFood of mealFoods) {
-        const { data, error } = await supabase
-          .from('food_item_prices')
-          .select('price_per_100g')
-          .ilike('food_name', `%${mealFood.food_name}%`)
-          .eq('restaurant_id', restaurantId)
-          .eq('is_active', true)
-          .order('price_per_100g', { ascending: true })
-          .limit(1)
-          .single();
-
-        if (!error && data) {
-          const pricePerUnit = data.price_per_100g / 100; // Convert to per gram
-          totalPrice += pricePerUnit * mealFood.quantity;
-        }
-      }
-
-      return totalPrice;
-    } catch (error) {
-      console.error('Error in calculateMealPriceDB:', error);
-      return 0;
-    }
   }
 
   /**
@@ -153,22 +119,12 @@ export class MealPricingService {
   }
 
   /**
-   * Calculate dynamic pricing based on portion size
-   */
-  static calculatePortionPrice(
-    basePricePerUnit: number,
-    baseQuantity: number,
-    requestedQuantity: number
-  ): number {
-    return (basePricePerUnit * requestedQuantity) / baseQuantity;
-  }
-
-  /**
-   * Get price breakdown for meal components
+   * Get price breakdown for meal components with tax
    */
   static async getMealPriceBreakdown(
     meal: Meal,
-    restaurantId: string
+    restaurantId: string,
+    taxRate: number = 0.08
   ): Promise<{
     foods: MealFoodWithPricing[];
     subtotal: number;
@@ -177,7 +133,7 @@ export class MealPricingService {
   }> {
     const mealPricing = await this.calculateMealPrice(meal, restaurantId);
     const subtotal = mealPricing.total_price;
-    const tax = subtotal * 0.08; // 8% tax rate
+    const tax = subtotal * taxRate;
     const total = subtotal + tax;
 
     return {
@@ -186,5 +142,32 @@ export class MealPricingService {
       tax: Math.round(tax * 100) / 100,
       total: Math.round(total * 100) / 100
     };
+  }
+
+  /**
+   * Calculate pricing for multiple portion sizes
+   */
+  static async getMealPricingForPortions(
+    meal: Meal,
+    restaurantId: string,
+    portionMultipliers: number[]
+  ): Promise<{ multiplier: number; pricing: MealPricingResult }[]> {
+    const results: { multiplier: number; pricing: MealPricingResult }[] = [];
+
+    for (const multiplier of portionMultipliers) {
+      // Create a modified meal with adjusted portion sizes
+      const adjustedMeal: Meal = {
+        ...meal,
+        foods: meal.foods.map(mealFood => ({
+          ...mealFood,
+          portionSize: mealFood.portionSize * multiplier
+        }))
+      };
+
+      const pricing = await this.calculateMealPrice(adjustedMeal, restaurantId);
+      results.push({ multiplier, pricing });
+    }
+
+    return results;
   }
 }

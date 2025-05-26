@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FoodItemService, MealPricingService } from '@/services/foodPricing';
-import { FoodItem, FoodPricingQuery, MealPricingResult } from '@/types/foodPricing';
+import { FoodItem, FoodPricingQuery, MealPricingResult, DynamicPricing } from '@/types/foodPricing';
 import { Meal } from '@/types/food';
 
 export const useFoodPricing = () => {
@@ -26,13 +26,13 @@ export const useFoodPricing = () => {
   const getFoodPricing = async (
     foodName: string, 
     restaurantId?: string, 
-    quantity: number = 100
+    portionSize: number = 100
   ): Promise<FoodPricingQuery[]> => {
     setLoading(true);
     setError(null);
     
     try {
-      const pricing = await FoodItemService.getFoodItemPricing(foodName, restaurantId, quantity);
+      const pricing = await FoodItemService.getFoodItemPricing(foodName, restaurantId, portionSize);
       return pricing;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get food pricing');
@@ -78,12 +78,40 @@ export const useFoodPricing = () => {
     }
   };
 
+  const calculateDynamicPricing = (
+    basePrice: number,
+    basePortion: number,
+    requestedPortion: number
+  ): DynamicPricing => {
+    return FoodItemService.calculateDynamicPricing(basePrice, basePortion, requestedPortion);
+  };
+
+  const getCheapestPrice = async (
+    foodName: string,
+    portionSize: number = 100
+  ): Promise<FoodPricingQuery | null> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const cheapest = await FoodItemService.getCheapestPrice(foodName, portionSize);
+      return cheapest;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get cheapest price');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
     searchFoodItems,
     getFoodPricing,
     calculateMealPrice,
-    comparePricesAcrossRestaurants
+    comparePricesAcrossRestaurants,
+    calculateDynamicPricing,
+    getCheapestPrice
   };
 };

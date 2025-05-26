@@ -1416,33 +1416,49 @@ export type Database = {
       }
       food_item_prices: {
         Row: {
+          base_portion_size: number | null
           created_at: string | null
+          food_item_id: string | null
           food_name: string
           id: string
           is_active: boolean | null
           price_per_100g: number
+          price_per_base_portion: number
           restaurant_id: string | null
           updated_at: string | null
         }
         Insert: {
+          base_portion_size?: number | null
           created_at?: string | null
+          food_item_id?: string | null
           food_name: string
           id?: string
           is_active?: boolean | null
           price_per_100g: number
+          price_per_base_portion?: number
           restaurant_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          base_portion_size?: number | null
           created_at?: string | null
+          food_item_id?: string | null
           food_name?: string
           id?: string
           is_active?: boolean | null
           price_per_100g?: number
+          price_per_base_portion?: number
           restaurant_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "food_item_prices_food_item_id_fkey"
+            columns: ["food_item_id"]
+            isOneToOne: false
+            referencedRelation: "food_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "food_item_prices_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -1451,6 +1467,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      food_items: {
+        Row: {
+          base_unit: string
+          category: string
+          created_at: string | null
+          id: string
+          name: string
+          nutritional_info: Json
+          updated_at: string | null
+        }
+        Insert: {
+          base_unit?: string
+          category: string
+          created_at?: string | null
+          id?: string
+          name: string
+          nutritional_info?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          base_unit?: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          nutritional_info?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       global_meal_ratings: {
         Row: {
@@ -4382,6 +4428,14 @@ export type Database = {
         }
         Returns: number
       }
+      calculate_portion_price: {
+        Args: {
+          base_price: number
+          base_portion: number
+          requested_portion: number
+        }
+        Returns: number
+      }
       check_expired_assignments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -4746,6 +4800,35 @@ export type Database = {
       geomfromewkt: {
         Args: { "": string }
         Returns: unknown
+      }
+      get_cheapest_food_pricing: {
+        Args: { p_food_name: string; p_portion_size?: number }
+        Returns: {
+          food_item_id: string
+          food_name: string
+          restaurant_id: string
+          restaurant_name: string
+          calculated_price: number
+          portion_size: number
+        }[]
+      }
+      get_food_pricing: {
+        Args: {
+          p_food_name: string
+          p_restaurant_id?: string
+          p_portion_size?: number
+        }
+        Returns: {
+          food_item_id: string
+          food_name: string
+          restaurant_id: string
+          restaurant_name: string
+          base_price: number
+          calculated_price: number
+          portion_size: number
+          base_unit: string
+          nutritional_info: Json
+        }[]
       }
       get_meals_with_details: {
         Args: {

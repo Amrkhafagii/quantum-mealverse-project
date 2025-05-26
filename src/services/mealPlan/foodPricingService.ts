@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Meal, MealFood } from '@/types/food';
-import { FoodItemService, MealPricingService } from '@/services/foodPricing';
+import { Meal } from '@/types/food';
+import { MealPricingService } from '@/services/foodPricing';
 
 export interface FoodPrice {
   id: string;
@@ -23,32 +23,49 @@ export interface MealPricing {
 }
 
 /**
- * Gets pricing for food items from the new food pricing system
+ * Gets pricing for food items from the food pricing system
  */
 export const getFoodPricing = async (foodNames: string[], restaurantId?: string): Promise<FoodPrice[]> => {
   try {
-    const prices: FoodPrice[] = [];
+    let query = supabase
+      .from('food_item_prices')
+      .select(`
+        *,
+        food_items (
+          name
+        )
+      `)
+      .eq('is_active', true);
 
-    for (const foodName of foodNames) {
-      const pricingData = await FoodItemService.getFoodItemPricing(
-        foodName,
-        restaurantId,
-        100 // Get price per 100 units
-      );
-
-      if (pricingData.length > 0) {
-        const pricing = pricingData[0]; // Use the first (cheapest) result
-        prices.push({
-          id: pricing.food_item_id,
-          food_name: pricing.food_name,
-          price_per_100g: pricing.price_per_unit * 100, // Convert to price per 100g
-          restaurant_id: pricing.restaurant_id,
-          is_active: true
-        });
-      }
+    if (restaurantId) {
+      query = query.eq('restaurant_id', restaurantId);
     }
 
-    return prices;
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch food pricing:', error);
+      return [];
+    }
+
+    // Filter by food names and convert to expected format
+    const filteredPrices = (data || [])
+      .filter((item: any) => {
+        const foodName = item.food_items?.name || item.food_name;
+        return foodNames.some(name => 
+          foodName.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(foodName.toLowerCase())
+        );
+      })
+      .map((item: any) => ({
+        id: item.id,
+        food_name: item.food_items?.name || item.food_name,
+        price_per_100g: item.price_per_base_portion || item.price_per_100g,
+        restaurant_id: item.restaurant_id,
+        is_active: item.is_active
+      }));
+
+    return filteredPrices;
   } catch (error) {
     console.error('Failed to fetch food pricing:', error);
     return [];
