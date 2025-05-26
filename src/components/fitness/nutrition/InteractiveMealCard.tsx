@@ -72,7 +72,7 @@ const InteractiveMealCard: React.FC<InteractiveMealCardProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-white">
                         {mealFood.food.name} 
                         <span className="text-gray-400 text-xs">({mealFood.portionSize}g)</span>
                         {mealFood.food.cookingState && (
