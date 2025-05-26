@@ -62,11 +62,12 @@ export const filterMealsByDietaryTags = (meals: MealType[], tags: string[]): Mea
   return meals.filter(meal => {
     if (!meal.dietary_tags) return false;
     return tags.some(tag => {
-      return meal.dietary_tags?.some(dietaryTag => {
+      return meal.dietary_tags?.some((dietaryTag: any) => {
         if (typeof dietaryTag === 'string') {
           return dietaryTag === tag;
-        } else if (dietaryTag && typeof dietaryTag === 'object' && 'name' in dietaryTag) {
-          return dietaryTag.name === tag;
+        }
+        if (dietaryTag && typeof dietaryTag === 'object' && dietaryTag.name) {
+          return (dietaryTag as { name: string }).name === tag;
         }
         return false;
       });
@@ -92,11 +93,12 @@ export const groupMealsByCategory = (meals: MealType[]): { [key: string]: MealTy
       category = 'Desserts';
     } else if (name.includes('drink') || name.includes('juice') || name.includes('smoothie')) {
       category = 'Beverages';
-    } else if (dietary_tags.some(tag => {
+    } else if (dietary_tags.some((tag: any) => {
       if (typeof tag === 'string') {
         return tag.includes('vegan') || tag.includes('vegetarian');
-      } else if (tag && typeof tag === 'object' && 'name' in tag) {
-        return tag.name?.includes('vegan') || tag.name?.includes('vegetarian');
+      }
+      if (tag && typeof tag === 'object' && tag.name) {
+        return (tag as { name: string }).name.includes('vegan') || (tag as { name: string }).name.includes('vegetarian');
       }
       return false;
     })) {
