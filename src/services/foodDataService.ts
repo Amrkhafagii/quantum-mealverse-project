@@ -47,6 +47,7 @@ export interface NutritionData {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
   sugar?: number;
   sodium?: number;
   servingSize?: number;
@@ -59,6 +60,7 @@ const NUTRIENT_IDS = {
   PROTEIN: 1003,      // Protein (g)
   CARBS: 1005,        // Carbohydrates (g)
   FAT: 1004,          // Total fat (g)
+  FIBER: 1079,        // Fiber (g)
   SUGAR: 2000,        // Total sugars (g)
   SODIUM: 1093,       // Sodium (mg)
 };
@@ -216,6 +218,9 @@ export class FoodDataService {
           break;
         case NUTRIENT_IDS.FAT:
           nutrition.fat = nutrient.value;
+          break;
+        case NUTRIENT_IDS.FIBER:
+          nutrition.fiber = nutrient.value;
           break;
         case NUTRIENT_IDS.SUGAR:
           nutrition.sugar = nutrient.value;
@@ -451,7 +456,8 @@ export class FoodDataService {
           { nutrientId: NUTRIENT_IDS.CALORIES, nutrientName: 'Energy', value: 34, unitName: 'kcal' },
           { nutrientId: NUTRIENT_IDS.PROTEIN, nutrientName: 'Protein', value: 2.8, unitName: 'g' },
           { nutrientId: NUTRIENT_IDS.FAT, nutrientName: 'Total lipid (fat)', value: 0.4, unitName: 'g' },
-          { nutrientId: NUTRIENT_IDS.CARBS, nutrientName: 'Carbohydrate, by difference', value: 6.6, unitName: 'g' }
+          { nutrientId: NUTRIENT_IDS.CARBS, nutrientName: 'Carbohydrate, by difference', value: 6.6, unitName: 'g' },
+          { nutrientId: NUTRIENT_IDS.FIBER, nutrientName: 'Fiber, total dietary', value: 2.6, unitName: 'g' }
         ]
       }
     };

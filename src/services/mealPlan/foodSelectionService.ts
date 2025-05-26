@@ -1,4 +1,3 @@
-
 import { Food, FoodCategory, CookingState } from '@/types/food';
 import { foodDataService } from '../foodDataService';
 import { foodDatabase } from '../../data/foodDatabase';
