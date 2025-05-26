@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -29,7 +28,7 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
   };
 
   // Handle ordering meals
-  const handleOrderMealPlan = () => {
+  const handleOrderMeals = () => {
     // Use the sonner toast API correctly
     toast("Your meal plan has been sent to our partnered restaurants for preparation.");
   };
@@ -47,7 +46,6 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="space-y-6"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {meals.map((meal, index) => (
@@ -122,22 +120,20 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
                   );
                 })}
               </div>
+              
+              {/* Order button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-3 border-quantum-purple/30 hover:bg-quantum-purple/10 text-quantum-purple"
+                onClick={handleOrderMeals}
+              >
+                <ShoppingCart className="h-3.5 w-3.5 mr-2" />
+                Order This Meal
+              </Button>
             </CardContent>
           </Card>
         ))}
-      </div>
-      
-      {/* Order button at the end of the grid */}
-      <div className="flex justify-center">
-        <Button
-          variant="outline"
-          size="lg"
-          className="border-quantum-purple/30 hover:bg-quantum-purple/10 text-quantum-purple px-8 py-3"
-          onClick={handleOrderMealPlan}
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          Order This Meal Plan
-        </Button>
       </div>
     </motion.div>
   );
