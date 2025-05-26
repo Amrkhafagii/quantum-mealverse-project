@@ -14,7 +14,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/chickenbreast/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -29,7 +28,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/beefliver/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -44,7 +42,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/tilapia/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -59,7 +56,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/beefmince/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -74,7 +70,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/eggs/300/200",
     cookingState: "cooked",
     mealSuitability: ["breakfast", "lunch"]
   },
@@ -90,7 +85,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/rabbit/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -105,7 +99,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/duck/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -120,7 +113,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/turkey/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -135,7 +127,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/tuna/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -153,7 +144,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/beefribs/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -168,7 +158,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/lambchops/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -183,7 +172,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/chickenthighs/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -198,7 +186,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/chickenliver/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -213,7 +200,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/beefheart/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -228,7 +214,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/beefkidney/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -243,7 +228,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/feta/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch"]
   },
@@ -258,7 +242,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: false,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/domiati/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch"]
   },
@@ -273,7 +256,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/yogurt/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "snack"]
   },
@@ -288,7 +270,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: false,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/labneh/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "snack"]
   },
@@ -303,7 +284,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/cottagecheese/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "snack"]
   },
@@ -318,7 +298,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/mozzarella/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -333,7 +312,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: false,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/cannedfoul/300/200",
     cookingState: "cooked",
     mealSuitability: ["breakfast"]
   },
@@ -348,7 +326,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/cannedchickpeas/300/200",
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -366,7 +343,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/rice/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -382,7 +358,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/quinoa/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -397,7 +372,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/pasta/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -412,7 +386,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/bulgur/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -427,7 +400,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/freekeh/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -442,7 +414,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/oats/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast"]
   },
@@ -458,7 +429,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/favabeans/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
@@ -473,7 +443,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/chickpeas/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -488,7 +457,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/lentils/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -504,7 +472,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/brownlentils/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -520,7 +487,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/potatoes/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -535,7 +501,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/sweetpotatoes/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -550,7 +515,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/corn/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -565,7 +529,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/greenpeas/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -584,7 +547,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/oliveoil/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
@@ -600,7 +562,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/tahini/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
@@ -615,7 +576,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/samna/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
@@ -631,7 +591,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/almonds/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -646,7 +605,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/walnuts/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -661,7 +619,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/hazelnuts/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -676,7 +633,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/pistachios/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -691,7 +647,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/peanuts/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -706,7 +661,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/peanutbutter/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "snack"]
   },
@@ -722,7 +676,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/butter/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
@@ -739,7 +692,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/darkchocolate/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -754,7 +706,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/coconutmilk/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
@@ -769,7 +720,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/mayonnaise/300/200",
     cookingState: "raw",
     mealSuitability: ["lunch", "dinner"]
   },
@@ -785,7 +735,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/cashews/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -804,7 +753,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/mango/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -819,7 +767,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/dates/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "snack"]
   },
@@ -834,7 +781,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/guava/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -849,7 +795,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: false,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/pricklypear/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -864,7 +809,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/watermelon/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -879,7 +823,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/cantaloupe/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -894,7 +837,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/figs/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -909,7 +851,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/pomegranate/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -924,7 +865,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/grapes/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -939,7 +879,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/banana/300/200",
     cookingState: "raw",
     mealSuitability: ["breakfast", "snack"]
   },
@@ -954,7 +893,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/strawberries/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -969,7 +907,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/oranges/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -984,7 +921,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/tangerines/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -999,7 +935,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/peaches/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1014,7 +949,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/apricots/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1029,7 +963,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/plums/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1046,7 +979,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/mulberries/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1062,7 +994,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 3,
-    imageUrl: "https://picsum.photos/seed/kiwi/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1077,7 +1008,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/pears/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1092,7 +1022,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/apples/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1107,7 +1036,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/lemons/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1122,7 +1050,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 1,
-    imageUrl: "https://picsum.photos/seed/limes/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1137,7 +1064,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/coconut/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   },
@@ -1152,7 +1078,6 @@ export const foodDatabase: Food[] = [
     portion: 100,
     isGloballyAvailable: true,
     costTier: 2,
-    imageUrl: "https://picsum.photos/seed/pineapple/300/200",
     cookingState: "raw",
     mealSuitability: ["snack"]
   }
