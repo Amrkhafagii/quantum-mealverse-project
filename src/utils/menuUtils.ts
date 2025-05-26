@@ -1,78 +1,106 @@
 
-import { MenuItem, NutritionalInfo } from '@/types/menu';
+import { MealType } from "@/types/meal";
 
-/**
- * Ensures a MenuItem has all required properties with proper defaults
- */
-export const normalizeMenuItem = (item: Partial<MenuItem>): MenuItem => {
-  return {
-    id: item.id || '',
-    restaurant_id: item.restaurant_id || '',
-    name: item.name || '',
-    description: item.description || '',
-    price: item.price || 0,
-    image_url: item.image_url,
-    is_available: item.is_available ?? true,
-    category: item.category || '',
-    preparation_time: item.preparation_time || 15,
-    ingredients: item.ingredients || [],
-    steps: item.steps || [],
-    nutritional_info: item.nutritional_info || {},
-    created_at: item.created_at,
-    updated_at: item.updated_at,
-  };
-};
-
-/**
- * Formats a price for display
- */
-export const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(price);
-};
-
-/**
- * Calculate match percentage between meal plan and restaurant meal
- * Weights protein match more heavily than other macros
- */
-export const calculateMatchPercentage = (
-  planMeal: { calories: number, protein: number, carbs: number, fat: number },
-  restaurantMeal: { calories: number, protein: number, carbs: number, fat: number }
-): number => {
-  // Weight factors (protein is weighted more heavily)
-  const weights = {
-    protein: 0.4,  // 40% importance
-    carbs: 0.25,   // 25% importance
-    fat: 0.25,     // 25% importance
-    calories: 0.1  // 10% importance
-  };
+export const calculateNutritionalScore = (meal: MealType): number => {
+  // Calculate a score based on nutritional balance (0-100)
+  const nutritionalInfo = meal.nutritional_info;
+  if (!nutritionalInfo) return 50; // Default score if no nutritional info
   
-  // Calculate similarity for each macro
-  // Using a formula that produces higher scores for closer matches
-  const calculateSimilarity = (plan: number, restaurant: number): number => {
-    if (plan === 0 && restaurant === 0) return 100;  // Both zero means perfect match
-    if (plan === 0) return 0;  // Can't divide by zero
+  let score = 50; // Base score
+  
+  // Protein score (higher is better, target ~25% of calories from protein)
+  const proteinCalories = nutritionalInfo.protein * 4;
+  const proteinRatio = proteinCalories / nutritionalInfo.calories;
+  if (proteinRatio >= 0.20 && proteinRatio <= 0.35) {
+    score += 15;
+  } else if (proteinRatio >= 0.15) {
+    score += 10;
+  }
+  
+  // Moderate calorie content (not too high or too low)
+  if (nutritionalInfo.calories >= 300 && nutritionalInfo.calories <= 600) {
+    score += 10;
+  } else if (nutritionalInfo.calories >= 200 && nutritionalInfo.calories <= 800) {
+    score += 5;
+  }
+  
+  // Lower sugar content is better
+  if (nutritionalInfo.sugar && nutritionalInfo.sugar < 10) {
+    score += 10;
+  } else if (nutritionalInfo.sugar && nutritionalInfo.sugar < 20) {
+    score += 5;
+  }
+  
+  // Lower sodium content is better
+  if (nutritionalInfo.sodium && nutritionalInfo.sodium < 600) {
+    score += 10;
+  } else if (nutritionalInfo.sodium && nutritionalInfo.sodium < 1000) {
+    score += 5;
+  }
+  
+  // Fat balance (not too high, not too low)
+  const fatCalories = nutritionalInfo.fat * 9;
+  const fatRatio = fatCalories / nutritionalInfo.calories;
+  if (fatRatio >= 0.20 && fatRatio <= 0.35) {
+    score += 5;
+  }
+  
+  return Math.min(100, Math.max(0, score));
+};
+
+export const sortMealsByNutrition = (meals: MealType[]): MealType[] => {
+  return meals.sort((a, b) => {
+    const scoreA = calculateNutritionalScore(a);
+    const scoreB = calculateNutritionalScore(b);
+    return scoreB - scoreA; // Higher scores first
+  });
+};
+
+export const filterMealsByDietaryTags = (meals: MealType[], tags: string[]): MealType[] => {
+  if (tags.length === 0) return meals;
+  
+  return meals.filter(meal => {
+    if (!meal.dietary_tags) return false;
+    return tags.some(tag => 
+      meal.dietary_tags?.some(dietaryTag => 
+        typeof dietaryTag === 'string' ? dietaryTag === tag : dietaryTag.name === tag
+      )
+    );
+  });
+};
+
+export const groupMealsByCategory = (meals: MealType[]): { [key: string]: MealType[] } => {
+  const groups: { [key: string]: MealType[] } = {};
+  
+  meals.forEach(meal => {
+    // Simple categorization based on meal name and dietary tags
+    let category = 'Main Dishes';
     
-    const ratio = restaurant / plan;
-    // Convert ratio to percentage similarity
-    // 1.0 ratio = 100%, 0.9 or 1.1 = 90%, etc.
-    return 100 - Math.min(Math.abs(1 - ratio) * 100, 100);
-  };
+    const name = meal.name.toLowerCase();
+    const dietary_tags = meal.dietary_tags || [];
+    
+    if (name.includes('salad') || dietary_tags.some(tag => 
+      typeof tag === 'string' ? tag.includes('fresh') : tag.name?.includes('fresh')
+    )) {
+      category = 'Salads & Fresh';
+    } else if (name.includes('soup') || name.includes('broth')) {
+      category = 'Soups';
+    } else if (name.includes('dessert') || name.includes('cake') || name.includes('ice cream')) {
+      category = 'Desserts';
+    } else if (name.includes('drink') || name.includes('juice') || name.includes('smoothie')) {
+      category = 'Beverages';
+    } else if (dietary_tags.some(tag => 
+      typeof tag === 'string' ? tag.includes('vegan') || tag.includes('vegetarian') : 
+      tag.name?.includes('vegan') || tag.name?.includes('vegetarian')
+    )) {
+      category = 'Plant-Based';
+    }
+    
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(meal);
+  });
   
-  // Calculate individual macro similarities
-  const proteinSimilarity = calculateSimilarity(planMeal.protein, restaurantMeal.protein);
-  const carbsSimilarity = calculateSimilarity(planMeal.carbs, restaurantMeal.carbs);
-  const fatSimilarity = calculateSimilarity(planMeal.fat, restaurantMeal.fat);
-  const caloriesSimilarity = calculateSimilarity(planMeal.calories, restaurantMeal.calories);
-  
-  // Combine weighted similarities
-  const weightedMatch = 
-    (proteinSimilarity * weights.protein) +
-    (carbsSimilarity * weights.carbs) +
-    (fatSimilarity * weights.fat) +
-    (caloriesSimilarity * weights.calories);
-  
-  return weightedMatch;
+  return groups;
 };
