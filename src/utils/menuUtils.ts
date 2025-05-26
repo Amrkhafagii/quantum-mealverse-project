@@ -61,11 +61,16 @@ export const filterMealsByDietaryTags = (meals: MealType[], tags: string[]): Mea
   
   return meals.filter(meal => {
     if (!meal.dietary_tags) return false;
-    return tags.some(tag => 
-      meal.dietary_tags?.some(dietaryTag => 
-        typeof dietaryTag === 'string' ? dietaryTag === tag : dietaryTag.name === tag
-      )
-    );
+    return tags.some(tag => {
+      return meal.dietary_tags?.some(dietaryTag => {
+        if (typeof dietaryTag === 'string') {
+          return dietaryTag === tag;
+        } else if (dietaryTag && typeof dietaryTag === 'object' && 'name' in dietaryTag) {
+          return dietaryTag.name === tag;
+        }
+        return false;
+      });
+    });
   });
 };
 
@@ -87,10 +92,14 @@ export const groupMealsByCategory = (meals: MealType[]): { [key: string]: MealTy
       category = 'Desserts';
     } else if (name.includes('drink') || name.includes('juice') || name.includes('smoothie')) {
       category = 'Beverages';
-    } else if (dietary_tags.some(tag => 
-      typeof tag === 'string' ? tag.includes('vegan') || tag.includes('vegetarian') : 
-      tag.name?.includes('vegan') || tag.name?.includes('vegetarian')
-    )) {
+    } else if (dietary_tags.some(tag => {
+      if (typeof tag === 'string') {
+        return tag.includes('vegan') || tag.includes('vegetarian');
+      } else if (tag && typeof tag === 'object' && 'name' in tag) {
+        return tag.name?.includes('vegan') || tag.name?.includes('vegetarian');
+      }
+      return false;
+    })) {
       category = 'Plant-Based';
     }
     
