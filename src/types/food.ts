@@ -1,3 +1,4 @@
+
 // Food and nutrition types for the meal planning system
 export interface Food {
   id: string;
@@ -34,6 +35,9 @@ export interface MealPlan {
   userId?: string;
   meals: Meal[];
   totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
   targetProtein: number;
   targetCarbs: number;
   targetFat: number;

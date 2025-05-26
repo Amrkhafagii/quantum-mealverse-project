@@ -121,10 +121,13 @@ export const storeMealPlanCartItem = async (
   userId: string
 ): Promise<string | null> => {
   try {
+    // Convert meal to JSON-serializable format
+    const mealData = JSON.parse(JSON.stringify(meal));
+    
     const { data, error } = await supabase
       .from('meal_plan_cart_items')
       .insert({
-        meal_plan_data: meal,
+        meal_plan_data: mealData,
         total_price: pricing.totalPrice,
         restaurant_id: pricing.restaurantId,
         user_id: userId
