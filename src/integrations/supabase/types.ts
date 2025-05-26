@@ -1728,7 +1728,6 @@ export type Database = {
           calories: number | null
           carbs: number | null
           fats: number | null
-          fiber: number | null
           meal_id: string
           protein: number | null
           sodium: number | null
@@ -1739,7 +1738,6 @@ export type Database = {
           calories?: number | null
           carbs?: number | null
           fats?: number | null
-          fiber?: number | null
           meal_id: string
           protein?: number | null
           sodium?: number | null
@@ -1750,7 +1748,6 @@ export type Database = {
           calories?: number | null
           carbs?: number | null
           fats?: number | null
-          fiber?: number | null
           meal_id?: string
           protein?: number | null
           sodium?: number | null

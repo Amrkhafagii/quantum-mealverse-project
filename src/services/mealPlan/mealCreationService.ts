@@ -1,4 +1,3 @@
-
 import { Meal, MealFood, Food, FoodCategory, CookingState } from '@/types/food';
 import { foodDataService } from '../foodDataService';
 import { MealDistribution } from './types';
@@ -23,7 +22,7 @@ export const createBalancedMeal = (
     const proteinFood = selectOptimalFood(suitableFoods.proteins, 'protein', targetProtein);
     const carbFood = selectOptimalFood(suitableFoods.carbs, 'carbs', targetCarbs);
     const fatFood = selectOptimalFood(suitableFoods.fats, 'fat', targetFat);
-    const veggieFood = selectOptimalFood(suitableFoods.veggies, 'fiber', 0); // Veggies for micronutrients
+    const veggieFood = selectOptimalFood(suitableFoods.veggies, 'protein', 0); // Veggies for micronutrients
     
     // Advanced portion calculation that better accounts for nutrient density and realistic servings
     const proteinPortion = calculateOptimalPortion(proteinFood, targetProtein, 'protein', targetCalories * 0.35);
