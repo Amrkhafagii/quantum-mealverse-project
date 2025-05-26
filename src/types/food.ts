@@ -43,6 +43,7 @@ export interface MealPlan {
   hydrationTarget?: number;
   dateCreated?: string;
   name?: string;
+  goal?: string; // Added goal property
 }
 
 export type FoodCategory = 'protein' | 'carbs' | 'fats' | 'vegetables' | 'fruits';
