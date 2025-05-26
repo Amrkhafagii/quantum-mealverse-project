@@ -16,15 +16,18 @@ export class MealPricingService {
     let totalPrice = 0;
     let restaurantName = '';
 
-    // Get restaurant name
-    const { data: restaurant } = await supabase
-      .from('restaurants')
-      .select('name')
-      .eq('id', restaurantId)
-      .single();
-    
-    if (restaurant) {
-      restaurantName = restaurant.name;
+    // Get restaurant name using raw SQL
+    try {
+      const { data: restaurantData, error } = await supabase
+        .rpc('execute_sql', { 
+          sql: `SELECT name FROM restaurants WHERE id = '${restaurantId}'` 
+        });
+      
+      if (restaurantData && restaurantData.length > 0) {
+        restaurantName = restaurantData[0].name;
+      }
+    } catch (error) {
+      console.error('Error fetching restaurant name:', error);
     }
 
     for (const mealFood of meal.foods) {
@@ -79,24 +82,41 @@ export class MealPricingService {
   }
 
   /**
-   * Calculate meal price using database function
+   * Calculate meal price using raw SQL
    */
   static async calculateMealPriceDB(
     mealFoods: Array<{ food_name: string; quantity: number; unit: string }>,
     restaurantId: string
   ): Promise<number> {
     try {
-      const { data, error } = await supabase.rpc('calculate_meal_total_price', {
-        p_meal_foods: mealFoods,
-        p_restaurant_id: restaurantId
-      });
+      let totalPrice = 0;
 
-      if (error) {
-        console.error('Error calculating meal price:', error);
-        throw error;
+      for (const mealFood of mealFoods) {
+        const sql = `
+          SELECT fip.price_per_unit
+          FROM food_items fi
+          JOIN food_item_prices fip ON fi.id = fip.food_item_id
+          WHERE fi.name ILIKE '%${mealFood.food_name}%'
+            AND fip.restaurant_id = '${restaurantId}'
+            AND fip.is_active = true
+          ORDER BY fip.price_per_unit ASC
+          LIMIT 1
+        `;
+
+        const { data, error } = await supabase.rpc('execute_sql', { sql });
+
+        if (error) {
+          console.error('Error calculating meal price:', error);
+          continue;
+        }
+
+        if (data && data.length > 0) {
+          const pricePerUnit = parseFloat(data[0].price_per_unit);
+          totalPrice += pricePerUnit * mealFood.quantity;
+        }
       }
 
-      return data || 0;
+      return totalPrice;
     } catch (error) {
       console.error('Error in calculateMealPriceDB:', error);
       return 0;
