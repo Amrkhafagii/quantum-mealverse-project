@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -108,7 +107,7 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
                   return (
                     <div key={foodIndex} className="bg-quantum-black/30 p-2 rounded-md flex justify-between text-sm">
                       <div className="flex gap-1 items-center">
-                        {mealFood.food.name} 
+                        <span className="text-white">{mealFood.food.name}</span>
                         <span className="text-gray-400 text-xs">({mealFood.portionSize}g)</span>
                         {mealFood.food.cookingState && (
                           <span className="text-gray-400 text-xs italic">
