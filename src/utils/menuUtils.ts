@@ -79,9 +79,7 @@ export const groupMealsByCategory = (meals: MealType[]): { [key: string]: MealTy
     const name = meal.name.toLowerCase();
     const dietary_tags = meal.dietary_tags || [];
     
-    if (name.includes('salad') || dietary_tags.some(tag => 
-      typeof tag === 'string' ? tag.includes('fresh') : tag.name?.includes('fresh')
-    )) {
+    if (name.includes('salad')) {
       category = 'Salads & Fresh';
     } else if (name.includes('soup') || name.includes('broth')) {
       category = 'Soups';
@@ -103,4 +101,29 @@ export const groupMealsByCategory = (meals: MealType[]): { [key: string]: MealTy
   });
   
   return groups;
+};
+
+// Add missing functions that RestaurantMealMatcher expects
+export const calculateMatchPercentage = (
+  targetMacros: { calories: number; protein: number; carbs: number; fat: number },
+  itemMacros: { calories: number; protein: number; carbs: number; fat: number }
+): number => {
+  // Calculate percentage match based on macro similarity
+  const caloriesDiff = Math.abs(targetMacros.calories - itemMacros.calories) / targetMacros.calories;
+  const proteinDiff = Math.abs(targetMacros.protein - itemMacros.protein) / targetMacros.protein;
+  const carbsDiff = Math.abs(targetMacros.carbs - itemMacros.carbs) / targetMacros.carbs;
+  const fatDiff = Math.abs(targetMacros.fat - itemMacros.fat) / targetMacros.fat;
+  
+  // Weight the differences (calories more important)
+  const avgDiff = (caloriesDiff * 0.4 + proteinDiff * 0.2 + carbsDiff * 0.2 + fatDiff * 0.2);
+  
+  // Convert to percentage match (100% - difference percentage)
+  return Math.max(0, Math.min(100, (1 - avgDiff) * 100));
+};
+
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(price);
 };
