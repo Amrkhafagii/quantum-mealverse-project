@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { TDEEResult } from '@/components/fitness/TDEECalculator'; 
 import { MealPlan } from '@/types/food';
-import { shuffleMeal } from '@/services/mealPlan/mealGenerationService';
+import { shuffleMeal } from '@/services/mealPlan/mealCreationService';
 import { toast } from 'sonner';
 
 // Import the newly created components
@@ -81,6 +82,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     const meal = mealPlan.meals[index];
     const distribution = mealDistribution[index];
     
+    const targetCaloriesPerMeal = mealPlan.totalCalories * (distribution.protein + distribution.carbs + distribution.fat) / 4; // Rough estimation
     const targetProteinPerMeal = mealPlan.targetProtein * distribution.protein;
     const targetCarbsPerMeal = mealPlan.targetCarbs * distribution.carbs;
     const targetFatPerMeal = mealPlan.targetFat * distribution.fat;
@@ -90,6 +92,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     
     const newMeal = shuffleMeal(
       meal, 
+      targetCaloriesPerMeal,
       targetProteinPerMeal, 
       targetCarbsPerMeal, 
       targetFatPerMeal
