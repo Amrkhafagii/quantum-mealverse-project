@@ -4,7 +4,7 @@ import { foodDatabase, getFoodsByCategory } from '../../data/foodDatabase';
 
 /**
  * Gets suitable foods for each meal type (breakfast, lunch, dinner, snack)
- * Falls back to category-based selection if meal-specific filtering returns no results
+ * Returns foods grouped by category for use with compatibility templates
  */
 export const getSuitableFoodsForMeal = (mealType: string): {
   proteins: Food[],
@@ -25,19 +25,58 @@ export const getSuitableFoodsForMeal = (mealType: string): {
   let veggies = suitableFoods.filter(food => food.category === 'vegetables');
   let fruits = suitableFoods.filter(food => food.category === 'fruits');
   
-  // If any category is empty, fall back to all foods from that category
+  // Enhanced fallback logic - prioritize foods that make sense for the meal type
   if (proteins.length === 0) {
-    proteins = getFoodsByCategory('protein');
+    if (mealType === 'breakfast') {
+      // Prioritize breakfast-friendly proteins
+      proteins = getFoodsByCategory('protein').filter(food => 
+        food.name.toLowerCase().includes('egg') ||
+        food.name.toLowerCase().includes('yogurt') ||
+        food.name.toLowerCase().includes('cheese') ||
+        food.name.toLowerCase().includes('protein powder') ||
+        food.name.toLowerCase().includes('salmon')
+      );
+      // If still empty, use all proteins
+      if (proteins.length === 0) proteins = getFoodsByCategory('protein');
+    } else {
+      proteins = getFoodsByCategory('protein');
+    }
   }
+  
   if (carbs.length === 0) {
-    carbs = getFoodsByCategory('carbs');
+    if (mealType === 'breakfast') {
+      // Prioritize breakfast carbs
+      carbs = getFoodsByCategory('carbs').filter(food => 
+        food.name.toLowerCase().includes('oats') ||
+        food.name.toLowerCase().includes('bread') ||
+        food.name.toLowerCase().includes('granola') ||
+        food.name.toLowerCase().includes('muesli')
+      );
+      if (carbs.length === 0) carbs = getFoodsByCategory('carbs');
+    } else {
+      carbs = getFoodsByCategory('carbs');
+    }
   }
+  
   if (fats.length === 0) {
     fats = getFoodsByCategory('fats');
   }
+  
   if (veggies.length === 0) {
-    veggies = getFoodsByCategory('vegetables');
+    if (mealType === 'breakfast') {
+      // Prioritize breakfast-friendly vegetables
+      veggies = getFoodsByCategory('vegetables').filter(food => 
+        food.name.toLowerCase().includes('spinach') ||
+        food.name.toLowerCase().includes('tomato') ||
+        food.name.toLowerCase().includes('mushroom') ||
+        food.name.toLowerCase().includes('bell pepper')
+      );
+      if (veggies.length === 0) veggies = getFoodsByCategory('vegetables');
+    } else {
+      veggies = getFoodsByCategory('vegetables');
+    }
   }
+  
   if (fruits.length === 0) {
     fruits = getFoodsByCategory('fruits');
   }
@@ -52,13 +91,23 @@ export const getSuitableFoodsForMeal = (mealType: string): {
 };
 
 /**
- * Selects optimal food from a category based on target nutrient
- * Always returns a real food from the database - no fallbacks
+ * Selects optimal food from a category based on target nutrient and meal context
+ * Prioritizes foods that work well together and have good protein density
  */
-export const selectOptimalFood = (foods: Food[], nutrientType: string, targetAmount: number): Food => {
+export const selectOptimalFood = (foods: Food[], nutrientType: string, targetAmount: number, mealContext?: string): Food => {
   // Ensure we always have foods to select from
   if (!foods || foods.length === 0) {
     throw new Error(`No foods available for selection in category: ${nutrientType}`);
+  }
+  
+  // Enhanced selection for protein foods - prioritize high-protein options
+  if (nutrientType === 'protein') {
+    // Sort by protein content (highest first) and select from top options
+    const highProteinFoods = [...foods].sort((a, b) => b.protein - a.protein);
+    
+    // Take top 5 high-protein foods for variety
+    const topOptions = highProteinFoods.slice(0, Math.min(5, highProteinFoods.length));
+    return topOptions[Math.floor(Math.random() * topOptions.length)];
   }
   
   // If there's a target amount, try to find foods that have good nutrient density

@@ -1,10 +1,16 @@
 
 import { Meal, Food, MealFood } from '@/types/food';
-import { getSuitableFoodsForMeal, selectOptimalFood } from './foodSelectionService';
+import { getSuitableFoodsForMeal } from './foodSelectionService';
+import { 
+  getMealTemplate, 
+  selectCompatibleFoods, 
+  calculateEnhancedPortions,
+  areFoodsCompatible 
+} from './foodCompatibilityService';
 
 /**
- * Creates a balanced meal with specified calorie and macro targets
- * Always uses real foods from the database - no fallbacks
+ * Creates a balanced meal using food compatibility templates
+ * Always uses real foods from the database with logical combinations
  */
 export const createBalancedMeal = (
   mealName: string,
@@ -27,87 +33,59 @@ export const createBalancedMeal = (
     fruits: suitableFoods.fruits.length
   });
 
-  const mealFoods: MealFood[] = [];
+  // Get appropriate meal template for this meal type
+  const template = getMealTemplate(mealType);
+  console.log(`Using meal template: ${template.name} for ${mealName}`);
+
+  // Select compatible foods based on template
+  const selectedFoods = selectCompatibleFoods(suitableFoods, template);
+  
+  if (selectedFoods.length === 0) {
+    throw new Error(`No compatible foods found for meal ${mealName}`);
+  }
+
+  // Verify food compatibility
+  const areCompatible = areFoodsCompatible(selectedFoods, template);
+  if (!areCompatible) {
+    console.warn(`Foods selected for ${mealName} may not be fully compatible, but proceeding`);
+  }
+
+  // Calculate enhanced portions with minimum protein requirements
+  const mealFoodsWithPortions = calculateEnhancedPortions(
+    selectedFoods,
+    template,
+    targetProtein,
+    targetCarbs,
+    targetFat
+  );
+
+  // Calculate actual nutritional values
   let currentCalories = 0;
   let currentProtein = 0;
   let currentCarbs = 0;
   let currentFat = 0;
 
-  // Helper function to add food with proper portion calculation
-  const addFoodToMeal = (food: Food, targetNutrient: string, targetAmount: number) => {
-    try {
-      const basePortionSize = food.portion || 100;
-      let portionSize = basePortionSize;
-      
-      // Calculate portion size based on target nutrient if specified
-      if (targetAmount > 0 && food[targetNutrient as keyof Food]) {
-        const nutrientPerBasePortion = food[targetNutrient as keyof Food] as number;
-        if (nutrientPerBasePortion > 0) {
-          const desiredPortion = (targetAmount / nutrientPerBasePortion) * basePortionSize;
-          portionSize = Math.max(10, Math.min(500, desiredPortion)); // Keep portions reasonable
-        }
-      }
+  const mealFoods: MealFood[] = mealFoodsWithPortions.map(({ food, portionSize }) => {
+    const basePortionSize = food.portion || 100;
+    const portionRatio = portionSize / basePortionSize;
+    
+    const foodCalories = food.calories * portionRatio;
+    const foodProtein = food.protein * portionRatio;
+    const foodCarbs = food.carbs * portionRatio;
+    const foodFat = food.fat * portionRatio;
 
-      const portionRatio = portionSize / basePortionSize;
-      const foodCalories = food.calories * portionRatio;
-      const foodProtein = food.protein * portionRatio;
-      const foodCarbs = food.carbs * portionRatio;
-      const foodFat = food.fat * portionRatio;
+    currentCalories += foodCalories;
+    currentProtein += foodProtein;
+    currentCarbs += foodCarbs;
+    currentFat += foodFat;
 
-      mealFoods.push({
-        food: food,
-        portionSize: Math.round(portionSize)
-      });
+    console.log(`Added ${food.name} (${portionSize}g) - Calories: ${Math.round(foodCalories)}, Protein: ${Math.round(foodProtein)}g`);
 
-      currentCalories += foodCalories;
-      currentProtein += foodProtein;
-      currentCarbs += foodCarbs;
-      currentFat += foodFat;
-
-      console.log(`Added ${food.name} (${Math.round(portionSize)}g) - Calories: ${Math.round(foodCalories)}, Protein: ${Math.round(foodProtein)}g`);
-    } catch (error) {
-      console.error(`Error adding food ${food.name}:`, error);
-    }
-  };
-
-  try {
-    // 1. Add primary protein source (aim for 60-80% of protein target)
-    if (suitableFoods.proteins.length > 0) {
-      const proteinFood = selectOptimalFood(suitableFoods.proteins, 'protein', targetProtein * 0.7);
-      addFoodToMeal(proteinFood, 'protein', targetProtein * 0.7);
-    }
-
-    // 2. Add carbohydrate source (aim for 60-70% of carb target)
-    if (suitableFoods.carbs.length > 0 && targetCarbs > 0) {
-      const carbFood = selectOptimalFood(suitableFoods.carbs, 'carbs', targetCarbs * 0.65);
-      addFoodToMeal(carbFood, 'carbs', targetCarbs * 0.65);
-    }
-
-    // 3. Add healthy fat source (aim for 60-70% of fat target)
-    if (suitableFoods.fats.length > 0 && targetFat > 0) {
-      const fatFood = selectOptimalFood(suitableFoods.fats, 'fat', targetFat * 0.65);
-      addFoodToMeal(fatFood, 'fat', targetFat * 0.65);
-    }
-
-    // 4. Add vegetables for micronutrients (small portion)
-    if (suitableFoods.veggies.length > 0) {
-      const veggieFood = selectOptimalFood(suitableFoods.veggies, 'protein', 0);
-      addFoodToMeal(veggieFood, '', 0);
-    }
-
-    // 5. Add fruit if it's breakfast or snack
-    if ((mealType === 'breakfast' || mealType === 'snack') && suitableFoods.fruits.length > 0) {
-      const fruitFood = selectOptimalFood(suitableFoods.fruits, 'carbs', 0);
-      addFoodToMeal(fruitFood, '', 0);
-    }
-
-  } catch (error) {
-    console.error(`Error creating meal ${mealName}:`, error);
-    // If we have any foods, continue with what we have
-    if (mealFoods.length === 0) {
-      throw new Error(`Failed to create meal ${mealName}: No suitable foods found`);
-    }
-  }
+    return {
+      food: food,
+      portionSize: portionSize
+    };
+  });
 
   const meal: Meal = {
     id: crypto.randomUUID(),
@@ -119,19 +97,21 @@ export const createBalancedMeal = (
     totalFat: Math.round(currentFat)
   };
 
-  console.log(`Created meal ${mealName}:`, {
+  console.log(`Created compatible meal ${mealName}:`, {
     totalCalories: meal.totalCalories,
     totalProtein: meal.totalProtein,
     totalCarbs: meal.totalCarbs,
     totalFat: meal.totalFat,
-    foodCount: meal.foods.length
+    foodCount: meal.foods.length,
+    template: template.name,
+    cookingMethod: template.cookingMethod
   });
 
   return meal;
 };
 
 /**
- * Shuffles a meal by regenerating it with the same targets
+ * Shuffles a meal by regenerating it with the same targets using compatibility rules
  */
 export const shuffleMeal = (
   meal: Meal,
@@ -140,6 +120,6 @@ export const shuffleMeal = (
   targetCarbs: number,
   targetFat: number
 ): Meal => {
-  console.log(`Shuffling meal: ${meal.name}`);
+  console.log(`Shuffling meal: ${meal.name} with compatibility rules`);
   return createBalancedMeal(meal.name, targetCalories, targetProtein, targetCarbs, targetFat);
 };
