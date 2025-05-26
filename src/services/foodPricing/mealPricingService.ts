@@ -38,7 +38,7 @@ export class MealPricingService {
         mealFood.portionSize
       );
 
-      if (pricing.length > 0) {
+      if (pricing && pricing.length > 0) {
         const foodPricing = pricing[0]; // Use the first (cheapest) result
         
         const foodWithPricing: MealFoodWithPricing = {

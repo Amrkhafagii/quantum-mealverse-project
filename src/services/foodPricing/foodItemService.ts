@@ -18,7 +18,12 @@ export class FoodItemService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        nutritional_info: typeof item.nutritional_info === 'string' 
+          ? JSON.parse(item.nutritional_info) 
+          : item.nutritional_info
+      })) as FoodItem[];
     } catch (error) {
       console.error('Error in getAllFoodItems:', error);
       return [];
@@ -41,7 +46,12 @@ export class FoodItemService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        nutritional_info: typeof item.nutritional_info === 'string' 
+          ? JSON.parse(item.nutritional_info) 
+          : item.nutritional_info
+      })) as FoodItem[];
     } catch (error) {
       console.error('Error in searchFoodItems:', error);
       return [];
@@ -64,7 +74,12 @@ export class FoodItemService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        nutritional_info: typeof item.nutritional_info === 'string' 
+          ? JSON.parse(item.nutritional_info) 
+          : item.nutritional_info
+      })) as FoodItem[];
     } catch (error) {
       console.error('Error in getFoodItemsByCategory:', error);
       return [];
@@ -219,6 +234,8 @@ export class FoodItemService {
           restaurant_id: restaurantId,
           price_per_base_portion: pricePerBasePortion,
           base_portion_size: basePortionSize,
+          price_per_100g: pricePerBasePortion, // For backward compatibility
+          food_name: '', // Will be populated by trigger or join
           is_active: true,
           updated_at: new Date().toISOString()
         })
@@ -253,7 +270,12 @@ export class FoodItemService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        nutritional_info: typeof data.nutritional_info === 'string' 
+          ? JSON.parse(data.nutritional_info) 
+          : data.nutritional_info
+      } as FoodItem;
     } catch (error) {
       console.error('Error in createFoodItem:', error);
       return null;
@@ -276,7 +298,12 @@ export class FoodItemService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        nutritional_info: typeof data.nutritional_info === 'string' 
+          ? JSON.parse(data.nutritional_info) 
+          : data.nutritional_info
+      } as FoodItem;
     } catch (error) {
       console.error('Error in getFoodItemById:', error);
       return null;
