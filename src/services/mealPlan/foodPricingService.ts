@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Meal, MealFood } from '@/types/food';
+import { FoodItemService, MealPricingService } from '@/services/foodPricing';
 
 export interface FoodPrice {
   id: string;
@@ -22,28 +23,32 @@ export interface MealPricing {
 }
 
 /**
- * Gets pricing for food items from the database
+ * Gets pricing for food items from the new food pricing system
  */
 export const getFoodPricing = async (foodNames: string[], restaurantId?: string): Promise<FoodPrice[]> => {
   try {
-    let query = supabase
-      .from('food_item_prices')
-      .select('*')
-      .in('food_name', foodNames)
-      .eq('is_active', true);
+    const prices: FoodPrice[] = [];
 
-    if (restaurantId) {
-      query = query.eq('restaurant_id', restaurantId);
+    for (const foodName of foodNames) {
+      const pricingData = await FoodItemService.getFoodItemPricing(
+        foodName,
+        restaurantId,
+        100 // Get price per 100 units
+      );
+
+      if (pricingData.length > 0) {
+        const pricing = pricingData[0]; // Use the first (cheapest) result
+        prices.push({
+          id: pricing.food_item_id,
+          food_name: pricing.food_name,
+          price_per_100g: pricing.price_per_unit * 100, // Convert to price per 100g
+          restaurant_id: pricing.restaurant_id,
+          is_active: true
+        });
+      }
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching food pricing:', error);
-      throw error;
-    }
-
-    return data || [];
+    return prices;
   } catch (error) {
     console.error('Failed to fetch food pricing:', error);
     return [];
@@ -51,44 +56,65 @@ export const getFoodPricing = async (foodNames: string[], restaurantId?: string)
 };
 
 /**
- * Calculates the total price for a meal based on food items and portions
+ * Calculates the total price for a meal using the new pricing system
  */
 export const calculateMealPricing = async (meal: Meal, restaurantId?: string): Promise<MealPricing> => {
-  const foodNames = meal.foods.map(mealFood => mealFood.food.name);
-  const foodPrices = await getFoodPricing(foodNames, restaurantId);
+  try {
+    if (!restaurantId) {
+      // If no restaurant specified, find the cheapest option
+      const { data: restaurants } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('is_active', true)
+        .limit(5);
 
-  // Create a map for quick price lookup
-  const priceMap = new Map<string, number>();
-  let selectedRestaurantId = restaurantId;
-
-  foodPrices.forEach(price => {
-    priceMap.set(price.food_name, price.price_per_100g);
-    if (!selectedRestaurantId) {
-      selectedRestaurantId = price.restaurant_id;
+      if (restaurants && restaurants.length > 0) {
+        const restaurantIds = restaurants.map(r => r.id);
+        const cheapestOption = await MealPricingService.findCheapestRestaurantForMeal(meal, restaurantIds);
+        
+        if (cheapestOption) {
+          return {
+            totalPrice: cheapestOption.total_price,
+            itemPrices: cheapestOption.foods.map(food => ({
+              foodName: food.food_name,
+              portionSize: food.quantity,
+              pricePerGram: food.price_per_unit,
+              itemTotal: food.total_price
+            })),
+            restaurantId: cheapestOption.restaurant_id
+          };
+        }
+      }
     }
-  });
 
-  const itemPrices = meal.foods.map(mealFood => {
-    const foodName = mealFood.food.name;
-    const portionSize = mealFood.portionSize;
-    const pricePerGram = (priceMap.get(foodName) || 3.50) / 100; // Convert per 100g to per gram
-    const itemTotal = pricePerGram * portionSize;
-
+    // Calculate pricing for specific restaurant
+    const mealPricing = await MealPricingService.calculateMealPrice(meal, restaurantId!);
+    
     return {
-      foodName,
-      portionSize,
-      pricePerGram,
-      itemTotal: Math.round(itemTotal * 100) / 100 // Round to 2 decimal places
+      totalPrice: mealPricing.total_price,
+      itemPrices: mealPricing.foods.map(food => ({
+        foodName: food.food_name,
+        portionSize: food.quantity,
+        pricePerGram: food.price_per_unit,
+        itemTotal: food.total_price
+      })),
+      restaurantId: mealPricing.restaurant_id
     };
-  });
-
-  const totalPrice = itemPrices.reduce((sum, item) => sum + item.itemTotal, 0);
-
-  return {
-    totalPrice: Math.round(totalPrice * 100) / 100,
-    itemPrices,
-    restaurantId: selectedRestaurantId || ''
-  };
+  } catch (error) {
+    console.error('Failed to calculate meal pricing:', error);
+    
+    // Return fallback structure
+    return {
+      totalPrice: 0,
+      itemPrices: meal.foods.map(mealFood => ({
+        foodName: mealFood.food.name,
+        portionSize: mealFood.portionSize,
+        pricePerGram: 0,
+        itemTotal: 0
+      })),
+      restaurantId: restaurantId || ''
+    };
+  }
 };
 
 /**
