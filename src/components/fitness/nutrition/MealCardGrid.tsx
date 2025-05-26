@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -47,7 +46,6 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="space-y-6"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {meals.map((meal, index) => (
@@ -122,21 +120,20 @@ const MealCardGrid: React.FC<MealCardGridProps> = ({
                   );
                 })}
               </div>
+              
+              {/* Order button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-3 border-quantum-purple/30 hover:bg-quantum-purple/10 text-quantum-purple"
+                onClick={handleOrderMeals}
+              >
+                <ShoppingCart className="h-3.5 w-3.5 mr-2" />
+                Order This Meal
+              </Button>
             </CardContent>
           </Card>
         ))}
-      </div>
-      
-      {/* Order button at the end of the grid */}
-      <div className="flex justify-center">
-        <Button
-          size="lg"
-          className="bg-quantum-purple hover:bg-quantum-purple/90 text-white px-8 py-3 text-lg"
-          onClick={handleOrderMeals}
-        >
-          <ShoppingCart className="h-5 w-5 mr-3" />
-          Order This Meal Plan
-        </Button>
       </div>
     </motion.div>
   );
