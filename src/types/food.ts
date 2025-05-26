@@ -1,4 +1,3 @@
-
 // Food and nutrition types for the meal planning system
 export interface Food {
   id: string;
@@ -46,7 +45,7 @@ export interface MealPlan {
   name?: string;
 }
 
-export type FoodCategory = 'protein' | 'carbs' | 'fats' | 'vegetables';
+export type FoodCategory = 'protein' | 'carbs' | 'fats' | 'vegetables' | 'fruits';
 
 export type CookingState = 'raw' | 'cooked' | 'processed';
 

@@ -1,4 +1,3 @@
-
 import { Food, FoodCategory, CookingState } from '@/types/food';
 import { foodDataService } from '../foodDataService';
 import { foodDatabase } from '../../data/foodDatabase';
@@ -10,7 +9,8 @@ export const getSuitableFoodsForMeal = (mealType: string): {
   proteins: Food[],
   carbs: Food[],
   fats: Food[],
-  veggies: Food[]
+  veggies: Food[],
+  fruits: Food[]
 } => {
   // Filter foods suitable for this meal type
   const suitableFoods = foodDatabase.filter(food => 
@@ -22,7 +22,8 @@ export const getSuitableFoodsForMeal = (mealType: string): {
     proteins: suitableFoods.filter(food => food.category === 'protein'),
     carbs: suitableFoods.filter(food => food.category === 'carbs'),
     fats: suitableFoods.filter(food => food.category === 'fats'),
-    veggies: suitableFoods.filter(food => food.category === 'vegetables')
+    veggies: suitableFoods.filter(food => food.category === 'vegetables'),
+    fruits: suitableFoods.filter(food => food.category === 'fruits')
   };
 };
 
@@ -84,6 +85,12 @@ export const createFallbackFood = (category: string, name: string): Food => {
       calories = 35;
       protein = 2;
       carbs = 7;
+      fat = 0;
+      break;
+    case 'fruits':
+      calories = 50;
+      protein = 1;
+      carbs = 12;
       fat = 0;
       break;
     default:
