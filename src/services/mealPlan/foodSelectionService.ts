@@ -7,10 +7,10 @@ import { foodDatabase, getFoodsByCategory } from '../../data/foodDatabase';
  * Returns foods grouped by category for use with compatibility templates
  */
 export const getSuitableFoodsForMeal = (mealType: string): {
-  proteins: Food[],
+  protein: Food[],
   carbs: Food[],
   fats: Food[],
-  veggies: Food[],
+  vegetables: Food[],
   fruits: Food[]
 } => {
   // First try to filter foods suitable for this meal type
@@ -19,17 +19,17 @@ export const getSuitableFoodsForMeal = (mealType: string): {
   );
   
   // Group by category
-  let proteins = suitableFoods.filter(food => food.category === 'protein');
+  let protein = suitableFoods.filter(food => food.category === 'protein');
   let carbs = suitableFoods.filter(food => food.category === 'carbs');
   let fats = suitableFoods.filter(food => food.category === 'fats');
-  let veggies = suitableFoods.filter(food => food.category === 'vegetables');
+  let vegetables = suitableFoods.filter(food => food.category === 'vegetables');
   let fruits = suitableFoods.filter(food => food.category === 'fruits');
   
   // Enhanced fallback logic - prioritize foods that make sense for the meal type
-  if (proteins.length === 0) {
+  if (protein.length === 0) {
     if (mealType === 'breakfast') {
       // Prioritize breakfast-friendly proteins
-      proteins = getFoodsByCategory('protein').filter(food => 
+      protein = getFoodsByCategory('protein').filter(food => 
         food.name.toLowerCase().includes('egg') ||
         food.name.toLowerCase().includes('yogurt') ||
         food.name.toLowerCase().includes('cheese') ||
@@ -37,9 +37,9 @@ export const getSuitableFoodsForMeal = (mealType: string): {
         food.name.toLowerCase().includes('salmon')
       );
       // If still empty, use all proteins
-      if (proteins.length === 0) proteins = getFoodsByCategory('protein');
+      if (protein.length === 0) protein = getFoodsByCategory('protein');
     } else {
-      proteins = getFoodsByCategory('protein');
+      protein = getFoodsByCategory('protein');
     }
   }
   
@@ -62,18 +62,18 @@ export const getSuitableFoodsForMeal = (mealType: string): {
     fats = getFoodsByCategory('fats');
   }
   
-  if (veggies.length === 0) {
+  if (vegetables.length === 0) {
     if (mealType === 'breakfast') {
       // Prioritize breakfast-friendly vegetables
-      veggies = getFoodsByCategory('vegetables').filter(food => 
+      vegetables = getFoodsByCategory('vegetables').filter(food => 
         food.name.toLowerCase().includes('spinach') ||
         food.name.toLowerCase().includes('tomato') ||
         food.name.toLowerCase().includes('mushroom') ||
         food.name.toLowerCase().includes('bell pepper')
       );
-      if (veggies.length === 0) veggies = getFoodsByCategory('vegetables');
+      if (vegetables.length === 0) vegetables = getFoodsByCategory('vegetables');
     } else {
-      veggies = getFoodsByCategory('vegetables');
+      vegetables = getFoodsByCategory('vegetables');
     }
   }
   
@@ -82,10 +82,10 @@ export const getSuitableFoodsForMeal = (mealType: string): {
   }
   
   return {
-    proteins,
+    protein,
     carbs,
     fats,
-    veggies,
+    vegetables,
     fruits
   };
 };

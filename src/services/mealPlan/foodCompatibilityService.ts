@@ -192,7 +192,13 @@ export const areFoodsCompatible = (foods: Food[], template: MealTemplate): boole
  * Select compatible foods for a meal template
  */
 export const selectCompatibleFoods = (
-  availableFoods: { [key in FoodCategory]: Food[] },
+  availableFoods: {
+    protein: Food[];
+    carbs: Food[];
+    fats: Food[];
+    vegetables: Food[];
+    fruits: Food[];
+  },
   template: MealTemplate
 ): Food[] => {
   const selectedFoods: Food[] = [];

@@ -26,10 +26,10 @@ export const createBalancedMeal = (
   const suitableFoods = getSuitableFoodsForMeal(mealType);
   
   console.log(`Available foods for ${mealName}:`, {
-    proteins: suitableFoods.proteins.length,
+    protein: suitableFoods.protein.length,
     carbs: suitableFoods.carbs.length,
     fats: suitableFoods.fats.length,
-    veggies: suitableFoods.veggies.length,
+    vegetables: suitableFoods.vegetables.length,
     fruits: suitableFoods.fruits.length
   });
 
