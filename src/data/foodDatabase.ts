@@ -1,3 +1,4 @@
+
 import { Food, FoodCategory } from "../types/food";
 
 export const foodDatabase: Food[] = [
@@ -329,6 +330,63 @@ export const foodDatabase: Food[] = [
     cookingState: "cooked",
     mealSuitability: ["lunch", "dinner"]
   },
+  // Add more breakfast-suitable proteins
+  {
+    id: "ep29",
+    name: "Protein Powder (Whey)",
+    category: "protein",
+    calories: 103,
+    protein: 20,
+    carbs: 1,
+    fat: 1,
+    portion: 25,
+    isGloballyAvailable: true,
+    costTier: 3,
+    cookingState: "processed",
+    mealSuitability: ["breakfast", "snack"]
+  },
+  {
+    id: "ep30",
+    name: "Scrambled Eggs",
+    category: "protein",
+    calories: 168,
+    protein: 11,
+    carbs: 1.6,
+    fat: 12,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: "cooked",
+    mealSuitability: ["breakfast"]
+  },
+  {
+    id: "ep31",
+    name: "Smoked Salmon",
+    category: "protein",
+    calories: 117,
+    protein: 18,
+    carbs: 0,
+    fat: 4.5,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 4,
+    cookingState: "processed",
+    mealSuitability: ["breakfast", "lunch"]
+  },
+  {
+    id: "ep32",
+    name: "Turkey Sausage",
+    category: "protein",
+    calories: 196,
+    protein: 14,
+    carbs: 1,
+    fat: 14,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    cookingState: "cooked",
+    mealSuitability: ["breakfast", "lunch"]
+  },
 
  
   // ========== CARBS (30 items - uncooked state) ==========
@@ -415,6 +473,49 @@ export const foodDatabase: Food[] = [
     isGloballyAvailable: true,
     costTier: 1,
     cookingState: "raw",
+    mealSuitability: ["breakfast"]
+  },
+  // Add more breakfast carbs
+  {
+    id: "ec25",
+    name: "Whole Wheat Bread",
+    category: "carbs",
+    calories: 247,
+    protein: 13,
+    carbs: 41,
+    fat: 4,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: "processed",
+    mealSuitability: ["breakfast", "lunch"]
+  },
+  {
+    id: "ec26",
+    name: "Granola",
+    category: "carbs",
+    calories: 471,
+    protein: 12,
+    carbs: 64,
+    fat: 20,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    cookingState: "processed",
+    mealSuitability: ["breakfast", "snack"]
+  },
+  {
+    id: "ec27",
+    name: "Muesli",
+    category: "carbs",
+    calories: 325,
+    protein: 8,
+    carbs: 66,
+    fat: 5,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    cookingState: "processed",
     mealSuitability: ["breakfast"]
   },
 
@@ -680,6 +781,35 @@ export const foodDatabase: Food[] = [
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
 
+  // Add more breakfast fats
+  {
+    id: "ef29",
+    name: "Avocado",
+    category: "fats",
+    calories: 160,
+    protein: 2,
+    carbs: 9,
+    fat: 15,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 3,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "snack"]
+  },
+  {
+    id: "ef30",
+    name: "Coconut Oil",
+    category: "fats",
+    calories: 862,
+    protein: 0,
+    carbs: 0,
+    fat: 100,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 3,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
 
   {
     id: "ef24",
@@ -1080,6 +1210,108 @@ export const foodDatabase: Food[] = [
     costTier: 2,
     cookingState: "raw",
     mealSuitability: ["snack"]
+  },
+
+  // Add more breakfast-suitable fruits
+  {
+    id: "efr31",
+    name: "Blueberries",
+    category: "fruits",
+    calories: 57,
+    protein: 0.7,
+    carbs: 14,
+    fat: 0.3,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 3,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
+  },
+  {
+    id: "efr32",
+    name: "Raspberries",
+    category: "fruits",
+    calories: 52,
+    protein: 1.2,
+    carbs: 12,
+    fat: 0.7,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 3,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "snack"]
+  },
+
+  // ========== VEGETABLES (add some with better breakfast suitability) ==========
+  {
+    id: "ev1",
+    name: "Spinach (raw)",
+    category: "vegetables",
+    calories: 23,
+    protein: 2.9,
+    carbs: 3.6,
+    fat: 0.4,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
+  {
+    id: "ev2",
+    name: "Tomatoes",
+    category: "vegetables",
+    calories: 18,
+    protein: 0.9,
+    carbs: 3.9,
+    fat: 0.2,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
+  {
+    id: "ev3",
+    name: "Bell Peppers",
+    category: "vegetables",
+    calories: 31,
+    protein: 1,
+    carbs: 7,
+    fat: 0.3,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
+  {
+    id: "ev4",
+    name: "Mushrooms",
+    category: "vegetables",
+    calories: 22,
+    protein: 3.1,
+    carbs: 3.3,
+    fat: 0.3,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 2,
+    cookingState: "raw",
+    mealSuitability: ["breakfast", "lunch", "dinner"]
+  },
+  {
+    id: "ev5",
+    name: "Onions",
+    category: "vegetables",
+    calories: 40,
+    protein: 1.1,
+    carbs: 9.3,
+    fat: 0.1,
+    portion: 100,
+    isGloballyAvailable: true,
+    costTier: 1,
+    cookingState: "raw",
+    mealSuitability: ["lunch", "dinner"]
   }
 ];
 
