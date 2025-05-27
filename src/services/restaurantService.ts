@@ -69,7 +69,7 @@ export const restaurantService = {
     
     if (!data) return null;
     
-    // Transform database response to match Restaurant interface
+    // Transform database response to match Restaurant interface with proper defaults
     return {
       id: data.id,
       user_id: data.user_id,
@@ -115,7 +115,7 @@ export const restaurantService = {
     
     if (error) throw error;
     
-    // Transform database response to match Restaurant interface
+    // Transform database response to match Restaurant interface with proper defaults
     return {
       id: data.id,
       user_id: data.user_id,

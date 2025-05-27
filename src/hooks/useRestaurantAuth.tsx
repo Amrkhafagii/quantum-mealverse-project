@@ -98,7 +98,7 @@ export const useRestaurantAuth = () => {
         
         if (data) {
           console.log('useRestaurantAuth - setting restaurant:', data);
-          // Transform database response to match Restaurant interface
+          // Transform database response to match Restaurant interface with proper defaults
           const restaurantData: Restaurant = {
             id: data.id,
             user_id: data.user_id,
