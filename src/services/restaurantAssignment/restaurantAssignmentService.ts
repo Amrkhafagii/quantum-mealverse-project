@@ -116,10 +116,12 @@ export class RestaurantAssignmentService {
         throw error;
       }
 
+      // Cast the JSON response to proper types
+      const result = data as any;
       return {
-        assignments: data?.assignments || [],
-        total_price: data?.total_price || 0,
-        strategy: data?.strategy || 'multi_restaurant'
+        assignments: result.assignments || [],
+        total_price: result.total_price || 0,
+        strategy: result.strategy || 'multi_restaurant'
       };
     } catch (error) {
       console.error('Error in createMultiRestaurantAssignment:', error);
@@ -264,7 +266,7 @@ export class RestaurantAssignmentService {
         .from('meal_plan_restaurant_assignments')
         .insert({
           meal_plan_id: mealPlanId,
-          restaurant_assignments: assignments,
+          restaurant_assignments: assignments as any, // Cast to Json type
           total_price: totalPrice,
           assignment_strategy: strategy
         })
@@ -276,7 +278,11 @@ export class RestaurantAssignmentService {
         throw error;
       }
 
-      return data;
+      // Cast the response to proper type
+      return {
+        ...data,
+        restaurant_assignments: data.restaurant_assignments as RestaurantAssignmentDetail[]
+      };
     } catch (error) {
       console.error('Error in saveMealPlanAssignment:', error);
       return null;
@@ -301,7 +307,13 @@ export class RestaurantAssignmentService {
         return null;
       }
 
-      return data;
+      if (!data) return null;
+
+      // Cast the response to proper type
+      return {
+        ...data,
+        restaurant_assignments: data.restaurant_assignments as RestaurantAssignmentDetail[]
+      };
     } catch (error) {
       console.error('Error in getMealPlanAssignment:', error);
       return null;
@@ -317,11 +329,21 @@ export class RestaurantAssignmentService {
   ): Promise<boolean> {
     try {
       for (const capability of capabilities) {
+        // Ensure required fields are present
+        if (!capability.food_item_id) {
+          console.error('Missing food_item_id for capability update');
+          continue;
+        }
+
         const { error } = await supabase
           .from('restaurant_food_capabilities')
           .upsert({
             restaurant_id: restaurantId,
-            ...capability,
+            food_item_id: capability.food_item_id,
+            is_available: capability.is_available ?? true,
+            preparation_time_minutes: capability.preparation_time_minutes,
+            minimum_quantity_grams: capability.minimum_quantity_grams,
+            maximum_quantity_grams: capability.maximum_quantity_grams,
             updated_at: new Date().toISOString()
           });
 

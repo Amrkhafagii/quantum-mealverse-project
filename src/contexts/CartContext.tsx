@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
 
 export type CartItem = {
   id: string;
@@ -17,6 +17,9 @@ export type CartItem = {
   updated_at?: string;
   image_url?: string;
   dietary_tags?: string[];
+  assignment_details?: RestaurantAssignmentDetail;
+  estimated_prep_time?: number;
+  distance_km?: number;
 };
 
 export type CartContextType = {
