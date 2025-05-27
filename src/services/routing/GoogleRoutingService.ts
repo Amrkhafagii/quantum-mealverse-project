@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface RouteWaypoint {
@@ -223,11 +222,10 @@ export class GoogleRoutingService {
     waypoints: RouteWaypoint[]
   ): Promise<void> {
     try {
-      // Store main route
+      // Store main route (remove id from insert since it's auto-generated)
       const { data: routeRecord, error: routeError } = await supabase
         .from('routes')
         .insert({
-          id: route.id,
           assignment_id: assignmentId,
           origin_latitude: origin.latitude,
           origin_longitude: origin.longitude,
@@ -247,6 +245,9 @@ export class GoogleRoutingService {
 
       if (routeError) throw routeError;
 
+      // Use the returned route ID for segments
+      const routeId = routeRecord.id;
+
       // Store route segments for turn-by-turn navigation
       const segments = [];
       let segmentIndex = 0;
@@ -254,7 +255,7 @@ export class GoogleRoutingService {
       for (const leg of route.legs) {
         for (const step of leg.steps) {
           segments.push({
-            route_id: route.id,
+            route_id: routeId,
             segment_index: segmentIndex++,
             instruction: step.instruction,
             maneuver: step.maneuver,

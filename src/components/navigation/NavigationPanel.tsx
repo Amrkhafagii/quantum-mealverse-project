@@ -11,8 +11,8 @@ import {
   Clock, 
   Route, 
   AlertTriangle,
-  TurnRight,
-  TurnLeft,
+  RotateCcw,
+  RotateCw,
   ArrowUp
 } from 'lucide-react';
 
@@ -79,9 +79,9 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
   const getManeuverIcon = (maneuver: string) => {
     switch (maneuver) {
       case 'turn-left':
-        return <TurnLeft className="h-6 w-6 text-quantum-cyan" />;
+        return <RotateCcw className="h-6 w-6 text-quantum-cyan" />;
       case 'turn-right':
-        return <TurnRight className="h-6 w-6 text-quantum-cyan" />;
+        return <RotateCw className="h-6 w-6 text-quantum-cyan" />;
       default:
         return <ArrowUp className="h-6 w-6 text-quantum-cyan" />;
     }
