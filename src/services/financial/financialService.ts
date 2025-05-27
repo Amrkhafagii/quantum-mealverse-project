@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { fromSupabaseJson, toSupabaseJson } from '@/utils/supabaseUtils';
 import type { 
   PaymentMethod, 
   FinancialTransaction, 
@@ -96,14 +96,20 @@ export class FinancialService {
     return (data || []).map(item => ({
       ...item,
       transaction_type: item.transaction_type as FinancialTransaction['transaction_type'],
-      status: item.status as FinancialTransaction['status']
+      status: item.status as FinancialTransaction['status'],
+      metadata: fromSupabaseJson<Record<string, any>>(item.metadata)
     }));
   }
 
   async createTransaction(transaction: Omit<FinancialTransaction, 'id' | 'created_at' | 'updated_at'>): Promise<FinancialTransaction> {
+    const transactionData = {
+      ...transaction,
+      metadata: toSupabaseJson(transaction.metadata)
+    };
+
     const { data, error } = await supabase
       .from('financial_transactions')
-      .insert(transaction)
+      .insert(transactionData)
       .select()
       .single();
 
@@ -111,7 +117,8 @@ export class FinancialService {
     return {
       ...data,
       transaction_type: data.transaction_type as FinancialTransaction['transaction_type'],
-      status: data.status as FinancialTransaction['status']
+      status: data.status as FinancialTransaction['status'],
+      metadata: fromSupabaseJson<Record<string, any>>(data.metadata)
     };
   }
 
@@ -200,14 +207,20 @@ export class FinancialService {
     return (data || []).map(item => ({
       ...item,
       payout_method: item.payout_method as Payout['payout_method'],
-      status: item.status as Payout['status']
+      status: item.status as Payout['status'],
+      metadata: fromSupabaseJson<Record<string, any>>(item.metadata)
     }));
   }
 
   async createPayout(payout: Omit<Payout, 'id' | 'created_at' | 'updated_at'>): Promise<Payout> {
+    const payoutData = {
+      ...payout,
+      metadata: toSupabaseJson(payout.metadata)
+    };
+
     const { data, error } = await supabase
       .from('payouts')
-      .insert(payout)
+      .insert(payoutData)
       .select()
       .single();
 
@@ -215,7 +228,8 @@ export class FinancialService {
     return {
       ...data,
       payout_method: data.payout_method as Payout['payout_method'],
-      status: data.status as Payout['status']
+      status: data.status as Payout['status'],
+      metadata: fromSupabaseJson<Record<string, any>>(data.metadata)
     };
   }
 
@@ -328,8 +342,8 @@ export class FinancialService {
       total_refunds: 0, // TODO: Calculate refunds
       average_order_value: averageOrderValue,
       commission_rate: averageCommissionRate,
-      payment_methods_breakdown: paymentMethodsBreakdown,
-      top_selling_items: [], // TODO: Calculate top selling items
+      payment_methods_breakdown: toSupabaseJson(paymentMethodsBreakdown),
+      top_selling_items: toSupabaseJson([]), // TODO: Calculate top selling items
       generated_at: new Date().toISOString()
     };
 
@@ -343,7 +357,9 @@ export class FinancialService {
     if (error) throw error;
     return {
       ...data,
-      report_type: data.report_type as FinancialReport['report_type']
+      report_type: data.report_type as FinancialReport['report_type'],
+      payment_methods_breakdown: fromSupabaseJson<Record<string, any>>(data.payment_methods_breakdown),
+      top_selling_items: fromSupabaseJson<any[]>(data.top_selling_items)
     };
   }
 
@@ -358,7 +374,9 @@ export class FinancialService {
     if (error) throw error;
     return (data || []).map(item => ({
       ...item,
-      report_type: item.report_type as FinancialReport['report_type']
+      report_type: item.report_type as FinancialReport['report_type'],
+      payment_methods_breakdown: fromSupabaseJson<Record<string, any>>(item.payment_methods_breakdown),
+      top_selling_items: fromSupabaseJson<any[]>(item.top_selling_items)
     }));
   }
 
