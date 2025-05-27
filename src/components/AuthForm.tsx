@@ -119,27 +119,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         
         // Get user type - first check user metadata
         const userMetadata = data.user?.user_metadata as { user_type?: string } | undefined;
-        let userType = userMetadata?.user_type;
+        let detectedUserType = userMetadata?.user_type;
         
-        console.log('AuthForm - User type from metadata:', userType);
+        console.log('AuthForm - User type from metadata:', detectedUserType);
         
         // If not in metadata, check our user_types table as fallback
-        if (!userType && data.user?.id) {
-          userType = await userTypeService.getUserType(data.user.id);
-          console.log('AuthForm - User type from service:', userType);
+        if (!detectedUserType && data.user?.id) {
+          detectedUserType = await userTypeService.getUserType(data.user.id);
+          console.log('AuthForm - User type from service:', detectedUserType);
         }
         
-        // If still no user type, default to customer
-        if (!userType && data.user) {
-          userType = 'customer';
-          await userTypeService.updateUserType(data.user.id, 'customer');
-          console.log('AuthForm - Defaulted to customer');
-        }
-        
-        console.log('AuthForm - Final user type determined:', userType);
+        console.log('AuthForm - Final user type determined:', detectedUserType);
         
         if (data.user) {
-          if (userType === 'restaurant') {
+          if (detectedUserType === 'restaurant') {
             // Restaurant user - redirect to restaurant dashboard
             console.log('AuthForm - Redirecting restaurant user to dashboard');
             toast({
@@ -148,7 +141,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
             });
             navigate('/restaurant/dashboard', { replace: true });
             return; // Important: return early to prevent further execution
-          } else if (userType === 'delivery') {
+          } else if (detectedUserType === 'delivery') {
             // Check if delivery onboarding is complete
             const { data: deliveryUserData } = await supabase
               .from('delivery_users')

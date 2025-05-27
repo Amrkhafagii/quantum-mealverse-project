@@ -17,14 +17,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectPath = '/auth',
   requiresLocation = false
 }) => {
-  const { user, loading } = useAuth();
+  const { user, userType, loading } = useAuth();
 
   console.log('ProtectedRoute: Checking access', { 
     user: !!user, 
     loading, 
     allowedUserTypes,
-    userMetadata: user?.user_metadata,
-    userType: user?.user_metadata?.user_type 
+    userType,
+    userMetadata: user?.user_metadata
   });
 
   if (loading) {
@@ -43,21 +43,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If allowedUserTypes is specified, check if the user type is allowed
   if (allowedUserTypes && allowedUserTypes.length > 0) {
-    const userType = user.user_metadata?.user_type || 'customer'; // Default to customer if no type set
+    const currentUserType = userType || 'customer'; // Only use customer as absolute fallback
     
     console.log('ProtectedRoute: User type check', { 
-      userType, 
+      currentUserType, 
       allowedUserTypes,
+      userType,
       userMetadata: user.user_metadata,
       userEmail: user.email 
     });
     
-    if (!allowedUserTypes.includes(userType)) {
+    if (!allowedUserTypes.includes(currentUserType)) {
       console.log('ProtectedRoute: User type not allowed, redirecting based on type');
       // Redirect to appropriate dashboard based on user type
-      if (userType === 'delivery') {
+      if (currentUserType === 'delivery') {
         return <Navigate to="/delivery/dashboard" replace />;
-      } else if (userType === 'restaurant') {
+      } else if (currentUserType === 'restaurant') {
         return <Navigate to="/restaurant/dashboard" replace />;
       } else {
         return <Navigate to="/customer" replace />;
