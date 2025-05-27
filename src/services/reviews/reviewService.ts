@@ -20,7 +20,7 @@ export class ReviewService {
       comment: review.comment || '',
       images: review.images || [],
       meal_id: review.meal_id || '',
-      order_id: review.order_id || undefined
+      order_id: undefined // This field doesn't exist in the reviews table
     }));
   }
 

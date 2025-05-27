@@ -7,7 +7,7 @@ export class NotificationService {
   async getRestaurantNotifications(restaurantId: string, limit = 50): Promise<OrderNotification[]> {
     const { data, error } = await supabase
       .from('order_notifications')
-      .select('*')
+      .select('*, metadata')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -71,7 +71,7 @@ export class NotificationService {
         ...notification,
         metadata: notification.metadata || {}
       })
-      .select()
+      .select('*, metadata')
       .single();
 
     if (error) throw error;

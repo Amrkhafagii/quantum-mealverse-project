@@ -22,14 +22,14 @@ export class AssignmentService {
       .eq('restaurant_id', restaurantId)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
-      .order('assigned_at', { ascending: true });
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
     return (data || []).map(assignment => ({
       ...assignment,
       status: assignment.status as RestaurantAssignment['status'],
-      assigned_at: assignment.assigned_at || assignment.created_at,
-      details: assignment.details || {}
+      assigned_at: assignment.created_at, // Use created_at as assigned_at
+      details: {} // Default empty details object
     }));
   }
 
@@ -92,8 +92,8 @@ export class AssignmentService {
     return (data || []).map(assignment => ({
       ...assignment,
       status: assignment.status as RestaurantAssignment['status'],
-      assigned_at: assignment.assigned_at || assignment.created_at,
-      details: assignment.details || {}
+      assigned_at: assignment.created_at, // Use created_at as assigned_at
+      details: {} // Default empty details object
     }));
   }
 
@@ -117,8 +117,8 @@ export class AssignmentService {
           callback({
             ...assignment,
             status: assignment.status as RestaurantAssignment['status'],
-            assigned_at: assignment.assigned_at || assignment.created_at,
-            details: assignment.details || {}
+            assigned_at: assignment.created_at || assignment.assigned_at,
+            details: {}
           });
         }
       )
