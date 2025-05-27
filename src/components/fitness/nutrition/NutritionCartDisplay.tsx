@@ -83,12 +83,15 @@ const NutritionCartDisplay: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Macro Summary */}
+      {/* Macro Summary - Fixed props to match MacroSummary interface */}
       <MacroSummary 
-        calories={totalCalories}
-        protein={totalProtein}
-        carbs={totalCarbs}
-        fat={totalFat}
+        totalCalories={totalCalories}
+        targetProtein={0}
+        targetCarbs={0}
+        targetFat={0}
+        actualProtein={totalProtein}
+        actualCarbs={totalCarbs}
+        actualFat={totalFat}
       />
 
       {/* Clear Cart Button */}
