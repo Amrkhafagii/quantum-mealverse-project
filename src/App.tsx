@@ -26,6 +26,11 @@ import { ResponsiveProvider } from "./contexts/ResponsiveContext";
 import { SkipToContent } from "./components/accessibility/SkipToContent";
 import ComplexOrderDemo from '@/pages/ComplexOrderDemo';
 
+// Import delivery components
+import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
+import OnboardingPage from "./pages/delivery/OnboardingPage";
+import DeliverySettings from "./pages/delivery/DeliverySettings";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -98,7 +103,23 @@ function App() {
                       <Route path="/fitness" element={<Fitness />} />
                       <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
                       <Route path="/complex-order-demo" element={<ComplexOrderDemo />} />
-                      {/* Add more routes as needed */}
+                      
+                      {/* Delivery Routes */}
+                      <Route path="/delivery/onboarding" element={
+                        <ProtectedRoute allowedUserTypes={['delivery']}>
+                          <OnboardingPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/delivery/dashboard" element={
+                        <ProtectedRoute allowedUserTypes={['delivery']}>
+                          <DeliveryDashboard />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/delivery/settings" element={
+                        <ProtectedRoute allowedUserTypes={['delivery']}>
+                          <DeliverySettings />
+                        </ProtectedRoute>
+                      } />
                     </Routes>
                   </div>
                 </BrowserRouter>

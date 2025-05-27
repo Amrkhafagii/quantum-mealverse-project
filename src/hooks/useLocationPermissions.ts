@@ -23,10 +23,13 @@ export function useLocationPermissions() {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [recoveryAttempts, setRecoveryAttempts] = useState(0);
 
-  // Initialize permission status
+  // Initialize permission status - only run once
   useEffect(() => {
+    if (hasInitialized) return; // Prevent multiple initializations
+    
     const checkInitialStatus = async () => {
       try {
+        console.log('=== useLocationPermissions initialization ===');
         const status = await LocationPermissions.checkPermissionStatus();
         setPermissionStatus(status.location);
         setBackgroundPermissionStatus(status.backgroundLocation);
@@ -36,6 +39,7 @@ export function useLocationPermissions() {
         await checkLocationAvailability();
         
         setHasInitialized(true);
+        console.log('=== useLocationPermissions initialized ===');
       } catch (error) {
         console.error('Error checking initial permission status:', error);
         // Enter fallback mode if plugin fails
@@ -48,7 +52,7 @@ export function useLocationPermissions() {
     };
     
     checkInitialStatus();
-  }, []);
+  }, []); // Empty dependency array - only run once
   
   // Check if location services are enabled and high accuracy is available
   const checkLocationAvailability = useCallback(async () => {
@@ -248,6 +252,7 @@ export function useLocationPermissions() {
 // Add missing LocationPermissions global variable
 const LocationPermissions = {
   checkPermissionStatus: async (): Promise<LocationPermissionStatus> => {
+    console.log('Getting permission status');
     // Fallback implementation
     return { 
       location: 'prompt' as PermissionState,
@@ -255,6 +260,7 @@ const LocationPermissions = {
     };
   },
   requestPermission: async (options: { includeBackground?: boolean }): Promise<LocationPermissionStatus> => {
+    console.log('Requesting permission with options:', options);
     // Fallback implementation
     return {
       location: 'prompt' as PermissionState,
