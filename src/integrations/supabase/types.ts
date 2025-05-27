@@ -1161,6 +1161,42 @@ export type Database = {
           },
         ]
       }
+      delivery_management_logs: {
+        Row: {
+          action_type: string
+          admin_user_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          target_id: string | null
+          target_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_user_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          target_id?: string | null
+          target_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_user_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          target_id?: string | null
+          target_type?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       delivery_metrics: {
         Row: {
           acceptance_rate: number | null
@@ -1247,6 +1283,65 @@ export type Database = {
             foreignKeyName: "delivery_payment_details_delivery_user_id_fkey"
             columns: ["delivery_user_id"]
             isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_performance_alerts: {
+        Row: {
+          actual_value: number | null
+          alert_type: string
+          created_at: string | null
+          delivery_user_id: string | null
+          description: string
+          id: string
+          is_resolved: boolean | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          threshold_value: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_value?: number | null
+          alert_type: string
+          created_at?: string | null
+          delivery_user_id?: string | null
+          description: string
+          id?: string
+          is_resolved?: boolean | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          threshold_value?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_value?: number | null
+          alert_type?: string
+          created_at?: string | null
+          delivery_user_id?: string | null
+          description?: string
+          id?: string
+          is_resolved?: boolean | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          threshold_value?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_performance_alerts_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
             referencedRelation: "delivery_users"
             referencedColumns: ["id"]
           },
@@ -1538,6 +1633,48 @@ export type Database = {
           },
         ]
       }
+      delivery_zones: {
+        Row: {
+          base_delivery_fee: number | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          max_delivery_distance: number | null
+          name: string
+          per_km_fee: number | null
+          polygon: Json
+          priority_level: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_delivery_fee?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_delivery_distance?: number | null
+          name: string
+          per_km_fee?: number | null
+          polygon: Json
+          priority_level?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_delivery_fee?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_delivery_distance?: number | null
+          name?: string
+          per_km_fee?: number | null
+          polygon?: Json
+          priority_level?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dietary_tags: {
         Row: {
           description: string | null
@@ -1558,6 +1695,56 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      driver_approval_workflow: {
+        Row: {
+          approval_date: string | null
+          created_at: string | null
+          delivery_user_id: string | null
+          id: string
+          rejection_date: string | null
+          rejection_reason: string | null
+          review_notes: string | null
+          reviewer_id: string | null
+          stage: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approval_date?: string | null
+          created_at?: string | null
+          delivery_user_id?: string | null
+          id?: string
+          rejection_date?: string | null
+          rejection_reason?: string | null
+          review_notes?: string | null
+          reviewer_id?: string | null
+          stage: string
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          approval_date?: string | null
+          created_at?: string | null
+          delivery_user_id?: string | null
+          id?: string
+          rejection_date?: string | null
+          rejection_reason?: string | null
+          review_notes?: string | null
+          reviewer_id?: string | null
+          stage?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_approval_workflow_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       error_logs: {
         Row: {
@@ -7909,6 +8096,15 @@ export type Database = {
         }
         Returns: string
       }
+      check_delivery_zone: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: {
+          zone_id: string
+          zone_name: string
+          base_fee: number
+          per_km_fee: number
+        }[]
+      }
       check_expired_assignments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -8090,6 +8286,18 @@ export type Database = {
       }
       generate_order_id: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_performance_alert: {
+        Args: {
+          p_delivery_user_id: string
+          p_alert_type: string
+          p_severity: string
+          p_title: string
+          p_description: string
+          p_threshold_value?: number
+          p_actual_value?: number
+        }
         Returns: string
       }
       generate_ticket_number: {
@@ -8497,6 +8705,16 @@ export type Database = {
       jsonb: {
         Args: { "": unknown }
         Returns: Json
+      }
+      log_admin_action: {
+        Args: {
+          p_admin_user_id: string
+          p_action_type: string
+          p_target_type: string
+          p_target_id?: string
+          p_details?: Json
+        }
+        Returns: string
       }
       log_error: {
         Args: {

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { SupportTicket, SupportTicketMessage } from '@/types/delivery-features';
 import type { RealtimeChannel } from '@supabase/supabase-js';
