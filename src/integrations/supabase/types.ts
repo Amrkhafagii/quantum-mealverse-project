@@ -468,6 +468,74 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_analytics_daily: {
+        Row: {
+          average_delivery_time: number
+          average_rating: number | null
+          cancelled_deliveries: number
+          completed_deliveries: number
+          created_at: string
+          customer_ratings: Json | null
+          date: string
+          delivery_user_id: string
+          id: string
+          online_time_minutes: number
+          peak_hours_worked: number
+          total_bonuses: number
+          total_deliveries: number
+          total_distance_km: number
+          total_earnings: number
+          total_tips: number
+          updated_at: string
+        }
+        Insert: {
+          average_delivery_time?: number
+          average_rating?: number | null
+          cancelled_deliveries?: number
+          completed_deliveries?: number
+          created_at?: string
+          customer_ratings?: Json | null
+          date: string
+          delivery_user_id: string
+          id?: string
+          online_time_minutes?: number
+          peak_hours_worked?: number
+          total_bonuses?: number
+          total_deliveries?: number
+          total_distance_km?: number
+          total_earnings?: number
+          total_tips?: number
+          updated_at?: string
+        }
+        Update: {
+          average_delivery_time?: number
+          average_rating?: number | null
+          cancelled_deliveries?: number
+          completed_deliveries?: number
+          created_at?: string
+          customer_ratings?: Json | null
+          date?: string
+          delivery_user_id?: string
+          id?: string
+          online_time_minutes?: number
+          peak_hours_worked?: number
+          total_bonuses?: number
+          total_deliveries?: number
+          total_distance_km?: number
+          total_earnings?: number
+          total_tips?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_analytics_daily_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_assignment_rejections: {
         Row: {
           assignment_id: string
@@ -709,6 +777,171 @@ export type Database = {
           },
         ]
       }
+      delivery_earnings_detailed: {
+        Row: {
+          assignment_id: string | null
+          base_fee: number
+          bonus_amount: number
+          created_at: string
+          currency: string
+          delivery_user_id: string
+          distance_fee: number
+          earned_at: string
+          id: string
+          order_id: string | null
+          paid_at: string | null
+          payment_method: string
+          payout_batch_id: string | null
+          penalty_amount: number
+          status: string
+          surge_multiplier: number
+          time_fee: number
+          tip_amount: number
+          total_earnings: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          base_fee?: number
+          bonus_amount?: number
+          created_at?: string
+          currency?: string
+          delivery_user_id: string
+          distance_fee?: number
+          earned_at: string
+          id?: string
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          payout_batch_id?: string | null
+          penalty_amount?: number
+          status?: string
+          surge_multiplier?: number
+          time_fee?: number
+          tip_amount?: number
+          total_earnings: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          base_fee?: number
+          bonus_amount?: number
+          created_at?: string
+          currency?: string
+          delivery_user_id?: string
+          distance_fee?: number
+          earned_at?: string
+          id?: string
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string
+          payout_batch_id?: string | null
+          penalty_amount?: number
+          status?: string
+          surge_multiplier?: number
+          time_fee?: number
+          tip_amount?: number
+          total_earnings?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_earnings_detailed_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_earnings_detailed_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_earnings_detailed_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_financial_reports: {
+        Row: {
+          created_at: string
+          delivery_count: number
+          delivery_user_id: string
+          expenses: number
+          fuel_costs: number
+          generated_at: string
+          gross_earnings: number
+          hours_worked: number
+          id: string
+          maintenance_costs: number
+          net_earnings: number
+          performance_metrics: Json | null
+          period_end: string
+          period_start: string
+          report_type: string
+          tax_deductions: number
+          total_bonuses: number
+          total_penalties: number
+          total_tips: number
+        }
+        Insert: {
+          created_at?: string
+          delivery_count?: number
+          delivery_user_id: string
+          expenses?: number
+          fuel_costs?: number
+          generated_at?: string
+          gross_earnings?: number
+          hours_worked?: number
+          id?: string
+          maintenance_costs?: number
+          net_earnings?: number
+          performance_metrics?: Json | null
+          period_end: string
+          period_start: string
+          report_type: string
+          tax_deductions?: number
+          total_bonuses?: number
+          total_penalties?: number
+          total_tips?: number
+        }
+        Update: {
+          created_at?: string
+          delivery_count?: number
+          delivery_user_id?: string
+          expenses?: number
+          fuel_costs?: number
+          generated_at?: string
+          gross_earnings?: number
+          hours_worked?: number
+          id?: string
+          maintenance_costs?: number
+          net_earnings?: number
+          performance_metrics?: Json | null
+          period_end?: string
+          period_start?: string
+          report_type?: string
+          tax_deductions?: number
+          total_bonuses?: number
+          total_penalties?: number
+          total_tips?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_financial_reports_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_info: {
         Row: {
           address: string
@@ -928,6 +1161,74 @@ export type Database = {
           },
         ]
       }
+      delivery_performance_metrics: {
+        Row: {
+          acceptance_rate: number
+          bonuses_earned: number
+          cancellation_rate: number
+          completion_rate: number
+          created_at: string
+          customer_satisfaction: number
+          delivery_user_id: string
+          earnings_per_delivery: number
+          earnings_per_hour: number
+          efficiency_score: number
+          id: string
+          metric_date: string
+          on_time_rate: number
+          peak_hours_bonus: number
+          penalties_count: number
+          total_hours_worked: number
+          updated_at: string
+        }
+        Insert: {
+          acceptance_rate?: number
+          bonuses_earned?: number
+          cancellation_rate?: number
+          completion_rate?: number
+          created_at?: string
+          customer_satisfaction?: number
+          delivery_user_id: string
+          earnings_per_delivery?: number
+          earnings_per_hour?: number
+          efficiency_score?: number
+          id?: string
+          metric_date: string
+          on_time_rate?: number
+          peak_hours_bonus?: number
+          penalties_count?: number
+          total_hours_worked?: number
+          updated_at?: string
+        }
+        Update: {
+          acceptance_rate?: number
+          bonuses_earned?: number
+          cancellation_rate?: number
+          completion_rate?: number
+          created_at?: string
+          customer_satisfaction?: number
+          delivery_user_id?: string
+          earnings_per_delivery?: number
+          earnings_per_hour?: number
+          efficiency_score?: number
+          id?: string
+          metric_date?: string
+          on_time_rate?: number
+          peak_hours_bonus?: number
+          penalties_count?: number
+          total_hours_worked?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_performance_metrics_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_users: {
         Row: {
           average_rating: number | null
@@ -1016,6 +1317,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_vehicles_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_weekly_summaries: {
+        Row: {
+          average_hourly_rate: number
+          best_day_date: string | null
+          best_day_earnings: number
+          created_at: string
+          delivery_user_id: string
+          efficiency_rating: number
+          goal_achievement_percentage: number
+          id: string
+          total_bonuses: number
+          total_deliveries: number
+          total_earnings: number
+          total_hours: number
+          total_tips: number
+          updated_at: string
+          week_end_date: string
+          week_start_date: string
+        }
+        Insert: {
+          average_hourly_rate?: number
+          best_day_date?: string | null
+          best_day_earnings?: number
+          created_at?: string
+          delivery_user_id: string
+          efficiency_rating?: number
+          goal_achievement_percentage?: number
+          id?: string
+          total_bonuses?: number
+          total_deliveries?: number
+          total_earnings?: number
+          total_hours?: number
+          total_tips?: number
+          updated_at?: string
+          week_end_date: string
+          week_start_date: string
+        }
+        Update: {
+          average_hourly_rate?: number
+          best_day_date?: string | null
+          best_day_earnings?: number
+          created_at?: string
+          delivery_user_id?: string
+          efficiency_rating?: number
+          goal_achievement_percentage?: number
+          id?: string
+          total_bonuses?: number
+          total_deliveries?: number
+          total_earnings?: number
+          total_hours?: number
+          total_tips?: number
+          updated_at?: string
+          week_end_date?: string
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_weekly_summaries_delivery_user_id_fkey"
             columns: ["delivery_user_id"]
             isOneToOne: false
             referencedRelation: "delivery_users"
@@ -7124,6 +7490,10 @@ export type Database = {
           commission_rate: number
         }[]
       }
+      calculate_delivery_daily_analytics: {
+        Args: { p_delivery_user_id: string; p_date: string }
+        Returns: undefined
+      }
       calculate_exercise_progress: {
         Args: { p_user_id: string; p_workout_log_id: string }
         Returns: undefined
@@ -7327,6 +7697,10 @@ export type Database = {
       generate_order_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      generate_weekly_summary: {
+        Args: { p_delivery_user_id: string; p_week_start: string }
+        Returns: undefined
       }
       generate_workout_sessions: {
         Args: {
