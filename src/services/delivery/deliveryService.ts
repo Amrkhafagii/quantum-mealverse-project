@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   DeliveryUser, 
@@ -306,22 +307,6 @@ export const getPaymentDetailsByDeliveryUserId = async (deliveryUserId: string):
     console.error('Error in getPaymentDetailsByDeliveryUserId:', error);
     throw error;
   }
-};
-
-// Export all the existing functions and add the deliveryService object
-export {
-  createDeliveryUser,
-  getDeliveryUserByUserId,
-  updateDeliveryUserStatus,
-  updateDeliveryUserProfile,
-  saveVehicleInfo,
-  getVehicleByDeliveryUserId,
-  uploadDeliveryDocument,
-  getDocumentsByDeliveryUserId,
-  saveAvailability,
-  getAvailabilityByDeliveryUserId,
-  savePaymentDetails,
-  getPaymentDetailsByDeliveryUserId
 };
 
 // Create a service object for consistency with other services
