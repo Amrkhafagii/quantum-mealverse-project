@@ -11,11 +11,13 @@ export const useDeliveryUser = (userId: string | undefined) => {
   const { toast } = useToast();
 
   const fetchDeliveryUser = async () => {
-    console.log('useDeliveryUser - fetchDeliveryUser called with userId:', userId);
+    console.log('=== useDeliveryUser fetchDeliveryUser ===');
+    console.log('UserId provided:', userId);
     
     if (!userId) {
-      console.log('useDeliveryUser - No userId provided');
+      console.log('No userId provided, setting loading to false');
       setLoading(false);
+      setDeliveryUser(null);
       return;
     }
 
@@ -23,31 +25,38 @@ export const useDeliveryUser = (userId: string | undefined) => {
       setLoading(true);
       setError(null);
       
-      console.log('useDeliveryUser - Fetching delivery user for userId:', userId);
+      console.log('Fetching delivery user for userId:', userId);
       const userData = await getDeliveryUserByUserId(userId);
-      console.log('useDeliveryUser - Received delivery user data:', userData);
+      console.log('Delivery user data received:', userData);
       
       setDeliveryUser(userData);
     } catch (err) {
-      console.error('useDeliveryUser - Error fetching delivery user:', err);
+      console.error('Error fetching delivery user:', err);
       setError(err as Error);
-      toast({
-        title: "Error",
-        description: "Failed to load your delivery profile",
-        variant: "destructive"
-      });
+      setDeliveryUser(null);
+      
+      // Only show toast for actual errors, not missing profiles
+      if (err && (err as any).message !== 'Delivery user not found') {
+        toast({
+          title: "Error",
+          description: "Failed to load your delivery profile",
+          variant: "destructive"
+        });
+      }
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('useDeliveryUser - useEffect triggered with userId:', userId);
+    console.log('=== useDeliveryUser useEffect ===');
+    console.log('UserId changed to:', userId);
     fetchDeliveryUser();
-  }, [userId]);
+  }, [userId]); // Remove toast dependency to prevent loops
 
   const refreshDeliveryUser = () => {
-    console.log('useDeliveryUser - refreshDeliveryUser called');
+    console.log('refreshDeliveryUser called');
     fetchDeliveryUser();
   };
 
