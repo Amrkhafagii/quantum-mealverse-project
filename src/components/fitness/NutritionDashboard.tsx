@@ -5,11 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Droplets, Utensils, ShoppingCart, Shuffle } from 'lucide-react';
+import { Droplets, Utensils, ShoppingCart } from 'lucide-react';
 import { TDEEResult } from './TDEECalculator';
 import { useNutritionCart } from '@/contexts/NutritionCartContext';
 import { generateNutritionMealPlan } from '@/services/mealPlan/nutritionMealGenerationService';
-import { shuffleNutritionPlan } from '@/services/mealPlan/nutritionShuffleService';
 import { useToast } from '@/hooks/use-toast';
 import NutritionCartDisplay from './nutrition/NutritionCartDisplay';
 import CartConversionModal from './nutrition/CartConversionModal';
@@ -25,7 +24,6 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [showConversionModal, setShowConversionModal] = useState(false);
-  const [isShuffling, setIsShuffling] = useState(false);
   const { 
     items, 
     totalCalories, 
@@ -73,46 +71,6 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
         description: "Please try again later.",
         variant: "destructive"
       });
-    }
-  };
-
-  const handleShuffleMealPlan = async () => {
-    if (items.length === 0) {
-      toast({
-        title: "No items to shuffle",
-        description: "Generate a meal plan first before shuffling.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsShuffling(true);
-    try {
-      // Clear existing items
-      await clearCart();
-      
-      // Generate shuffled nutrition meal plan items
-      const shuffledItems = shuffleNutritionPlan(items, calculationResult);
-      
-      // Add each shuffled item to the nutrition cart
-      for (const item of shuffledItems) {
-        await addItem(item);
-      }
-      
-      toast({
-        title: "Meal plan shuffled!",
-        description: `Generated ${shuffledItems.length} new nutrition items for variety.`,
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error shuffling meal plan:', error);
-      toast({
-        title: "Error shuffling meal plan",
-        description: "Please try again later.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsShuffling(false);
     }
   };
 
@@ -200,17 +158,6 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                   >
                     Generate Meal Plan
                   </Button>
-                  {items.length > 0 && (
-                    <Button 
-                      onClick={handleShuffleMealPlan}
-                      disabled={isShuffling}
-                      variant="outline"
-                      className="border-quantum-cyan/30 text-quantum-cyan hover:bg-quantum-cyan/10"
-                    >
-                      <Shuffle className="h-4 w-4 mr-2" />
-                      {isShuffling ? "Shuffling..." : "Shuffle Plan"}
-                    </Button>
-                  )}
                 </div>
               </CardTitle>
               <p className="text-gray-400">

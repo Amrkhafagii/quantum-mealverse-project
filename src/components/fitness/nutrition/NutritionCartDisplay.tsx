@@ -7,15 +7,10 @@ import { useNutritionCart } from '@/contexts/NutritionCartContext';
 import { Plus, Minus, Trash2, Shuffle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { shuffleSingleItem } from '@/services/mealPlan/nutritionShuffleService';
-import MacroSummary from './MacroSummary';
 
 const NutritionCartDisplay: React.FC = () => {
   const { 
     items, 
-    totalCalories, 
-    totalProtein, 
-    totalCarbs, 
-    totalFat,
     removeItem, 
     updateQuantity,
     addItem,
@@ -83,17 +78,6 @@ const NutritionCartDisplay: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Macro Summary - Fixed props to match MacroSummary interface */}
-      <MacroSummary 
-        totalCalories={totalCalories}
-        targetProtein={0}
-        targetCarbs={0}
-        targetFat={0}
-        actualProtein={totalProtein}
-        actualCarbs={totalCarbs}
-        actualFat={totalFat}
-      />
-
       {/* Clear Cart Button */}
       {items.length > 0 && (
         <div className="flex justify-end">
