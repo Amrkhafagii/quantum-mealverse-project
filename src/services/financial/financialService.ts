@@ -22,7 +22,10 @@ export class FinancialService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      type: item.type as PaymentMethod['type']
+    }));
   }
 
   async addPaymentMethod(paymentMethod: Omit<PaymentMethod, 'id' | 'created_at' | 'updated_at'>): Promise<PaymentMethod> {
@@ -33,7 +36,10 @@ export class FinancialService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      type: data.type as PaymentMethod['type']
+    };
   }
 
   async setDefaultPaymentMethod(paymentMethodId: string, userId: string): Promise<void> {
@@ -87,7 +93,11 @@ export class FinancialService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      transaction_type: item.transaction_type as FinancialTransaction['transaction_type'],
+      status: item.status as FinancialTransaction['status']
+    }));
   }
 
   async createTransaction(transaction: Omit<FinancialTransaction, 'id' | 'created_at' | 'updated_at'>): Promise<FinancialTransaction> {
@@ -98,7 +108,11 @@ export class FinancialService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      transaction_type: data.transaction_type as FinancialTransaction['transaction_type'],
+      status: data.status as FinancialTransaction['status']
+    };
   }
 
   // Restaurant Earnings
@@ -121,7 +135,10 @@ export class FinancialService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as RestaurantEarnings['status']
+    }));
   }
 
   async getEarningsSummary(restaurantId: string): Promise<{
@@ -180,7 +197,11 @@ export class FinancialService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      payout_method: item.payout_method as Payout['payout_method'],
+      status: item.status as Payout['status']
+    }));
   }
 
   async createPayout(payout: Omit<Payout, 'id' | 'created_at' | 'updated_at'>): Promise<Payout> {
@@ -191,7 +212,11 @@ export class FinancialService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      payout_method: data.payout_method as Payout['payout_method'],
+      status: data.status as Payout['status']
+    };
   }
 
   async requestPayout(restaurantId: string): Promise<Payout> {
@@ -316,7 +341,10 @@ export class FinancialService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      report_type: data.report_type as FinancialReport['report_type']
+    };
   }
 
   async getFinancialReports(restaurantId: string, limit = 10): Promise<FinancialReport[]> {
@@ -328,7 +356,10 @@ export class FinancialService {
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      report_type: item.report_type as FinancialReport['report_type']
+    }));
   }
 
   // Bank Accounts
@@ -344,7 +375,11 @@ export class FinancialService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      account_type: item.account_type as BankAccount['account_type'],
+      verification_status: item.verification_status as BankAccount['verification_status']
+    }));
   }
 
   async addBankAccount(bankAccount: Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>): Promise<BankAccount> {
@@ -355,7 +390,11 @@ export class FinancialService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      account_type: data.account_type as BankAccount['account_type'],
+      verification_status: data.verification_status as BankAccount['verification_status']
+    };
   }
 
   async setDefaultBankAccount(bankAccountId: string, restaurantId?: string, deliveryUserId?: string): Promise<void> {
