@@ -307,3 +307,35 @@ export const getPaymentDetailsByDeliveryUserId = async (deliveryUserId: string):
     throw error;
   }
 };
+
+// Export all the existing functions and add the deliveryService object
+export {
+  createDeliveryUser,
+  getDeliveryUserByUserId,
+  updateDeliveryUserStatus,
+  updateDeliveryUserProfile,
+  saveVehicleInfo,
+  getVehicleByDeliveryUserId,
+  uploadDeliveryDocument,
+  getDocumentsByDeliveryUserId,
+  saveAvailability,
+  getAvailabilityByDeliveryUserId,
+  savePaymentDetails,
+  getPaymentDetailsByDeliveryUserId
+};
+
+// Create a service object for consistency with other services
+export const deliveryService = {
+  createDeliveryUser,
+  getDeliveryUserByUserId,
+  updateDeliveryUserStatus,
+  updateDeliveryUserProfile,
+  saveVehicleInfo,
+  getVehicleByDeliveryUserId,
+  uploadDeliveryDocument,
+  getDocumentsByDeliveryUserId,
+  saveAvailability,
+  getAvailabilityByDeliveryUserId,
+  savePaymentDetails,
+  getPaymentDetailsByDeliveryUserId
+};

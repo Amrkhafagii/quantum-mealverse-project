@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { DeliveryLocationControls } from '@/components/delivery/DeliveryLocationControls';
-import { DeliveryNotificationPreferences } from '@/components/delivery/settings/DeliveryNotificationPreferences';
+import { DeliveryNotificationSettings } from '@/components/delivery/settings/DeliveryNotificationPreferences';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveryService } from '@/services/delivery/deliveryService';
 
@@ -194,7 +194,7 @@ const DeliverySettings = () => {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <DeliveryNotificationPreferences deliveryUserId={deliveryUser.id} />
+          <DeliveryNotificationSettings deliveryUserId={deliveryUser.id} />
         </TabsContent>
       </Tabs>
     </div>
