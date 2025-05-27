@@ -1,4 +1,6 @@
 
+import { RestaurantAssignmentDetail } from './restaurantAssignment';
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -62,6 +64,8 @@ export interface MealPricingResult {
   foods: MealFoodWithPricing[];
   restaurant_id: string;
   restaurant_name: string;
+  can_prepare_meal?: boolean;
+  assignment_details?: RestaurantAssignmentDetail;
 }
 
 export interface DynamicPricing {

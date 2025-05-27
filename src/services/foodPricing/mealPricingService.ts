@@ -1,8 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MealPricingResult, MealFoodWithPricing } from '@/types/foodPricing';
 import { Meal, MealFood } from '@/types/food';
 import { FoodItemService } from './foodItemService';
+import { RestaurantAssignmentService } from '@/services/restaurantAssignment/restaurantAssignmentService';
+import { RestaurantAssignmentOptions } from '@/types/restaurantAssignment';
 
 export class MealPricingService {
   /**
@@ -12,6 +13,13 @@ export class MealPricingService {
     meal: Meal,
     restaurantId: string
   ): Promise<MealPricingResult> {
+    // First check if the restaurant can actually prepare this meal
+    const canPrepare = await RestaurantAssignmentService.checkRestaurantMealCapability(restaurantId, meal);
+    
+    if (!canPrepare) {
+      console.warn(`Restaurant ${restaurantId} cannot prepare meal ${meal.name}`);
+    }
+
     const foodsWithPricing: MealFoodWithPricing[] = [];
     let totalPrice = 0;
     let restaurantName = '';
@@ -78,8 +86,37 @@ export class MealPricingService {
       total_price: Math.round(totalPrice * 100) / 100, // Round to 2 decimal places
       foods: foodsWithPricing,
       restaurant_id: restaurantId,
-      restaurant_name: restaurantName
+      restaurant_name: restaurantName,
+      can_prepare_meal: canPrepare
     };
+  }
+
+  /**
+   * Calculate pricing using restaurant assignment logic
+   */
+  static async calculateMealPriceWithAssignment(
+    meal: Meal,
+    options: RestaurantAssignmentOptions = {}
+  ): Promise<MealPricingResult[]> {
+    try {
+      // Get restaurant assignments for this meal
+      const assignments = await RestaurantAssignmentService.assignRestaurantsToMeal(meal, options);
+      
+      const results: MealPricingResult[] = [];
+      
+      for (const assignment of assignments) {
+        const pricing = await this.calculateMealPrice(meal, assignment.restaurant_id);
+        results.push({
+          ...pricing,
+          assignment_details: assignment
+        });
+      }
+      
+      return results;
+    } catch (error) {
+      console.error('Error calculating meal price with assignment:', error);
+      throw error;
+    }
   }
 
   /**

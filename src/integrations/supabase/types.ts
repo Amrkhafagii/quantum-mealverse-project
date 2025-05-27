@@ -1669,6 +1669,36 @@ export type Database = {
           },
         ]
       }
+      meal_plan_restaurant_assignments: {
+        Row: {
+          assignment_strategy: string
+          created_at: string | null
+          id: string
+          meal_plan_id: string
+          restaurant_assignments: Json
+          total_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_strategy?: string
+          created_at?: string | null
+          id?: string
+          meal_plan_id: string
+          restaurant_assignments: Json
+          total_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_strategy?: string
+          created_at?: string | null
+          id?: string
+          meal_plan_id?: string
+          restaurant_assignments?: Json
+          total_price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       meal_ratings: {
         Row: {
           avg_rating: number
@@ -2367,6 +2397,57 @@ export type Database = {
           },
           {
             foreignKeyName: "restaurant_assignments_restaurant_id_restaurants_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_food_capabilities: {
+        Row: {
+          created_at: string | null
+          food_item_id: string
+          id: string
+          is_available: boolean
+          maximum_quantity_grams: number | null
+          minimum_quantity_grams: number | null
+          preparation_time_minutes: number | null
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          food_item_id: string
+          id?: string
+          is_available?: boolean
+          maximum_quantity_grams?: number | null
+          minimum_quantity_grams?: number | null
+          preparation_time_minutes?: number | null
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          food_item_id?: string
+          id?: string
+          is_available?: boolean
+          maximum_quantity_grams?: number | null
+          minimum_quantity_grams?: number | null
+          preparation_time_minutes?: number | null
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_food_capabilities_food_item_id_fkey"
+            columns: ["food_item_id"]
+            isOneToOne: false
+            referencedRelation: "food_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_food_capabilities_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -4440,6 +4521,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      check_restaurant_meal_capability: {
+        Args: { p_restaurant_id: string; p_food_items: Json }
+        Returns: boolean
+      }
       check_valid_status_transition: {
         Args: { old_status: string; new_status: string }
         Returns: boolean
@@ -4451,6 +4536,14 @@ export type Database = {
       create_app_config_table: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      create_multi_restaurant_assignment: {
+        Args: {
+          p_food_items: Json
+          p_customer_lat?: number
+          p_customer_lng?: number
+        }
+        Returns: Json
       }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
@@ -4482,6 +4575,21 @@ export type Database = {
       equals: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
+      }
+      find_capable_restaurants_for_meal: {
+        Args: {
+          p_food_items: Json
+          p_max_distance_km?: number
+          p_customer_lat?: number
+          p_customer_lng?: number
+        }
+        Returns: {
+          restaurant_id: string
+          restaurant_name: string
+          distance_km: number
+          estimated_prep_time: number
+          can_prepare_complete_meal: boolean
+        }[]
       }
       find_nearby_delivery_assignments: {
         Args: {
