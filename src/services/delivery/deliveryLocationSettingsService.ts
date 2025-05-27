@@ -15,7 +15,17 @@ class DeliveryLocationSettingsService {
         throw error;
       }
 
-      return data;
+      // Convert the data to match our TypeScript interface
+      if (data) {
+        return {
+          ...data,
+          custom_geofence_zones: Array.isArray(data.custom_geofence_zones) 
+            ? data.custom_geofence_zones 
+            : []
+        } as DeliveryLocationSettings;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error in getLocationSettings:', error);
       return null;
@@ -27,9 +37,17 @@ class DeliveryLocationSettingsService {
     settings: DeliveryLocationSettingsUpdate
   ): Promise<DeliveryLocationSettings | null> {
     try {
+      // Convert GeofenceZone[] to Json format for database
+      const dbSettings = {
+        ...settings,
+        custom_geofence_zones: settings.custom_geofence_zones 
+          ? JSON.stringify(settings.custom_geofence_zones)
+          : undefined
+      };
+
       const { data, error } = await supabase
         .from('delivery_location_settings')
-        .update(settings)
+        .update(dbSettings)
         .eq('delivery_user_id', deliveryUserId)
         .select()
         .single();
@@ -39,7 +57,19 @@ class DeliveryLocationSettingsService {
         throw error;
       }
 
-      return data;
+      // Convert back to TypeScript interface
+      if (data) {
+        return {
+          ...data,
+          custom_geofence_zones: Array.isArray(data.custom_geofence_zones) 
+            ? data.custom_geofence_zones 
+            : typeof data.custom_geofence_zones === 'string'
+            ? JSON.parse(data.custom_geofence_zones)
+            : []
+        } as DeliveryLocationSettings;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error in updateLocationSettings:', error);
       return null;
