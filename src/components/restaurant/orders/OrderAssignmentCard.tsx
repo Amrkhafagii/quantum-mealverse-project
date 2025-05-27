@@ -11,6 +11,7 @@ interface OrderAssignmentCardProps {
   assignment: {
     id: string;
     order_id: string;
+    restaurant_id: string;
     expires_at: string;
     orders: {
       id: string;

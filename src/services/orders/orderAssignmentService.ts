@@ -99,14 +99,6 @@ export const orderAssignmentService = {
         return false;
       }
 
-      // Record in history
-      await supabase.from('restaurant_assignment_history').insert({
-        order_id: assignment.order_id,
-        restaurant_id: restaurantId,
-        status: action === 'accept' ? 'accepted' : 'rejected',
-        notes
-      });
-
       if (action === 'accept') {
         // Cancel other pending assignments
         await supabase
@@ -193,15 +185,15 @@ export const orderAssignmentService = {
   /**
    * Get restaurant assignments for an order
    */
-  async getOrderAssignments(orderId: string): Promise<OrderAssignment[]> {
+  async getOrderAssignments(orderId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('restaurant_assignments')
       .select(`
         *,
-        restaurants(name, address)
+        restaurants!restaurant_assignments_restaurant_id_fkey(name, address)
       `)
       .eq('order_id', orderId)
-      .order('assigned_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching assignments:', error);
@@ -214,12 +206,12 @@ export const orderAssignmentService = {
   /**
    * Get restaurant's pending assignments
    */
-  async getRestaurantPendingAssignments(restaurantId: string): Promise<OrderAssignment[]> {
+  async getRestaurantPendingAssignments(restaurantId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('restaurant_assignments')
       .select(`
         *,
-        orders(
+        orders!restaurant_assignments_order_id_fkey(
           id,
           customer_name,
           customer_phone,
@@ -232,7 +224,7 @@ export const orderAssignmentService = {
       .eq('restaurant_id', restaurantId)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
-      .order('assigned_at', { ascending: true });
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Error fetching pending assignments:', error);
@@ -243,12 +235,35 @@ export const orderAssignmentService = {
   },
 
   /**
-   * Handle expired assignments
+   * Handle expired assignments (simplified version without RPC call)
    */
   async handleExpiredAssignments(): Promise<number> {
     try {
-      const { data } = await supabase.rpc('handle_expired_assignments');
-      return data || 0;
+      const now = new Date().toISOString();
+      
+      // Find expired assignments
+      const { data: expiredAssignments } = await supabase
+        .from('restaurant_assignments')
+        .select('id, order_id')
+        .eq('status', 'pending')
+        .lt('expires_at', now);
+
+      if (!expiredAssignments?.length) {
+        return 0;
+      }
+
+      // Update expired assignments
+      const { error } = await supabase
+        .from('restaurant_assignments')
+        .update({ status: 'expired' })
+        .in('id', expiredAssignments.map(a => a.id));
+
+      if (error) {
+        console.error('Error updating expired assignments:', error);
+        return 0;
+      }
+
+      return expiredAssignments.length;
     } catch (error) {
       console.error('Error handling expired assignments:', error);
       return 0;
