@@ -316,6 +316,53 @@ export type Database = {
           },
         ]
       }
+      customer_communications: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          media_urls: string[] | null
+          message_type: string
+          order_id: string
+          read_at: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          media_urls?: string[] | null
+          message_type: string
+          order_id: string
+          read_at?: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          media_urls?: string[] | null
+          message_type?: string
+          order_id?: string
+          read_at?: string | null
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_communications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_logs: {
         Row: {
           affected_rows: number | null
@@ -672,6 +719,50 @@ export type Database = {
             columns: ["delivery_user_id"]
             isOneToOne: false
             referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_confirmations: {
+        Row: {
+          confirmation_type: string
+          confirmed_at: string | null
+          confirmed_by: string
+          delivery_assignment_id: string
+          id: string
+          location_latitude: number | null
+          location_longitude: number | null
+          notes: string | null
+          photo_urls: string[]
+        }
+        Insert: {
+          confirmation_type: string
+          confirmed_at?: string | null
+          confirmed_by: string
+          delivery_assignment_id: string
+          id?: string
+          location_latitude?: number | null
+          location_longitude?: number | null
+          notes?: string | null
+          photo_urls: string[]
+        }
+        Update: {
+          confirmation_type?: string
+          confirmed_at?: string | null
+          confirmed_by?: string
+          delivery_assignment_id?: string
+          id?: string
+          location_latitude?: number | null
+          location_longitude?: number | null
+          notes?: string | null
+          photo_urls?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_confirmations_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
             referencedColumns: ["id"]
           },
         ]
@@ -1225,6 +1316,64 @@ export type Database = {
             columns: ["delivery_user_id"]
             isOneToOne: false
             referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          customer_id: string
+          delivery_assignment_id: string
+          delivery_user_id: string
+          id: string
+          order_id: string
+          rating: number
+          rating_categories: Json | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          customer_id: string
+          delivery_assignment_id: string
+          delivery_user_id: string
+          id?: string
+          order_id: string
+          rating: number
+          rating_categories?: Json | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          customer_id?: string
+          delivery_assignment_id?: string
+          delivery_user_id?: string
+          id?: string
+          order_id?: string
+          rating?: number
+          rating_categories?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_ratings_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_ratings_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_ratings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -3661,6 +3810,61 @@ export type Database = {
           },
         ]
       }
+      order_events: {
+        Row: {
+          created_at: string | null
+          delivery_user_id: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          order_id: string
+          restaurant_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_user_id?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          order_id: string
+          restaurant_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_user_id?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          order_id?: string
+          restaurant_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_events_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_history: {
         Row: {
           changed_by: string | null
@@ -4322,6 +4526,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_notification_tokens: {
+        Row: {
+          created_at: string | null
+          device_id: string | null
+          id: string
+          is_active: boolean | null
+          platform: string
+          token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          data: Json | null
+          delivered_at: string | null
+          id: string
+          notification_type: string
+          sent_at: string | null
+          status: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          data?: Json | null
+          delivered_at?: string | null
+          id?: string
+          notification_type: string
+          sent_at?: string | null
+          status?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          data?: Json | null
+          delivered_at?: string | null
+          id?: string
+          notification_type?: string
+          sent_at?: string | null
+          status?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       recommendation_feedback: {
         Row: {
@@ -5741,6 +6017,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      support_ticket_messages: {
+        Row: {
+          attachments: string[] | null
+          created_at: string | null
+          id: string
+          is_internal: boolean | null
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: string[] | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: string[] | null
+          created_at?: string | null
+          id?: string
+          is_internal?: boolean | null
+          message?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          attachments: string[] | null
+          category: string
+          created_at: string | null
+          delivery_assignment_id: string | null
+          description: string
+          id: string
+          order_id: string | null
+          priority: string | null
+          resolved_at: string | null
+          status: string | null
+          subject: string
+          ticket_number: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          attachments?: string[] | null
+          category: string
+          created_at?: string | null
+          delivery_assignment_id?: string | null
+          description: string
+          id?: string
+          order_id?: string | null
+          priority?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          subject: string
+          ticket_number: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          attachments?: string[] | null
+          category?: string
+          created_at?: string | null
+          delivery_assignment_id?: string | null
+          description?: string
+          id?: string
+          order_id?: string | null
+          priority?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          subject?: string
+          ticket_number?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {
@@ -7554,6 +7937,17 @@ export type Database = {
         }
         Returns: Json
       }
+      create_order_event: {
+        Args: {
+          p_order_id: string
+          p_event_type: string
+          p_event_data?: Json
+          p_user_id?: string
+          p_delivery_user_id?: string
+          p_restaurant_id?: string
+        }
+        Returns: string
+      }
       create_restaurant_profile: {
         Args: {
           p_user_id: string
@@ -7695,6 +8089,10 @@ export type Database = {
         Returns: Json
       }
       generate_order_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_ticket_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
