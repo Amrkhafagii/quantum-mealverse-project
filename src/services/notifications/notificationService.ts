@@ -7,7 +7,7 @@ export class NotificationService {
   async getRestaurantNotifications(restaurantId: string, limit = 50): Promise<OrderNotification[]> {
     const { data, error } = await supabase
       .from('order_notifications')
-      .select('*, metadata')
+      .select('*')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -16,7 +16,7 @@ export class NotificationService {
     return (data || []).map(notification => ({
       ...notification,
       notification_type: notification.notification_type as OrderNotification['notification_type'],
-      metadata: notification.metadata || {},
+      metadata: {}, // Default empty metadata since column doesn't exist
       user_id: notification.user_id || '',
       restaurant_id: notification.restaurant_id || undefined,
       is_read: notification.is_read || false,
@@ -65,20 +65,20 @@ export class NotificationService {
 
   // Create a new notification
   async createNotification(notification: Omit<OrderNotification, 'id' | 'created_at'>): Promise<OrderNotification> {
+    // Remove metadata from the notification since the column doesn't exist
+    const { metadata, ...notificationData } = notification;
+    
     const { data, error } = await supabase
       .from('order_notifications')
-      .insert({
-        ...notification,
-        metadata: notification.metadata || {}
-      })
-      .select('*, metadata')
+      .insert(notificationData)
+      .select('*')
       .single();
 
     if (error) throw error;
     return {
       ...data,
       notification_type: data.notification_type as OrderNotification['notification_type'],
-      metadata: data.metadata || {},
+      metadata: {}, // Default empty metadata
       user_id: data.user_id || '',
       restaurant_id: data.restaurant_id || undefined,
       is_read: data.is_read || false,
@@ -106,7 +106,7 @@ export class NotificationService {
           callback({
             ...notification,
             notification_type: notification.notification_type as OrderNotification['notification_type'],
-            metadata: notification.metadata || {},
+            metadata: {}, // Default empty metadata
             user_id: notification.user_id || '',
             restaurant_id: notification.restaurant_id || undefined,
             is_read: notification.is_read || false,
