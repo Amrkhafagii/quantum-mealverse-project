@@ -120,7 +120,7 @@ class PrivacyDataService {
         const transformedData: ThirdPartySharePreferences = {
           ...data,
           location_sharing_partners: Array.isArray(data.location_sharing_partners) 
-            ? data.location_sharing_partners 
+            ? (data.location_sharing_partners as string[])
             : []
         };
         return transformedData;
@@ -157,7 +157,7 @@ class PrivacyDataService {
         const transformedData: ThirdPartySharePreferences = {
           ...data,
           location_sharing_partners: Array.isArray(data.location_sharing_partners) 
-            ? data.location_sharing_partners 
+            ? (data.location_sharing_partners as string[])
             : []
         };
         return transformedData;
@@ -229,7 +229,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data as LocationExportData;
+      return data as unknown as LocationExportData;
     } catch (error) {
       console.error('Error in exportLocationData:', error);
       return null;
