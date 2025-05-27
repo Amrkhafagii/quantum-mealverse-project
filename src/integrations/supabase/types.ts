@@ -1631,6 +1631,41 @@ export type Database = {
           },
         ]
       }
+      meal_ingredients: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_name: string
+          meal_id: string | null
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_name: string
+          meal_id?: string | null
+          quantity: number
+          unit?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_name?: string
+          meal_id?: string | null
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_ingredients_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_plan_cart_items: {
         Row: {
           created_at: string | null
@@ -1910,6 +1945,60 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      meal_preparation_estimates: {
+        Row: {
+          base_prep_time: number
+          complexity_multiplier: number
+          cooking_time: number
+          created_at: string | null
+          id: string
+          ingredient_prep_time: number
+          meal_id: string | null
+          plating_time: number
+          restaurant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_prep_time?: number
+          complexity_multiplier?: number
+          cooking_time?: number
+          created_at?: string | null
+          id?: string
+          ingredient_prep_time?: number
+          meal_id?: string | null
+          plating_time?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_prep_time?: number
+          complexity_multiplier?: number
+          cooking_time?: number
+          created_at?: string | null
+          id?: string
+          ingredient_prep_time?: number
+          meal_id?: string | null
+          plating_time?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_preparation_estimates_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_preparation_estimates_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meal_preparation_progress: {
         Row: {
@@ -2797,6 +2886,65 @@ export type Database = {
           },
           {
             foreignKeyName: "restaurant_food_capabilities_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_ingredient_inventory: {
+        Row: {
+          batch_number: string | null
+          cost_per_unit: number
+          created_at: string | null
+          current_stock: number
+          id: string
+          ingredient_name: string
+          is_available: boolean
+          last_restocked: string | null
+          minimum_stock: number
+          quality_grade: string | null
+          restaurant_id: string | null
+          storage_location: string | null
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          batch_number?: string | null
+          cost_per_unit?: number
+          created_at?: string | null
+          current_stock?: number
+          id?: string
+          ingredient_name: string
+          is_available?: boolean
+          last_restocked?: string | null
+          minimum_stock?: number
+          quality_grade?: string | null
+          restaurant_id?: string | null
+          storage_location?: string | null
+          unit?: string
+          updated_at?: string | null
+        }
+        Update: {
+          batch_number?: string | null
+          cost_per_unit?: number
+          created_at?: string | null
+          current_stock?: number
+          id?: string
+          ingredient_name?: string
+          is_available?: boolean
+          last_restocked?: string | null
+          minimum_stock?: number
+          quality_grade?: string | null
+          restaurant_id?: string | null
+          storage_location?: string | null
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_ingredient_inventory_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"

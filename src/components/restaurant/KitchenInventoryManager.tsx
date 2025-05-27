@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Package, AlertTriangle, Plus, Minus, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface InventoryItem {
   id: string;
@@ -32,6 +33,7 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const fetchInventory = async () => {
     try {
@@ -79,9 +81,19 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
           ? { ...item, current_stock: Math.max(0, newStock) }
           : item
       ));
+
+      toast({
+        title: "Success",
+        description: "Stock updated successfully",
+      });
     } catch (err) {
       console.error('Error updating stock:', err);
       setError('Failed to update stock');
+      toast({
+        title: "Error",
+        description: "Failed to update stock",
+        variant: "destructive",
+      });
     } finally {
       setUpdating(null);
     }
@@ -109,9 +121,19 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
           ? { ...item, is_available: isAvailable }
           : item
       ));
+
+      toast({
+        title: "Success",
+        description: "Availability updated successfully",
+      });
     } catch (err) {
       console.error('Error updating availability:', err);
       setError('Failed to update availability');
+      toast({
+        title: "Error",
+        description: "Failed to update availability",
+        variant: "destructive",
+      });
     } finally {
       setUpdating(null);
     }
@@ -137,7 +159,6 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
   }
 
   const lowStockItems = inventory.filter(item => item.current_stock <= item.minimum_stock);
-  const unavailableItems = inventory.filter(item => !item.is_available);
 
   return (
     <div className="space-y-6">
