@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,17 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     clearCart 
   } = useNutritionCart();
   const { toast } = useToast();
+
+  // Calculate daily hydration target based on activity level and weight
+  const calculateHydrationTarget = () => {
+    const baseWater = calculationResult.weight * 35; // 35ml per kg
+    const activityMultiplier = calculationResult.activityLevel === 'very_active' ? 1.3 :
+                               calculationResult.activityLevel === 'active' ? 1.2 :
+                               calculationResult.activityLevel === 'moderately_active' ? 1.1 : 1.0;
+    return Math.round(baseWater * activityMultiplier);
+  };
+
+  const hydrationTarget = calculateHydrationTarget();
 
   const handleGenerateMealPlan = async () => {
     try {
@@ -196,7 +208,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <div className="flex items-center justify-center p-8">
                 <div className="text-center">
                   <div className="text-4xl font-bold text-blue-400 mb-2">
-                    {mealPlan.hydrationTarget} ml
+                    {hydrationTarget} ml
                   </div>
                   <p className="text-gray-400">
                     Recommended daily water intake based on your activity level and goals

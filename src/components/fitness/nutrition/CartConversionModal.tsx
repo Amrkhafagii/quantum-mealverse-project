@@ -2,14 +2,13 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Check, X } from 'lucide-react';
 import { useNutritionCart } from '@/contexts/NutritionCartContext';
 import { useCart } from '@/contexts/CartContext';
 import { CartConversionService } from '@/services/cart/cartConversionService';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { CheckCircle, XCircle, ArrowRight, ShoppingCart } from 'lucide-react';
 
 interface CartConversionModalProps {
   open: boolean;
@@ -17,23 +16,39 @@ interface CartConversionModalProps {
 }
 
 const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenChange }) => {
+  const { items: nutritionItems } = useNutritionCart();
+  const { addToCart } = useCart();
+  const { toast } = useToast();
   const [isConverting, setIsConverting] = useState(false);
   const [conversionResult, setConversionResult] = useState<any>(null);
-  const { items: nutritionItems } = useNutritionCart();
-  const { addToCart, clearCart } = useCart();
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleConvert = async () => {
+  const handleConversion = async () => {
+    if (nutritionItems.length === 0) {
+      toast({
+        title: "No items to convert",
+        description: "Your nutrition plan is empty",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsConverting(true);
     try {
-      setIsConverting(true);
       const result = await CartConversionService.convertNutritionToRestaurant(nutritionItems);
       setConversionResult(result);
+      
+      if (result.converted.length > 0) {
+        toast({
+          title: "Conversion successful!",
+          description: `${result.converted.length} items can be ordered from restaurants`,
+          variant: "default"
+        });
+      }
     } catch (error) {
-      console.error('Error converting cart:', error);
+      console.error('Conversion error:', error);
       toast({
         title: "Conversion failed",
-        description: "Unable to convert nutrition plan to restaurant order.",
+        description: "Unable to convert nutrition items to restaurant orders",
         variant: "destructive"
       });
     } finally {
@@ -42,32 +57,21 @@ const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenC
   };
 
   const handleAddToRestaurantCart = async () => {
-    try {
-      // Clear existing restaurant cart
-      clearCart();
-      
-      // Add converted items to restaurant cart
-      for (const item of conversionResult.converted) {
-        await addToCart(item);
-      }
-      
-      toast({
-        title: "Items added to cart!",
-        description: `${conversionResult.converted.length} items added to your restaurant cart.`,
-        variant: "default"
-      });
-      
-      // Close modal and navigate to cart
-      onOpenChange(false);
-      navigate('/cart');
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast({
-        title: "Error adding items",
-        description: "Some items could not be added to your cart.",
-        variant: "destructive"
-      });
+    if (!conversionResult?.converted) return;
+
+    let addedCount = 0;
+    for (const item of conversionResult.converted) {
+      const success = await addToCart(item);
+      if (success) addedCount++;
     }
+
+    toast({
+      title: "Items added to cart",
+      description: `${addedCount} items added to your restaurant cart`,
+      variant: "default"
+    });
+
+    onOpenChange(false);
   };
 
   const handleCreateMapping = async (nutritionItem: any, menuItem: any) => {
@@ -75,23 +79,22 @@ const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenC
       await CartConversionService.createMapping(
         nutritionItem.name,
         menuItem.id,
-        menuItem.similarity_score,
-        0.8 // Default nutritional accuracy
+        0.8, // similarity score
+        0.9  // nutritional accuracy
       );
       
       toast({
         title: "Mapping created",
-        description: `${nutritionItem.name} is now mapped to ${menuItem.name}`,
+        description: `"${nutritionItem.name}" is now mapped to "${menuItem.name}"`,
         variant: "default"
       });
       
       // Refresh conversion
-      await handleConvert();
+      handleConversion();
     } catch (error) {
-      console.error('Error creating mapping:', error);
       toast({
-        title: "Mapping failed",
-        description: "Unable to create item mapping.",
+        title: "Error creating mapping",
+        description: "Unable to create the mapping",
         variant: "destructive"
       });
     }
@@ -99,7 +102,7 @@ const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-quantum-darkBlue border-quantum-cyan/20">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-quantum-cyan">Convert Nutrition Plan to Restaurant Order</DialogTitle>
         </DialogHeader>
@@ -108,78 +111,80 @@ const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenC
           {!conversionResult ? (
             <div className="text-center py-8">
               <p className="text-gray-400 mb-4">
-                Convert your nutrition plan items to available restaurant menu items for ordering.
+                Convert your nutrition plan items to restaurant menu items that you can order.
               </p>
               <Button 
-                onClick={handleConvert}
-                disabled={isConverting}
+                onClick={handleConversion}
+                disabled={isConverting || nutritionItems.length === 0}
                 className="bg-quantum-purple hover:bg-quantum-purple/90"
               >
-                {isConverting ? 'Converting...' : 'Start Conversion'}
+                {isConverting ? "Converting..." : "Convert Nutrition Plan"}
               </Button>
             </div>
           ) : (
             <div className="space-y-6">
               {/* Successfully Converted Items */}
               {conversionResult.converted.length > 0 && (
-                <Card className="bg-quantum-black/30 border-green-500/20">
-                  <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold text-green-400 mb-4 flex items-center gap-2">
-                      <Check className="h-5 w-5" />
-                      Ready to Order ({conversionResult.converted.length} items)
-                    </h3>
+                <Card className="bg-quantum-darkBlue/30 border-green-500/20">
+                  <CardHeader className="flex flex-row items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <CardTitle className="text-green-500">Available for Order ({conversionResult.converted.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div className="space-y-3">
                       {conversionResult.converted.map((item: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 border border-green-500/20 rounded">
+                        <div key={index} className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
                           <div>
-                            <p className="font-medium text-white">{item.name}</p>
-                            <p className="text-sm text-gray-400">${item.price} • {item.calories} cal</p>
+                            <h4 className="font-semibold text-white">{item.name}</h4>
+                            <p className="text-sm text-gray-400">
+                              ${item.price} • {item.calories} cal • Qty: {item.quantity}
+                            </p>
                           </div>
-                          <Badge className="bg-green-500/20 text-green-400">
-                            Available
-                          </Badge>
+                          <ArrowRight className="h-4 w-4 text-green-500" />
                         </div>
                       ))}
+                      <Button 
+                        onClick={handleAddToRestaurantCart}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Add All to Restaurant Cart
+                      </Button>
                     </div>
-                    <Button 
-                      onClick={handleAddToRestaurantCart}
-                      className="w-full mt-4 bg-green-600 hover:bg-green-700"
-                    >
-                      Add All to Restaurant Cart
-                    </Button>
                   </CardContent>
                 </Card>
               )}
 
               {/* Items with Suggestions */}
               {conversionResult.suggestions.length > 0 && (
-                <Card className="bg-quantum-black/30 border-yellow-500/20">
-                  <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold text-yellow-400 mb-4">
-                      Suggested Alternatives ({conversionResult.suggestions.length} items)
-                    </h3>
+                <Card className="bg-quantum-darkBlue/30 border-yellow-500/20">
+                  <CardHeader className="flex flex-row items-center gap-2">
+                    <ArrowRight className="h-5 w-5 text-yellow-500" />
+                    <CardTitle className="text-yellow-500">Suggested Alternatives ({conversionResult.suggestions.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div className="space-y-4">
                       {conversionResult.suggestions.map((suggestion: any, index: number) => (
-                        <div key={index} className="border border-yellow-500/20 rounded p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="font-medium text-white">{suggestion.nutritionItem.name}</span>
-                            <ArrowRight className="h-4 w-4 text-yellow-400" />
-                            <span className="text-yellow-400">Find Alternative</span>
+                        <div key={index} className="p-4 bg-yellow-500/10 rounded-lg">
+                          <div className="mb-3">
+                            <h4 className="font-semibold text-white">{suggestion.nutritionItem.name}</h4>
+                            <p className="text-sm text-gray-400">
+                              {suggestion.nutritionItem.calories} cal • {suggestion.nutritionItem.protein}g protein
+                            </p>
                           </div>
                           <div className="space-y-2">
-                            {suggestion.menuItems.map((menuItem: any, menuIndex: number) => (
-                              <div key={menuIndex} className="flex items-center justify-between p-2 border border-gray-600 rounded">
+                            <p className="text-sm font-medium text-yellow-500">Similar menu items:</p>
+                            {suggestion.menuItems.slice(0, 3).map((menuItem: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between p-2 bg-quantum-darkBlue/50 rounded">
                                 <div>
-                                  <p className="font-medium text-white">{menuItem.name}</p>
-                                  <p className="text-sm text-gray-400">
-                                    ${menuItem.price} • {menuItem.calories} cal • 
-                                    {Math.round(menuItem.similarity_score * 100)}% match
-                                  </p>
+                                  <span className="text-white">{menuItem.name}</span>
+                                  <span className="text-gray-400 ml-2">${menuItem.price}</span>
                                 </div>
-                                <Button 
+                                <Button
                                   size="sm"
+                                  variant="outline"
                                   onClick={() => handleCreateMapping(suggestion.nutritionItem, menuItem)}
-                                  className="bg-quantum-purple hover:bg-quantum-purple/90"
+                                  className="border-quantum-cyan/30 text-quantum-cyan hover:bg-quantum-cyan/10"
                                 >
                                   Use This
                                 </Button>
@@ -195,22 +200,19 @@ const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenC
 
               {/* Items Not Found */}
               {conversionResult.notFound.length > 0 && (
-                <Card className="bg-quantum-black/30 border-red-500/20">
-                  <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2">
-                      <X className="h-5 w-5" />
-                      Not Available ({conversionResult.notFound.length} items)
-                    </h3>
+                <Card className="bg-quantum-darkBlue/30 border-red-500/20">
+                  <CardHeader className="flex flex-row items-center gap-2">
+                    <XCircle className="h-5 w-5 text-red-500" />
+                    <CardTitle className="text-red-500">Not Available ({conversionResult.notFound.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div className="space-y-2">
                       {conversionResult.notFound.map((item: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 border border-red-500/20 rounded">
-                          <div>
-                            <p className="font-medium text-white">{item.name}</p>
-                            <p className="text-sm text-gray-400">{item.calories} cal • {item.meal_type}</p>
-                          </div>
-                          <Badge variant="destructive">
-                            Not Available
-                          </Badge>
+                        <div key={index} className="p-3 bg-red-500/10 rounded-lg">
+                          <h4 className="font-semibold text-white">{item.name}</h4>
+                          <p className="text-sm text-gray-400">
+                            No similar menu items found in nearby restaurants
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -218,18 +220,17 @@ const CartConversionModal: React.FC<CartConversionModalProps> = ({ open, onOpenC
                 </Card>
               )}
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3">
                 <Button 
-                  variant="outline" 
                   onClick={() => setConversionResult(null)}
-                  className="flex-1"
+                  variant="outline"
+                  className="border-quantum-cyan/30 text-quantum-cyan hover:bg-quantum-cyan/10"
                 >
                   Try Again
                 </Button>
                 <Button 
-                  variant="outline" 
                   onClick={() => onOpenChange(false)}
-                  className="flex-1"
+                  variant="outline"
                 >
                   Close
                 </Button>
