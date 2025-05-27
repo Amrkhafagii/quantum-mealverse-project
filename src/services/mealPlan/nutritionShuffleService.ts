@@ -2,7 +2,6 @@
 import { NutritionCartItem } from '@/contexts/NutritionCartContext';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { generateNutritionMealPlan } from './nutritionMealGenerationService';
-import { getFoodsByMealType, getFoodsByCategory, calculateNutritionForPortion } from '../foodDatabase';
 
 /**
  * Shuffles nutrition cart items by generating new alternatives
@@ -62,39 +61,8 @@ export const shuffleSingleItem = (
     };
   }
   
-  // Select a random alternative
-  const randomFood = alternatives[Math.floor(Math.random() * alternatives.length)];
-  
-  // Calculate portion to match original item's calories
-  const targetCalories = item.calories * item.quantity;
-  let bestPortion = randomFood.common_portion_size;
-  let bestCalorieDiff = Number.MAX_SAFE_INTEGER;
-  
-  // Find portion size that best matches original calories
-  for (let portion = 20; portion <= 300; portion += 10) {
-    const nutrition = calculateNutritionForPortion(randomFood, portion);
-    const calorieDiff = Math.abs(nutrition.calories - targetCalories);
-    
-    if (calorieDiff < bestCalorieDiff) {
-      bestCalorieDiff = calorieDiff;
-      bestPortion = portion;
-    }
-  }
-  
-  const finalNutrition = calculateNutritionForPortion(randomFood, bestPortion);
-  
-  return {
-    name: randomFood.name,
-    calories: finalNutrition.calories,
-    protein: finalNutrition.protein,
-    carbs: finalNutrition.carbs,
-    fat: finalNutrition.fat,
-    quantity: 1,
-    portion_size: bestPortion,
-    meal_type: item.meal_type,
-    food_category: randomFood.category,
-    usda_food_id: randomFood.id
-  };
+  const randomAlternative = alternatives[Math.floor(Math.random() * alternatives.length)];
+  return randomAlternative;
 };
 
 function generateMealItems(
@@ -107,63 +75,199 @@ function generateMealItems(
 ): Omit<NutritionCartItem, 'id'>[] {
   const items: Omit<NutritionCartItem, 'id'>[] = [];
   
-  // Get available foods for this meal type
-  const availableFoods = getFoodsByMealType(mealType);
+  // Food alternatives for each meal type
+  const foodAlternatives = {
+    breakfast: [
+      {
+        name: 'Scrambled Eggs with Toast',
+        calories: Math.round(targetCalories * 0.6),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.6),
+        fat: Math.round(targetFat * 0.4),
+        quantity: 1,
+        portion_size: 200,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'scrambled_eggs_toast'
+      },
+      {
+        name: 'Protein Smoothie',
+        calories: Math.round(targetCalories * 0.4),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.4),
+        fat: Math.round(targetFat * 0.6),
+        quantity: 1,
+        portion_size: 300,
+        meal_type: mealType,
+        food_category: 'dairy',
+        usda_food_id: 'protein_smoothie'
+      }
+    ],
+    lunch: [
+      {
+        name: 'Turkey Sandwich',
+        calories: Math.round(targetCalories * 0.5),
+        protein: Math.round(targetProtein * 0.6),
+        carbs: Math.round(targetCarbs * 0.5),
+        fat: Math.round(targetFat * 0.3),
+        quantity: 1,
+        portion_size: 250,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'turkey_sandwich'
+      },
+      {
+        name: 'Quinoa Bowl',
+        calories: Math.round(targetCalories * 0.3),
+        protein: Math.round(targetProtein * 0.3),
+        carbs: Math.round(targetCarbs * 0.4),
+        fat: Math.round(targetFat * 0.4),
+        quantity: 1,
+        portion_size: 180,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'quinoa_bowl'
+      },
+      {
+        name: 'Side Vegetables',
+        calories: Math.round(targetCalories * 0.2),
+        protein: Math.round(targetProtein * 0.1),
+        carbs: Math.round(targetCarbs * 0.1),
+        fat: Math.round(targetFat * 0.3),
+        quantity: 1,
+        portion_size: 120,
+        meal_type: mealType,
+        food_category: 'vegetables',
+        usda_food_id: 'side_vegetables'
+      }
+    ],
+    dinner: [
+      {
+        name: 'Grilled Fish',
+        calories: Math.round(targetCalories * 0.5),
+        protein: Math.round(targetProtein * 0.7),
+        carbs: Math.round(targetCarbs * 0.1),
+        fat: Math.round(targetFat * 0.6),
+        quantity: 1,
+        portion_size: 150,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'grilled_fish'
+      },
+      {
+        name: 'Roasted Vegetables',
+        calories: Math.round(targetCalories * 0.3),
+        protein: Math.round(targetProtein * 0.2),
+        carbs: Math.round(targetCarbs * 0.6),
+        fat: Math.round(targetFat * 0.2),
+        quantity: 1,
+        portion_size: 160,
+        meal_type: mealType,
+        food_category: 'vegetables',
+        usda_food_id: 'roasted_vegetables'
+      },
+      {
+        name: 'Wild Rice',
+        calories: Math.round(targetCalories * 0.2),
+        protein: Math.round(targetProtein * 0.1),
+        carbs: Math.round(targetCarbs * 0.3),
+        fat: Math.round(targetFat * 0.2),
+        quantity: 1,
+        portion_size: 90,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'wild_rice'
+      }
+    ],
+    snack: [
+      {
+        name: 'Trail Mix',
+        calories: Math.round(targetCalories * 0.6),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.4),
+        fat: Math.round(targetFat * 0.7),
+        quantity: 1,
+        portion_size: 35,
+        meal_type: mealType,
+        food_category: 'nuts',
+        usda_food_id: 'trail_mix'
+      },
+      {
+        name: 'Banana',
+        calories: Math.round(targetCalories * 0.4),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.6),
+        fat: Math.round(targetFat * 0.3),
+        quantity: 1,
+        portion_size: 120,
+        meal_type: mealType,
+        food_category: 'fruits',
+        usda_food_id: 'banana'
+      }
+    ]
+  };
   
-  if (availableFoods.length === 0) return items;
-
-  // Simple approach: select 2-3 random foods and distribute calories
-  const numItems = Math.min(3, availableFoods.length);
-  const selectedFoods = [];
-  const usedIndices = new Set<number>();
-  
-  // Select unique random foods
-  while (selectedFoods.length < numItems && usedIndices.size < availableFoods.length) {
-    const randomIndex = Math.floor(Math.random() * availableFoods.length);
-    if (!usedIndices.has(randomIndex)) {
-      selectedFoods.push(availableFoods[randomIndex]);
-      usedIndices.add(randomIndex);
-    }
-  }
-  
-  // Distribute calories among selected foods
-  const caloriesPerFood = targetCalories / selectedFoods.length;
-  
-  selectedFoods.forEach(food => {
-    // Calculate portion to meet calorie target
-    const targetFoodCalories = caloriesPerFood;
-    const portionRatio = targetFoodCalories / food.calories_per_100g;
-    const portionSize = Math.max(20, Math.min(300, portionRatio * 100));
-    
-    const nutrition = calculateNutritionForPortion(food, portionSize);
-    
-    items.push({
-      name: food.name,
-      calories: nutrition.calories,
-      protein: nutrition.protein,
-      carbs: nutrition.carbs,
-      fat: nutrition.fat,
-      quantity: 1,
-      portion_size: portionSize,
-      meal_type: mealType,
-      food_category: food.category,
-      usda_food_id: food.id
-    });
-  });
-  
-  return items;
+  return foodAlternatives[mealType] || [];
 }
 
 function getAlternativeItems(
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack',
   category: string
-): any[] {
-  // Get foods from the same category that are suitable for this meal type
-  const categoryFoods = getFoodsByCategory(category as any);
-  const mealTypeFoods = getFoodsByMealType(mealType);
+): Omit<NutritionCartItem, 'id'>[] {
+  const alternatives: { [key: string]: Omit<NutritionCartItem, 'id'>[] } = {
+    protein: [
+      {
+        name: 'Lean Beef',
+        calories: 250,
+        protein: 26,
+        carbs: 0,
+        fat: 15,
+        quantity: 1,
+        portion_size: 100,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'lean_beef'
+      },
+      {
+        name: 'Chicken Thigh',
+        calories: 280,
+        protein: 25,
+        carbs: 0,
+        fat: 18,
+        quantity: 1,
+        portion_size: 120,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'chicken_thigh'
+      }
+    ],
+    grains: [
+      {
+        name: 'Whole Wheat Pasta',
+        calories: 350,
+        protein: 12,
+        carbs: 70,
+        fat: 2,
+        quantity: 1,
+        portion_size: 100,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'whole_wheat_pasta'
+      },
+      {
+        name: 'Barley',
+        calories: 320,
+        protein: 10,
+        carbs: 65,
+        fat: 2,
+        quantity: 1,
+        portion_size: 100,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'barley'
+      }
+    ]
+  };
   
-  // Find intersection of category and meal type
-  return categoryFoods.filter(food => 
-    mealTypeFoods.some(mealFood => mealFood.id === food.id)
-  );
+  return alternatives[category] || [];
 }
