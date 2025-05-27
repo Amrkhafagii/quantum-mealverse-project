@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
@@ -92,7 +93,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         if (signUpError) throw signUpError;
         
         if (userType === 'restaurant' && signUpData.user && email) {
-          // Create restaurant profile in database
+          // Create restaurant profile using RPC function
           const { data, error } = await supabase.rpc('create_restaurant_profile', {
             p_user_id: signUpData.user.id,
             p_name: restaurantName,

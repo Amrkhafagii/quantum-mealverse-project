@@ -3,7 +3,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import RestaurantLayout from '@/components/restaurant/RestaurantLayout';
+import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import { RestaurantDashboard as Dashboard } from '@/components/restaurant/RestaurantDashboard';
 import { RestaurantProfile } from '@/components/restaurant/profile/RestaurantProfile';
 
