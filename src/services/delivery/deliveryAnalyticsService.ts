@@ -170,7 +170,10 @@ class DeliveryAnalyticsService {
     
     return (data || []).map(item => ({
       ...item,
-      report_type: item.report_type as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+      report_type: item.report_type as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly',
+      performance_metrics: typeof item.performance_metrics === 'string' 
+        ? JSON.parse(item.performance_metrics) 
+        : (item.performance_metrics || {})
     }));
   }
 
@@ -227,7 +230,10 @@ class DeliveryAnalyticsService {
     if (error) throw error;
     return {
       ...data,
-      report_type: data.report_type as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+      report_type: data.report_type as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly',
+      performance_metrics: typeof data.performance_metrics === 'string' 
+        ? JSON.parse(data.performance_metrics) 
+        : (data.performance_metrics || {})
     };
   }
 
