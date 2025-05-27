@@ -87,9 +87,7 @@ export const MealPlanOrderTracking: React.FC<MealPlanOrderTrackingProps> = ({ or
             protein_per_serving,
             carbs_per_serving,
             fats_per_serving,
-            meals (
-              name
-            ),
+            meal_id,
             meal_preparation_progress (
               id,
               step_name,
@@ -119,9 +117,9 @@ export const MealPlanOrderTracking: React.FC<MealPlanOrderTrackingProps> = ({ or
           totalProtein: orderData.total_protein || 0,
           totalCarbs: orderData.total_carbs || 0,
           totalFats: orderData.total_fats || 0,
-          items: orderData.meal_plan_order_items.map((item: any) => ({
+          items: (orderData.meal_plan_order_items || []).map((item: any) => ({
             id: item.id,
-            mealName: item.meals?.name || 'Unknown Meal',
+            mealName: item.meal_id || 'Unknown Meal',
             quantity: item.quantity,
             preparationStatus: item.preparation_status,
             caloriesPerServing: item.calories_per_serving || 0,

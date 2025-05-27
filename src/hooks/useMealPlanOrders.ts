@@ -61,6 +61,15 @@ export interface CreateMealPlanOrderData {
   }>;
   estimatedDeliveryTime?: string;
   notes?: string;
+  totalNutrition?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    fiber: number;
+    sugar: number;
+    sodium: number;
+  };
 }
 
 export const useMealPlanOrders = () => {
@@ -109,6 +118,10 @@ export const useMealPlanOrders = () => {
       setLoading(true);
       setError(null);
 
+      const totalNutrition = orderData.totalNutrition || {
+        calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sugar: 0, sodium: 0
+      };
+
       // Create the meal plan order
       const { data: orderInserted, error: orderError } = await supabase
         .from('meal_plan_orders')
@@ -118,7 +131,14 @@ export const useMealPlanOrders = () => {
           order_id: orderData.orderId,
           delivery_date: orderData.deliveryDate,
           estimated_delivery_time: orderData.estimatedDeliveryTime,
-          notes: orderData.notes
+          notes: orderData.notes,
+          total_calories: totalNutrition.calories,
+          total_protein: totalNutrition.protein,
+          total_carbs: totalNutrition.carbs,
+          total_fats: totalNutrition.fats,
+          total_fiber: totalNutrition.fiber,
+          total_sugar: totalNutrition.sugar,
+          total_sodium: totalNutrition.sodium
         })
         .select()
         .single();
@@ -144,40 +164,6 @@ export const useMealPlanOrders = () => {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
-
-      // Create preparation progress steps for each item
-      const { data: insertedItems, error: fetchItemsError } = await supabase
-        .from('meal_plan_order_items')
-        .select('id')
-        .eq('meal_plan_order_id', orderInserted.id);
-
-      if (fetchItemsError) throw fetchItemsError;
-
-      const preparationSteps = [];
-      const stepTemplates = [
-        { name: 'Prep Ingredients', description: 'Wash, chop, and prepare all ingredients', duration: 15 },
-        { name: 'Cooking', description: 'Cook main components according to recipe', duration: 25 },
-        { name: 'Plating', description: 'Arrange and present the meal', duration: 5 },
-        { name: 'Quality Check', description: 'Final quality and temperature check', duration: 3 },
-        { name: 'Packaging', description: 'Package for delivery with proper insulation', duration: 7 }
-      ];
-
-      for (const item of insertedItems) {
-        for (const step of stepTemplates) {
-          preparationSteps.push({
-            meal_plan_order_item_id: item.id,
-            step_name: step.name,
-            step_description: step.description,
-            estimated_duration_minutes: step.duration
-          });
-        }
-      }
-
-      const { error: stepsError } = await supabase
-        .from('meal_preparation_progress')
-        .insert(preparationSteps);
-
-      if (stepsError) throw stepsError;
 
       await fetchMealPlanOrders();
       return orderInserted;
@@ -214,47 +200,12 @@ export const useMealPlanOrders = () => {
     }
   };
 
-  const updatePreparationProgress = async (
-    stepId: string, 
-    status: 'pending' | 'in_progress' | 'completed' | 'skipped',
-    notes?: string
-  ): Promise<boolean> => {
-    try {
-      setError(null);
-
-      const updateData: any = { 
-        status,
-        ...(notes ? { notes } : {})
-      };
-
-      if (status === 'in_progress') {
-        updateData.started_at = new Date().toISOString();
-      } else if (status === 'completed') {
-        updateData.completed_at = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('meal_preparation_progress')
-        .update(updateData)
-        .eq('id', stepId);
-
-      if (error) throw error;
-
-      return true;
-    } catch (err) {
-      console.error('Error updating preparation progress:', err);
-      setError('Failed to update preparation progress');
-      return false;
-    }
-  };
-
   return {
     orders,
     loading,
     error,
     createMealPlanOrder,
     updateOrderStatus,
-    updatePreparationProgress,
     refetch: fetchMealPlanOrders
   };
 };

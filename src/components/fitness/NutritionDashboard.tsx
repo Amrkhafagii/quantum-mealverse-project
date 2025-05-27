@@ -42,30 +42,6 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   const [saving, setSaving] = useState(false);
   const [ordering, setOrdering] = useState(false);
 
-  // Add null checks for required props
-  if (!calculationResult || !mealPlan) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-quantum-cyan mb-2">Loading...</h3>
-          <p className="text-gray-400">Preparing your nutrition dashboard</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Ensure calculationResult has required properties
-  if (!calculationResult.dailyCalories || !calculationResult.macros) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-red-500 mb-2">Invalid Data</h3>
-          <p className="text-gray-400">Please recalculate your nutrition needs</p>
-        </div>
-      </div>
-    );
-  }
-
   const handleOrderMealPlan = async () => {
     if (!user) {
       toast.error('Please log in to order your meal plan');
@@ -75,13 +51,27 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
     try {
       setOrdering(true);
 
-      // Create a temporary order ID (in real app, this would come from order creation)
-      const tempOrderId = `order-${Date.now()}`;
-      
+      // Calculate total nutritional information from meal plan
+      const totalNutrition = Object.entries(mealPlan.meals).reduce(
+        (totals, [day, dayMeals]) => {
+          Object.entries(dayMeals).forEach(([mealType, meal]) => {
+            totals.calories += meal.calories || 0;
+            totals.protein += meal.protein || 0;
+            totals.carbs += meal.carbs || 0;
+            totals.fats += meal.fats || 0;
+            totals.fiber += meal.fiber || 0;
+            totals.sugar += meal.sugar || 0;
+            totals.sodium += meal.sodium || 0;
+          });
+          return totals;
+        },
+        { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0, sugar: 0, sodium: 0 }
+      );
+
       // Create meal plan order with nutritional information preserved
       const orderItems = Object.entries(mealPlan.meals).flatMap(([day, dayMeals]) => 
         Object.entries(dayMeals).map(([mealType, meal]) => ({
-          mealId: `${day}-${mealType}`, // In real app, these would be actual meal IDs
+          mealId: `${day}-${mealType}`,
           quantity: 1,
           nutritionalInfo: {
             calories: meal.calories || 0,
@@ -96,12 +86,13 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
       );
 
       const mealPlanOrder = await createMealPlanOrder({
-        mealPlanId: `plan-${Date.now()}`, // In real app, this would be actual meal plan ID
-        orderId: tempOrderId,
-        deliveryDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+        mealPlanId: `plan-${Date.now()}`,
+        orderId: `order-${Date.now()}`,
+        deliveryDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         items: orderItems,
-        estimatedDeliveryTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
-        notes: 'Custom meal plan order with preserved nutritional information'
+        estimatedDeliveryTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        notes: 'Custom meal plan order with preserved nutritional information',
+        totalNutrition
       });
 
       if (mealPlanOrder) {
@@ -195,7 +186,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <h3 className="font-semibold text-quantum-cyan">Daily Calories</h3>
             </div>
             <div className="text-2xl font-bold text-white">
-              {calculationResult.dailyCalories.toLocaleString()}
+              {calculationResult.adjustedCalories.toLocaleString()}
             </div>
             <p className="text-sm text-gray-400">kcal/day</p>
           </CardContent>
@@ -208,7 +199,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <h3 className="font-semibold text-green-500">Protein</h3>
             </div>
             <div className="text-2xl font-bold text-white">
-              {calculationResult.macros.protein}g
+              {calculationResult.proteinGrams}g
             </div>
             <p className="text-sm text-gray-400">daily target</p>
           </CardContent>
@@ -221,7 +212,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <h3 className="font-semibold text-yellow-500">Carbs</h3>
             </div>
             <div className="text-2xl font-bold text-white">
-              {calculationResult.macros.carbs}g
+              {calculationResult.carbsGrams}g
             </div>
             <p className="text-sm text-gray-400">daily target</p>
           </CardContent>
@@ -234,7 +225,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <h3 className="font-semibold text-red-500">Fats</h3>
             </div>
             <div className="text-2xl font-bold text-white">
-              {calculationResult.macros.fats}g
+              {calculationResult.fatsGrams}g
             </div>
             <p className="text-sm text-gray-400">daily target</p>
           </CardContent>
@@ -289,10 +280,10 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Protein Progress</span>
-                        <span>{Math.round(calculateMacroProgress(meal.protein || 0, calculationResult.macros.protein))}%</span>
+                        <span>{Math.round(calculateMacroProgress(meal.protein || 0, calculationResult.proteinGrams))}%</span>
                       </div>
                       <Progress 
-                        value={calculateMacroProgress(meal.protein || 0, calculationResult.macros.protein)} 
+                        value={calculateMacroProgress(meal.protein || 0, calculationResult.proteinGrams)} 
                         className="h-2"
                       />
                     </div>
@@ -314,7 +305,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                     </div>
                     <div className="text-sm text-gray-400">Total Calories</div>
                     <div className="text-xs text-gray-500">
-                      Target: {calculationResult.dailyCalories}
+                      Target: {calculationResult.adjustedCalories}
                     </div>
                   </div>
                   <div className="text-center">
@@ -323,7 +314,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                     </div>
                     <div className="text-sm text-gray-400">Total Protein</div>
                     <div className="text-xs text-gray-500">
-                      Target: {calculationResult.macros.protein}g
+                      Target: {calculationResult.proteinGrams}g
                     </div>
                   </div>
                   <div className="text-center">
@@ -332,7 +323,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                     </div>
                     <div className="text-sm text-gray-400">Total Carbs</div>
                     <div className="text-xs text-gray-500">
-                      Target: {calculationResult.macros.carbs}g
+                      Target: {calculationResult.carbsGrams}g
                     </div>
                   </div>
                   <div className="text-center">
@@ -341,7 +332,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
                     </div>
                     <div className="text-sm text-gray-400">Total Fats</div>
                     <div className="text-xs text-gray-500">
-                      Target: {calculationResult.macros.fats}g
+                      Target: {calculationResult.fatsGrams}g
                     </div>
                   </div>
                 </div>
