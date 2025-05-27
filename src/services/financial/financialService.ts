@@ -98,7 +98,7 @@ export class FinancialService {
       ...item,
       transaction_type: item.transaction_type as FinancialTransaction['transaction_type'],
       status: item.status as FinancialTransaction['status'],
-      metadata: fromSupabaseJson<Record<string, any>>(item.metadata)
+      metadata: fromSupabaseJson<Record<string, any>>(typeof item.metadata === 'string' ? item.metadata : null)
     }));
   }
 
@@ -119,7 +119,7 @@ export class FinancialService {
       ...data,
       transaction_type: data.transaction_type as FinancialTransaction['transaction_type'],
       status: data.status as FinancialTransaction['status'],
-      metadata: fromSupabaseJson<Record<string, any>>(data.metadata)
+      metadata: fromSupabaseJson<Record<string, any>>(typeof data.metadata === 'string' ? data.metadata : null)
     };
   }
 
@@ -209,7 +209,7 @@ export class FinancialService {
       ...item,
       payout_method: item.payout_method as Payout['payout_method'],
       status: item.status as Payout['status'],
-      metadata: fromSupabaseJson<Record<string, any>>(item.metadata)
+      metadata: fromSupabaseJson<Record<string, any>>(typeof item.metadata === 'string' ? item.metadata : null)
     }));
   }
 
@@ -246,7 +246,7 @@ export class FinancialService {
       ...data,
       payout_method: data.payout_method as Payout['payout_method'],
       status: data.status as Payout['status'],
-      metadata: fromSupabaseJson<Record<string, any>>(data.metadata)
+      metadata: fromSupabaseJson<Record<string, any>>(typeof data.metadata === 'string' ? data.metadata : null)
     };
   }
 
@@ -375,8 +375,8 @@ export class FinancialService {
     return {
       ...data,
       report_type: data.report_type as FinancialReport['report_type'],
-      payment_methods_breakdown: fromSupabaseJson<Record<string, any>>(data.payment_methods_breakdown),
-      top_selling_items: fromSupabaseJson<any[]>(data.top_selling_items)
+      payment_methods_breakdown: fromSupabaseJson<Record<string, any>>(typeof data.payment_methods_breakdown === 'string' ? data.payment_methods_breakdown : null),
+      top_selling_items: fromSupabaseJson<any[]>(typeof data.top_selling_items === 'string' ? data.top_selling_items : null)
     };
   }
 
@@ -392,8 +392,8 @@ export class FinancialService {
     return (data || []).map(item => ({
       ...item,
       report_type: item.report_type as FinancialReport['report_type'],
-      payment_methods_breakdown: fromSupabaseJson<Record<string, any>>(item.payment_methods_breakdown),
-      top_selling_items: fromSupabaseJson<any[]>(item.top_selling_items)
+      payment_methods_breakdown: fromSupabaseJson<Record<string, any>>(typeof item.payment_methods_breakdown === 'string' ? item.payment_methods_breakdown : null),
+      top_selling_items: fromSupabaseJson<any[]>(typeof item.top_selling_items === 'string' ? item.top_selling_items : null)
     }));
   }
 
