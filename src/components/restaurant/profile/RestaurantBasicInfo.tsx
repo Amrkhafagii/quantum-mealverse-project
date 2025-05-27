@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,71 +37,59 @@ const formSchema = z.object({
   estimated_delivery_time: z.coerce.number().min(15).max(120),
 });
 
-const RestaurantBasicInfo = () => {
+type FormData = z.infer<typeof formSchema>;
+
+interface RestaurantBasicInfoProps {
+  restaurant?: any;
+  onUpdate?: (restaurant: any) => void;
+}
+
+const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
+  restaurant,
+  onUpdate
+}) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [restaurant, setRestaurant] = useState<any>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
-  } = useForm<z.infer<typeof formSchema>>({
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
   });
 
   useEffect(() => {
-    const fetchRestaurant = async () => {
-      if (!user) return;
+    if (restaurant) {
+      setValue('name', restaurant.name || '');
+      setValue('email', restaurant.email || '');
+      setValue('phone', restaurant.phone || '');
+      setValue('address', restaurant.address || '');
+      setValue('city', restaurant.city || '');
+      setValue('state', restaurant.state || restaurant.postal_code || '');
+      setValue('country', restaurant.country || '');
+      setValue('description', restaurant.description || '');
+      setValue('delivery_radius', restaurant.delivery_radius || 10);
+      setValue('estimated_delivery_time', restaurant.estimated_delivery_time || 45);
+    }
+  }, [restaurant, setValue]);
 
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('owner_id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching restaurant:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load restaurant data.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        setRestaurant(data);
-
-        // Set default values for the form
-        if (data) {
-          setValue('name', data.name);
-          setValue('email', data.email);
-          setValue('phone', data.phone);
-          setValue('address', data.address);
-          setValue('city', data.city);
-          setValue('state', data.state || '');
-          setValue('country', data.country);
-          setValue('description', data.description || '');
-          setValue('delivery_radius', data.delivery_radius);
-          setValue('estimated_delivery_time', data.estimated_delivery_time);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRestaurant();
-  }, [user, setValue]);
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormData) => {
     setLoading(true);
     try {
       const updates = {
-        ...values,
-        owner_id: user?.id,
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        address: values.address,
+        city: values.city,
+        postal_code: values.state,
+        country: values.country,
+        description: values.description,
+        delivery_radius: values.delivery_radius,
+        estimated_delivery_time: values.estimated_delivery_time,
+        user_id: user?.id,
       };
 
       let response;
@@ -130,7 +119,11 @@ const RestaurantBasicInfo = () => {
         return;
       }
 
-      setRestaurant(response.data[0]);
+      const updatedRestaurant = response.data[0];
+      if (onUpdate) {
+        onUpdate(updatedRestaurant);
+      }
+      
       toast({
         title: 'Success',
         description: 'Restaurant information saved successfully!',
@@ -140,18 +133,13 @@ const RestaurantBasicInfo = () => {
     }
   };
 
-  const handleSubmit: any = (e: React.SyntheticEvent) => {
-    e.preventDefault();
-    void onSubmit(e);
-  };
-
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Restaurant Basic Information</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             label="Restaurant Name"
             {...register('name')}
@@ -189,7 +177,7 @@ const RestaurantBasicInfo = () => {
           />
 
           <div className="space-y-2">
-            <Label htmlFor="state" className="after:content-['*'] after:ml-0.5 after:text-red-500">
+            <Label htmlFor="state">
               State/Province
             </Label>
             <select

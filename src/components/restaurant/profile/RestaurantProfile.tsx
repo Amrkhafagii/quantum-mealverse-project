@@ -6,8 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 import { restaurantService, type Restaurant } from '@/services/restaurantService';
 import { useAuth } from '@/hooks/useAuth';
-import { RestaurantBasicInfo } from './RestaurantBasicInfo';
-import { RestaurantSettings } from './RestaurantSettings';
+import RestaurantBasicInfo from './RestaurantBasicInfo';
+import RestaurantSettings from './RestaurantSettings';
 import { RestaurantVerification } from './RestaurantVerification';
 import { RestaurantOperations } from './RestaurantOperations';
 

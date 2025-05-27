@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,9 +18,12 @@ const settingsSchema = z.object({
 
 type SettingsSchemaType = z.infer<typeof settingsSchema>;
 
-const RestaurantSettings = () => {
+interface RestaurantSettingsProps {
+  restaurant?: any;
+}
+
+const RestaurantSettings: React.FC<RestaurantSettingsProps> = ({ restaurant }) => {
   const { user } = useAuth();
-  const [restaurant, setRestaurant] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const {
@@ -32,44 +36,24 @@ const RestaurantSettings = () => {
   });
 
   useEffect(() => {
-    const fetchRestaurant = async () => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('owner_id', user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching restaurant:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load restaurant settings.",
-            variant: "destructive"
-          });
-        } else {
-          setRestaurant(data);
-          reset({
-            order_preparation_time: data?.order_preparation_time,
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRestaurant();
-  }, [user, reset]);
+    if (restaurant) {
+      reset({
+        order_preparation_time: restaurant.estimated_delivery_time || 30,
+      });
+    }
+  }, [restaurant, reset]);
 
   const onSubmit = async (data: SettingsSchemaType) => {
+    if (!restaurant?.id) return;
+    
     setLoading(true);
     try {
       const { error } = await supabase
         .from('restaurants')
-        .update(data)
-        .eq('owner_id', user?.id);
+        .update({
+          estimated_delivery_time: data.order_preparation_time
+        })
+        .eq('id', restaurant.id);
 
       if (error) {
         console.error("Error updating restaurant settings:", error);
@@ -96,16 +80,15 @@ const RestaurantSettings = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          
-              <FormField
-                label="Order Preparation Time (minutes)"
-                type="number"
-                min="5"
-                max="120"
-                {...register('order_preparation_time')}
-                error={errors.order_preparation_time?.message}
-                required
-              />
+          <FormField
+            label="Order Preparation Time (minutes)"
+            type="number"
+            min="5"
+            max="120"
+            {...register('order_preparation_time')}
+            error={errors.order_preparation_time?.message}
+            required
+          />
 
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Saving...' : 'Save Settings'}
