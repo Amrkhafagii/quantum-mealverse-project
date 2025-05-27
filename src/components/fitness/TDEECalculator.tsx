@@ -10,22 +10,16 @@ import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface TDEEResult {
+  tdee: number;
+  bmr: number;
   adjustedCalories: number;
   proteinGrams: number;
   carbsGrams: number;
   fatsGrams: number;
-  dailyCalories: number;
-  macros: {
-    protein: number;
-    carbs: number;
-    fats: number;
-  };
   goal: string;
   weight?: number;
   activityLevel?: string;
-  bmr: number;
-  tdee: number;
-  [key: string]: any;
+  formulaUsed: 'standard' | 'hybrid';
 }
 
 const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (result: TDEEResult) => void }) => {
@@ -146,21 +140,15 @@ const TDEECalculator = ({ onCalculationComplete }: { onCalculationComplete?: (re
     const fatsGrams = Math.round(fatsCalories / 9); // 9 calories per gram of fat
 
     const resultData: TDEEResult = {
+      tdee: Math.round(tdee),
+      bmr: Math.round(bmr),
       adjustedCalories: Math.round(adjustedCalories),
       proteinGrams,
       carbsGrams,
       fatsGrams,
-      dailyCalories: tdee,
-      macros: {
-        protein: proteinGrams,
-        carbs: carbsGrams,
-        fats: fatsGrams
-      },
       goal,
       weight: weightKg,
       activityLevel: getActivityLevelLabel(activityMultiplier),
-      bmr,
-      tdee,
       formulaUsed
     };
 
