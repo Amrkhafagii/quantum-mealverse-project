@@ -175,6 +175,7 @@ class PushNotificationService {
 
       return (data || []).map(item => ({
         ...item,
+        status: item.status as 'pending' | 'sent' | 'failed' | 'delivered',
         data: typeof item.data === 'string' 
           ? JSON.parse(item.data) 
           : (item.data as Record<string, any>)
