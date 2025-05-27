@@ -332,20 +332,6 @@ export const foodDatabase: Food[] = [
   },
   // Add more breakfast-suitable proteins
   {
-    id: "ep29",
-    name: "Protein Powder (Whey)",
-    category: "protein",
-    calories: 103,
-    protein: 20,
-    carbs: 1,
-    fat: 1,
-    portion: 25,
-    isGloballyAvailable: true,
-    costTier: 3,
-    cookingState: "processed",
-    mealSuitability: ["breakfast", "snack"]
-  },
-  {
     id: "ep30",
     name: "Scrambled Eggs",
     category: "protein",
@@ -1298,20 +1284,6 @@ export const foodDatabase: Food[] = [
     costTier: 2,
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
-  },
-  {
-    id: "ev5",
-    name: "Onions",
-    category: "vegetables",
-    calories: 40,
-    protein: 1.1,
-    carbs: 9.3,
-    fat: 0.1,
-    portion: 100,
-    isGloballyAvailable: true,
-    costTier: 1,
-    cookingState: "raw",
-    mealSuitability: ["lunch", "dinner"]
   }
 ];
 
