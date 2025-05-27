@@ -13,7 +13,7 @@ export type Restaurant = {
 };
 
 export const useRestaurantAuth = () => {
-  const { user, loading, logout } = useAuth();
+  const { user, userType, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,7 +21,7 @@ export const useRestaurantAuth = () => {
 
   useEffect(() => {
     const checkRestaurantAuth = async () => {
-      console.log('useRestaurantAuth - checking auth state:', { user, loading });
+      console.log('useRestaurantAuth - checking auth state:', { user: !!user, userType, loading });
       
       if (loading) {
         return; // Still loading auth state
@@ -34,9 +34,13 @@ export const useRestaurantAuth = () => {
         return;
       }
 
+      // Wait for userType to be determined
+      if (userType === null) {
+        console.log('useRestaurantAuth - userType still loading');
+        return;
+      }
+
       try {
-        // Check if user is a restaurant type
-        const userType = user.user_metadata?.user_type;
         console.log('useRestaurantAuth - user type:', userType);
         
         if (userType !== 'restaurant') {
@@ -77,7 +81,7 @@ export const useRestaurantAuth = () => {
     };
 
     checkRestaurantAuth();
-  }, [user, loading, navigate]);
+  }, [user, userType, loading, navigate]);
 
   const handleLogout = async () => {
     try {
