@@ -98,11 +98,36 @@ export const useRestaurantAuth = () => {
         
         if (data) {
           console.log('useRestaurantAuth - setting restaurant:', data);
-          // Ensure required fields have default values
+          // Transform database response to match Restaurant interface
           const restaurantData: Restaurant = {
-            ...data,
+            id: data.id,
+            user_id: data.user_id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            address: data.address,
+            city: data.city,
+            postal_code: data.postal_code,
+            country: data.country,
+            description: data.description,
+            cuisine_type: data.cuisine_type,
+            logo_url: data.logo_url,
+            cover_image_url: data.cover_image_url,
+            business_license: data.business_license,
+            tax_number: data.tax_number,
+            is_active: data.is_active,
+            is_verified: data.is_verified,
+            verification_status: (data.verification_status as 'pending' | 'approved' | 'rejected' | 'under_review') || 'pending',
+            verification_notes: data.verification_notes,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            opening_hours: data.opening_hours,
             delivery_radius: data.delivery_radius || 10,
+            minimum_order_amount: data.minimum_order_amount,
+            delivery_fee: data.delivery_fee,
             estimated_delivery_time: data.estimated_delivery_time || 45,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
             status: data.is_active ? 'active' : 'inactive'
           };
           setRestaurant(restaurantData);

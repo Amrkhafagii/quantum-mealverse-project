@@ -69,11 +69,36 @@ export const restaurantService = {
     
     if (!data) return null;
     
-    // Ensure required fields have default values
+    // Transform database response to match Restaurant interface
     return {
-      ...data,
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      city: data.city,
+      postal_code: data.postal_code,
+      country: data.country,
+      description: data.description,
+      cuisine_type: data.cuisine_type,
+      logo_url: data.logo_url,
+      cover_image_url: data.cover_image_url,
+      business_license: data.business_license,
+      tax_number: data.tax_number,
+      is_active: data.is_active,
+      is_verified: data.is_verified,
+      verification_status: (data.verification_status as 'pending' | 'approved' | 'rejected' | 'under_review') || 'pending',
+      verification_notes: data.verification_notes,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      opening_hours: data.opening_hours,
       delivery_radius: data.delivery_radius || 10,
+      minimum_order_amount: data.minimum_order_amount,
+      delivery_fee: data.delivery_fee,
       estimated_delivery_time: data.estimated_delivery_time || 45,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
     } as Restaurant;
   },
 
@@ -90,11 +115,36 @@ export const restaurantService = {
     
     if (error) throw error;
     
-    // Ensure required fields have default values
+    // Transform database response to match Restaurant interface
     return {
-      ...data,
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      city: data.city,
+      postal_code: data.postal_code,
+      country: data.country,
+      description: data.description,
+      cuisine_type: data.cuisine_type,
+      logo_url: data.logo_url,
+      cover_image_url: data.cover_image_url,
+      business_license: data.business_license,
+      tax_number: data.tax_number,
+      is_active: data.is_active,
+      is_verified: data.is_verified,
+      verification_status: (data.verification_status as 'pending' | 'approved' | 'rejected' | 'under_review') || 'pending',
+      verification_notes: data.verification_notes,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      opening_hours: data.opening_hours,
       delivery_radius: data.delivery_radius || 10,
+      minimum_order_amount: data.minimum_order_amount,
+      delivery_fee: data.delivery_fee,
       estimated_delivery_time: data.estimated_delivery_time || 45,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
     } as Restaurant;
   },
 
@@ -106,7 +156,21 @@ export const restaurantService = {
       .maybeSingle();
     
     if (error) throw error;
-    return data as RestaurantSettings | null;
+    
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      restaurant_id: data.restaurant_id,
+      notifications_enabled: data.notifications_enabled,
+      auto_accept_orders: data.auto_accept_orders,
+      order_preparation_time: data.order_preparation_time,
+      max_daily_orders: data.max_daily_orders,
+      operating_status: (data.operating_status as 'open' | 'busy' | 'closed' | 'temporarily_closed') || 'open',
+      special_instructions: data.special_instructions,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    } as RestaurantSettings;
   },
 
   async updateRestaurantSettings(restaurantId: string, settings: Partial<RestaurantSettings>): Promise<RestaurantSettings> {
@@ -121,7 +185,19 @@ export const restaurantService = {
       .single();
     
     if (error) throw error;
-    return data as RestaurantSettings;
+    
+    return {
+      id: data.id,
+      restaurant_id: data.restaurant_id,
+      notifications_enabled: data.notifications_enabled,
+      auto_accept_orders: data.auto_accept_orders,
+      order_preparation_time: data.order_preparation_time,
+      max_daily_orders: data.max_daily_orders,
+      operating_status: (data.operating_status as 'open' | 'busy' | 'closed' | 'temporarily_closed') || 'open',
+      special_instructions: data.special_instructions,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    } as RestaurantSettings;
   },
 
   async uploadVerificationDocument(
@@ -157,7 +233,18 @@ export const restaurantService = {
       .single();
     
     if (error) throw error;
-    return data as VerificationDocument;
+    
+    return {
+      id: data.id,
+      restaurant_id: data.restaurant_id,
+      document_type: data.document_type as VerificationDocument['document_type'],
+      document_url: data.document_url,
+      document_name: data.document_name,
+      uploaded_at: data.uploaded_at,
+      verified_at: data.verified_at,
+      verification_status: (data.verification_status as 'pending' | 'approved' | 'rejected') || 'pending',
+      verification_notes: data.verification_notes,
+    } as VerificationDocument;
   },
 
   async getVerificationDocuments(restaurantId: string): Promise<VerificationDocument[]> {
@@ -168,7 +255,18 @@ export const restaurantService = {
       .order('uploaded_at', { ascending: false });
     
     if (error) throw error;
-    return (data || []) as VerificationDocument[];
+    
+    return (data || []).map(doc => ({
+      id: doc.id,
+      restaurant_id: doc.restaurant_id,
+      document_type: doc.document_type as VerificationDocument['document_type'],
+      document_url: doc.document_url,
+      document_name: doc.document_name,
+      uploaded_at: doc.uploaded_at,
+      verified_at: doc.verified_at,
+      verification_status: (doc.verification_status as 'pending' | 'approved' | 'rejected') || 'pending',
+      verification_notes: doc.verification_notes,
+    })) as VerificationDocument[];
   },
 
   async deleteVerificationDocument(documentId: string): Promise<void> {
