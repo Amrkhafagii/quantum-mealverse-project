@@ -394,6 +394,59 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_notifications: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          is_sent: boolean | null
+          message: string
+          notification_type: string
+          order_id: string | null
+          read_at: string | null
+          sent_at: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message: string
+          notification_type: string
+          order_id?: string | null
+          read_at?: string | null
+          sent_at?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message?: string
+          notification_type?: string
+          order_id?: string | null
+          read_at?: string | null
+          sent_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_retention_logs: {
         Row: {
           executed_at: string
@@ -688,6 +741,69 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      delivery_location_updates: {
+        Row: {
+          accuracy: number | null
+          assignment_id: string | null
+          battery_level: number | null
+          created_at: string | null
+          delivery_user_id: string | null
+          heading: number | null
+          id: string
+          is_moving: boolean | null
+          latitude: number
+          location_source: string | null
+          longitude: number
+          speed: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          assignment_id?: string | null
+          battery_level?: number | null
+          created_at?: string | null
+          delivery_user_id?: string | null
+          heading?: number | null
+          id?: string
+          is_moving?: boolean | null
+          latitude: number
+          location_source?: string | null
+          longitude: number
+          speed?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          assignment_id?: string | null
+          battery_level?: number | null
+          created_at?: string | null
+          delivery_user_id?: string | null
+          heading?: number | null
+          id?: string
+          is_moving?: boolean | null
+          latitude?: number
+          location_source?: string | null
+          longitude?: number
+          speed?: number | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_location_updates_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_location_updates_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       delivery_locations: {
         Row: {
@@ -1782,6 +1898,127 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      geofence_events: {
+        Row: {
+          accuracy: number | null
+          assignment_id: string | null
+          delivery_user_id: string | null
+          event_type: string
+          geofence_zone_id: string | null
+          id: string
+          latitude: number
+          longitude: number
+          metadata: Json | null
+          timestamp: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          assignment_id?: string | null
+          delivery_user_id?: string | null
+          event_type: string
+          geofence_zone_id?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          metadata?: Json | null
+          timestamp?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          assignment_id?: string | null
+          delivery_user_id?: string | null
+          event_type?: string
+          geofence_zone_id?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          metadata?: Json | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geofence_events_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geofence_events_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geofence_events_geofence_zone_id_fkey"
+            columns: ["geofence_zone_id"]
+            isOneToOne: false
+            referencedRelation: "geofence_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geofence_zones: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number
+          longitude: number
+          metadata: Json | null
+          name: string
+          order_id: string | null
+          radius_meters: number
+          restaurant_id: string | null
+          updated_at: string | null
+          zone_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude: number
+          longitude: number
+          metadata?: Json | null
+          name: string
+          order_id?: string | null
+          radius_meters?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+          zone_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number
+          longitude?: number
+          metadata?: Json | null
+          name?: string
+          order_id?: string | null
+          radius_meters?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+          zone_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geofence_zones_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geofence_zones_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       global_meal_ratings: {
         Row: {
@@ -7430,6 +7667,16 @@ export type Database = {
       }
       postgis_wagyu_version: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      send_customer_notification: {
+        Args: {
+          p_order_id: string
+          p_notification_type: string
+          p_title: string
+          p_message: string
+          p_data?: Json
+        }
         Returns: string
       }
       spheroid_in: {

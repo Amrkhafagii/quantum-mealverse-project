@@ -13,6 +13,7 @@ import { EarningsSummary } from '@/components/delivery/dashboard/EarningsSummary
 import { DeliveryHistory } from '@/components/delivery/dashboard/DeliveryHistory';
 import { DeliveryStats } from '@/components/delivery/dashboard/DeliveryStats';
 import { AvailableOrders } from '@/components/delivery/AvailableOrders';
+import { RealTimeLocationPanel } from '@/components/delivery/RealTimeLocationPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from 'sonner';
 import { DeliveryDashboardErrorBoundary } from '@/components/delivery/DeliveryDashboardErrorBoundary';
 import { DeliveryMapProvider } from '@/contexts/DeliveryMapContext';
+import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 
 const DeliveryDashboardContent: React.FC = () => {
   const { user, loading: authLoading, logout } = useAuth();
@@ -32,6 +34,10 @@ const DeliveryDashboardContent: React.FC = () => {
   const { deliveryUser, loading: userLoading } = useDeliveryUser(user?.id);
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const [activeTab, setActiveTab] = useState<string>("active");
+  const { activeAssignments } = useDeliveryAssignments(deliveryUser?.id);
+
+  // Get the current active assignment for location tracking
+  const currentAssignment = activeAssignments.length > 0 ? activeAssignments[0] : null;
 
   console.log('=== DELIVERY DASHBOARD DEBUG ===');
   console.log('Auth loading:', authLoading);
@@ -171,6 +177,13 @@ const DeliveryDashboardContent: React.FC = () => {
                 <p className="text-yellow-400">Maps are loading. Some features may be limited until maps are ready.</p>
               </CardContent>
             </Card>
+          )}
+          
+          {/* Real-time location panel - show when there's an active assignment */}
+          {currentAssignment && (
+            <div className="mb-6">
+              <RealTimeLocationPanel assignmentId={currentAssignment.id} />
+            </div>
           )}
           
           <DeliveryStats deliveryUser={deliveryUser} />
