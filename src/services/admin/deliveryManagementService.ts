@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   DeliveryZone, 
@@ -9,6 +8,8 @@ import type {
 } from '@/types/admin';
 
 class DeliveryManagementService {
+  public supabase = supabase;
+
   // Dashboard Stats
   async getDashboardStats(): Promise<AdminDashboardStats> {
     const [driversCount, pendingApprovals, activeAlerts, zonesCount, todayDeliveries, avgRating] = await Promise.all([
@@ -157,7 +158,13 @@ class DeliveryManagementService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    
+    // Cast the response to proper types
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as DriverApprovalWorkflow['status'],
+      stage: item.stage as DriverApprovalWorkflow['stage']
+    }));
   }
 
   async updateDriverApproval(
@@ -207,7 +214,12 @@ class DeliveryManagementService {
       }
     }
     
-    return data;
+    // Cast the response to proper type
+    return data ? {
+      ...data,
+      status: data.status as DriverApprovalWorkflow['status'],
+      stage: data.stage as DriverApprovalWorkflow['stage']
+    } : null;
   }
 
   // Performance Alerts Management
@@ -230,7 +242,13 @@ class DeliveryManagementService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    
+    // Cast the response to proper types
+    return (data || []).map(item => ({
+      ...item,
+      alert_type: item.alert_type as DeliveryPerformanceAlert['alert_type'],
+      severity: item.severity as DeliveryPerformanceAlert['severity']
+    }));
   }
 
   async resolveAlert(
@@ -256,7 +274,12 @@ class DeliveryManagementService {
       await this.logAdminAction('alert_resolved', 'alert', id, { resolution_notes });
     }
     
-    return data;
+    // Cast the response to proper type
+    return data ? {
+      ...data,
+      alert_type: data.alert_type as DeliveryPerformanceAlert['alert_type'],
+      severity: data.severity as DeliveryPerformanceAlert['severity']
+    } : null;
   }
 
   async createPerformanceAlert(
@@ -290,7 +313,13 @@ class DeliveryManagementService {
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    
+    // Cast the response to proper types
+    return (data || []).map(item => ({
+      ...item,
+      action_type: item.action_type as DeliveryManagementLog['action_type'],
+      target_type: item.target_type as DeliveryManagementLog['target_type']
+    }));
   }
 
   private async logAdminAction(
