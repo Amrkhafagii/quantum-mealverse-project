@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { fromSupabaseJson, toSupabaseJson } from '@/utils/supabaseUtils';
 import type { 
@@ -213,8 +214,24 @@ export class FinancialService {
   }
 
   async createPayout(payout: Omit<Payout, 'id' | 'created_at' | 'updated_at'>): Promise<Payout> {
+    // Ensure we have the required fields for the database
     const payoutData = {
-      ...payout,
+      restaurant_id: payout.restaurant_id || null,
+      delivery_user_id: payout.delivery_user_id || null,
+      payout_method: payout.payout_method,
+      amount: payout.amount,
+      currency: payout.currency,
+      status: payout.status,
+      external_payout_id: payout.external_payout_id || null,
+      provider: payout.provider,
+      provider_fee: payout.provider_fee,
+      net_amount: payout.net_amount || null,
+      earnings_count: payout.earnings_count,
+      period_start: payout.period_start,
+      period_end: payout.period_end,
+      scheduled_date: payout.scheduled_date || null,
+      processed_at: payout.processed_at || null,
+      failure_reason: payout.failure_reason || null,
       metadata: toSupabaseJson(payout.metadata)
     };
 
