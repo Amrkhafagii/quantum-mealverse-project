@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface RouteWaypoint {
@@ -222,28 +223,26 @@ export class GoogleRoutingService {
     waypoints: RouteWaypoint[]
   ): Promise<void> {
     try {
-      // Store main route (remove id from insert since it's auto-generated)
+      // First, let's check what columns exist in the routes table
       const { data: routeRecord, error: routeError } = await supabase
         .from('routes')
         .insert({
-          assignment_id: assignmentId,
           origin_latitude: origin.latitude,
           origin_longitude: origin.longitude,
           destination_latitude: destination.latitude,
           destination_longitude: destination.longitude,
-          waypoints: waypoints,
-          optimized_waypoints: route.optimized_waypoint_order ? 
-            route.optimized_waypoint_order.map(i => waypoints[i]) : waypoints,
           route_polyline: route.overview_polyline,
           total_distance_meters: route.total_distance,
           total_duration_seconds: route.total_duration,
-          estimated_arrival: new Date(Date.now() + route.total_duration * 1000),
-          route_steps: route.legs.flatMap(leg => leg.steps)
+          estimated_arrival: new Date(Date.now() + route.total_duration * 1000).toISOString(),
         })
         .select()
         .single();
 
-      if (routeError) throw routeError;
+      if (routeError) {
+        console.error('Route insert error:', routeError);
+        throw routeError;
+      }
 
       // Use the returned route ID for segments
       const routeId = routeRecord.id;
@@ -276,7 +275,10 @@ export class GoogleRoutingService {
           .from('route_segments')
           .insert(segments);
 
-        if (segmentsError) throw segmentsError;
+        if (segmentsError) {
+          console.error('Segments insert error:', segmentsError);
+          throw segmentsError;
+        }
       }
     } catch (error) {
       console.error('Error storing route:', error);
