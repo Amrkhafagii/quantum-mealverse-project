@@ -1,8 +1,10 @@
 
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { Loader2, ChefHat, TrendingUp, Clock, Package } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { restaurantAnalyticsService, type AnalyticsSummary } from '@/services/restaurantAnalyticsService';
+import { useToast } from '@/components/ui/use-toast';
 
 // Lazy load components for better performance
 const OrderManagement = lazy(() => import('./orders/OrderManagement'));
@@ -10,6 +12,34 @@ const RestaurantAnalytics = lazy(() => import('./analytics/RestaurantAnalytics')
 
 export const RestaurantDashboard = () => {
   const { restaurant, isLoading } = useRestaurantAuth();
+  const { toast } = useToast();
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  useEffect(() => {
+    if (restaurant?.id) {
+      loadAnalyticsSummary();
+    }
+  }, [restaurant?.id]);
+
+  const loadAnalyticsSummary = async () => {
+    if (!restaurant?.id) return;
+
+    try {
+      setLoadingAnalytics(true);
+      const data = await restaurantAnalyticsService.getAnalyticsSummary(restaurant.id);
+      setAnalytics(data);
+    } catch (error) {
+      console.error('Error loading analytics summary:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard analytics",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
 
   console.log('RestaurantDashboard - Restaurant data:', restaurant);
 
@@ -55,7 +85,9 @@ export const RestaurantDashboard = () => {
               <TrendingUp className="h-8 w-8 text-green-500" />
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Status</p>
-                <p className="text-lg font-bold text-green-600 capitalize">{restaurant.status}</p>
+                <p className="text-lg font-bold text-green-600 capitalize">
+                  {restaurant.is_active ? 'Active' : 'Inactive'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -66,8 +98,10 @@ export const RestaurantDashboard = () => {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-orange-500" />
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Orders Today</p>
-                <p className="text-lg font-bold text-orange-600">0</p>
+                <p className="text-sm font-medium text-gray-600">Today's Orders</p>
+                <p className="text-lg font-bold text-orange-600">
+                  {loadingAnalytics ? '...' : analytics?.todayOrders || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -79,7 +113,9 @@ export const RestaurantDashboard = () => {
               <Package className="h-8 w-8 text-purple-500" />
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Menu Items</p>
-                <p className="text-lg font-bold text-purple-600">12</p>
+                <p className="text-lg font-bold text-purple-600">
+                  {loadingAnalytics ? '...' : analytics?.totalMenuItems || 0}
+                </p>
               </div>
             </div>
           </CardContent>

@@ -3103,6 +3103,56 @@ export type Database = {
           },
         ]
       }
+      restaurant_analytics: {
+        Row: {
+          average_order_value: number | null
+          average_preparation_time: number | null
+          created_at: string | null
+          customer_satisfaction_score: number | null
+          date: string
+          id: string
+          order_completion_rate: number | null
+          restaurant_id: string
+          total_orders: number | null
+          total_revenue: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_order_value?: number | null
+          average_preparation_time?: number | null
+          created_at?: string | null
+          customer_satisfaction_score?: number | null
+          date: string
+          id?: string
+          order_completion_rate?: number | null
+          restaurant_id: string
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_order_value?: number | null
+          average_preparation_time?: number | null
+          created_at?: string | null
+          customer_satisfaction_score?: number | null
+          date?: string
+          id?: string
+          order_completion_rate?: number | null
+          restaurant_id?: string
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_analytics_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_assignments: {
         Row: {
           created_at: string
@@ -3347,6 +3397,62 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_menu_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: string[] | null
+          is_available: boolean | null
+          name: string
+          nutritional_info: Json | null
+          preparation_time: number | null
+          price: number
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          ingredients?: string[] | null
+          is_available?: boolean | null
+          name: string
+          nutritional_info?: Json | null
+          preparation_time?: number | null
+          price: number
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          ingredients?: string[] | null
+          is_available?: boolean | null
+          name?: string
+          nutritional_info?: Json | null
+          preparation_time?: number | null
+          price?: number
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_menu_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_settings: {
         Row: {
           auto_accept_orders: boolean | null
@@ -3448,8 +3554,10 @@ export type Database = {
           created_at: string | null
           cuisine_type: string | null
           delivery_fee: number | null
+          delivery_radius: number | null
           description: string | null
           email: string
+          estimated_delivery_time: number | null
           id: string
           is_active: boolean | null
           is_verified: boolean | null
@@ -3477,8 +3585,10 @@ export type Database = {
           created_at?: string | null
           cuisine_type?: string | null
           delivery_fee?: number | null
+          delivery_radius?: number | null
           description?: string | null
           email: string
+          estimated_delivery_time?: number | null
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
@@ -3506,8 +3616,10 @@ export type Database = {
           created_at?: string | null
           cuisine_type?: string | null
           delivery_fee?: number | null
+          delivery_radius?: number | null
           description?: string | null
           email?: string
+          estimated_delivery_time?: number | null
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null

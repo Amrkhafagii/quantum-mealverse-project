@@ -96,21 +96,12 @@ export const useRestaurantOrders = (restaurantId: string) => {
         .update({ status: newStatus })
         .eq('id', orderId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       // Update local state
-      setOrders(prev => prev.map(order => 
-        order.id === orderId 
-          ? { ...order, status: newStatus }
-          : order
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
       ));
-
-      toast({
-        title: "Success",
-        description: `Order status updated to ${newStatus}`,
-      });
 
       return true;
     } catch (err) {
@@ -132,7 +123,7 @@ export const useRestaurantOrders = (restaurantId: string) => {
     orders,
     loading,
     error,
-    fetchOrders,
+    refetch: fetchOrders,
     updateOrderStatus
   };
 };

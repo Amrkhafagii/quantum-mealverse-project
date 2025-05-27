@@ -1,98 +1,141 @@
 
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, TrendingUp, DollarSign, Clock, Star } from 'lucide-react';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { EnhancedAnalyticsDashboard } from './EnhancedAnalyticsDashboard';
-import { OrdersOverTimeChart } from './OrdersOverTimeChart';
-import { PopularItemsList } from './PopularItemsList';
-import { PerformanceMetricsCard } from './PerformanceMetricsCard';
-import { SalesChart } from './SalesChart';
-import { TopPerformersChart } from './TopPerformersChart';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { restaurantAnalyticsService, type AnalyticsSummary } from '@/services/restaurantAnalyticsService';
+import { useToast } from '@/components/ui/use-toast';
 
-const RestaurantAnalytics = () => {
+export const RestaurantAnalytics = () => {
   const { restaurant } = useRestaurantAuth();
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
-  const [performanceData, setPerformanceData] = useState({
-    isLoading: true,
-    topPerformers: [] as Array<{name: string, value: number}>
-  });
-
-  // Mock data for demonstration purposes
-  const [mockedData] = useState({
-    title: "Revenue",
-    value: "$5,231.89",
-    change: 12.5
-  });
+  const { toast } = useToast();
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real implementation, this would fetch data based on timeRange
-    // For now, we'll just mock setting loading to false after a delay
-    const timer = setTimeout(() => {
-      setPerformanceData({
-        isLoading: false,
-        topPerformers: [
-          { name: "Burger Deluxe", value: 124 },
-          { name: "Chicken Salad", value: 98 },
-          { name: "Veggie Pizza", value: 82 },
-          { name: "Fish Tacos", value: 65 },
-          { name: "Steak Sandwich", value: 43 }
-        ]
-      });
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, [timeRange]);
+    if (restaurant?.id) {
+      loadAnalytics();
+    }
+  }, [restaurant?.id]);
 
-  // Safety check - if restaurant isn't loaded yet, don't render charts
-  if (!restaurant || !restaurant.id) {
-    return <div>Loading restaurant data...</div>;
+  const loadAnalytics = async () => {
+    if (!restaurant?.id) return;
+
+    try {
+      setLoading(true);
+      const data = await restaurantAnalyticsService.getAnalyticsSummary(restaurant.id);
+      setAnalytics(data);
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load analytics data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
+        <span className="ml-2 text-quantum-cyan">Loading analytics...</span>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <Card className="p-6">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">No Analytics Data</h3>
+          <p className="text-gray-600">Analytics data will appear once you start receiving orders.</p>
+        </div>
+      </Card>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
-        <Tabs defaultValue="week" onValueChange={(value) => setTimeRange(value as 'week' | 'month' | 'year')}>
-          <TabsList>
-            <TabsTrigger value="week">Last 7 Days</TabsTrigger>
-            <TabsTrigger value="month">Last 30 Days</TabsTrigger>
-            <TabsTrigger value="year">Last Year</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      
-      <EnhancedAnalyticsDashboard />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <OrdersOverTimeChart 
-          restaurantId={restaurant.id} 
-          timeRange={timeRange} 
-        />
-        <SalesChart 
-          restaurantId={restaurant.id} 
-          timeRange={timeRange} 
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <PerformanceMetricsCard 
-          title={mockedData.title} 
-          value={mockedData.value} 
-          change={mockedData.change} 
-        />
-        <PopularItemsList 
-          restaurantId={restaurant.id} 
-          timeRange={timeRange} 
-        />
-        <TopPerformersChart 
-          restaurantId={restaurant.id}
-          timeRange={timeRange}
-          data={performanceData.topPerformers}
-          isLoading={performanceData.isLoading}
-          title="Top Menu Items"
-          description="Most ordered items in the selected period"
-        />
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Today's Orders</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{analytics.todayOrders}</div>
+          <p className="text-xs text-muted-foreground">
+            Orders received today
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Weekly Revenue</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">${analytics.weeklyRevenue.toFixed(2)}</div>
+          <p className="text-xs text-muted-foreground">
+            Revenue from last 7 days
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">${analytics.averageOrderValue.toFixed(2)}</div>
+          <p className="text-xs text-muted-foreground">
+            Average value per order
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Menu Items</CardTitle>
+          <Clock className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{analytics.totalMenuItems}</div>
+          <p className="text-xs text-muted-foreground">
+            Total menu items
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Order Completion Rate</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{analytics.orderCompletionRate.toFixed(1)}%</div>
+          <p className="text-xs text-muted-foreground">
+            Percentage of orders completed successfully
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Customer Satisfaction</CardTitle>
+          <Star className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{analytics.customerSatisfactionScore.toFixed(1)}/5</div>
+          <p className="text-xs text-muted-foreground">
+            Average customer rating
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
