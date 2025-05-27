@@ -494,6 +494,75 @@ export type Database = {
           },
         ]
       }
+      data_anonymization_settings: {
+        Row: {
+          anonymize_device_info: boolean | null
+          anonymize_location_data: boolean | null
+          anonymize_usage_patterns: boolean | null
+          created_at: string | null
+          id: string
+          precision_reduction_level: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anonymize_device_info?: boolean | null
+          anonymize_location_data?: boolean | null
+          anonymize_usage_patterns?: boolean | null
+          created_at?: string | null
+          id?: string
+          precision_reduction_level?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anonymize_device_info?: boolean | null
+          anonymize_location_data?: boolean | null
+          anonymize_usage_patterns?: boolean | null
+          created_at?: string | null
+          id?: string
+          precision_reduction_level?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      data_export_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          export_format: string
+          file_url: string | null
+          id: string
+          request_type: string
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          export_format: string
+          file_url?: string | null
+          id?: string
+          request_type: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          export_format?: string
+          file_url?: string | null
+          id?: string
+          request_type?: string
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       data_retention_logs: {
         Row: {
           executed_at: string
@@ -3011,6 +3080,69 @@ export type Database = {
           substitute_ingredient?: string
           substitution_reason?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      location_anonymization_log: {
+        Row: {
+          anonymization_method: string | null
+          anonymized_location_count: number | null
+          id: string
+          original_location_count: number | null
+          precision_level: number | null
+          processed_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anonymization_method?: string | null
+          anonymized_location_count?: number | null
+          id?: string
+          original_location_count?: number | null
+          precision_level?: number | null
+          processed_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anonymization_method?: string | null
+          anonymized_location_count?: number | null
+          id?: string
+          original_location_count?: number | null
+          precision_level?: number | null
+          processed_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      location_data_retention_policies: {
+        Row: {
+          auto_anonymize_after_days: number
+          auto_delete_after_days: number
+          created_at: string | null
+          export_format: string | null
+          id: string
+          retention_period_days: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auto_anonymize_after_days?: number
+          auto_delete_after_days?: number
+          created_at?: string | null
+          export_format?: string | null
+          id?: string
+          retention_period_days?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auto_anonymize_after_days?: number
+          auto_delete_after_days?: number
+          created_at?: string | null
+          export_format?: string | null
+          id?: string
+          retention_period_days?: number
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -6564,6 +6696,45 @@ export type Database = {
         }
         Relationships: []
       }
+      third_party_sharing_preferences: {
+        Row: {
+          analytics_sharing: boolean | null
+          consent_date: string | null
+          created_at: string | null
+          data_processing_consent: boolean | null
+          id: string
+          location_sharing_partners: Json | null
+          marketing_sharing: boolean | null
+          research_sharing: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          analytics_sharing?: boolean | null
+          consent_date?: string | null
+          created_at?: string | null
+          data_processing_consent?: boolean | null
+          id?: string
+          location_sharing_partners?: Json | null
+          marketing_sharing?: boolean | null
+          research_sharing?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          analytics_sharing?: boolean | null
+          consent_date?: string | null
+          created_at?: string | null
+          data_processing_consent?: boolean | null
+          id?: string
+          location_sharing_partners?: Json | null
+          marketing_sharing?: boolean | null
+          research_sharing?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       traffic_incidents: {
         Row: {
           created_at: string | null
@@ -8179,6 +8350,10 @@ export type Database = {
             }
         Returns: string
       }
+      anonymize_user_location_data: {
+        Args: { p_user_id: string; p_precision_level?: number }
+        Returns: number
+      }
       box: {
         Args: { "": unknown } | { "": unknown }
         Returns: unknown
@@ -8328,6 +8503,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_user_location_history: {
+        Args: { p_user_id: string; p_older_than_days?: number }
+        Returns: number
+      }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -8358,6 +8537,14 @@ export type Database = {
       equals: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
+      }
+      export_user_location_data: {
+        Args: {
+          p_user_id: string
+          p_format?: string
+          p_include_anonymized?: boolean
+        }
+        Returns: Json
       }
       find_capable_restaurants_for_meal: {
         Args: {
@@ -8770,6 +8957,19 @@ export type Database = {
           health_score: number
         }[]
       }
+      get_or_create_anonymization_settings: {
+        Args: { p_user_id: string }
+        Returns: {
+          anonymize_device_info: boolean | null
+          anonymize_location_data: boolean | null
+          anonymize_usage_patterns: boolean | null
+          created_at: string | null
+          id: string
+          precision_reduction_level: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+      }
       get_or_create_delivery_location_settings: {
         Args: { p_delivery_user_id: string }
         Returns: {
@@ -8793,6 +8993,34 @@ export type Database = {
           movement_detection_sensitivity: string | null
           sharing_precision_level: string | null
           updated_at: string | null
+        }
+      }
+      get_or_create_location_retention_policy: {
+        Args: { p_user_id: string }
+        Returns: {
+          auto_anonymize_after_days: number
+          auto_delete_after_days: number
+          created_at: string | null
+          export_format: string | null
+          id: string
+          retention_period_days: number
+          updated_at: string | null
+          user_id: string | null
+        }
+      }
+      get_or_create_sharing_preferences: {
+        Args: { p_user_id: string }
+        Returns: {
+          analytics_sharing: boolean | null
+          consent_date: string | null
+          created_at: string | null
+          data_processing_consent: boolean | null
+          id: string
+          location_sharing_partners: Json | null
+          marketing_sharing: boolean | null
+          research_sharing: boolean | null
+          updated_at: string | null
+          user_id: string | null
         }
       }
       get_proj4_from_srid: {

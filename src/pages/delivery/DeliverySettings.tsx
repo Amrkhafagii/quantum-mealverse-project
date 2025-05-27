@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { DeliveryLocationControls } from '@/components/delivery/DeliveryLocationControls';
 import { DeliveryNotificationSettings } from '@/components/delivery/settings/DeliveryNotificationPreferences';
 import { AdvancedLocationSettings } from '@/components/delivery/settings/AdvancedLocationSettings';
+import DataRetentionSettings from '@/components/privacy/DataRetentionSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveryService } from '@/services/delivery/deliveryService';
 
