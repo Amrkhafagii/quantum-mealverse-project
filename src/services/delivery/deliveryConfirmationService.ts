@@ -50,7 +50,10 @@ class DeliveryConfirmationService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        confirmation_type: data.confirmation_type as 'pickup' | 'delivery'
+      };
     } catch (error) {
       console.error('Error creating delivery confirmation:', error);
       return null;
@@ -65,7 +68,10 @@ class DeliveryConfirmationService {
         .eq('delivery_assignment_id', assignmentId)
         .order('confirmed_at', { ascending: false });
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        confirmation_type: item.confirmation_type as 'pickup' | 'delivery'
+      }));
     } catch (error) {
       console.error('Error fetching confirmations:', error);
       return [];

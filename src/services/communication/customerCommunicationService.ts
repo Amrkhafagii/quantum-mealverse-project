@@ -35,7 +35,10 @@ class CustomerCommunicationService {
         await this.sendSMSMessage(recipientId, content);
       }
 
-      return data;
+      return {
+        ...data,
+        message_type: data.message_type as 'chat' | 'sms' | 'system'
+      };
     } catch (error) {
       console.error('Error sending message:', error);
       return null;
@@ -76,7 +79,10 @@ class CustomerCommunicationService {
         .eq('order_id', orderId)
         .order('created_at', { ascending: true });
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        message_type: item.message_type as 'chat' | 'sms' | 'system'
+      }));
     } catch (error) {
       console.error('Error fetching messages:', error);
       return [];
@@ -125,7 +131,10 @@ class CustomerCommunicationService {
         },
         (payload) => {
           console.log('New message received:', payload);
-          onMessage(payload.new as CustomerCommunication);
+          onMessage({
+            ...payload.new,
+            message_type: payload.new.message_type as 'chat' | 'sms' | 'system'
+          } as CustomerCommunication);
         }
       )
       .subscribe((status) => {

@@ -79,7 +79,10 @@ class PushNotificationService {
 
       // Send to each platform
       for (const token of tokens) {
-        await this.sendToDevice(token, title, body, data);
+        await this.sendToDevice({
+          ...token,
+          platform: token.platform as 'ios' | 'android' | 'web'
+        }, title, body, data);
       }
 
       // Update notification status
@@ -133,7 +136,6 @@ class PushNotificationService {
           data,
           icon: '/icon-192x192.png',
           badge: '/badge-72x72.png',
-          vibrate: [200, 100, 200],
           tag: data.orderId || 'default'
         });
       }
@@ -171,7 +173,12 @@ class PushNotificationService {
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        data: typeof item.data === 'string' 
+          ? JSON.parse(item.data) 
+          : (item.data as Record<string, any>)
+      }));
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];

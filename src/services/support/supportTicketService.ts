@@ -33,7 +33,12 @@ class SupportTicketService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        category: data.category as 'delivery_issue' | 'payment_issue' | 'quality_issue' | 'technical_issue' | 'other',
+        priority: data.priority as 'low' | 'medium' | 'high' | 'urgent',
+        status: data.status as 'open' | 'in_progress' | 'resolved' | 'closed'
+      };
     } catch (error) {
       console.error('Error creating support ticket:', error);
       return null;
@@ -53,7 +58,12 @@ class SupportTicketService {
       }
 
       const { data, error } = await query;
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        category: item.category as 'delivery_issue' | 'payment_issue' | 'quality_issue' | 'technical_issue' | 'other',
+        priority: item.priority as 'low' | 'medium' | 'high' | 'urgent',
+        status: item.status as 'open' | 'in_progress' | 'resolved' | 'closed'
+      }));
     } catch (error) {
       console.error('Error fetching user tickets:', error);
       return [];
@@ -69,7 +79,12 @@ class SupportTicketService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        category: data.category as 'delivery_issue' | 'payment_issue' | 'quality_issue' | 'technical_issue' | 'other',
+        priority: data.priority as 'low' | 'medium' | 'high' | 'urgent',
+        status: data.status as 'open' | 'in_progress' | 'resolved' | 'closed'
+      };
     } catch (error) {
       console.error('Error fetching ticket:', error);
       return null;

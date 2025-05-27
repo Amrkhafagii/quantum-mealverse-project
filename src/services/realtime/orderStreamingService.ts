@@ -54,7 +54,12 @@ class OrderStreamingService {
         },
         (payload) => {
           console.log('Order event received:', payload);
-          onEvent(payload.new as OrderEvent);
+          onEvent({
+            ...payload.new,
+            event_data: typeof payload.new.event_data === 'string' 
+              ? JSON.parse(payload.new.event_data) 
+              : (payload.new.event_data as Record<string, any>)
+          } as OrderEvent);
         }
       )
       .subscribe((status) => {
@@ -97,7 +102,12 @@ class OrderStreamingService {
         },
         (payload) => {
           console.log('User order event received:', payload);
-          onEvent(payload.new as OrderEvent);
+          onEvent({
+            ...payload.new,
+            event_data: typeof payload.new.event_data === 'string' 
+              ? JSON.parse(payload.new.event_data) 
+              : (payload.new.event_data as Record<string, any>)
+          } as OrderEvent);
         }
       )
       .subscribe((status) => {
@@ -136,7 +146,12 @@ class OrderStreamingService {
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        event_data: typeof item.event_data === 'string' 
+          ? JSON.parse(item.event_data) 
+          : (item.event_data as Record<string, any>)
+      }));
     } catch (error) {
       console.error('Error fetching order events:', error);
       return [];

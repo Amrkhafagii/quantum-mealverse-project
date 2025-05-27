@@ -1,68 +1,32 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supportTicketService } from '@/services/support/supportTicketService';
-import type { SupportTicket, SupportTicketMessage } from '@/types/delivery-features';
+import type { SupportTicket } from '@/types/delivery-features';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
-export const useSupportTickets = (ticketId?: string) => {
+export const useSupportTickets = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [currentTicket, setCurrentTicket] = useState<SupportTicket | null>(null);
-  const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-
-  const handleNewMessage = useCallback((message: SupportTicketMessage) => {
-    setMessages(prev => [...prev, message]);
-  }, []);
 
   useEffect(() => {
     if (user?.id) {
-      loadUserTickets();
+      loadTickets();
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (ticketId) {
-      loadTicketDetails();
-      loadTicketMessages();
-      
-      // Subscribe to new messages
-      const unsubscribe = supportTicketService.subscribeToTicketMessages(
-        ticketId,
-        handleNewMessage
-      );
-
-      setIsConnected(true);
-
-      return () => {
-        unsubscribe();
-        setIsConnected(false);
-      };
-    }
-  }, [ticketId, handleNewMessage]);
-
-  const loadUserTickets = async () => {
+  const loadTickets = async () => {
     if (!user?.id) return;
 
     setLoading(true);
-    const userTickets = await supportTicketService.getUserTickets(user.id);
-    setTickets(userTickets);
-    setLoading(false);
-  };
-
-  const loadTicketDetails = async () => {
-    if (!ticketId) return;
-
-    const ticket = await supportTicketService.getTicket(ticketId);
-    setCurrentTicket(ticket);
-  };
-
-  const loadTicketMessages = async () => {
-    if (!ticketId) return;
-
-    const ticketMessages = await supportTicketService.getTicketMessages(ticketId);
-    setMessages(ticketMessages);
+    try {
+      const userTickets = await supportTicketService.getUserTickets(user.id);
+      setTickets(userTickets);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const createTicket = async (
@@ -77,71 +41,62 @@ export const useSupportTickets = (ticketId?: string) => {
     if (!user?.id) return null;
 
     setLoading(true);
-    const ticket = await supportTicketService.createTicket(
-      user.id,
-      category,
-      subject,
-      description,
-      priority,
-      orderId,
-      deliveryAssignmentId,
-      attachments
-    );
+    try {
+      const ticket = await supportTicketService.createTicket(
+        user.id,
+        category,
+        subject,
+        description,
+        priority,
+        orderId,
+        deliveryAssignmentId,
+        attachments
+      );
 
-    if (ticket) {
-      await loadUserTickets();
+      if (ticket) {
+        setTickets(prev => [ticket, ...prev]);
+        toast({
+          title: 'Support ticket created',
+          description: `Ticket ${ticket.ticket_number} has been created`,
+        });
+      } else {
+        toast({
+          title: 'Failed to create ticket',
+          description: 'Please try again later',
+          variant: 'destructive'
+        });
+      }
+
+      return ticket;
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    return ticket;
   };
 
-  const addMessage = async (
-    message: string,
-    attachments?: string[]
-  ): Promise<boolean> => {
-    if (!ticketId || !user?.id) return false;
-
-    const newMessage = await supportTicketService.addMessage(
-      ticketId,
-      user.id,
-      message,
-      attachments
-    );
-
-    return !!newMessage;
-  };
-
-  const updateStatus = async (
+  const updateTicketStatus = async (
+    ticketId: string,
     status: 'open' | 'in_progress' | 'resolved' | 'closed'
   ): Promise<boolean> => {
-    if (!ticketId) return false;
-
     const success = await supportTicketService.updateTicketStatus(ticketId, status);
     
     if (success) {
-      await loadTicketDetails();
-      await loadUserTickets();
+      setTickets(prev =>
+        prev.map(ticket =>
+          ticket.id === ticketId
+            ? { ...ticket, status, updated_at: new Date().toISOString() }
+            : ticket
+        )
+      );
     }
 
     return success;
   };
 
-  const uploadAttachment = async (file: File): Promise<string | null> => {
-    if (!ticketId) return null;
-    return supportTicketService.uploadAttachment(file, ticketId);
-  };
-
   return {
     tickets,
-    currentTicket,
-    messages,
     loading,
-    isConnected,
     createTicket,
-    addMessage,
-    updateStatus,
-    uploadAttachment,
-    loadUserTickets
+    updateTicketStatus,
+    loadTickets
   };
 };

@@ -32,7 +32,12 @@ class DeliveryRatingService {
       // Update delivery user's average rating
       await this.updateDeliveryUserRating(deliveryUserId);
 
-      return data;
+      return {
+        ...data,
+        rating_categories: typeof data.rating_categories === 'string' 
+          ? JSON.parse(data.rating_categories) 
+          : (data.rating_categories as Record<string, number>)
+      };
     } catch (error) {
       console.error('Error creating delivery rating:', error);
       return null;
@@ -73,7 +78,14 @@ class DeliveryRatingService {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data || null;
+      if (!data) return null;
+
+      return {
+        ...data,
+        rating_categories: typeof data.rating_categories === 'string' 
+          ? JSON.parse(data.rating_categories) 
+          : (data.rating_categories as Record<string, number>)
+      };
     } catch (error) {
       console.error('Error fetching rating:', error);
       return null;
@@ -89,7 +101,12 @@ class DeliveryRatingService {
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        rating_categories: typeof item.rating_categories === 'string' 
+          ? JSON.parse(item.rating_categories) 
+          : (item.rating_categories as Record<string, number>)
+      }));
     } catch (error) {
       console.error('Error fetching delivery user ratings:', error);
       return [];
