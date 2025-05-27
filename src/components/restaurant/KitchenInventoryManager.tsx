@@ -2,10 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Package, AlertTriangle, Plus, Minus } from 'lucide-react';
+import { Package, AlertTriangle, Plus, Minus, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InventoryItem {
@@ -16,6 +15,9 @@ interface InventoryItem {
   unit: string;
   cost_per_unit: number;
   is_available: boolean;
+  quality_grade?: string;
+  storage_location?: string;
+  batch_number?: string;
   last_restocked?: string;
 }
 
@@ -72,7 +74,6 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
         throw error;
       }
 
-      // Update local state
       setInventory(prev => prev.map(item => 
         item.id === itemId 
           ? { ...item, current_stock: Math.max(0, newStock) }
@@ -103,7 +104,6 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
         throw error;
       }
 
-      // Update local state
       setInventory(prev => prev.map(item => 
         item.id === itemId 
           ? { ...item, is_available: isAvailable }
@@ -171,9 +171,25 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="font-medium">{item.ingredient_name}</h3>
-                    <p className="text-sm text-gray-600">
-                      Cost: ${item.cost_per_unit.toFixed(2)} per {item.unit}
-                    </p>
+                    <div className="flex flex-wrap gap-2 text-sm text-gray-600 mt-1">
+                      <span>Cost: ${item.cost_per_unit.toFixed(2)} per {item.unit}</span>
+                      {item.quality_grade && (
+                        <Badge variant="outline" className="text-xs">
+                          {item.quality_grade}
+                        </Badge>
+                      )}
+                      {item.storage_location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {item.storage_location}
+                        </span>
+                      )}
+                    </div>
+                    {item.batch_number && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Batch: {item.batch_number}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {item.current_stock <= item.minimum_stock && (
@@ -190,7 +206,7 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => updateStock(item.id, item.current_stock - 10)}
+                      onClick={() => updateStock(item.id, item.current_stock - 100)}
                       disabled={updating === item.id || item.current_stock <= 0}
                     >
                       <Minus className="h-4 w-4" />
@@ -208,7 +224,7 @@ export const KitchenInventoryManager: React.FC<KitchenInventoryManagerProps> = (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => updateStock(item.id, item.current_stock + 10)}
+                      onClick={() => updateStock(item.id, item.current_stock + 100)}
                       disabled={updating === item.id}
                     >
                       <Plus className="h-4 w-4" />

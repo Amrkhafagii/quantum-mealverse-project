@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { ResponsiveProvider } from "./contexts/ResponsiveContext";
 import { SkipToContent } from "./components/accessibility/SkipToContent";
+import ComplexOrderDemo from '@/pages/ComplexOrderDemo';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,61 +42,66 @@ const queryClient = new QueryClient({
   }
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ResponsiveProvider>
-      <TooltipProvider>
-        <AuthProvider>
-          <CartProvider>
-            <SkipToContent />
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <div id="main-content">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/order-confirmation/:id" element={
-                    <ProtectedRoute allowedUserTypes={['customer']}>
-                      <OrderConfirmation />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/orders/:id" element={
-                    <ProtectedRoute allowedUserTypes={['customer']}>
-                      <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/qr-scanner" element={<QrScannerDemo />} />
-                  <Route path="/nutrition" element={<Nutrition />} />
-                  <Route path="/customer" element={
-                    <ProtectedRoute allowedUserTypes={['customer']}>
-                      <Customer />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute allowedUserTypes={['customer']}>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/orders" element={
-                    <ProtectedRoute allowedUserTypes={['customer']}>
-                      <Orders />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/fitness" element={<Fitness />} />
-                  <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
-                  {/* Add more routes as needed */}
-                </Routes>
-              </div>
-            </BrowserRouter>
-          </CartProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </ResponsiveProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="App">
+        <ResponsiveProvider>
+          <TooltipProvider>
+            <AuthProvider>
+              <CartProvider>
+                <SkipToContent />
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <div id="main-content">
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/cart" element={<Cart />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/order-confirmation/:id" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <OrderConfirmation />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/orders/:id" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/qr-scanner" element={<QrScannerDemo />} />
+                      <Route path="/nutrition" element={<Nutrition />} />
+                      <Route path="/customer" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <Customer />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/dashboard" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/orders" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <Orders />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/fitness" element={<Fitness />} />
+                      <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
+                      <Route path="/complex-order-demo" element={<ComplexOrderDemo />} />
+                      {/* Add more routes as needed */}
+                    </Routes>
+                  </div>
+                </BrowserRouter>
+              </CartProvider>
+            </AuthProvider>
+          </TooltipProvider>
+        </ResponsiveProvider>
+      </div>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

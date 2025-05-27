@@ -1737,6 +1737,71 @@ export type Database = {
           },
         ]
       }
+      meals: {
+        Row: {
+          allergen_warnings: string[] | null
+          base_ingredients: Json | null
+          category: string | null
+          complexity_level: string | null
+          cooking_instructions: Json | null
+          created_at: string | null
+          description: string | null
+          dietary_tags: string[] | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          preparation_time: number
+          price: number
+          restaurant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          allergen_warnings?: string[] | null
+          base_ingredients?: Json | null
+          category?: string | null
+          complexity_level?: string | null
+          cooking_instructions?: Json | null
+          created_at?: string | null
+          description?: string | null
+          dietary_tags?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          preparation_time?: number
+          price?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          allergen_warnings?: string[] | null
+          base_ingredients?: Json | null
+          category?: string | null
+          complexity_level?: string | null
+          cooking_instructions?: Json | null
+          created_at?: string | null
+          description?: string | null
+          dietary_tags?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          preparation_time?: number
+          price?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meals_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           created_at: string | null
@@ -2038,6 +2103,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "order_items_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -2106,6 +2178,7 @@ export type Database = {
       orders: {
         Row: {
           city: string
+          complexity_score: number | null
           created_at: string
           customer_email: string
           customer_name: string
@@ -2113,6 +2186,7 @@ export type Database = {
           delivery_address: string
           delivery_fee: number
           delivery_method: string
+          estimated_preparation_time: number | null
           formatted_order_id: string | null
           id: string
           latitude: number | null
@@ -2122,6 +2196,7 @@ export type Database = {
           payment_method: string
           refund_amount: number | null
           refund_status: string | null
+          requires_chef_attention: boolean | null
           restaurant_attempts: Json | null
           restaurant_id: string | null
           return_images: string[] | null
@@ -2135,6 +2210,7 @@ export type Database = {
         }
         Insert: {
           city: string
+          complexity_score?: number | null
           created_at?: string
           customer_email: string
           customer_name: string
@@ -2142,6 +2218,7 @@ export type Database = {
           delivery_address: string
           delivery_fee: number
           delivery_method: string
+          estimated_preparation_time?: number | null
           formatted_order_id?: string | null
           id?: string
           latitude?: number | null
@@ -2151,6 +2228,7 @@ export type Database = {
           payment_method: string
           refund_amount?: number | null
           refund_status?: string | null
+          requires_chef_attention?: boolean | null
           restaurant_attempts?: Json | null
           restaurant_id?: string | null
           return_images?: string[] | null
@@ -2164,6 +2242,7 @@ export type Database = {
         }
         Update: {
           city?: string
+          complexity_score?: number | null
           created_at?: string
           customer_email?: string
           customer_name?: string
@@ -2171,6 +2250,7 @@ export type Database = {
           delivery_address?: string
           delivery_fee?: number
           delivery_method?: string
+          estimated_preparation_time?: number | null
           formatted_order_id?: string | null
           id?: string
           latitude?: number | null
@@ -2180,6 +2260,7 @@ export type Database = {
           payment_method?: string
           refund_amount?: number | null
           refund_status?: string | null
+          requires_chef_attention?: boolean | null
           restaurant_attempts?: Json | null
           restaurant_id?: string | null
           return_images?: string[] | null
