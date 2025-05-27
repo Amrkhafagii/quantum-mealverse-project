@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ParticleBackground from '@/components/ParticleBackground';
 import Footer from '@/components/Footer';
@@ -14,6 +14,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { ConnectionStateIndicator } from '@/components/ui/ConnectionStateIndicator';
+import { useCart } from '@/contexts/CartContext';
 
 const Checkout = () => {
   const {
@@ -29,7 +30,15 @@ const Checkout = () => {
   } = useCheckout();
   
   const { isOnline } = useConnectionStatus();
+  const { validateCart } = useCart();
   const navigate = useNavigate();
+
+  // Validate cart items when component mounts
+  useEffect(() => {
+    if (items.length > 0) {
+      validateCart();
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

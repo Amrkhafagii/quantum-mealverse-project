@@ -3015,6 +3015,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_order_items_meal_id"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "order_items_meal_id_fkey"
             columns: ["meal_id"]
             isOneToOne: false
@@ -8438,6 +8445,10 @@ export type Database = {
       }
       valid_status_transition: {
         Args: { old_status: string; new_status: string }
+        Returns: boolean
+      }
+      validate_menu_item_exists: {
+        Args: { p_meal_id: string }
         Returns: boolean
       }
       validate_order_status_transition: {

@@ -1,5 +1,8 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
+import { MenuValidationService } from '@/services/validation/menuValidationService';
+import { useToast } from '@/hooks/use-toast';
 
 export type CartItem = {
   id: string;
@@ -26,22 +29,24 @@ export type CartContextType = {
   cart: CartItem[];
   items: CartItem[];
   totalAmount: number;
-  addToCart: (item: CartItem) => void;
-  addItem: (item: CartItem) => void;
+  addToCart: (item: CartItem) => Promise<boolean>;
+  addItem: (item: CartItem) => Promise<boolean>;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  validateCart: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextType>({
   cart: [],
   items: [],
   totalAmount: 0,
-  addToCart: () => {},
-  addItem: () => {},
+  addToCart: async () => false,
+  addItem: async () => false,
   removeFromCart: () => {},
   updateQuantity: () => {},
   clearCart: () => {},
+  validateCart: async () => {},
 });
 
 export const useCart = () => useContext(CartContext);
@@ -52,22 +57,47 @@ type CartProviderProps = {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const { toast } = useToast();
   
   // Calculate total amount from cart items
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  const addToCart = (item: CartItem) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((cartItem) => cartItem.id === item.id);
-      if (existingItem) {
-        return prevCart.map((cartItem) =>
-          cartItem.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
-            : cartItem
-        );
+  const addToCart = async (item: CartItem): Promise<boolean> => {
+    try {
+      // Validate the item exists in menu_items table
+      const validation = await MenuValidationService.validateMenuItem(item.id);
+      
+      if (!validation.isValid) {
+        toast({
+          title: "Item not available",
+          description: `"${item.name}" is no longer available in our menu`,
+          variant: "destructive"
+        });
+        return false;
       }
-      return [...prevCart, item];
-    });
+
+      setCart((prevCart) => {
+        const existingItem = prevCart.find((cartItem) => cartItem.id === item.id);
+        if (existingItem) {
+          return prevCart.map((cartItem) =>
+            cartItem.id === item.id
+              ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+              : cartItem
+          );
+        }
+        return [...prevCart, item];
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error adding item to cart:', error);
+      toast({
+        title: "Error adding item",
+        description: "Unable to add item to cart. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
   };
 
   // Alias for addToCart for better readability
@@ -94,6 +124,28 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     setCart([]);
   };
 
+  const validateCart = async () => {
+    try {
+      const validation = await MenuValidationService.validateCartItems(cart);
+      
+      if (validation.invalidItems.length > 0) {
+        // Remove invalid items from cart
+        setCart(validation.validItems);
+        
+        // Show toast for each invalid item
+        validation.errors.forEach(error => {
+          toast({
+            title: "Item removed from cart",
+            description: error,
+            variant: "destructive"
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error validating cart:', error);
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{ 
@@ -104,7 +156,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         addItem, // add the alias
         removeFromCart, 
         updateQuantity, 
-        clearCart 
+        clearCart,
+        validateCart
       }}
     >
       {children}

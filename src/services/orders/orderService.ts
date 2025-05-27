@@ -3,6 +3,7 @@ import { CartItem } from '@/contexts/CartContext';
 import { OrderStatus } from '@/types/webhook';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { recordOrderHistory } from './webhook/orderHistoryService';
+import { MenuValidationService } from '@/services/validation/menuValidationService';
 
 /**
  * Creates a new order in the database
@@ -57,7 +58,7 @@ export const createOrder = async (
 };
 
 /**
- * Creates order items for a given order with defensive programming
+ * Creates order items for a given order with enhanced validation
  */
 export const createOrderItems = async (orderId: string, items: CartItem[]) => {
   try {
@@ -74,8 +75,23 @@ export const createOrderItems = async (orderId: string, items: CartItem[]) => {
       }))
     });
 
+    // First, validate all cart items exist in menu_items table
+    const validation = await MenuValidationService.validateCartItems(items);
+    
+    if (validation.invalidItems.length > 0) {
+      const invalidItemNames = validation.invalidItems.map(item => item.name).join(', ');
+      throw new Error(`The following items are no longer available: ${invalidItemNames}. Please refresh your cart and try again.`);
+    }
+
+    if (validation.validItems.length === 0) {
+      throw new Error('No valid items found in cart. Please add items to your cart before placing an order.');
+    }
+
+    // Use validated items instead of original items
+    const validatedItems = validation.validItems;
+
     // Map items with defensive programming to handle both nested and flat structures
-    const orderItems = items.map((item, index) => {
+    const orderItems = validatedItems.map((item, index) => {
       try {
         // Handle both nested (legacy) and flat (current) structures
         let mealId: string;
@@ -161,7 +177,7 @@ export const createOrderItems = async (orderId: string, items: CartItem[]) => {
       orderId,
       OrderStatus.PENDING,
       null,
-      { items_count: items.length }
+      { items_count: validatedItems.length }
     );
   } catch (error) {
     console.error('Critical error in createOrderItems:', {
