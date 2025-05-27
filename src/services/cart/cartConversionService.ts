@@ -45,19 +45,22 @@ export class CartConversionService {
         const mapping = mappings?.find(m => m.nutrition_food_name === nutritionItem.name);
         
         if (mapping && mapping.menu_items) {
+          const menuItem = mapping.menu_items;
+          const nutritionalInfo = menuItem.nutritional_info as any;
+          
           // Direct mapping found
           converted.push({
-            id: mapping.menu_items.id,
-            name: mapping.menu_items.name,
-            price: mapping.menu_items.price,
+            id: menuItem.id,
+            name: menuItem.name,
+            price: menuItem.price,
             quantity: nutritionItem.quantity,
-            description: mapping.menu_items.description,
-            calories: mapping.menu_items.calories,
-            protein: mapping.menu_items.protein,
-            carbs: mapping.menu_items.carbs,
-            fat: mapping.menu_items.fat,
-            image_url: mapping.menu_items.image_url,
-            restaurant_id: mapping.menu_items.restaurant_id,
+            description: menuItem.description,
+            calories: nutritionalInfo?.calories || 0,
+            protein: nutritionalInfo?.protein || 0,
+            carbs: nutritionalInfo?.carbs || 0,
+            fat: nutritionalInfo?.fat || 0,
+            image_url: menuItem.image_url,
+            restaurant_id: menuItem.restaurant_id,
           });
         } else {
           // No direct mapping, find suggestions based on nutritional similarity
@@ -87,10 +90,17 @@ export class CartConversionService {
   private static findSimilarMenuItems(nutritionItem: NutritionCartItem, menuItems: any[]) {
     return menuItems
       .map(menuItem => {
-        const caloriesDiff = Math.abs(menuItem.calories - nutritionItem.calories);
-        const proteinDiff = Math.abs(menuItem.protein - nutritionItem.protein);
-        const carbsDiff = Math.abs(menuItem.carbs - nutritionItem.carbs);
-        const fatDiff = Math.abs(menuItem.fat - nutritionItem.fat);
+        const nutritionalInfo = menuItem.nutritional_info as any;
+        
+        const menuCalories = nutritionalInfo?.calories || 0;
+        const menuProtein = nutritionalInfo?.protein || 0;
+        const menuCarbs = nutritionalInfo?.carbs || 0;
+        const menuFat = nutritionalInfo?.fat || 0;
+        
+        const caloriesDiff = Math.abs(menuCalories - nutritionItem.calories);
+        const proteinDiff = Math.abs(menuProtein - nutritionItem.protein);
+        const carbsDiff = Math.abs(menuCarbs - nutritionItem.carbs);
+        const fatDiff = Math.abs(menuFat - nutritionItem.fat);
         
         // Calculate similarity score (lower is better)
         const totalDiff = caloriesDiff + proteinDiff + carbsDiff + fatDiff;
@@ -147,7 +157,7 @@ export class CartConversionService {
       fat: item.fat || 0,
       quantity: item.quantity,
       portion_size: 100, // Default portion size
-      meal_type: 'lunch', // Default meal type
+      meal_type: 'lunch' as const, // Default meal type
       food_category: 'restaurant_item'
     }));
 
@@ -167,6 +177,19 @@ export class CartConversionService {
 
     if (error) throw error;
     
-    return data || [];
+    // Transform returned data to match our interface
+    return (data || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      calories: Number(item.calories),
+      protein: Number(item.protein),
+      carbs: Number(item.carbs),
+      fat: Number(item.fat),
+      quantity: item.quantity,
+      portion_size: Number(item.portion_size),
+      food_category: item.food_category,
+      meal_type: item.meal_type as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+      usda_food_id: item.usda_food_id,
+    }));
   }
 }

@@ -52,6 +52,14 @@ type NutritionCartProviderProps = {
   children: ReactNode;
 };
 
+// Helper function to ensure meal_type is properly typed
+const validateMealType = (mealType: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
+  if (['breakfast', 'lunch', 'dinner', 'snack'].includes(mealType)) {
+    return mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  }
+  return 'lunch'; // Default fallback
+};
+
 export const NutritionCartProvider: React.FC<NutritionCartProviderProps> = ({ children }) => {
   const [items, setItems] = useState<NutritionCartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +98,22 @@ export const NutritionCartProvider: React.FC<NutritionCartProviderProps> = ({ ch
 
       if (error) throw error;
 
-      setItems(data || []);
+      // Transform database items to match our TypeScript interface
+      const transformedItems: NutritionCartItem[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        calories: Number(item.calories),
+        protein: Number(item.protein),
+        carbs: Number(item.carbs),
+        fat: Number(item.fat),
+        quantity: item.quantity,
+        portion_size: Number(item.portion_size),
+        food_category: item.food_category,
+        meal_type: validateMealType(item.meal_type),
+        usda_food_id: item.usda_food_id,
+      }));
+
+      setItems(transformedItems);
     } catch (error) {
       console.error('Error loading nutrition cart:', error);
       toast({
@@ -119,7 +142,22 @@ export const NutritionCartProvider: React.FC<NutritionCartProviderProps> = ({ ch
 
       if (error) throw error;
 
-      setItems(prev => [...prev, data]);
+      // Transform the returned data to match our interface
+      const transformedItem: NutritionCartItem = {
+        id: data.id,
+        name: data.name,
+        calories: Number(data.calories),
+        protein: Number(data.protein),
+        carbs: Number(data.carbs),
+        fat: Number(data.fat),
+        quantity: data.quantity,
+        portion_size: Number(data.portion_size),
+        food_category: data.food_category,
+        meal_type: validateMealType(data.meal_type),
+        usda_food_id: data.usda_food_id,
+      };
+
+      setItems(prev => [...prev, transformedItem]);
       
       toast({
         title: "Item added to nutrition plan",
@@ -232,19 +270,22 @@ export const NutritionCartProvider: React.FC<NutritionCartProviderProps> = ({ ch
         const mapping = mappings?.find(m => m.nutrition_food_name === nutritionItem.name);
         
         if (mapping && mapping.menu_items) {
+          const menuItem = mapping.menu_items;
+          const nutritionalInfo = menuItem.nutritional_info as any;
+          
           // Convert to restaurant cart item format
           converted.push({
-            id: mapping.menu_items.id,
-            name: mapping.menu_items.name,
-            price: mapping.menu_items.price,
+            id: menuItem.id,
+            name: menuItem.name,
+            price: menuItem.price,
             quantity: nutritionItem.quantity,
-            description: mapping.menu_items.description,
-            calories: mapping.menu_items.calories,
-            protein: mapping.menu_items.protein,
-            carbs: mapping.menu_items.carbs,
-            fat: mapping.menu_items.fat,
-            image_url: mapping.menu_items.image_url,
-            restaurant_id: mapping.menu_items.restaurant_id,
+            description: menuItem.description,
+            calories: nutritionalInfo?.calories || 0,
+            protein: nutritionalInfo?.protein || 0,
+            carbs: nutritionalInfo?.carbs || 0,
+            fat: nutritionalInfo?.fat || 0,
+            image_url: menuItem.image_url,
+            restaurant_id: menuItem.restaurant_id,
           });
         } else {
           notFound.push(nutritionItem);

@@ -6,7 +6,7 @@ import { TDEEResult } from './types';
 /**
  * Generate nutrition cart items based on TDEE calculation
  */
-export const generateNutritionMealPlan = (tdeeResult: TDEEResult): NutritionCartItem[] => {
+export const generateNutritionMealPlan = (tdeeResult: TDEEResult): Omit<NutritionCartItem, 'id'>[] => {
   const { adjustedCalories, proteinGrams, carbsGrams, fatsGrams, goal, weight, activityLevel } = tdeeResult;
   
   // Meal distribution for optimal nutrition
