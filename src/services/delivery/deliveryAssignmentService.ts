@@ -21,7 +21,7 @@ export const getActiveDeliveryAssignments = async (
           total,
           status,
           created_at,
-          restaurant:restaurant_id (
+          restaurant:restaurants!orders_restaurant_id_fkey (
             id,
             name,
             address,

@@ -1,110 +1,45 @@
 
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
-
-interface DriverLocation {
-  latitude: number;
-  longitude: number;
-  title?: string;
-  description?: string;
-  type: 'driver';
-}
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface DeliveryMapContextType {
   selectedDeliveryId: string | null;
   setSelectedDeliveryId: (id: string | null) => void;
-  driverLocation: DriverLocation | null;
-  updateDriverLocation: (location: DriverLocation) => void;
-  mapZoom: number;
-  setMapZoom: React.Dispatch<React.SetStateAction<number>>;
-  isNativeMap: boolean;
-  isBackgroundTrackingEnabled: boolean;
-  setBackgroundTrackingEnabled: (enabled: boolean) => void;
+  mapCenter: { latitude: number; longitude: number } | null;
+  setMapCenter: (center: { latitude: number; longitude: number } | null) => void;
+  isMapReady: boolean;
+  setIsMapReady: (ready: boolean) => void;
 }
 
-const DeliveryMapContext = createContext<DeliveryMapContextType | null>(null);
+const DeliveryMapContext = createContext<DeliveryMapContextType | undefined>(undefined);
 
-export const DeliveryMapProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+interface DeliveryMapProviderProps {
+  children: ReactNode;
+}
+
+export const DeliveryMapProvider: React.FC<DeliveryMapProviderProps> = ({ children }) => {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null);
-  const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
-  const [mapZoom, setMapZoom] = useState<number>(14);
-  const [isBackgroundTrackingEnabled, setBackgroundTrackingEnabled] = useState<boolean>(false);
-  const isNativeMap = Capacitor.isNativePlatform();
-  
-  const updateDriverLocation = useCallback((location: DriverLocation) => {
-    setDriverLocation(location);
-  }, []);
-  
-  // Load persisted settings on mount
-  useEffect(() => {
-    try {
-      // Try to load driver location from local storage
-      const savedDriverLocation = localStorage.getItem('driverLocation');
-      if (savedDriverLocation) {
-        const parsedLocation = JSON.parse(savedDriverLocation);
-        // Validate the data
-        if (parsedLocation && 
-            typeof parsedLocation.latitude === 'number' && 
-            typeof parsedLocation.longitude === 'number') {
-          setDriverLocation({
-            ...parsedLocation,
-            type: 'driver'
-          });
-        }
-      }
-      
-      // Try to load background tracking setting
-      const trackingEnabled = localStorage.getItem('backgroundTrackingEnabled');
-      if (trackingEnabled === 'true') {
-        setBackgroundTrackingEnabled(true);
-      }
-    } catch (error) {
-      console.error('Error loading map settings from storage:', error);
-    }
-  }, []);
-  
-  // Save driver location to local storage when it changes
-  useEffect(() => {
-    if (driverLocation) {
-      try {
-        localStorage.setItem('driverLocation', JSON.stringify(driverLocation));
-      } catch (error) {
-        console.error('Error saving driver location to storage:', error);
-      }
-    }
-  }, [driverLocation]);
-  
-  // Save background tracking setting when it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('backgroundTrackingEnabled', isBackgroundTrackingEnabled.toString());
-    } catch (error) {
-      console.error('Error saving background tracking setting to storage:', error);
-    }
-  }, [isBackgroundTrackingEnabled]);
-  
+  const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  const value: DeliveryMapContextType = {
+    selectedDeliveryId,
+    setSelectedDeliveryId,
+    mapCenter,
+    setMapCenter,
+    isMapReady,
+    setIsMapReady
+  };
+
   return (
-    <DeliveryMapContext.Provider 
-      value={{
-        selectedDeliveryId,
-        setSelectedDeliveryId,
-        driverLocation,
-        updateDriverLocation,
-        mapZoom,
-        setMapZoom,
-        isNativeMap,
-        isBackgroundTrackingEnabled,
-        setBackgroundTrackingEnabled
-      }}
-    >
+    <DeliveryMapContext.Provider value={value}>
       {children}
     </DeliveryMapContext.Provider>
   );
 };
 
-export const useDeliveryMap = () => {
+export const useDeliveryMap = (): DeliveryMapContextType => {
   const context = useContext(DeliveryMapContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useDeliveryMap must be used within a DeliveryMapProvider');
   }
   return context;

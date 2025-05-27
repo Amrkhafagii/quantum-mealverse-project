@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { ResponsiveProvider } from "./contexts/ResponsiveContext";
+import { GoogleMapsProvider } from "./contexts/GoogleMapsContext";
 import { SkipToContent } from "./components/accessibility/SkipToContent";
 import ComplexOrderDemo from '@/pages/ComplexOrderDemo';
 
@@ -57,72 +57,74 @@ function App() {
           <TooltipProvider>
             <AuthProvider>
               <CartProvider>
-                <SkipToContent />
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <div id="main-content">
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/order-confirmation/:id" element={
-                        <ProtectedRoute allowedUserTypes={['customer']}>
-                          <OrderConfirmation />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/orders/:id" element={
-                        <ProtectedRoute allowedUserTypes={['customer']}>
-                          <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/qr-scanner" element={<QrScannerDemo />} />
-                      <Route path="/nutrition" element={<Nutrition />} />
-                      <Route path="/customer" element={
-                        <ProtectedRoute allowedUserTypes={['customer']}>
-                          <Customer />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/dashboard" element={
-                        <ProtectedRoute allowedUserTypes={['customer']}>
-                          <Dashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/restaurant/dashboard" element={
-                        <ProtectedRoute allowedUserTypes={['restaurant']}>
-                          <RestaurantDashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/orders" element={
-                        <ProtectedRoute allowedUserTypes={['customer']}>
-                          <Orders />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/fitness" element={<Fitness />} />
-                      <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
-                      <Route path="/complex-order-demo" element={<ComplexOrderDemo />} />
-                      
-                      {/* Delivery Routes */}
-                      <Route path="/delivery/onboarding" element={
-                        <ProtectedRoute allowedUserTypes={['delivery']}>
-                          <OnboardingPage />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/delivery/dashboard" element={
-                        <ProtectedRoute allowedUserTypes={['delivery']}>
-                          <DeliveryDashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/delivery/settings" element={
-                        <ProtectedRoute allowedUserTypes={['delivery']}>
-                          <DeliverySettings />
-                        </ProtectedRoute>
-                      } />
-                    </Routes>
-                  </div>
-                </BrowserRouter>
+                <GoogleMapsProvider>
+                  <SkipToContent />
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <div id="main-content">
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/order-confirmation/:id" element={
+                          <ProtectedRoute allowedUserTypes={['customer']}>
+                            <OrderConfirmation />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/orders/:id" element={
+                          <ProtectedRoute allowedUserTypes={['customer']}>
+                            <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/qr-scanner" element={<QrScannerDemo />} />
+                        <Route path="/nutrition" element={<Nutrition />} />
+                        <Route path="/customer" element={
+                          <ProtectedRoute allowedUserTypes={['customer']}>
+                            <Customer />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/dashboard" element={
+                          <ProtectedRoute allowedUserTypes={['customer']}>
+                            <Dashboard />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/restaurant/dashboard" element={
+                          <ProtectedRoute allowedUserTypes={['restaurant']}>
+                            <RestaurantDashboard />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/orders" element={
+                          <ProtectedRoute allowedUserTypes={['customer']}>
+                            <Orders />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/fitness" element={<Fitness />} />
+                        <Route path="/fitness-enhanced" element={<FitnessEnhanced />} />
+                        <Route path="/complex-order-demo" element={<ComplexOrderDemo />} />
+                        
+                        {/* Delivery Routes */}
+                        <Route path="/delivery/onboarding" element={
+                          <ProtectedRoute allowedUserTypes={['delivery']}>
+                            <OnboardingPage />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/delivery/dashboard" element={
+                          <ProtectedRoute allowedUserTypes={['delivery']}>
+                            <DeliveryDashboard />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/delivery/settings" element={
+                          <ProtectedRoute allowedUserTypes={['delivery']}>
+                            <DeliverySettings />
+                          </ProtectedRoute>
+                        } />
+                      </Routes>
+                    </div>
+                  </BrowserRouter>
+                </GoogleMapsProvider>
               </CartProvider>
             </AuthProvider>
           </TooltipProvider>
