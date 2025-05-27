@@ -18,7 +18,13 @@ export class PromotionService {
     return (data || []).map(promotion => ({
       ...promotion,
       promotion_type: promotion.promotion_type as RestaurantPromotion['promotion_type'],
-      applicable_items: Array.isArray(promotion.applicable_items) ? promotion.applicable_items : []
+      applicable_items: this.parseApplicableItems(promotion.applicable_items),
+      description: promotion.description || '',
+      discount_value: promotion.discount_value || 0,
+      maximum_discount_amount: promotion.maximum_discount_amount || 0,
+      terms_conditions: promotion.terms_conditions || '',
+      promo_code: promotion.promo_code || '',
+      usage_limit: promotion.usage_limit || 0
     }));
   }
 
@@ -34,8 +40,30 @@ export class PromotionService {
     return (data || []).map(promotion => ({
       ...promotion,
       promotion_type: promotion.promotion_type as RestaurantPromotion['promotion_type'],
-      applicable_items: Array.isArray(promotion.applicable_items) ? promotion.applicable_items : []
+      applicable_items: this.parseApplicableItems(promotion.applicable_items),
+      description: promotion.description || '',
+      discount_value: promotion.discount_value || 0,
+      maximum_discount_amount: promotion.maximum_discount_amount || 0,
+      terms_conditions: promotion.terms_conditions || '',
+      promo_code: promotion.promo_code || '',
+      usage_limit: promotion.usage_limit || 0
     }));
+  }
+
+  // Helper function to parse applicable_items from JSON
+  private parseApplicableItems(items: any): string[] {
+    if (Array.isArray(items)) {
+      return items.map(item => String(item));
+    }
+    if (typeof items === 'string') {
+      try {
+        const parsed = JSON.parse(items);
+        return Array.isArray(parsed) ? parsed.map(item => String(item)) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   }
 
   // Create a new promotion
@@ -56,7 +84,13 @@ export class PromotionService {
     return {
       ...data,
       promotion_type: data.promotion_type as RestaurantPromotion['promotion_type'],
-      applicable_items: Array.isArray(data.applicable_items) ? data.applicable_items : []
+      applicable_items: this.parseApplicableItems(data.applicable_items),
+      description: data.description || '',
+      discount_value: data.discount_value || 0,
+      maximum_discount_amount: data.maximum_discount_amount || 0,
+      terms_conditions: data.terms_conditions || '',
+      promo_code: data.promo_code || '',
+      usage_limit: data.usage_limit || 0
     };
   }
 
@@ -79,7 +113,13 @@ export class PromotionService {
     return {
       ...data,
       promotion_type: data.promotion_type as RestaurantPromotion['promotion_type'],
-      applicable_items: Array.isArray(data.applicable_items) ? data.applicable_items : []
+      applicable_items: this.parseApplicableItems(data.applicable_items),
+      description: data.description || '',
+      discount_value: data.discount_value || 0,
+      maximum_discount_amount: data.maximum_discount_amount || 0,
+      terms_conditions: data.terms_conditions || '',
+      promo_code: data.promo_code || '',
+      usage_limit: data.usage_limit || 0
     };
   }
 
@@ -115,7 +155,7 @@ export class PromotionService {
       .from('promotion_usage')
       .select(`
         *,
-        orders(customer_name, total, created_at)
+        orders!promotion_usage_order_id_fkey(customer_name, total, created_at)
       `)
       .eq('promotion_id', promotionId)
       .order('used_at', { ascending: false })

@@ -22,10 +22,23 @@ export const PromotionsManager: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<RestaurantPromotion | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    promotion_type: PromotionType;
+    discount_value: number;
+    minimum_order_amount: number;
+    maximum_discount_amount: number;
+    start_date: string;
+    end_date: string;
+    usage_limit: string;
+    promo_code: string;
+    terms_conditions: string;
+    is_active: boolean;
+  }>({
     name: '',
     description: '',
-    promotion_type: 'percentage_discount' as PromotionType,
+    promotion_type: 'percentage_discount',
     discount_value: 0,
     minimum_order_amount: 0,
     maximum_discount_amount: 0,
@@ -176,8 +189,8 @@ export const PromotionsManager: React.FC = () => {
     }
   };
 
-  const handlePromotionTypeChange = (value: PromotionType) => {
-    setFormData({ ...formData, promotion_type: value });
+  const handlePromotionTypeChange = (value: string) => {
+    setFormData({ ...formData, promotion_type: value as PromotionType });
   };
 
   const formatCurrency = (amount: number) => {

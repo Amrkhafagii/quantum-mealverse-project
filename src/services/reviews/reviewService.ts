@@ -7,33 +7,51 @@ export class ReviewService {
   async getRestaurantReviews(restaurantId: string, limit = 20): Promise<RestaurantReview[]> {
     const { data, error } = await supabase
       .from('reviews')
-      .select(`
-        *,
-        menu_items(name, image_url),
-        orders(customer_name)
-      `)
+      .select('*')
       .eq('restaurant_id', restaurantId)
       .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(review => ({
+      ...review,
+      status: review.status as RestaurantReview['status'],
+      comment: review.comment || '',
+      images: review.images || [],
+      meal_id: review.meal_id || '',
+      order_id: review.order_id || undefined
+    }));
   }
 
   // Get meal ratings for restaurant menu items
   async getMealRatings(restaurantId: string): Promise<MealRating[]> {
     const { data, error } = await supabase
       .from('meal_ratings')
-      .select(`
-        *,
-        menu_items(name, image_url)
-      `)
+      .select('*')
       .eq('restaurant_id', restaurantId)
       .order('avg_rating', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(rating => ({
+      ...rating,
+      rating_distribution: this.parseRatingDistribution(rating.rating_distribution)
+    }));
+  }
+
+  // Helper function to parse rating distribution from JSON
+  private parseRatingDistribution(distribution: any): Record<string, number> {
+    if (typeof distribution === 'object' && distribution !== null) {
+      return distribution;
+    }
+    if (typeof distribution === 'string') {
+      try {
+        return JSON.parse(distribution);
+      } catch {
+        return { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+      }
+    }
+    return { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
   }
 
   // Get restaurant average rating

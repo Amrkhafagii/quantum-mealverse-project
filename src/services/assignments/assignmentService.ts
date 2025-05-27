@@ -9,7 +9,7 @@ export class AssignmentService {
       .from('restaurant_assignments')
       .select(`
         *,
-        orders:order_id(
+        orders:orders!restaurant_assignments_order_id_fkey(
           id,
           customer_name,
           customer_phone,
@@ -27,6 +27,7 @@ export class AssignmentService {
     if (error) throw error;
     return (data || []).map(assignment => ({
       ...assignment,
+      status: assignment.status as RestaurantAssignment['status'],
       assigned_at: assignment.assigned_at || assignment.created_at,
       details: assignment.details || {}
     }));
@@ -90,6 +91,7 @@ export class AssignmentService {
     if (error) throw error;
     return (data || []).map(assignment => ({
       ...assignment,
+      status: assignment.status as RestaurantAssignment['status'],
       assigned_at: assignment.assigned_at || assignment.created_at,
       details: assignment.details || {}
     }));
@@ -114,6 +116,7 @@ export class AssignmentService {
           const assignment = payload.new as any;
           callback({
             ...assignment,
+            status: assignment.status as RestaurantAssignment['status'],
             assigned_at: assignment.assigned_at || assignment.created_at,
             details: assignment.details || {}
           });

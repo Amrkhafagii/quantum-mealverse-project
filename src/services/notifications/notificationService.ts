@@ -15,7 +15,12 @@ export class NotificationService {
     if (error) throw error;
     return (data || []).map(notification => ({
       ...notification,
-      metadata: notification.metadata || {}
+      notification_type: notification.notification_type as OrderNotification['notification_type'],
+      metadata: notification.metadata || {},
+      user_id: notification.user_id || '',
+      restaurant_id: notification.restaurant_id || undefined,
+      is_read: notification.is_read || false,
+      read_at: notification.read_at || undefined
     }));
   }
 
@@ -72,7 +77,12 @@ export class NotificationService {
     if (error) throw error;
     return {
       ...data,
-      metadata: data.metadata || {}
+      notification_type: data.notification_type as OrderNotification['notification_type'],
+      metadata: data.metadata || {},
+      user_id: data.user_id || '',
+      restaurant_id: data.restaurant_id || undefined,
+      is_read: data.is_read || false,
+      read_at: data.read_at || undefined
     };
   }
 
@@ -95,7 +105,12 @@ export class NotificationService {
           const notification = payload.new as any;
           callback({
             ...notification,
-            metadata: notification.metadata || {}
+            notification_type: notification.notification_type as OrderNotification['notification_type'],
+            metadata: notification.metadata || {},
+            user_id: notification.user_id || '',
+            restaurant_id: notification.restaurant_id || undefined,
+            is_read: notification.is_read || false,
+            read_at: notification.read_at || undefined
           });
         }
       )

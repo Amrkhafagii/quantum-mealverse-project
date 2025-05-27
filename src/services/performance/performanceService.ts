@@ -20,7 +20,7 @@ export class PerformanceService {
     if (error) throw error;
     return (data || []).map(metric => ({
       ...metric,
-      peak_hours: Array.isArray(metric.peak_hours) ? metric.peak_hours : []
+      peak_hours: this.parsePeakHours(metric.peak_hours)
     }));
   }
 
@@ -40,8 +40,24 @@ export class PerformanceService {
     
     return {
       ...data,
-      peak_hours: Array.isArray(data.peak_hours) ? data.peak_hours : []
+      peak_hours: this.parsePeakHours(data.peak_hours)
     };
+  }
+
+  // Helper function to parse peak hours from JSON
+  private parsePeakHours(peakHours: any): any[] {
+    if (Array.isArray(peakHours)) {
+      return peakHours;
+    }
+    if (typeof peakHours === 'string') {
+      try {
+        const parsed = JSON.parse(peakHours);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   }
 
   // Get weekly summary
