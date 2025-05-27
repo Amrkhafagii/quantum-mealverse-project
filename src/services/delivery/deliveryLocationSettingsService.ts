@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { DeliveryLocationSettings, DeliveryLocationSettingsUpdate } from '@/types/delivery-location-settings';
 
@@ -19,9 +18,7 @@ class DeliveryLocationSettingsService {
       if (data) {
         return {
           ...data,
-          custom_geofence_zones: Array.isArray(data.custom_geofence_zones) 
-            ? data.custom_geofence_zones 
-            : []
+          custom_geofence_zones: this.parseGeofenceZones(data.custom_geofence_zones)
         } as DeliveryLocationSettings;
       }
 
@@ -61,11 +58,7 @@ class DeliveryLocationSettingsService {
       if (data) {
         return {
           ...data,
-          custom_geofence_zones: Array.isArray(data.custom_geofence_zones) 
-            ? data.custom_geofence_zones 
-            : typeof data.custom_geofence_zones === 'string'
-            ? JSON.parse(data.custom_geofence_zones)
-            : []
+          custom_geofence_zones: this.parseGeofenceZones(data.custom_geofence_zones)
         } as DeliveryLocationSettings;
       }
 
@@ -74,6 +67,19 @@ class DeliveryLocationSettingsService {
       console.error('Error in updateLocationSettings:', error);
       return null;
     }
+  }
+
+  private parseGeofenceZones(zones: any): any[] {
+    if (!zones) return [];
+    if (Array.isArray(zones)) return zones;
+    if (typeof zones === 'string') {
+      try {
+        return JSON.parse(zones);
+      } catch {
+        return [];
+      }
+    }
+    return [];
   }
 
   async updateAccuracyThresholds(

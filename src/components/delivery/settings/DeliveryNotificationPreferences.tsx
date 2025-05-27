@@ -1,2 +1,2 @@
 
-export { DeliveryNotificationSettings as DeliveryNotificationPreferences };
+export { DeliveryNotificationSettings } from './DeliveryNotificationSettings';

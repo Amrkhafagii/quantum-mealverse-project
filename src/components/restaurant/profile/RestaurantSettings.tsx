@@ -1,224 +1,119 @@
-
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/ui/form-field';
+import { toast } from '@/components/ui/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save } from 'lucide-react';
-import { restaurantService, type Restaurant, type RestaurantSettings as Settings } from '@/services/restaurantService';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const settingsSchema = z.object({
-  notifications_enabled: z.boolean(),
-  auto_accept_orders: z.boolean(),
-  order_preparation_time: z.number().min(10).max(120),
-  max_daily_orders: z.number().min(1).optional(),
-  operating_status: z.enum(['open', 'busy', 'closed', 'temporarily_closed']),
-  special_instructions: z.string().optional(),
+  order_preparation_time: z.coerce.number()
+    .min(5, { message: "Must be at least 5 minutes." })
+    .max(120, { message: "Must be no more than 120 minutes." }),
 });
 
-type SettingsFormData = z.infer<typeof settingsSchema>;
+type SettingsSchemaType = z.infer<typeof settingsSchema>;
 
-interface Props {
-  restaurant: Restaurant;
-}
-
-export const RestaurantSettings: React.FC<Props> = ({ restaurant }) => {
-  const { toast } = useToast();
+const RestaurantSettings = () => {
+  const { user } = useAuth();
+  const [restaurant, setRestaurant] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [loadingSettings, setLoadingSettings] = useState(true);
 
-  const form = useForm<SettingsFormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset
+  } = useForm<SettingsSchemaType>({
     resolver: zodResolver(settingsSchema),
   });
 
   useEffect(() => {
-    loadSettings();
-  }, [restaurant.id]);
+    const fetchRestaurant = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('owner_id', user.id)
+          .single();
 
-  const loadSettings = async () => {
+        if (error) {
+          console.error("Error fetching restaurant:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load restaurant settings.",
+            variant: "destructive"
+          });
+        } else {
+          setRestaurant(data);
+          reset({
+            order_preparation_time: data?.order_preparation_time,
+          });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRestaurant();
+  }, [user, reset]);
+
+  const onSubmit = async (data: SettingsSchemaType) => {
+    setLoading(true);
     try {
-      setLoadingSettings(true);
-      const data = await restaurantService.getRestaurantSettings(restaurant.id);
-      if (data) {
-        setSettings(data);
-        form.reset({
-          notifications_enabled: data.notifications_enabled,
-          auto_accept_orders: data.auto_accept_orders,
-          order_preparation_time: data.order_preparation_time,
-          max_daily_orders: data.max_daily_orders || undefined,
-          operating_status: data.operating_status,
-          special_instructions: data.special_instructions || '',
+      const { error } = await supabase
+        .from('restaurants')
+        .update(data)
+        .eq('owner_id', user?.id);
+
+      if (error) {
+        console.error("Error updating restaurant settings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update restaurant settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Restaurant settings updated successfully.",
         });
       }
-    } catch (error: any) {
-      console.error('Error loading settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load restaurant settings",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingSettings(false);
-    }
-  };
-
-  const onSubmit = async (data: SettingsFormData) => {
-    if (!settings) return;
-
-    try {
-      setLoading(true);
-      const updatedSettings = await restaurantService.updateRestaurantSettings(restaurant.id, data);
-      setSettings(updatedSettings);
-      toast({
-        title: "Success",
-        description: "Restaurant settings updated successfully",
-      });
-    } catch (error: any) {
-      console.error('Error updating settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update restaurant settings",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  if (loadingSettings) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
-        <span className="ml-2 text-quantum-cyan">Loading settings...</span>
-      </div>
-    );
-  }
-
-  if (!settings) {
-    return (
-      <Card className="p-6">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Settings Not Found</h3>
-          <p className="text-gray-600">Unable to load restaurant settings.</p>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>Restaurant Settings</CardTitle>
-        <CardDescription>
-          Configure your restaurant's operational settings
-        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Notifications</Label>
-                  <p className="text-sm text-gray-500">Receive order notifications</p>
-                </div>
-                <Switch
-                  checked={form.watch('notifications_enabled')}
-                  onCheckedChange={(checked) => form.setValue('notifications_enabled', checked)}
-                />
-              </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          
+              <FormField
+                label="Order Preparation Time (minutes)"
+                type="number"
+                min="5"
+                max="120"
+                {...register('order_preparation_time')}
+                error={errors.order_preparation_time?.message}
+                required
+              />
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Auto Accept Orders</Label>
-                  <p className="text-sm text-gray-500">Automatically accept incoming orders</p>
-                </div>
-                <Switch
-                  checked={form.watch('auto_accept_orders')}
-                  onCheckedChange={(checked) => form.setValue('auto_accept_orders', checked)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="operating_status">Operating Status</Label>
-                <Select
-                  value={form.watch('operating_status')}
-                  onValueChange={(value) => form.setValue('operating_status', value as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="busy">Busy</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                    <SelectItem value="temporarily_closed">Temporarily Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="order_preparation_time">Order Preparation Time (minutes)</Label>
-                <Input
-                  id="order_preparation_time"
-                  type="number"
-                  min="10"
-                  max="120"
-                  {...form.register('order_preparation_time', { valueAsNumber: true })}
-                  error={form.formState.errors.order_preparation_time?.message}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="max_daily_orders">Maximum Daily Orders (optional)</Label>
-                <Input
-                  id="max_daily_orders"
-                  type="number"
-                  min="1"
-                  placeholder="No limit"
-                  {...form.register('max_daily_orders', { valueAsNumber: true })}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="special_instructions">Special Instructions</Label>
-            <Textarea
-              id="special_instructions"
-              placeholder="Any special instructions for customers or delivery partners..."
-              className="min-h-[100px]"
-              {...form.register('special_instructions')}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Settings
-                </>
-              )}
-            </Button>
-          </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? 'Saving...' : 'Save Settings'}
+          </Button>
         </form>
       </CardContent>
     </Card>
   );
 };
+
+export default RestaurantSettings;
