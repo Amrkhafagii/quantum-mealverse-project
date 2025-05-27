@@ -1,33 +1,34 @@
 
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { AuthForm } from '@/components/AuthForm';
 import ParticleBackground from '@/components/ParticleBackground';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/hooks/useAuth';
+import { Loader } from 'lucide-react';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
-  
-  // If user is already logged in, redirect appropriately
-  React.useEffect(() => {
-    if (user) {
-      // Check if the user is a delivery person
-      const userType = user.user_metadata?.user_type;
-      
-      if (userType === 'delivery') {
-        navigate('/delivery/dashboard', { replace: true });
-      } else if (userType === 'restaurant') {
-        navigate('/restaurant/dashboard', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
-    }
-  }, [user, navigate]);
+  const { user, loading } = useAuth();
+
+  // Show loading state while auth is in progress
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-quantum-black">
+        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+      </div>
+    );
+  }
+
+  // If user is logged in, show loading (Auth page will handle redirect)
+  if (user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-quantum-black">
+        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

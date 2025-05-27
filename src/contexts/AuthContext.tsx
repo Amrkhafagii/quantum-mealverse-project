@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const fetchUserType = async (currentUser: User | null) => {
     if (!currentUser) {
@@ -58,36 +59,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthContext - Initial session:', session);
-      console.log('AuthContext - Initial user metadata:', session?.user?.user_metadata);
-      setSession(session);
-      setUser(session?.user as UserWithMetadata ?? null);
-      
-      // Fetch user type
-      fetchUserType(session?.user ?? null).finally(() => {
-        setLoading(false);
-      });
-    });
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        console.log('AuthContext - Initial session:', session);
+        setSession(session);
+        setUser(session?.user as UserWithMetadata ?? null);
+        
+        // Fetch user type
+        await fetchUserType(session?.user ?? null);
+        
+        if (mounted) {
+          setIsInitialized(true);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('AuthContext - Error initializing auth:', error);
+        if (mounted) {
+          setIsInitialized(true);
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('AuthContext - Auth state changed:', _event, session);
-      console.log('AuthContext - User metadata in auth change:', session?.user?.user_metadata);
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
+      console.log('AuthContext - Auth state changed:', event);
+      
+      // Batch state updates to prevent multiple renders
       setSession(session);
       setUser(session?.user as UserWithMetadata ?? null);
       
-      // Fetch user type for new session
-      fetchUserType(session?.user ?? null).finally(() => {
+      // Only fetch user type if we have a session and we're initialized
+      if (session?.user && isInitialized) {
+        await fetchUserType(session.user);
+      } else if (!session) {
+        setUserType(null);
+      }
+      
+      if (mounted && isInitialized) {
         setLoading(false);
-      });
+      }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [isInitialized]);
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { AuthForm } from '@/components/AuthForm';
@@ -16,23 +16,28 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, userType, loading } = useAuth();
+  const [hasRedirected, setHasRedirected] = useState(false);
   
   // Get any state passed from navigation
   const { state } = location;
   const mode = propMode || state?.mode || 'login';
   const returnTo = state?.returnTo || '/';
 
-  // If user is already logged in, redirect appropriately
+  // Single redirect effect with proper guards
   useEffect(() => {
-    if (user && !loading) {
-      console.log("Auth page: User is logged in, checking redirect", { user, returnTo });
-      
-      // Check if the user is a restaurant owner
-      const userType = user.user_metadata?.user_type;
-      
-      console.log("Auth page: User type from metadata:", userType);
-      
+    // Prevent multiple redirects
+    if (hasRedirected || loading || !user) {
+      return;
+    }
+
+    console.log("Auth page: User is logged in, checking redirect", { user, userType });
+    
+    // Set flag immediately to prevent multiple redirects
+    setHasRedirected(true);
+    
+    // Use setTimeout to ensure state updates are completed
+    setTimeout(() => {
       if (userType === 'delivery') {
         console.log("Auth page: Redirecting delivery user to dashboard");
         navigate('/delivery/dashboard', { replace: true });
@@ -43,15 +48,24 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
         console.log("Auth page: Redirecting customer user to customer page");
         navigate('/customer', { replace: true });
       } else {
-        // Default redirect for users without type - but prioritize customer page for general users
+        // Default redirect for users without type
         console.log("Auth page: No specific user type, redirecting to customer page");
         navigate('/customer', { replace: true });
       }
-    }
-  }, [user, loading, navigate, returnTo]);
+    }, 0);
+  }, [user, userType, loading, navigate, hasRedirected]);
 
   // Show loading state while auth is in progress
   if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-quantum-black">
+        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+      </div>
+    );
+  }
+
+  // Don't render the form if we're about to redirect
+  if (user && !loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-quantum-black">
         <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
