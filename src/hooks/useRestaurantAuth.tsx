@@ -59,19 +59,26 @@ export const useRestaurantAuth = () => {
           return;
         }
 
-        // Create mock restaurant data for now
-        const mockRestaurant: Restaurant = {
-          id: 'rest_' + user.id.slice(0, 8),
-          name: 'Quantum Delights Restaurant',
-          address: '123 Quantum Street, Food City',
-          owner_id: user.id,
-          created_at: new Date().toISOString(),
-          status: 'active'
-        };
+        // Fetch actual restaurant data from database
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
         
-        console.log('useRestaurantAuth - setting restaurant:', mockRestaurant);
-        setRestaurant(mockRestaurant);
-        setIsRestaurantOwner(true);
+        if (error) {
+          console.error('useRestaurantAuth - Error fetching restaurant:', error);
+          throw error;
+        }
+        
+        if (data) {
+          console.log('useRestaurantAuth - setting restaurant:', data);
+          setRestaurant(data);
+          setIsRestaurantOwner(true);
+        } else {
+          console.log('useRestaurantAuth - no restaurant found for user');
+          setIsRestaurantOwner(false);
+        }
       } catch (error) {
         console.error('useRestaurantAuth - Error:', error);
         setIsRestaurantOwner(false);

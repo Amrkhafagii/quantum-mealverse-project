@@ -79,7 +79,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     try {
       if (mode === 'signup') {
         // Sign up the user
-        await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -89,24 +89,41 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           }
         });
         
-        if (userType === 'restaurant' && email) {
+        if (signUpError) throw signUpError;
+        
+        if (userType === 'restaurant' && signUpData.user && email) {
+          // Create restaurant profile in database
+          const { data, error } = await supabase.rpc('create_restaurant_profile', {
+            p_user_id: signUpData.user.id,
+            p_name: restaurantName,
+            p_email: email,
+            p_phone: restaurantPhone,
+            p_address: restaurantAddress,
+            p_city: restaurantCity,
+            p_description: restaurantDescription || null
+          });
+          
+          if (error) {
+            console.error('Restaurant profile creation error:', error);
+            throw new Error('Failed to create restaurant profile');
+          }
+          
           toast({
             title: "Restaurant account created!",
-            description: "Please check your email to verify your account.",
+            description: "Please check your email to verify your account. Complete your profile to get approved.",
           });
         } else if (userType === 'delivery') {
           toast({
             title: "Delivery account created!",
             description: "Please check your email to verify your account.",
           });
-          setMode('login');
         } else {
           toast({
             title: "Success!",
             description: "Please check your email to verify your account.",
           });
-          setMode('login');
         }
+        setMode('login');
       } else {
         // Login
         const { data, error } = await supabase.auth.signInWithPassword({
