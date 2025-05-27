@@ -30,7 +30,11 @@ class DeliveryAnalyticsService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as 'pending' | 'processing' | 'paid' | 'disputed'
+    }));
   }
 
   async createEarningsRecord(earnings: Omit<DeliveryEarningsDetailed, 'id' | 'created_at' | 'updated_at'>): Promise<DeliveryEarningsDetailed> {
@@ -41,7 +45,10 @@ class DeliveryAnalyticsService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      status: data.status as 'pending' | 'processing' | 'paid' | 'disputed'
+    };
   }
 
   // Daily Analytics
@@ -61,7 +68,13 @@ class DeliveryAnalyticsService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(item => ({
+      ...item,
+      customer_ratings: Array.isArray(item.customer_ratings) 
+        ? item.customer_ratings 
+        : JSON.parse(item.customer_ratings as string || '[]')
+    }));
   }
 
   async calculateDailyAnalytics(deliveryUserId: string, date: string): Promise<void> {
@@ -154,7 +167,11 @@ class DeliveryAnalyticsService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(item => ({
+      ...item,
+      report_type: item.report_type as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+    }));
   }
 
   async generateFinancialReport(
@@ -208,7 +225,10 @@ class DeliveryAnalyticsService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      report_type: data.report_type as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+    };
   }
 
   // Summary Data
