@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { fromSupabaseJson, toSupabaseJson } from '@/utils/supabaseUtils';
 import type { 
@@ -126,7 +127,7 @@ export class OnboardingService {
     
     return {
       ...data,
-      polygon_coordinates: data.polygon_coordinates ? fromSupabaseJson(data.polygon_coordinates) : undefined,
+      polygon_coordinates: data.polygon_coordinates ? fromSupabaseJson(data.polygon_coordinates as string) : undefined,
       postal_codes: data.postal_codes || undefined
     } as DeliveryArea;
   }
@@ -142,7 +143,7 @@ export class OnboardingService {
     
     return (data || []).map(area => ({
       ...area,
-      polygon_coordinates: area.polygon_coordinates ? fromSupabaseJson(area.polygon_coordinates) : undefined,
+      polygon_coordinates: area.polygon_coordinates ? fromSupabaseJson(area.polygon_coordinates as string) : undefined,
       postal_codes: area.postal_codes || undefined
     })) as DeliveryArea[];
   }
@@ -168,7 +169,7 @@ export class OnboardingService {
     
     return {
       ...data,
-      polygon_coordinates: data.polygon_coordinates ? fromSupabaseJson(data.polygon_coordinates) : undefined,
+      polygon_coordinates: data.polygon_coordinates ? fromSupabaseJson(data.polygon_coordinates as string) : undefined,
       postal_codes: data.postal_codes || undefined
     } as DeliveryArea;
   }

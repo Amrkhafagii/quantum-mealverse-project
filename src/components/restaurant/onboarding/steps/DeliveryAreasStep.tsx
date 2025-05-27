@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +17,22 @@ interface DeliveryAreasStepProps {
   onComplete: (data: Record<string, any>) => void;
 }
 
+interface NewAreaState {
+  area_name: string;
+  area_type: 'radius' | 'polygon' | 'postal_codes';
+  radius_km: number;
+  delivery_fee: number;
+  minimum_order_amount: number;
+  estimated_delivery_time: number;
+}
+
 export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurantId, onComplete }) => {
   const { restaurant } = useRestaurantAuth();
   const { toast } = useToast();
   const [areas, setAreas] = useState<DeliveryArea[]>([]);
-  const [newArea, setNewArea] = useState({
+  const [newArea, setNewArea] = useState<NewAreaState>({
     area_name: '',
-    area_type: 'radius' as const,
+    area_type: 'radius',
     radius_km: 5,
     delivery_fee: 0,
     minimum_order_amount: 0,
@@ -75,7 +85,7 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
       setAreas(prev => [...prev, area]);
       setNewArea({
         area_name: '',
-        area_type: 'radius' as const,
+        area_type: 'radius',
         radius_km: 5,
         delivery_fee: 0,
         minimum_order_amount: 0,
