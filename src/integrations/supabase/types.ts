@@ -1066,6 +1066,83 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_location_settings: {
+        Row: {
+          auto_stop_sharing_after_delivery: boolean | null
+          background_location_enabled: boolean | null
+          battery_optimization_enabled: boolean | null
+          created_at: string | null
+          custom_geofence_zones: Json | null
+          delivery_user_id: string
+          delivery_zone_radius: number | null
+          geofence_entry_notifications: boolean | null
+          geofence_exit_notifications: boolean | null
+          high_accuracy_interval: number | null
+          high_accuracy_threshold: number | null
+          id: string
+          location_sharing_duration: number | null
+          low_accuracy_interval: number | null
+          low_accuracy_threshold: number | null
+          medium_accuracy_interval: number | null
+          medium_accuracy_threshold: number | null
+          movement_detection_sensitivity: string | null
+          sharing_precision_level: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_stop_sharing_after_delivery?: boolean | null
+          background_location_enabled?: boolean | null
+          battery_optimization_enabled?: boolean | null
+          created_at?: string | null
+          custom_geofence_zones?: Json | null
+          delivery_user_id: string
+          delivery_zone_radius?: number | null
+          geofence_entry_notifications?: boolean | null
+          geofence_exit_notifications?: boolean | null
+          high_accuracy_interval?: number | null
+          high_accuracy_threshold?: number | null
+          id?: string
+          location_sharing_duration?: number | null
+          low_accuracy_interval?: number | null
+          low_accuracy_threshold?: number | null
+          medium_accuracy_interval?: number | null
+          medium_accuracy_threshold?: number | null
+          movement_detection_sensitivity?: string | null
+          sharing_precision_level?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_stop_sharing_after_delivery?: boolean | null
+          background_location_enabled?: boolean | null
+          battery_optimization_enabled?: boolean | null
+          created_at?: string | null
+          custom_geofence_zones?: Json | null
+          delivery_user_id?: string
+          delivery_zone_radius?: number | null
+          geofence_entry_notifications?: boolean | null
+          geofence_exit_notifications?: boolean | null
+          high_accuracy_interval?: number | null
+          high_accuracy_threshold?: number | null
+          id?: string
+          location_sharing_duration?: number | null
+          low_accuracy_interval?: number | null
+          low_accuracy_threshold?: number | null
+          medium_accuracy_interval?: number | null
+          medium_accuracy_threshold?: number | null
+          movement_detection_sensitivity?: string | null
+          sharing_precision_level?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_location_settings_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_location_updates: {
         Row: {
           accuracy: number | null
@@ -8692,6 +8769,31 @@ export type Database = {
           dietary_tags: Json
           health_score: number
         }[]
+      }
+      get_or_create_delivery_location_settings: {
+        Args: { p_delivery_user_id: string }
+        Returns: {
+          auto_stop_sharing_after_delivery: boolean | null
+          background_location_enabled: boolean | null
+          battery_optimization_enabled: boolean | null
+          created_at: string | null
+          custom_geofence_zones: Json | null
+          delivery_user_id: string
+          delivery_zone_radius: number | null
+          geofence_entry_notifications: boolean | null
+          geofence_exit_notifications: boolean | null
+          high_accuracy_interval: number | null
+          high_accuracy_threshold: number | null
+          id: string
+          location_sharing_duration: number | null
+          low_accuracy_interval: number | null
+          low_accuracy_threshold: number | null
+          medium_accuracy_interval: number | null
+          medium_accuracy_threshold: number | null
+          movement_detection_sensitivity: string | null
+          sharing_precision_level: string | null
+          updated_at: string | null
+        }
       }
       get_proj4_from_srid: {
         Args: { "": number }

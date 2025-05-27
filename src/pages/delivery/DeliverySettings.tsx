@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { DeliveryLocationControls } from '@/components/delivery/DeliveryLocationControls';
 import { DeliveryNotificationSettings } from '@/components/delivery/settings/DeliveryNotificationPreferences';
+import { AdvancedLocationSettings } from '@/components/delivery/settings/AdvancedLocationSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveryService } from '@/services/delivery/deliveryService';
 
@@ -84,8 +85,9 @@ const DeliverySettings = () => {
   return (
     <div className="space-y-6 p-4">
       <Tabs defaultValue="location">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="location">Location Settings</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced Settings</TabsTrigger>
           <TabsTrigger value="notifications">Notification Settings</TabsTrigger>
         </TabsList>
 
@@ -133,64 +135,10 @@ const DeliverySettings = () => {
             onLocationUpdate={handleUpdateLocation}
             showHelp={true}
           />
-          
-          <Tabs defaultValue="general">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="accuracy">Accuracy</TabsTrigger>
-              <TabsTrigger value="privacy">Privacy</TabsTrigger>
-            </TabsList>
-            <TabsContent value="general" className="space-y-4">
-              <Card className="border border-quantum-cyan/20 bg-transparent">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="background-updates">Background Updates</Label>
-                    <Switch id="background-updates" />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="high-accuracy">High Accuracy Mode</Label>
-                    <Switch id="high-accuracy" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="accuracy">
-              <Card className="border border-quantum-cyan/20 bg-transparent">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="adaptive-tracking">Adaptive Tracking</Label>
-                    <Switch id="adaptive-tracking" defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="battery-saving">Battery Saving</Label>
-                    <Switch id="battery-saving" defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="motion-detection">Motion Detection</Label>
-                    <Switch id="motion-detection" defaultChecked />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="privacy">
-              <Card className="border border-quantum-cyan/20 bg-transparent">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="anonymize-data">Anonymize Data</Label>
-                    <Switch id="anonymize-data" />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="location-history">Store Location History</Label>
-                    <Switch id="location-history" defaultChecked />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="advanced" className="space-y-6">
+          <AdvancedLocationSettings deliveryUserId={deliveryUser.id} />
         </TabsContent>
 
         <TabsContent value="notifications">
