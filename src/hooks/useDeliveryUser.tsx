@@ -11,7 +11,10 @@ export const useDeliveryUser = (userId: string | undefined) => {
   const { toast } = useToast();
 
   const fetchDeliveryUser = async () => {
+    console.log('useDeliveryUser - fetchDeliveryUser called with userId:', userId);
+    
     if (!userId) {
+      console.log('useDeliveryUser - No userId provided');
       setLoading(false);
       return;
     }
@@ -20,10 +23,13 @@ export const useDeliveryUser = (userId: string | undefined) => {
       setLoading(true);
       setError(null);
       
+      console.log('useDeliveryUser - Fetching delivery user for userId:', userId);
       const userData = await getDeliveryUserByUserId(userId);
+      console.log('useDeliveryUser - Received delivery user data:', userData);
+      
       setDeliveryUser(userData);
     } catch (err) {
-      console.error('Error fetching delivery user:', err);
+      console.error('useDeliveryUser - Error fetching delivery user:', err);
       setError(err as Error);
       toast({
         title: "Error",
@@ -36,10 +42,12 @@ export const useDeliveryUser = (userId: string | undefined) => {
   };
 
   useEffect(() => {
+    console.log('useDeliveryUser - useEffect triggered with userId:', userId);
     fetchDeliveryUser();
   }, [userId]);
 
   const refreshDeliveryUser = () => {
+    console.log('useDeliveryUser - refreshDeliveryUser called');
     fetchDeliveryUser();
   };
 

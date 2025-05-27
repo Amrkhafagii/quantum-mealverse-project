@@ -23,16 +23,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from 'sonner';
+import { DeliveryDashboardErrorBoundary } from '@/components/delivery/DeliveryDashboardErrorBoundary';
 
-const DeliveryDashboard: React.FC = () => {
+const DeliveryDashboardContent: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const { deliveryUser, loading: userLoading } = useDeliveryUser(user?.id);
   const { isLoaded: mapsLoaded, isLoading: mapsLoading } = useGoogleMaps();
   const [activeTab, setActiveTab] = useState<string>("active");
 
+  // Debug logging to identify the issue
+  console.log('DeliveryDashboard - Render state:', {
+    user: !!user,
+    userId: user?.id,
+    loading,
+    deliveryUser: !!deliveryUser,
+    deliveryUserApproved: deliveryUser?.is_approved,
+    userLoading,
+    mapsLoaded,
+    mapsLoading,
+    timestamp: new Date().toISOString()
+  });
+
   useEffect(() => {
+    console.log('DeliveryDashboard - Auth effect:', { user: !!user, loading });
     if (!loading && !user) {
+      console.log('DeliveryDashboard - Redirecting to auth (no user)');
       navigate('/auth');
     }
   }, [user, loading, navigate]);
@@ -48,7 +64,9 @@ const DeliveryDashboard: React.FC = () => {
     }
   };
 
+  // Show loading state
   if (loading || userLoading) {
+    console.log('DeliveryDashboard - Showing loading state');
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-quantum-cyan" />
@@ -57,7 +75,15 @@ const DeliveryDashboard: React.FC = () => {
     );
   }
 
+  // Check if user exists
+  if (!user) {
+    console.log('DeliveryDashboard - No user found');
+    return null; // This should trigger redirect in useEffect
+  }
+
+  // Check if delivery user profile exists
   if (!deliveryUser) {
+    console.log('DeliveryDashboard - No delivery user profile, redirecting to onboarding');
     return (
       <div className="container mx-auto p-4">
         <Card>
@@ -73,7 +99,9 @@ const DeliveryDashboard: React.FC = () => {
     );
   }
 
+  // Check if delivery user is approved
   if (!deliveryUser.is_approved) {
+    console.log('DeliveryDashboard - Delivery user not approved');
     return (
       <div className="container mx-auto p-4">
         <Card>
@@ -88,24 +116,10 @@ const DeliveryDashboard: React.FC = () => {
     );
   }
 
-  if (!mapsLoaded && !mapsLoading) {
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Maps API Loading</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Please wait while we load the mapping service...</p>
-            <div className="mt-4 flex items-center">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              <span>Initializing maps</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Don't block dashboard on maps loading - just show a notice
+  const showMapNotice = !mapsLoaded && !mapsLoading;
+  
+  console.log('DeliveryDashboard - Rendering main dashboard');
 
   return (
     <div className="container mx-auto p-4">
@@ -142,6 +156,15 @@ const DeliveryDashboard: React.FC = () => {
         </DropdownMenu>
       </div>
       
+      {/* Show map notice if needed */}
+      {showMapNotice && (
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <p className="text-yellow-600">Maps are currently loading. Some features may be limited until maps are ready.</p>
+          </CardContent>
+        </Card>
+      )}
+      
       {deliveryUser && <DeliveryStats deliveryUser={deliveryUser} />}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
@@ -169,6 +192,14 @@ const DeliveryDashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+const DeliveryDashboard: React.FC = () => {
+  return (
+    <DeliveryDashboardErrorBoundary>
+      <DeliveryDashboardContent />
+    </DeliveryDashboardErrorBoundary>
   );
 };
 

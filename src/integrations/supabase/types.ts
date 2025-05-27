@@ -2370,6 +2370,44 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_plan_to_menu_mappings: {
+        Row: {
+          created_at: string | null
+          id: string
+          menu_item_id: string | null
+          nutrition_food_name: string
+          nutritional_accuracy: number | null
+          similarity_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          menu_item_id?: string | null
+          nutrition_food_name: string
+          nutritional_accuracy?: number | null
+          similarity_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          menu_item_id?: string | null
+          nutrition_food_name?: string
+          nutritional_accuracy?: number | null
+          similarity_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_to_menu_mappings_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_plans: {
         Row: {
           created_at: string | null
@@ -2789,6 +2827,60 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      nutrition_cart_items: {
+        Row: {
+          calories: number
+          carbs: number
+          created_at: string | null
+          fat: number
+          food_category: string | null
+          id: string
+          meal_type: string
+          name: string
+          portion_size: number
+          protein: number
+          quantity: number
+          session_id: string | null
+          updated_at: string | null
+          usda_food_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          calories?: number
+          carbs?: number
+          created_at?: string | null
+          fat?: number
+          food_category?: string | null
+          id?: string
+          meal_type: string
+          name: string
+          portion_size?: number
+          protein?: number
+          quantity?: number
+          session_id?: string | null
+          updated_at?: string | null
+          usda_food_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          calories?: number
+          carbs?: number
+          created_at?: string | null
+          fat?: number
+          food_category?: string | null
+          id?: string
+          meal_type?: string
+          name?: string
+          portion_size?: number
+          protein?: number
+          quantity?: number
+          session_id?: string | null
+          updated_at?: string | null
+          usda_food_id?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
