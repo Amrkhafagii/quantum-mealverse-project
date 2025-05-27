@@ -31,6 +31,9 @@ export type Restaurant = {
   minimum_order_amount?: number;
   delivery_fee?: number;
   estimated_delivery_time: number;
+  onboarding_status?: 'not_started' | 'in_progress' | 'pending_review' | 'completed' | 'rejected';
+  onboarding_step?: number;
+  onboarding_completed_at?: string;
   created_at: string;
   updated_at: string;
   // Add status property for dashboard compatibility

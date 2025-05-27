@@ -3,48 +3,51 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, FileText, Clock, MapPin, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { CheckCircle, AlertCircle, FileText, Clock, MapPin, Store } from 'lucide-react';
 import { onboardingService } from '@/services/onboarding/onboardingService';
-import type { RestaurantDocument, OperationalHours, DeliveryArea } from '@/types/onboarding';
+import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 
 interface ReviewStepProps {
   restaurantId: string;
   onComplete: () => void;
-  onSubmit: () => Promise<void>;
+  onSubmit: () => void;
 }
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({ restaurantId, onComplete, onSubmit }) => {
   const { restaurant } = useRestaurantAuth();
   const { toast } = useToast();
-  const [documents, setDocuments] = useState<RestaurantDocument[]>([]);
-  const [hours, setHours] = useState<OperationalHours[]>([]);
-  const [areas, setAreas] = useState<DeliveryArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [summary, setSummary] = useState({
+    documents: 0,
+    operationalHours: 0,
+    deliveryAreas: 0
+  });
 
   useEffect(() => {
-    loadAllData();
+    loadSummary();
   }, [restaurantId]);
 
-  const loadAllData = async () => {
+  const loadSummary = async () => {
     try {
       setLoading(true);
-      const [docsData, hoursData, areasData] = await Promise.all([
+      const [docs, hours, areas] = await Promise.all([
         onboardingService.getRestaurantDocuments(restaurantId),
         onboardingService.getOperationalHours(restaurantId),
         onboardingService.getDeliveryAreas(restaurantId)
       ]);
       
-      setDocuments(docsData);
-      setHours(hoursData);
-      setAreas(areasData);
+      setSummary({
+        documents: docs.length,
+        operationalHours: hours.filter(h => h.is_open).length,
+        deliveryAreas: areas.length
+      });
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading summary:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load review data',
+        description: 'Failed to load onboarding summary',
         variant: 'destructive'
       });
     } finally {
@@ -57,6 +60,10 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ restaurantId, onComplete
       setSubmitting(true);
       await onSubmit();
       onComplete();
+      toast({
+        title: 'Success',
+        description: 'Your restaurant profile has been submitted for review',
+      });
     } catch (error) {
       console.error('Error submitting for review:', error);
       toast({
@@ -69,17 +76,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ restaurantId, onComplete
     }
   };
 
-  const getDocumentStatusSummary = () => {
-    const total = documents.length;
-    const approved = documents.filter(d => d.verification_status === 'approved').length;
-    const pending = documents.filter(d => d.verification_status === 'pending').length;
-    const rejected = documents.filter(d => d.verification_status === 'rejected').length;
-    
-    return { total, approved, pending, rejected };
-  };
-
-  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-40">
@@ -88,33 +84,35 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ restaurantId, onComplete
     );
   }
 
-  const docSummary = getDocumentStatusSummary();
+  const isComplete = summary.documents > 0 && summary.operationalHours > 0 && summary.deliveryAreas > 0;
 
   return (
     <div className="space-y-6">
-      {/* Restaurant Information */}
+      {/* Restaurant Information Summary */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
-            <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
+            <Store className="h-5 w-5 mr-2" />
             Restaurant Information
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p><strong>Name:</strong> {restaurant?.name}</p>
               <p><strong>Email:</strong> {restaurant?.email}</p>
               <p><strong>Phone:</strong> {restaurant?.phone}</p>
-              <p><strong>Cuisine:</strong> {restaurant?.cuisine_type}</p>
             </div>
             <div>
               <p><strong>Address:</strong> {restaurant?.address}</p>
               <p><strong>City:</strong> {restaurant?.city}</p>
-              <p><strong>Delivery Radius:</strong> {restaurant?.delivery_radius}km</p>
-              <p><strong>Min Order:</strong> ${restaurant?.minimum_order_amount}</p>
+              <p><strong>Cuisine:</strong> {restaurant?.cuisine_type || 'Not specified'}</p>
             </div>
           </div>
+          <Badge variant="default" className="bg-green-500">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Complete
+          </Badge>
         </CardContent>
       </Card>
 
@@ -123,119 +121,116 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ restaurantId, onComplete
         <CardHeader>
           <CardTitle className="flex items-center">
             <FileText className="h-5 w-5 mr-2" />
-            Documents ({docSummary.total} uploaded)
+            Documents Verification
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{docSummary.approved}</div>
-              <div className="text-sm text-gray-600">Approved</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{docSummary.pending}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{docSummary.rejected}</div>
-              <div className="text-sm text-gray-600">Rejected</div>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            {documents.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <span className="font-medium">{doc.document_type.replace('_', ' ')}</span>
-                <Badge className={
-                  doc.verification_status === 'approved' ? 'bg-green-100 text-green-800' :
-                  doc.verification_status === 'rejected' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }>
-                  {doc.verification_status}
-                </Badge>
-              </div>
-            ))}
+          <div className="flex items-center justify-between">
+            <p>{summary.documents} documents uploaded</p>
+            {summary.documents > 0 ? (
+              <Badge variant="default" className="bg-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Complete
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Incomplete
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Operating Hours */}
+      {/* Operational Hours Summary */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
             <Clock className="h-5 w-5 mr-2" />
-            Operating Hours
+            Operational Hours
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {DAYS.map((day, index) => {
-              const dayHours = hours.find(h => h.day_of_week === index);
-              return (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="font-medium">{day}</span>
-                  <span className="text-sm">
-                    {dayHours?.is_open ? 
-                      `${dayHours.open_time} - ${dayHours.close_time}` : 
-                      'Closed'
-                    }
-                  </span>
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-between">
+            <p>{summary.operationalHours} days configured</p>
+            {summary.operationalHours > 0 ? (
+              <Badge variant="default" className="bg-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Complete
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Incomplete
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Delivery Areas */}
+      {/* Delivery Areas Summary */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
             <MapPin className="h-5 w-5 mr-2" />
-            Delivery Areas ({areas.length} configured)
+            Delivery Areas
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {areas.map(area => (
-              <div key={area.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                <div>
-                  <span className="font-medium">{area.area_name}</span>
-                  <span className="text-sm text-gray-600 ml-2">
-                    ({area.radius_km}km, ${area.delivery_fee} fee)
-                  </span>
-                </div>
-                <Badge variant={area.is_active ? 'default' : 'secondary'}>
-                  {area.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
-            ))}
+          <div className="flex items-center justify-between">
+            <p>{summary.deliveryAreas} delivery areas configured</p>
+            {summary.deliveryAreas > 0 ? (
+              <Badge variant="default" className="bg-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Complete
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Incomplete
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Submit Button */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div className="flex-1">
-            <h4 className="font-medium text-blue-900">Ready to Submit</h4>
-            <p className="text-sm text-blue-700 mt-1">
-              Once submitted, your restaurant profile will be reviewed by our team. 
-              You'll receive an email notification about the approval status within 24-48 hours.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <Button 
-        onClick={handleSubmitForReview} 
-        disabled={submitting} 
-        className="w-full"
-        size="lg"
-      >
-        {submitting ? 'Submitting for Review...' : 'Submit for Review'}
-      </Button>
+      {/* Submit Section */}
+      <Card>
+        <CardContent className="pt-6">
+          {isComplete ? (
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center text-green-600">
+                <CheckCircle className="h-8 w-8 mr-2" />
+                <h3 className="text-lg font-semibold">Ready for Review</h3>
+              </div>
+              <p className="text-gray-600">
+                All required information has been provided. Click below to submit your restaurant for approval.
+              </p>
+              <Button 
+                onClick={handleSubmitForReview} 
+                disabled={submitting}
+                className="w-full"
+                size="lg"
+              >
+                {submitting ? 'Submitting...' : 'Submit for Review'}
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center text-orange-600">
+                <AlertCircle className="h-8 w-8 mr-2" />
+                <h3 className="text-lg font-semibold">Incomplete Information</h3>
+              </div>
+              <p className="text-gray-600">
+                Please complete all previous steps before submitting for review.
+              </p>
+              <Button disabled className="w-full" size="lg">
+                Complete All Steps First
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

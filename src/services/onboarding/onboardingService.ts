@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { fromSupabaseJson, toSupabaseJson } from '@/utils/supabaseUtils';
 import type { 
@@ -214,7 +213,7 @@ export class OnboardingService {
     
     return {
       ...result,
-      data: result.data ? fromSupabaseJson(result.data) : undefined
+      data: result.data ? fromSupabaseJson(result.data as string) : undefined
     } as OnboardingProgress;
   }
 
@@ -229,7 +228,7 @@ export class OnboardingService {
     
     return (data || []).map(progress => ({
       ...progress,
-      data: progress.data ? fromSupabaseJson(progress.data) : undefined
+      data: progress.data ? fromSupabaseJson(progress.data as string) : undefined
     })) as OnboardingProgress[];
   }
 

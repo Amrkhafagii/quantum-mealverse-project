@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, MapPin } from 'lucide-react';
@@ -21,10 +22,11 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
   const [areas, setAreas] = useState<DeliveryArea[]>([]);
   const [newArea, setNewArea] = useState({
     area_name: '',
+    area_type: 'radius' as const,
     radius_km: 5,
     delivery_fee: 0,
     minimum_order_amount: 0,
-    estimated_delivery_time: 45
+    estimated_delivery_time: 30
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,8 +38,8 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
   const loadAreas = async () => {
     try {
       setLoading(true);
-      const existingAreas = await onboardingService.getDeliveryAreas(restaurantId);
-      setAreas(existingAreas);
+      const deliveryAreas = await onboardingService.getDeliveryAreas(restaurantId);
+      setAreas(deliveryAreas);
     } catch (error) {
       console.error('Error loading delivery areas:', error);
       toast({
@@ -51,9 +53,9 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
   };
 
   const handleAddArea = async () => {
-    if (!newArea.area_name) {
+    if (!newArea.area_name.trim()) {
       toast({
-        title: 'Missing Information',
+        title: 'Error',
         description: 'Please enter an area name',
         variant: 'destructive'
       });
@@ -64,25 +66,25 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
       setSaving(true);
       const area = await onboardingService.saveDeliveryArea(restaurantId, {
         ...newArea,
-        area_type: 'radius',
-        center_latitude: restaurant?.latitude || 0,
-        center_longitude: restaurant?.longitude || 0,
-        is_active: true,
-        priority_order: areas.length + 1
+        center_latitude: 0, // This would be set by map integration
+        center_longitude: 0, // This would be set by map integration
+        priority_order: areas.length + 1,
+        is_active: true
       });
       
       setAreas(prev => [...prev, area]);
       setNewArea({
         area_name: '',
+        area_type: 'radius' as const,
         radius_km: 5,
         delivery_fee: 0,
         minimum_order_amount: 0,
-        estimated_delivery_time: 45
+        estimated_delivery_time: 30
       });
       
       toast({
         title: 'Success',
-        description: 'Delivery area added successfully'
+        description: 'Delivery area added successfully',
       });
     } catch (error) {
       console.error('Error adding delivery area:', error);
@@ -99,10 +101,10 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
   const handleDeleteArea = async (areaId: string) => {
     try {
       await onboardingService.deleteDeliveryArea(areaId);
-      setAreas(prev => prev.filter(area => area.id !== areaId));
+      setAreas(prev => prev.filter(a => a.id !== areaId));
       toast({
         title: 'Success',
-        description: 'Delivery area deleted successfully'
+        description: 'Delivery area deleted successfully',
       });
     } catch (error) {
       console.error('Error deleting delivery area:', error);
@@ -114,25 +116,17 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
     }
   };
 
-  const handleComplete = () => {
+  const handleSubmit = () => {
     if (areas.length === 0) {
       toast({
-        title: 'No Delivery Areas',
+        title: 'Error',
         description: 'Please add at least one delivery area',
         variant: 'destructive'
       });
       return;
     }
 
-    const areasSummary = areas.map(area => ({
-      name: area.area_name,
-      type: area.area_type,
-      radius: area.radius_km,
-      delivery_fee: area.delivery_fee,
-      minimum_order: area.minimum_order_amount
-    }));
-
-    onComplete({ delivery_areas: areasSummary });
+    onComplete({ delivery_areas: areas.length });
   };
 
   if (loading) {
@@ -145,7 +139,7 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
 
   return (
     <div className="space-y-6">
-      {/* Add New Area */}
+      {/* Add New Area Form */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -159,27 +153,51 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
               <Label htmlFor="area_name">Area Name</Label>
               <Input
                 id="area_name"
+                placeholder="e.g., Downtown, North Side"
                 value={newArea.area_name}
                 onChange={(e) => setNewArea(prev => ({ ...prev, area_name: e.target.value }))}
-                placeholder="e.g., Downtown, City Center"
               />
             </div>
             
             <div>
-              <Label htmlFor="radius_km">Radius (km)</Label>
-              <Input
-                id="radius_km"
-                type="number"
-                value={newArea.radius_km}
-                onChange={(e) => setNewArea(prev => ({ ...prev, radius_km: Number(e.target.value) }))}
-              />
+              <Label htmlFor="area_type">Area Type</Label>
+              <Select 
+                value={newArea.area_type} 
+                onValueChange={(value: 'radius' | 'polygon' | 'postal_codes') => 
+                  setNewArea(prev => ({ ...prev, area_type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="radius">Radius (km)</SelectItem>
+                  <SelectItem value="postal_codes">Postal Codes</SelectItem>
+                  <SelectItem value="polygon">Custom Area</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            
+            {newArea.area_type === 'radius' && (
+              <div>
+                <Label htmlFor="radius_km">Delivery Radius (km)</Label>
+                <Input
+                  id="radius_km"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={newArea.radius_km}
+                  onChange={(e) => setNewArea(prev => ({ ...prev, radius_km: Number(e.target.value) }))}
+                />
+              </div>
+            )}
             
             <div>
               <Label htmlFor="delivery_fee">Delivery Fee</Label>
               <Input
                 id="delivery_fee"
                 type="number"
+                min="0"
                 step="0.01"
                 value={newArea.delivery_fee}
                 onChange={(e) => setNewArea(prev => ({ ...prev, delivery_fee: Number(e.target.value) }))}
@@ -187,10 +205,11 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
             </div>
             
             <div>
-              <Label htmlFor="minimum_order_amount">Minimum Order</Label>
+              <Label htmlFor="minimum_order_amount">Minimum Order Amount</Label>
               <Input
                 id="minimum_order_amount"
                 type="number"
+                min="0"
                 step="0.01"
                 value={newArea.minimum_order_amount}
                 onChange={(e) => setNewArea(prev => ({ ...prev, minimum_order_amount: Number(e.target.value) }))}
@@ -198,10 +217,12 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
             </div>
             
             <div>
-              <Label htmlFor="estimated_delivery_time">Delivery Time (minutes)</Label>
+              <Label htmlFor="estimated_delivery_time">Estimated Delivery Time (minutes)</Label>
               <Input
                 id="estimated_delivery_time"
                 type="number"
+                min="10"
+                max="120"
                 value={newArea.estimated_delivery_time}
                 onChange={(e) => setNewArea(prev => ({ ...prev, estimated_delivery_time: Number(e.target.value) }))}
               />
@@ -209,7 +230,7 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
           </div>
           
           <Button onClick={handleAddArea} disabled={saving} className="w-full">
-            {saving ? 'Adding...' : 'Add Area'}
+            {saving ? 'Adding...' : 'Add Delivery Area'}
           </Button>
         </CardContent>
       </Card>
@@ -218,37 +239,31 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
       {areas.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Configured Delivery Areas</CardTitle>
+            <CardTitle className="flex items-center">
+              <MapPin className="h-5 w-5 mr-2" />
+              Configured Delivery Areas ({areas.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {areas.map((area) => (
-                <div key={area.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-quantum-cyan" />
-                    <div>
-                      <h4 className="font-medium">{area.area_name}</h4>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <span>{area.radius_km}km radius</span>
-                        <span>•</span>
-                        <span>${area.delivery_fee} delivery fee</span>
-                        <span>•</span>
-                        <span>${area.minimum_order_amount} min order</span>
-                      </div>
-                    </div>
+                <div key={area.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <div>
+                    <h4 className="font-medium">{area.area_name}</h4>
+                    <p className="text-sm text-gray-600">
+                      {area.area_type === 'radius' && `${area.radius_km}km radius`}
+                      {area.area_type === 'postal_codes' && 'Postal codes'}
+                      {area.area_type === 'polygon' && 'Custom area'}
+                      • Fee: ${area.delivery_fee} • Min: ${area.minimum_order_amount} • {area.estimated_delivery_time}min
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={area.is_active ? 'default' : 'secondary'}>
-                      {area.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteArea(area.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteArea(area.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -256,8 +271,8 @@ export const DeliveryAreasStep: React.FC<DeliveryAreasStepProps> = ({ restaurant
         </Card>
       )}
 
-      <Button onClick={handleComplete} disabled={areas.length === 0} className="w-full">
-        Continue to Review
+      <Button onClick={handleSubmit} className="w-full">
+        Save & Continue
       </Button>
     </div>
   );
