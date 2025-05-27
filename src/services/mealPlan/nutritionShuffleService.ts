@@ -2,12 +2,6 @@
 import { NutritionCartItem } from '@/contexts/NutritionCartContext';
 import { TDEEResult } from '@/components/fitness/TDEECalculator';
 import { generateNutritionMealPlan } from './nutritionMealGenerationService';
-import { 
-  getFoodsByMealType, 
-  getRandomFoodByMealTypeAndCategory,
-  calculateNutritionForPortion,
-  FoodItem 
-} from '../foodDatabase';
 
 /**
  * Shuffles nutrition cart items by generating new alternatives
@@ -40,7 +34,7 @@ export const shuffleMealType = (
   const totalFat = mealItems.reduce((sum, item) => sum + (item.fat * item.quantity), 0);
   
   // Generate new items for this meal type with similar nutrition targets
-  return generateMealItemsFromDatabase(mealType, totalCalories, totalProtein, totalCarbs, totalFat, tdeeResult.goal);
+  return generateMealItems(mealType, totalCalories, totalProtein, totalCarbs, totalFat, tdeeResult.goal);
 };
 
 /**
@@ -50,19 +44,9 @@ export const shuffleSingleItem = (
   item: NutritionCartItem,
   goal: string
 ): Omit<NutritionCartItem, 'id'> => {
-  // Get alternative foods for the same meal type and category
-  const availableFoods = getFoodsByMealType(item.meal_type);
-  
-  // Filter by category if specified, otherwise get any food for that meal
-  let alternatives = item.food_category 
-    ? availableFoods.filter(food => food.category === item.food_category)
-    : availableFoods;
-  
-  // Remove the current food from alternatives
-  alternatives = alternatives.filter(food => food.name !== item.name);
+  const alternatives = getAlternativeItems(item.meal_type, item.food_category || 'protein');
   
   if (alternatives.length === 0) {
-    // If no alternatives found, return the original item
     return {
       name: item.name,
       calories: item.calories,
@@ -77,29 +61,11 @@ export const shuffleSingleItem = (
     };
   }
   
-  // Select a random alternative
-  const randomFood = alternatives[Math.floor(Math.random() * alternatives.length)];
-  
-  // Calculate portion size to match similar calories
-  const targetCalories = item.calories * item.quantity;
-  const portionSize = calculateOptimalPortion(randomFood, targetCalories);
-  const nutrition = calculateNutritionForPortion(randomFood, portionSize);
-  
-  return {
-    name: randomFood.name,
-    calories: nutrition.calories,
-    protein: nutrition.protein,
-    carbs: nutrition.carbs,
-    fat: nutrition.fat,
-    quantity: 1,
-    portion_size: portionSize,
-    meal_type: item.meal_type,
-    food_category: randomFood.category,
-    usda_food_id: randomFood.usda_food_id
-  };
+  const randomAlternative = alternatives[Math.floor(Math.random() * alternatives.length)];
+  return randomAlternative;
 };
 
-function generateMealItemsFromDatabase(
+function generateMealItems(
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack',
   targetCalories: number,
   targetProtein: number,
@@ -109,234 +75,199 @@ function generateMealItemsFromDatabase(
 ): Omit<NutritionCartItem, 'id'>[] {
   const items: Omit<NutritionCartItem, 'id'>[] = [];
   
-  // Get available foods for this meal type
-  const availableFoods = getFoodsByMealType(mealType);
+  // Food alternatives for each meal type
+  const foodAlternatives = {
+    breakfast: [
+      {
+        name: 'Scrambled Eggs with Toast',
+        calories: Math.round(targetCalories * 0.6),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.6),
+        fat: Math.round(targetFat * 0.4),
+        quantity: 1,
+        portion_size: 200,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'scrambled_eggs_toast'
+      },
+      {
+        name: 'Protein Smoothie',
+        calories: Math.round(targetCalories * 0.4),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.4),
+        fat: Math.round(targetFat * 0.6),
+        quantity: 1,
+        portion_size: 300,
+        meal_type: mealType,
+        food_category: 'dairy',
+        usda_food_id: 'protein_smoothie'
+      }
+    ],
+    lunch: [
+      {
+        name: 'Turkey Sandwich',
+        calories: Math.round(targetCalories * 0.5),
+        protein: Math.round(targetProtein * 0.6),
+        carbs: Math.round(targetCarbs * 0.5),
+        fat: Math.round(targetFat * 0.3),
+        quantity: 1,
+        portion_size: 250,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'turkey_sandwich'
+      },
+      {
+        name: 'Quinoa Bowl',
+        calories: Math.round(targetCalories * 0.3),
+        protein: Math.round(targetProtein * 0.3),
+        carbs: Math.round(targetCarbs * 0.4),
+        fat: Math.round(targetFat * 0.4),
+        quantity: 1,
+        portion_size: 180,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'quinoa_bowl'
+      },
+      {
+        name: 'Side Vegetables',
+        calories: Math.round(targetCalories * 0.2),
+        protein: Math.round(targetProtein * 0.1),
+        carbs: Math.round(targetCarbs * 0.1),
+        fat: Math.round(targetFat * 0.3),
+        quantity: 1,
+        portion_size: 120,
+        meal_type: mealType,
+        food_category: 'vegetables',
+        usda_food_id: 'side_vegetables'
+      }
+    ],
+    dinner: [
+      {
+        name: 'Grilled Fish',
+        calories: Math.round(targetCalories * 0.5),
+        protein: Math.round(targetProtein * 0.7),
+        carbs: Math.round(targetCarbs * 0.1),
+        fat: Math.round(targetFat * 0.6),
+        quantity: 1,
+        portion_size: 150,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'grilled_fish'
+      },
+      {
+        name: 'Roasted Vegetables',
+        calories: Math.round(targetCalories * 0.3),
+        protein: Math.round(targetProtein * 0.2),
+        carbs: Math.round(targetCarbs * 0.6),
+        fat: Math.round(targetFat * 0.2),
+        quantity: 1,
+        portion_size: 160,
+        meal_type: mealType,
+        food_category: 'vegetables',
+        usda_food_id: 'roasted_vegetables'
+      },
+      {
+        name: 'Wild Rice',
+        calories: Math.round(targetCalories * 0.2),
+        protein: Math.round(targetProtein * 0.1),
+        carbs: Math.round(targetCarbs * 0.3),
+        fat: Math.round(targetFat * 0.2),
+        quantity: 1,
+        portion_size: 90,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'wild_rice'
+      }
+    ],
+    snack: [
+      {
+        name: 'Trail Mix',
+        calories: Math.round(targetCalories * 0.6),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.4),
+        fat: Math.round(targetFat * 0.7),
+        quantity: 1,
+        portion_size: 35,
+        meal_type: mealType,
+        food_category: 'nuts',
+        usda_food_id: 'trail_mix'
+      },
+      {
+        name: 'Banana',
+        calories: Math.round(targetCalories * 0.4),
+        protein: Math.round(targetProtein * 0.5),
+        carbs: Math.round(targetCarbs * 0.6),
+        fat: Math.round(targetFat * 0.3),
+        quantity: 1,
+        portion_size: 120,
+        meal_type: mealType,
+        food_category: 'fruits',
+        usda_food_id: 'banana'
+      }
+    ]
+  };
   
-  if (availableFoods.length === 0) {
-    return items;
-  }
-  
-  // Use the same strategy as the main generation service
-  switch (mealType) {
-    case 'breakfast':
-      const breakfastGrain = getRandomFoodByMealTypeAndCategory(mealType, 'grains');
-      const breakfastProtein = getRandomFoodByMealTypeAndCategory(mealType, 'dairy');
-      
-      if (breakfastGrain) {
-        const portion = calculateOptimalPortion(breakfastGrain, targetCalories * 0.6);
-        const nutrition = calculateNutritionForPortion(breakfastGrain, portion);
-        
-        items.push({
-          name: breakfastGrain.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: breakfastGrain.category,
-          usda_food_id: breakfastGrain.usda_food_id
-        });
-      }
-      
-      if (breakfastProtein) {
-        const portion = calculateOptimalPortion(breakfastProtein, targetCalories * 0.4);
-        const nutrition = calculateNutritionForPortion(breakfastProtein, portion);
-        
-        items.push({
-          name: breakfastProtein.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: breakfastProtein.category,
-          usda_food_id: breakfastProtein.usda_food_id
-        });
-      }
-      break;
-
-    case 'lunch':
-      const lunchProtein = getRandomFoodByMealTypeAndCategory(mealType, 'protein');
-      const lunchGrain = getRandomFoodByMealTypeAndCategory(mealType, 'grains');
-      const lunchVegetable = getRandomFoodByMealTypeAndCategory(mealType, 'vegetables');
-      
-      if (lunchProtein) {
-        const portion = calculateOptimalPortion(lunchProtein, targetCalories * 0.5);
-        const nutrition = calculateNutritionForPortion(lunchProtein, portion);
-        
-        items.push({
-          name: lunchProtein.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: lunchProtein.category,
-          usda_food_id: lunchProtein.usda_food_id
-        });
-      }
-      
-      if (lunchGrain) {
-        const portion = calculateOptimalPortion(lunchGrain, targetCalories * 0.3);
-        const nutrition = calculateNutritionForPortion(lunchGrain, portion);
-        
-        items.push({
-          name: lunchGrain.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: lunchGrain.category,
-          usda_food_id: lunchGrain.usda_food_id
-        });
-      }
-      
-      if (lunchVegetable) {
-        const portion = calculateOptimalPortion(lunchVegetable, targetCalories * 0.2);
-        const nutrition = calculateNutritionForPortion(lunchVegetable, portion);
-        
-        items.push({
-          name: lunchVegetable.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: lunchVegetable.category,
-          usda_food_id: lunchVegetable.usda_food_id
-        });
-      }
-      break;
-
-    case 'dinner':
-      const dinnerProtein = getRandomFoodByMealTypeAndCategory(mealType, 'protein');
-      const dinnerCarb = getRandomFoodByMealTypeAndCategory(mealType, 'vegetables') || 
-                         getRandomFoodByMealTypeAndCategory(mealType, 'grains');
-      const dinnerVegetable = getRandomFoodByMealTypeAndCategory(mealType, 'vegetables');
-      
-      if (dinnerProtein) {
-        const portion = calculateOptimalPortion(dinnerProtein, targetCalories * 0.6);
-        const nutrition = calculateNutritionForPortion(dinnerProtein, portion);
-        
-        items.push({
-          name: dinnerProtein.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: dinnerProtein.category,
-          usda_food_id: dinnerProtein.usda_food_id
-        });
-      }
-      
-      if (dinnerCarb) {
-        const portion = calculateOptimalPortion(dinnerCarb, targetCalories * 0.25);
-        const nutrition = calculateNutritionForPortion(dinnerCarb, portion);
-        
-        items.push({
-          name: dinnerCarb.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: dinnerCarb.category,
-          usda_food_id: dinnerCarb.usda_food_id
-        });
-      }
-      
-      if (dinnerVegetable && dinnerVegetable.id !== dinnerCarb?.id) {
-        const portion = calculateOptimalPortion(dinnerVegetable, targetCalories * 0.15);
-        const nutrition = calculateNutritionForPortion(dinnerVegetable, portion);
-        
-        items.push({
-          name: dinnerVegetable.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: dinnerVegetable.category,
-          usda_food_id: dinnerVegetable.usda_food_id
-        });
-      }
-      break;
-
-    case 'snack':
-      const snackNuts = getRandomFoodByMealTypeAndCategory(mealType, 'nuts');
-      const snackFruit = getRandomFoodByMealTypeAndCategory(mealType, 'fruits');
-      
-      if (snackNuts) {
-        const portion = calculateOptimalPortion(snackNuts, targetCalories * 0.7);
-        const nutrition = calculateNutritionForPortion(snackNuts, portion);
-        
-        items.push({
-          name: snackNuts.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: snackNuts.category,
-          usda_food_id: snackNuts.usda_food_id
-        });
-      }
-      
-      if (snackFruit) {
-        const portion = calculateOptimalPortion(snackFruit, targetCalories * 0.3);
-        const nutrition = calculateNutritionForPortion(snackFruit, portion);
-        
-        items.push({
-          name: snackFruit.name,
-          calories: nutrition.calories,
-          protein: nutrition.protein,
-          carbs: nutrition.carbs,
-          fat: nutrition.fat,
-          quantity: 1,
-          portion_size: portion,
-          meal_type: mealType,
-          food_category: snackFruit.category,
-          usda_food_id: snackFruit.usda_food_id
-        });
-      }
-      break;
-  }
-
-  return items;
+  return foodAlternatives[mealType] || [];
 }
 
-/**
- * Calculate optimal portion size to meet target calories
- */
-function calculateOptimalPortion(food: FoodItem, targetCalories: number): number {
-  if (food.calories === 0) return food.defaultPortionSize;
+function getAlternativeItems(
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack',
+  category: string
+): Omit<NutritionCartItem, 'id'>[] {
+  const alternatives: { [key: string]: Omit<NutritionCartItem, 'id'>[] } = {
+    protein: [
+      {
+        name: 'Lean Beef',
+        calories: 250,
+        protein: 26,
+        carbs: 0,
+        fat: 15,
+        quantity: 1,
+        portion_size: 100,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'lean_beef'
+      },
+      {
+        name: 'Chicken Thigh',
+        calories: 280,
+        protein: 25,
+        carbs: 0,
+        fat: 18,
+        quantity: 1,
+        portion_size: 120,
+        meal_type: mealType,
+        food_category: 'protein',
+        usda_food_id: 'chicken_thigh'
+      }
+    ],
+    grains: [
+      {
+        name: 'Whole Wheat Pasta',
+        calories: 350,
+        protein: 12,
+        carbs: 70,
+        fat: 2,
+        quantity: 1,
+        portion_size: 100,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'whole_wheat_pasta'
+      },
+      {
+        name: 'Barley',
+        calories: 320,
+        protein: 10,
+        carbs: 65,
+        fat: 2,
+        quantity: 1,
+        portion_size: 100,
+        meal_type: mealType,
+        food_category: 'grains',
+        usda_food_id: 'barley'
+      }
+    ]
+  };
   
-  // Calculate portion needed to meet target calories
-  const portionForCalories = (targetCalories / food.calories) * 100; // Convert to grams
-  
-  // Use reasonable bounds - between 50% and 200% of default portion
-  const minPortion = food.defaultPortionSize * 0.5;
-  const maxPortion = food.defaultPortionSize * 2;
-  
-  return Math.max(minPortion, Math.min(maxPortion, portionForCalories));
+  return alternatives[category] || [];
 }
