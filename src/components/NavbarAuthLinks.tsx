@@ -15,7 +15,8 @@ const NavbarAuthLinks: React.FC = () => {
         Login
       </Link>
       <Link
-        to="/auth" state={{ mode: 'signup' }}
+        to="/auth" 
+        state={{ mode: 'signup' }}
         className="flex items-center text-green-500 hover:text-green-700"
       >
         <UserPlus className="h-4 w-4 mr-1" />
