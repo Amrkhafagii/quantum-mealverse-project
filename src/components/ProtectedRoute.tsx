@@ -19,7 +19,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading } = useAuth();
 
-  console.log('ProtectedRoute: Checking access', { user: !!user, loading, allowedUserTypes });
+  console.log('ProtectedRoute: Checking access', { 
+    user: !!user, 
+    loading, 
+    allowedUserTypes,
+    userMetadata: user?.user_metadata,
+    userType: user?.user_metadata?.user_type 
+  });
 
   if (loading) {
     return (
@@ -39,7 +45,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (allowedUserTypes && allowedUserTypes.length > 0) {
     const userType = user.user_metadata?.user_type || 'customer'; // Default to customer if no type set
     
-    console.log('ProtectedRoute: User type check', { userType, allowedUserTypes });
+    console.log('ProtectedRoute: User type check', { 
+      userType, 
+      allowedUserTypes,
+      userMetadata: user.user_metadata,
+      userEmail: user.email 
+    });
     
     if (!allowedUserTypes.includes(userType)) {
       console.log('ProtectedRoute: User type not allowed, redirecting based on type');
