@@ -15,7 +15,11 @@ export class PromotionService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(promotion => ({
+      ...promotion,
+      promotion_type: promotion.promotion_type as RestaurantPromotion['promotion_type'],
+      applicable_items: Array.isArray(promotion.applicable_items) ? promotion.applicable_items : []
+    }));
   }
 
   // Get all promotions for a restaurant
@@ -27,7 +31,11 @@ export class PromotionService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(promotion => ({
+      ...promotion,
+      promotion_type: promotion.promotion_type as RestaurantPromotion['promotion_type'],
+      applicable_items: Array.isArray(promotion.applicable_items) ? promotion.applicable_items : []
+    }));
   }
 
   // Create a new promotion
@@ -38,13 +46,18 @@ export class PromotionService {
       .from('restaurant_promotions')
       .insert({
         ...promotion,
-        usage_count: 0
+        usage_count: 0,
+        applicable_items: promotion.applicable_items || []
       })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      promotion_type: data.promotion_type as RestaurantPromotion['promotion_type'],
+      applicable_items: Array.isArray(data.applicable_items) ? data.applicable_items : []
+    };
   }
 
   // Update a promotion
@@ -63,7 +76,11 @@ export class PromotionService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      promotion_type: data.promotion_type as RestaurantPromotion['promotion_type'],
+      applicable_items: Array.isArray(data.applicable_items) ? data.applicable_items : []
+    };
   }
 
   // Delete a promotion

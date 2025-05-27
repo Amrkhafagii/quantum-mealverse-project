@@ -9,7 +9,7 @@ export class AssignmentService {
       .from('restaurant_assignments')
       .select(`
         *,
-        orders!inner(
+        orders:order_id(
           id,
           customer_name,
           customer_phone,
@@ -25,7 +25,11 @@ export class AssignmentService {
       .order('assigned_at', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(assignment => ({
+      ...assignment,
+      assigned_at: assignment.assigned_at || assignment.created_at,
+      details: assignment.details || {}
+    }));
   }
 
   // Accept an order assignment
@@ -84,7 +88,11 @@ export class AssignmentService {
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(assignment => ({
+      ...assignment,
+      assigned_at: assignment.assigned_at || assignment.created_at,
+      details: assignment.details || {}
+    }));
   }
 
   // Subscribe to new assignments
@@ -103,7 +111,12 @@ export class AssignmentService {
           filter: `restaurant_id=eq.${restaurantId}`
         },
         (payload) => {
-          callback(payload.new as RestaurantAssignment);
+          const assignment = payload.new as any;
+          callback({
+            ...assignment,
+            assigned_at: assignment.assigned_at || assignment.created_at,
+            details: assignment.details || {}
+          });
         }
       )
       .subscribe();

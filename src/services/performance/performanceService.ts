@@ -18,7 +18,10 @@ export class PerformanceService {
       .order('metric_date', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(metric => ({
+      ...metric,
+      peak_hours: Array.isArray(metric.peak_hours) ? metric.peak_hours : []
+    }));
   }
 
   // Get today's performance metrics
@@ -33,7 +36,12 @@ export class PerformanceService {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
+    if (!data) return null;
+    
+    return {
+      ...data,
+      peak_hours: Array.isArray(data.peak_hours) ? data.peak_hours : []
+    };
   }
 
   // Get weekly summary

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,8 @@ import type { RestaurantPromotion } from '@/types/notifications';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { useToast } from '@/components/ui/use-toast';
 
+type PromotionType = 'percentage_discount' | 'fixed_discount' | 'buy_one_get_one' | 'free_delivery' | 'combo_deal';
+
 export const PromotionsManager: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
   const { toast } = useToast();
@@ -24,7 +25,7 @@ export const PromotionsManager: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    promotion_type: 'percentage_discount' as const,
+    promotion_type: 'percentage_discount' as PromotionType,
     discount_value: 0,
     minimum_order_amount: 0,
     maximum_discount_amount: 0,
@@ -175,6 +176,10 @@ export const PromotionsManager: React.FC = () => {
     }
   };
 
+  const handlePromotionTypeChange = (value: PromotionType) => {
+    setFormData({ ...formData, promotion_type: value });
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -253,7 +258,7 @@ export const PromotionsManager: React.FC = () => {
                   <Label htmlFor="promotion_type">Promotion Type *</Label>
                   <Select 
                     value={formData.promotion_type} 
-                    onValueChange={(value: any) => setFormData({ ...formData, promotion_type: value })}
+                    onValueChange={handlePromotionTypeChange}
                   >
                     <SelectTrigger>
                       <SelectValue />

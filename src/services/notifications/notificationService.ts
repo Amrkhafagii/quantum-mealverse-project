@@ -13,7 +13,10 @@ export class NotificationService {
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(notification => ({
+      ...notification,
+      metadata: notification.metadata || {}
+    }));
   }
 
   // Get unread notification count
@@ -59,12 +62,18 @@ export class NotificationService {
   async createNotification(notification: Omit<OrderNotification, 'id' | 'created_at'>): Promise<OrderNotification> {
     const { data, error } = await supabase
       .from('order_notifications')
-      .insert(notification)
+      .insert({
+        ...notification,
+        metadata: notification.metadata || {}
+      })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      metadata: data.metadata || {}
+    };
   }
 
   // Subscribe to real-time notifications
@@ -83,7 +92,11 @@ export class NotificationService {
           filter: `restaurant_id=eq.${restaurantId}`
         },
         (payload) => {
-          callback(payload.new as OrderNotification);
+          const notification = payload.new as any;
+          callback({
+            ...notification,
+            metadata: notification.metadata || {}
+          });
         }
       )
       .subscribe();

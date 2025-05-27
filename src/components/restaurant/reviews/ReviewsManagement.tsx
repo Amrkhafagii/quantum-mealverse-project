@@ -1,56 +1,73 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Flag, MessageCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Star, Flag, Reply } from 'lucide-react';
 import { reviewService } from '@/services/reviews/reviewService';
-import type { RestaurantReview, MealRating } from '@/types/notifications';
+import type { RestaurantReview } from '@/types/notifications';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+import { useToast } from '@/components/ui/use-toast';
 
 export const ReviewsManagement: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
+  const { toast } = useToast();
   const [reviews, setReviews] = useState<RestaurantReview[]>([]);
-  const [mealRatings, setMealRatings] = useState<MealRating[]>([]);
-  const [averageRating, setAverageRating] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
 
   useEffect(() => {
     if (!restaurant?.id) return;
-
-    const loadReviewsData = async () => {
-      try {
-        const [reviewsData, ratingsData, avgData] = await Promise.all([
-          reviewService.getRestaurantReviews(restaurant.id),
-          reviewService.getMealRatings(restaurant.id),
-          reviewService.getRestaurantAverageRating(restaurant.id)
-        ]);
-
-        setReviews(reviewsData);
-        setMealRatings(ratingsData);
-        setAverageRating(avgData);
-      } catch (error) {
-        console.error('Error loading reviews data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadReviewsData();
+    loadReviews();
+    loadAverageRating();
   }, [restaurant?.id]);
+
+  const loadReviews = async () => {
+    if (!restaurant?.id) return;
+    
+    try {
+      const data = await reviewService.getRestaurantReviews(restaurant.id);
+      setReviews(data);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load reviews',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAverageRating = async () => {
+    if (!restaurant?.id) return;
+    
+    try {
+      const ratingData = await reviewService.getRestaurantAverageRating(restaurant.id);
+      setAverageRating(ratingData.averageRating);
+      setTotalReviews(ratingData.totalReviews);
+    } catch (error) {
+      console.error('Error loading average rating:', error);
+    }
+  };
 
   const handleFlagReview = async (reviewId: string) => {
     try {
       await reviewService.flagReview(reviewId, 'Inappropriate content');
-      setReviews(prev =>
-        prev.map(review =>
-          review.id === reviewId
-            ? { ...review, is_flagged: true, status: 'pending' }
-            : review
-        )
-      );
+      toast({
+        title: 'Success',
+        description: 'Review has been flagged for moderation'
+      });
+      loadReviews();
     } catch (error) {
       console.error('Error flagging review:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to flag review',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -58,103 +75,107 @@ export const ReviewsManagement: React.FC = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${
-          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        className={`w-4 h-4 ${
+          i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
         }`}
       />
     ));
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="animate-pulse space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Overall Rating Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Rating Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-yellow-600 mb-2">
-                {averageRating?.averageRating || '0.0'}
-              </div>
-              <div className="flex justify-center mb-2">
-                {renderStars(Math.round(averageRating?.averageRating || 0))}
-              </div>
-              <p className="text-sm text-gray-600">
-                {averageRating?.totalReviews || 0} reviews
-              </p>
+      {/* Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2">
+              <div className="flex">{renderStars(Math.round(averageRating))}</div>
+              <span className="text-2xl font-bold">{averageRating.toFixed(1)}</span>
             </div>
-            
-            <div className="col-span-2">
-              <h4 className="font-medium mb-3">Rating Distribution</h4>
-              {Object.entries(averageRating?.ratingDistribution || {})
-                .reverse()
-                .map(([star, count]) => (
-                  <div key={star} className="flex items-center mb-2">
-                    <span className="w-8 text-sm">{star}★</span>
-                    <div className="flex-1 bg-gray-200 rounded-full h-2 mx-3">
-                      <div
-                        className="bg-yellow-400 h-2 rounded-full"
-                        style={{
-                          width: `${
-                            averageRating?.totalReviews > 0
-                              ? ((count as number) / averageRating.totalReviews) * 100
-                              : 0
-                          }%`
-                        }}
-                      ></div>
-                    </div>
-                    <span className="w-8 text-sm text-gray-600">{count}</span>
-                  </div>
-                ))}
+            <p className="text-sm text-gray-600">Average Rating</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-2xl font-bold">{totalReviews}</div>
+            <p className="text-sm text-gray-600">Total Reviews</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-2xl font-bold">
+              {reviews.filter(r => r.rating >= 4).length}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            <p className="text-sm text-gray-600">Positive Reviews</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Recent Reviews */}
+      {/* Reviews List */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Reviews</CardTitle>
+          <CardTitle>Customer Reviews</CardTitle>
         </CardHeader>
         <CardContent>
           {reviews.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
               <p>No reviews yet</p>
-              <p className="text-sm">Reviews from customers will appear here</p>
+              <p className="text-sm">Your customers' reviews will appear here</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {reviews.map((review) => (
-                <div key={review.id} className="border rounded-lg p-4">
+                <div key={review.id} className="border-b pb-6 last:border-b-0">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center space-x-3">
-                      <div className="flex">{renderStars(review.rating)}</div>
-                      <Badge variant={review.is_verified_purchase ? 'default' : 'secondary'}>
-                        {review.is_verified_purchase ? 'Verified Purchase' : 'Unverified'}
-                      </Badge>
-                      {review.is_flagged && (
-                        <Badge variant="destructive">Flagged</Badge>
-                      )}
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium">
+                          {review.user_id.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex">{renderStars(review.rating)}</div>
+                          <Badge variant={review.status === 'approved' ? 'default' : 'secondary'}>
+                            {review.status}
+                          </Badge>
+                          {review.is_verified_purchase && (
+                            <Badge variant="outline">Verified Purchase</Badge>
+                          )}
+                          {review.is_flagged && (
+                            <Badge variant="destructive">Flagged</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {formatDate(review.created_at)}
+                        </p>
+                      </div>
                     </div>
+                    
                     <div className="flex items-center space-x-2">
                       <Button
                         variant="ghost"
@@ -162,52 +183,32 @@ export const ReviewsManagement: React.FC = () => {
                         onClick={() => handleFlagReview(review.id)}
                         disabled={review.is_flagged}
                       >
-                        <Flag className="h-4 w-4" />
+                        <Flag className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <Reply className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                  
-                  {review.comment && (
-                    <p className="text-gray-700 mb-3">{review.comment}</p>
-                  )}
-                  
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>
-                      {new Date(review.created_at).toLocaleDateString()}
-                    </span>
-                    {(review as any).orders?.customer_name && (
-                      <span>by {(review as any).orders.customer_name}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Meal Ratings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Menu Item Ratings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {mealRatings.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">No meal ratings available yet</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mealRatings.map((rating) => (
-                <div key={rating.meal_id} className="border rounded-lg p-4">
-                  <h4 className="font-medium mb-2">
-                    {(rating as any).menu_items?.name || 'Unknown Item'}
-                  </h4>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="flex">{renderStars(Math.round(rating.avg_rating))}</div>
-                    <span className="text-sm font-medium">{rating.avg_rating.toFixed(1)}</span>
-                    <span className="text-sm text-gray-500">
-                      ({rating.review_count} reviews)
-                    </span>
-                  </div>
+                  {review.comment && (
+                    <div className="mb-3">
+                      <p className="text-gray-700">{review.comment}</p>
+                    </div>
+                  )}
+
+                  {review.images && review.images.length > 0 && (
+                    <div className="flex space-x-2 mb-3">
+                      {review.images.map((image, index) => (
+                        <img
+                          key={index}
+                          src={image}
+                          alt={`Review image ${index + 1}`}
+                          className="w-20 h-20 object-cover rounded"
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
