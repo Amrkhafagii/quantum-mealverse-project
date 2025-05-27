@@ -93,21 +93,33 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         if (signUpError) throw signUpError;
         
         if (userType === 'restaurant' && signUpData.user && email) {
-          // Create restaurant profile using RPC function
-          const { data, error } = await supabase.rpc('create_restaurant_profile', {
-            p_user_id: signUpData.user.id,
-            p_name: restaurantName,
-            p_email: email,
-            p_phone: restaurantPhone,
-            p_address: restaurantAddress,
-            p_city: restaurantCity,
-            p_description: restaurantDescription || null
-          });
+          // Create restaurant profile using direct database insert
+          const { data, error } = await supabase
+            .from('restaurants')
+            .insert({
+              user_id: signUpData.user.id,
+              name: restaurantName,
+              email: email,
+              phone: restaurantPhone,
+              address: restaurantAddress,
+              city: restaurantCity,
+              description: restaurantDescription || null,
+              country: 'Canada'
+            })
+            .select()
+            .single();
           
           if (error) {
             console.error('Restaurant profile creation error:', error);
             throw new Error('Failed to create restaurant profile');
           }
+          
+          // Create default settings
+          await supabase
+            .from('restaurant_settings')
+            .insert({
+              restaurant_id: data.id
+            });
           
           toast({
             title: "Restaurant account created!",

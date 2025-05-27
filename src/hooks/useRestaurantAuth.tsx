@@ -6,11 +6,33 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type Restaurant = {
   id: string;
+  user_id: string;
   name: string;
+  email: string;
+  phone: string;
   address: string;
-  owner_id: string;
+  city: string;
+  postal_code?: string;
+  country: string;
+  description?: string;
+  cuisine_type?: string;
+  logo_url?: string;
+  cover_image_url?: string;
+  business_license?: string;
+  tax_number?: string;
+  is_active: boolean;
+  is_verified: boolean;
+  verification_status: 'pending' | 'approved' | 'rejected' | 'under_review';
+  verification_notes?: string;
+  latitude?: number;
+  longitude?: number;
+  opening_hours?: any;
+  delivery_radius: number;
+  minimum_order_amount?: number;
+  delivery_fee?: number;
+  estimated_delivery_time: number;
   created_at: string;
-  status: string;
+  updated_at: string;
 };
 
 export const useRestaurantAuth = () => {

@@ -3347,45 +3347,184 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_settings: {
+        Row: {
+          auto_accept_orders: boolean | null
+          created_at: string | null
+          id: string
+          max_daily_orders: number | null
+          notifications_enabled: boolean | null
+          operating_status: string | null
+          order_preparation_time: number | null
+          restaurant_id: string
+          special_instructions: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_accept_orders?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_daily_orders?: number | null
+          notifications_enabled?: boolean | null
+          operating_status?: string | null
+          order_preparation_time?: number | null
+          restaurant_id: string
+          special_instructions?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_accept_orders?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_daily_orders?: number | null
+          notifications_enabled?: boolean | null
+          operating_status?: string | null
+          order_preparation_time?: number | null
+          restaurant_id?: string
+          special_instructions?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_verification_documents: {
+        Row: {
+          document_name: string
+          document_type: string
+          document_url: string
+          id: string
+          restaurant_id: string
+          uploaded_at: string | null
+          verification_notes: string | null
+          verification_status: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          document_name: string
+          document_type: string
+          document_url: string
+          id?: string
+          restaurant_id: string
+          uploaded_at?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          document_name?: string
+          document_type?: string
+          document_url?: string
+          id?: string
+          restaurant_id?: string
+          uploaded_at?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_verification_documents_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address: string
+          business_license: string | null
+          city: string
+          country: string | null
+          cover_image_url: string | null
           created_at: string | null
-          email: string | null
+          cuisine_type: string | null
+          delivery_fee: number | null
+          description: string | null
+          email: string
           id: string
           is_active: boolean | null
+          is_verified: boolean | null
           latitude: number | null
+          logo_url: string | null
           longitude: number | null
+          minimum_order_amount: number | null
           name: string
+          opening_hours: Json | null
+          phone: string
+          postal_code: string | null
           restaurant_id: string
+          tax_number: string | null
           updated_at: string | null
           user_id: string
+          verification_notes: string | null
+          verification_status: string | null
         }
         Insert: {
           address: string
+          business_license?: string | null
+          city: string
+          country?: string | null
+          cover_image_url?: string | null
           created_at?: string | null
-          email?: string | null
+          cuisine_type?: string | null
+          delivery_fee?: number | null
+          description?: string | null
+          email: string
           id?: string
           is_active?: boolean | null
+          is_verified?: boolean | null
           latitude?: number | null
+          logo_url?: string | null
           longitude?: number | null
+          minimum_order_amount?: number | null
           name: string
+          opening_hours?: Json | null
+          phone: string
+          postal_code?: string | null
           restaurant_id?: string
+          tax_number?: string | null
           updated_at?: string | null
           user_id: string
+          verification_notes?: string | null
+          verification_status?: string | null
         }
         Update: {
           address?: string
+          business_license?: string | null
+          city?: string
+          country?: string | null
+          cover_image_url?: string | null
           created_at?: string | null
-          email?: string | null
+          cuisine_type?: string | null
+          delivery_fee?: number | null
+          description?: string | null
+          email?: string
           id?: string
           is_active?: boolean | null
+          is_verified?: boolean | null
           latitude?: number | null
+          logo_url?: string | null
           longitude?: number | null
+          minimum_order_amount?: number | null
           name?: string
+          opening_hours?: Json | null
+          phone?: string
+          postal_code?: string | null
           restaurant_id?: string
+          tax_number?: string | null
           updated_at?: string | null
           user_id?: string
+          verification_notes?: string | null
+          verification_status?: string | null
         }
         Relationships: []
       }
@@ -5364,6 +5503,18 @@ export type Database = {
           p_customer_lng?: number
         }
         Returns: Json
+      }
+      create_restaurant_profile: {
+        Args: {
+          p_user_id: string
+          p_name: string
+          p_email: string
+          p_phone: string
+          p_address: string
+          p_city: string
+          p_description?: string
+        }
+        Returns: string
       }
       disablelongtransactions: {
         Args: Record<PropertyKey, never>
