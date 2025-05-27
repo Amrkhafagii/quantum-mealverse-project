@@ -26,23 +26,26 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
   // If user is already logged in, redirect appropriately
   useEffect(() => {
     if (user && !loading) {
-      console.log("Auth: User is logged in, redirecting", { user, returnTo });
+      console.log("Auth page: User is logged in, checking redirect", { user, returnTo });
       
       // Check if the user is a restaurant owner
       const userType = user.user_metadata?.user_type;
       
-      console.log("Auth: User type from metadata:", userType);
+      console.log("Auth page: User type from metadata:", userType);
       
       if (userType === 'delivery') {
+        console.log("Auth page: Redirecting delivery user to dashboard");
         navigate('/delivery/dashboard', { replace: true });
       } else if (userType === 'restaurant') {
-        console.log("Auth: Redirecting restaurant user to dashboard");
+        console.log("Auth page: Redirecting restaurant user to dashboard");
         navigate('/restaurant/dashboard', { replace: true });
       } else if (userType === 'customer') {
+        console.log("Auth page: Redirecting customer user to customer page");
         navigate('/customer', { replace: true });
       } else {
-        // Default redirect for users without type
-        navigate(returnTo || '/', { replace: true });
+        // Default redirect for users without type - but prioritize customer page for general users
+        console.log("Auth page: No specific user type, redirecting to customer page");
+        navigate('/customer', { replace: true });
       }
     }
   }, [user, loading, navigate, returnTo]);

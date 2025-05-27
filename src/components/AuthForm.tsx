@@ -115,31 +115,39 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         });
         if (error) throw error;
         
+        console.log('AuthForm - Login successful, user data:', data.user);
+        
         // Get user type - first check user metadata
         const userMetadata = data.user?.user_metadata as { user_type?: string } | undefined;
         let userType = userMetadata?.user_type;
         
+        console.log('AuthForm - User type from metadata:', userType);
+        
         // If not in metadata, check our user_types table as fallback
         if (!userType && data.user?.id) {
           userType = await userTypeService.getUserType(data.user.id);
+          console.log('AuthForm - User type from service:', userType);
         }
         
         // If still no user type, default to customer
         if (!userType && data.user) {
           userType = 'customer';
           await userTypeService.updateUserType(data.user.id, 'customer');
+          console.log('AuthForm - Defaulted to customer');
         }
         
-        console.log('AuthForm - User type determined:', userType);
+        console.log('AuthForm - Final user type determined:', userType);
         
         if (data.user) {
           if (userType === 'restaurant') {
             // Restaurant user - redirect to restaurant dashboard
+            console.log('AuthForm - Redirecting restaurant user to dashboard');
             toast({
               title: "Welcome to Restaurant Dashboard",
               description: "You have been logged in as a restaurant owner",
             });
             navigate('/restaurant/dashboard', { replace: true });
+            return; // Important: return early to prevent further execution
           } else if (userType === 'delivery') {
             // Check if delivery onboarding is complete
             const { data: deliveryUserData } = await supabase
@@ -169,8 +177,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
               });
               navigate('/delivery/onboarding', { replace: true });
             }
+            return; // Important: return early to prevent further execution
           } else {
             // Regular customer flow - prompt for location
+            console.log('AuthForm - Customer user, showing location prompt');
             toast({
               title: "Welcome back",
               description: "You have been logged in successfully",
@@ -180,6 +190,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         }
       }
     } catch (error: any) {
+      console.error('AuthForm - Authentication error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -196,7 +207,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
       title: "Location Enabled",
       description: "You can now see restaurants near you",
     });
-    navigate('/', { replace: true });
+    navigate('/customer', { replace: true });
   };
   
   const handlePermissionDenied = () => {
@@ -205,12 +216,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
       description: "Some features will be limited without location access",
       variant: "destructive",
     });
-    navigate('/', { replace: true });
+    navigate('/customer', { replace: true });
   };
   
   const handleDismiss = () => {
     setShowLocationPrompt(false);
-    navigate('/', { replace: true });
+    navigate('/customer', { replace: true });
   };
   
   // Handle biometric login success

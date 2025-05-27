@@ -19,6 +19,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading } = useAuth();
 
+  console.log('ProtectedRoute: Checking access', { user: !!user, loading, allowedUserTypes });
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-quantum-black">
@@ -29,6 +31,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!user) {
+    console.log('ProtectedRoute: No user, redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
 
@@ -36,7 +39,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (allowedUserTypes && allowedUserTypes.length > 0) {
     const userType = user.user_metadata?.user_type || 'customer'; // Default to customer if no type set
     
+    console.log('ProtectedRoute: User type check', { userType, allowedUserTypes });
+    
     if (!allowedUserTypes.includes(userType)) {
+      console.log('ProtectedRoute: User type not allowed, redirecting based on type');
       // Redirect to appropriate dashboard based on user type
       if (userType === 'delivery') {
         return <Navigate to="/delivery/dashboard" replace />;
@@ -48,6 +54,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
+  console.log('ProtectedRoute: Access granted');
   return <>{children}</>;
 };
 
