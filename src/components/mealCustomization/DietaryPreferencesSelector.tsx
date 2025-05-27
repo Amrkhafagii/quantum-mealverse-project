@@ -2,7 +2,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 
 interface DietaryPreferencesSelectorProps {
   availablePreferences: string[];
@@ -20,31 +19,24 @@ export const DietaryPreferencesSelector: React.FC<DietaryPreferencesSelectorProp
       <CardHeader>
         <CardTitle className="text-lg">Dietary Preferences</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           {availablePreferences.map((preference) => (
             <div key={preference} className="flex items-center space-x-2">
               <Checkbox
-                id={`diet-${preference}`}
+                id={`pref-${preference}`}
                 checked={selectedPreferences.includes(preference)}
                 onCheckedChange={() => onTogglePreference(preference)}
               />
-              <Label
-                htmlFor={`diet-${preference}`}
-                className="text-sm font-medium cursor-pointer"
+              <label
+                htmlFor={`pref-${preference}`}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 {preference}
-              </Label>
+              </label>
             </div>
           ))}
         </div>
-        
-        {selectedPreferences.length > 0 && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm font-medium text-blue-800">Selected preferences:</p>
-            <p className="text-sm text-blue-600">{selectedPreferences.join(', ')}</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

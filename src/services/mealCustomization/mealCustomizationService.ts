@@ -25,7 +25,10 @@ export class MealCustomizationService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        customization_type: item.customization_type as MealCustomizationOption['customization_type']
+      }));
     } catch (error) {
       console.error('Error in getMealCustomizationOptions:', error);
       return [];
@@ -53,7 +56,12 @@ export class MealCustomizationService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        nutritional_impact: typeof item.nutritional_impact === 'string' 
+          ? JSON.parse(item.nutritional_impact) 
+          : (item.nutritional_impact || {})
+      }));
     } catch (error) {
       console.error('Error in getIngredientSubstitutions:', error);
       return [];
@@ -65,9 +73,14 @@ export class MealCustomizationService {
    */
   static async saveMealPlanCustomization(customization: Omit<MealPlanCustomization, 'id' | 'created_at' | 'updated_at'>): Promise<MealPlanCustomization | null> {
     try {
+      const dbCustomization = {
+        ...customization,
+        ingredient_substitutions: JSON.stringify(customization.ingredient_substitutions)
+      };
+
       const { data, error } = await supabase
         .from('meal_plan_customizations')
-        .insert(customization)
+        .insert(dbCustomization)
         .select()
         .single();
 
@@ -76,7 +89,12 @@ export class MealCustomizationService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        ingredient_substitutions: typeof data.ingredient_substitutions === 'string'
+          ? JSON.parse(data.ingredient_substitutions)
+          : (data.ingredient_substitutions || [])
+      };
     } catch (error) {
       console.error('Error in saveMealPlanCustomization:', error);
       return null;
@@ -104,7 +122,12 @@ export class MealCustomizationService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        ingredient_substitutions: typeof item.ingredient_substitutions === 'string'
+          ? JSON.parse(item.ingredient_substitutions)
+          : (item.ingredient_substitutions || [])
+      }));
     } catch (error) {
       console.error('Error in getMealPlanCustomizations:', error);
       return [];
@@ -136,7 +159,7 @@ export class MealCustomizationService {
         throw new Error('Meal not found');
       }
 
-      const basePrice = mealData.price;
+      const basePrice = mealData.price || 0;
       const baseCost = basePrice * servingsCount;
       
       // Calculate portion adjustment cost
@@ -214,12 +237,17 @@ export class MealCustomizationService {
     updates: Partial<Omit<MealPlanCustomization, 'id' | 'created_at' | 'updated_at'>>
   ): Promise<MealPlanCustomization | null> {
     try {
+      const dbUpdates = {
+        ...updates,
+        ingredient_substitutions: updates.ingredient_substitutions 
+          ? JSON.stringify(updates.ingredient_substitutions)
+          : undefined,
+        updated_at: new Date().toISOString()
+      };
+
       const { data, error } = await supabase
         .from('meal_plan_customizations')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -229,7 +257,12 @@ export class MealCustomizationService {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        ingredient_substitutions: typeof data.ingredient_substitutions === 'string'
+          ? JSON.parse(data.ingredient_substitutions)
+          : (data.ingredient_substitutions || [])
+      };
     } catch (error) {
       console.error('Error in updateMealPlanCustomization:', error);
       return null;
@@ -295,7 +328,12 @@ export class MealCustomizationService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(item => ({
+        ...item,
+        nutritional_impact: typeof item.nutritional_impact === 'string' 
+          ? JSON.parse(item.nutritional_impact) 
+          : (item.nutritional_impact || {})
+      }));
     } catch (error) {
       console.error('Error in searchIngredientSubstitutions:', error);
       return [];
