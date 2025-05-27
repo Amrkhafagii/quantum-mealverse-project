@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Restaurant {
@@ -30,6 +29,9 @@ export interface Restaurant {
   estimated_delivery_time: number;
   created_at: string;
   updated_at: string;
+  onboarding_status?: string;
+  onboarding_step?: number;
+  onboarding_completed_at?: string;
 }
 
 export interface RestaurantSettings {
@@ -97,6 +99,9 @@ export const restaurantService = {
       minimum_order_amount: data.minimum_order_amount,
       delivery_fee: data.delivery_fee,
       estimated_delivery_time: data.estimated_delivery_time || 45,
+      onboarding_status: data.onboarding_status || 'not_started',
+      onboarding_step: data.onboarding_step || 1,
+      onboarding_completed_at: data.onboarding_completed_at,
       created_at: data.created_at,
       updated_at: data.updated_at,
     } as Restaurant;
@@ -276,5 +281,37 @@ export const restaurantService = {
       .eq('id', documentId);
     
     if (error) throw error;
+  },
+  async checkOnboardingStatus(restaurantId: string): Promise<{
+    status: string;
+    currentStep: number;
+    completedSteps: string[];
+    totalSteps: number;
+  }> {
+    const { data: progressData, error } = await supabase
+      .from('restaurant_onboarding_progress')
+      .select('*')
+      .eq('restaurant_id', restaurantId);
+    
+    if (error) throw error;
+    
+    const completedSteps = (progressData || [])
+      .filter(p => p.is_completed)
+      .map(p => p.step_name);
+    
+    const { data: restaurantData, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('onboarding_status, onboarding_step')
+      .eq('id', restaurantId)
+      .single();
+    
+    if (restaurantError) throw restaurantError;
+    
+    return {
+      status: restaurantData.onboarding_status || 'not_started',
+      currentStep: restaurantData.onboarding_step || 1,
+      completedSteps,
+      totalSteps: 5
+    };
   }
 };

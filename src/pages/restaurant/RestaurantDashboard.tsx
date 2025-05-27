@@ -6,9 +6,10 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import { RestaurantDashboard as Dashboard } from '@/components/restaurant/RestaurantDashboard';
 import { RestaurantProfile } from '@/components/restaurant/profile/RestaurantProfile';
+import { RestaurantOnboarding } from '@/components/restaurant/onboarding/RestaurantOnboarding';
 
 const RestaurantDashboard = () => {
-  const { isLoading } = useRestaurantAuth();
+  const { isLoading, restaurant } = useRestaurantAuth();
 
   if (isLoading) {
     return (
@@ -18,6 +19,22 @@ const RestaurantDashboard = () => {
           <p className="text-quantum-cyan">Loading restaurant dashboard...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show onboarding if restaurant hasn't completed it yet
+  const showOnboarding = restaurant && 
+    (restaurant.onboarding_status === 'not_started' || 
+     restaurant.onboarding_status === 'in_progress' ||
+     restaurant.onboarding_status === 'pending_review');
+
+  if (showOnboarding) {
+    return (
+      <ProtectedRoute allowedUserTypes={['restaurant']}>
+        <RestaurantLayout>
+          <RestaurantOnboarding />
+        </RestaurantLayout>
+      </ProtectedRoute>
     );
   }
 

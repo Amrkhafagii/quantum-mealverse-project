@@ -3686,6 +3686,130 @@ export type Database = {
           },
         ]
       }
+      restaurant_delivery_areas: {
+        Row: {
+          area_name: string
+          area_type: string | null
+          center_latitude: number | null
+          center_longitude: number | null
+          created_at: string | null
+          delivery_fee: number | null
+          estimated_delivery_time: number | null
+          id: string
+          is_active: boolean | null
+          minimum_order_amount: number | null
+          polygon_coordinates: Json | null
+          postal_codes: string[] | null
+          priority_order: number | null
+          radius_km: number | null
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          area_name: string
+          area_type?: string | null
+          center_latitude?: number | null
+          center_longitude?: number | null
+          created_at?: string | null
+          delivery_fee?: number | null
+          estimated_delivery_time?: number | null
+          id?: string
+          is_active?: boolean | null
+          minimum_order_amount?: number | null
+          polygon_coordinates?: Json | null
+          postal_codes?: string[] | null
+          priority_order?: number | null
+          radius_km?: number | null
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          area_name?: string
+          area_type?: string | null
+          center_latitude?: number | null
+          center_longitude?: number | null
+          created_at?: string | null
+          delivery_fee?: number | null
+          estimated_delivery_time?: number | null
+          id?: string
+          is_active?: boolean | null
+          minimum_order_amount?: number | null
+          polygon_coordinates?: Json | null
+          postal_codes?: string[] | null
+          priority_order?: number | null
+          radius_km?: number | null
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_delivery_areas_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_documents: {
+        Row: {
+          created_at: string | null
+          document_name: string
+          document_type: string
+          document_url: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          restaurant_id: string
+          updated_at: string | null
+          uploaded_at: string | null
+          verification_notes: string | null
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_name: string
+          document_type: string
+          document_url: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          restaurant_id: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_name?: string
+          document_type?: string
+          document_url?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          restaurant_id?: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_documents_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_earnings: {
         Row: {
           available_at: string | null
@@ -4000,6 +4124,106 @@ export type Database = {
           },
         ]
       }
+      restaurant_onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_completed: boolean | null
+          notes: string | null
+          restaurant_id: string
+          step_name: string
+          step_number: number
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          restaurant_id: string
+          step_name: string
+          step_number: number
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          restaurant_id?: string
+          step_name?: string
+          step_number?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_onboarding_progress_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_operational_hours: {
+        Row: {
+          break_end_time: string | null
+          break_start_time: string | null
+          close_time: string | null
+          created_at: string | null
+          day_of_week: number
+          id: string
+          is_24_hours: boolean | null
+          is_open: boolean | null
+          open_time: string | null
+          restaurant_id: string
+          special_hours_note: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          break_end_time?: string | null
+          break_start_time?: string | null
+          close_time?: string | null
+          created_at?: string | null
+          day_of_week: number
+          id?: string
+          is_24_hours?: boolean | null
+          is_open?: boolean | null
+          open_time?: string | null
+          restaurant_id: string
+          special_hours_note?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          break_end_time?: string | null
+          break_start_time?: string | null
+          close_time?: string | null
+          created_at?: string | null
+          day_of_week?: number
+          id?: string
+          is_24_hours?: boolean | null
+          is_open?: boolean | null
+          open_time?: string | null
+          restaurant_id?: string
+          special_hours_note?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_operational_hours_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_settings: {
         Row: {
           auto_accept_orders: boolean | null
@@ -4113,6 +4337,9 @@ export type Database = {
           longitude: number | null
           minimum_order_amount: number | null
           name: string
+          onboarding_completed_at: string | null
+          onboarding_status: string | null
+          onboarding_step: number | null
           opening_hours: Json | null
           phone: string
           postal_code: string | null
@@ -4144,6 +4371,9 @@ export type Database = {
           longitude?: number | null
           minimum_order_amount?: number | null
           name: string
+          onboarding_completed_at?: string | null
+          onboarding_status?: string | null
+          onboarding_step?: number | null
           opening_hours?: Json | null
           phone: string
           postal_code?: string | null
@@ -4175,6 +4405,9 @@ export type Database = {
           longitude?: number | null
           minimum_order_amount?: number | null
           name?: string
+          onboarding_completed_at?: string | null
+          onboarding_status?: string | null
+          onboarding_step?: number | null
           opening_hours?: Json | null
           phone?: string
           postal_code?: string | null
