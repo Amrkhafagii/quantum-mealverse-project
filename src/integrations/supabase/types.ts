@@ -3497,6 +3497,48 @@ export type Database = {
           },
         ]
       }
+      promotion_usage: {
+        Row: {
+          discount_applied: number
+          id: string
+          order_id: string
+          promotion_id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          discount_applied: number
+          id?: string
+          order_id: string
+          promotion_id: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          discount_applied?: number
+          id?: string
+          order_id?: string
+          promotion_id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_usage_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recommendation_feedback: {
         Row: {
           comments: string | null
@@ -4217,6 +4259,142 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "restaurant_operational_hours_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_performance_metrics: {
+        Row: {
+          average_order_value: number | null
+          average_preparation_time: number | null
+          average_rating: number | null
+          cancelled_orders: number | null
+          completed_orders: number | null
+          created_at: string | null
+          customer_satisfaction_score: number | null
+          id: string
+          metric_date: string
+          on_time_delivery_rate: number | null
+          order_accuracy_rate: number | null
+          peak_hours: Json | null
+          restaurant_id: string
+          total_orders: number | null
+          total_revenue: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_order_value?: number | null
+          average_preparation_time?: number | null
+          average_rating?: number | null
+          cancelled_orders?: number | null
+          completed_orders?: number | null
+          created_at?: string | null
+          customer_satisfaction_score?: number | null
+          id?: string
+          metric_date: string
+          on_time_delivery_rate?: number | null
+          order_accuracy_rate?: number | null
+          peak_hours?: Json | null
+          restaurant_id: string
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_order_value?: number | null
+          average_preparation_time?: number | null
+          average_rating?: number | null
+          cancelled_orders?: number | null
+          completed_orders?: number | null
+          created_at?: string | null
+          customer_satisfaction_score?: number | null
+          id?: string
+          metric_date?: string
+          on_time_delivery_rate?: number | null
+          order_accuracy_rate?: number | null
+          peak_hours?: Json | null
+          restaurant_id?: string
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_performance_metrics_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_promotions: {
+        Row: {
+          applicable_items: Json | null
+          created_at: string | null
+          description: string | null
+          discount_value: number | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          maximum_discount_amount: number | null
+          minimum_order_amount: number | null
+          name: string
+          promo_code: string | null
+          promotion_type: string
+          restaurant_id: string
+          start_date: string
+          terms_conditions: string | null
+          updated_at: string | null
+          usage_count: number | null
+          usage_limit: number | null
+        }
+        Insert: {
+          applicable_items?: Json | null
+          created_at?: string | null
+          description?: string | null
+          discount_value?: number | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          maximum_discount_amount?: number | null
+          minimum_order_amount?: number | null
+          name: string
+          promo_code?: string | null
+          promotion_type: string
+          restaurant_id: string
+          start_date: string
+          terms_conditions?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Update: {
+          applicable_items?: Json | null
+          created_at?: string | null
+          description?: string | null
+          discount_value?: number | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          maximum_discount_amount?: number | null
+          minimum_order_amount?: number | null
+          name?: string
+          promo_code?: string | null
+          promotion_type?: string
+          restaurant_id?: string
+          start_date?: string
+          terms_conditions?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_promotions_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -8238,6 +8416,10 @@ export type Database = {
       }
       update_meal_rating_cache: {
         Args: { p_meal_id: string; p_restaurant_id: string }
+        Returns: undefined
+      }
+      update_restaurant_performance_metrics: {
+        Args: { p_restaurant_id: string; p_date: string }
         Returns: undefined
       }
       update_workout_analytics: {

@@ -1,11 +1,18 @@
 
 import React from 'react';
-import { RestaurantDashboard } from '@/components/restaurant/RestaurantDashboard';
 import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader } from 'lucide-react';
+
+// Import the new components
+import { NotificationCenter } from '@/components/restaurant/notifications/NotificationCenter';
+import { PerformanceDashboard } from '@/components/restaurant/performance/PerformanceDashboard';
+import { AssignmentCenter } from '@/components/restaurant/assignments/AssignmentCenter';
+import { ReviewsManagement } from '@/components/restaurant/reviews/ReviewsManagement';
+import { PromotionsManager } from '@/components/restaurant/promotions/PromotionsManager';
 
 const Dashboard = () => {
   const { isRestaurantOwner, isLoading, user } = useRestaurantAuth();
@@ -34,13 +41,49 @@ const Dashboard = () => {
           <CardHeader>
             <CardTitle className="text-quantum-cyan">Restaurant Management Dashboard</CardTitle>
             <CardDescription>
-              Welcome to your restaurant management system. Monitor orders, track performance, and manage your menu.
+              Monitor orders, track performance, manage reviews, and handle promotions all in one place.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <RestaurantDashboard />
-          </CardContent>
         </Card>
+
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="assignments">Orders</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="promotions">Promotions</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AssignmentCenter />
+              <NotificationCenter />
+            </div>
+            <PerformanceDashboard />
+          </TabsContent>
+
+          <TabsContent value="assignments">
+            <AssignmentCenter />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <NotificationCenter />
+          </TabsContent>
+
+          <TabsContent value="performance">
+            <PerformanceDashboard />
+          </TabsContent>
+
+          <TabsContent value="reviews">
+            <ReviewsManagement />
+          </TabsContent>
+
+          <TabsContent value="promotions">
+            <PromotionsManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </RestaurantLayout>
   );
