@@ -1525,6 +1525,63 @@ export type Database = {
         }
         Relationships: []
       }
+      ingredient_availability_checks: {
+        Row: {
+          available_quantity: number
+          created_at: string | null
+          id: string
+          ingredient_name: string
+          is_sufficient: boolean
+          meal_id: string | null
+          notes: string | null
+          order_id: string
+          required_quantity: number
+          restaurant_id: string | null
+          substitution_suggested: string | null
+        }
+        Insert: {
+          available_quantity: number
+          created_at?: string | null
+          id?: string
+          ingredient_name: string
+          is_sufficient: boolean
+          meal_id?: string | null
+          notes?: string | null
+          order_id: string
+          required_quantity: number
+          restaurant_id?: string | null
+          substitution_suggested?: string | null
+        }
+        Update: {
+          available_quantity?: number
+          created_at?: string | null
+          id?: string
+          ingredient_name?: string
+          is_sufficient?: boolean
+          meal_id?: string | null
+          notes?: string | null
+          order_id?: string
+          required_quantity?: number
+          restaurant_id?: string | null
+          substitution_suggested?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_availability_checks_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_availability_checks_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_substitutions: {
         Row: {
           created_at: string | null
@@ -2087,9 +2144,12 @@ export type Database = {
           created_at: string | null
           id: string
           ingredient_prep_time: number
+          kitchen_capacity_factor: number | null
           meal_id: string | null
+          peak_hours_multiplier: number | null
           plating_time: number
           restaurant_id: string | null
+          total_estimated_time: number | null
           updated_at: string | null
         }
         Insert: {
@@ -2099,9 +2159,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           ingredient_prep_time?: number
+          kitchen_capacity_factor?: number | null
           meal_id?: string | null
+          peak_hours_multiplier?: number | null
           plating_time?: number
           restaurant_id?: string | null
+          total_estimated_time?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -2111,9 +2174,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           ingredient_prep_time?: number
+          kitchen_capacity_factor?: number | null
           meal_id?: string | null
+          peak_hours_multiplier?: number | null
           plating_time?: number
           restaurant_id?: string | null
+          total_estimated_time?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2474,6 +2540,65 @@ export type Database = {
         }
         Relationships: []
       }
+      order_complexity_analysis: {
+        Row: {
+          complex_meals: number
+          created_at: string | null
+          dietary_restrictions: string[] | null
+          estimated_completion_time: string
+          id: string
+          kitchen_load_factor: number | null
+          moderate_meals: number
+          order_id: string
+          requires_chef_attention: boolean | null
+          restaurant_id: string | null
+          simple_meals: number
+          special_requirements: string[] | null
+          total_meals: number
+          total_preparation_time: number
+        }
+        Insert: {
+          complex_meals?: number
+          created_at?: string | null
+          dietary_restrictions?: string[] | null
+          estimated_completion_time: string
+          id?: string
+          kitchen_load_factor?: number | null
+          moderate_meals?: number
+          order_id: string
+          requires_chef_attention?: boolean | null
+          restaurant_id?: string | null
+          simple_meals?: number
+          special_requirements?: string[] | null
+          total_meals: number
+          total_preparation_time: number
+        }
+        Update: {
+          complex_meals?: number
+          created_at?: string | null
+          dietary_restrictions?: string[] | null
+          estimated_completion_time?: string
+          id?: string
+          kitchen_load_factor?: number | null
+          moderate_meals?: number
+          order_id?: string
+          requires_chef_attention?: boolean | null
+          restaurant_id?: string | null
+          simple_meals?: number
+          special_requirements?: string[] | null
+          total_meals?: number
+          total_preparation_time?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_complexity_analysis_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_history: {
         Row: {
           changed_by: string | null
@@ -2652,6 +2777,59 @@ export type Database = {
           timestamp?: string
         }
         Relationships: []
+      }
+      order_preparation_instructions: {
+        Row: {
+          chef_notes: string | null
+          created_at: string | null
+          customer_notes: string | null
+          equipment_needed: string[] | null
+          estimated_time_minutes: number | null
+          id: string
+          instruction_text: string
+          instruction_type: string
+          meal_id: string | null
+          order_id: string
+          priority_level: number
+          requires_special_equipment: boolean | null
+        }
+        Insert: {
+          chef_notes?: string | null
+          created_at?: string | null
+          customer_notes?: string | null
+          equipment_needed?: string[] | null
+          estimated_time_minutes?: number | null
+          id?: string
+          instruction_text: string
+          instruction_type: string
+          meal_id?: string | null
+          order_id: string
+          priority_level?: number
+          requires_special_equipment?: boolean | null
+        }
+        Update: {
+          chef_notes?: string | null
+          created_at?: string | null
+          customer_notes?: string | null
+          equipment_needed?: string[] | null
+          estimated_time_minutes?: number | null
+          id?: string
+          instruction_text?: string
+          instruction_type?: string
+          meal_id?: string | null
+          order_id?: string
+          priority_level?: number
+          requires_special_equipment?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_preparation_instructions_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_sequences: {
         Row: {
