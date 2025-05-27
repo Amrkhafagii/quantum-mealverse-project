@@ -23,7 +23,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      return data as LocationDataRetentionPolicy;
     } catch (error) {
       console.error('Error in getLocationRetentionPolicy:', error);
       return null;
@@ -49,7 +49,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      return data as LocationDataRetentionPolicy;
     } catch (error) {
       console.error('Error in updateLocationRetentionPolicy:', error);
       return null;
@@ -69,7 +69,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      return data as DataAnonymizationSettings;
     } catch (error) {
       console.error('Error in getAnonymizationSettings:', error);
       return null;
@@ -95,7 +95,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      return data as DataAnonymizationSettings;
     } catch (error) {
       console.error('Error in updateAnonymizationSettings:', error);
       return null;
@@ -115,7 +115,18 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      // Transform the data to match our interface
+      if (data) {
+        const transformedData: ThirdPartySharePreferences = {
+          ...data,
+          location_sharing_partners: Array.isArray(data.location_sharing_partners) 
+            ? data.location_sharing_partners 
+            : []
+        };
+        return transformedData;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error in getSharingPreferences:', error);
       return null;
@@ -141,7 +152,18 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      // Transform the data to match our interface
+      if (data) {
+        const transformedData: ThirdPartySharePreferences = {
+          ...data,
+          location_sharing_partners: Array.isArray(data.location_sharing_partners) 
+            ? data.location_sharing_partners 
+            : []
+        };
+        return transformedData;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error in updateSharingPreferences:', error);
       return null;
@@ -207,7 +229,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data;
+      return data as LocationExportData;
     } catch (error) {
       console.error('Error in exportLocationData:', error);
       return null;
@@ -228,7 +250,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data || [];
+      return (data || []) as LocationAnonymizationLog[];
     } catch (error) {
       console.error('Error in getAnonymizationLog:', error);
       return [];
@@ -249,7 +271,7 @@ class PrivacyDataService {
         throw error;
       }
 
-      return data || [];
+      return (data || []) as DataExportRequest[];
     } catch (error) {
       console.error('Error in getExportRequests:', error);
       return [];
