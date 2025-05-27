@@ -1244,6 +1244,101 @@ export type Database = {
           },
         ]
       }
+      delivery_notification_preferences: {
+        Row: {
+          created_at: string | null
+          delivery_user_id: string
+          email_delivery_assignments: boolean | null
+          email_order_updates: boolean | null
+          email_payment_notifications: boolean | null
+          email_system_alerts: boolean | null
+          email_weekly_summary: boolean | null
+          id: string
+          push_delivery_assignments: boolean | null
+          push_order_updates: boolean | null
+          push_payment_notifications: boolean | null
+          push_system_alerts: boolean | null
+          quiet_hours_enabled: boolean | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          sms_delivery_assignments: boolean | null
+          sms_order_updates: boolean | null
+          sms_payment_notifications: boolean | null
+          sms_system_alerts: boolean | null
+          sound_delivery_assignments: string | null
+          sound_enabled: boolean | null
+          sound_order_updates: string | null
+          sound_payment_notifications: string | null
+          sound_system_alerts: string | null
+          updated_at: string | null
+          vibration_enabled: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_user_id: string
+          email_delivery_assignments?: boolean | null
+          email_order_updates?: boolean | null
+          email_payment_notifications?: boolean | null
+          email_system_alerts?: boolean | null
+          email_weekly_summary?: boolean | null
+          id?: string
+          push_delivery_assignments?: boolean | null
+          push_order_updates?: boolean | null
+          push_payment_notifications?: boolean | null
+          push_system_alerts?: boolean | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          sms_delivery_assignments?: boolean | null
+          sms_order_updates?: boolean | null
+          sms_payment_notifications?: boolean | null
+          sms_system_alerts?: boolean | null
+          sound_delivery_assignments?: string | null
+          sound_enabled?: boolean | null
+          sound_order_updates?: string | null
+          sound_payment_notifications?: string | null
+          sound_system_alerts?: string | null
+          updated_at?: string | null
+          vibration_enabled?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_user_id?: string
+          email_delivery_assignments?: boolean | null
+          email_order_updates?: boolean | null
+          email_payment_notifications?: boolean | null
+          email_system_alerts?: boolean | null
+          email_weekly_summary?: boolean | null
+          id?: string
+          push_delivery_assignments?: boolean | null
+          push_order_updates?: boolean | null
+          push_payment_notifications?: boolean | null
+          push_system_alerts?: boolean | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          sms_delivery_assignments?: boolean | null
+          sms_order_updates?: boolean | null
+          sms_payment_notifications?: boolean | null
+          sms_system_alerts?: boolean | null
+          sound_delivery_assignments?: string | null
+          sound_enabled?: boolean | null
+          sound_order_updates?: string | null
+          sound_payment_notifications?: string | null
+          sound_system_alerts?: string | null
+          updated_at?: string | null
+          vibration_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_notification_preferences_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_payment_details: {
         Row: {
           account_name: string
