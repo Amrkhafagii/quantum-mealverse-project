@@ -24,6 +24,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from 'sonner';
 import { DeliveryDashboardErrorBoundary } from '@/components/delivery/DeliveryDashboardErrorBoundary';
+import { DeliveryMapProvider } from '@/contexts/DeliveryMapContext';
 
 const DeliveryDashboardContent: React.FC = () => {
   const { user, loading: authLoading, logout } = useAuth();
@@ -127,86 +128,88 @@ const DeliveryDashboardContent: React.FC = () => {
 
   // Main dashboard content
   return (
-    <div className="min-h-screen bg-quantum-black text-white">
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-quantum-cyan">Delivery Dashboard</h1>
+    <DeliveryMapProvider>
+      <div className="min-h-screen bg-quantum-black text-white">
+        <div className="container mx-auto p-4">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-quantum-cyan">Delivery Dashboard</h1>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-quantum-cyan text-quantum-black">
+                      {deliveryUser?.first_name?.charAt(0) || user?.email?.charAt(0).toUpperCase() || "D"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/delivery/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-quantum-cyan text-quantum-black">
-                    {deliveryUser?.first_name?.charAt(0) || user?.email?.charAt(0).toUpperCase() || "D"}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/profile')}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/delivery/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Maps loading notice */}
+          {!mapsLoaded && (
+            <Card className="mb-4 bg-quantum-darkBlue/30 border-yellow-500/20">
+              <CardContent className="p-4">
+                <p className="text-yellow-400">Maps are loading. Some features may be limited until maps are ready.</p>
+              </CardContent>
+            </Card>
+          )}
+          
+          <DeliveryStats deliveryUser={deliveryUser} />
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList className="grid grid-cols-4 mb-4 bg-quantum-darkBlue/50">
+              <TabsTrigger value="available" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
+                Available Orders
+              </TabsTrigger>
+              <TabsTrigger value="active" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
+                Active Deliveries
+              </TabsTrigger>
+              <TabsTrigger value="earnings" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
+                Earnings
+              </TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
+                Delivery History
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="available" className="mt-2">
+              <AvailableOrders />
+            </TabsContent>
+            
+            <TabsContent value="active" className="mt-2">
+              <ActiveDeliveriesWithMap />
+            </TabsContent>
+            
+            <TabsContent value="earnings" className="mt-2">
+              <EarningsSummary deliveryUserId={deliveryUser.id} />
+            </TabsContent>
+            
+            <TabsContent value="history" className="mt-2">
+              <DeliveryHistory deliveryUserId={deliveryUser.id} />
+            </TabsContent>
+          </Tabs>
         </div>
-        
-        {/* Maps loading notice */}
-        {!mapsLoaded && (
-          <Card className="mb-4 bg-quantum-darkBlue/30 border-yellow-500/20">
-            <CardContent className="p-4">
-              <p className="text-yellow-400">Maps are loading. Some features may be limited until maps are ready.</p>
-            </CardContent>
-          </Card>
-        )}
-        
-        <DeliveryStats deliveryUser={deliveryUser} />
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-4 mb-4 bg-quantum-darkBlue/50">
-            <TabsTrigger value="available" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
-              Available Orders
-            </TabsTrigger>
-            <TabsTrigger value="active" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
-              Active Deliveries
-            </TabsTrigger>
-            <TabsTrigger value="earnings" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
-              Earnings
-            </TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
-              Delivery History
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="available" className="mt-2">
-            <AvailableOrders />
-          </TabsContent>
-          
-          <TabsContent value="active" className="mt-2">
-            <ActiveDeliveriesWithMap />
-          </TabsContent>
-          
-          <TabsContent value="earnings" className="mt-2">
-            <EarningsSummary deliveryUserId={deliveryUser.id} />
-          </TabsContent>
-          
-          <TabsContent value="history" className="mt-2">
-            <DeliveryHistory deliveryUserId={deliveryUser.id} />
-          </TabsContent>
-        </Tabs>
       </div>
-    </div>
+    </DeliveryMapProvider>
   );
 };
 
