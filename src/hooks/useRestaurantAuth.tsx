@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import type { UserWithMetadata } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export type Restaurant = {
   id: string;
@@ -14,47 +14,78 @@ export type Restaurant = {
 
 export const useRestaurantAuth = () => {
   const { user, loading, logout } = useAuth();
+  const navigate = useNavigate();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRestaurantOwner, setIsRestaurantOwner] = useState(false);
 
   useEffect(() => {
-    const fetchRestaurant = async () => {
-      if (!user || loading) {
+    const checkRestaurantAuth = async () => {
+      console.log('useRestaurantAuth - checking auth state:', { user, loading });
+      
+      if (loading) {
+        return; // Still loading auth state
+      }
+
+      if (!user) {
+        console.log('useRestaurantAuth - no user, redirecting to auth');
+        navigate('/auth');
         setIsLoading(false);
         return;
       }
 
       try {
-        // For now we'll use a mock restaurant until we have a real API
+        // Check if user is a restaurant type
+        const userType = user.user_metadata?.user_type;
+        console.log('useRestaurantAuth - user type:', userType);
+        
+        if (userType !== 'restaurant') {
+          console.log('useRestaurantAuth - not a restaurant user');
+          setIsRestaurantOwner(false);
+          setIsLoading(false);
+          return;
+        }
+
+        // Create mock restaurant data for now
         const mockRestaurant: Restaurant = {
-          id: 'rest1',
-          name: 'Quantum Delights',
-          address: '123 Quantum Street',
+          id: 'rest_' + user.id.slice(0, 8),
+          name: 'Quantum Delights Restaurant',
+          address: '123 Quantum Street, Food City',
           owner_id: user.id,
           created_at: new Date().toISOString(),
           status: 'active'
         };
         
+        console.log('useRestaurantAuth - setting restaurant:', mockRestaurant);
         setRestaurant(mockRestaurant);
-        
-        // Check if user is restaurant owner
-        setIsRestaurantOwner(mockRestaurant.owner_id === user.id);
+        setIsRestaurantOwner(true);
       } catch (error) {
-        console.error('Error fetching restaurant:', error);
+        console.error('useRestaurantAuth - Error:', error);
+        setIsRestaurantOwner(false);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchRestaurant();
-  }, [user, loading]);
+    checkRestaurantAuth();
+  }, [user, loading, navigate]);
+
+  const handleLogout = async () => {
+    try {
+      const success = await logout();
+      if (success) {
+        navigate('/auth');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return {
     user,
     restaurant,
     isLoading: loading || isLoading,
     isRestaurantOwner,
-    logout
+    logout: handleLogout
   };
 };
