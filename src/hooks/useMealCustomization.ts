@@ -7,7 +7,7 @@ import {
   MealPlanCustomization,
   MealCustomizationSummary 
 } from '@/types/mealCustomization';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useMealCustomization = (mealId: string, userId: string) => {
   const [customizationOptions, setCustomizationOptions] = useState<MealCustomizationOption[]>([]);

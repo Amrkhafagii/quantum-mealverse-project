@@ -1525,6 +1525,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ingredient_substitutions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean
+          nutritional_impact: Json | null
+          original_ingredient: string
+          price_adjustment: number
+          substitute_ingredient: string
+          substitution_reason: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          nutritional_impact?: Json | null
+          original_ingredient: string
+          price_adjustment?: number
+          substitute_ingredient: string
+          substitution_reason?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          nutritional_impact?: Json | null
+          original_ingredient?: string
+          price_adjustment?: number
+          substitute_ingredient?: string
+          substitution_reason?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       meal_categories: {
         Row: {
           created_at: string | null
@@ -1565,6 +1601,50 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "meal_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_customization_options: {
+        Row: {
+          created_at: string | null
+          customization_type: string
+          id: string
+          is_active: boolean
+          meal_id: string | null
+          option_description: string | null
+          option_name: string
+          price_adjustment: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customization_type: string
+          id?: string
+          is_active?: boolean
+          meal_id?: string | null
+          option_description?: string | null
+          option_name: string
+          price_adjustment?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customization_type?: string
+          id?: string
+          is_active?: boolean
+          meal_id?: string | null
+          option_description?: string | null
+          option_name?: string
+          price_adjustment?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_customization_options_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
             referencedColumns: ["id"]
           },
         ]
@@ -1700,6 +1780,59 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_customizations: {
+        Row: {
+          created_at: string | null
+          dietary_preferences: string[] | null
+          id: string
+          ingredient_substitutions: Json | null
+          meal_id: string | null
+          meal_plan_id: string
+          portion_size_multiplier: number
+          servings_count: number
+          special_instructions: string | null
+          total_price_adjustment: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dietary_preferences?: string[] | null
+          id?: string
+          ingredient_substitutions?: Json | null
+          meal_id?: string | null
+          meal_plan_id: string
+          portion_size_multiplier?: number
+          servings_count?: number
+          special_instructions?: string | null
+          total_price_adjustment?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dietary_preferences?: string[] | null
+          id?: string
+          ingredient_substitutions?: Json | null
+          meal_id?: string | null
+          meal_plan_id?: string
+          portion_size_multiplier?: number
+          servings_count?: number
+          special_instructions?: string | null
+          total_price_adjustment?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_customizations_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
             referencedColumns: ["id"]
           },
         ]
@@ -2098,54 +2231,66 @@ export type Database = {
         Row: {
           allergen_warnings: string[] | null
           base_ingredients: Json | null
+          calories: number | null
+          carbs: number | null
           category: string | null
           complexity_level: string | null
           cooking_instructions: Json | null
           created_at: string | null
           description: string | null
           dietary_tags: string[] | null
+          fat: number | null
           id: string
           image_url: string | null
           is_active: boolean | null
           name: string
           preparation_time: number
           price: number
+          protein: number | null
           restaurant_id: string | null
           updated_at: string | null
         }
         Insert: {
           allergen_warnings?: string[] | null
           base_ingredients?: Json | null
+          calories?: number | null
+          carbs?: number | null
           category?: string | null
           complexity_level?: string | null
           cooking_instructions?: Json | null
           created_at?: string | null
           description?: string | null
           dietary_tags?: string[] | null
+          fat?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           name: string
           preparation_time?: number
           price?: number
+          protein?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }
         Update: {
           allergen_warnings?: string[] | null
           base_ingredients?: Json | null
+          calories?: number | null
+          carbs?: number | null
           category?: string | null
           complexity_level?: string | null
           cooking_instructions?: Json | null
           created_at?: string | null
           description?: string | null
           dietary_tags?: string[] | null
+          fat?: number | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           name?: string
           preparation_time?: number
           price?: number
+          protein?: number | null
           restaurant_id?: string | null
           updated_at?: string | null
         }

@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Meal } from '@/types/food';
+import { Meal } from '@/types/meal';
 import { useMealCustomization } from '@/hooks/useMealCustomization';
 import { QuantitySelector } from './QuantitySelector';
 import { PortionSizeSelector } from './PortionSizeSelector';
@@ -128,8 +128,17 @@ export const MealCustomizationModal: React.FC<MealCustomizationModalProps> = ({
           <div className="lg:col-span-1">
             <CustomizationSummary
               meal={meal}
-              summary={customization.customizationSummary}
-              loading={customization.loading}
+              customizations={[...customization.selectedSubstitutions.map(sub => ({
+                name: `${sub.original_ingredient} → ${sub.substitute_ingredient}`,
+                priceImpact: sub.price_adjustment,
+                timeImpact: 0
+              })), ...customization.selectedOptions.map(opt => ({
+                name: opt.option_name,
+                priceImpact: opt.price_adjustment,
+                timeImpact: 0
+              }))]}
+              onConfirm={handleSave}
+              onCancel={handleClose}
             />
           </div>
         </div>
