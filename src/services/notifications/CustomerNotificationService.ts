@@ -30,7 +30,7 @@ export class CustomerNotificationService {
 
   async sendLocationUpdate(orderId: string, driverLocation: { latitude: number; longitude: number }, estimatedArrival?: number): Promise<boolean> {
     try {
-      return await supabase.rpc('send_customer_notification', {
+      const { data, error } = await supabase.rpc('send_customer_notification', {
         p_order_id: orderId,
         p_notification_type: 'location_update',
         p_title: 'Driver Location Update',
@@ -43,6 +43,13 @@ export class CustomerNotificationService {
           timestamp: new Date().toISOString()
         }
       });
+
+      if (error) {
+        console.error('Error sending location update notification:', error);
+        return false;
+      }
+
+      return !!data;
     } catch (error) {
       console.error('Error sending location update notification:', error);
       return false;
@@ -51,7 +58,7 @@ export class CustomerNotificationService {
 
   async sendPickupNotification(orderId: string, restaurantName: string): Promise<boolean> {
     try {
-      return await supabase.rpc('send_customer_notification', {
+      const { data, error } = await supabase.rpc('send_customer_notification', {
         p_order_id: orderId,
         p_notification_type: 'order_picked_up',
         p_title: 'Order Picked Up!',
@@ -61,6 +68,13 @@ export class CustomerNotificationService {
           timestamp: new Date().toISOString()
         }
       });
+
+      if (error) {
+        console.error('Error sending pickup notification:', error);
+        return false;
+      }
+
+      return !!data;
     } catch (error) {
       console.error('Error sending pickup notification:', error);
       return false;
@@ -69,7 +83,7 @@ export class CustomerNotificationService {
 
   async sendDeliveryStartedNotification(orderId: string, estimatedArrival: number): Promise<boolean> {
     try {
-      return await supabase.rpc('send_customer_notification', {
+      const { data, error } = await supabase.rpc('send_customer_notification', {
         p_order_id: orderId,
         p_notification_type: 'delivery_started',
         p_title: 'Driver On The Way',
@@ -79,6 +93,13 @@ export class CustomerNotificationService {
           timestamp: new Date().toISOString()
         }
       });
+
+      if (error) {
+        console.error('Error sending delivery started notification:', error);
+        return false;
+      }
+
+      return !!data;
     } catch (error) {
       console.error('Error sending delivery started notification:', error);
       return false;
@@ -87,7 +108,7 @@ export class CustomerNotificationService {
 
   async sendNearbyNotification(orderId: string): Promise<boolean> {
     try {
-      return await supabase.rpc('send_customer_notification', {
+      const { data, error } = await supabase.rpc('send_customer_notification', {
         p_order_id: orderId,
         p_notification_type: 'driver_nearby',
         p_title: 'Driver Nearby',
@@ -96,6 +117,13 @@ export class CustomerNotificationService {
           timestamp: new Date().toISOString()
         }
       });
+
+      if (error) {
+        console.error('Error sending nearby notification:', error);
+        return false;
+      }
+
+      return !!data;
     } catch (error) {
       console.error('Error sending nearby notification:', error);
       return false;
@@ -104,7 +132,7 @@ export class CustomerNotificationService {
 
   async sendDeliveredNotification(orderId: string): Promise<boolean> {
     try {
-      return await supabase.rpc('send_customer_notification', {
+      const { data, error } = await supabase.rpc('send_customer_notification', {
         p_order_id: orderId,
         p_notification_type: 'order_delivered',
         p_title: 'Order Delivered!',
@@ -113,6 +141,13 @@ export class CustomerNotificationService {
           timestamp: new Date().toISOString()
         }
       });
+
+      if (error) {
+        console.error('Error sending delivered notification:', error);
+        return false;
+      }
+
+      return !!data;
     } catch (error) {
       console.error('Error sending delivered notification:', error);
       return false;
