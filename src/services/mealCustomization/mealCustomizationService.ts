@@ -4,7 +4,6 @@ import {
   MealCustomizationOption, 
   IngredientSubstitution, 
   MealPlanCustomization, 
-  CustomizedMeal,
   MealCustomizationSummary 
 } from '@/types/mealCustomization';
 
@@ -123,7 +122,7 @@ export class MealCustomizationService {
     selectedOptions: MealCustomizationOption[]
   ): Promise<MealCustomizationSummary> {
     try {
-      // Get base meal data
+      // Get base meal data with nutritional info
       const { data: mealData, error: mealError } = await supabase
         .from('meals')
         .select(`
