@@ -1,7 +1,12 @@
 
 import { NutritionCartItem } from '@/contexts/NutritionCartContext';
-import { foodDataService } from '../foodDataService';
 import { TDEEResult } from './types';
+import { 
+  getFoodsByMealType, 
+  calculateNutritionForPortion, 
+  findFoodsByNutritionProfile,
+  FoodItem 
+} from '../foodDatabase';
 
 /**
  * Generate nutrition cart items based on TDEE calculation
@@ -51,147 +56,147 @@ function generateMealItems(
 ): Omit<NutritionCartItem, 'id'>[] {
   const items: Omit<NutritionCartItem, 'id'>[] = [];
   
-  switch (mealType) {
-    case 'breakfast':
-      items.push(
-        {
-          name: 'Oatmeal with Berries',
-          calories: Math.round(targetCalories * 0.6),
-          protein: Math.round(targetProtein * 0.4),
-          carbs: Math.round(targetCarbs * 0.7),
-          fat: Math.round(targetFat * 0.3),
-          quantity: 1,
-          portion_size: 150,
-          meal_type: mealType,
-          food_category: 'grains',
-          usda_food_id: 'oatmeal_berries'
-        },
-        {
-          name: 'Greek Yogurt',
-          calories: Math.round(targetCalories * 0.4),
-          protein: Math.round(targetProtein * 0.6),
-          carbs: Math.round(targetCarbs * 0.3),
-          fat: Math.round(targetFat * 0.7),
-          quantity: 1,
-          portion_size: 170,
-          meal_type: mealType,
-          food_category: 'dairy',
-          usda_food_id: 'greek_yogurt'
-        }
-      );
-      break;
+  // Get appropriate foods for this meal type
+  const availableFoods = getFoodsByMealType(mealType);
+  
+  if (availableFoods.length === 0) {
+    return items;
+  }
 
-    case 'lunch':
-      items.push(
-        {
-          name: 'Grilled Chicken Breast',
-          calories: Math.round(targetCalories * 0.5),
-          protein: Math.round(targetProtein * 0.7),
-          carbs: Math.round(targetCarbs * 0.1),
-          fat: Math.round(targetFat * 0.4),
-          quantity: 1,
-          portion_size: 120,
-          meal_type: mealType,
-          food_category: 'protein',
-          usda_food_id: 'chicken_breast'
-        },
-        {
-          name: 'Brown Rice',
-          calories: Math.round(targetCalories * 0.3),
-          protein: Math.round(targetProtein * 0.2),
-          carbs: Math.round(targetCarbs * 0.6),
-          fat: Math.round(targetFat * 0.2),
-          quantity: 1,
-          portion_size: 100,
-          meal_type: mealType,
-          food_category: 'grains',
-          usda_food_id: 'brown_rice'
-        },
-        {
-          name: 'Mixed Vegetables',
-          calories: Math.round(targetCalories * 0.2),
-          protein: Math.round(targetProtein * 0.1),
-          carbs: Math.round(targetCarbs * 0.3),
-          fat: Math.round(targetFat * 0.4),
-          quantity: 1,
-          portion_size: 150,
-          meal_type: mealType,
-          food_category: 'vegetables',
-          usda_food_id: 'mixed_vegetables'
-        }
-      );
-      break;
+  let remainingCalories = targetCalories;
+  let remainingProtein = targetProtein;
+  let remainingCarbs = targetCarbs;
+  let remainingFat = targetFat;
 
-    case 'dinner':
-      items.push(
-        {
-          name: 'Salmon Fillet',
-          calories: Math.round(targetCalories * 0.6),
-          protein: Math.round(targetProtein * 0.8),
-          carbs: Math.round(targetCarbs * 0.1),
-          fat: Math.round(targetFat * 0.7),
-          quantity: 1,
-          portion_size: 140,
-          meal_type: mealType,
-          food_category: 'protein',
-          usda_food_id: 'salmon_fillet'
-        },
-        {
-          name: 'Sweet Potato',
-          calories: Math.round(targetCalories * 0.25),
-          protein: Math.round(targetProtein * 0.1),
-          carbs: Math.round(targetCarbs * 0.6),
-          fat: Math.round(targetFat * 0.1),
-          quantity: 1,
-          portion_size: 120,
-          meal_type: mealType,
-          food_category: 'vegetables',
-          usda_food_id: 'sweet_potato'
-        },
-        {
-          name: 'Green Salad',
-          calories: Math.round(targetCalories * 0.15),
-          protein: Math.round(targetProtein * 0.1),
-          carbs: Math.round(targetCarbs * 0.3),
-          fat: Math.round(targetFat * 0.2),
-          quantity: 1,
-          portion_size: 100,
-          meal_type: mealType,
-          food_category: 'vegetables',
-          usda_food_id: 'green_salad'
-        }
-      );
-      break;
-
-    case 'snack':
-      items.push(
-        {
-          name: 'Almonds',
-          calories: Math.round(targetCalories * 0.7),
-          protein: Math.round(targetProtein * 0.6),
-          carbs: Math.round(targetCarbs * 0.4),
-          fat: Math.round(targetFat * 0.8),
-          quantity: 1,
-          portion_size: 28,
-          meal_type: mealType,
-          food_category: 'nuts',
-          usda_food_id: 'almonds'
-        },
-        {
-          name: 'Apple',
-          calories: Math.round(targetCalories * 0.3),
-          protein: Math.round(targetProtein * 0.4),
-          carbs: Math.round(targetCarbs * 0.6),
-          fat: Math.round(targetFat * 0.2),
-          quantity: 1,
-          portion_size: 150,
-          meal_type: mealType,
-          food_category: 'fruits',
-          usda_food_id: 'apple'
-        }
-      );
-      break;
+  // Strategy: Add foods based on macro priorities for the goal
+  const macroStrategy = getMacroStrategy(goal);
+  
+  // Add main items based on strategy
+  for (const macro of macroStrategy) {
+    if (remainingCalories <= 0) break;
+    
+    const categoryFoods = availableFoods.filter(food => 
+      getPrimaryMacroCategory(food) === macro
+    );
+    
+    if (categoryFoods.length === 0) continue;
+    
+    // Select a food that fits well
+    const selectedFood = selectOptimalFood(categoryFoods, remainingCalories, macro);
+    if (!selectedFood) continue;
+    
+    // Calculate portion to meet macro needs
+    const portion = calculateOptimalPortion(
+      selectedFood, 
+      remainingCalories, 
+      remainingProtein, 
+      remainingCarbs, 
+      remainingFat,
+      macro
+    );
+    
+    const nutrition = calculateNutritionForPortion(selectedFood, portion);
+    
+    items.push({
+      name: selectedFood.name,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      quantity: 1,
+      portion_size: portion,
+      meal_type: mealType,
+      food_category: selectedFood.category,
+      usda_food_id: selectedFood.id
+    });
+    
+    // Update remaining targets
+    remainingCalories -= nutrition.calories;
+    remainingProtein -= nutrition.protein;
+    remainingCarbs -= nutrition.carbs;
+    remainingFat -= nutrition.fat;
   }
 
   return items;
+}
+
+function getMacroStrategy(goal: string): ('protein' | 'carbs' | 'fat')[] {
+  switch (goal.toLowerCase()) {
+    case 'lose_weight':
+      return ['protein', 'fat', 'carbs']; // Prioritize protein and fat for satiety
+    case 'gain_weight':
+      return ['carbs', 'protein', 'fat']; // Prioritize carbs for energy
+    case 'maintain':
+    default:
+      return ['protein', 'carbs', 'fat']; // Balanced approach
+  }
+}
+
+function getPrimaryMacroCategory(food: FoodItem): 'protein' | 'carbs' | 'fat' {
+  const { protein, carbs, fat } = food;
+  
+  // Determine primary macro based on highest percentage
+  const proteinCals = protein * 4;
+  const carbsCals = carbs * 4;
+  const fatCals = fat * 9;
+  
+  if (proteinCals >= carbsCals && proteinCals >= fatCals) return 'protein';
+  if (fatCals >= carbsCals) return 'fat';
+  return 'carbs';
+}
+
+function selectOptimalFood(foods: FoodItem[], targetCalories: number, priorityMacro: 'protein' | 'carbs' | 'fat'): FoodItem | null {
+  if (foods.length === 0) return null;
+  
+  // Score foods based on how well they fit the calorie target and macro priority
+  const scoredFoods = foods.map(food => {
+    const defaultNutrition = calculateNutritionForPortion(food, food.defaultPortion);
+    const calorieScore = 1 - Math.abs(defaultNutrition.calories - targetCalories) / targetCalories;
+    
+    // Bonus for foods high in priority macro
+    let macroBonus = 0;
+    switch (priorityMacro) {
+      case 'protein':
+        macroBonus = food.protein / 100; // Higher protein = higher bonus
+        break;
+      case 'carbs':
+        macroBonus = food.carbs / 100;
+        break;
+      case 'fat':
+        macroBonus = food.fat / 100;
+        break;
+    }
+    
+    return {
+      food,
+      score: calorieScore + macroBonus * 0.3 // Weight macro bonus at 30%
+    };
+  });
+  
+  // Sort by score and return the best option
+  scoredFoods.sort((a, b) => b.score - a.score);
+  return scoredFoods[0]?.food || null;
+}
+
+function calculateOptimalPortion(
+  food: FoodItem, 
+  targetCalories: number, 
+  targetProtein: number, 
+  targetCarbs: number, 
+  targetFat: number,
+  priorityMacro: 'protein' | 'carbs' | 'fat'
+): number {
+  // Start with default portion and adjust based on calorie target
+  let portion = food.defaultPortion;
+  
+  // Calculate what portion would give us target calories
+  const calorieBasedPortion = (targetCalories * 100) / food.calories;
+  
+  // Don't go too extreme with portion sizes
+  const minPortion = food.defaultPortion * 0.3;
+  const maxPortion = food.defaultPortion * 2.5;
+  
+  portion = Math.max(minPortion, Math.min(maxPortion, calorieBasedPortion));
+  
+  return Math.round(portion);
 }
