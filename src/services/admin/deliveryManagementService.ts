@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   DeliveryZone, 
@@ -318,7 +319,10 @@ class DeliveryManagementService {
     return (data || []).map(item => ({
       ...item,
       action_type: item.action_type as DeliveryManagementLog['action_type'],
-      target_type: item.target_type as DeliveryManagementLog['target_type']
+      target_type: item.target_type as DeliveryManagementLog['target_type'],
+      details: (item.details && typeof item.details === 'object' && !Array.isArray(item.details)) 
+        ? item.details as Record<string, any>
+        : {}
     }));
   }
 
