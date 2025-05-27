@@ -1,6 +1,38 @@
 
 import { DeliveryLocation } from '@/types/location';
-import { EventEmitter } from 'events';
+
+// Browser-compatible EventEmitter implementation
+class BrowserEventEmitter {
+  private events: Map<string, Function[]> = new Map();
+
+  setMaxListeners(max: number): void {
+    // No-op for browser compatibility
+  }
+
+  on(event: string, listener: Function): void {
+    if (!this.events.has(event)) {
+      this.events.set(event, []);
+    }
+    this.events.get(event)!.push(listener);
+  }
+
+  off(event: string, listener: Function): void {
+    const listeners = this.events.get(event);
+    if (listeners) {
+      const index = listeners.indexOf(listener);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+
+  emit(event: string, ...args: any[]): void {
+    const listeners = this.events.get(event);
+    if (listeners) {
+      listeners.forEach(listener => listener(...args));
+    }
+  }
+}
 
 export interface GeofenceRegion {
   id: string;
@@ -33,7 +65,7 @@ export class GeofencingService {
   private static instance: GeofencingService;
   private regions: Map<string, GeofenceRegion> = new Map();
   private activeRegionIds: Set<string> = new Set();
-  private eventEmitter: EventEmitter = new EventEmitter();
+  private eventEmitter: BrowserEventEmitter = new BrowserEventEmitter();
   private lastLocation: DeliveryLocation | null = null;
   private monitoringInterval: number | null = null;
   private dwellTimeouts: Map<string, number> = new Map();
