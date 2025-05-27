@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
-import { MenuValidationService } from '@/services/validation/menuValidationService';
+import { CartValidationService } from '@/services/cart/cartValidationService';
 import { useToast } from '@/hooks/use-toast';
 
 export type CartItem = {
@@ -57,35 +57,79 @@ type CartProviderProps = {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
   
   // Calculate total amount from cart items
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+  // Initialize cart from localStorage with validation
+  useEffect(() => {
+    initializeCart();
+  }, []);
+
+  // Save cart to localStorage whenever it changes (after initialization)
+  useEffect(() => {
+    if (isInitialized) {
+      CartValidationService.updateStoredCart(cart);
+    }
+  }, [cart, isInitialized]);
+
+  const initializeCart = async () => {
+    try {
+      const validation = await CartValidationService.validateAndCleanStoredCart();
+      
+      setCart(validation.validItems);
+      
+      // Notify user about removed items
+      if (validation.hasInvalidItems) {
+        const removedItemNames = validation.removedItems.map(item => item.name).join(', ');
+        toast({
+          title: "Cart updated",
+          description: `Removed unavailable items: ${removedItemNames}`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing cart:', error);
+      setCart([]);
+    } finally {
+      setIsInitialized(true);
+    }
+  };
+
   const addToCart = async (item: CartItem): Promise<boolean> => {
     try {
-      // Validate the item exists in menu_items table
-      const validation = await MenuValidationService.validateMenuItem(item.id);
+      // Validate the item before adding
+      const validation = await CartValidationService.validateItemForCart(item);
       
       if (!validation.isValid) {
         toast({
           title: "Item not available",
-          description: `"${item.name}" is no longer available in our menu`,
+          description: validation.error || "Item is no longer available",
           variant: "destructive"
         });
         return false;
       }
 
+      const itemToAdd = validation.updatedItem || item;
+
       setCart((prevCart) => {
-        const existingItem = prevCart.find((cartItem) => cartItem.id === item.id);
+        const existingItem = prevCart.find((cartItem) => cartItem.id === itemToAdd.id);
         if (existingItem) {
           return prevCart.map((cartItem) =>
-            cartItem.id === item.id
-              ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+            cartItem.id === itemToAdd.id
+              ? { ...cartItem, quantity: cartItem.quantity + itemToAdd.quantity }
               : cartItem
           );
         }
-        return [...prevCart, item];
+        return [...prevCart, itemToAdd];
+      });
+
+      toast({
+        title: "Item added",
+        description: `"${itemToAdd.name}" added to cart`,
+        variant: "default"
       });
 
       return true;
@@ -122,23 +166,23 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const clearCart = () => {
     setCart([]);
+    CartValidationService.clearStoredCart();
   };
 
   const validateCart = async () => {
     try {
-      const validation = await MenuValidationService.validateCartItems(cart);
+      if (cart.length === 0) return;
+
+      const validation = await CartValidationService.validateAndCleanStoredCart();
       
-      if (validation.invalidItems.length > 0) {
-        // Remove invalid items from cart
+      if (validation.hasInvalidItems) {
         setCart(validation.validItems);
         
-        // Show toast for each invalid item
-        validation.errors.forEach(error => {
-          toast({
-            title: "Item removed from cart",
-            description: error,
-            variant: "destructive"
-          });
+        const removedItemNames = validation.removedItems.map(item => item.name).join(', ');
+        toast({
+          title: "Cart updated",
+          description: `Removed unavailable items: ${removedItemNames}`,
+          variant: "destructive"
         });
       }
     } catch (error) {
