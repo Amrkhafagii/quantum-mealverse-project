@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +18,8 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
+import MealPlanOrderConfirmationPage from "./pages/MealPlanOrderConfirmationPage";
+import MealPlanOrderTrackingPage from "./pages/MealPlanOrderTrackingPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
@@ -64,6 +67,16 @@ function App() {
                       <Route path="/order-confirmation/:id" element={
                         <ProtectedRoute allowedUserTypes={['customer']}>
                           <OrderConfirmation />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/meal-plan-confirmation/:orderId" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <MealPlanOrderConfirmationPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/meal-plan-tracking/:orderId" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <MealPlanOrderTrackingPage />
                         </ProtectedRoute>
                       } />
                       <Route path="/orders/:id" element={
