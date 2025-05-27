@@ -4,74 +4,64 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Droplets, Utensils, ShoppingCart } from 'lucide-react';
+import { Droplets, Utensils } from 'lucide-react';
 import { TDEEResult } from './TDEECalculator';
-import { useNutritionCart } from '@/contexts/NutritionCartContext';
-import { generateNutritionMealPlan } from '@/services/mealPlan/nutritionMealGenerationService';
-import { useToast } from '@/hooks/use-toast';
-import NutritionCartDisplay from './nutrition/NutritionCartDisplay';
-import CartConversionModal from './nutrition/CartConversionModal';
+import { MealPlan } from '@/types/food';
+import MealCardGrid from './nutrition/MealCardGrid';
+import { shuffleMeal } from '@/services/mealPlan/mealCreationService';
 
 interface NutritionDashboardProps {
   calculationResult: TDEEResult;
-  onUpdateMealPlan?: (updatedPlan: any) => void;
+  mealPlan: MealPlan;
+  onUpdateMealPlan: (updatedPlan: MealPlan) => void;
 }
 
 const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
   calculationResult,
+  mealPlan,
   onUpdateMealPlan
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [showConversionModal, setShowConversionModal] = useState(false);
-  const { 
-    items, 
-    totalCalories, 
-    totalProtein, 
-    totalCarbs, 
-    totalFat,
-    addItem, 
-    clearCart 
-  } = useNutritionCart();
-  const { toast } = useToast();
+  
+  // Calculate meal distribution (protein/carbs/fat ratios for each meal)
+  const mealDistribution = [
+    { name: 'Breakfast', protein: 0.25, carbs: 0.30, fat: 0.25 },
+    { name: 'Lunch', protein: 0.35, carbs: 0.35, fat: 0.35 },
+    { name: 'Dinner', protein: 0.30, carbs: 0.25, fat: 0.30 },
+    { name: 'Snack', protein: 0.10, carbs: 0.10, fat: 0.10 }
+  ];
 
-  // Calculate daily hydration target based on activity level and weight
-  const calculateHydrationTarget = () => {
-    const baseWater = calculationResult.weight * 35; // 35ml per kg
-    const activityMultiplier = calculationResult.activityLevel === 'very_active' ? 1.3 :
-                               calculationResult.activityLevel === 'active' ? 1.2 :
-                               calculationResult.activityLevel === 'moderately_active' ? 1.1 : 1.0;
-    return Math.round(baseWater * activityMultiplier);
-  };
+  const handleShuffleMeal = (mealIndex: number) => {
+    const mealNames = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+    const mealName = mealNames[mealIndex];
+    const distribution = mealDistribution[mealIndex];
+    
+    // Calculate targets for this specific meal
+    const targetCalories = calculationResult.adjustedCalories * (mealIndex === 0 ? 0.25 : mealIndex === 1 ? 0.35 : mealIndex === 2 ? 0.30 : 0.10);
+    const targetProtein = calculationResult.proteinGrams * distribution.protein;
+    const targetCarbs = calculationResult.carbsGrams * distribution.carbs;
+    const targetFat = calculationResult.fatsGrams * distribution.fat;
 
-  const hydrationTarget = calculateHydrationTarget();
-
-  const handleGenerateMealPlan = async () => {
-    try {
-      // Clear existing items
-      await clearCart();
-      
-      // Generate nutrition meal plan items
-      const nutritionItems = generateNutritionMealPlan(calculationResult);
-      
-      // Add each item to the nutrition cart
-      for (const item of nutritionItems) {
-        await addItem(item);
-      }
-      
-      toast({
-        title: "Meal plan generated!",
-        description: `Added ${nutritionItems.length} nutrition items to your plan.`,
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error generating meal plan:', error);
-      toast({
-        title: "Error generating meal plan",
-        description: "Please try again later.",
-        variant: "destructive"
-      });
-    }
+    // Get the current meal
+    const currentMeal = mealPlan.meals[mealIndex];
+    
+    // Shuffle the meal
+    const newMeal = shuffleMeal(currentMeal, targetCalories, targetProtein, targetCarbs, targetFat);
+    
+    // Update the meal plan
+    const updatedMeals = [...mealPlan.meals];
+    updatedMeals[mealIndex] = newMeal;
+    
+    const updatedPlan: MealPlan = {
+      ...mealPlan,
+      meals: updatedMeals,
+      totalCalories: updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0),
+      totalProtein: updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0),
+      totalCarbs: updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0),
+      totalFat: updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0)
+    };
+    
+    onUpdateMealPlan(updatedPlan);
   };
 
   return (
@@ -89,7 +79,6 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <div>
                 <p className="text-sm text-gray-400">Daily Calories</p>
                 <p className="text-2xl font-bold text-quantum-cyan">{calculationResult.adjustedCalories}</p>
-                <p className="text-xs text-gray-500">Current: {Math.round(totalCalories)}</p>
               </div>
               <Badge variant="outline" className="bg-quantum-cyan/10 text-quantum-cyan border-quantum-cyan/30">
                 {calculationResult.goal}
@@ -103,7 +92,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
             <div>
               <p className="text-sm text-gray-400">Protein</p>
               <p className="text-2xl font-bold text-green-400">{calculationResult.proteinGrams}g</p>
-              <p className="text-xs text-gray-500">Current: {Math.round(totalProtein)}g</p>
+              <p className="text-xs text-gray-500">Current: {Math.round(mealPlan.totalProtein)}g</p>
             </div>
           </CardContent>
         </Card>
@@ -113,7 +102,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
             <div>
               <p className="text-sm text-gray-400">Carbs</p>
               <p className="text-2xl font-bold text-blue-400">{calculationResult.carbsGrams}g</p>
-              <p className="text-xs text-gray-500">Current: {Math.round(totalCarbs)}g</p>
+              <p className="text-xs text-gray-500">Current: {Math.round(mealPlan.totalCarbs)}g</p>
             </div>
           </CardContent>
         </Card>
@@ -123,7 +112,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
             <div>
               <p className="text-sm text-gray-400">Fats</p>
               <p className="text-2xl font-bold text-yellow-400">{calculationResult.fatsGrams}g</p>
-              <p className="text-xs text-gray-500">Current: {Math.round(totalFat)}g</p>
+              <p className="text-xs text-gray-500">Current: {Math.round(mealPlan.totalFat)}g</p>
             </div>
           </CardContent>
         </Card>
@@ -134,11 +123,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
         <TabsList className="bg-quantum-darkBlue/50 w-full justify-start">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Utensils className="h-4 w-4" />
-            Nutrition Plan
-          </TabsTrigger>
-          <TabsTrigger value="cart" className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" />
-            My Plan ({items.length})
+            Meal Plan
           </TabsTrigger>
           <TabsTrigger value="hydration" className="flex items-center gap-2">
             <Droplets className="h-4 w-4" />
@@ -149,53 +134,20 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
         <TabsContent value="overview" className="mt-6">
           <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
             <CardHeader>
-              <CardTitle className="text-quantum-cyan flex items-center justify-between">
-                <span>Your Personalized Nutrition Plan</span>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleGenerateMealPlan}
-                    className="bg-quantum-purple hover:bg-quantum-purple/90"
-                  >
-                    Generate Meal Plan
-                  </Button>
-                </div>
-              </CardTitle>
+              <CardTitle className="text-quantum-cyan">Your Personalized Meal Plan</CardTitle>
               <p className="text-gray-400">
-                Create a nutrition plan optimized for your {calculationResult.goal.toLowerCase()} goal
+                Meals optimized for your {calculationResult.goal.toLowerCase()} goal with enhanced protein portions and food compatibility
               </p>
             </CardHeader>
             <CardContent>
-              {items.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-400 mb-4">No nutrition items in your plan yet.</p>
-                  <Button 
-                    onClick={handleGenerateMealPlan}
-                    className="bg-quantum-purple hover:bg-quantum-purple/90"
-                  >
-                    Generate Your First Meal Plan
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Current plan: {items.length} items</span>
-                    <Button 
-                      onClick={() => setShowConversionModal(true)}
-                      variant="outline"
-                      className="border-quantum-cyan/30 text-quantum-cyan hover:bg-quantum-cyan/10"
-                    >
-                      Convert to Restaurant Order
-                    </Button>
-                  </div>
-                  <NutritionCartDisplay />
-                </div>
-              )}
+              <MealCardGrid
+                meals={mealPlan.meals}
+                onShuffleMeal={handleShuffleMeal}
+                mealDistribution={mealDistribution}
+                targetProtein={calculationResult.proteinGrams}
+              />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="cart" className="mt-6">
-          <NutritionCartDisplay />
         </TabsContent>
 
         <TabsContent value="hydration" className="mt-6">
@@ -210,7 +162,7 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
               <div className="flex items-center justify-center p-8">
                 <div className="text-center">
                   <div className="text-4xl font-bold text-blue-400 mb-2">
-                    {hydrationTarget} ml
+                    {mealPlan.hydrationTarget} ml
                   </div>
                   <p className="text-gray-400">
                     Recommended daily water intake based on your activity level and goals
@@ -221,12 +173,6 @@ const NutritionDashboard: React.FC<NutritionDashboardProps> = ({
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Conversion Modal */}
-      <CartConversionModal 
-        open={showConversionModal}
-        onOpenChange={setShowConversionModal}
-      />
     </motion.div>
   );
 };
