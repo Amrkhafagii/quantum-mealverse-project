@@ -81,6 +81,72 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          account_holder_name: string
+          account_number: string
+          account_type: string | null
+          bank_name: string
+          created_at: string | null
+          delivery_user_id: string | null
+          external_account_id: string | null
+          id: string
+          is_default: boolean | null
+          is_verified: boolean | null
+          restaurant_id: string | null
+          routing_number: string
+          updated_at: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          account_holder_name: string
+          account_number: string
+          account_type?: string | null
+          bank_name: string
+          created_at?: string | null
+          delivery_user_id?: string | null
+          external_account_id?: string | null
+          id?: string
+          is_default?: boolean | null
+          is_verified?: boolean | null
+          restaurant_id?: string | null
+          routing_number: string
+          updated_at?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          account_holder_name?: string
+          account_number?: string
+          account_type?: string | null
+          bank_name?: string
+          created_at?: string | null
+          delivery_user_id?: string | null
+          external_account_id?: string | null
+          id?: string
+          is_default?: boolean | null
+          is_verified?: boolean | null
+          restaurant_id?: string | null
+          routing_number?: string
+          updated_at?: string | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_accounts_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_participants: {
         Row: {
           challenge_id: string
@@ -193,6 +259,59 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_structures: {
+        Row: {
+          commission_rate: number
+          created_at: string | null
+          effective_from: string
+          effective_until: string | null
+          fixed_fee: number | null
+          id: string
+          is_active: boolean | null
+          minimum_order_value: number | null
+          name: string
+          payment_processing_rate: number
+          restaurant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          commission_rate: number
+          created_at?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          fixed_fee?: number | null
+          id?: string
+          is_active?: boolean | null
+          minimum_order_value?: number | null
+          name: string
+          payment_processing_rate: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          fixed_fee?: number | null
+          id?: string
+          is_active?: boolean | null
+          minimum_order_value?: number | null
+          name?: string
+          payment_processing_rate?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_structures_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -1118,6 +1237,172 @@ export type Database = {
           video_url?: string | null
         }
         Relationships: []
+      }
+      financial_reports: {
+        Row: {
+          average_order_value: number
+          commission_rate: number | null
+          created_at: string | null
+          generated_at: string | null
+          gross_revenue: number
+          id: string
+          net_revenue: number
+          payment_methods_breakdown: Json | null
+          period_end: string
+          period_start: string
+          report_type: string
+          restaurant_id: string | null
+          top_selling_items: Json | null
+          total_commission: number
+          total_fees: number
+          total_orders: number
+          total_refunds: number
+        }
+        Insert: {
+          average_order_value?: number
+          commission_rate?: number | null
+          created_at?: string | null
+          generated_at?: string | null
+          gross_revenue?: number
+          id?: string
+          net_revenue?: number
+          payment_methods_breakdown?: Json | null
+          period_end: string
+          period_start: string
+          report_type: string
+          restaurant_id?: string | null
+          top_selling_items?: Json | null
+          total_commission?: number
+          total_fees?: number
+          total_orders?: number
+          total_refunds?: number
+        }
+        Update: {
+          average_order_value?: number
+          commission_rate?: number | null
+          created_at?: string | null
+          generated_at?: string | null
+          gross_revenue?: number
+          id?: string
+          net_revenue?: number
+          payment_methods_breakdown?: Json | null
+          period_end?: string
+          period_start?: string
+          report_type?: string
+          restaurant_id?: string | null
+          top_selling_items?: Json | null
+          total_commission?: number
+          total_fees?: number
+          total_orders?: number
+          total_refunds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_reports_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          delivery_user_id: string | null
+          description: string | null
+          external_transaction_id: string | null
+          id: string
+          metadata: Json | null
+          net_amount: number | null
+          order_id: string | null
+          payment_method_id: string | null
+          platform_commission: number | null
+          processed_at: string | null
+          provider: string
+          provider_fee: number | null
+          restaurant_id: string | null
+          status: string
+          transaction_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          delivery_user_id?: string | null
+          description?: string | null
+          external_transaction_id?: string | null
+          id?: string
+          metadata?: Json | null
+          net_amount?: number | null
+          order_id?: string | null
+          payment_method_id?: string | null
+          platform_commission?: number | null
+          processed_at?: string | null
+          provider: string
+          provider_fee?: number | null
+          restaurant_id?: string | null
+          status?: string
+          transaction_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          delivery_user_id?: string | null
+          description?: string | null
+          external_transaction_id?: string | null
+          id?: string
+          metadata?: Json | null
+          net_amount?: number | null
+          order_id?: string | null
+          payment_method_id?: string | null
+          platform_commission?: number | null
+          processed_at?: string | null
+          provider?: string
+          provider_fee?: number | null
+          restaurant_id?: string | null
+          status?: string
+          transaction_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fitness_challenge_participants: {
         Row: {
@@ -3023,6 +3308,138 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          brand: string | null
+          created_at: string | null
+          expires_month: number | null
+          expires_year: number | null
+          external_id: string
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          last_four: string | null
+          provider: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string | null
+          expires_month?: number | null
+          expires_year?: number | null
+          external_id: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_four?: string | null
+          provider: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string | null
+          expires_month?: number | null
+          expires_year?: number | null
+          external_id?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_four?: string | null
+          provider?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payouts: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          delivery_user_id: string | null
+          earnings_count: number
+          external_payout_id: string | null
+          failure_reason: string | null
+          id: string
+          metadata: Json | null
+          net_amount: number | null
+          payout_method: string
+          period_end: string
+          period_start: string
+          processed_at: string | null
+          provider: string
+          provider_fee: number | null
+          restaurant_id: string
+          scheduled_date: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          delivery_user_id?: string | null
+          earnings_count?: number
+          external_payout_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json | null
+          net_amount?: number | null
+          payout_method: string
+          period_end: string
+          period_start: string
+          processed_at?: string | null
+          provider: string
+          provider_fee?: number | null
+          restaurant_id: string
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          delivery_user_id?: string | null
+          earnings_count?: number
+          external_payout_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json | null
+          net_amount?: number | null
+          payout_method?: string
+          period_end?: string
+          period_start?: string
+          processed_at?: string | null
+          provider?: string
+          provider_fee?: number | null
+          restaurant_id?: string
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_records: {
         Row: {
           achieved_at: string
@@ -3265,6 +3682,82 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_earnings: {
+        Row: {
+          available_at: string | null
+          commission_rate: number
+          created_at: string | null
+          earned_at: string | null
+          gross_amount: number
+          id: string
+          net_earnings: number
+          order_id: string | null
+          payment_processing_fee: number
+          payout_id: string | null
+          platform_commission: number
+          restaurant_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_at?: string | null
+          commission_rate: number
+          created_at?: string | null
+          earned_at?: string | null
+          gross_amount: number
+          id?: string
+          net_earnings: number
+          order_id?: string | null
+          payment_processing_fee: number
+          payout_id?: string | null
+          platform_commission: number
+          restaurant_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_at?: string | null
+          commission_rate?: number
+          created_at?: string | null
+          earned_at?: string | null
+          gross_amount?: number
+          id?: string
+          net_earnings?: number
+          order_id?: string | null
+          payment_processing_fee?: number
+          payout_id?: string | null
+          platform_commission?: number
+          restaurant_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_earnings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_earnings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "restaurant_earnings_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -5617,6 +6110,15 @@ export type Database = {
       bytea: {
         Args: { "": unknown } | { "": unknown }
         Returns: string
+      }
+      calculate_commission: {
+        Args: { p_order_amount: number; p_restaurant_id?: string }
+        Returns: {
+          commission_amount: number
+          processing_fee: number
+          net_earnings: number
+          commission_rate: number
+        }[]
       }
       calculate_exercise_progress: {
         Args: { p_user_id: string; p_workout_log_id: string }
