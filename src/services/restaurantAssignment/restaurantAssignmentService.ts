@@ -281,7 +281,8 @@ export class RestaurantAssignmentService {
       // Cast the response to proper type
       return {
         ...data,
-        restaurant_assignments: data.restaurant_assignments as RestaurantAssignmentDetail[]
+        restaurant_assignments: (data.restaurant_assignments as unknown) as RestaurantAssignmentDetail[],
+        assignment_strategy: data.assignment_strategy as 'single_restaurant' | 'multi_restaurant' | 'cheapest'
       };
     } catch (error) {
       console.error('Error in saveMealPlanAssignment:', error);
@@ -312,7 +313,8 @@ export class RestaurantAssignmentService {
       // Cast the response to proper type
       return {
         ...data,
-        restaurant_assignments: data.restaurant_assignments as RestaurantAssignmentDetail[]
+        restaurant_assignments: (data.restaurant_assignments as unknown) as RestaurantAssignmentDetail[],
+        assignment_strategy: data.assignment_strategy as 'single_restaurant' | 'multi_restaurant' | 'cheapest'
       };
     } catch (error) {
       console.error('Error in getMealPlanAssignment:', error);
