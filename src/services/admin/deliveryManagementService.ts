@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   DeliveryZone, 
@@ -315,14 +314,17 @@ class DeliveryManagementService {
 
     if (error) throw error;
     
-    // Cast the response to proper types
+    // Cast the response to proper types with proper nullable handling
     return (data || []).map(item => ({
       ...item,
       action_type: item.action_type as DeliveryManagementLog['action_type'],
       target_type: item.target_type as DeliveryManagementLog['target_type'],
       details: (item.details && typeof item.details === 'object' && !Array.isArray(item.details)) 
         ? item.details as Record<string, any>
-        : {}
+        : {},
+      ip_address: item.ip_address as string | undefined,
+      user_agent: item.user_agent as string | undefined,
+      target_id: item.target_id as string | undefined
     }));
   }
 
