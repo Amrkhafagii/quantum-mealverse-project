@@ -40,9 +40,18 @@ export const useRestaurantAuth = () => {
         console.log('useRestaurantAuth - user type:', userType);
         
         if (userType !== 'restaurant') {
-          console.log('useRestaurantAuth - not a restaurant user');
+          console.log('useRestaurantAuth - not a restaurant user, redirecting based on type');
           setIsRestaurantOwner(false);
           setIsLoading(false);
+          
+          // Redirect based on actual user type
+          if (userType === 'delivery') {
+            navigate('/delivery/dashboard', { replace: true });
+          } else if (userType === 'customer') {
+            navigate('/customer', { replace: true });
+          } else {
+            navigate('/auth', { replace: true });
+          }
           return;
         }
 

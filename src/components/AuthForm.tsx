@@ -89,11 +89,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           }
         });
         
-        // Also update the user_types table to store the user type
-        // This will be handled by the database trigger we've set up
-        
         if (userType === 'restaurant' && email) {
-          // Create restaurant profile after signup
           toast({
             title: "Restaurant account created!",
             description: "Please check your email to verify your account.",
@@ -103,15 +99,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
             title: "Delivery account created!",
             description: "Please check your email to verify your account.",
           });
-          
-          // After successful signup as delivery, redirect to login
           setMode('login');
         } else {
           toast({
             title: "Success!",
             description: "Please check your email to verify your account.",
           });
-          // After successful signup, redirect to login
           setMode('login');
         }
       } else {
@@ -134,20 +127,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
         // If still no user type, default to customer
         if (!userType && data.user) {
           userType = 'customer';
-          // Store the default user type if possible
           await userTypeService.updateUserType(data.user.id, 'customer');
         }
         
-        // Check if user is a restaurant owner
+        console.log('AuthForm - User type determined:', userType);
+        
         if (data.user) {
-          const { data: restaurantData } = await supabase
-            .from('restaurants')
-            .select('id')
-            .eq('user_id', data.user.id)
-            .maybeSingle();
-            
-          if (restaurantData) {
-            // Restaurant owner - redirect to restaurant dashboard
+          if (userType === 'restaurant') {
+            // Restaurant user - redirect to restaurant dashboard
             toast({
               title: "Welcome to Restaurant Dashboard",
               description: "You have been logged in as a restaurant owner",
@@ -163,14 +150,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
 
             if (deliveryUserData?.id) {
               if (deliveryUserData.is_approved) {
-                // Approved delivery user - go to delivery dashboard
                 toast({
                   title: "Welcome back",
                   description: "You have been logged in as a delivery partner",
                 });
                 navigate('/delivery/dashboard', { replace: true });
               } else {
-                // Onboarding complete but not approved yet
                 toast({
                   title: "Welcome back",
                   description: "Your delivery account is pending approval",
@@ -178,7 +163,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
                 navigate('/delivery/onboarding', { replace: true });
               }
             } else {
-              // Delivery user who hasn't completed onboarding
               toast({
                 title: "Welcome",
                 description: "Please complete your delivery partner onboarding",
@@ -191,8 +175,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
               title: "Welcome back",
               description: "You have been logged in successfully",
             });
-            
-            // Show location prompt after successful login (only for customers)
             setShowLocationPrompt(true);
           }
         }

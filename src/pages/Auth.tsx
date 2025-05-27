@@ -28,16 +28,20 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
     if (user && !loading) {
       console.log("Auth: User is logged in, redirecting", { user, returnTo });
       
-      // Check if the user is a customer
+      // Check if the user is a restaurant owner
       const userType = user.user_metadata?.user_type;
+      
+      console.log("Auth: User type from metadata:", userType);
       
       if (userType === 'delivery') {
         navigate('/delivery/dashboard', { replace: true });
       } else if (userType === 'restaurant') {
+        console.log("Auth: Redirecting restaurant user to dashboard");
         navigate('/restaurant/dashboard', { replace: true });
       } else if (userType === 'customer') {
         navigate('/customer', { replace: true });
       } else {
+        // Default redirect for users without type
         navigate(returnTo || '/', { replace: true });
       }
     }
