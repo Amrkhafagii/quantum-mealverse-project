@@ -33,6 +33,8 @@ export type Restaurant = {
   estimated_delivery_time: number;
   created_at: string;
   updated_at: string;
+  // Add status property for dashboard compatibility
+  status?: string;
 };
 
 export const useRestaurantAuth = () => {
@@ -96,7 +98,14 @@ export const useRestaurantAuth = () => {
         
         if (data) {
           console.log('useRestaurantAuth - setting restaurant:', data);
-          setRestaurant(data);
+          // Ensure required fields have default values
+          const restaurantData: Restaurant = {
+            ...data,
+            delivery_radius: data.delivery_radius || 10,
+            estimated_delivery_time: data.estimated_delivery_time || 45,
+            status: data.is_active ? 'active' : 'inactive'
+          };
+          setRestaurant(restaurantData);
           setIsRestaurantOwner(true);
         } else {
           console.log('useRestaurantAuth - no restaurant found for user');

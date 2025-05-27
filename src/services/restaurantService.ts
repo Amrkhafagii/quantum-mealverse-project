@@ -66,7 +66,15 @@ export const restaurantService = {
       .maybeSingle();
     
     if (error) throw error;
-    return data;
+    
+    if (!data) return null;
+    
+    // Ensure required fields have default values
+    return {
+      ...data,
+      delivery_radius: data.delivery_radius || 10,
+      estimated_delivery_time: data.estimated_delivery_time || 45,
+    } as Restaurant;
   },
 
   async updateRestaurant(restaurantId: string, updates: Partial<Restaurant>): Promise<Restaurant> {
@@ -81,7 +89,13 @@ export const restaurantService = {
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Ensure required fields have default values
+    return {
+      ...data,
+      delivery_radius: data.delivery_radius || 10,
+      estimated_delivery_time: data.estimated_delivery_time || 45,
+    } as Restaurant;
   },
 
   async getRestaurantSettings(restaurantId: string): Promise<RestaurantSettings | null> {
@@ -92,7 +106,7 @@ export const restaurantService = {
       .maybeSingle();
     
     if (error) throw error;
-    return data;
+    return data as RestaurantSettings | null;
   },
 
   async updateRestaurantSettings(restaurantId: string, settings: Partial<RestaurantSettings>): Promise<RestaurantSettings> {
@@ -107,7 +121,7 @@ export const restaurantService = {
       .single();
     
     if (error) throw error;
-    return data;
+    return data as RestaurantSettings;
   },
 
   async uploadVerificationDocument(
@@ -143,7 +157,7 @@ export const restaurantService = {
       .single();
     
     if (error) throw error;
-    return data;
+    return data as VerificationDocument;
   },
 
   async getVerificationDocuments(restaurantId: string): Promise<VerificationDocument[]> {
@@ -154,7 +168,7 @@ export const restaurantService = {
       .order('uploaded_at', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    return (data || []) as VerificationDocument[];
   },
 
   async deleteVerificationDocument(documentId: string): Promise<void> {
