@@ -1,145 +1,257 @@
 
 import React, { useState, useEffect } from 'react';
-import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RoutePoint } from '@/plugins/RouteOptimizationPlugin';
-import OptimizedRouteMap from '@/components/maps/OptimizedRouteMap';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useRouteOptimization } from '@/hooks/useRouteOptimization';
+import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
+import { useAuth } from '@/hooks/useAuth';
+import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
-import { useToast } from '@/components/ui/use-toast';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { MapPin, RotateCw, Route } from 'lucide-react';
-import { HapticButton } from '@/components/ui/haptic-button';
+import { Route, MapPin, Clock, Truck, Navigation } from 'lucide-react';
+import OptimizedRouteMap from '@/components/maps/OptimizedRouteMap';
 
-interface OptimizedDeliveryRoutesProps {
-  className?: string;
-  returnToRestaurant?: boolean;
-}
-
-export const OptimizedDeliveryRoutes: React.FC<OptimizedDeliveryRoutesProps> = ({ 
-  className = '',
-  returnToRestaurant = false
-}) => {
-  const { activeAssignments } = useDeliveryAssignments();
-  const [returnToOrigin, setReturnToOrigin] = useState(returnToRestaurant);
-  const [stops, setStops] = useState<RoutePoint[]>([]);
-  const locationPermission = useLocationPermission();
-  const { toast } = useToast();
+export const OptimizedDeliveryRoutes: React.FC = () => {
+  const { user } = useAuth();
+  const { deliveryUser } = useDeliveryUser(user?.id);
+  const { activeAssignments } = useDeliveryAssignments(deliveryUser?.id);
+  const { location } = useLocationPermission();
   
-  // Prepare stops from current location and active assignments
-  useEffect(() => {
-    const newStops: RoutePoint[] = [];
-    
-    // Add current location as the starting point
-    if (locationPermission.location) {
-      newStops.push({
-        latitude: locationPermission.location.coords.latitude,
-        longitude: locationPermission.location.coords.longitude,
-        name: 'Current Location',
-        stopType: 'pickup'
-      });
+  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
+  const [routeStops, setRouteStops] = useState<any[]>([]);
+
+  const {
+    calculateMultiStopRoute,
+    isCalculating,
+    currentRoute,
+    error
+  } = useRouteOptimization({
+    assignmentId: selectedAssignments[0],
+    onRouteCalculated: (route) => {
+      console.log('Route calculated:', route);
     }
+  });
+
+  // Update route stops when assignments or location change
+  useEffect(() => {
+    if (!location || selectedAssignments.length === 0) {
+      setRouteStops([]);
+      return;
+    }
+
+    const stops = [];
     
-    // Add all restaurant pickup locations
-    activeAssignments.forEach(assignment => {
+    // Start from current location
+    stops.push({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      name: 'Your Location',
+      stopType: 'waypoint'
+    });
+
+    // Add selected assignments
+    selectedAssignments.forEach(assignmentId => {
+      const assignment = activeAssignments.find(a => a.id === assignmentId);
+      if (!assignment) return;
+
+      // Add restaurant pickup if not picked up
       if (assignment.status === 'assigned' && assignment.restaurant) {
-        newStops.push({
+        stops.push({
           latitude: assignment.restaurant.latitude,
           longitude: assignment.restaurant.longitude,
-          name: `Pickup: ${assignment.restaurant.name}`,
+          name: assignment.restaurant.name,
           stopType: 'pickup'
         });
       }
-    });
-    
-    // Add all delivery locations
-    activeAssignments.forEach(assignment => {
-      if (assignment.latitude && assignment.longitude) {
-        newStops.push({
-          latitude: assignment.latitude,
-          longitude: assignment.longitude,
-          name: `Delivery: Order #${assignment.order_id.substring(0, 6)}`,
-          stopType: 'delivery'
-        });
-      }
-    });
-    
-    // If we want to return to origin and we have current location
-    if (returnToOrigin && locationPermission.location && newStops.length > 0) {
-      newStops.push({
-        latitude: locationPermission.location.coords.latitude,
-        longitude: locationPermission.location.coords.longitude,
-        name: 'Return to Start',
-        stopType: 'waypoint'
-      });
-    }
-    
-    setStops(newStops);
-  }, [activeAssignments, locationPermission.location, returnToOrigin]);
 
-  const handleRouteCalculated = (route: any) => {
-    toast({
-      title: "Route Optimized",
-      description: `Found the fastest route between ${stops.length} locations`,
+      // Add delivery location
+      stops.push({
+        latitude: assignment.latitude,
+        longitude: assignment.longitude,
+        name: assignment.customer?.name || 'Customer',
+        stopType: 'delivery'
+      });
     });
+
+    setRouteStops(stops);
+  }, [location, selectedAssignments, activeAssignments]);
+
+  const handleAssignmentToggle = (assignmentId: string) => {
+    setSelectedAssignments(prev => 
+      prev.includes(assignmentId)
+        ? prev.filter(id => id !== assignmentId)
+        : [...prev, assignmentId]
+    );
+  };
+
+  const handleOptimizeRoute = async () => {
+    if (routeStops.length < 2) return;
+
+    await calculateMultiStopRoute(routeStops);
+  };
+
+  const formatDistance = (meters: number): string => {
+    if (meters < 1000) {
+      return `${Math.round(meters)}m`;
+    }
+    return `${(meters / 1000).toFixed(1)}km`;
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+      return `${minutes}min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}min`;
   };
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center">
-            <Route className="mr-2 h-5 w-5" />
-            Optimized Delivery Routes
+    <div className="space-y-6">
+      {/* Assignment Selection */}
+      <Card className="holographic-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-quantum-cyan" />
+            Select Deliveries to Optimize
           </CardTitle>
-          
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="return-switch" className="text-xs cursor-pointer">
-              Return to start
-            </Label>
-            <Switch
-              id="return-switch"
-              checked={returnToOrigin}
-              onCheckedChange={setReturnToOrigin}
-            />
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {!locationPermission.location ? (
-          <div className="py-8 text-center">
-            <MapPin className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-muted-foreground">Location permission required</p>
-            <HapticButton 
-              onClick={() => locationPermission.requestPermission()} 
-              className="mt-4"
-              hapticEffect="selection"
+        </CardHeader>
+        <CardContent>
+          {activeAssignments.length === 0 ? (
+            <div className="text-center py-4 text-gray-400">
+              No active assignments available
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {activeAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedAssignments.includes(assignment.id)
+                      ? 'bg-quantum-cyan/20 border-quantum-cyan'
+                      : 'bg-quantum-darkBlue/30 border-transparent hover:border-quantum-cyan/50'
+                  }`}
+                  onClick={() => handleAssignmentToggle(assignment.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">
+                        {assignment.restaurant?.name || 'Restaurant'}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        to {assignment.customer?.name || 'Customer'}
+                      </div>
+                    </div>
+                    <Badge variant={assignment.status === 'assigned' ? 'default' : 'secondary'}>
+                      {assignment.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Route Optimization */}
+      {selectedAssignments.length > 0 && (
+        <Card className="holographic-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Route className="h-5 w-5 text-quantum-cyan" />
+              Route Optimization
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Route Stops */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Route Stops ({routeStops.length})</h3>
+              <div className="space-y-1">
+                {routeStops.map((stop, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                      stop.stopType === 'pickup' ? 'bg-blue-500' :
+                      stop.stopType === 'delivery' ? 'bg-green-500' :
+                      'bg-gray-500'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <MapPin className="h-3 w-3 text-gray-400" />
+                    <span>{stop.name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {stop.stopType}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Optimization Button */}
+            <Button
+              onClick={handleOptimizeRoute}
+              className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
+              disabled={isCalculating || routeStops.length < 2}
             >
-              Enable Location
-            </HapticButton>
-          </div>
-        ) : stops.length < 2 ? (
-          <div className="py-8 text-center">
-            <Route className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-muted-foreground">No deliveries to optimize</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Accept deliveries to calculate optimal routes
-            </p>
-          </div>
-        ) : (
-          <OptimizedRouteMap
-            mapId={`delivery-route-map-${stops.length}`}
-            stops={stops}
-            returnToOrigin={returnToOrigin}
-            onRouteCalculated={handleRouteCalculated}
-            height="h-[350px]"
-          />
-        )}
-      </CardContent>
-    </Card>
+              <Navigation className="h-4 w-4 mr-2" />
+              {isCalculating ? 'Optimizing Route...' : 'Optimize Route'}
+            </Button>
+
+            {/* Route Results */}
+            {currentRoute && (
+              <div className="p-3 bg-quantum-darkBlue/30 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Optimized Route</span>
+                  <Badge variant="outline" className="bg-green-500/20 text-green-400">
+                    Optimized
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Route className="h-3 w-3 text-gray-400" />
+                    <span>Distance: {formatDistance(currentRoute.total_distance)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3 text-gray-400" />
+                    <span>Duration: {formatDuration(currentRoute.total_duration)}</span>
+                  </div>
+                </div>
+
+                {currentRoute.optimized_waypoint_order && (
+                  <div className="text-xs text-gray-400">
+                    Stops reordered for optimal efficiency
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                <div className="text-red-400 text-sm">{error.message}</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Route Visualization */}
+      {currentRoute && routeStops.length > 0 && (
+        <Card className="holographic-card">
+          <CardHeader>
+            <CardTitle>Route Visualization</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <OptimizedRouteMap
+              mapId="optimized-delivery-route"
+              height="h-[400px]"
+              stops={routeStops}
+              onRouteCalculated={(route) => console.log('Map route calculated:', route)}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
-
-export default OptimizedDeliveryRoutes;

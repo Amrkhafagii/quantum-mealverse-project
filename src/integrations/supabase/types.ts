@@ -3034,6 +3034,88 @@ export type Database = {
           },
         ]
       }
+      navigation_sessions: {
+        Row: {
+          assignment_id: string | null
+          completed_at: string | null
+          current_latitude: number | null
+          current_longitude: number | null
+          current_step_index: number | null
+          delivery_user_id: string | null
+          distance_remaining_meters: number | null
+          id: string
+          is_active: boolean | null
+          next_maneuver: string | null
+          next_maneuver_distance_meters: number | null
+          off_route: boolean | null
+          reroute_count: number | null
+          route_id: string | null
+          started_at: string | null
+          time_remaining_seconds: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          completed_at?: string | null
+          current_latitude?: number | null
+          current_longitude?: number | null
+          current_step_index?: number | null
+          delivery_user_id?: string | null
+          distance_remaining_meters?: number | null
+          id?: string
+          is_active?: boolean | null
+          next_maneuver?: string | null
+          next_maneuver_distance_meters?: number | null
+          off_route?: boolean | null
+          reroute_count?: number | null
+          route_id?: string | null
+          started_at?: string | null
+          time_remaining_seconds?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          completed_at?: string | null
+          current_latitude?: number | null
+          current_longitude?: number | null
+          current_step_index?: number | null
+          delivery_user_id?: string | null
+          distance_remaining_meters?: number | null
+          id?: string
+          is_active?: boolean | null
+          next_maneuver?: string | null
+          next_maneuver_distance_meters?: number | null
+          off_route?: boolean | null
+          reroute_count?: number | null
+          route_id?: string | null
+          started_at?: string | null
+          time_remaining_seconds?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "navigation_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "navigation_sessions_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "navigation_sessions_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -5034,6 +5116,133 @@ export type Database = {
           },
         ]
       }
+      route_segments: {
+        Row: {
+          created_at: string | null
+          distance_meters: number
+          duration_seconds: number
+          end_latitude: number
+          end_longitude: number
+          id: string
+          instruction: string
+          maneuver: string | null
+          road_name: string | null
+          route_id: string | null
+          segment_index: number
+          segment_polyline: string | null
+          start_latitude: number
+          start_longitude: number
+        }
+        Insert: {
+          created_at?: string | null
+          distance_meters: number
+          duration_seconds: number
+          end_latitude: number
+          end_longitude: number
+          id?: string
+          instruction: string
+          maneuver?: string | null
+          road_name?: string | null
+          route_id?: string | null
+          segment_index: number
+          segment_polyline?: string | null
+          start_latitude: number
+          start_longitude: number
+        }
+        Update: {
+          created_at?: string | null
+          distance_meters?: number
+          duration_seconds?: number
+          end_latitude?: number
+          end_longitude?: number
+          id?: string
+          instruction?: string
+          maneuver?: string | null
+          road_name?: string | null
+          route_id?: string | null
+          segment_index?: number
+          segment_polyline?: string | null
+          start_latitude?: number
+          start_longitude?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_segments_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routes: {
+        Row: {
+          assignment_id: string | null
+          created_at: string | null
+          destination_latitude: number
+          destination_longitude: number
+          estimated_arrival: string | null
+          id: string
+          optimized_waypoints: Json | null
+          origin_latitude: number
+          origin_longitude: number
+          route_polyline: string | null
+          route_status: string | null
+          route_steps: Json | null
+          total_distance_meters: number | null
+          total_duration_seconds: number | null
+          traffic_data: Json | null
+          updated_at: string | null
+          waypoints: Json | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string | null
+          destination_latitude: number
+          destination_longitude: number
+          estimated_arrival?: string | null
+          id?: string
+          optimized_waypoints?: Json | null
+          origin_latitude: number
+          origin_longitude: number
+          route_polyline?: string | null
+          route_status?: string | null
+          route_steps?: Json | null
+          total_distance_meters?: number | null
+          total_duration_seconds?: number | null
+          traffic_data?: Json | null
+          updated_at?: string | null
+          waypoints?: Json | null
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string | null
+          destination_latitude?: number
+          destination_longitude?: number
+          estimated_arrival?: string | null
+          id?: string
+          optimized_waypoints?: Json | null
+          origin_latitude?: number
+          origin_longitude?: number
+          route_polyline?: string | null
+          route_status?: string | null
+          route_steps?: Json | null
+          total_distance_meters?: number | null
+          total_duration_seconds?: number | null
+          traffic_data?: Json | null
+          updated_at?: string | null
+          waypoints?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_meal_plans: {
         Row: {
           date_created: string
@@ -5244,6 +5453,54 @@ export type Database = {
           members_count?: number | null
           name?: string
           total_points?: number | null
+        }
+        Relationships: []
+      }
+      traffic_incidents: {
+        Row: {
+          created_at: string | null
+          delay_minutes: number | null
+          description: string | null
+          end_time: string | null
+          id: string
+          incident_type: string
+          is_active: boolean | null
+          latitude: number
+          longitude: number
+          radius_meters: number | null
+          severity: string
+          start_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delay_minutes?: number | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          incident_type: string
+          is_active?: boolean | null
+          latitude: number
+          longitude: number
+          radius_meters?: number | null
+          severity: string
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delay_minutes?: number | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          incident_type?: string
+          is_active?: boolean | null
+          latitude?: number
+          longitude?: number
+          radius_meters?: number | null
+          severity?: string
+          start_time?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -6890,6 +7147,14 @@ export type Database = {
           requested_portion: number
         }
         Returns: number
+      }
+      calculate_route_eta: {
+        Args: {
+          p_route_id: string
+          p_current_latitude: number
+          p_current_longitude: number
+        }
+        Returns: string
       }
       check_expired_assignments: {
         Args: Record<PropertyKey, never>
@@ -8763,6 +9028,14 @@ export type Database = {
       update_meal_rating_cache: {
         Args: { p_meal_id: string; p_restaurant_id: string }
         Returns: undefined
+      }
+      update_navigation_progress: {
+        Args: {
+          p_session_id: string
+          p_current_latitude: number
+          p_current_longitude: number
+        }
+        Returns: boolean
       }
       update_restaurant_performance_metrics: {
         Args: { p_restaurant_id: string; p_date: string }
