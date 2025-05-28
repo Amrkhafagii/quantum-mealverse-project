@@ -870,6 +870,71 @@ export type Database = {
           },
         ]
       }
+      delivery_auto_status_settings: {
+        Row: {
+          auto_active_in_work_zone: boolean
+          auto_active_on_schedule: boolean
+          auto_break_status_during_breaks: boolean
+          auto_inactive_off_schedule: boolean
+          auto_inactive_outside_work_zone: boolean
+          created_at: string
+          delivery_user_id: string
+          enable_location_based_status: boolean
+          enable_time_based_status: boolean
+          id: string
+          post_shift_buffer_minutes: number | null
+          pre_shift_buffer_minutes: number | null
+          updated_at: string
+          work_zone_latitude: number | null
+          work_zone_longitude: number | null
+          work_zone_radius_meters: number | null
+        }
+        Insert: {
+          auto_active_in_work_zone?: boolean
+          auto_active_on_schedule?: boolean
+          auto_break_status_during_breaks?: boolean
+          auto_inactive_off_schedule?: boolean
+          auto_inactive_outside_work_zone?: boolean
+          created_at?: string
+          delivery_user_id: string
+          enable_location_based_status?: boolean
+          enable_time_based_status?: boolean
+          id?: string
+          post_shift_buffer_minutes?: number | null
+          pre_shift_buffer_minutes?: number | null
+          updated_at?: string
+          work_zone_latitude?: number | null
+          work_zone_longitude?: number | null
+          work_zone_radius_meters?: number | null
+        }
+        Update: {
+          auto_active_in_work_zone?: boolean
+          auto_active_on_schedule?: boolean
+          auto_break_status_during_breaks?: boolean
+          auto_inactive_off_schedule?: boolean
+          auto_inactive_outside_work_zone?: boolean
+          created_at?: string
+          delivery_user_id?: string
+          enable_location_based_status?: boolean
+          enable_time_based_status?: boolean
+          id?: string
+          post_shift_buffer_minutes?: number | null
+          pre_shift_buffer_minutes?: number | null
+          updated_at?: string
+          work_zone_latitude?: number | null
+          work_zone_longitude?: number | null
+          work_zone_radius_meters?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_auto_status_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_availability: {
         Row: {
           created_at: string
@@ -904,6 +969,163 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_availability_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_availability_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          delivery_user_id: string
+          end_time: string
+          id: string
+          is_active: boolean
+          start_time: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          delivery_user_id: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          start_time: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          delivery_user_id?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          start_time?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_availability_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_break_logs: {
+        Row: {
+          actual_duration_minutes: number | null
+          break_setting_id: string | null
+          break_type: string
+          created_at: string
+          delivery_user_id: string
+          end_time: string | null
+          id: string
+          location_latitude: number | null
+          location_longitude: number | null
+          notes: string | null
+          start_time: string
+          status: string
+        }
+        Insert: {
+          actual_duration_minutes?: number | null
+          break_setting_id?: string | null
+          break_type: string
+          created_at?: string
+          delivery_user_id: string
+          end_time?: string | null
+          id?: string
+          location_latitude?: number | null
+          location_longitude?: number | null
+          notes?: string | null
+          start_time: string
+          status?: string
+        }
+        Update: {
+          actual_duration_minutes?: number | null
+          break_setting_id?: string | null
+          break_type?: string
+          created_at?: string
+          delivery_user_id?: string
+          end_time?: string | null
+          id?: string
+          location_latitude?: number | null
+          location_longitude?: number | null
+          notes?: string | null
+          start_time?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_break_logs_break_setting_id_fkey"
+            columns: ["break_setting_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_break_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_break_logs_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_break_settings: {
+        Row: {
+          auto_break_reminder: boolean
+          break_type: string
+          created_at: string
+          delivery_user_id: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          is_flexible: boolean
+          max_break_count_per_day: number | null
+          minimum_interval_between_breaks_minutes: number | null
+          scheduled_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_break_reminder?: boolean
+          break_type: string
+          created_at?: string
+          delivery_user_id: string
+          duration_minutes: number
+          id?: string
+          is_active?: boolean
+          is_flexible?: boolean
+          max_break_count_per_day?: number | null
+          minimum_interval_between_breaks_minutes?: number | null
+          scheduled_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_break_reminder?: boolean
+          break_type?: string
+          created_at?: string
+          delivery_user_id?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          is_flexible?: boolean
+          max_break_count_per_day?: number | null
+          minimum_interval_between_breaks_minutes?: number | null
+          scheduled_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_break_settings_delivery_user"
             columns: ["delivery_user_id"]
             isOneToOne: false
             referencedRelation: "delivery_users"
@@ -1143,6 +1365,56 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_emergency_contacts: {
+        Row: {
+          contact_email: string | null
+          contact_name: string
+          contact_phone: string
+          contact_priority: number
+          created_at: string
+          delivery_user_id: string
+          id: string
+          is_active: boolean
+          is_primary: boolean
+          relationship: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name: string
+          contact_phone: string
+          contact_priority?: number
+          created_at?: string
+          delivery_user_id: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          relationship: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string
+          contact_phone?: string
+          contact_priority?: number
+          created_at?: string
+          delivery_user_id?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          relationship?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_emergency_contacts_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
             referencedColumns: ["id"]
           },
         ]
@@ -9029,6 +9301,15 @@ export type Database = {
           portion_size: number
         }[]
       }
+      get_current_break_status: {
+        Args: { p_delivery_user_id: string }
+        Returns: {
+          is_on_break: boolean
+          break_type: string
+          break_start_time: string
+          estimated_end_time: string
+        }[]
+      }
       get_food_pricing: {
         Args: {
           p_food_name: string
@@ -9240,6 +9521,10 @@ export type Database = {
       }
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_delivery_user_available: {
+        Args: { p_delivery_user_id: string; p_check_time?: string }
         Returns: boolean
       }
       json: {

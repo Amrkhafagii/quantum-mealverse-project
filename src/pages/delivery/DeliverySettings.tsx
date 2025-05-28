@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,9 +86,10 @@ const DeliverySettings = () => {
   return (
     <div className="space-y-6 p-4">
       <Tabs defaultValue="location">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="location">Location</TabsTrigger>
           <TabsTrigger value="battery">Battery & Performance</TabsTrigger>
+          <TabsTrigger value="availability">Hours & Availability</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
@@ -143,6 +143,10 @@ const DeliverySettings = () => {
 
         <TabsContent value="battery" className="space-y-6">
           <BatteryPerformanceSettings deliveryUserId={deliveryUser.id} />
+        </TabsContent>
+
+        <TabsContent value="availability" className="space-y-6">
+          <AdvancedLocationSettings deliveryUserId={deliveryUser.id} />
         </TabsContent>
 
         <TabsContent value="advanced" className="space-y-6">
