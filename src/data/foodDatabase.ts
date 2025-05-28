@@ -652,20 +652,7 @@ export const foodDatabase: Food[] = [
     cookingState: "raw",
     mealSuitability: ["breakfast", "lunch", "dinner"]
   },
-  {
-    id: "ef6",
-    name: "Samna Baladi (Ghee)",
-    category: "fats",
-    calories: 900,
-    protein: 0,
-    carbs: 0,
-    fat: 100,
-    portion: 100,
-    isGloballyAvailable: true,
-    costTier: 2,
-    cookingState: "raw",
-    mealSuitability: ["breakfast", "lunch", "dinner"]
-  },
+  
  
   {
     id: "ef10",
@@ -752,20 +739,6 @@ export const foodDatabase: Food[] = [
     mealSuitability: ["breakfast", "snack"]
   },
 
-  {
-    id: "ef20",
-    name: "Butter",
-    category: "fats",
-    calories: 717,
-    protein: 0.9,
-    carbs: 0.1,
-    fat: 81,
-    portion: 100,
-    isGloballyAvailable: true,
-    costTier: 2,
-    cookingState: "raw",
-    mealSuitability: ["breakfast", "lunch", "dinner"]
-  },
 
   // Add more breakfast fats
   {
