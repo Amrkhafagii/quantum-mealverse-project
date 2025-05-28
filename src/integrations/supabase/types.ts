@@ -147,6 +147,125 @@ export type Database = {
           },
         ]
       }
+      battery_performance_settings: {
+        Row: {
+          auto_pause_tracking_when_stationary: boolean
+          auto_reduce_accuracy_on_low_battery: boolean
+          background_processing_enabled: boolean
+          batch_size: number
+          batch_timeout_seconds: number
+          battery_critical_threshold: number
+          battery_high_threshold: number
+          battery_low_threshold: number
+          battery_medium_threshold: number
+          cellular_interval: number
+          cpu_optimization_level: string
+          created_at: string
+          delivery_user_id: string
+          distance_filter_high: number
+          distance_filter_low: number
+          distance_filter_medium: number
+          enable_data_compression: boolean
+          enable_low_power_mode: boolean
+          high_accuracy_interval: number
+          id: string
+          location_batching_enabled: boolean
+          low_accuracy_interval: number
+          medium_accuracy_interval: number
+          motion_detection_enabled: boolean
+          motion_sensitivity: string
+          movement_threshold_meters: number
+          network_quality_optimization: boolean
+          offline_mode_interval: number
+          poor_network_interval: number
+          speed_threshold_kmh: number
+          stationary_timeout_minutes: number
+          tracking_mode: string
+          updated_at: string
+          wifi_preferred_interval: number
+        }
+        Insert: {
+          auto_pause_tracking_when_stationary?: boolean
+          auto_reduce_accuracy_on_low_battery?: boolean
+          background_processing_enabled?: boolean
+          batch_size?: number
+          batch_timeout_seconds?: number
+          battery_critical_threshold?: number
+          battery_high_threshold?: number
+          battery_low_threshold?: number
+          battery_medium_threshold?: number
+          cellular_interval?: number
+          cpu_optimization_level?: string
+          created_at?: string
+          delivery_user_id: string
+          distance_filter_high?: number
+          distance_filter_low?: number
+          distance_filter_medium?: number
+          enable_data_compression?: boolean
+          enable_low_power_mode?: boolean
+          high_accuracy_interval?: number
+          id?: string
+          location_batching_enabled?: boolean
+          low_accuracy_interval?: number
+          medium_accuracy_interval?: number
+          motion_detection_enabled?: boolean
+          motion_sensitivity?: string
+          movement_threshold_meters?: number
+          network_quality_optimization?: boolean
+          offline_mode_interval?: number
+          poor_network_interval?: number
+          speed_threshold_kmh?: number
+          stationary_timeout_minutes?: number
+          tracking_mode?: string
+          updated_at?: string
+          wifi_preferred_interval?: number
+        }
+        Update: {
+          auto_pause_tracking_when_stationary?: boolean
+          auto_reduce_accuracy_on_low_battery?: boolean
+          background_processing_enabled?: boolean
+          batch_size?: number
+          batch_timeout_seconds?: number
+          battery_critical_threshold?: number
+          battery_high_threshold?: number
+          battery_low_threshold?: number
+          battery_medium_threshold?: number
+          cellular_interval?: number
+          cpu_optimization_level?: string
+          created_at?: string
+          delivery_user_id?: string
+          distance_filter_high?: number
+          distance_filter_low?: number
+          distance_filter_medium?: number
+          enable_data_compression?: boolean
+          enable_low_power_mode?: boolean
+          high_accuracy_interval?: number
+          id?: string
+          location_batching_enabled?: boolean
+          low_accuracy_interval?: number
+          medium_accuracy_interval?: number
+          motion_detection_enabled?: boolean
+          motion_sensitivity?: string
+          movement_threshold_meters?: number
+          network_quality_optimization?: boolean
+          offline_mode_interval?: number
+          poor_network_interval?: number
+          speed_threshold_kmh?: number
+          stationary_timeout_minutes?: number
+          tracking_mode?: string
+          updated_at?: string
+          wifi_preferred_interval?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_battery_performance_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_participants: {
         Row: {
           challenge_id: string

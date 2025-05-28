@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { DeliveryLocationControls } from '@/components/delivery/DeliveryLocationControls';
 import { DeliveryNotificationSettings } from '@/components/delivery/settings/DeliveryNotificationPreferences';
 import { AdvancedLocationSettings } from '@/components/delivery/settings/AdvancedLocationSettings';
+import { BatteryPerformanceSettings } from '@/components/delivery/settings/BatteryPerformanceSettings';
 import DataRetentionSettings from '@/components/privacy/DataRetentionSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveryService } from '@/services/delivery/deliveryService';
@@ -86,10 +87,12 @@ const DeliverySettings = () => {
   return (
     <div className="space-y-6 p-4">
       <Tabs defaultValue="location">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="location">Location Settings</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced Settings</TabsTrigger>
-          <TabsTrigger value="notifications">Notification Settings</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="location">Location</TabsTrigger>
+          <TabsTrigger value="battery">Battery & Performance</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="privacy">Privacy</TabsTrigger>
         </TabsList>
 
         <TabsContent value="location" className="space-y-6">
@@ -138,12 +141,20 @@ const DeliverySettings = () => {
           />
         </TabsContent>
 
+        <TabsContent value="battery" className="space-y-6">
+          <BatteryPerformanceSettings deliveryUserId={deliveryUser.id} />
+        </TabsContent>
+
         <TabsContent value="advanced" className="space-y-6">
           <AdvancedLocationSettings deliveryUserId={deliveryUser.id} />
         </TabsContent>
 
         <TabsContent value="notifications">
           <DeliveryNotificationSettings deliveryUserId={deliveryUser.id} />
+        </TabsContent>
+
+        <TabsContent value="privacy">
+          <DataRetentionSettings />
         </TabsContent>
       </Tabs>
     </div>
