@@ -84,7 +84,10 @@ class DeliveryAvailabilityService {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      break_type: item.break_type as 'short_break' | 'lunch_break' | 'custom_break'
+    }));
   }
 
   async createBreakSetting(setting: Omit<DeliveryBreakSetting, 'id' | 'created_at' | 'updated_at'>): Promise<DeliveryBreakSetting> {
@@ -99,7 +102,10 @@ class DeliveryAvailabilityService {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      break_type: data.break_type as 'short_break' | 'lunch_break' | 'custom_break'
+    };
   }
 
   async updateBreakSetting(id: string, updates: Partial<DeliveryBreakSetting>): Promise<DeliveryBreakSetting> {
@@ -115,7 +121,10 @@ class DeliveryAvailabilityService {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      break_type: data.break_type as 'short_break' | 'lunch_break' | 'custom_break'
+    };
   }
 
   async deleteBreakSetting(id: string): Promise<void> {
@@ -153,7 +162,10 @@ class DeliveryAvailabilityService {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'active' | 'completed' | 'interrupted'
+    };
   }
 
   async endBreak(breakLogId: string, notes?: string): Promise<DeliveryBreakLog> {
@@ -191,7 +203,10 @@ class DeliveryAvailabilityService {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'active' | 'completed' | 'interrupted'
+    };
   }
 
   async getCurrentBreakStatus(deliveryUserId: string): Promise<BreakStatus> {
