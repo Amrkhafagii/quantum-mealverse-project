@@ -31,7 +31,7 @@ export const getActiveDeliveryAssignments = async (
       `)
       .eq('delivery_user_id', deliveryUserId)
       .in('status', ['assigned', 'picked_up', 'on_the_way'])
-      .order('priority_score', { ascending: false }); // Order by priority score
+      .order('priority_score', { ascending: false }); // Remove nullsLast
 
     if (error) {
       console.error('Error fetching active assignments:', error);
@@ -143,7 +143,7 @@ export const getPastDeliveryAssignments = async (
       `)
       .eq('delivery_user_id', deliveryUserId)
       .in('status', ['delivered', 'cancelled'])
-      .order('delivery_time', { ascending: false, nullsLast: true })
+      .order('delivery_time', { ascending: false, nullsFirst: true })
       .order('created_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1);
 
@@ -201,12 +201,10 @@ export const updateDeliveryStatus = async (
         .single();
         
       if (assignment?.delivery_user_id) {
-        await supabase
-          .from('delivery_driver_availability')
-          .update({
-            current_delivery_count: supabase.sql`GREATEST(0, current_delivery_count - 1)`
-          })
-          .eq('delivery_user_id', assignment.delivery_user_id);
+        // Use raw SQL update for decrementing
+        await supabase.rpc('decrement_delivery_count', {
+          user_id: assignment.delivery_user_id
+        });
       }
     }
 
