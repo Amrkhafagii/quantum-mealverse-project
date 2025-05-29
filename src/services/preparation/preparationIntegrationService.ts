@@ -192,7 +192,7 @@ export class PreparationIntegrationService {
     try {
       const { data: activeStages } = await supabase
         .from('order_preparation_stages')
-        .select('stage_name, status, actual_duration_minutes')
+        .select('stage_name, status, actual_duration_minutes, order_id')
         .eq('restaurant_id', restaurantId)
         .eq('status', 'in_progress');
 

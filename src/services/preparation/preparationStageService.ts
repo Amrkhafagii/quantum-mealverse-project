@@ -52,7 +52,7 @@ export class PreparationStageService {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as PreparationStage[];
   }
 
   /**
@@ -71,7 +71,7 @@ export class PreparationStageService {
       throw error;
     }
 
-    return data || null;
+    return data as PreparationStage | null;
   }
 
   /**
@@ -87,7 +87,7 @@ export class PreparationStageService {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as PreparationProgress[];
   }
 
   /**
@@ -141,7 +141,12 @@ export class PreparationStageService {
         };
       }
 
-      return data || { success: false, message: 'No response from database' };
+      // Handle the RPC response properly
+      if (data && typeof data === 'object') {
+        return data as StageTransitionResult;
+      }
+
+      return { success: false, message: 'No response from database' };
     } catch (error) {
       console.error('Error in advanceStage:', error);
       return {
