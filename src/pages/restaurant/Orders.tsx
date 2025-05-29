@@ -6,12 +6,11 @@ import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const Orders = () => {
-  const { restaurant, isLoading, error } = useRestaurantAuth();
+  const { restaurant, isLoading } = useRestaurantAuth();
 
   console.log('RestaurantOrders - Component mounted');
   console.log('RestaurantOrders - Restaurant:', restaurant);
   console.log('RestaurantOrders - IsLoading:', isLoading);
-  console.log('RestaurantOrders - Error:', error);
 
   if (isLoading) {
     console.log('RestaurantOrders - Showing loading state');
@@ -21,26 +20,6 @@ const Orders = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan mx-auto mb-4"></div>
             <p className="text-gray-600">Loading restaurant data...</p>
-          </div>
-        </div>
-      </RestaurantLayout>
-    );
-  }
-
-  if (error) {
-    console.error('RestaurantOrders - Authentication error:', error);
-    return (
-      <RestaurantLayout>
-        <div className="text-center py-12">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold text-red-800 mb-2">Authentication Error</h3>
-            <p className="text-red-600 mb-4">Unable to load restaurant data: {error.message}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
-              Retry
-            </button>
           </div>
         </div>
       </RestaurantLayout>
