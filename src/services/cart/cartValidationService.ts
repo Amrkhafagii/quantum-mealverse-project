@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from '@/utils/offlineStorage/types';
 
 export class CartValidationService {
   /**
-   * Validates and cleans stored cart - now accepts all items without validation
+   * Phase 6: Integrated cart validation - accepts all items without restrictions
    */
   static async validateAndCleanStoredCart(): Promise<{
     validItems: CartItem[];
@@ -23,16 +23,16 @@ export class CartValidationService {
         };
       }
 
-      console.log('CartValidationService: Loaded cart items from storage:', storedCart.length);
+      console.log('Phase 6: Integrated cart validation - accepting all items:', storedCart.length);
 
-      // Accept all items without validation - Phase 2 implementation
+      // Phase 6: Accept all items without any validation barriers
       return {
         validItems: storedCart,
         removedItems: [],
         errors: []
       };
     } catch (error) {
-      console.error('CartValidationService: Error validating stored cart:', error);
+      console.error('Phase 6: Error in integrated cart validation:', error);
       return {
         validItems: [],
         removedItems: [],
@@ -42,41 +42,42 @@ export class CartValidationService {
   }
 
   /**
-   * Updates the stored cart
+   * Phase 6: Updates the stored cart with integrated support
    */
   static async updateStoredCart(cartItems: CartItem[]): Promise<void> {
     try {
       await offlineStorage.set(STORAGE_KEYS.CART, cartItems);
-      console.log('CartValidationService: Updated stored cart with', cartItems.length, 'items');
+      console.log('Phase 6: Updated stored cart with integrated support:', cartItems.length, 'items');
     } catch (error) {
-      console.error('CartValidationService: Error updating stored cart:', error);
+      console.error('Phase 6: Error updating integrated cart:', error);
       throw error;
     }
   }
 
   /**
-   * Clears the stored cart
+   * Phase 6: Clears the stored cart
    */
   static async clearStoredCart(): Promise<void> {
     try {
       await offlineStorage.remove(STORAGE_KEYS.CART);
-      console.log('CartValidationService: Cleared stored cart');
+      console.log('Phase 6: Cleared integrated cart storage');
     } catch (error) {
-      console.error('CartValidationService: Error clearing stored cart:', error);
+      console.error('Phase 6: Error clearing integrated cart:', error);
       throw error;
     }
   }
 
   /**
-   * Validates individual cart item - now always returns valid
+   * Phase 6: Validates individual cart item - integrated approach accepts all
    */
   static async validateCartItem(item: CartItem): Promise<{
     isValid: boolean;
     updatedItem?: CartItem;
     error?: string;
   }> {
-    // Phase 2: Accept all cart items without validation
-    console.log('CartValidationService: Accepting cart item without validation:', item.name);
+    console.log('Phase 6: Integrated cart item validation - accepting:', item.name);
+    
+    // Phase 6: Integrated validation accepts all items
     return {
       isValid: true,
       updatedItem: item

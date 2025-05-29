@@ -1,4 +1,3 @@
-
 import { Meal } from '@/types/food';
 import { CartItem } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,26 +12,24 @@ interface MealPricingResult {
 }
 
 /**
- * Converts a meal plan meal into cart items with location-based restaurant assignment
- * Phase 4: Simplified without validation restrictions
+ * Phase 6: Integrated meal to cart conversion with seamless assignment
  */
 export const convertMealToCartItemWithAssignment = async (
   meal: Meal, 
   userId: string,
   options: RestaurantAssignmentOptions = {}
 ): Promise<CartItem[]> => {
-  console.log('Converting meal to cart items with simplified assignment:', meal.name);
+  console.log('Phase 6: Converting meal with integrated assignment:', meal.name);
 
   try {
-    // Get restaurant assignment based on location only (no capability checks)
+    // Phase 6: Integrated restaurant assignment
     const assignments = await RestaurantAssignmentService.assignRestaurantsToMeal(meal, {
       ...options,
-      strategy: 'single_restaurant' // Always use single restaurant for simplicity
+      strategy: 'single_restaurant'
     });
 
     if (!assignments || assignments.length === 0) {
-      console.log('No restaurants found nearby, using default restaurant');
-      // Get any available restaurant as fallback
+      console.log('Phase 6: No restaurants found, using integrated fallback');
       const { data: restaurants } = await supabase
         .from('restaurants')
         .select('id, name')
@@ -43,7 +40,6 @@ export const convertMealToCartItemWithAssignment = async (
         throw new Error('No restaurants available');
       }
 
-      // Create default assignment
       const defaultAssignment: RestaurantAssignmentDetail = {
         restaurant_id: restaurants[0].id,
         restaurant_name: restaurants[0].name,
@@ -52,13 +48,13 @@ export const convertMealToCartItemWithAssignment = async (
           quantity: mealFood.portionSize
         })),
         subtotal: calculateDefaultPrice(meal),
-        distance_km: 5 // Default distance
+        distance_km: 5
       };
       
       assignments.push(defaultAssignment);
     }
 
-    // Calculate pricing based on assignment
+    // Phase 6: Integrated pricing calculation
     const pricing: MealPricingResult = {
       total_price: assignments[0].subtotal,
       restaurantId: assignments[0].restaurant_id,
@@ -66,17 +62,16 @@ export const convertMealToCartItemWithAssignment = async (
       distance: assignments[0].distance_km
     };
     
-    // Store the meal plan data for order processing
+    // Phase 6: Store integrated meal plan data
     const mealPlanItemId = await storeMealPlanCartItem(meal, pricing, userId, assignments);
 
-    // Create description from food items
     const foodDescriptions = meal.foods.map(mealFood => 
       `${mealFood.food.name} (${mealFood.portionSize}g)`
     );
     
     const description = foodDescriptions.join(', ');
 
-    // Create cart item
+    // Phase 6: Create integrated cart item
     const cartItem: CartItem = {
       id: mealPlanItemId || crypto.randomUUID(),
       name: meal.name,
@@ -92,16 +87,15 @@ export const convertMealToCartItemWithAssignment = async (
       image_url: generateMealImageUrl(meal)
     };
 
-    console.log('Created cart item with simplified assignment:', {
+    console.log('Phase 6: Created integrated cart item:', {
       mealName: cartItem.name,
-      totalPrice: pricing,
-      restaurantName: pricing.restaurant_name,
-      distance: pricing.distance
+      pricing,
+      restaurantName: pricing.restaurant_name
     });
 
     return [cartItem];
   } catch (error) {
-    console.error('Error converting meal to cart item with assignment:', error);
+    console.error('Phase 6: Error in integrated meal conversion:', error);
     throw error;
   }
 };
@@ -182,12 +176,11 @@ const storeMealPlanCartItem = async (
 };
 
 /**
- * Phase 4: Simplified validation - accepts all meals without restrictions
+ * Phase 6: Integrated validation - accepts all meals
  */
 export const validateMealForCart = (meal: Meal): { isValid: boolean; errors: string[] } => {
-  console.log('Phase 4: Accepting meal without validation restrictions:', meal.name);
+  console.log('Phase 6: Integrated meal validation - accepting:', meal.name);
   
-  // Accept all meals - no validation restrictions
   return {
     isValid: true,
     errors: []
@@ -195,7 +188,7 @@ export const validateMealForCart = (meal: Meal): { isValid: boolean; errors: str
 };
 
 /**
- * Batch converts multiple meals to cart items with simplified assignment
+ * Phase 6: Integrated batch conversion
  */
 export const convertMealsToCartItems = async (
   meals: Meal[], 
@@ -206,15 +199,19 @@ export const convertMealsToCartItems = async (
   const errors: string[] = [];
 
   for (const meal of meals) {
-    // Phase 4: Skip validation - accept all meals
     try {
       const cartItems = await convertMealToCartItemWithAssignment(meal, userId, options);
       items.push(...cartItems);
     } catch (error) {
-      console.error(`Failed to convert meal ${meal.name}:`, error);
+      console.error(`Phase 6: Failed to convert meal ${meal.name}:`, error);
       errors.push(`Failed to convert ${meal.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  console.log('Phase 6: Integrated batch conversion completed:', {
+    totalItems: items.length,
+    errors: errors.length
+  });
 
   return { items, errors };
 };

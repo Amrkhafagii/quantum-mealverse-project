@@ -18,10 +18,10 @@ export const useOrderSubmission = (
     if (isSubmitting) return;
     
     setIsSubmitting(true);
-    console.log('Starting order submission with flexible schema:', data);
+    console.log('Phase 6: Starting integrated order submission:', data);
 
     try {
-      // Create the order with new flexible fields
+      // Phase 6: Create order with integrated flexible schema
       const orderData = {
         user_id: userId || null,
         customer_name: data.fullName,
@@ -38,11 +38,11 @@ export const useOrderSubmission = (
         special_instructions: data.specialInstructions || null,
         latitude: data.latitude || null,
         longitude: data.longitude || null,
-        assignment_source: 'nutrition_generation', // New field for flexible ordering
-        is_mixed_order: false // Will be updated if we have mixed items
+        assignment_source: 'nutrition_generation',
+        is_mixed_order: hasMixedOrderTypes(items)
       };
 
-      console.log('Creating flexible order with schema updates:', orderData);
+      console.log('Phase 6: Creating integrated order:', orderData);
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -51,52 +51,52 @@ export const useOrderSubmission = (
         .single();
 
       if (orderError) {
-        console.error('Order creation error:', orderError);
+        console.error('Phase 6: Order creation error:', orderError);
         throw new Error(`Failed to create order: ${orderError.message}`);
       }
 
-      console.log('Order created successfully with flexible schema:', order);
+      console.log('Phase 6: Order created successfully:', order);
 
-      // Create order items with new flexible schema
+      // Phase 6: Create order items with integrated flexible schema
       const orderItems = items.map(item => ({
         order_id: order.id,
-        meal_id: item.id, // Now nullable and flexible
-        menu_item_id: null, // For traditional restaurant items (future use)
+        meal_id: item.id, // Flexible: can be meal plan ID or null
+        menu_item_id: null, // For future traditional restaurant items
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        source_type: 'meal_plan' // New field to track item origin
+        source_type: determineSourceType(item)
       }));
 
-      console.log('Creating flexible order items:', orderItems);
+      console.log('Phase 6: Creating integrated order items:', orderItems);
 
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
       if (itemsError) {
-        console.error('Order items error:', itemsError);
+        console.error('Phase 6: Order items error:', itemsError);
         throw new Error(`Failed to create order items: ${itemsError.message}`);
       }
 
-      console.log('Flexible order items created successfully');
+      console.log('Phase 6: Order items created successfully');
 
-      // Simplified restaurant assignment with flexible constraints
-      await assignNearbyRestaurants(order.id, data.latitude, data.longitude);
+      // Phase 6: Integrated restaurant assignment
+      await assignRestaurantsIntegrated(order.id, data.latitude, data.longitude);
 
       toast({
         title: "Order Placed Successfully!",
-        description: `Your order #${order.formatted_order_id} has been placed with flexible ordering support.`,
+        description: `Your order #${order.formatted_order_id} has been placed using our integrated flexible ordering system.`,
         variant: "default"
       });
 
       clearCart();
       
-      // Redirect to thank you page
+      // Redirect to confirmation page
       window.location.href = `/order-confirmation/${order.id}`;
 
     } catch (error) {
-      console.error('Flexible order submission error:', error);
+      console.error('Phase 6: Integrated order submission error:', error);
       toast({
         title: "Order Failed",
         description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
@@ -107,20 +107,37 @@ export const useOrderSubmission = (
     }
   };
 
-  const assignNearbyRestaurants = async (
+  // Phase 6: Determine source type for flexible ordering
+  const determineSourceType = (item: CartItem): string => {
+    if (item.assignment_source === 'nutrition_generation') {
+      return 'meal_plan';
+    }
+    if (item.assignment_source === 'traditional_ordering') {
+      return 'menu_item';
+    }
+    return 'meal_plan'; // Default for backward compatibility
+  };
+
+  // Phase 6: Check if order has mixed item types
+  const hasMixedOrderTypes = (items: CartItem[]): boolean => {
+    const sourceTypes = new Set(items.map(item => determineSourceType(item)));
+    return sourceTypes.size > 1;
+  };
+
+  // Phase 6: Integrated restaurant assignment
+  const assignRestaurantsIntegrated = async (
     orderId: string, 
     latitude?: number, 
     longitude?: number
   ) => {
-    console.log('Starting flexible restaurant assignment for order:', orderId);
+    console.log('Phase 6: Starting integrated restaurant assignment:', orderId);
     
     try {
       let nearbyRestaurants = [];
 
       if (latitude && longitude) {
-        console.log('Finding nearby restaurants for flexible ordering:', { latitude, longitude });
+        console.log('Phase 6: Finding restaurants with integrated location:', { latitude, longitude });
         
-        // Find nearby restaurants using the database function
         const { data, error: findError } = await supabase.rpc('find_nearest_restaurant', {
           order_lat: latitude,
           order_lng: longitude,
@@ -129,13 +146,13 @@ export const useOrderSubmission = (
 
         if (!findError && data && data.length > 0) {
           nearbyRestaurants = data;
-          console.log('Found nearby restaurants for flexible ordering:', nearbyRestaurants.length);
+          console.log('Phase 6: Found nearby restaurants:', nearbyRestaurants.length);
         }
       }
 
-      // Fallback: get any available restaurant if no nearby restaurants found
+      // Phase 6: Integrated fallback strategy
       if (nearbyRestaurants.length === 0) {
-        console.log('No nearby restaurants found, using fallback for flexible ordering');
+        console.log('Phase 6: Using integrated fallback restaurant selection');
         const { data: fallbackRestaurants } = await supabase
           .from('restaurants')
           .select('id')
@@ -150,37 +167,37 @@ export const useOrderSubmission = (
       }
 
       if (nearbyRestaurants.length === 0) {
-        console.log('No restaurants available for flexible ordering - order will proceed without assignment');
+        console.log('Phase 6: No restaurants available - order will proceed without assignment');
         return;
       }
 
-      // Create flexible restaurant assignments
+      // Phase 6: Create integrated restaurant assignments
       const assignments = nearbyRestaurants.map((restaurantData: any) => {
         const restaurantId = restaurantData.restaurant_id || restaurantData.id;
         return {
           order_id: orderId,
           restaurant_id: restaurantId,
           status: 'pending',
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString()
         };
       });
 
-      console.log('Creating flexible restaurant assignments:', assignments.length);
+      console.log('Phase 6: Creating integrated restaurant assignments:', assignments.length);
 
       const { error: assignmentError } = await supabase
         .from('restaurant_assignments')
         .insert(assignments);
 
       if (assignmentError) {
-        console.error('Flexible restaurant assignment error:', assignmentError);
-        console.log('Assignment failed but order was created successfully with flexible schema');
+        console.error('Phase 6: Integrated assignment error:', assignmentError);
+        console.log('Assignment failed but order created successfully with integrated system');
       } else {
-        console.log(`Successfully created ${assignments.length} flexible restaurant assignments`);
+        console.log(`Phase 6: Successfully created ${assignments.length} integrated assignments`);
       }
 
     } catch (error) {
-      console.error('Error in flexible restaurant assignment:', error);
-      console.log('Restaurant assignment failed but order was created successfully with flexible schema');
+      console.error('Phase 6: Error in integrated restaurant assignment:', error);
+      console.log('Restaurant assignment failed but order created successfully');
     }
   };
 

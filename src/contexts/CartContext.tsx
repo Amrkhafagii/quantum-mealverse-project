@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
 import { CartValidationService } from '@/services/cart/cartValidationService';
@@ -14,15 +15,15 @@ export type CartItem = {
   carbs?: number;
   fat?: number;
   is_active?: boolean;
-  restaurant_id?: string; // Unified: all items can have restaurant assignment
+  restaurant_id?: string;
   created_at?: string;
   updated_at?: string;
   image_url?: string;
   dietary_tags?: string[];
-  assignment_details?: RestaurantAssignmentDetail; // Unified: detailed assignment info
-  estimated_prep_time?: number; // Unified: prep time for all items
-  distance_km?: number; // Unified: distance info for all items
-  assignment_source?: 'nutrition_generation' | 'traditional_ordering' | 'manual'; // Track source
+  assignment_details?: RestaurantAssignmentDetail;
+  estimated_prep_time?: number;
+  distance_km?: number;
+  assignment_source?: 'nutrition_generation' | 'traditional_ordering' | 'manual';
 };
 
 export type CartContextType = {
@@ -64,95 +65,90 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
   
-  // Calculate total amount from cart items
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Initialize cart from localStorage
   useEffect(() => {
     initializeCart();
   }, []);
 
-  // Save cart to localStorage whenever it changes (after initialization)
   useEffect(() => {
     if (isInitialized) {
-      console.log("CartContext: Saving cart to localStorage:", cart);
+      console.log("Phase 6: Saving integrated cart to localStorage:", cart);
       CartValidationService.updateStoredCart(cart);
     }
   }, [cart, isInitialized]);
 
   const initializeCart = async () => {
     try {
-      console.log("CartContext: Initializing cart from localStorage");
+      console.log("Phase 6: Initializing integrated cart from localStorage");
       const validation = await CartValidationService.validateAndCleanStoredCart();
       
-      console.log("CartContext: Loaded cart items:", validation.validItems);
+      console.log("Phase 6: Loaded integrated cart items:", validation.validItems);
       setCart(validation.validItems);
       
-      // No longer show notifications for removed items - just accept everything
     } catch (error) {
-      console.error('CartContext: Error initializing cart:', error);
+      console.error('Phase 6: Error initializing integrated cart:', error);
       setCart([]);
     } finally {
       setIsInitialized(true);
-      console.log("CartContext: Cart initialization complete");
+      console.log("Phase 6: Integrated cart initialization complete");
     }
   };
 
   const addToCart = async (item: CartItem): Promise<boolean> => {
     try {
-      console.log("CartContext: Adding item to cart:", item);
+      console.log("Phase 6: Adding item to integrated cart:", item);
       
-      // No validation needed - just add items directly
-      const unifiedItem: CartItem = {
+      // Phase 6: Direct addition without validation barriers
+      const integratedItem: CartItem = {
         ...item,
-        assignment_source: item.assignment_source || (item.restaurant_id ? 'nutrition_generation' : 'traditional_ordering')
+        assignment_source: item.assignment_source || 'nutrition_generation'
       };
 
-      console.log("CartContext: Unified item:", unifiedItem);
+      console.log("Phase 6: Integrated item prepared:", integratedItem);
 
       setCart((prevCart) => {
-        console.log("CartContext: Previous cart:", prevCart);
-        const existingItem = prevCart.find((cartItem) => cartItem.id === unifiedItem.id);
+        console.log("Phase 6: Previous integrated cart:", prevCart);
+        const existingItem = prevCart.find((cartItem) => cartItem.id === integratedItem.id);
         
         if (existingItem) {
-          console.log("CartContext: Item exists, updating quantity");
+          console.log("Phase 6: Updating existing item in integrated cart");
           const updatedCart = prevCart.map((cartItem) =>
-            cartItem.id === unifiedItem.id
+            cartItem.id === integratedItem.id
               ? { 
                   ...cartItem, 
-                  quantity: cartItem.quantity + unifiedItem.quantity,
-                  // Preserve restaurant assignment data
-                  restaurant_id: cartItem.restaurant_id || unifiedItem.restaurant_id,
-                  assignment_details: cartItem.assignment_details || unifiedItem.assignment_details,
-                  estimated_prep_time: cartItem.estimated_prep_time || unifiedItem.estimated_prep_time,
-                  distance_km: cartItem.distance_km || unifiedItem.distance_km
+                  quantity: cartItem.quantity + integratedItem.quantity,
+                  restaurant_id: cartItem.restaurant_id || integratedItem.restaurant_id,
+                  assignment_details: cartItem.assignment_details || integratedItem.assignment_details,
+                  estimated_prep_time: cartItem.estimated_prep_time || integratedItem.estimated_prep_time,
+                  distance_km: cartItem.distance_km || integratedItem.distance_km
                 }
               : cartItem
           );
-          console.log("CartContext: Updated cart with existing item:", updatedCart);
+          console.log("Phase 6: Updated integrated cart with existing item:", updatedCart);
           return updatedCart;
         }
         
-        console.log("CartContext: Adding new item to cart");
-        const newCart = [...prevCart, unifiedItem];
-        console.log("CartContext: New cart:", newCart);
+        console.log("Phase 6: Adding new item to integrated cart");
+        const newCart = [...prevCart, integratedItem];
+        console.log("Phase 6: New integrated cart:", newCart);
         return newCart;
       });
 
-      const assignmentInfo = unifiedItem.restaurant_id 
+      const assignmentInfo = integratedItem.restaurant_id 
         ? ` (assigned to restaurant)` 
         : ` (will be assigned to restaurant)`;
 
       toast({
         title: "Item added",
-        description: `"${unifiedItem.name}" added to cart${assignmentInfo}`,
+        description: `"${integratedItem.name}" added to cart${assignmentInfo}`,
         variant: "default"
       });
 
-      console.log("CartContext: Successfully added item to cart");
+      console.log("Phase 6: Successfully added item to integrated cart");
       return true;
     } catch (error) {
-      console.error('CartContext: Error adding item to cart:', error);
+      console.error('Phase 6: Error adding item to integrated cart:', error);
       toast({
         title: "Error adding item",
         description: "Unable to add item to cart. Please try again.",
@@ -162,16 +158,15 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
-  // Alias for addToCart for better readability
   const addItem = addToCart;
 
   const removeFromCart = (id: string) => {
-    console.log("CartContext: Removing item from cart:", id);
+    console.log("Phase 6: Removing item from integrated cart:", id);
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
   const updateQuantity = (id: string, quantity: number) => {
-    console.log("CartContext: Updating quantity for item:", id, "to:", quantity);
+    console.log("Phase 6: Updating quantity in integrated cart:", id, "to:", quantity);
     if (quantity <= 0) {
       removeFromCart(id);
       return;
@@ -185,18 +180,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const clearCart = () => {
-    console.log("CartContext: Clearing cart");
+    console.log("Phase 6: Clearing integrated cart");
     setCart([]);
     CartValidationService.clearStoredCart();
   };
 
-  // Keep validateCart method for compatibility but make it empty
+  // Phase 6: Integrated validation (no-op for seamless flow)
   const validateCart = async () => {
-    console.log('CartContext: Cart validation disabled - accepting all items');
-    // No validation performed - method kept for compatibility only
+    console.log('Phase 6: Integrated cart validation - no barriers, accepting all items');
   };
 
-  // Unified helper: Group cart items by restaurant
   const getRestaurantGroupings = (): { [restaurantId: string]: CartItem[] } => {
     const groupings: { [restaurantId: string]: CartItem[] } = {};
     
@@ -211,21 +204,20 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return groupings;
   };
 
-  // Unified helper: Check if cart has any restaurant assignments
   const hasRestaurantAssignments = (): boolean => {
     return cart.some(item => item.restaurant_id);
   };
 
-  console.log("CartContext: Rendering with cart:", cart.length, "items");
+  console.log("Phase 6: Rendering integrated cart with:", cart.length, "items");
 
   return (
     <CartContext.Provider
       value={{ 
         cart, 
-        items: cart, // alias for items for compatibility
+        items: cart,
         totalAmount,
         addToCart, 
-        addItem, // add the alias
+        addItem,
         removeFromCart, 
         updateQuantity, 
         clearCart,

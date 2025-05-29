@@ -24,13 +24,15 @@ export const useCheckout = () => {
     clearCart
   );
 
-  // Handle order submission without validation checks
+  // Phase 6: Integrated checkout flow without validation stops
   const handleUnifiedSubmit = async (data: any) => {
-    console.log('Unified checkout starting with items:', {
-      itemCount: items.length
+    console.log('Phase 6: Starting integrated checkout with items:', {
+      itemCount: items.length,
+      totalAmount,
+      hasFlexibleItems: items.some(item => item.assignment_source === 'nutrition_generation')
     });
 
-    // Proceed directly with order submission - no validation needed
+    // Phase 6: Direct order submission - no validation barriers
     await handleSubmit(data);
   };
 
