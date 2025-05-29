@@ -1,84 +1,199 @@
 
 import { Meal } from '@/types/food';
 import { CartItem } from '@/contexts/CartContext';
-import { RestaurantAssignmentService } from '@/services/restaurantAssignment/restaurantAssignmentService';
 import { MealPricingService } from '@/services/foodPricing/mealPricingService';
-import { RestaurantAssignmentOptions } from '@/types/restaurantAssignment';
+import { RestaurantAssignmentOptions, RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Enhanced meal to cart conversion with restaurant assignment
+ * Enhanced meal to cart conversion with simplified restaurant assignment (location-based only)
  */
 export const convertMealToCartItemWithAssignment = async (
   meal: Meal, 
   userId: string, 
   options: RestaurantAssignmentOptions = {}
 ): Promise<CartItem[]> => {
-  console.log('Converting meal to cart items with restaurant assignment:', meal.name);
+  console.log('Converting meal to cart items with location-based assignment:', meal.name);
 
   try {
-    // Get restaurant assignments for this meal
-    const assignments = await RestaurantAssignmentService.assignRestaurantsToMeal(meal, options);
+    // Get nearest restaurants by location only - no capability filtering
+    const nearestRestaurants = await findNearestRestaurantsByLocation(options);
     
-    if (assignments.length === 0) {
-      throw new Error('No restaurants found that can prepare this meal');
+    if (nearestRestaurants.length === 0) {
+      throw new Error('No restaurants found in your area');
     }
 
     const cartItems: CartItem[] = [];
 
-    // Create cart items for each restaurant assignment
-    for (const assignment of assignments) {
-      // Calculate accurate pricing for this restaurant
-      const pricing = await MealPricingService.calculateMealPrice(meal, assignment.restaurant_id);
-      
-      // Create description from food items for this restaurant
-      const foodDescriptions = assignment.food_items.map(food => 
-        `${food.food_name} (${food.quantity}g)`
-      );
-      
-      const description = `${foodDescriptions.join(', ')} - Prepared by ${assignment.restaurant_name}`;
-      
-      // Generate unique ID for this assignment
-      const cartItemId = `${meal.id}-${assignment.restaurant_id}`;
+    // Create a single assignment to the nearest restaurant
+    const nearestRestaurant = nearestRestaurants[0];
+    
+    // Calculate estimated pricing for this restaurant
+    const pricing = await MealPricingService.calculateMealPrice(meal, nearestRestaurant.restaurant_id);
+    
+    // Create description from food items
+    const foodDescriptions = meal.foods.map(mealFood => 
+      `${mealFood.food.name} (${mealFood.portionSize}g)`
+    );
+    
+    const description = `${foodDescriptions.join(', ')} - Will be prepared by nearest restaurant`;
+    
+    // Generate unique ID for this assignment
+    const cartItemId = `${meal.id}-${nearestRestaurant.restaurant_id}`;
 
-      const cartItem: CartItem = {
-        id: cartItemId,
-        name: assignments.length > 1 ? `${meal.name} - ${assignment.restaurant_name}` : meal.name,
-        price: assignment.subtotal,
-        quantity: 1,
-        description: description,
-        calories: meal.totalCalories,
-        protein: meal.totalProtein,
-        carbs: meal.totalCarbs,
-        fat: meal.totalFat,
-        restaurant_id: assignment.restaurant_id,
-        dietary_tags: [],
-        image_url: generateMealImageUrl(meal),
-        assignment_details: assignment,
-        estimated_prep_time: assignment.estimated_prep_time,
-        distance_km: assignment.distance_km
-      };
+    const assignment: RestaurantAssignmentDetail = {
+      restaurant_id: nearestRestaurant.restaurant_id,
+      restaurant_name: nearestRestaurant.restaurant_name,
+      food_items: meal.foods.map(mealFood => ({
+        food_name: mealFood.food.name,
+        quantity: mealFood.portionSize,
+        unit: 'g',
+        price_per_unit: pricing.totalPrice / meal.foods.reduce((sum, f) => sum + f.portionSize, 0),
+        total_price: pricing.totalPrice
+      })),
+      subtotal: pricing.totalPrice,
+      estimated_prep_time: 30, // Default estimated prep time
+      distance_km: nearestRestaurant.distance_km
+    };
 
-      cartItems.push(cartItem);
-    }
+    const cartItem: CartItem = {
+      id: cartItemId,
+      name: meal.name,
+      price: assignment.subtotal,
+      quantity: 1,
+      description: description,
+      calories: meal.totalCalories,
+      protein: meal.totalProtein,
+      carbs: meal.totalCarbs,
+      fat: meal.totalFat,
+      restaurant_id: assignment.restaurant_id,
+      dietary_tags: [],
+      image_url: generateMealImageUrl(meal),
+      assignment_details: assignment,
+      estimated_prep_time: assignment.estimated_prep_time,
+      distance_km: assignment.distance_km,
+      assignment_source: 'nutrition_generation'
+    };
+
+    cartItems.push(cartItem);
 
     // Save the assignment to database for later reference
     const mealPlanId = `meal-${meal.id}-${userId}`;
-    await RestaurantAssignmentService.saveMealPlanAssignment(
+    await saveMealPlanAssignmentSimplified(
       mealPlanId,
-      assignments,
-      options.strategy || (assignments.length > 1 ? 'multi_restaurant' : 'single_restaurant')
+      [assignment],
+      'single_restaurant'
     );
 
-    console.log(`Created ${cartItems.length} cart items for meal assignment:`, {
+    console.log(`Created cart item with location-based assignment:`, {
       mealName: meal.name,
-      totalPrice: cartItems.reduce((sum, item) => sum + item.price, 0),
-      restaurants: assignments.map(a => a.restaurant_name)
+      totalPrice: cartItem.price,
+      restaurantName: assignment.restaurant_name,
+      distance: assignment.distance_km
     });
 
     return cartItems;
   } catch (error) {
-    console.error('Error converting meal to cart items with assignment:', error);
+    console.error('Error converting meal to cart items with location-based assignment:', error);
     throw error;
+  }
+};
+
+/**
+ * Find nearest restaurants by location only (no capability filtering)
+ */
+const findNearestRestaurantsByLocation = async (
+  options: RestaurantAssignmentOptions = {}
+): Promise<Array<{
+  restaurant_id: string;
+  restaurant_name: string;
+  distance_km: number;
+}>> => {
+  try {
+    const maxDistance = options.max_distance_km || 50; // Default 50km radius
+    const customerLat = options.customer_latitude;
+    const customerLng = options.customer_longitude;
+
+    // If no customer location provided, get some default restaurants
+    if (!customerLat || !customerLng) {
+      console.log('No customer location provided, getting default restaurants');
+      const { data: restaurants, error } = await supabase
+        .from('restaurants')
+        .select('id, name, latitude, longitude')
+        .eq('is_active', true)
+        .limit(5);
+
+      if (error) {
+        console.error('Error fetching default restaurants:', error);
+        throw error;
+      }
+
+      return (restaurants || []).map(restaurant => ({
+        restaurant_id: restaurant.id,
+        restaurant_name: restaurant.name,
+        distance_km: 5.0 // Default distance for restaurants without location context
+      }));
+    }
+
+    // Use RPC function to find nearest restaurants by location
+    const { data: nearestRestaurants, error } = await supabase.rpc('find_nearest_restaurant', {
+      order_lat: customerLat,
+      order_lng: customerLng,
+      max_distance_km: maxDistance
+    });
+
+    if (error) {
+      console.error('Error finding nearest restaurants:', error);
+      throw error;
+    }
+
+    if (!nearestRestaurants || nearestRestaurants.length === 0) {
+      throw new Error(`No restaurants found within ${maxDistance}km of your location`);
+    }
+
+    return nearestRestaurants.map((restaurant: any) => ({
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name || 'Restaurant',
+      distance_km: restaurant.distance_km || 0
+    }));
+  } catch (error) {
+    console.error('Error in findNearestRestaurantsByLocation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Simplified meal plan assignment saving (no capability validation)
+ */
+const saveMealPlanAssignmentSimplified = async (
+  mealPlanId: string,
+  assignments: RestaurantAssignmentDetail[],
+  strategy: string
+): Promise<any> => {
+  try {
+    const totalPrice = assignments.reduce((sum, assignment) => sum + assignment.subtotal, 0);
+
+    const { data, error } = await supabase
+      .from('meal_plan_restaurant_assignments')
+      .insert({
+        meal_plan_id: mealPlanId,
+        restaurant_assignments: assignments,
+        total_price: totalPrice,
+        assignment_strategy: strategy,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving meal plan assignment:', error);
+      // Don't throw here - assignment saving is not critical for cart functionality
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in saveMealPlanAssignmentSimplified:', error);
+    return null;
   }
 };
 
@@ -159,7 +274,7 @@ const generateMealImageUrl = (meal: Meal): string => {
 };
 
 /**
- * Validates that a meal can be converted to cart items with restaurant assignment
+ * Validates that a meal can be converted to cart items (simplified - no capability checks)
  */
 export const validateMealForCartWithAssignment = async (
   meal: Meal,
@@ -184,25 +299,21 @@ export const validateMealForCartWithAssignment = async (
     errors.push('Meal must have positive calorie content');
   }
 
-  // Check restaurant availability
+  // Check if restaurants are available in the area (no capability validation)
   try {
-    const capableRestaurants = await RestaurantAssignmentService.findCapableRestaurantsForMeal(meal, options);
+    const nearestRestaurants = await findNearestRestaurantsByLocation(options);
     
-    if (capableRestaurants.length === 0) {
-      errors.push('No restaurants found that can prepare any components of this meal');
+    if (nearestRestaurants.length === 0) {
+      errors.push('No restaurants found in your area');
     } else {
-      const completeCapableRestaurants = capableRestaurants.filter(r => r.can_prepare_complete_meal);
-      
-      if (completeCapableRestaurants.length === 0) {
-        warnings.push('No single restaurant can prepare the complete meal. It will be split across multiple restaurants.');
+      if (nearestRestaurants[0].distance_km > 20) {
+        warnings.push('Nearest restaurant is far from your location, which may increase delivery time.');
       }
       
-      if (capableRestaurants.some(r => r.distance_km > 20)) {
-        warnings.push('Some restaurants are far from your location, which may increase delivery time.');
-      }
+      warnings.push('Order will be assigned to nearest restaurant. Restaurant may decline if they cannot prepare specific items.');
     }
   } catch (error) {
-    errors.push('Failed to check restaurant availability');
+    errors.push('Failed to check restaurant availability in your area');
   }
 
   return {

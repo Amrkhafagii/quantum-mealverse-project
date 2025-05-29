@@ -65,37 +65,36 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
     setIsAddingToCart(true);
     
     try {
-      console.log("Adding meal to cart with restaurant assignment:", meal.name);
+      console.log("Adding meal to cart with location-based assignment:", meal.name);
       
       // Convert meal to proper format
       const mealForAssignment = convertToMealFormat();
       
-      // Use restaurant assignment service
+      // Use simplified restaurant assignment service (location-based only)
       const cartItems = await convertMealToCartItemWithAssignment(
         mealForAssignment,
         user.id,
         {
-          strategy: 'cheapest',
-          prefer_single_restaurant: true
+          strategy: 'single_restaurant'
         }
       );
 
-      // Add each cart item (there may be multiple if split across restaurants)
+      // Add each cart item
       for (const cartItem of cartItems) {
         await addItem(cartItem);
       }
 
       toast({
         title: "Item Added",
-        description: `${meal.name} added to cart with restaurant assignment`,
+        description: `${meal.name} added to cart and assigned to nearest restaurant`,
         variant: "default"
       });
       
     } catch (error) {
       console.error('Error adding meal to cart:', error);
       toast({
-        title: "Assignment Failed",
-        description: error instanceof Error ? error.message : "No restaurants available for this item",
+        title: "Error Adding Item",
+        description: error instanceof Error ? error.message : "Unable to add item to cart",
         variant: "destructive"
       });
     } finally {
@@ -172,7 +171,7 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
           {isAddingToCart ? (
             <>
               <MapPin className="w-4 h-4 animate-pulse" />
-              Assigning to Restaurants...
+              Assigning to Nearest Restaurant...
             </>
           ) : (
             <>
