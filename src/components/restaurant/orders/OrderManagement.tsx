@@ -36,7 +36,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
 
   if (error) {
     console.error('OrderManagement - Error loading orders:', error);
-    const errorMessage = typeof error === 'string' ? error : (error as any)?.message || 'Unknown error occurred';
+    const errorMessage = typeof error === 'string' ? error : 'Unknown error occurred';
     return (
       <Card>
         <CardContent className="p-6 text-center">
@@ -125,7 +125,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="text-lg">
-                            Order #{order.formatted_order_id || order.id.substring(0, 8)}
+                            Order #{order.id.substring(0, 8)}
                           </CardTitle>
                           <p className="text-sm text-gray-600">
                             {format(new Date(order.created_at!), 'MMM dd, yyyy at h:mm a')}
@@ -143,9 +143,6 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
                         <p><strong>Phone:</strong> {order.customer_phone}</p>
                         <p><strong>Address:</strong> {order.delivery_address}</p>
                         <p><strong>Total:</strong> EGP {order.total}</p>
-                        {order.special_instructions && (
-                          <p><strong>Instructions:</strong> {order.special_instructions}</p>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -171,7 +168,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="text-lg">
-                            Order #{order.formatted_order_id || order.id.substring(0, 8)}
+                            Order #{order.id.substring(0, 8)}
                           </CardTitle>
                           <p className="text-sm text-gray-600">
                             {format(new Date(order.created_at!), 'MMM dd, yyyy at h:mm a')}
