@@ -1,20 +1,20 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useRestaurants } from '@/hooks/useRestaurants';
-import { useMenuItems } from '@/hooks/useMenuItems';
+import { useRestaurantsData } from '@/hooks/useRestaurantsData';
+import { useMenuItems } from '@/hooks/menu/useMenuItems';
 
 export const useCustomerState = () => {
   const { user } = useAuth();
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch restaurants (now without location dependency)
+  // Fetch restaurants using the correct hook
   const {
     data: restaurants,
     isLoading: restaurantsLoading,
     error: restaurantsError
-  } = useRestaurants();
+  } = useRestaurantsData();
 
   // Fetch menu items
   const {
