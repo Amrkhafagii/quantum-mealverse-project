@@ -5709,6 +5709,13 @@ export type Database = {
             foreignKeyName: "order_item_preparation_order_item_id_fkey"
             columns: ["order_item_id"]
             isOneToOne: false
+            referencedRelation: "flexible_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_preparation_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
             referencedRelation: "order_items"
             referencedColumns: ["id"]
           },
@@ -5726,37 +5733,36 @@ export type Database = {
           created_at: string
           id: string
           meal_id: string | null
+          menu_item_id: string | null
           name: string
           order_id: string
           price: number
           quantity: number
+          source_type: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           meal_id?: string | null
+          menu_item_id?: string | null
           name: string
           order_id: string
           price: number
           quantity: number
+          source_type?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           meal_id?: string | null
+          menu_item_id?: string | null
           name?: string
           order_id?: string
           price?: number
           quantity?: number
+          source_type?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_order_items_meal_id"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "menu_items"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "order_items_meal_id_fkey"
             columns: ["meal_id"]
@@ -6074,6 +6080,7 @@ export type Database = {
           estimated_preparation_time: number | null
           formatted_order_id: string | null
           id: string
+          is_mixed_order: boolean | null
           last_rejected_at: string | null
           latitude: number | null
           locale: string | null
@@ -6118,6 +6125,7 @@ export type Database = {
           estimated_preparation_time?: number | null
           formatted_order_id?: string | null
           id?: string
+          is_mixed_order?: boolean | null
           last_rejected_at?: string | null
           latitude?: number | null
           locale?: string | null
@@ -6162,6 +6170,7 @@ export type Database = {
           estimated_preparation_time?: number | null
           formatted_order_id?: string | null
           id?: string
+          is_mixed_order?: boolean | null
           last_rejected_at?: string | null
           latitude?: number | null
           locale?: string | null
@@ -9915,6 +9924,63 @@ export type Database = {
       }
     }
     Views: {
+      flexible_order_items: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          item_category: string | null
+          meal_id: string | null
+          menu_item_id: string | null
+          name: string | null
+          order_id: string | null
+          price: number | null
+          quantity: number | null
+          source_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: never
+          id?: string | null
+          item_category?: never
+          meal_id?: string | null
+          menu_item_id?: string | null
+          name?: string | null
+          order_id?: string | null
+          price?: number | null
+          quantity?: number | null
+          source_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: never
+          id?: string | null
+          item_category?: never
+          meal_id?: string | null
+          menu_item_id?: string | null
+          name?: string | null
+          order_id?: string | null
+          price?: number | null
+          quantity?: number | null
+          source_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null

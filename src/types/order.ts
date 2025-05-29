@@ -32,14 +32,19 @@ export interface Order {
   return_images?: string[];
   refund_status?: string;
   refund_amount?: number;
+  // New flexible ordering fields from Phase 5
+  assignment_source?: string;
+  is_mixed_order?: boolean;
 }
 
 export interface OrderItem {
   id: string;
-  meal_id: string;
+  meal_id?: string | null; // Now nullable for flexible ordering
+  menu_item_id?: string | null; // New field for traditional restaurant items
   name: string;
   price: number;
   quantity: number;
   created_at?: string;
   preparation_time?: number;
+  source_type?: string; // New field to track item origin
 }
