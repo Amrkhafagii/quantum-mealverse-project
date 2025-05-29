@@ -22,7 +22,8 @@ export interface OfflineStorage {
 // Constants used throughout the storage modules
 export const STORAGE_KEYS = {
   PENDING_ACTIONS: 'pending_actions',
-  ACTIVE_ORDERS: 'active_orders'
+  ACTIVE_ORDERS: 'active_orders',
+  CART: 'cart'
 };
 
 // Configuration constants
