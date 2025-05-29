@@ -26,8 +26,12 @@ export const useOrderSubmission = (
         user_id: userId || null,
         customer_name: data.fullName,
         customer_phone: data.phone,
+        customer_email: data.email || '',
         delivery_address: data.address,
+        city: data.city || '',
         total: totalAmount,
+        subtotal: totalAmount * 0.9, // Assuming 10% is delivery fee
+        delivery_fee: totalAmount * 0.1,
         status: 'pending',
         payment_method: data.paymentMethod || 'cash',
         delivery_method: data.deliveryMethod || 'delivery',
@@ -55,10 +59,9 @@ export const useOrderSubmission = (
       const orderItems = items.map(item => ({
         order_id: order.id,
         meal_id: item.meal_id,
-        restaurant_id: item.restaurant_id,
+        name: item.name,
         quantity: item.quantity,
-        price: item.price,
-        customizations: item.customizations || {}
+        price: item.price
       }));
 
       const { error: itemsError } = await supabase
@@ -143,7 +146,6 @@ export const useOrderSubmission = (
         const { data: fallbackRestaurants } = await supabase
           .from('restaurants')
           .select('id')
-          .eq('is_active', true)
           .limit(1);
 
         if (fallbackRestaurants && fallbackRestaurants.length > 0) {
@@ -152,27 +154,26 @@ export const useOrderSubmission = (
         return;
       }
 
-      // Parse the tuple response properly
-      // The function returns tuples like (restaurant_id, restaurant_name, distance_km, address, phone, latitude, longitude)
-      const assignments = nearbyRestaurants.map((restaurantTuple: any) => {
-        console.log('Processing restaurant tuple:', restaurantTuple);
+      // Parse the restaurant data properly
+      const assignments = nearbyRestaurants.map((restaurantData: any) => {
+        console.log('Processing restaurant data:', restaurantData);
         
-        // Handle both tuple format and object format
         let restaurantId: string;
         
-        if (Array.isArray(restaurantTuple)) {
+        // Handle different response formats from the database function
+        if (Array.isArray(restaurantData)) {
           // Tuple format: [restaurant_id, restaurant_name, distance_km, ...]
-          restaurantId = restaurantTuple[0];
-        } else if (restaurantTuple && typeof restaurantTuple === 'object') {
+          restaurantId = restaurantData[0];
+        } else if (restaurantData && typeof restaurantData === 'object') {
           // Object format: {restaurant_id: "...", restaurant_name: "...", ...}
-          restaurantId = restaurantTuple.restaurant_id || restaurantTuple.id;
+          restaurantId = restaurantData.restaurant_id || restaurantData.id;
         } else {
-          console.error('Unexpected restaurant data format:', restaurantTuple);
+          console.error('Unexpected restaurant data format:', restaurantData);
           return null;
         }
 
         if (!restaurantId) {
-          console.error('Could not extract restaurant ID from:', restaurantTuple);
+          console.error('Could not extract restaurant ID from:', restaurantData);
           return null;
         }
 
