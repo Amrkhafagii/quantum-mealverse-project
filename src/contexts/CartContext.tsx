@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
 import { CartValidationService } from '@/services/cart/cartValidationService';
@@ -179,24 +178,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const validateCart = async () => {
-    try {
-      if (cart.length === 0) return;
-
-      const validation = await CartValidationService.validateAndCleanStoredCart();
-      
-      if (validation.hasInvalidItems) {
-        setCart(validation.validItems);
-        
-        const removedItemNames = validation.removedItems.map(item => item.name).join(', ');
-        toast({
-          title: "Cart updated",
-          description: `Removed unavailable items: ${removedItemNames}`,
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error validating cart:', error);
-    }
+    // No validation needed - this method is kept for compatibility
+    console.log('Cart validation skipped - no validation performed');
   };
 
   // Unified helper: Group cart items by restaurant

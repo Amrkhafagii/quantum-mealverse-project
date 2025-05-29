@@ -1,6 +1,5 @@
 
 import { CartItem } from '@/contexts/CartContext';
-import { MenuValidationService } from '@/services/validation/menuValidationService';
 
 export class CartValidationService {
   private static readonly CART_STORAGE_KEY = 'quantum-cart-items';
@@ -34,29 +33,19 @@ export class CartValidationService {
         return { validItems: [], removedItems: [], hasInvalidItems: false };
       }
 
-      console.log('Validating stored cart items:', cartItems.map(item => ({
+      console.log('Loading stored cart items without validation:', cartItems.map(item => ({
         id: item.id,
         name: item.name
       })));
 
-      // Validate items against menu_items table
-      const validation = await MenuValidationService.validateCartItems(cartItems);
-      
-      const hasInvalidItems = validation.invalidItems.length > 0;
-      
-      if (hasInvalidItems) {
-        console.log('Found invalid items in cart:', validation.invalidItems);
-        // Update localStorage with only valid items
-        this.updateStoredCart(validation.validItems);
-      }
-
+      // No validation - just return all items as valid
       return {
-        validItems: validation.validItems,
-        removedItems: validation.invalidItems,
-        hasInvalidItems
+        validItems: cartItems,
+        removedItems: [],
+        hasInvalidItems: false
       };
     } catch (error) {
-      console.error('Error validating stored cart:', error);
+      console.error('Error loading stored cart:', error);
       // On error, clear the cart to prevent issues
       this.clearStoredCart();
       return { validItems: [], removedItems: [], hasInvalidItems: false };
