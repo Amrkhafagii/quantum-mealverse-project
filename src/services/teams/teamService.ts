@@ -38,37 +38,39 @@ const transformTeam = (team: DatabaseTeam): Team => ({
 export const fetchTeams = async (): Promise<Team[]> => {
   const { data, error } = await supabase
     .from('teams')
-    .select('id, name, description, created_by, created_at, avatar_url, is_active, max_members, member_count, total_points')
+    .select('*')
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   
-  // Use unknown first to avoid type depth issues, then cast to our expected type
-  const teams = (data as unknown) as DatabaseTeam[];
-  return (teams || []).map(transformTeam);
+  // Simple type assertion to avoid depth issues
+  return (data || []).map(team => transformTeam(team as DatabaseTeam));
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
-  const { data, error } = await supabase
+  // First get the team membership
+  const { data: membershipData, error: membershipError } = await supabase
     .from('team_members')
-    .select(`
-      *,
-      team:teams(id, name, description, created_by, created_at, avatar_url, is_active, max_members, member_count, total_points)
-    `)
+    .select('team_id')
     .eq('user_id', userId)
     .eq('is_active', true)
     .single();
 
-  if (error && error.code !== 'PGRST116') throw error;
+  if (membershipError && membershipError.code !== 'PGRST116') throw membershipError;
   
-  if (data?.team) {
-    // Use unknown first to avoid type depth issues, then cast to our expected type
-    const teamData = (data.team as unknown) as DatabaseTeam;
-    return transformTeam(teamData);
-  }
+  if (!membershipData) return null;
+
+  // Then get the team details
+  const { data: teamData, error: teamError } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('id', membershipData.team_id)
+    .single();
+
+  if (teamError) throw teamError;
   
-  return null;
+  return teamData ? transformTeam(teamData as DatabaseTeam) : null;
 };
 
 export const createTeam = async (userId: string, teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {

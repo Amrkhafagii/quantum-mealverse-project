@@ -2,7 +2,8 @@
 import React from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
-import SafeAreaView from '@/components/ios/SafeAreaView';
+import SafeAreaView from '@/components/ui/SafeAreaView';
+import PlatformErrorBoundary from '@/components/ui/PlatformErrorBoundary';
 
 interface ResponsiveContainerProps {
   children: React.ReactNode;
@@ -34,8 +35,14 @@ export const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
   const { 
     isMobile, 
     isTablet, 
-    isPlatformIOS
+    isPlatformIOS,
+    isInitialized
   } = useResponsive();
+  
+  // Show loading state until context is initialized
+  if (!isInitialized) {
+    return <div className="animate-pulse bg-gray-200 h-32 rounded" />;
+  }
   
   const maxWidthClass = maxWidth !== 'none' ? {
     'max-w-xs': maxWidth === 'xs',
@@ -56,7 +63,16 @@ export const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
     className
   );
   
-  // For iOS devices that need safe area adjustments, use our SafeAreaView component
+  const content = <>{children}</>;
+  
+  // Wrap in platform error boundary for safer platform-specific features
+  const errorBoundaryContent = (
+    <PlatformErrorBoundary platformSpecific={isPlatformIOS && respectSafeArea}>
+      {content}
+    </PlatformErrorBoundary>
+  );
+  
+  // For iOS devices that need safe area adjustments, use our consolidated SafeAreaView
   if (isPlatformIOS && respectSafeArea) {
     return (
       <SafeAreaView 
@@ -66,7 +82,7 @@ export const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
         disableBottom={disableBottom}
         disableSides={disableSides}
       >
-        {children}
+        {errorBoundaryContent}
       </SafeAreaView>
     );
   }
@@ -75,7 +91,7 @@ export const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
   const Component = as;
   return (
     <Component className={containerClasses}>
-      {children}
+      {errorBoundaryContent}
     </Component>
   );
 };
