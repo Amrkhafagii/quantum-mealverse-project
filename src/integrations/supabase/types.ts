@@ -1502,6 +1502,66 @@ export type Database = {
           },
         ]
       }
+      delivery_eta_updates: {
+        Row: {
+          calculated_distance_km: number | null
+          calculated_duration_minutes: number | null
+          created_at: string | null
+          delivery_assignment_id: string
+          destination_lat: number | null
+          destination_lng: number | null
+          driver_location_lat: number | null
+          driver_location_lng: number | null
+          estimated_arrival: string
+          id: string
+          order_id: string
+          traffic_factor: number | null
+        }
+        Insert: {
+          calculated_distance_km?: number | null
+          calculated_duration_minutes?: number | null
+          created_at?: string | null
+          delivery_assignment_id: string
+          destination_lat?: number | null
+          destination_lng?: number | null
+          driver_location_lat?: number | null
+          driver_location_lng?: number | null
+          estimated_arrival: string
+          id?: string
+          order_id: string
+          traffic_factor?: number | null
+        }
+        Update: {
+          calculated_distance_km?: number | null
+          calculated_duration_minutes?: number | null
+          created_at?: string | null
+          delivery_assignment_id?: string
+          destination_lat?: number | null
+          destination_lng?: number | null
+          driver_location_lat?: number | null
+          driver_location_lng?: number | null
+          estimated_arrival?: string
+          id?: string
+          order_id?: string
+          traffic_factor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_eta_updates_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_eta_updates_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_financial_reports: {
         Row: {
           created_at: string
@@ -1841,6 +1901,69 @@ export type Database = {
             foreignKeyName: "delivery_location_settings_delivery_user_id_fkey"
             columns: ["delivery_user_id"]
             isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_location_tracking: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          battery_level: number | null
+          created_at: string | null
+          delivery_assignment_id: string
+          delivery_user_id: string
+          heading: number | null
+          id: string
+          latitude: number
+          longitude: number
+          network_type: string | null
+          speed: number | null
+          timestamp: string
+        }
+        Insert: {
+          accuracy?: number | null
+          altitude?: number | null
+          battery_level?: number | null
+          created_at?: string | null
+          delivery_assignment_id: string
+          delivery_user_id: string
+          heading?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          network_type?: string | null
+          speed?: number | null
+          timestamp?: string
+        }
+        Update: {
+          accuracy?: number | null
+          altitude?: number | null
+          battery_level?: number | null
+          created_at?: string | null
+          delivery_assignment_id?: string
+          delivery_user_id?: string
+          heading?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          network_type?: string | null
+          speed?: number | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_location_tracking_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_location_tracking_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
             referencedRelation: "delivery_users"
             referencedColumns: ["id"]
           },
@@ -3931,6 +4054,57 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      location_sharing_permissions: {
+        Row: {
+          created_at: string | null
+          customer_user_id: string
+          delivery_assignment_id: string
+          delivery_user_id: string
+          id: string
+          is_location_sharing_enabled: boolean | null
+          privacy_level: string | null
+          sharing_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_user_id: string
+          delivery_assignment_id: string
+          delivery_user_id: string
+          id?: string
+          is_location_sharing_enabled?: boolean | null
+          privacy_level?: string | null
+          sharing_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_user_id?: string
+          delivery_assignment_id?: string
+          delivery_user_id?: string
+          id?: string
+          is_location_sharing_enabled?: boolean | null
+          privacy_level?: string | null
+          sharing_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_sharing_permissions_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_sharing_permissions_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meal_categories: {
         Row: {
@@ -9234,6 +9408,21 @@ export type Database = {
         Args: { p_delivery_user_id: string; p_date: string }
         Returns: undefined
       }
+      calculate_delivery_eta: {
+        Args: {
+          p_delivery_assignment_id: string
+          p_driver_lat: number
+          p_driver_lng: number
+          p_destination_lat: number
+          p_destination_lng: number
+          p_traffic_factor?: number
+        }
+        Returns: {
+          eta_minutes: number
+          distance_km: number
+          estimated_arrival: string
+        }[]
+      }
       calculate_exercise_progress: {
         Args: { p_user_id: string; p_workout_log_id: string }
         Returns: undefined
@@ -11325,6 +11514,25 @@ export type Database = {
       unlockrows: {
         Args: { "": string }
         Returns: number
+      }
+      update_driver_location_with_eta: {
+        Args: {
+          p_delivery_assignment_id: string
+          p_delivery_user_id: string
+          p_latitude: number
+          p_longitude: number
+          p_accuracy?: number
+          p_altitude?: number
+          p_heading?: number
+          p_speed?: number
+          p_battery_level?: number
+          p_network_type?: string
+        }
+        Returns: {
+          location_id: string
+          eta_minutes: number
+          estimated_arrival: string
+        }[]
       }
       update_global_meal_rating_cache: {
         Args: { p_meal_id: string }

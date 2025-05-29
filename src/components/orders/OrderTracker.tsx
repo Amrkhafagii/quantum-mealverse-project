@@ -1,7 +1,8 @@
-
 import React from 'react';
 import OrderLocationMap from './OrderLocationMap';
+import { CustomerLocationView } from '../delivery/CustomerLocationView';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface OrderTrackerProps {
   order?: any; // Keep existing type
@@ -25,15 +26,35 @@ const OrderTracker: React.FC<OrderTrackerProps> = ({
     }
   };
 
+  // Get delivery assignment ID from order
+  const deliveryAssignmentId = order?.delivery_assignment?.id;
+  const driverName = order?.delivery_assignment?.delivery_user ? 
+    `${order.delivery_assignment.delivery_user.first_name} ${order.delivery_assignment.delivery_user.last_name}`.trim() : 
+    undefined;
+
   return (
     <div className="space-y-4">
-      <div className="rounded-lg overflow-hidden">
-        <OrderLocationMap
-          order={order}
-          driver={driverLocation}
-          showAccuracyCircle={true}
+      {/* Real-time location tracking component */}
+      {deliveryAssignmentId && orderId && (
+        <CustomerLocationView
+          deliveryAssignmentId={deliveryAssignmentId}
+          orderId={orderId}
+          driverName={driverName}
         />
-      </div>
+      )}
+
+      {/* Existing map component */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="rounded-lg overflow-hidden">
+            <OrderLocationMap
+              order={order}
+              driver={driverLocation}
+              showAccuracyCircle={true}
+            />
+          </div>
+        </CardContent>
+      </Card>
       
       {driverLocation && (
         <Button 

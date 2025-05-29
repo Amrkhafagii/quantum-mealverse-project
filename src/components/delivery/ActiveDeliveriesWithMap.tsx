@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveDeliveries } from './ActiveDeliveries';
 import { DeliveryMapView } from './DeliveryMapView';
+import { RealTimeLocationTracker } from './RealTimeLocationTracker';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,19 +44,29 @@ const ActiveDeliveriesWithMap: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="lg:order-1">
-        <ActiveDeliveries 
-          selectedAssignmentId={selectedAssignment?.id}
-          onAssignmentSelect={handleAssignmentSelect}
+    <div className="space-y-4">
+      {/* Real-time location tracker for selected assignment */}
+      {selectedAssignment && (
+        <RealTimeLocationTracker
+          deliveryAssignmentId={selectedAssignment.id}
+          orderId={selectedAssignment.order_id}
         />
-      </div>
-      
-      <div className="lg:order-2">
-        <DeliveryMapView 
-          activeAssignment={selectedAssignment || undefined}
-          className="h-full"
-        />
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="lg:order-1">
+          <ActiveDeliveries 
+            selectedAssignmentId={selectedAssignment?.id}
+            onAssignmentSelect={handleAssignmentSelect}
+          />
+        </div>
+        
+        <div className="lg:order-2">
+          <DeliveryMapView 
+            activeAssignment={selectedAssignment || undefined}
+            className="h-full"
+          />
+        </div>
       </div>
     </div>
   );
