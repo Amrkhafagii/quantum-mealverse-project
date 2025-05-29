@@ -1,4 +1,4 @@
-import { runRetentionPolicies } from './locationService';
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -29,6 +29,44 @@ export const RETENTION_CONFIGS: Record<string, RetentionConfig> = {
 };
 
 /**
+ * Run location data retention policies
+ */
+const runLocationRetentionPolicies = async (): Promise<{
+  success: boolean;
+  purged: number;
+  anonymized: number;
+}> => {
+  try {
+    const config = RETENTION_CONFIGS.LOCATION_DATA;
+    const purgeDate = new Date();
+    purgeDate.setDate(purgeDate.getDate() - config.purgeAfterDays);
+    
+    const anonymizeDate = new Date();
+    anonymizeDate.setDate(anonymizeDate.getDate() - config.anonymizeAfterDays);
+
+    // Purge old location data
+    const { count: purgedCount, error: purgeError } = await supabase
+      .from('user_locations' as any)
+      .delete()
+      .lt('created_at', purgeDate.toISOString());
+
+    if (purgeError) {
+      console.error('Error purging location data:', purgeError);
+      return { success: false, purged: 0, anonymized: 0 };
+    }
+
+    return {
+      success: true,
+      purged: purgedCount || 0,
+      anonymized: 0 // Anonymization can be implemented later if needed
+    };
+  } catch (error) {
+    console.error('Failed to run location retention policies:', error);
+    return { success: false, purged: 0, anonymized: 0 };
+  }
+};
+
+/**
  * Main scheduler function to run all data retention policies
  * This should be called by a scheduled job (e.g., cron)
  */
@@ -40,7 +78,7 @@ export const runAllDataRetentionPolicies = async (): Promise<{
     console.log('Running all data retention policies at:', new Date().toISOString());
     
     // Run location data retention policies
-    const locationResult = await runRetentionPolicies();
+    const locationResult = await runLocationRetentionPolicies();
     
     // Additional data type retention policies can be added here
     
@@ -124,7 +162,7 @@ export const executeRetentionPolicy = async (
       };
       
       if (runPurge) {
-        const purgeResult = await runRetentionPolicies();
+        const purgeResult = await runLocationRetentionPolicies();
         result = { ...result, ...purgeResult };
       }
       
@@ -198,7 +236,7 @@ const deleteUserLocationData = async (
   try {
     // Count records to be deleted
     const { count: countResult, error: countError } = await supabase
-      .from('unified_locations' as any)
+      .from('user_locations' as any)
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
       
@@ -208,7 +246,7 @@ const deleteUserLocationData = async (
     
     // Delete the records
     const { error } = await supabase
-      .from('unified_locations' as any)
+      .from('user_locations' as any)
       .delete()
       .eq('user_id', userId);
       
