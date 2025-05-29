@@ -45,7 +45,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     
     // Only activate pull if we're at the top of the scroll
     const scrollElement = containerRef.current?.parentElement || window;
-    const scrollTop = scrollElement === window ? window.scrollY : scrollElement.scrollTop;
+    const scrollTop = scrollElement === window ? window.scrollY : (scrollElement as HTMLElement).scrollTop;
     
     if (scrollTop === 0) {
       setStartY(e.touches[0].clientY);

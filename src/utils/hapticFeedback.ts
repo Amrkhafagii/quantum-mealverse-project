@@ -5,6 +5,13 @@ interface HapticFeedback {
   selection: () => void;
   impact: (style?: 'light' | 'medium' | 'heavy') => void;
   notification: (type?: 'success' | 'warning' | 'error') => void;
+  light: () => void;
+  medium: () => void;
+  heavy: () => void;
+  success: () => void;
+  error: () => void;
+  warning: () => void;
+  contextual: (context: string) => void;
 }
 
 class HapticFeedbackService implements HapticFeedback {
@@ -43,6 +50,49 @@ class HapticFeedbackService implements HapticFeedback {
       const pattern = type === 'success' ? [50, 50, 50] : 
                      type === 'error' ? [100, 100, 100] : [50, 100, 50];
       this.webVibrate(pattern);
+    }
+  }
+
+  light(): void {
+    this.impact('light');
+  }
+
+  medium(): void {
+    this.impact('medium');
+  }
+
+  heavy(): void {
+    this.impact('heavy');
+  }
+
+  success(): void {
+    this.notification('success');
+  }
+
+  error(): void {
+    this.notification('error');
+  }
+
+  warning(): void {
+    this.notification('warning');
+  }
+
+  contextual(context: string): void {
+    switch (context) {
+      case 'success':
+        this.success();
+        break;
+      case 'error':
+        this.error();
+        break;
+      case 'warning':
+        this.warning();
+        break;
+      case 'selection':
+        this.selection();
+        break;
+      default:
+        this.medium();
     }
   }
 

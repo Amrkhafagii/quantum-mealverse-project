@@ -30,5 +30,5 @@ export { default as AchievementNotification } from './achievements/AchievementNo
 // Enhanced components
 export { default as EnhancedFitnessProfile } from './enhanced/EnhancedFitnessProfile';
 
-// Exercise Library
-export { default as ExerciseLibrary } from './ExerciseLibrary';
+// Exercise Library - export the named export
+export { ExerciseLibrary } from './ExerciseLibrary';
