@@ -17,18 +17,17 @@ export class MealResolutionService {
    */
   static async resolveCartItemsToMeals(
     cartItems: CartItem[],
-    defaultRestaurantId?: string
+    restaurantId: string
   ): Promise<ResolvedMealItem[]> {
+    if (!restaurantId) {
+      throw new Error('Restaurant ID is required for meal resolution');
+    }
+
     const resolvedItems: ResolvedMealItem[] = [];
 
     for (const item of cartItems) {
       try {
-        // Use item's restaurant_id or fallback to default
-        const restaurantId = item.restaurant_id || defaultRestaurantId;
-        
-        if (!restaurantId) {
-          throw new Error(`No restaurant ID available for item: ${item.name}`);
-        }
+        console.log(`Resolving cart item "${item.name}" with restaurant: ${restaurantId}`);
 
         // First, try to find existing meal by name and restaurant
         let mealId = await this.findExistingMeal(item.name, restaurantId);
@@ -94,7 +93,7 @@ export class MealResolutionService {
       name: cartItem.name,
       description: cartItem.description || `Nutritionally optimized meal: ${cartItem.name}`,
       price: cartItem.price,
-      restaurant_id: restaurantId, // This is now required and properly set
+      restaurant_id: restaurantId, // Now guaranteed to be provided
       category: 'Generated Meals',
       is_available: true,
       nutritional_info: cartItem.calories || cartItem.protein || cartItem.carbs || cartItem.fat ? {

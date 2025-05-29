@@ -77,50 +77,50 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Get the first restaurant_id from items or use order's restaurant_id
-      const defaultRestaurantId = order.restaurant_id || items.find(item => item.restaurant_id)?.restaurant_id;
+      // Get the first restaurant_id from items or use a default
+      const defaultRestaurantId = items.find(item => item.restaurant_id)?.restaurant_id;
       
       if (!defaultRestaurantId) {
-        throw new Error('No restaurant ID available for order items');
+        // If no restaurant is assigned, we'll need to assign one
+        // For now, we'll get the first available restaurant
+        const { data: firstRestaurant } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+          
+        if (!firstRestaurant) {
+          throw new Error('No active restaurants available');
+        }
+        
+        // Update order with restaurant assignment
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ restaurant_id: firstRestaurant.id })
+          .eq('id', order.id);
+          
+        if (updateError) {
+          console.error('Error updating order with restaurant:', updateError);
+          throw updateError;
+        }
+        
+        console.log('Assigned order to restaurant:', firstRestaurant.id);
       }
 
       // Resolve cart items to actual meal database records
       console.log('Resolving cart items to meal records...');
       const resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
         items,
-        defaultRestaurantId
+        defaultRestaurantId || order.restaurant_id
       );
 
       console.log('Resolved meal items:', resolvedItems);
 
-      // Create order items - simplified without ON CONFLICT
+      // Create order items with proper handling of the unique constraint
       for (const item of resolvedItems) {
-        // Check if this order_id + meal_id combination already exists
-        const { data: existingItem } = await supabase
-          .from('order_items')
-          .select('id, quantity')
-          .eq('order_id', order.id)
-          .eq('meal_id', item.meal_id)
-          .single();
-
-        if (existingItem) {
-          // Update existing item quantity
-          const { error: updateError } = await supabase
-            .from('order_items')
-            .update({ 
-              quantity: existingItem.quantity + item.quantity,
-              price: item.price // Update price in case it changed
-            })
-            .eq('id', existingItem.id);
-
-          if (updateError) {
-            console.error('Order item update error:', updateError);
-            throw updateError;
-          }
-          
-          console.log(`Updated existing order item for meal_id: ${item.meal_id}`);
-        } else {
-          // Create new order item
+        try {
+          // Try to insert the order item
           const orderItem = {
             order_id: order.id,
             meal_id: item.meal_id,
@@ -129,35 +129,56 @@ export const useOrderSubmission = (
             quantity: item.quantity
           };
 
-          console.log('Inserting new order item:', orderItem);
+          console.log('Inserting order item:', orderItem);
 
           const { error: itemError } = await supabase
             .from('order_items')
             .insert(orderItem);
 
           if (itemError) {
-            // Handle unique constraint violation specifically
-            if (itemError.code === '23505') {
-              console.warn('Duplicate order item detected, attempting to update instead');
-              // Retry with update logic
-              const { error: retryUpdateError } = await supabase
+            // If we get a unique constraint violation, update the existing item
+            if (itemError.code === '23505' && itemError.message?.includes('order_items_order_meal_unique')) {
+              console.log('Duplicate order item detected, updating existing item');
+              
+              // Get the existing item to add quantities
+              const { data: existingItem, error: fetchError } = await supabase
+                .from('order_items')
+                .select('quantity')
+                .eq('order_id', order.id)
+                .eq('meal_id', item.meal_id)
+                .single();
+
+              if (fetchError) {
+                console.error('Error fetching existing item:', fetchError);
+                throw fetchError;
+              }
+
+              // Update with combined quantity
+              const { error: updateError } = await supabase
                 .from('order_items')
                 .update({ 
-                  quantity: item.quantity,
-                  price: item.price 
+                  quantity: existingItem.quantity + item.quantity,
+                  price: item.price // Update price in case it changed
                 })
                 .eq('order_id', order.id)
                 .eq('meal_id', item.meal_id);
-              
-              if (retryUpdateError) {
-                console.error('Retry update failed:', retryUpdateError);
-                throw retryUpdateError;
+
+              if (updateError) {
+                console.error('Error updating existing order item:', updateError);
+                throw updateError;
               }
+              
+              console.log(`Updated existing order item for meal_id: ${item.meal_id}`);
             } else {
               console.error('Order item creation error:', itemError);
               throw itemError;
             }
+          } else {
+            console.log(`Successfully created order item for meal_id: ${item.meal_id}`);
           }
+        } catch (itemProcessError) {
+          console.error('Error processing order item:', item, itemProcessError);
+          throw itemProcessError;
         }
       }
 
@@ -181,8 +202,8 @@ export const useOrderSubmission = (
       let errorMessage = "Failed to place order. Please try again.";
       
       if (error instanceof Error) {
-        if (error.message.includes('restaurant ID')) {
-          errorMessage = "Unable to assign restaurant for your items. Please try again.";
+        if (error.message.includes('restaurant')) {
+          errorMessage = "Unable to assign restaurant for your order. Please try again.";
         } else if (error.message.includes('meal')) {
           errorMessage = "There was an issue processing your meal items. Please try again.";
         } else {
