@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -55,10 +54,10 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Create order items
+      // Create order items - transform id to meal_id
       const orderItems = items.map(item => ({
         order_id: order.id,
-        meal_id: item.meal_id,
+        meal_id: item.id, // Transform id to meal_id for database
         name: item.name,
         quantity: item.quantity,
         price: item.price
@@ -115,7 +114,6 @@ export const useOrderSubmission = (
         const { data: restaurants } = await supabase
           .from('restaurants')
           .select('id')
-          .eq('is_active', true)
           .limit(1);
 
         if (restaurants && restaurants.length > 0) {
