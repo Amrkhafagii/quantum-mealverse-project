@@ -10808,6 +10808,15 @@ export type Database = {
           portion_size: number
         }[]
       }
+      get_current_active_stage: {
+        Args: { p_order_id: string }
+        Returns: {
+          stage_name: string
+          status: string
+          started_at: string
+          estimated_duration_minutes: number
+        }[]
+      }
       get_current_break_status: {
         Args: { p_delivery_user_id: string }
         Returns: {
@@ -10958,6 +10967,28 @@ export type Database = {
           rating: number
           comments: string
           created_at: string
+        }[]
+      }
+      get_restaurant_orders_with_stages: {
+        Args: { p_restaurant_id: string }
+        Returns: {
+          order_id: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          order_status: string
+          total: number
+          created_at: string
+          stage_id: string
+          stage_name: string
+          stage_status: string
+          stage_order: number
+          estimated_duration_minutes: number
+          actual_duration_minutes: number
+          stage_started_at: string
+          stage_completed_at: string
+          stage_notes: string
+          overall_progress: number
         }[]
       }
       get_user_adaptations: {
