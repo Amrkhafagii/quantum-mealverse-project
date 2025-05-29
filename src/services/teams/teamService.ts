@@ -1,24 +1,34 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 import type { Team } from '@/types/fitness/challenges';
 
-// Use the proper Supabase generated type
-type TeamRow = Database['public']['Tables']['teams']['Row'];
+// Define a simple interface for what we expect from the database
+interface TeamDatabaseRow {
+  id: string;
+  name: string;
+  description: string | null;
+  created_by: string;
+  creator_id: string | null;
+  created_at: string;
+  avatar_url: string | null;
+  member_count: number | null;
+  members_count: number | null;
+  total_points: number | null;
+}
 
-// Transform function that maps all database fields to Team interface
-const transformTeam = (team: TeamRow): Team => {
+// Transform function that maps database fields to Team interface
+const transformTeam = (team: TeamDatabaseRow): Team => {
   return {
     id: team.id,
     name: team.name,
-    description: team.description,
+    description: team.description || undefined,
     created_by: team.created_by,
-    creator_id: team.creator_id, // Map database field
+    creator_id: team.creator_id || undefined,
     created_at: team.created_at,
-    avatar_url: team.avatar_url,
-    image_url: team.avatar_url, // Provide alias for component compatibility
+    avatar_url: team.avatar_url || undefined,
+    image_url: team.avatar_url || undefined,
     member_count: team.member_count ?? 0,
-    members_count: team.members_count ?? 0, // Map database field
+    members_count: team.members_count ?? 0,
     total_points: team.total_points ?? 0
   };
 };
@@ -42,7 +52,7 @@ export const fetchTeams = async (): Promise<Team[]> => {
 
   if (error) throw error;
   
-  return (data || []).map(transformTeam);
+  return (data || []).map(team => transformTeam(team as TeamDatabaseRow));
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
@@ -76,7 +86,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
 
   if (teamError) throw teamError;
   
-  return teamData ? transformTeam(teamData) : null;
+  return teamData ? transformTeam(teamData as TeamDatabaseRow) : null;
 };
 
 interface CreateTeamData {
@@ -93,7 +103,7 @@ export const createTeam = async (userId: string, teamData: CreateTeamData): Prom
       description: teamData.description,
       avatar_url: teamData.image_url,
       created_by: userId,
-      creator_id: userId // Also set creator_id for consistency
+      creator_id: userId
     }])
     .select()
     .single();
