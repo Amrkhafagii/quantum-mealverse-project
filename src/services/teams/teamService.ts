@@ -5,7 +5,7 @@ import type { Database } from '@/integrations/supabase/types';
 // Use the proper Supabase generated type
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 
-// Define a simplified Team interface that matches what we actually need
+// Define a simplified Team interface that matches the actual database schema
 interface Team {
   id: string;
   name: string;
@@ -13,8 +13,6 @@ interface Team {
   created_by: string;
   created_at: string;
   avatar_url: string | null;
-  is_active: boolean;
-  max_members: number;
   member_count: number;
   total_points: number;
 }
@@ -27,8 +25,6 @@ const transformTeam = (team: TeamRow): Team => ({
   created_by: team.created_by,
   created_at: team.created_at,
   avatar_url: team.avatar_url,
-  is_active: team.is_active ?? true,
-  max_members: team.max_members ?? 50,
   member_count: team.member_count ?? 0,
   total_points: team.total_points ?? 0
 });
@@ -43,12 +39,9 @@ export const fetchTeams = async (): Promise<Team[]> => {
       created_by,
       created_at,
       avatar_url,
-      is_active,
-      max_members,
       member_count,
       total_points
     `)
-    .eq('is_active', true)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -77,8 +70,6 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
       created_by,
       created_at,
       avatar_url,
-      is_active,
-      max_members,
       member_count,
       total_points
     `)
@@ -94,8 +85,6 @@ interface CreateTeamData {
   name: string;
   description?: string;
   image_url?: string;
-  is_active?: boolean;
-  max_members?: number;
 }
 
 export const createTeam = async (userId: string, teamData: CreateTeamData): Promise<boolean> => {
@@ -105,9 +94,7 @@ export const createTeam = async (userId: string, teamData: CreateTeamData): Prom
       name: teamData.name,
       description: teamData.description,
       avatar_url: teamData.image_url,
-      created_by: userId,
-      is_active: teamData.is_active ?? true,
-      max_members: teamData.max_members ?? 50
+      created_by: userId
     }])
     .select()
     .single();
