@@ -53,12 +53,28 @@ export const ResponsiveContainer: React.FC<ResponsiveContainerProps> = ({
     'max-w-2xl': maxWidth === '2xl',
   } : {};
   
-  // Base classes without safe area
+  // Enhanced mobile-specific padding and spacing
+  const responsivePadding = padded ? (
+    isMobile 
+      ? 'px-3 py-2 sm:px-4 sm:py-3' 
+      : isTablet 
+        ? 'px-6 py-4' 
+        : 'px-8 py-5'
+  ) : '';
+  
+  // Base classes with improved mobile optimizations
   const containerClasses = cn(
     'transition-all duration-200',
     mobileFull && isMobile ? 'w-full' : 'w-full mx-auto',
-    padded && (isMobile ? 'px-4 py-3' : isTablet ? 'px-6 py-4' : 'px-8 py-5'),
+    responsivePadding,
     centerContent && 'flex flex-col items-center',
+    // Mobile-specific optimizations
+    isMobile && [
+      'touch-manipulation',
+      'overscroll-behavior-contain',
+    ],
+    // Platform-specific optimizations
+    isPlatformIOS && 'ios-scroll',
     maxWidthClass,
     className
   );

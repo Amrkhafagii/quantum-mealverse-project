@@ -96,15 +96,16 @@ const FitnessPage = () => {
       <Navbar />
       
       <ResponsiveContainer 
-        className="pt-24 pb-12"
+        className="pt-20 sm:pt-24 pb-4 sm:pb-8 lg:pb-12"
         maxWidth="2xl"
         respectSafeArea={true}
+        padded={true}
       >
-        <h1 className="text-4xl sm:text-5xl font-bold text-quantum-cyan mb-6 neon-text">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-quantum-cyan mb-4 sm:mb-6 neon-text">
           Fitness Dashboard
         </h1>
         
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <PlatformTabBar
             tabs={tabs}
             value={activeTab}
@@ -115,7 +116,7 @@ const FitnessPage = () => {
             showIcons={true}
             showLabels={true}
             animated={true}
-            className="space-y-4"
+            className="space-y-2 sm:space-y-4"
             tabsListClassName="bg-quantum-darkBlue/50 backdrop-blur-lg border border-quantum-cyan/20"
           />
         </div>
