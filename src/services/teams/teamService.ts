@@ -2,22 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Team } from '@/types/fitness/challenges';
 
-// Simplified interface for raw team data from database
-interface DatabaseTeam {
-  id: string;
-  name: string;
-  description: string | null;
-  created_by: string;
-  created_at: string;
-  avatar_url: string | null;
-  is_active: boolean;
-  max_members: number;
-  member_count: number;
-  total_points: number;
-}
-
 // Helper function to transform raw team data to our Team type
-const transformTeam = (team: DatabaseTeam): Team => ({
+const transformTeam = (team: any): Team => ({
   id: team.id,
   name: team.name,
   description: team.description || undefined,
@@ -44,8 +30,7 @@ export const fetchTeams = async (): Promise<Team[]> => {
 
   if (error) throw error;
   
-  // Simple type assertion to avoid depth issues
-  return (data || []).map(team => transformTeam(team as DatabaseTeam));
+  return (data || []).map(transformTeam);
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
@@ -70,7 +55,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
 
   if (teamError) throw teamError;
   
-  return teamData ? transformTeam(teamData as DatabaseTeam) : null;
+  return teamData ? transformTeam(teamData) : null;
 };
 
 export const createTeam = async (userId: string, teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
