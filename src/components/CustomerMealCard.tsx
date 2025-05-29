@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { HapticButton } from "@/components/ui/haptic-button";
-import { ShoppingCart, MapPin } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-import { convertMealToCartItemWithAssignment } from '@/services/mealPlan/mealToCartServiceWithAssignment';
+import { convertMealToSimpleCartItem, validateMealForSimpleCart } from '@/services/cart/simpleCartService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Meal, MealFood } from '@/types/food';
@@ -22,7 +22,7 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
   const { toast } = useToast();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // Convert CustomerMealCard props to Meal format for restaurant assignment
+  // Convert CustomerMealCard props to Meal format
   const convertToMealFormat = (): Meal => {
     const mealFoods: MealFood[] = [
       {
@@ -33,11 +33,11 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
           protein: meal.protein,
           carbs: meal.carbs,
           fat: meal.fat,
-          category: 'protein', // Use valid FoodCategory
+          category: 'protein',
           cookingState: 'cooked',
-          portion: 100 // Add required portion property
+          portion: 100
         },
-        portionSize: 100 // Base portion for prepared meals
+        portionSize: 100
       }
     ];
 
@@ -65,30 +65,30 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
     setIsAddingToCart(true);
     
     try {
-      console.log("Adding meal to cart with location-based assignment:", meal.name);
+      console.log("Adding meal to cart (simple):", meal.name);
       
       // Convert meal to proper format
-      const mealForAssignment = convertToMealFormat();
+      const mealForCart = convertToMealFormat();
       
-      // Use simplified restaurant assignment service (location-based only)
-      const cartItems = await convertMealToCartItemWithAssignment(
-        mealForAssignment,
-        user.id,
-        {
-          strategy: 'single_restaurant'
-        }
-      );
-
-      // Add each cart item
-      for (const cartItem of cartItems) {
-        await addItem(cartItem);
+      // Validate meal
+      const validation = validateMealForSimpleCart(mealForCart);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
       }
-
-      toast({
-        title: "Item Added",
-        description: `${meal.name} added to cart and assigned to nearest restaurant`,
-        variant: "default"
-      });
+      
+      // Convert to simple cart item (no restaurant assignment)
+      const cartItem = convertMealToSimpleCartItem(mealForCart);
+      
+      // Add to cart
+      const success = await addItem(cartItem);
+      
+      if (success) {
+        toast({
+          title: "Item Added",
+          description: `${meal.name} added to cart`,
+          variant: "default"
+        });
+      }
       
     } catch (error) {
       console.error('Error adding meal to cart:', error);
@@ -170,8 +170,8 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
         >
           {isAddingToCart ? (
             <>
-              <MapPin className="w-4 h-4 animate-pulse" />
-              Assigning to Nearest Restaurant...
+              <ShoppingCart className="w-4 h-4 animate-pulse" />
+              Adding to Cart...
             </>
           ) : (
             <>
