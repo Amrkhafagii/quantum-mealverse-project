@@ -42,8 +42,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ className 
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (notificationType: string) => {
+    switch (notificationType) {
       case 'order_status':
         return <ShoppingBag className="h-4 w-4 text-blue-500" />;
       case 'system':
@@ -104,7 +104,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ className 
                 >
                   <div className="flex">
                     <div className="mr-3 pt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.notification_type)}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">

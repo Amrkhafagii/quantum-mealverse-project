@@ -48,8 +48,8 @@ export const NotificationDropdown = () => {
     }
   };
   
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (notificationType: string) => {
+    switch (notificationType) {
       case 'order_status':
         return <span className="h-2 w-2 rounded-full bg-blue-500" />;
       case 'system':
@@ -106,7 +106,7 @@ export const NotificationDropdown = () => {
                 >
                   <div className="flex w-full items-center gap-2">
                     <div className="flex-shrink-0">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.notification_type)}
                     </div>
                     <div className="flex-1 text-sm font-medium">
                       {notification.title}

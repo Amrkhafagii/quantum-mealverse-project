@@ -25,8 +25,8 @@ const Notifications = () => {
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (notificationType: string) => {
+    switch (notificationType) {
       case 'order_status':
         return <div className="w-2 h-2 rounded-full bg-blue-500" />;
       case 'system':
@@ -90,7 +90,7 @@ const Notifications = () => {
                 <CardContent className="p-4">
                   <div className="flex gap-3">
                     <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.notification_type)}
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between mb-1">

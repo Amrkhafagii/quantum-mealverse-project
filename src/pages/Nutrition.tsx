@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateMealPlan } from '@/services/mealPlan/mealGenerationService';
 import { MealPlan } from '@/types/food';
 import NutritionDashboard from '@/components/fitness/NutritionDashboard';
-import { supabase } from '@/services/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import SavedMealPlans from '@/components/fitness/SavedMealPlans';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,11 +23,13 @@ import MobileContainer from '@/components/mobile/MobileContainer';
 import { TouchOptimizerProvider } from '@/contexts/TouchOptimizerContext';
 import TouchFriendlyButton from '@/components/mobile/TouchFriendlyButton';
 
+type ActiveTab = 'calculator' | 'plans' | 'saved';
+
 const Nutrition = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<'calculator' | 'plans' | 'saved'>('calculator');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('calculator');
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
 
@@ -90,7 +93,7 @@ const Nutrition = () => {
                 type="single" 
                 value={activeTab}
                 onValueChange={(value) => {
-                  if (value) setActiveTab(value as 'calculator' | 'plans' | 'saved');
+                  if (value) setActiveTab(value as ActiveTab);
                 }}
                 className="justify-center bg-quantum-darkBlue/50 p-1 rounded-lg w-full max-w-md mx-auto"
               >
