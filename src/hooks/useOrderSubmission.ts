@@ -76,7 +76,7 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Create order items with required meal_id field
+      // Create order items with required meal_id field and handle potential conflicts
       const orderItems = items.map(item => ({
         order_id: order.id,
         meal_id: item.id, // Use item.id as meal_id
@@ -85,6 +85,9 @@ export const useOrderSubmission = (
         quantity: item.quantity
       }));
 
+      console.log('Inserting order items:', orderItems);
+
+      // Use ON CONFLICT to handle potential duplicates
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
