@@ -77,8 +77,8 @@ export const useOrderSubmission = (
 
       console.log('Order items created successfully');
 
-      // Assign restaurants to the order
-      await assignRestaurantsToOrder(order.id, data.latitude, data.longitude);
+      // Simplified restaurant assignment - no capability checking
+      await assignNearbyRestaurants(order.id, data.latitude, data.longitude);
 
       toast({
         title: "Order Placed Successfully!",
@@ -103,97 +103,66 @@ export const useOrderSubmission = (
     }
   };
 
-  const assignRestaurantsToOrder = async (
+  const assignNearbyRestaurants = async (
     orderId: string, 
     latitude?: number, 
     longitude?: number
   ) => {
+    console.log('Starting simplified restaurant assignment for order:', orderId);
+    
     try {
-      console.log('Starting restaurant assignment for order:', orderId);
-      
-      if (!latitude || !longitude) {
-        console.log('No location provided, using default assignment strategy');
-        // Fallback: assign to first available restaurant
-        const { data: restaurants } = await supabase
-          .from('restaurants')
-          .select('id')
-          .limit(1);
+      let nearbyRestaurants = [];
 
-        if (restaurants && restaurants.length > 0) {
-          await createSingleRestaurantAssignment(orderId, restaurants[0].id);
+      if (latitude && longitude) {
+        console.log('Finding nearby restaurants for coordinates:', { latitude, longitude });
+        
+        // Find nearby restaurants using the database function
+        const { data, error: findError } = await supabase.rpc('find_nearest_restaurant', {
+          order_lat: latitude,
+          order_lng: longitude,
+          max_distance_km: 50
+        });
+
+        if (!findError && data && data.length > 0) {
+          nearbyRestaurants = data;
+          console.log('Found nearby restaurants:', nearbyRestaurants.length);
         }
-        return;
       }
 
-      // Find nearby restaurants using the database function
-      console.log('Finding nearby restaurants for coordinates:', { latitude, longitude });
-      
-      const { data: nearbyRestaurants, error: findError } = await supabase.rpc('find_nearest_restaurant', {
-        order_lat: latitude,
-        order_lng: longitude,
-        max_distance_km: 50
-      });
-
-      if (findError) {
-        console.error('Error finding nearby restaurants:', findError);
-        throw findError;
-      }
-
-      console.log('Raw response from find_nearest_restaurant:', nearbyRestaurants);
-
-      if (!nearbyRestaurants || nearbyRestaurants.length === 0) {
-        console.log('No nearby restaurants found, using fallback');
-        // Fallback to any active restaurant
+      // Fallback: get any available restaurant if no nearby restaurants found
+      if (nearbyRestaurants.length === 0) {
+        console.log('No nearby restaurants found, using any available restaurant');
         const { data: fallbackRestaurants } = await supabase
           .from('restaurants')
           .select('id')
-          .limit(1);
+          .eq('is_active', true)
+          .limit(5);
 
         if (fallbackRestaurants && fallbackRestaurants.length > 0) {
-          await createSingleRestaurantAssignment(orderId, fallbackRestaurants[0].id);
+          nearbyRestaurants = fallbackRestaurants.map(restaurant => ({
+            restaurant_id: restaurant.id
+          }));
         }
+      }
+
+      if (nearbyRestaurants.length === 0) {
+        console.log('No restaurants available - order will proceed without assignment');
+        // Don't throw error - order was created successfully
         return;
       }
 
-      // Parse the restaurant data properly
+      // Create assignments for available restaurants - no capability checking
       const assignments = nearbyRestaurants.map((restaurantData: any) => {
-        console.log('Processing restaurant data:', restaurantData);
-        
-        let restaurantId: string;
-        
-        // Handle different response formats from the database function
-        if (Array.isArray(restaurantData)) {
-          // Tuple format: [restaurant_id, restaurant_name, distance_km, ...]
-          restaurantId = restaurantData[0];
-        } else if (restaurantData && typeof restaurantData === 'object') {
-          // Object format: {restaurant_id: "...", restaurant_name: "...", ...}
-          restaurantId = restaurantData.restaurant_id || restaurantData.id;
-        } else {
-          console.error('Unexpected restaurant data format:', restaurantData);
-          return null;
-        }
-
-        if (!restaurantId) {
-          console.error('Could not extract restaurant ID from:', restaurantData);
-          return null;
-        }
-
-        console.log('Extracted restaurant ID:', restaurantId);
-
+        const restaurantId = restaurantData.restaurant_id || restaurantData.id;
         return {
           order_id: orderId,
           restaurant_id: restaurantId,
           status: 'pending',
           expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
         };
-      }).filter(Boolean); // Remove null entries
+      });
 
-      if (assignments.length === 0) {
-        console.error('No valid restaurant assignments could be created');
-        throw new Error('No restaurants available for assignment');
-      }
-
-      console.log('Creating restaurant assignments:', assignments);
+      console.log('Creating simplified restaurant assignments:', assignments.length);
 
       const { error: assignmentError } = await supabase
         .from('restaurant_assignments')
@@ -201,42 +170,17 @@ export const useOrderSubmission = (
 
       if (assignmentError) {
         console.error('Restaurant assignment error:', assignmentError);
-        throw assignmentError;
+        // Don't throw - order was already created successfully
+        console.log('Assignment failed but order was created successfully');
+      } else {
+        console.log(`Successfully created ${assignments.length} restaurant assignments`);
       }
 
-      console.log(`Successfully created ${assignments.length} restaurant assignments`);
-
     } catch (error) {
-      console.error('Error in assignRestaurantsToOrder:', error);
-      // Don't throw here - order was already created successfully
-      toast({
-        title: "Assignment Warning",
-        description: "Order created but restaurant assignment may be delayed.",
-        variant: "default"
-      });
+      console.error('Error in assignNearbyRestaurants:', error);
+      // Don't throw - order was already created successfully
+      console.log('Restaurant assignment failed but order was created successfully');
     }
-  };
-
-  const createSingleRestaurantAssignment = async (orderId: string, restaurantId: string) => {
-    const assignment = {
-      order_id: orderId,
-      restaurant_id: restaurantId,
-      status: 'pending',
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString()
-    };
-
-    console.log('Creating single restaurant assignment:', assignment);
-
-    const { error } = await supabase
-      .from('restaurant_assignments')
-      .insert([assignment]);
-
-    if (error) {
-      console.error('Single restaurant assignment error:', error);
-      throw error;
-    }
-
-    console.log('Single restaurant assignment created successfully');
   };
 
   return {
