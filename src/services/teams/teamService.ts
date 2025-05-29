@@ -1,42 +1,36 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define the Team interface directly to avoid type conflicts
+// Use the proper Supabase generated type
+type TeamRow = Database['public']['Tables']['teams']['Row'];
+
+// Define a simplified Team interface that matches what we actually need
 interface Team {
   id: string;
   name: string;
-  description?: string;
+  description: string | null;
   created_by: string;
-  creator_id: string;
   created_at: string;
-  updated_at: string;
-  image_url?: string;
-  avatar_url?: string;
+  avatar_url: string | null;
   is_active: boolean;
   max_members: number;
-  members_count: number;
   member_count: number;
-  challenges_count: number;
   total_points: number;
 }
 
-// Helper function to transform raw team data to our Team type
-const transformTeam = (team: any): Team => ({
+// Simplified transform function with proper type handling
+const transformTeam = (team: TeamRow): Team => ({
   id: team.id,
   name: team.name,
-  description: team.description || undefined,
+  description: team.description,
   created_by: team.created_by,
-  creator_id: team.created_by,
   created_at: team.created_at,
-  updated_at: team.created_at,
-  image_url: team.avatar_url || undefined,
-  avatar_url: team.avatar_url || undefined,
-  is_active: team.is_active !== false,
-  max_members: team.max_members || 50,
-  members_count: team.member_count || 0,
-  member_count: team.member_count || 0,
-  challenges_count: 0,
-  total_points: team.total_points || 0
+  avatar_url: team.avatar_url,
+  is_active: team.is_active ?? true,
+  max_members: team.max_members ?? 50,
+  member_count: team.member_count ?? 0,
+  total_points: team.total_points ?? 0
 });
 
 export const fetchTeams = async (): Promise<Team[]> => {
@@ -112,8 +106,8 @@ export const createTeam = async (userId: string, teamData: CreateTeamData): Prom
       description: teamData.description,
       avatar_url: teamData.image_url,
       created_by: userId,
-      is_active: teamData.is_active,
-      max_members: teamData.max_members
+      is_active: teamData.is_active ?? true,
+      max_members: teamData.max_members ?? 50
     }])
     .select()
     .single();
