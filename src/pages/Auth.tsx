@@ -22,11 +22,12 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
   // Get any state passed from navigation
   const { state } = location;
   const mode = propMode || state?.mode || 'login';
-  const returnTo = state?.returnTo || '/';
+  
+  console.log("Auth page: Current state", { user, userType, loading, hasRedirected });
 
-  // Single redirect effect with proper guards
+  // Handle redirects for authenticated users
   useEffect(() => {
-    // Prevent multiple redirects
+    // Prevent multiple redirects and wait for auth to finish loading
     if (hasRedirected || loading || !user) {
       return;
     }
@@ -36,43 +37,50 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
     // Set flag immediately to prevent multiple redirects
     setHasRedirected(true);
     
-    // Use setTimeout to ensure state updates are completed
+    // Determine redirect path based on user type
+    let redirectPath = '/customer'; // default
+    
+    if (userType === 'delivery') {
+      redirectPath = '/delivery/dashboard';
+    } else if (userType === 'restaurant') {
+      redirectPath = '/restaurant/dashboard';
+    } else if (userType === 'customer') {
+      redirectPath = '/customer';
+    }
+    
+    console.log("Auth page: Redirecting to", redirectPath);
+    
+    // Small delay to ensure state updates are processed
     setTimeout(() => {
-      if (userType === 'delivery') {
-        console.log("Auth page: Redirecting delivery user to dashboard");
-        navigate('/delivery/dashboard', { replace: true });
-      } else if (userType === 'restaurant') {
-        console.log("Auth page: Redirecting restaurant user to dashboard");
-        navigate('/restaurant/dashboard', { replace: true });
-      } else if (userType === 'customer') {
-        console.log("Auth page: Redirecting customer user to customer page");
-        navigate('/customer', { replace: true });
-      } else {
-        // Default redirect for users without type
-        console.log("Auth page: No specific user type, redirecting to customer page");
-        navigate('/customer', { replace: true });
-      }
-    }, 0);
+      navigate(redirectPath, { replace: true });
+    }, 100);
   }, [user, userType, loading, navigate, hasRedirected]);
 
   // Show loading state while auth is in progress
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-quantum-black">
-        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+        <div className="flex flex-col items-center space-y-4">
+          <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+          <p className="text-quantum-cyan">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // Don't render the form if we're about to redirect
+  // Show loading state if user is authenticated and we're about to redirect
   if (user && !loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-quantum-black">
-        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+        <div className="flex flex-col items-center space-y-4">
+          <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
+          <p className="text-quantum-cyan">Redirecting...</p>
+        </div>
       </div>
     );
   }
 
+  // Render the auth form for non-authenticated users
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />

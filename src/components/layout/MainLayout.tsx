@@ -4,6 +4,9 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { useResponsive } from "@/contexts/ResponsiveContext";
 import SkipLink from "@/components/ui/a11y/skip-link";
 import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import { NetworkStatusProvider } from "@/components/providers/NetworkStatusProvider";
 import About from "@/pages/About";
 import Shop from "@/pages/Shop";
@@ -44,6 +47,9 @@ const MainLayout: React.FC = () => {
               <Routes location={location}>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/shop" element={<Shop />} />
                 

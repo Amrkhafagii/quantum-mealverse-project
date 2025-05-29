@@ -25,7 +25,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   const [userId, setUserId] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, userType: currentUserType } = useAuth();
+  const { user } = useAuth();
 
   // Hide location flow if user is already authenticated
   useEffect(() => {
@@ -40,6 +40,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
 
     try {
       if (isRegister) {
+        console.log('AuthForm: Attempting to register user', { email, userType });
+        
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -50,9 +52,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('AuthForm: Registration error', error);
+          throw error;
+        }
 
         if (data.user) {
+          console.log('AuthForm: Registration successful', data.user.id);
           setUserId(data.user.id);
           setShowLocationFlow(true);
           
@@ -62,35 +68,50 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
           });
         }
       } else {
+        console.log('AuthForm: Attempting to sign in user', { email });
+        
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('AuthForm: Sign in error', error);
+          throw error;
+        }
 
         if (data.user) {
-          // Get user type from the database
-          const { data: userTypeData } = await supabase
-            .from('user_types')
-            .select('type')
-            .eq('user_id', data.user.id)
-            .single();
-
-          if (userTypeData?.type) {
+          console.log('AuthForm: Sign in successful', data.user.id);
+          
+          // Get user type from metadata or database
+          const userMetadata = data.user.user_metadata;
+          if (userMetadata?.user_type) {
+            setUserType(userMetadata.user_type as UserType);
             setUserId(data.user.id);
-            setUserType(userTypeData.type as UserType);
             setShowLocationFlow(true);
-            
-            toast({
-              title: "Welcome back!",
-              description: "You have been signed in successfully.",
-            });
+          } else {
+            // Fallback: try to get from database
+            const { data: userTypeData } = await supabase
+              .from('user_types')
+              .select('type')
+              .eq('user_id', data.user.id)
+              .single();
+
+            if (userTypeData?.type) {
+              setUserType(userTypeData.type as UserType);
+              setUserId(data.user.id);
+              setShowLocationFlow(true);
+            }
           }
+          
+          toast({
+            title: "Welcome back!",
+            description: "You have been signed in successfully.",
+          });
         }
       }
     } catch (error: any) {
-      console.error('Auth error:', error);
+      console.error('AuthForm: Authentication error', error);
       toast({
         title: "Authentication failed",
         description: error.message,
@@ -102,7 +123,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   };
 
   const handleLocationSuccess = (coordinates: { latitude: number; longitude: number }) => {
-    console.log('Location permission granted:', coordinates);
+    console.log('AuthForm: Location permission granted:', coordinates);
     setShowLocationFlow(false);
     
     // Navigate based on user type
@@ -123,12 +144,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   };
 
   const handleLocationError = (error: string) => {
-    console.error('Location permission error:', error);
+    console.error('AuthForm: Location permission error:', error);
     // Continue navigation even if location fails
     handleLocationSkip();
   };
 
   const handleLocationSkip = () => {
+    console.log('AuthForm: Location permission skipped');
     setShowLocationFlow(false);
     
     // Navigate based on user type even without location
