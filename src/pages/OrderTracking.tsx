@@ -101,8 +101,8 @@ const OrderTracking = () => {
             <p className="text-sm text-gray-600">
               Last updated: {new Date(latestLocation.timestamp).toLocaleTimeString()}
             </p>
-            {/* Check if accuracy property exists on the location object */}
-            {'accuracy' in latestLocation && latestLocation.accuracy && (
+            {/* Check if accuracy property exists and is a number */}
+            {'accuracy' in latestLocation && typeof latestLocation.accuracy === 'number' && latestLocation.accuracy && (
               <p className="text-xs text-gray-500">
                 Accuracy: ±{Math.round(latestLocation.accuracy)}m
               </p>
