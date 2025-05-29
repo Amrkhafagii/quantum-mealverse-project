@@ -5559,7 +5559,6 @@ export type Database = {
       }
       order_history: {
         Row: {
-          assignment_source: string | null
           changed_by: string | null
           changed_by_type: string
           created_at: string
@@ -5574,7 +5573,6 @@ export type Database = {
           visibility: boolean
         }
         Insert: {
-          assignment_source?: string | null
           changed_by?: string | null
           changed_by_type?: string
           created_at?: string
@@ -5589,7 +5587,6 @@ export type Database = {
           visibility?: boolean
         }
         Update: {
-          assignment_source?: string | null
           changed_by?: string | null
           changed_by_type?: string
           created_at?: string
@@ -5879,17 +5876,12 @@ export type Database = {
       }
       orders: {
         Row: {
-          accepted_at: string | null
-          assigned_at: string | null
-          assignment_source: string | null
-          cancelled_at: string | null
           city: string
           complexity_score: number | null
           created_at: string
           customer_email: string
           customer_name: string
           customer_phone: string
-          delivered_at: string | null
           delivery_address: string
           delivery_fee: number
           delivery_method: string
@@ -5901,9 +5893,6 @@ export type Database = {
           longitude: number | null
           notes: string | null
           payment_method: string
-          picked_up_at: string | null
-          preparation_started_at: string | null
-          ready_at: string | null
           refund_amount: number | null
           refund_status: string | null
           requires_chef_attention: boolean | null
@@ -5919,17 +5908,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          accepted_at?: string | null
-          assigned_at?: string | null
-          assignment_source?: string | null
-          cancelled_at?: string | null
           city: string
           complexity_score?: number | null
           created_at?: string
           customer_email: string
           customer_name: string
           customer_phone: string
-          delivered_at?: string | null
           delivery_address: string
           delivery_fee: number
           delivery_method: string
@@ -5941,9 +5925,6 @@ export type Database = {
           longitude?: number | null
           notes?: string | null
           payment_method: string
-          picked_up_at?: string | null
-          preparation_started_at?: string | null
-          ready_at?: string | null
           refund_amount?: number | null
           refund_status?: string | null
           requires_chef_attention?: boolean | null
@@ -5959,17 +5940,12 @@ export type Database = {
           user_id: string
         }
         Update: {
-          accepted_at?: string | null
-          assigned_at?: string | null
-          assignment_source?: string | null
-          cancelled_at?: string | null
           city?: string
           complexity_score?: number | null
           created_at?: string
           customer_email?: string
           customer_name?: string
           customer_phone?: string
-          delivered_at?: string | null
           delivery_address?: string
           delivery_fee?: number
           delivery_method?: string
@@ -5981,9 +5957,6 @@ export type Database = {
           longitude?: number | null
           notes?: string | null
           payment_method?: string
-          picked_up_at?: string | null
-          preparation_started_at?: string | null
-          ready_at?: string | null
           refund_amount?: number | null
           refund_status?: string | null
           requires_chef_attention?: boolean | null
@@ -6692,8 +6665,6 @@ export type Database = {
       }
       restaurant_assignments: {
         Row: {
-          assignment_metadata: Json | null
-          assignment_source: string | null
           created_at: string
           expires_at: string
           id: string
@@ -6704,8 +6675,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          assignment_metadata?: Json | null
-          assignment_source?: string | null
           created_at?: string
           expires_at: string
           id?: string
@@ -6716,8 +6685,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          assignment_metadata?: Json | null
-          assignment_source?: string | null
           created_at?: string
           expires_at?: string
           id?: string
@@ -12233,21 +12200,6 @@ export type Database = {
     }
     Enums: {
       log_type: "click" | "error" | "api" | "database"
-      order_status_enum:
-        | "pending"
-        | "awaiting_restaurant"
-        | "restaurant_assigned"
-        | "restaurant_accepted"
-        | "preparing"
-        | "ready_for_pickup"
-        | "picked_up"
-        | "on_the_way"
-        | "delivered"
-        | "cancelled"
-        | "no_restaurant_available"
-        | "no_restaurant_accepted"
-        | "expired_assignment"
-        | "refunded"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -12372,22 +12324,6 @@ export const Constants = {
   public: {
     Enums: {
       log_type: ["click", "error", "api", "database"],
-      order_status_enum: [
-        "pending",
-        "awaiting_restaurant",
-        "restaurant_assigned",
-        "restaurant_accepted",
-        "preparing",
-        "ready_for_pickup",
-        "picked_up",
-        "on_the_way",
-        "delivered",
-        "cancelled",
-        "no_restaurant_available",
-        "no_restaurant_accepted",
-        "expired_assignment",
-        "refunded",
-      ],
     },
   },
 } as const

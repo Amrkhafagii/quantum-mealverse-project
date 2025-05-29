@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface OrderAssignment {
@@ -24,62 +25,6 @@ export interface OrderNotification {
 }
 
 export const orderAssignmentService = {
-  /**
-   * Create a direct assignment for pre-assigned restaurants (nutrition-generated orders)
-   */
-  async createDirectAssignment(
-    orderId: string, 
-    restaurantId: string, 
-    metadata: any = {}
-  ): Promise<boolean> {
-    try {
-      console.log('Creating direct restaurant assignment:', {
-        orderId,
-        restaurantId,
-        metadata
-      });
-
-      // Create restaurant assignment record with unified tracking
-      const { error: assignmentError } = await supabase
-        .from('restaurant_assignments')
-        .insert({
-          order_id: orderId,
-          restaurant_id: restaurantId,
-          status: 'pending',
-          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
-          assignment_metadata: metadata,
-          assignment_source: 'nutrition_generated' // Track source for unified experience
-        });
-
-      if (assignmentError) {
-        console.error('Error creating direct assignment:', assignmentError);
-        return false;
-      }
-
-      // Update order with unified status tracking
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({
-          status: 'restaurant_assigned',
-          restaurant_id: restaurantId,
-          assignment_source: 'nutrition_generated',
-          assigned_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      if (orderError) {
-        console.error('Error updating order for direct assignment:', orderError);
-        return false;
-      }
-
-      console.log('Direct assignment created successfully with unified tracking');
-      return true;
-    } catch (error) {
-      console.error('Error in createDirectAssignment:', error);
-      return false;
-    }
-  },
-
   /**
    * Assign an order to restaurants based on location
    */
@@ -126,7 +71,7 @@ export const orderAssignmentService = {
   },
 
   /**
-   * Handle restaurant response to order assignment with unified tracking
+   * Handle restaurant response to order assignment
    */
   async handleRestaurantResponse(
     assignmentId: string,
@@ -163,14 +108,13 @@ export const orderAssignmentService = {
           .eq('status', 'pending')
           .neq('id', assignmentId);
 
-        // Update order with unified tracking - use proper timestamp fields
+        // Update order
         await supabase
           .from('orders')
           .update({
             restaurant_id: restaurantId,
             status: 'restaurant_accepted',
-            accepted_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            accepted_at: new Date().toISOString()
           })
           .eq('id', assignment.order_id);
       } else {
@@ -194,7 +138,7 @@ export const orderAssignmentService = {
   },
 
   /**
-   * Update order status with unified tracking and proper timestamp fields
+   * Update order status with proper tracking
    */
   async updateOrderStatus(orderId: string, status: string, restaurantId?: string): Promise<boolean> {
     try {
@@ -203,11 +147,8 @@ export const orderAssignmentService = {
         updated_at: new Date().toISOString()
       };
 
-      // Add timestamp fields based on status for unified tracking
+      // Add timestamp fields based on status
       switch (status) {
-        case 'restaurant_assigned':
-          updateData.assigned_at = new Date().toISOString();
-          break;
         case 'restaurant_accepted':
           updateData.accepted_at = new Date().toISOString();
           break;
@@ -222,9 +163,6 @@ export const orderAssignmentService = {
           break;
         case 'delivered':
           updateData.delivered_at = new Date().toISOString();
-          break;
-        case 'cancelled':
-          updateData.cancelled_at = new Date().toISOString();
           break;
       }
 

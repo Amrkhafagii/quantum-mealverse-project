@@ -4,7 +4,7 @@ import { useCheckoutAuth } from './useCheckoutAuth';
 import { useOrderSubmission } from './useOrderSubmission';
 
 export const useCheckout = () => {
-  const { items, totalAmount, clearCart, validateCart } = useCart();
+  const { items, totalAmount, clearCart } = useCart();
   const { 
     loggedInUser, 
     hasDeliveryInfo, 
@@ -16,26 +16,11 @@ export const useCheckout = () => {
   
   const { isSubmitting, handleSubmit } = useOrderSubmission(
     loggedInUser?.id,
-    items, // Unified CartItem[] structure with restaurant assignments
+    items, // CartItem[] from CartContext - unified structure
     totalAmount,
     hasDeliveryInfo,
     clearCart
   );
-
-  // Validate cart items before checkout to ensure consistency
-  const handleUnifiedSubmit = async (data: any) => {
-    console.log('Unified checkout starting with items:', {
-      itemCount: items.length,
-      itemsWithRestaurants: items.filter(item => item.restaurant_id).length,
-      itemsWithAssignments: items.filter(item => item.assignment_details).length
-    });
-
-    // Validate cart structure before submission
-    await validateCart();
-    
-    // Proceed with unified submission
-    await handleSubmit(data);
-  };
 
   return {
     items,
@@ -46,6 +31,6 @@ export const useCheckout = () => {
     showLoginPrompt,
     isLoadingUserData,
     handleAuthSubmit,
-    handleSubmit: handleUnifiedSubmit
+    handleSubmit
   };
 };

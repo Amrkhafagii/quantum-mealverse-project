@@ -15,15 +15,14 @@ export type CartItem = {
   carbs?: number;
   fat?: number;
   is_active?: boolean;
-  restaurant_id?: string; // Unified: all items can have restaurant assignment
+  restaurant_id?: string;
   created_at?: string;
   updated_at?: string;
   image_url?: string;
   dietary_tags?: string[];
-  assignment_details?: RestaurantAssignmentDetail; // Unified: detailed assignment info
-  estimated_prep_time?: number; // Unified: prep time for all items
-  distance_km?: number; // Unified: distance info for all items
-  assignment_source?: 'nutrition_generation' | 'traditional_ordering' | 'manual'; // Track source
+  assignment_details?: RestaurantAssignmentDetail;
+  estimated_prep_time?: number;
+  distance_km?: number;
 };
 
 export type CartContextType = {
@@ -36,8 +35,6 @@ export type CartContextType = {
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   validateCart: () => Promise<void>;
-  getRestaurantGroupings: () => { [restaurantId: string]: CartItem[] };
-  hasRestaurantAssignments: () => boolean;
 };
 
 const CartContext = createContext<CartContextType>({
@@ -50,8 +47,6 @@ const CartContext = createContext<CartContextType>({
   updateQuantity: () => {},
   clearCart: () => {},
   validateCart: async () => {},
-  getRestaurantGroupings: () => ({}),
-  hasRestaurantAssignments: () => false,
 });
 
 export const useCart = () => useContext(CartContext);
@@ -119,39 +114,21 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
       const itemToAdd = validation.updatedItem || item;
 
-      // Ensure unified structure with restaurant assignment data
-      const unifiedItem: CartItem = {
-        ...itemToAdd,
-        assignment_source: itemToAdd.assignment_source || (itemToAdd.restaurant_id ? 'nutrition_generation' : 'traditional_ordering')
-      };
-
       setCart((prevCart) => {
-        const existingItem = prevCart.find((cartItem) => cartItem.id === unifiedItem.id);
+        const existingItem = prevCart.find((cartItem) => cartItem.id === itemToAdd.id);
         if (existingItem) {
           return prevCart.map((cartItem) =>
-            cartItem.id === unifiedItem.id
-              ? { 
-                  ...cartItem, 
-                  quantity: cartItem.quantity + unifiedItem.quantity,
-                  // Preserve restaurant assignment data
-                  restaurant_id: cartItem.restaurant_id || unifiedItem.restaurant_id,
-                  assignment_details: cartItem.assignment_details || unifiedItem.assignment_details,
-                  estimated_prep_time: cartItem.estimated_prep_time || unifiedItem.estimated_prep_time,
-                  distance_km: cartItem.distance_km || unifiedItem.distance_km
-                }
+            cartItem.id === itemToAdd.id
+              ? { ...cartItem, quantity: cartItem.quantity + itemToAdd.quantity }
               : cartItem
           );
         }
-        return [...prevCart, unifiedItem];
+        return [...prevCart, itemToAdd];
       });
-
-      const assignmentInfo = unifiedItem.restaurant_id 
-        ? ` (assigned to restaurant)` 
-        : ` (will be assigned to restaurant)`;
 
       toast({
         title: "Item added",
-        description: `"${unifiedItem.name}" added to cart${assignmentInfo}`,
+        description: `"${itemToAdd.name}" added to cart`,
         variant: "default"
       });
 
@@ -213,26 +190,6 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
-  // Unified helper: Group cart items by restaurant
-  const getRestaurantGroupings = (): { [restaurantId: string]: CartItem[] } => {
-    const groupings: { [restaurantId: string]: CartItem[] } = {};
-    
-    cart.forEach(item => {
-      const restaurantId = item.restaurant_id || 'unassigned';
-      if (!groupings[restaurantId]) {
-        groupings[restaurantId] = [];
-      }
-      groupings[restaurantId].push(item);
-    });
-    
-    return groupings;
-  };
-
-  // Unified helper: Check if cart has any restaurant assignments
-  const hasRestaurantAssignments = (): boolean => {
-    return cart.some(item => item.restaurant_id);
-  };
-
   return (
     <CartContext.Provider
       value={{ 
@@ -244,9 +201,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         removeFromCart, 
         updateQuantity, 
         clearCart,
-        validateCart,
-        getRestaurantGroupings,
-        hasRestaurantAssignments
+        validateCart
       }}
     >
       {children}

@@ -1,54 +1,139 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSimpleLocation } from '@/hooks/useSimpleLocation';
 import { useRestaurantsData } from '@/hooks/useRestaurantsData';
-import { useMenuItems } from '@/hooks/menu/useMenuItems';
+import { useMenuData } from '@/hooks/useMenuData';
 
-export const useCustomerState = () => {
+export interface CustomerState {
+  // Auth state
+  user: any;
+  
+  // Location state
+  location: any;
+  locationError: string | null;
+  permissionStatus: string;
+  hasRequestedPermission: boolean;
+  
+  // Restaurant state
+  restaurants: any[];
+  restaurantsError: string | null;
+  
+  // Menu state
+  menuItems: any[];
+  menuError: string | null;
+  
+  // Combined loading states
+  isInitializing: boolean;
+  isLoadingLocation: boolean;
+  isLoadingRestaurants: boolean;
+  isLoadingMenu: boolean;
+  isLoading: boolean;
+  
+  // Combined error state
+  hasError: boolean;
+  errorMessage: string | null;
+  
+  // Actions
+  requestLocation: () => Promise<boolean>;
+  refetchRestaurants: () => void;
+  clearErrors: () => void;
+}
+
+export const useCustomerState = (): CustomerState => {
   const { user } = useAuth();
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Fetch restaurants using the correct hook
+  const [isInitializing, setIsInitializing] = useState(true);
+  
+  // Location management - but don't require it
+  const {
+    location,
+    isLoading: locationLoading,
+    error: locationError,
+    permissionStatus,
+    hasRequestedPermission,
+    requestLocation
+  } = useSimpleLocation();
+  
+  // Restaurant management - works with or without location
   const {
     restaurants,
     loading: restaurantsLoading,
-    error: restaurantsError
-  } = useRestaurantsData();
+    error: restaurantsError,
+    refetch: refetchRestaurants
+  } = useRestaurantsData(location); // Pass location if available, null if not
+  
+  // Menu management
+  const { 
+    data: menuItems = [], 
+    isLoading: menuLoading, 
+    error: menuError 
+  } = useMenuData(restaurants);
 
-  // Fetch menu items - this hook needs nearby restaurants
-  const {
-    menuItems,
-    isLoading: menuLoading
-  } = useMenuItems(restaurants || []);
-
-  const isLoading = restaurantsLoading || menuLoading;
-
-  const clearErrors = () => {
-    setHasError(false);
-    setErrorMessage(null);
-  };
-
-  // Handle errors from hooks
+  // Initialize state
   useEffect(() => {
-    if (restaurantsError) {
-      setHasError(true);
-      setErrorMessage('Failed to load restaurants');
-    } else {
-      setHasError(false);
-      setErrorMessage(null);
+    if (user !== undefined) {
+      setIsInitializing(false);
     }
-  }, [restaurantsError]);
+  }, [user]);
+
+  // Calculate combined loading states
+  const isLoadingLocation = locationLoading;
+  const isLoadingRestaurants = restaurantsLoading;
+  const isLoadingMenu = menuLoading;
+  const isLoading = isInitializing || isLoadingRestaurants || isLoadingMenu;
+
+  // Calculate combined error state with proper string conversion
+  // Don't treat location error as a blocking error since location is now optional
+  const hasError = !!(restaurantsError || menuError);
+  const errorMessage = restaurantsError || (menuError ? String(menuError) : null);
+
+  // Clear errors action
+  const clearErrors = useCallback(() => {
+    // Note: Individual hooks should handle their own error clearing
+    console.log('Clearing errors - individual hooks should implement their own error clearing');
+  }, []);
+
+  // Enhanced location request with error handling
+  const handleLocationRequest = useCallback(async (): Promise<boolean> => {
+    const success = await requestLocation();
+    if (success && refetchRestaurants) {
+      refetchRestaurants();
+    }
+    return success;
+  }, [requestLocation, refetchRestaurants]);
 
   return {
+    // Auth state
     user,
+    
+    // Location state
+    location,
+    locationError,
+    permissionStatus,
+    hasRequestedPermission,
+    
+    // Restaurant state
     restaurants,
     restaurantsError,
+    
+    // Menu state
     menuItems,
-    menuError: null, // useMenuItems doesn't expose error in this interface
+    menuError: menuError ? String(menuError) : null,
+    
+    // Combined loading states
+    isInitializing,
+    isLoadingLocation,
+    isLoadingRestaurants,
+    isLoadingMenu,
     isLoading,
+    
+    // Combined error state
     hasError,
     errorMessage,
+    
+    // Actions
+    requestLocation: handleLocationRequest,
+    refetchRestaurants,
     clearErrors
   };
 };

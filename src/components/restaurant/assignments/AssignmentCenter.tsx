@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Phone, User, CheckCircle, XCircle, Utensils } from 'lucide-react';
+import { Clock, MapPin, Phone, User, CheckCircle, XCircle } from 'lucide-react';
 import { useRestaurantAssignments } from '@/hooks/useRestaurantAssignments';
 import { useToast } from '@/components/ui/use-toast';
 import type { RestaurantAssignment } from '@/types/notifications';
@@ -35,34 +35,16 @@ const AssignmentItem: React.FC<{
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Determine if this is a nutrition-generated order based on assignment metadata
-  const isNutritionGenerated = (assignment as any).assignment_metadata?.assignment_type === 'nutrition_generated';
-  const estimatedPrepTime = (assignment as any).assignment_metadata?.estimated_prep_time;
-
   return (
     <Card className="border-l-4 border-l-blue-500">
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold text-lg">New Order Assignment</h3>
-              {isNutritionGenerated && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Utensils className="h-3 w-3" />
-                  Nutrition Plan
-                </Badge>
-              )}
-            </div>
+            <h3 className="font-semibold text-lg">New Order Assignment</h3>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Clock className="h-4 w-4" />
               <span>Expires in: {getTimeRemaining(assignment.expires_at)}</span>
             </div>
-            {estimatedPrepTime && (
-              <div className="flex items-center space-x-2 text-sm text-blue-600 mt-1">
-                <Utensils className="h-4 w-4" />
-                <span>Est. prep time: {estimatedPrepTime} min</span>
-              </div>
-            )}
           </div>
           <Badge variant="secondary">
             {assignment.distance_km && `${assignment.distance_km.toFixed(1)} km away`}
@@ -98,14 +80,6 @@ const AssignmentItem: React.FC<{
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
-
-            {isNutritionGenerated && (
-              <div className="bg-blue-50 p-3 rounded-md mt-3">
-                <p className="text-sm text-blue-800">
-                  <strong>Nutrition-Generated Order:</strong> This order was created from a customer's meal plan and has been automatically assigned to your restaurant based on your menu capabilities.
-                </p>
               </div>
             )}
           </div>
@@ -206,9 +180,6 @@ export const AssignmentCenter: React.FC = () => {
               <Clock className="h-8 w-8 mx-auto mb-2 text-gray-300" />
               <p>No pending assignments</p>
               <p className="text-sm">New order assignments will appear here</p>
-              <p className="text-xs mt-2 text-blue-600">
-                This includes both traditional orders and nutrition-generated meal plans
-              </p>
             </div>
           ) : (
             <div className="space-y-4">

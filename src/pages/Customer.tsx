@@ -5,29 +5,26 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ParticleBackground from '@/components/ParticleBackground';
 import { MainContent } from '@/components/customer/MainContent';
-import { ImprovedLocationPrompt } from '@/components/customer/ImprovedLocationPrompt';
+import { LocationPrompt } from '@/components/customer/LocationPrompt';
 import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBoundary';
 import { CustomerBreadcrumbs } from '@/components/customer/CustomerBreadcrumbs';
 import { CustomerNavigation } from '@/components/customer/CustomerNavigation';
-import { RestaurantAssignmentDebug } from '@/components/customer/RestaurantAssignmentDebug';
-import { LocationTroubleshootingGuide } from '@/components/customer/LocationTroubleshootingGuide';
 import { AnimatedContainer } from '@/components/performance/AnimatedContainer';
 import { useCustomerState } from '@/hooks/useCustomerState';
-import { useLocationHandler } from '@/hooks/useLocationHandler';
 import { useCart } from '@/contexts/CartContext';
 
 const CustomerPage = () => {
   const navigate = useNavigate();
   const [isMapView, setIsMapView] = useState(false);
-  const [showDebugTools, setShowDebugTools] = useState(false);
   const { cart } = useCart();
-  
-  // Use the new location handler
-  const locationHandler = useLocationHandler();
   
   // Use centralized state management
   const {
     user,
+    location,
+    locationError,
+    permissionStatus,
+    hasRequestedPermission,
     restaurants,
     restaurantsError,
     menuItems,
@@ -35,11 +32,13 @@ const CustomerPage = () => {
     isLoading,
     hasError,
     errorMessage,
+    requestLocation,
     clearErrors
   } = useCustomerState();
 
   const handleLogout = useCallback(async () => {
     try {
+      // Note: logout logic should be handled by auth context
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -50,20 +49,19 @@ const CustomerPage = () => {
     setIsMapView(prev => !prev);
   }, []);
 
-  const hasLocation = !!locationHandler.location && locationHandler.permissionStatus === 'granted';
+  const hasLocationIssue = locationError && permissionStatus !== 'granted';
+  const hasLocation = !!location && permissionStatus === 'granted';
   const hasRestaurants = restaurants && restaurants.length > 0;
-  const showLocationPrompt = !hasLocation && !locationHandler.isLoading;
 
   console.log('Customer page state:', {
     user: user?.email,
-    location: !!locationHandler.location,
+    location: !!location,
     restaurantsCount: restaurants?.length || 0,
     menuItemsCount: menuItems?.length || 0,
     isLoading,
     hasError,
     errorMessage,
-    permissionStatus: locationHandler.permissionStatus,
-    locationError: locationHandler.error
+    permissionStatus
   });
 
   return (
@@ -85,64 +83,17 @@ const CustomerPage = () => {
               </div>
             </AnimatedContainer>
             
-            {/* Debug Tools Toggle */}
-            <AnimatedContainer animation="slideUp" delay={0.15}>
-              <div className="mb-4">
-                <button
-                  onClick={() => setShowDebugTools(!showDebugTools)}
-                  className="text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  {showDebugTools ? 'Hide' : 'Show'} Debug Tools
-                </button>
-              </div>
+            <AnimatedContainer animation="slideUp" delay={0.3}>
+              <MainContent 
+                isMapView={isMapView}
+                menuItems={menuItems}
+                isLoading={isLoading}
+                error={hasError ? errorMessage : null}
+                nearbyRestaurants={restaurants}
+                toggleMapView={toggleMapView}
+                onLocationRequest={requestLocation}
+              />
             </AnimatedContainer>
-            
-            {/* Debug Tools */}
-            {showDebugTools && (
-              <AnimatedContainer animation="slideUp" delay={0.2}>
-                <div className="space-y-4 mb-8">
-                  <RestaurantAssignmentDebug 
-                    restaurants={restaurants || []}
-                    location={locationHandler.location}
-                  />
-                  <LocationTroubleshootingGuide
-                    permissionStatus={locationHandler.permissionStatus}
-                    hasLocation={hasLocation}
-                    error={locationHandler.error}
-                  />
-                </div>
-              </AnimatedContainer>
-            )}
-            
-            {/* Location Prompt */}
-            {showLocationPrompt && (
-              <AnimatedContainer animation="slideUp" delay={0.3}>
-                <ImprovedLocationPrompt
-                  onRequestLocation={locationHandler.requestLocation}
-                  onManualLocation={locationHandler.setManualLocation}
-                  isLoading={locationHandler.isLoading}
-                  error={locationHandler.error}
-                  hasRequestedPermission={locationHandler.hasRequestedPermission}
-                  permissionStatus={locationHandler.permissionStatus}
-                  onResetPermission={locationHandler.resetPermissionState}
-                />
-              </AnimatedContainer>
-            )}
-            
-            {/* Main Content - Only show when location is available */}
-            {hasLocation && (
-              <AnimatedContainer animation="slideUp" delay={0.4}>
-                <MainContent 
-                  isMapView={isMapView}
-                  menuItems={menuItems || []}
-                  isLoading={isLoading}
-                  error={hasError ? errorMessage : null}
-                  nearbyRestaurants={restaurants}
-                  toggleMapView={toggleMapView}
-                  onLocationRequest={locationHandler.requestLocation}
-                />
-              </AnimatedContainer>
-            )}
           </div>
         </main>
         

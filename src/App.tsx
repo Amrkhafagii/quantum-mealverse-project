@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,7 @@ import Auth from "./pages/Auth";
 import About from "./pages/About";
 import Nutrition from "./pages/Nutrition";
 import Orders from "./pages/Orders";
+import QrScannerDemo from "./pages/QrScannerDemo";
 import Dashboard from "./pages/Dashboard";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -79,6 +79,7 @@ function App() {
                             <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
                           </ProtectedRoute>
                         } />
+                        <Route path="/qr-scanner" element={<QrScannerDemo />} />
                         <Route path="/nutrition" element={<Nutrition />} />
                         <Route path="/customer" element={
                           <ProtectedRoute allowedUserTypes={['customer']}>

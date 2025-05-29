@@ -5,7 +5,6 @@ import { Order } from '@/types/order';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { storeActiveOrder, getActiveOrder } from '@/utils/offlineStorage';
 import { toast } from '@/components/ui/use-toast';
-import { unifiedOrderStatusService } from '@/services/orders/unifiedOrderStatusService';
 
 export const useOrderData = (orderId: string) => {
   const { isOnline } = useConnectionStatus();
@@ -23,32 +22,13 @@ export const useOrderData = (orderId: string) => {
           throw new Error('You are offline and this order is not cached');
         }
 
-        // Use unified order status service for consistent data
-        const unifiedData = await unifiedOrderStatusService.getOrderStatusWithTracking(orderId);
-        if (unifiedData) {
-          // Transform to match Order interface
-          const formattedData: Order = {
-            ...unifiedData,
-            restaurant: unifiedData.restaurant_id ? {
-              id: unifiedData.restaurant_id,
-              name: unifiedData.restaurant_name || '',
-              latitude: null,
-              longitude: null
-            } : undefined
-          };
-
-          // Store for offline access
-          storeActiveOrder(formattedData);
-          return formattedData;
-        }
-
-        // Fallback to original implementation for backwards compatibility
+        // Otherwise fetch from server
+        // Instead of trying to join with restaurants directly, we'll fetch the order first
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .select(`
             *, 
-            order_items(*),
-            order_history(*)
+            order_items(*)
           `)
           .eq('id', orderId)
           .maybeSingle();
@@ -59,57 +39,84 @@ export const useOrderData = (orderId: string) => {
           throw new Error('Order not found');
         }
         
-        // Check restaurant assignments for unified status handling
+        // Check restaurant assignments if the order is in pending, awaiting, or assigned status
         if (['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(orderData.status)) {
-          // Check for any assignment status that should update order status
-          const { data: assignments } = await supabase
+          // First check for accepted assignment
+          const { data: acceptedAssignment, error: acceptedError } = await supabase
             .from('restaurant_assignments')
             .select('*')
             .eq('order_id', orderId)
-            .in('status', ['accepted', 'preparing', 'ready_for_pickup'])
-            .order('created_at', { ascending: false })
-            .limit(1);
+            .eq('status', 'accepted')
+            .maybeSingle();
             
-          if (assignments && assignments.length > 0) {
-            const latestAssignment = assignments[0];
-            console.log('Found assignment with status:', latestAssignment.status);
-            
-            // Map assignment status to order status
-            const statusMap: Record<string, string> = {
-              'accepted': 'restaurant_accepted',
-              'preparing': 'preparing',
-              'ready_for_pickup': 'ready_for_pickup'
-            };
-            
-            const mappedStatus = statusMap[latestAssignment.status];
-            if (mappedStatus && orderData.status !== mappedStatus) {
-              orderData.status = mappedStatus;
-              orderData.restaurant_id = latestAssignment.restaurant_id;
+          if (!acceptedError && acceptedAssignment) {
+            console.log('Found accepted restaurant assignment but order status is not synced');
+            // Get restaurant data for the accepted assignment
+            const { data: restaurant } = await supabase
+              .from('restaurants')
+              .select('id, name, latitude, longitude')
+              .eq('id', acceptedAssignment.restaurant_id)
+              .maybeSingle();
+              
+            if (restaurant) {
+              // Override the order status and restaurant_id to match the assignment
+              orderData.status = 'restaurant_accepted';
+              orderData.restaurant_id = acceptedAssignment.restaurant_id;
             }
+          }
+          
+          // Now check for ready_for_pickup assignment which should take precedence
+          const { data: readyAssignment, error: readyError } = await supabase
+            .from('restaurant_assignments')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('status', 'ready_for_pickup')
+            .maybeSingle();
+            
+          if (!readyError && readyAssignment) {
+            console.log('Found ready_for_pickup restaurant assignment but order status is not synced');
+            // Override to ready_for_pickup status
+            orderData.status = 'ready_for_pickup';
+            orderData.restaurant_id = readyAssignment.restaurant_id;
+          }
+          
+          // Also check for preparing status
+          const { data: preparingAssignment, error: preparingError } = await supabase
+            .from('restaurant_assignments')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('status', 'preparing')
+            .maybeSingle();
+            
+          if (!preparingError && preparingAssignment) {
+            console.log('Found preparing restaurant assignment but order status is not synced');
+            // Override to preparing status
+            orderData.status = 'preparing';
+            orderData.restaurant_id = preparingAssignment.restaurant_id;
           }
         }
         
-        // Get restaurant data if needed
+        // Then, if there's a restaurant_id, fetch restaurant data separately
         let restaurantData = null;
         if (orderData.restaurant_id) {
-          const { data: restaurant } = await supabase
+          const { data: restaurant, error: restaurantError } = await supabase
             .from('restaurants')
             .select('id, name, latitude, longitude')
             .eq('id', orderData.restaurant_id)
             .maybeSingle();
             
-          if (restaurant) {
+          if (!restaurantError && restaurant) {
             restaurantData = restaurant;
           }
         }
         
-        // Format data consistently
+        // Combine the order with restaurant data
         const formattedData: Order = {
           ...orderData,
           restaurant: restaurantData || { id: orderData.restaurant_id || '', name: '' }
         };
         
-        // Store for offline access
+        // Store the order data for offline access
         storeActiveOrder(formattedData);
         
         return formattedData;
@@ -142,7 +149,7 @@ export const useOrderData = (orderId: string) => {
       // Don't refetch if offline
       if (!isOnline) return false;
       
-      // Refetch for active statuses regardless of assignment source
+      // Add 'ready_for_pickup' to the list of statuses that should trigger refetching
       return ['pending', 'awaiting_restaurant', 'restaurant_assigned', 'preparing', 'restaurant_accepted', 'ready_for_pickup'].includes(data.status) ? 5000 : false;
     },
   });

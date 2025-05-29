@@ -63,6 +63,14 @@ const NavLinks: React.FC<NavLinksProps> = ({ isMobile, user, closeMenu = () => {
         My Orders
       </Link>
       
+      <Link
+        to="/qr-scanner"
+        className={linkClasses}
+        onClick={closeMenu}
+      >
+        QR Scanner
+      </Link>
+      
       {user && (
         <>
           <Link

@@ -15,23 +15,10 @@ export const useRestaurantAssignments = () => {
 
     const loadAssignments = async () => {
       try {
-        console.log('Loading assignments for restaurant:', restaurant.id);
-        
         const [pending, history] = await Promise.all([
           assignmentService.getPendingAssignments(restaurant.id),
           assignmentService.getAssignmentHistory(restaurant.id)
         ]);
-        
-        console.log('Loaded assignments:', {
-          pendingCount: pending.length,
-          historyCount: history.length,
-          pending: pending.map(p => ({
-            id: p.id,
-            order_id: p.order_id,
-            status: p.status,
-            assigned_at: p.assigned_at
-          }))
-        });
         
         setPendingAssignments(pending);
         setAssignmentHistory(history);
@@ -44,11 +31,10 @@ export const useRestaurantAssignments = () => {
 
     loadAssignments();
 
-    // Subscribe to real-time assignments for both traditional and nutrition-generated orders
+    // Subscribe to real-time assignments
     const subscription = assignmentService.subscribeToAssignments(
       restaurant.id,
       (newAssignment) => {
-        console.log('Received new assignment:', newAssignment);
         setPendingAssignments(prev => [newAssignment, ...prev]);
       }
     );
@@ -60,7 +46,6 @@ export const useRestaurantAssignments = () => {
 
   const acceptAssignment = async (assignmentId: string, notes?: string) => {
     try {
-      console.log('Accepting assignment:', assignmentId);
       await assignmentService.acceptAssignment(assignmentId, notes);
       setPendingAssignments(prev => 
         prev.filter(assignment => assignment.id !== assignmentId)
@@ -78,7 +63,6 @@ export const useRestaurantAssignments = () => {
 
   const rejectAssignment = async (assignmentId: string, reason?: string) => {
     try {
-      console.log('Rejecting assignment:', assignmentId);
       await assignmentService.rejectAssignment(assignmentId, reason);
       setPendingAssignments(prev => 
         prev.filter(assignment => assignment.id !== assignmentId)
