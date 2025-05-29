@@ -26,7 +26,9 @@ export function useTeamChallenges() {
   const fetchTeams = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      
+      // Use simpler query without complex type inference
+      const { data: rawData, error } = await supabase
         .from('teams')
         .select('*')
         .eq('is_active', true)
@@ -34,8 +36,8 @@ export function useTeamChallenges() {
 
       if (error) throw error;
       
-      // Safely map database fields to our Team type
-      const mappedTeams: Team[] = (data || []).map(team => ({
+      // Safely map database fields to our Team type with explicit typing
+      const mappedTeams: Team[] = (rawData || []).map((team: any) => ({
         id: team.id,
         name: team.name,
         description: team.description || undefined,
@@ -43,13 +45,13 @@ export function useTeamChallenges() {
         creator_id: team.created_by,
         created_at: team.created_at,
         updated_at: team.updated_at || team.created_at,
-        image_url: team.avatar_url || team.image_url || undefined,
+        image_url: team.avatar_url || undefined,
         avatar_url: team.avatar_url || undefined,
-        is_active: team.is_active !== false, // Default to true if undefined
+        is_active: team.is_active !== false,
         max_members: team.max_members || 50,
-        members_count: team.members_count || team.member_count || 0,
-        member_count: team.member_count || team.members_count || 0,
-        challenges_count: team.challenges_count || 0,
+        members_count: team.member_count || 0,
+        member_count: team.member_count || 0,
+        challenges_count: 0, // Default value since it's not in database
         total_points: team.total_points || 0
       }));
       
@@ -70,7 +72,7 @@ export function useTeamChallenges() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: rawData, error } = await supabase
         .from('team_members')
         .select(`
           *,
@@ -82,8 +84,8 @@ export function useTeamChallenges() {
 
       if (error && error.code !== 'PGRST116') throw error;
       
-      if (data?.team) {
-        const team = data.team as any;
+      if (rawData?.team) {
+        const team = rawData.team as any;
         const mappedTeam: Team = {
           id: team.id,
           name: team.name,
@@ -92,13 +94,13 @@ export function useTeamChallenges() {
           creator_id: team.created_by,
           created_at: team.created_at,
           updated_at: team.updated_at || team.created_at,
-          image_url: team.avatar_url || team.image_url || undefined,
+          image_url: team.avatar_url || undefined,
           avatar_url: team.avatar_url || undefined,
           is_active: team.is_active !== false,
           max_members: team.max_members || 50,
-          members_count: team.members_count || team.member_count || 0,
-          member_count: team.member_count || team.members_count || 0,
-          challenges_count: team.challenges_count || 0,
+          members_count: team.member_count || 0,
+          member_count: team.member_count || 0,
+          challenges_count: 0,
           total_points: team.total_points || 0
         };
         
@@ -113,7 +115,7 @@ export function useTeamChallenges() {
 
   const fetchTeamMembers = async (teamId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: rawData, error } = await supabase
         .from('team_members')
         .select('*')
         .eq('team_id', teamId)
@@ -122,17 +124,17 @@ export function useTeamChallenges() {
       if (error) throw error;
       
       // Safely map database fields to our TeamMember type
-      const mappedMembers: TeamMember[] = (data || []).map(member => ({
+      const mappedMembers: TeamMember[] = (rawData || []).map((member: any) => ({
         id: member.id,
         user_id: member.user_id,
         team_id: member.team_id,
         role: member.role,
         joined_date: member.joined_at || member.joined_date,
         joined_at: member.joined_at || member.joined_date,
-        user_name: member.user_name || undefined,
-        profile_image: member.profile_image || undefined,
-        points_contributed: member.points_contributed || member.contribution_points || 0,
-        contribution_points: member.contribution_points || member.points_contributed || 0,
+        user_name: undefined, // Not available in current query
+        profile_image: undefined, // Not available in current query
+        points_contributed: member.contribution_points || 0,
+        contribution_points: member.contribution_points || 0,
         is_active: member.is_active !== false
       }));
       
