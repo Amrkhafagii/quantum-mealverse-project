@@ -1,202 +1,142 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PreparationStageService, type PreparationStage, type PreparationProgress, type StageTransitionResult } from '@/services/preparation/preparationStageService';
-import { PreparationTimerService, type TimerState } from '@/services/preparation/preparationTimerService';
-import { useToast } from '@/hooks/use-toast';
+import { PreparationStageService } from '@/services/preparation/preparationStageService';
+import { useConnectionStatus } from './useConnectionStatus';
+import { supabase } from '@/integrations/supabase/client';
 
 export const usePreparationStages = (orderId: string) => {
-  const [timerState, setTimerState] = useState<TimerState | null>(null);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [stages, setStages] = useState<any[]>([]);
+  const [progress, setProgress] = useState<any[]>([]);
+  const [overallProgress, setOverallProgress] = useState<number>(0);
+  const [timerState, setTimerState] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const { isOnline } = useConnectionStatus();
 
-  // Query for preparation stages
-  const { data: stages, isLoading } = useQuery({
-    queryKey: ['preparation-stages', orderId],
-    queryFn: () => PreparationStageService.getOrderPreparationStages(orderId),
-    enabled: !!orderId,
-    refetchInterval: 5000, // Refresh every 5 seconds
-  });
+  const loadStages = useCallback(async () => {
+    if (!orderId || !isOnline) return;
 
-  // Query for preparation progress
-  const { data: progress } = useQuery({
-    queryKey: ['preparation-progress', orderId],
-    queryFn: () => PreparationStageService.getPreparationProgress(orderId),
-    enabled: !!orderId,
-    refetchInterval: 5000,
-  });
+    try {
+      setIsLoading(true);
+      const [stagesData, progressData, overallProg] = await Promise.all([
+        PreparationStageService.getOrderPreparationStages(orderId),
+        PreparationStageService.getPreparationProgress(orderId),
+        PreparationStageService.getOverallProgress(orderId)
+      ]);
 
-  // Query for overall progress percentage
-  const { data: overallProgress } = useQuery({
-    queryKey: ['preparation-overall-progress', orderId],
-    queryFn: () => PreparationStageService.getOverallProgress(orderId),
-    enabled: !!orderId,
-    refetchInterval: 5000,
-  });
+      setStages(stagesData);
+      setProgress(progressData);
+      setOverallProgress(overallProg);
+    } catch (error) {
+      console.error('Error loading preparation stages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [orderId, isOnline]);
 
-  // Start stage mutation
-  const startStageMutation = useMutation({
-    mutationFn: ({ orderId, stageName }: { orderId: string; stageName: string }) =>
-      PreparationStageService.startStage(orderId, stageName),
-    onSuccess: (success, { stageName }) => {
-      if (success) {
-        PreparationTimerService.startTimer(orderId, stageName);
-        queryClient.invalidateQueries({ queryKey: ['preparation-stages', orderId] });
-        queryClient.invalidateQueries({ queryKey: ['preparation-progress', orderId] });
-        toast({
-          title: 'Stage Started',
-          description: `${stageName} stage has been started`,
-        });
-      }
-    },
-  });
+  // Real-time updates
+  useEffect(() => {
+    if (!orderId || !isOnline) return;
 
-  // Advance stage mutation
-  const advanceStageMutation = useMutation({
-    mutationFn: ({ orderId, stageName, notes }: { orderId: string; stageName: string; notes?: string }) =>
-      PreparationStageService.advanceStage(orderId, stageName, notes),
-    onSuccess: (result: StageTransitionResult) => {
-      if (result.success) {
-        PreparationTimerService.stopTimer(orderId);
-        
-        if (result.next_stage) {
-          PreparationTimerService.startTimer(orderId, result.next_stage);
+    const channel = supabase
+      .channel(`preparation_stages_${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_preparation_stages',
+          filter: `order_id=eq.${orderId}`
+        },
+        () => {
+          loadStages();
         }
-        
-        queryClient.invalidateQueries({ queryKey: ['preparation-stages', orderId] });
-        queryClient.invalidateQueries({ queryKey: ['preparation-progress', orderId] });
-        queryClient.invalidateQueries({ queryKey: ['preparation-overall-progress', orderId] });
-        
-        toast({
-          title: 'Stage Advanced',
-          description: result.message,
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    },
-  });
-
-  // Skip stage mutation
-  const skipStageMutation = useMutation({
-    mutationFn: ({ orderId, stageName, reason }: { orderId: string; stageName: string; reason?: string }) =>
-      PreparationStageService.skipStage(orderId, stageName, reason),
-    onSuccess: (success, { stageName }) => {
-      if (success) {
-        PreparationTimerService.stopTimer(orderId);
-        queryClient.invalidateQueries({ queryKey: ['preparation-stages', orderId] });
-        queryClient.invalidateQueries({ queryKey: ['preparation-progress', orderId] });
-        toast({
-          title: 'Stage Skipped',
-          description: `${stageName} stage has been skipped`,
-        });
-      }
-    },
-  });
-
-  // Update notes mutation
-  const updateNotesMutation = useMutation({
-    mutationFn: ({ orderId, stageName, notes }: { orderId: string; stageName: string; notes: string }) =>
-      PreparationStageService.updateStageNotes(orderId, stageName, notes),
-    onSuccess: (success) => {
-      if (success) {
-        queryClient.invalidateQueries({ queryKey: ['preparation-stages', orderId] });
-        toast({
-          title: 'Notes Updated',
-          description: 'Stage notes have been updated',
-        });
-      }
-    },
-  });
-
-  // Timer state management
-  useEffect(() => {
-    if (!orderId) return;
-
-    // Initialize timer for existing in-progress stage
-    PreparationTimerService.initializeExistingTimer(orderId);
-
-    // Subscribe to timer updates
-    const unsubscribe = PreparationTimerService.subscribeToTimerUpdates(orderId, setTimerState);
-
-    // Set initial timer state
-    const initialTimer = PreparationTimerService.getTimerState(orderId);
-    setTimerState(initialTimer);
+      )
+      .subscribe();
 
     return () => {
-      unsubscribe();
-      // Don't stop timer on unmount unless explicitly requested
+      supabase.removeChannel(channel);
     };
-  }, [orderId]);
+  }, [orderId, isOnline, loadStages]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      // Only cleanup if no other components are using the timer
-      // This is a basic implementation - could be improved with ref counting
-    };
-  }, []);
-
-  const startStage = useCallback((stageName: string) => {
-    startStageMutation.mutate({ orderId, stageName });
-  }, [orderId, startStageMutation]);
-
-  const advanceStage = useCallback((stageName: string, notes?: string) => {
-    advanceStageMutation.mutate({ orderId, stageName, notes });
-  }, [orderId, advanceStageMutation]);
-
-  const skipStage = useCallback((stageName: string, reason?: string) => {
-    skipStageMutation.mutate({ orderId, stageName, reason });
-  }, [orderId, skipStageMutation]);
-
-  const updateNotes = useCallback((stageName: string, notes: string) => {
-    updateNotesMutation.mutate({ orderId, stageName, notes });
-  }, [orderId, updateNotesMutation]);
-
-  const pauseTimer = useCallback(() => {
-    PreparationTimerService.pauseTimer(orderId);
-  }, [orderId]);
-
-  const resumeTimer = useCallback(() => {
-    PreparationTimerService.resumeTimer(orderId);
-  }, [orderId]);
+    loadStages();
+  }, [loadStages]);
 
   const getCurrentStage = useCallback(() => {
-    return stages?.find(stage => stage.status === 'in_progress') || null;
+    return stages.find(stage => stage.status === 'in_progress') || null;
   }, [stages]);
 
-  const getElapsedMinutes = useCallback(() => {
-    return PreparationTimerService.getElapsedMinutes(orderId);
-  }, [orderId]);
+  const startStage = async (stageName: string) => {
+    return await PreparationStageService.startStage(orderId, stageName);
+  };
+
+  const advanceStage = async (stageName: string, notes?: string) => {
+    setIsAdvancing(true);
+    try {
+      const result = await PreparationStageService.advanceStage(orderId, stageName, notes);
+      if (result.success) {
+        await loadStages();
+      }
+      return result;
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
+  const skipStage = async (stageName: string, reason?: string) => {
+    setIsSkipping(true);
+    try {
+      const result = await PreparationStageService.skipStage(orderId, stageName, reason);
+      if (result) {
+        await loadStages();
+      }
+      return result;
+    } finally {
+      setIsSkipping(false);
+    }
+  };
+
+  const updateNotes = async (stageName: string, notes: string) => {
+    return await PreparationStageService.updateStageNotes(orderId, stageName, notes);
+  };
+
+  const getEstimatedCompletionTime = async () => {
+    return await PreparationStageService.getEstimatedCompletionTime(orderId);
+  };
+
+  const getElapsedMinutes = (startedAt: string) => {
+    if (!startedAt) return 0;
+    const started = new Date(startedAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - started.getTime()) / (1000 * 60));
+  };
+
+  const pauseTimer = () => {
+    setTimerState((prev: any) => prev ? { ...prev, isRunning: false } : null);
+  };
+
+  const resumeTimer = () => {
+    setTimerState((prev: any) => prev ? { ...prev, isRunning: true } : null);
+  };
 
   return {
-    // Data
     stages,
     progress,
     overallProgress,
     timerState,
-    isLoading,
-    
-    // Actions
+    getCurrentStage,
     startStage,
     advanceStage,
     skipStage,
     updateNotes,
+    getEstimatedCompletionTime,
+    getElapsedMinutes,
     pauseTimer,
     resumeTimer,
-    
-    // Helpers
-    getCurrentStage,
-    getElapsedMinutes,
-    
-    // Loading states
-    isStarting: startStageMutation.isPending,
-    isAdvancing: advanceStageMutation.isPending,
-    isSkipping: skipStageMutation.isPending,
-    isUpdatingNotes: updateNotesMutation.isPending,
+    isLoading,
+    isAdvancing,
+    isSkipping
   };
 };
