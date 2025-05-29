@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ActiveDeliveries } from './ActiveDeliveries';
 import { DeliveryMapView } from './DeliveryMapView';
 import { RealTimeLocationTracker } from './RealTimeLocationTracker';
+import { DriverAvailabilityPanel } from './DriverAvailabilityPanel';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 import { useDeliveryAssignments } from '@/hooks/useDeliveryAssignments';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,6 +46,11 @@ const ActiveDeliveriesWithMap: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Driver Availability Panel */}
+      {deliveryUser && (
+        <DriverAvailabilityPanel deliveryUserId={deliveryUser.id} />
+      )}
+
       {/* Real-time location tracker for selected assignment */}
       {selectedAssignment && (
         <RealTimeLocationTracker

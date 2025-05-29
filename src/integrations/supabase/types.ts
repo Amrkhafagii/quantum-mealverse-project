@@ -771,6 +771,104 @@ export type Database = {
           },
         ]
       }
+      delivery_assignment_criteria: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_assignment_time_minutes: number | null
+          max_distance_km: number | null
+          preferred_driver_rating: number | null
+          priority_factors: Json | null
+          restaurant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_assignment_time_minutes?: number | null
+          max_distance_km?: number | null
+          preferred_driver_rating?: number | null
+          priority_factors?: Json | null
+          restaurant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_assignment_time_minutes?: number | null
+          max_distance_km?: number | null
+          preferred_driver_rating?: number | null
+          priority_factors?: Json | null
+          restaurant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_assignment_criteria_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_assignment_history: {
+        Row: {
+          action: string
+          assignment_duration_seconds: number | null
+          created_at: string | null
+          delivery_assignment_id: string
+          delivery_user_id: string | null
+          distance_km: number | null
+          driver_rating: number | null
+          id: string
+          metadata: Json | null
+          priority_score: number | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          assignment_duration_seconds?: number | null
+          created_at?: string | null
+          delivery_assignment_id: string
+          delivery_user_id?: string | null
+          distance_km?: number | null
+          driver_rating?: number | null
+          id?: string
+          metadata?: Json | null
+          priority_score?: number | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          assignment_duration_seconds?: number | null
+          created_at?: string | null
+          delivery_assignment_id?: string
+          delivery_user_id?: string | null
+          distance_km?: number | null
+          driver_rating?: number | null
+          id?: string
+          metadata?: Json | null
+          priority_score?: number | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_assignment_history_delivery_assignment_id_fkey"
+            columns: ["delivery_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_assignment_history_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_assignment_rejections: {
         Row: {
           assignment_id: string
@@ -805,43 +903,58 @@ export type Database = {
       }
       delivery_assignments: {
         Row: {
+          assignment_attempt: number | null
+          auto_assigned: boolean | null
           created_at: string
           delivery_time: string | null
           delivery_user_id: string | null
           estimated_delivery_time: string | null
+          expires_at: string | null
           id: string
           latitude: number | null
           longitude: number | null
+          max_attempts: number | null
           order_id: string
           pickup_time: string | null
+          priority_score: number | null
           restaurant_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          assignment_attempt?: number | null
+          auto_assigned?: boolean | null
           created_at?: string
           delivery_time?: string | null
           delivery_user_id?: string | null
           estimated_delivery_time?: string | null
+          expires_at?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
+          max_attempts?: number | null
           order_id: string
           pickup_time?: string | null
+          priority_score?: number | null
           restaurant_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          assignment_attempt?: number | null
+          auto_assigned?: boolean | null
           created_at?: string
           delivery_time?: string | null
           delivery_user_id?: string | null
           estimated_delivery_time?: string | null
+          expires_at?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
+          max_attempts?: number | null
           order_id?: string
           pickup_time?: string | null
+          priority_score?: number | null
           restaurant_id?: string | null
           status?: string
           updated_at?: string
@@ -1299,6 +1412,56 @@ export type Database = {
             foreignKeyName: "delivery_documents_delivery_user_id_fkey"
             columns: ["delivery_user_id"]
             isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_driver_availability: {
+        Row: {
+          availability_radius_km: number | null
+          created_at: string | null
+          current_delivery_count: number | null
+          current_latitude: number | null
+          current_longitude: number | null
+          delivery_user_id: string
+          id: string
+          is_available: boolean | null
+          last_location_update: string | null
+          max_concurrent_deliveries: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          availability_radius_km?: number | null
+          created_at?: string | null
+          current_delivery_count?: number | null
+          current_latitude?: number | null
+          current_longitude?: number | null
+          delivery_user_id: string
+          id?: string
+          is_available?: boolean | null
+          last_location_update?: string | null
+          max_concurrent_deliveries?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          availability_radius_km?: number | null
+          created_at?: string | null
+          current_delivery_count?: number | null
+          current_latitude?: number | null
+          current_longitude?: number | null
+          delivery_user_id?: string
+          id?: string
+          is_available?: boolean | null
+          last_location_update?: string | null
+          max_concurrent_deliveries?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_driver_availability_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
             referencedRelation: "delivery_users"
             referencedColumns: ["id"]
           },
@@ -9423,6 +9586,15 @@ export type Database = {
           estimated_arrival: string
         }[]
       }
+      calculate_delivery_priority_score: {
+        Args: {
+          p_delivery_user_id: string
+          p_restaurant_lat: number
+          p_restaurant_lng: number
+          p_restaurant_id?: string
+        }
+        Returns: number
+      }
       calculate_exercise_progress: {
         Args: { p_user_id: string; p_workout_log_id: string }
         Returns: undefined
@@ -9584,6 +9756,23 @@ export type Database = {
           p_include_anonymized?: boolean
         }
         Returns: Json
+      }
+      find_best_drivers_for_assignment: {
+        Args: {
+          p_restaurant_id: string
+          p_restaurant_lat: number
+          p_restaurant_lng: number
+          p_max_distance_km?: number
+          p_limit?: number
+        }
+        Returns: {
+          delivery_user_id: string
+          driver_name: string
+          priority_score: number
+          distance_km: number
+          current_deliveries: number
+          average_rating: number
+        }[]
       }
       find_capable_restaurants_for_meal: {
         Args: {
@@ -10131,6 +10320,10 @@ export type Database = {
       gidx_out: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      handle_expired_delivery_assignments: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       insert_recommendation_feedback: {
         Args: {

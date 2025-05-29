@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
-import { fixOrderStatus } from '@/utils/orderStatusFix';
 
 // Get active delivery assignments for a delivery user
 export const getActiveDeliveryAssignments = async (
@@ -32,7 +31,7 @@ export const getActiveDeliveryAssignments = async (
       `)
       .eq('delivery_user_id', deliveryUserId)
       .in('status', ['assigned', 'picked_up', 'on_the_way'])
-      .order('created_at', { ascending: false });
+      .order('priority_score', { ascending: false }); // Order by priority score
 
     if (error) {
       console.error('Error fetching active assignments:', error);
@@ -41,13 +40,11 @@ export const getActiveDeliveryAssignments = async (
 
     // Transform the data to match the DeliveryAssignment type
     const assignments = (data || []).map(assignment => {
-      // Ensure the order exists
       if (!assignment.orders) {
         console.warn(`No order data found for assignment ${assignment.id}`);
         return null;
       }
       
-      // Use type assertion to help TypeScript understand the structure
       const order = assignment.orders as any;
       const restaurant = order.restaurant as any || {};
       
@@ -67,8 +64,10 @@ export const getActiveDeliveryAssignments = async (
         );
       }
       
-      // Estimate delivery time (basic calculation: 5 minutes base + 3 minutes per km)
-      const estimate_minutes = distance_km ? Math.round(5 + (distance_km * 3)) : undefined;
+      // Use estimate from assignment or calculate basic estimate
+      const estimate_minutes = assignment.estimated_delivery_time ? 
+        Math.ceil((new Date(assignment.estimated_delivery_time).getTime() - new Date().getTime()) / (1000 * 60)) :
+        (distance_km ? Math.round(5 + (distance_km * 3)) : undefined);
       
       return {
         ...assignment,
@@ -132,9 +131,19 @@ export const getPastDeliveryAssignments = async (
     // Then get the paginated data
     const { data, error } = await supabase
       .from('delivery_assignments')
-      .select('*')
+      .select(`
+        *,
+        orders:order_id (
+          id,
+          customer_name,
+          delivery_address,
+          total,
+          created_at
+        )
+      `)
       .eq('delivery_user_id', deliveryUserId)
       .in('status', ['delivered', 'cancelled'])
+      .order('delivery_time', { ascending: false, nullsLast: true })
       .order('created_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1);
 
@@ -143,11 +152,22 @@ export const getPastDeliveryAssignments = async (
       throw error;
     }
 
+    const assignments = (data || []).map(assignment => {
+      const order = assignment.orders as any;
+      return {
+        ...assignment,
+        customer: order ? {
+          name: order.customer_name || 'Customer',
+          address: order.delivery_address || '',
+          latitude: 0,
+          longitude: 0,
+        } : undefined,
+        status: assignment.status as DeliveryAssignment['status'] 
+      };
+    });
+
     return { 
-      assignments: (data || []).map(a => ({
-        ...a,
-        status: a.status as DeliveryAssignment['status'] 
-      })), 
+      assignments, 
       count: count || 0 
     };
   } catch (error) {
@@ -172,6 +192,22 @@ export const updateDeliveryStatus = async (
       updates.pickup_time = new Date().toISOString();
     } else if (status === 'delivered') {
       updates.delivery_time = new Date().toISOString();
+      
+      // Update driver availability when delivery is completed
+      const { data: assignment } = await supabase
+        .from('delivery_assignments')
+        .select('delivery_user_id')
+        .eq('id', assignmentId)
+        .single();
+        
+      if (assignment?.delivery_user_id) {
+        await supabase
+          .from('delivery_driver_availability')
+          .update({
+            current_delivery_count: supabase.sql`GREATEST(0, current_delivery_count - 1)`
+          })
+          .eq('delivery_user_id', assignment.delivery_user_id);
+      }
     }
 
     const { data, error } = await supabase
