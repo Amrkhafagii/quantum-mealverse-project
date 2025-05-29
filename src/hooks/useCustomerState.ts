@@ -62,12 +62,12 @@ export const useCustomerState = (): CustomerState => {
     refetch: refetchRestaurants
   } = useRestaurantsData(location); // Pass location if available, null if not
   
-  // Menu management - pass restaurants array instead of string
+  // Menu management
   const { 
     data: menuItems = [], 
     isLoading: menuLoading, 
     error: menuError 
-  } = useMenuData(restaurants || []);
+  } = useMenuData(restaurants);
 
   // Initialize state
   useEffect(() => {
@@ -113,7 +113,7 @@ export const useCustomerState = (): CustomerState => {
     hasRequestedPermission,
     
     // Restaurant state
-    restaurants: restaurants || [],
+    restaurants,
     restaurantsError,
     
     // Menu state

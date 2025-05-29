@@ -86,7 +86,7 @@ const CustomerPage = () => {
             <AnimatedContainer animation="slideUp" delay={0.3}>
               <MainContent 
                 isMapView={isMapView}
-                menuItems={menuItems || []}
+                menuItems={menuItems}
                 isLoading={isLoading}
                 error={hasError ? errorMessage : null}
                 nearbyRestaurants={restaurants}
