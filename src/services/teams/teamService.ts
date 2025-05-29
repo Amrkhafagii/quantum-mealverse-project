@@ -44,9 +44,9 @@ export const fetchTeams = async (): Promise<Team[]> => {
 
   if (error) throw error;
   
-  // Explicitly cast the data to our expected type
-  const teams = (data || []) as DatabaseTeam[];
-  return teams.map(transformTeam);
+  // Use unknown first to avoid type depth issues, then cast to our expected type
+  const teams = (data as unknown) as DatabaseTeam[];
+  return (teams || []).map(transformTeam);
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
@@ -63,8 +63,8 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   if (error && error.code !== 'PGRST116') throw error;
   
   if (data?.team) {
-    // Explicitly cast the nested team data
-    const teamData = data.team as DatabaseTeam;
+    // Use unknown first to avoid type depth issues, then cast to our expected type
+    const teamData = (data.team as unknown) as DatabaseTeam;
     return transformTeam(teamData);
   }
   
@@ -77,7 +77,7 @@ export const createTeam = async (userId: string, teamData: Omit<Team, 'id' | 'cr
     .insert([{
       name: teamData.name,
       description: teamData.description,
-      image_url: teamData.image_url,
+      avatar_url: teamData.image_url,
       created_by: userId,
       is_active: teamData.is_active,
       max_members: teamData.max_members
