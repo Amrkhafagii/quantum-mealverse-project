@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   DeliveryLocationAccuracySettings, 
@@ -21,7 +20,14 @@ class DeliveryLocationAccuracyService {
       throw error;
     }
 
-    return data;
+    if (!data) return null;
+
+    // Cast provider types to ensure TypeScript compatibility
+    return {
+      ...data,
+      primary_provider: data.primary_provider as LocationProvider,
+      fallback_provider: data.fallback_provider as LocationProvider
+    };
   }
 
   async updateLocationAccuracySettings(
@@ -42,7 +48,12 @@ class DeliveryLocationAccuracyService {
       throw error;
     }
 
-    return data;
+    // Cast provider types to ensure TypeScript compatibility
+    return {
+      ...data,
+      primary_provider: data.primary_provider as LocationProvider,
+      fallback_provider: data.fallback_provider as LocationProvider
+    };
   }
 
   // Location Quality Validation
