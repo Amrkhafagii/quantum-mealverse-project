@@ -1,360 +1,347 @@
 
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { OrderAssignmentCard } from './OrderAssignmentCard';
-import { EnhancedOrderPreparation } from './preparation/EnhancedOrderPreparation';
-import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, AlertCircle, RefreshCw, ChefHat } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { Clock, MapPin, Phone, User } from 'lucide-react';
+import { EnhancedOrderPreparation } from './preparation/EnhancedOrderPreparation';
+import { PreparationIntegrationService } from '@/services/preparation/preparationIntegrationService';
 
-const OrderManagement = () => {
-  const { user } = useAuth();
+interface Order {
+  id: string;
+  formatted_order_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  delivery_address: string;
+  total: number;
+  status: string;
+  created_at: string;
+  notes?: string;
+  order_items?: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+}
+
+interface OrderManagementProps {
+  restaurantId: string;
+}
+
+const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [acceptedOrders, setAcceptedOrders] = useState<Order[]>([]);
+  const [preparationOrders, setPreparationOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const [pendingAssignments, setPendingAssignments] = useState<any[]>([]);
-  const [acceptedOrders, setAcceptedOrders] = useState<any[]>([]);
-  const [preparationOrders, setPreparationOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.id) {
-      getRestaurantId();
-    }
-  }, [user?.id]);
+    fetchOrders();
+    
+    // Set up real-time subscription for orders
+    const channel = supabase
+      .channel('order_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
 
-  useEffect(() => {
-    if (restaurantId) {
-      loadOrders();
-      
-      // Set up real-time subscription for new assignments
-      const subscription = supabase
-        .channel('restaurant_assignments')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'restaurant_assignments',
-            filter: `restaurant_id=eq.${restaurantId}`
-          },
-          () => {
-            console.log('Assignment change detected, refreshing orders...');
-            loadOrders();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [restaurantId]);
 
-  const getRestaurantId = async () => {
+  const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) {
-        console.error('Error getting restaurant ID:', error);
-        return;
-      }
-
-      setRestaurantId(data?.id);
-    } catch (error) {
-      console.error('Error in getRestaurantId:', error);
-    }
-  };
-
-  const loadOrders = async () => {
-    if (!restaurantId) return;
-
-    try {
-      setLoading(true);
-
-      // Load pending assignments
-      const pendingData = await orderAssignmentService.getRestaurantPendingAssignments(restaurantId);
-      setPendingAssignments(pendingData);
-
-      // Load accepted orders (restaurant_accepted status)
-      const { data: acceptedData, error: acceptedError } = await supabase
-        .from('restaurant_assignments')
-        .select(`
-          *,
-          orders!restaurant_assignments_order_id_fkey(
-            id,
-            customer_name,
-            customer_phone,
-            delivery_address,
-            total,
-            status,
-            created_at,
-            order_items(*)
-          )
-        `)
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'accepted')
-        .eq('orders.status', 'restaurant_accepted')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (acceptedError) {
-        console.error('Error loading accepted orders:', acceptedError);
-      } else {
-        setAcceptedOrders(acceptedData || []);
-      }
-
-      // Load orders in preparation (preparing status)
-      const { data: preparationData, error: preparationError } = await supabase
+      setIsLoading(true);
+      
+      // Fetch orders with restaurant assignments
+      const { data: orders, error } = await supabase
         .from('orders')
         .select(`
-          id,
-          customer_name,
-          customer_phone,
-          customer_email,
-          delivery_address,
-          total,
-          status,
-          created_at,
-          formatted_order_id,
-          notes,
-          order_items(
+          *,
+          order_items (
             id,
             name,
             quantity,
             price
           )
         `)
-        .eq('restaurant_id', restaurantId)
-        .in('status', ['preparing', 'ready_for_pickup'])
+        .in('id', 
+          await supabase
+            .from('restaurant_assignments')
+            .select('order_id')
+            .eq('restaurant_id', restaurantId)
+            .then(({ data }) => data?.map(a => a.order_id) || [])
+        )
         .order('created_at', { ascending: false });
 
-      if (preparationError) {
-        console.error('Error loading preparation orders:', preparationError);
-      } else {
-        setPreparationOrders(preparationData || []);
-      }
+      if (error) throw error;
 
+      if (orders) {
+        // Categorize orders by status
+        setPendingOrders(orders.filter(order => order.status === 'pending'));
+        setAcceptedOrders(orders.filter(order => order.status === 'restaurant_accepted'));
+        setPreparationOrders(orders.filter(order => 
+          ['preparing', 'ready_for_pickup'].includes(order.status)
+        ));
+      }
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('Error fetching orders:', error);
       toast({
-        title: 'Error Loading Orders',
-        description: 'Failed to load restaurant orders',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to fetch orders",
+        variant: "destructive"
       });
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setIsLoading(false);
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadOrders();
-  };
-
-  const handleAssignmentResponse = async () => {
-    // Reload orders after any assignment response
-    await loadOrders();
-  };
-
-  const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
+  const handleAcceptOrder = async (orderId: string) => {
     try {
-      // Initialize preparation stages when order moves to preparing
-      if (newStatus === 'preparing' && restaurantId) {
-        console.log('Initializing preparation stages for order:', orderId);
-        const { error: stagesError } = await supabase.rpc('create_default_preparation_stages', {
-          p_order_id: orderId,
-          p_restaurant_id: restaurantId
-        });
+      // Update order status to restaurant_accepted
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'restaurant_accepted' })
+        .eq('id', orderId);
 
-        if (stagesError) {
-          console.error('Error creating preparation stages:', stagesError);
-        }
-      }
+      if (updateError) throw updateError;
 
-      // Reload orders to reflect changes
-      await loadOrders();
+      // Initialize preparation tracking
+      await PreparationIntegrationService.initializePreparationTracking(orderId, restaurantId);
+
+      toast({
+        title: "Success",
+        description: "Order accepted successfully",
+        variant: "default"
+      });
+
+      fetchOrders();
     } catch (error) {
-      console.error('Error handling order status change:', error);
+      console.error('Error accepting order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept order",
+        variant: "destructive"
+      });
     }
   };
 
-  if (!restaurantId) {
+  const handleStartPreparation = async (orderId: string) => {
+    try {
+      await PreparationIntegrationService.startPreparation(orderId);
+      
+      toast({
+        title: "Success",
+        description: "Preparation started",
+        variant: "default"
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error starting preparation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start preparation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-500';
+      case 'restaurant_accepted': return 'bg-blue-500';
+      case 'preparing': return 'bg-orange-500';
+      case 'ready_for_pickup': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const OrderCard: React.FC<{ order: Order; showActions?: boolean; actionType?: string }> = ({ 
+    order, 
+    showActions = false, 
+    actionType 
+  }) => (
+    <Card className="mb-4">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center space-x-2">
+              <span>Order #{order.formatted_order_id}</span>
+              <Badge className={getStatusColor(order.status)}>
+                {order.status.replace('_', ' ')}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              <Clock className="inline h-4 w-4 mr-1" />
+              {formatTime(order.created_at)} • ${order.total.toFixed(2)}
+            </CardDescription>
+          </div>
+          {showActions && (
+            <div className="space-x-2">
+              {actionType === 'accept' && (
+                <Button onClick={() => handleAcceptOrder(order.id)}>
+                  Accept Order
+                </Button>
+              )}
+              {actionType === 'start' && (
+                <Button onClick={() => handleStartPreparation(order.id)}>
+                  Start Preparation
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-gray-500" />
+              <span className="font-medium">{order.customer_name}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Phone className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-600">{order.customer_phone}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-600">{order.delivery_address}</span>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-2">Order Items</h4>
+            <div className="space-y-1">
+              {order.order_items?.map((item, index) => (
+                <div key={index} className="flex justify-between text-sm">
+                  <span>{item.quantity}x {item.name}</span>
+                  <span>${item.price.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            
+            {order.notes && (
+              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="text-sm text-yellow-800">Note: {order.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Restaurant Not Found</h3>
-          <p className="text-gray-500">No restaurant profile found for your account.</p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Order Management</h2>
-        <Button 
-          onClick={handleRefresh} 
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending" className="flex items-center gap-2">
-            Pending Assignments
-            {pendingAssignments.length > 0 && (
-              <Badge variant="secondary">{pendingAssignments.length}</Badge>
-            )}
+          <TabsTrigger value="pending">
+            Pending Assignments ({pendingOrders.length})
           </TabsTrigger>
-          <TabsTrigger value="accepted" className="flex items-center gap-2">
-            Accepted Orders
-            {acceptedOrders.length > 0 && (
-              <Badge variant="secondary">{acceptedOrders.length}</Badge>
-            )}
+          <TabsTrigger value="accepted">
+            Accepted Orders ({acceptedOrders.length})
           </TabsTrigger>
-          <TabsTrigger value="preparation" className="flex items-center gap-2">
-            <ChefHat className="h-4 w-4" />
-            Preparation
-            {preparationOrders.length > 0 && (
-              <Badge variant="secondary">{preparationOrders.length}</Badge>
-            )}
+          <TabsTrigger value="preparation">
+            Preparation ({preparationOrders.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="mt-6">
-          {loading ? (
+        <TabsContent value="pending" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Pending Order Assignments</h2>
+            <Badge variant="outline">{pendingOrders.length} orders</Badge>
+          </div>
+          
+          {pendingOrders.length === 0 ? (
             <Card>
-              <CardContent className="p-6 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p>Loading pending assignments...</p>
-              </CardContent>
-            </Card>
-          ) : pendingAssignments.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <h3 className="text-lg font-medium mb-2">No Pending Assignments</h3>
-                <p className="text-gray-500">
-                  New order assignments will appear here when available.
-                </p>
+              <CardContent className="flex items-center justify-center py-8">
+                <p className="text-gray-500">No pending orders</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {pendingAssignments.map((assignment) => (
-                <OrderAssignmentCard
-                  key={assignment.id}
-                  assignment={assignment}
-                  onResponse={handleAssignmentResponse}
-                />
-              ))}
-            </div>
+            pendingOrders.map(order => (
+              <OrderCard 
+                key={order.id} 
+                order={order} 
+                showActions={true} 
+                actionType="accept" 
+              />
+            ))
           )}
         </TabsContent>
 
-        <TabsContent value="accepted" className="mt-6">
-          {loading ? (
+        <TabsContent value="accepted" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Accepted Orders</h2>
+            <Badge variant="outline">{acceptedOrders.length} orders</Badge>
+          </div>
+          
+          {acceptedOrders.length === 0 ? (
             <Card>
-              <CardContent className="p-6 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p>Loading accepted orders...</p>
-              </CardContent>
-            </Card>
-          ) : acceptedOrders.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <h3 className="text-lg font-medium mb-2">No Accepted Orders</h3>
-                <p className="text-gray-500">
-                  Orders you accept will appear here. Click "Start Preparing" to move them to the Preparation tab.
-                </p>
+              <CardContent className="flex items-center justify-center py-8">
+                <p className="text-gray-500">No accepted orders</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {acceptedOrders.map((assignment) => (
-                <Card key={assignment.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      Order #{assignment.orders.formatted_order_id || assignment.orders.id.slice(-8)}
-                      <Button
-                        onClick={() => handleOrderStatusChange(assignment.orders.id, 'preparing')}
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <ChefHat className="h-4 w-4 mr-2" />
-                        Start Preparing
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p><strong>Customer:</strong> {assignment.orders.customer_name}</p>
-                      <p><strong>Phone:</strong> {assignment.orders.customer_phone}</p>
-                      <p><strong>Total:</strong> ${assignment.orders.total.toFixed(2)}</p>
-                      <p><strong>Items:</strong> {assignment.orders.order_items?.length || 0}</p>
-                      <div className="mt-4">
-                        <h4 className="font-medium mb-2">Order Items:</h4>
-                        <div className="space-y-1">
-                          {assignment.orders.order_items?.map((item: any, index: number) => (
-                            <div key={index} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
-                              <span>{item.quantity}x {item.name}</span>
-                              <span>${item.price?.toFixed(2)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            acceptedOrders.map(order => (
+              <OrderCard 
+                key={order.id} 
+                order={order} 
+                showActions={true} 
+                actionType="start" 
+              />
+            ))
           )}
         </TabsContent>
 
-        <TabsContent value="preparation" className="mt-6">
-          {loading ? (
+        <TabsContent value="preparation" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Orders in Preparation</h2>
+            <Badge variant="outline">{preparationOrders.length} orders</Badge>
+          </div>
+          
+          {preparationOrders.length === 0 ? (
             <Card>
-              <CardContent className="p-6 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p>Loading preparation orders...</p>
-              </CardContent>
-            </Card>
-          ) : preparationOrders.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Orders in Preparation</h3>
-                <p className="text-gray-500">
-                  Orders that are being prepared will appear here with detailed stage management.
-                </p>
+              <CardContent className="flex items-center justify-center py-8">
+                <p className="text-gray-500">No orders in preparation</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
-              {preparationOrders.map((order) => (
-                <EnhancedOrderPreparation
-                  key={order.id}
-                  order={order}
-                />
-              ))}
-            </div>
+            preparationOrders.map(order => (
+              <EnhancedOrderPreparation key={order.id} order={order} />
+            ))
           )}
         </TabsContent>
       </Tabs>
