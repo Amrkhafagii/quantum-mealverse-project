@@ -1,306 +1,421 @@
 
-import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/components/ui/use-toast';
-import { getCoordinatesFromAddress } from '@/utils/geocoding';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase, userTypeService } from "@/services/supabaseClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useLocationPermission } from '@/hooks/useLocationPermission';
+import LocationPermissionsPrompt from './location/LocationPermissionsPrompt';
+import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton';
+import { Platform } from '@/utils/platform';
+import { BiometricErrorBoundary } from '@/components/auth/BiometricErrorBoundary';
 
 interface AuthFormProps {
-  mode: 'signup' | 'login';
-  onSuccess?: (user: any) => void;
-  userType?: 'customer' | 'restaurant' | 'delivery';
   isRegister?: boolean;
 }
 
-interface FormData {
-  email?: string;
-  password?: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  description?: string;
-}
-
-const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType, isRegister }) => {
-  const [formData, setFormData] = useState<FormData>({});
+export const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
+  const [mode, setMode] = useState<'login' | 'signup'>(isRegister ? 'signup' : 'login');
+  const [userType, setUserType] = useState<'customer' | 'restaurant' | 'delivery'>('customer');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [platformInitialized, setPlatformInitialized] = useState(false);
+  
+  // Restaurant specific fields
+  const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantAddress, setRestaurantAddress] = useState('');
+  const [restaurantCity, setRestaurantCity] = useState('');
+  const [restaurantPhone, setRestaurantPhone] = useState('');
+  const [restaurantDescription, setRestaurantDescription] = useState('');
+  
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { requestPermission } = useLocationPermission();
+  
+  // Check platform initialization
+  useEffect(() => {
+    let mounted = true;
+    let checkTimer: number | undefined;
+    
+    const checkPlatform = () => {
+      try {
+        // Check if platform is initialized
+        if (Platform.isInitialized()) {
+          if (mounted) {
+            setPlatformInitialized(true);
+          }
+          return;
+        }
+        
+        // Retry after a delay
+        checkTimer = window.setTimeout(checkPlatform, 100);
+      } catch (error) {
+        console.warn("Error checking platform:", error);
+        if (mounted) {
+          // Proceed anyway to avoid blocking auth
+          setPlatformInitialized(true);
+        }
+      }
+    };
+    
+    checkPlatform();
+    
+    return () => {
+      mounted = false;
+      if (checkTimer) clearTimeout(checkTimer);
+    };
+  }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const actualMode = mode || (isRegister ? 'signup' : 'login');
-      
-      if (actualMode === 'signup') {
-        if (!formData.email || !formData.password) {
-          throw new Error('Email and password are required');
-        }
-
-        const { data: authData, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
+      if (mode === 'signup') {
+        // Sign up the user
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
           options: {
             data: {
-              full_name: formData.name,
-            },
-          },
+              user_type: userType
+            }
+          }
         });
-
-        if (error) {
-          console.error('Signup error:', error);
-          throw new Error(error.message);
-        }
-
-        if (userType === 'restaurant' && authData.user) {
-          // Get coordinates for the restaurant
-          const coordinates = await getCoordinatesFromAddress(
-            `${formData.address}, ${formData.city}`
-          );
-
-          // Create restaurant profile with coordinates
-          const restaurantData = {
-            user_id: authData.user.id,
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            postal_code: formData.state,
-            country: formData.country || 'US',
-            description: formData.description,
-            latitude: coordinates?.latitude || 37.7749,
-            longitude: coordinates?.longitude || -122.4194,
-          };
-
-          const { error: restaurantError } = await supabase
+        
+        if (signUpError) throw signUpError;
+        
+        if (userType === 'restaurant' && signUpData.user && email) {
+          // Create restaurant profile using direct database insert
+          const { data, error } = await supabase
             .from('restaurants')
-            .insert(restaurantData as any);
-
-          if (restaurantError) {
-            console.error('Restaurant creation error:', restaurantError);
+            .insert({
+              user_id: signUpData.user.id,
+              name: restaurantName,
+              email: email,
+              phone: restaurantPhone,
+              address: restaurantAddress,
+              city: restaurantCity,
+              description: restaurantDescription || null,
+              country: 'Canada'
+            })
+            .select()
+            .single();
+          
+          if (error) {
+            console.error('Restaurant profile creation error:', error);
             throw new Error('Failed to create restaurant profile');
           }
-        } else if (userType === 'delivery' && authData.user) {
-          // Create delivery user profile
-          const deliveryData = {
-            user_id: authData.user.id,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-          };
+          
+          // Create default settings
+          await supabase
+            .from('restaurant_settings')
+            .insert({
+              restaurant_id: data.id
+            });
+          
+          toast({
+            title: "Restaurant account created!",
+            description: "Please check your email to verify your account. Complete your profile to get approved.",
+          });
+        } else if (userType === 'delivery') {
+          toast({
+            title: "Delivery account created!",
+            description: "Please check your email to verify your account.",
+          });
+        } else {
+          toast({
+            title: "Success!",
+            description: "Please check your email to verify your account.",
+          });
+        }
+        setMode('login');
+      } else {
+        // Login
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        
+        console.log('AuthForm - Login successful, user data:', data.user);
+        
+        // Get user type - first check user metadata
+        const userMetadata = data.user?.user_metadata as { user_type?: string } | undefined;
+        let detectedUserType = userMetadata?.user_type;
+        
+        console.log('AuthForm - User type from metadata:', detectedUserType);
+        
+        // If not in metadata, check our user_types table as fallback
+        if (!detectedUserType && data.user?.id) {
+          detectedUserType = await userTypeService.getUserType(data.user.id);
+          console.log('AuthForm - User type from service:', detectedUserType);
+        }
+        
+        console.log('AuthForm - Final user type determined:', detectedUserType);
+        
+        if (data.user) {
+          if (detectedUserType === 'restaurant') {
+            // Restaurant user - redirect to restaurant dashboard
+            console.log('AuthForm - Redirecting restaurant user to dashboard');
+            toast({
+              title: "Welcome to Restaurant Dashboard",
+              description: "You have been logged in as a restaurant owner",
+            });
+            navigate('/restaurant/dashboard', { replace: true });
+            return; // Important: return early to prevent further execution
+          } else if (detectedUserType === 'delivery') {
+            // Check if delivery onboarding is complete
+            const { data: deliveryUserData } = await supabase
+              .from('delivery_users')
+              .select('id, is_approved')
+              .eq('user_id', data.user.id)
+              .maybeSingle();
 
-          const { error: deliveryError } = await supabase
-            .from('delivery_users')
-            .insert(deliveryData);
-
-          if (deliveryError) {
-            console.error('Delivery user creation error:', deliveryError);
-            throw new Error('Failed to create delivery user profile');
+            if (deliveryUserData?.id) {
+              if (deliveryUserData.is_approved) {
+                toast({
+                  title: "Welcome back",
+                  description: "You have been logged in as a delivery partner",
+                });
+                navigate('/delivery/dashboard', { replace: true });
+              } else {
+                toast({
+                  title: "Welcome back",
+                  description: "Your delivery account is pending approval",
+                });
+                navigate('/delivery/onboarding', { replace: true });
+              }
+            } else {
+              toast({
+                title: "Welcome",
+                description: "Please complete your delivery partner onboarding",
+              });
+              navigate('/delivery/onboarding', { replace: true });
+            }
+            return; // Important: return early to prevent further execution
+          } else {
+            // Regular customer flow - prompt for location
+            console.log('AuthForm - Customer user, showing location prompt');
+            toast({
+              title: "Welcome back",
+              description: "You have been logged in successfully",
+            });
+            setShowLocationPrompt(true);
           }
         }
-
-        toast({
-          title: 'Success',
-          description: 'Account created successfully!',
-        });
-
-        onSuccess?.(authData.user);
-      } else {
-        if (!formData.email || !formData.password) {
-          throw new Error('Email and password are required');
-        }
-
-        const { data: authData, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) {
-          console.error('Login error:', error);
-          throw new Error(error.message);
-        }
-
-        onSuccess?.(authData.user);
       }
     } catch (error: any) {
-      console.error('Auth error:', error);
+      console.error('AuthForm - Authentication error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'An error occurred',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const actualMode = mode || (isRegister ? 'signup' : 'login');
+  // Handle location permission result
+  const handlePermissionGranted = () => {
+    toast({
+      title: "Location Enabled",
+      description: "You can now see restaurants near you",
+    });
+    navigate('/customer', { replace: true });
+  };
+  
+  const handlePermissionDenied = () => {
+    toast({
+      title: "Location Access Limited",
+      description: "Some features will be limited without location access",
+      variant: "destructive",
+    });
+    navigate('/customer', { replace: true });
+  };
+  
+  const handleDismiss = () => {
+    setShowLocationPrompt(false);
+    navigate('/customer', { replace: true });
+  };
+  
+  // Handle biometric login success
+  const handleBiometricSuccess = () => {
+    setShowLocationPrompt(true);
+  };
+  
+  // Handle biometric login error
+  const handleBiometricError = (error: any) => {
+    console.error("Biometric login error:", error);
+    toast({
+      title: "Biometric login failed",
+      description: "Please login with your email and password instead.",
+      variant: "destructive",
+    });
+  };
+
+  // Render the location prompt or the auth form
+  if (showLocationPrompt) {
+    return (
+      <LocationPermissionsPrompt
+        onRequestPermission={requestPermission}
+        isLoading={false}
+        onPermissionGranted={handlePermissionGranted}
+        onPermissionDenied={handlePermissionDenied}
+        onDismiss={handleDismiss}
+      />
+    );
+  }
+
+  // Safely determine if biometric login should be rendered
+  const shouldShowBiometricButton = () => {
+    if (mode !== 'login') return false;
+    
+    try {
+      return platformInitialized && Platform.isNative();
+    } catch (error) {
+      console.warn("Error checking platform for biometrics:", error);
+      return false;
+    }
+  };
+
+  // Render biometric button with error boundary
+  const renderBiometricButton = () => {
+    if (!shouldShowBiometricButton()) return null;
+    
+    return (
+      <BiometricErrorBoundary>
+        <BiometricLoginButton 
+          onSuccess={handleBiometricSuccess} 
+          onError={handleBiometricError}
+        />
+      </BiometricErrorBoundary>
+    );
+  };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>{actualMode === 'signup' ? 'Sign Up' : 'Login'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {actualMode === 'signup' && userType === 'restaurant' && (
-            <>
+    <form onSubmit={handleAuth} className="space-y-6">
+      <div className="space-y-4">
+        {mode === 'signup' && (
+          <Tabs defaultValue={userType} onValueChange={(value) => setUserType(value as 'customer' | 'restaurant' | 'delivery')}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="customer">Customer</TabsTrigger>
+              <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
+              <TabsTrigger value="delivery">Delivery</TabsTrigger>
+            </TabsList>
+            <TabsContent value="delivery" className="pt-4 pb-2">
+              <div className="text-sm text-gray-300 bg-quantum-darkBlue/30 p-3 rounded-md border border-quantum-cyan/20">
+                <p>Join our delivery team and earn money delivering orders to customers in your area.</p>
+                <p className="mt-1">You'll need to complete an onboarding process after signing up.</p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+        
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        
+        {mode === 'signup' && userType === 'restaurant' && (
+          <div className="space-y-4 p-4 border rounded-md">
+            <div>
+              <Label htmlFor="restaurant-name">Restaurant Name</Label>
+              <Input
+                id="restaurant-name"
+                type="text"
+                placeholder="Restaurant Name"
+                value={restaurantName}
+                onChange={(e) => setRestaurantName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="restaurant-address">Address</Label>
+              <Input
+                id="restaurant-address"
+                type="text"
+                placeholder="Address"
+                value={restaurantAddress}
+                onChange={(e) => setRestaurantAddress(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Restaurant Name</Label>
+                <Label htmlFor="restaurant-city">City</Label>
                 <Input
+                  id="restaurant-city"
                   type="text"
-                  id="name"
-                  name="name"
-                  onChange={handleChange}
-                  placeholder="Enter restaurant name"
+                  placeholder="City"
+                  value={restaurantCity}
+                  onChange={(e) => setRestaurantCity(e.target.value)}
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="restaurant-phone">Phone</Label>
                 <Input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  onChange={handleChange}
-                  placeholder="Enter phone number"
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input
+                  id="restaurant-phone"
                   type="text"
-                  id="address"
-                  name="address"
-                  onChange={handleChange}
-                  placeholder="Enter address"
+                  placeholder="Phone"
+                  value={restaurantPhone}
+                  onChange={(e) => setRestaurantPhone(e.target.value)}
+                  required
                 />
               </div>
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input
-                  type="text"
-                  id="city"
-                  name="city"
-                  onChange={handleChange}
-                  placeholder="Enter city"
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">State</Label>
-                <Input
-                  type="text"
-                  id="state"
-                  name="state"
-                  onChange={handleChange}
-                  placeholder="Enter state"
-                />
-              </div>
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  type="text"
-                  id="country"
-                  name="country"
-                  onChange={handleChange}
-                  placeholder="Enter country"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  onChange={handleChange}
-                  placeholder="Enter description"
-                  rows={3}
-                />
-              </div>
-            </>
-          )}
-
-          {actualMode === 'signup' && userType === 'delivery' && (
-            <>
-              <div>
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  type="text"
-                  id="firstName"
-                  name="firstName"
-                  onChange={handleChange}
-                  placeholder="Enter first name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  type="text"
-                  id="lastName"
-                  name="lastName"
-                  onChange={handleChange}
-                  placeholder="Enter last name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  onChange={handleChange}
-                  placeholder="Enter phone number"
-                />
-              </div>
-            </>
-          )}
-
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              type="email"
-              id="email"
-              name="email"
-              onChange={handleChange}
-              placeholder="Enter email"
-              required
-            />
+            </div>
+            <div>
+              <Label htmlFor="restaurant-description">Description</Label>
+              <Textarea
+                id="restaurant-description"
+                placeholder="Tell us about your restaurant"
+                value={restaurantDescription}
+                onChange={(e) => setRestaurantDescription(e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              type="password"
-              id="password"
-              name="password"
-              onChange={handleChange}
-              placeholder="Enter password"
-              required
-            />
-          </div>
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? (actualMode === 'signup' ? 'Creating...' : 'Logging in...') : (actualMode === 'signup' ? 'Sign Up' : 'Login')}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+
+      <Button 
+        type="submit" 
+        className="w-full cyber-button" 
+        disabled={loading}
+      >
+        {loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Sign Up'}
+      </Button>
+      
+      {renderBiometricButton()}
+
+      <p className="text-center text-sm">
+        {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
+        <button
+          type="button"
+          onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+          className="text-quantum-cyan hover:underline"
+        >
+          {mode === 'login' ? 'Sign Up' : 'Login'}
+        </button>
+      </p>
+    </form>
   );
 };
-
-export default AuthForm;
-export { AuthForm };
