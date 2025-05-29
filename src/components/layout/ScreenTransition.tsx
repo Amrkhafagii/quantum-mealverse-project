@@ -10,14 +10,11 @@ interface ScreenTransitionProps {
   children: React.ReactNode;
   type?: TransitionType;
   direction?: 'left' | 'right' | 'up' | 'down';
-  identifier: string | number; // Used to identify when content changes
+  identifier: string | number;
   className?: string;
   duration?: number;
 }
 
-/**
- * A component that applies platform-specific transitions when content changes
- */
 export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
   children,
   type = 'platform',
@@ -30,35 +27,31 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
   const [isInitialRender, setIsInitialRender] = useState(true);
   
   useEffect(() => {
-    // Skip animation on first render
     if (isInitialRender) {
       setIsInitialRender(false);
     }
   }, []);
   
-  // Determine transition to use based on platform
   const getTransition = (): TransitionType => {
     if (type !== 'platform') {
       return type;
     }
     
     if (isPlatformIOS) {
-      return 'slide'; // iOS typically uses slide transitions
+      return 'slide';
     } else if (isPlatformAndroid) {
-      return 'fade'; // Android often uses fade transitions
+      return 'fade';
     }
     
-    return 'fade'; // Default for web
+    return 'fade';
   };
   
   const currentTransition = getTransition();
   
-  // Skip animation on first render to avoid initial animation
   if (isInitialRender) {
     return <div className={className}>{children}</div>;
   }
   
-  // Configure animations based on transition type and direction
   const getAnimations = () => {
     switch (currentTransition) {
       case 'slide':

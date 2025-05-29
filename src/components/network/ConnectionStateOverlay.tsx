@@ -1,113 +1,154 @@
 
-import React, { useEffect, useState } from 'react';
-import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, WifiOff, AlertTriangle, SignalLow } from 'lucide-react';
+import { WifiOff, Wifi, RefreshCw } from 'lucide-react';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { cn } from '@/lib/utils';
+import { hapticFeedback } from '@/utils/hapticFeedback';
+import { Platform } from '@/utils/platform';
 
 interface ConnectionStateOverlayProps {
-  position?: 'top' | 'bottom' | 'float';
-  theme?: 'light' | 'dark' | 'auto';
+  position?: 'top' | 'bottom';
   autoDismiss?: boolean;
-  dismissAfter?: number;
-  showForNetworkChange?: boolean;
+  onRetry?: () => void;
 }
 
-export function ConnectionStateOverlay({
+export const ConnectionStateOverlay: React.FC<ConnectionStateOverlayProps> = ({
   position = 'top',
-  theme = 'auto',
   autoDismiss = true,
-  dismissAfter = 5000,
-  showForNetworkChange = true
-}: ConnectionStateOverlayProps) {
-  const { isOnline, wasOffline, connectionType } = useConnectionStatus();
-  const { quality, hasTransitioned, isFlaky, metrics } = useNetworkQuality();
-  const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState('');
-  const [icon, setIcon] = useState<React.ReactNode | null>(null);
-  const [color, setColor] = useState('bg-green-500');
+  onRetry
+}) => {
+  const { isOnline, wasOffline } = useConnectionStatus();
+  const [showNotification, setShowNotification] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  // Position styles
-  const positionStyles = {
-    top: 'top-safe left-0 right-0 mx-auto',
-    bottom: 'bottom-safe left-0 right-0 mx-auto',
-    float: 'bottom-safe right-safe'
-  };
-
-  // Effect to handle state changes and display appropriate messages
   useEffect(() => {
-    // Connection restored after being offline
-    if (isOnline && wasOffline) {
-      setVisible(true);
-      setMessage('Connection restored');
-      setIcon(<Wifi className="h-4 w-4" />);
-      setColor('bg-green-500');
-    } 
-    // Just went offline
-    else if (!isOnline && !wasOffline) {
-      setVisible(true);
-      setMessage('Connection lost');
-      setIcon(<WifiOff className="h-4 w-4" />);
-      setColor('bg-red-500');
-    }
-    // Network quality changed significantly
-    else if (showForNetworkChange && hasTransitioned) {
-      setVisible(true);
-      if (quality === 'poor' || quality === 'very-poor') {
-        setMessage('Poor connection detected');
-        setIcon(<SignalLow className="h-4 w-4" />);
-        setColor('bg-amber-500');
-      } else if (quality === 'excellent' || quality === 'good') {
-        setMessage('Connection improved');
-        setIcon(<Wifi className="h-4 w-4" />);
-        setColor('bg-green-500');
+    if (!isOnline) {
+      setShowNotification(true);
+      if (Platform.isNative()) {
+        hapticFeedback.error();
+      }
+    } else if (wasOffline && isOnline) {
+      setShowNotification(true);
+      if (Platform.isNative()) {
+        hapticFeedback.success();
+      }
+      
+      if (autoDismiss) {
+        const timer = setTimeout(() => {
+          setShowNotification(false);
+        }, 3000);
+        return () => clearTimeout(timer);
       }
     }
-    // Flaky connection detection
-    else if (isFlaky && isOnline) {
-      setVisible(true);
-      setMessage('Unstable connection');
-      setIcon(<AlertTriangle className="h-4 w-4" />);
-      setColor('bg-amber-500');
+  }, [isOnline, wasOffline, autoDismiss]);
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    
+    if (Platform.isNative()) {
+      await hapticFeedback.medium();
     }
     
-    // Auto dismiss after specified time
-    if (visible && autoDismiss) {
-      const timer = setTimeout(() => {
-        setVisible(false);
-      }, dismissAfter);
-      
-      return () => clearTimeout(timer);
+    try {
+      if (onRetry) {
+        await onRetry();
+      } else {
+        // Simple connectivity test
+        await fetch('/favicon.ico', { cache: 'no-store' });
+      }
+    } catch (error) {
+      console.log('Retry failed:', error);
+    } finally {
+      setIsRetrying(false);
     }
-  }, [isOnline, wasOffline, quality, hasTransitioned, isFlaky, autoDismiss, dismissAfter, showForNetworkChange]);
-
-  // Handle manual dismiss
-  const handleDismiss = () => {
-    setVisible(false);
   };
+
+  const getNotificationContent = () => {
+    if (!isOnline) {
+      return {
+        icon: <WifiOff className="h-4 w-4" />,
+        message: 'No internet connection',
+        description: 'Check your network settings',
+        className: 'bg-red-500 text-white'
+      };
+    } else if (wasOffline) {
+      return {
+        icon: <Wifi className="h-4 w-4" />,
+        message: 'Connection restored',
+        description: 'You are back online',
+        className: 'bg-green-500 text-white'
+      };
+    }
+    return null;
+  };
+
+  const content = getNotificationContent();
+  if (!content || !showNotification) return null;
 
   return (
     <AnimatePresence>
-      {visible && (
-        <motion.div
-          initial={{ opacity: 0, y: position === 'top' ? -20 : 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: position === 'top' ? -20 : 20 }}
-          transition={{ duration: 0.3 }}
-          className={`fixed ${positionStyles[position]} z-40 pointer-events-none`}
-          onClick={handleDismiss}
-        >
-          <div className={`${color} text-white rounded-full shadow-md px-3 py-1 flex items-center m-2 pointer-events-auto`}>
-            {icon}
-            <span className="ml-2 text-sm font-medium">{message}</span>
-            {metrics && metrics.latency && quality !== 'unknown' && (
-              <span className="ml-2 text-xs opacity-80">{metrics.latency}ms</span>
+      <motion.div
+        initial={{ 
+          opacity: 0, 
+          y: position === 'top' ? -100 : 100,
+          scale: 0.95 
+        }}
+        animate={{ 
+          opacity: 1, 
+          y: 0,
+          scale: 1 
+        }}
+        exit={{ 
+          opacity: 0, 
+          y: position === 'top' ? -100 : 100,
+          scale: 0.95 
+        }}
+        transition={{ 
+          type: 'spring', 
+          stiffness: 400, 
+          damping: 30 
+        }}
+        className={cn(
+          'fixed left-4 right-4 z-50 mx-auto max-w-sm',
+          position === 'top' ? 'top-4' : 'bottom-4'
+        )}
+      >
+        <div className={cn(
+          'rounded-lg p-4 shadow-lg backdrop-blur-sm',
+          'border border-white/20',
+          content.className
+        )}>
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              {content.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">
+                {content.message}
+              </p>
+              <p className="text-xs opacity-90">
+                {content.description}
+              </p>
+            </div>
+            {!isOnline && (
+              <button
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="flex-shrink-0 p-1 rounded-full hover:bg-white/20 transition-colors"
+                aria-label="Retry connection"
+              >
+                <RefreshCw 
+                  className={cn(
+                    'h-4 w-4',
+                    isRetrying && 'animate-spin'
+                  )} 
+                />
+              </button>
             )}
           </div>
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
-}
-
-export default ConnectionStateOverlay;
+};

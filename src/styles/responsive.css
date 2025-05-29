@@ -43,6 +43,62 @@
   transition: opacity 0.15s ease;
 }
 
+/* Enhanced responsive breakpoints */
+@media (max-width: 320px) {
+  /* Small phones */
+  .text-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .padding-responsive {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 375px) {
+  /* Medium phones */
+  .text-responsive {
+    font-size: 1rem;
+  }
+  
+  .padding-responsive {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 376px) and (max-width: 414px) {
+  /* Large phones */
+  .text-responsive {
+    font-size: 1.125rem;
+  }
+  
+  .padding-responsive {
+    padding: 1.25rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Tablets */
+  .text-responsive {
+    font-size: 1.25rem;
+  }
+  
+  .padding-responsive {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  /* Desktop */
+  .text-responsive {
+    font-size: 1.375rem;
+  }
+  
+  .padding-responsive {
+    padding: 2rem;
+  }
+}
+
 /* Foldable device optimization */
 @media (min-width: 768px) and (max-width: 900px) {
   .foldable-layout {
@@ -55,24 +111,40 @@
   }
 }
 
-/* Adaptive font sizes */
-.dynamic-text {
-  /* Base font scale for all devices */
-  font-size: 16px;
+/* Dynamic viewport units for mobile */
+.min-h-screen-safe {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height */
 }
 
-@media (max-width: 375px) {
-  /* Small phones */
-  .dynamic-text {
-    font-size: 14px;
-  }
+.h-screen-safe {
+  height: 100vh;
+  height: 100dvh;
 }
 
-@media (min-width: 768px) {
-  /* Tablets and larger */
-  .dynamic-text {
-    font-size: 18px;
-  }
+/* Keyboard aware layouts */
+.keyboard-active {
+  transition: padding-bottom 0.3s ease-out;
+}
+
+/* Scroll optimizations */
+.ios-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.android-scroll {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Reduced motion preference support */
@@ -82,6 +154,14 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .responsive-contrast {
+    border: 2px solid;
+    filter: contrast(1.5);
   }
 }
 
@@ -95,4 +175,57 @@
   .hidden-for-landscape {
     display: none !important;
   }
+  
+  .landscape-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
+/* Portrait orientation optimizations */
+@media screen and (orientation: portrait) {
+  .portrait-stack {
+    flex-direction: column;
+  }
+  
+  .portrait-full-width {
+    width: 100%;
+  }
+}
+
+/* Dark mode improvements */
+@media (prefers-color-scheme: dark) {
+  .responsive-bg {
+    background-color: rgb(15 23 42);
+  }
+  
+  .responsive-text {
+    color: rgb(241 245 249);
+  }
+}
+
+/* Animation performance optimizations */
+.performance-animation {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Touch target improvements */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Focus improvements for accessibility */
+.focus-ring-enhanced {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring-enhanced:focus-visible {
+  outline: 2px solid rgb(59 130 246);
+  outline-offset: 2px;
 }

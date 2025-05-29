@@ -7,23 +7,19 @@ import { useResponsive } from '@/contexts/ResponsiveContext';
 interface PageTransitionProps {
   children: React.ReactNode;
   type?: TransitionType;
-  identifier?: string; // Add this line to accept the identifier prop
-  className?: string; // Add this to accept the className prop
+  identifier?: string;
+  className?: string;
 }
 
-/**
- * Wrapper component for page transitions using location pathname as the key
- */
 export const PageTransition: React.FC<PageTransitionProps> = ({
   children,
   type = 'platform',
-  identifier, // Accept the identifier prop
-  className = 'w-full h-full', // Accept className with default value
+  identifier,
+  className = 'w-full h-full',
 }) => {
   const location = useLocation();
   const { isPlatformIOS, isPlatformAndroid } = useResponsive();
   
-  // Determine default transition type by platform if not specified
   const getDefaultTransition = (): TransitionType => {
     if (isPlatformIOS) return 'slide';
     if (isPlatformAndroid) return 'fade';
@@ -31,8 +27,6 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
   };
   
   const transitionType = type === 'platform' ? getDefaultTransition() : type;
-  
-  // Use the provided identifier or fall back to location.pathname
   const transitionIdentifier = identifier || location.pathname;
   
   return (
