@@ -76,7 +76,7 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Create order items with required meal_id field and handle potential conflicts
+      // Create order items with required meal_id field
       const orderItems = items.map(item => ({
         order_id: order.id,
         meal_id: item.id, // Use item.id as meal_id
@@ -87,12 +87,13 @@ export const useOrderSubmission = (
 
       console.log('Inserting order items:', orderItems);
 
-      // Use ON CONFLICT to handle potential duplicates with the unique constraint
+      // Use upsert instead of insert with onConflict to handle potential duplicates
       const { error: itemsError } = await supabase
         .from('order_items')
-        .insert(orderItems)
-        .onConflict('order_id, meal_id')
-        .merge(['quantity', 'price', 'name']); // Update these fields if conflict occurs
+        .upsert(orderItems, {
+          onConflict: 'order_id,meal_id',
+          ignoreDuplicates: false
+        });
 
       if (itemsError) {
         console.error('Order items creation error:', itemsError);
