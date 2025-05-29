@@ -139,28 +139,32 @@ export const useOrderSubmission = (
         });
       }
 
-      // Update order with restaurant assignment
-      if (assignedRestaurantId) {
-        console.log('Updating order with restaurant assignment...');
-        
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ restaurant_id: assignedRestaurantId })
-          .eq('id', order.id);
-          
-        if (updateError) {
-          console.error('Error updating order with restaurant:', updateError);
-          throw new Error(`Failed to assign restaurant: ${updateError.message}`);
-        }
-        
-        console.log('Order updated with restaurant assignment successfully');
+      // Validate restaurant ID before proceeding
+      if (!assignedRestaurantId) {
+        throw new Error('No restaurant could be assigned to process your order');
       }
+
+      // Update order with restaurant assignment
+      console.log('Updating order with restaurant assignment...');
+      
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ restaurant_id: assignedRestaurantId })
+        .eq('id', order.id);
+        
+      if (updateError) {
+        console.error('Error updating order with restaurant:', updateError);
+        throw new Error(`Failed to assign restaurant: ${updateError.message}`);
+      }
+      
+      console.log('Order updated with restaurant assignment successfully');
 
       // Resolve cart items to meal records with enhanced error handling
       console.log('Starting meal resolution process...');
       
+      let resolvedItems;
       try {
-        const resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
+        resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
           items,
           assignedRestaurantId
         );
@@ -177,76 +181,90 @@ export const useOrderSubmission = (
           }))
         });
 
-        // Create order items with better error handling
-        console.log('Creating order items...');
-        
-        for (const [index, item] of resolvedItems.entries()) {
-          try {
-            const orderItem = {
-              order_id: order.id,
-              meal_id: item.meal_id,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity
-            };
-
-            console.log(`Creating order item ${index + 1}/${resolvedItems.length}:`, orderItem);
-
-            const { error: itemError } = await supabase
-              .from('order_items')
-              .insert(orderItem);
-
-            if (itemError) {
-              // Handle unique constraint violations
-              if (itemError.code === '23505' && itemError.message?.includes('order_items_order_meal_unique')) {
-                console.log('Duplicate order item detected, updating existing item...');
-                
-                const { data: existingItem, error: fetchError } = await supabase
-                  .from('order_items')
-                  .select('quantity')
-                  .eq('order_id', order.id)
-                  .eq('meal_id', item.meal_id)
-                  .single();
-
-                if (fetchError) {
-                  console.error('Error fetching existing item:', fetchError);
-                  throw new Error(`Failed to fetch existing item: ${fetchError.message}`);
-                }
-
-                const { error: updateError } = await supabase
-                  .from('order_items')
-                  .update({ 
-                    quantity: existingItem.quantity + item.quantity,
-                    price: item.price
-                  })
-                  .eq('order_id', order.id)
-                  .eq('meal_id', item.meal_id);
-
-                if (updateError) {
-                  console.error('Error updating existing order item:', updateError);
-                  throw new Error(`Failed to update existing item: ${updateError.message}`);
-                }
-                
-                console.log(`Updated existing order item for meal_id: ${item.meal_id}`);
-              } else {
-                console.error('Order item creation error:', itemError);
-                throw new Error(`Failed to create order item: ${itemError.message}`);
-              }
-            } else {
-              console.log(`Successfully created order item ${index + 1} for meal_id: ${item.meal_id}`);
-            }
-          } catch (itemProcessError) {
-            console.error(`Error processing order item ${index + 1}:`, item, itemProcessError);
-            throw itemProcessError;
-          }
-        }
-
-        console.log('All order items processed successfully');
-
       } catch (mealResolutionError) {
         console.error('Meal resolution failed:', mealResolutionError);
         throw new Error(`Failed to process meal items: ${mealResolutionError instanceof Error ? mealResolutionError.message : 'Unknown error'}`);
       }
+
+      // Validate all meal IDs exist before creating order items
+      const mealIds = resolvedItems.map(item => item.meal_id);
+      const areMealIdsValid = await MealResolutionService.validateMealIds(mealIds);
+      
+      if (!areMealIdsValid) {
+        console.error('Meal ID validation failed before order item creation');
+        throw new Error('Some meal items could not be validated. Please try again.');
+      }
+
+      console.log('All meal IDs validated successfully');
+
+      // Create order items with better error handling
+      console.log('Creating order items...');
+      
+      for (const [index, item] of resolvedItems.entries()) {
+        try {
+          const orderItem = {
+            order_id: order.id,
+            meal_id: item.meal_id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          };
+
+          console.log(`Creating order item ${index + 1}/${resolvedItems.length}:`, orderItem);
+
+          const { error: itemError } = await supabase
+            .from('order_items')
+            .insert(orderItem);
+
+          if (itemError) {
+            // Handle unique constraint violations
+            if (itemError.code === '23505' && itemError.message?.includes('order_items_order_meal_unique')) {
+              console.log('Duplicate order item detected, updating existing item...');
+              
+              const { data: existingItem, error: fetchError } = await supabase
+                .from('order_items')
+                .select('quantity')
+                .eq('order_id', order.id)
+                .eq('meal_id', item.meal_id)
+                .single();
+
+              if (fetchError) {
+                console.error('Error fetching existing item:', fetchError);
+                throw new Error(`Failed to fetch existing item: ${fetchError.message}`);
+              }
+
+              const { error: updateError } = await supabase
+                .from('order_items')
+                .update({ 
+                  quantity: existingItem.quantity + item.quantity,
+                  price: item.price
+                })
+                .eq('order_id', order.id)
+                .eq('meal_id', item.meal_id);
+
+              if (updateError) {
+                console.error('Error updating existing order item:', updateError);
+                throw new Error(`Failed to update existing item: ${updateError.message}`);
+              }
+              
+              console.log(`Updated existing order item for meal_id: ${item.meal_id}`);
+            } else if (itemError.code === '23503' && itemError.message?.includes('meal_id_fkey')) {
+              console.error('Foreign key constraint violation for meal_id:', item.meal_id);
+              throw new Error(`Invalid meal reference for "${item.name}". The meal may have been deleted.`);
+            } else {
+              console.error('Order item creation error:', itemError);
+              throw new Error(`Failed to create order item "${item.name}": ${itemError.message}`);
+            }
+          } else {
+            console.log(`Successfully created order item ${index + 1} for meal_id: ${item.meal_id}`);
+          }
+        } catch (itemProcessError) {
+          console.error(`Error processing order item ${index + 1}:`, item, itemProcessError);
+          throw itemProcessError;
+        }
+      }
+
+      console.log('All order items processed successfully');
 
       // Clear cart and show success
       clearCart();

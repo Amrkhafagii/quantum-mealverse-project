@@ -26,6 +26,25 @@ export class MealResolutionService {
       items: cartItems.map(item => ({ id: item.id, name: item.name, price: item.price }))
     });
 
+    // First validate that the restaurant exists
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id, name, is_active')
+      .eq('id', restaurantId)
+      .single();
+
+    if (restaurantError || !restaurant) {
+      console.error('Restaurant validation failed:', restaurantError);
+      throw new Error(`Invalid restaurant ID: ${restaurantId}`);
+    }
+
+    if (!restaurant.is_active) {
+      console.error('Restaurant is not active:', restaurant);
+      throw new Error(`Restaurant "${restaurant.name}" is not currently active`);
+    }
+
+    console.log('Restaurant validated:', restaurant);
+
     const resolvedItems: ResolvedMealItem[] = [];
 
     for (const [index, item] of cartItems.entries()) {
@@ -40,7 +59,18 @@ export class MealResolutionService {
         } else {
           console.log(`No existing meal found for "${item.name}", creating new meal...`);
           mealId = await this.createMealRecord(item, restaurantId);
+          
+          if (!mealId) {
+            throw new Error(`Failed to create meal record for "${item.name}" - no meal ID returned`);
+          }
+          
           console.log(`Created new meal for "${item.name}": ${mealId}`);
+        }
+
+        // Validate that the meal ID actually exists in the database
+        const isValidMeal = await this.validateMealExists(mealId);
+        if (!isValidMeal) {
+          throw new Error(`Meal validation failed for "${item.name}" - meal ID ${mealId} does not exist in database`);
         }
 
         const resolvedItem: ResolvedMealItem = {
@@ -134,12 +164,23 @@ export class MealResolutionService {
 
       if (error) {
         console.error('Database error while creating meal:', error);
+        
+        // Check if it's a permission error
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
+          throw new Error(`Permission denied: Cannot create meals in database. Please contact support.`);
+        }
+        
+        // Check if it's a foreign key constraint error
+        if (error.code === '23503') {
+          throw new Error(`Invalid restaurant reference: Restaurant ${restaurantId} may not exist.`);
+        }
+        
         throw new Error(`Failed to create meal in database: ${error.message}`);
       }
 
       if (!data?.id) {
         console.error('No ID returned from meal creation');
-        throw new Error('Failed to create meal record - no ID returned');
+        throw new Error('Failed to create meal record - no ID returned from database');
       }
 
       console.log(`Successfully created meal:`, { id: data.id, name: data.name });
@@ -148,6 +189,30 @@ export class MealResolutionService {
     } catch (error) {
       console.error('Error in createMealRecord:', error);
       throw error;
+    }
+  }
+
+  private static async validateMealExists(mealId: string): Promise<boolean> {
+    console.log('Validating meal exists:', mealId);
+
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('id')
+        .eq('id', mealId)
+        .single();
+
+      if (error) {
+        console.error('Error validating meal existence:', error);
+        return false;
+      }
+
+      const exists = !!data;
+      console.log('Meal validation result:', { mealId, exists });
+      return exists;
+    } catch (error) {
+      console.error('Exception during meal validation:', error);
+      return false;
     }
   }
 
