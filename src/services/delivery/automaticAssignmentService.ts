@@ -52,6 +52,18 @@ class AutomaticAssignmentService {
 
   // Reject a delivery assignment (reassign to another delivery user)
   async rejectAssignment(assignmentId: string, reason?: string): Promise<void> {
+    // First get the assignment to retrieve the order_id
+    const { data: assignment, error: fetchError } = await supabase
+      .from('delivery_assignments')
+      .select('order_id')
+      .eq('id', assignmentId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching assignment for rejection:', fetchError);
+      throw fetchError;
+    }
+
     const { error } = await supabase
       .from('delivery_assignments')
       .update({ 
@@ -65,11 +77,12 @@ class AutomaticAssignmentService {
       throw error;
     }
 
-    // Log the rejection for analytics
+    // Log the rejection for analytics with the required order_id
     await supabase
       .from('delivery_assignment_rejections')
       .insert({
         assignment_id: assignmentId,
+        order_id: assignment.order_id,
         reason: reason || 'No reason provided'
       });
   }
