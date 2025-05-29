@@ -5761,7 +5761,7 @@ export type Database = {
             foreignKeyName: "order_items_meal_id_fkey"
             columns: ["meal_id"]
             isOneToOne: false
-            referencedRelation: "meals"
+            referencedRelation: "menu_items"
             referencedColumns: ["id"]
           },
           {
@@ -6093,6 +6093,7 @@ export type Database = {
           return_images: string[] | null
           return_reason: string | null
           return_status: string | null
+          special_instructions: string | null
           status: string
           subtotal: number
           total: number
@@ -6136,6 +6137,7 @@ export type Database = {
           return_images?: string[] | null
           return_reason?: string | null
           return_status?: string | null
+          special_instructions?: string | null
           status?: string
           subtotal: number
           total: number
@@ -6179,6 +6181,7 @@ export type Database = {
           return_images?: string[] | null
           return_reason?: string | null
           return_status?: string | null
+          special_instructions?: string | null
           status?: string
           subtotal?: number
           total?: number

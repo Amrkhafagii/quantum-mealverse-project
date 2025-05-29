@@ -9,7 +9,6 @@ import { DeliveryForm } from '@/components/checkout/DeliveryForm';
 import { EmptyCartMessage } from '@/components/checkout/EmptyCartMessage';
 import { AuthOptions } from '@/components/checkout/AuthOptions';
 import { useCheckout } from '@/hooks/useCheckout';
-import { useCartCleanup } from '@/hooks/useCartCleanup';
 import { Loader2, WifiOff } from 'lucide-react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { Button } from '@/components/ui/button';
@@ -32,11 +31,7 @@ const Checkout = () => {
   const { isOnline } = useConnectionStatus();
   const navigate = useNavigate();
 
-  // Perform cart validation and cleanup on checkout page load
-  useCartCleanup({
-    validateOnMount: true,
-    showNotifications: true
-  });
+  // No cart cleanup or validation performed - accept all items
 
   return (
     <div className="min-h-screen bg-quantum-black text-white relative">

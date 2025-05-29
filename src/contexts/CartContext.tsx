@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
 import { CartValidationService } from '@/services/cart/cartValidationService';
@@ -68,7 +67,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   // Calculate total amount from cart items
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Initialize cart from localStorage with validation
+  // Initialize cart from localStorage
   useEffect(() => {
     initializeCart();
   }, []);
@@ -89,15 +88,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       console.log("CartContext: Loaded cart items:", validation.validItems);
       setCart(validation.validItems);
       
-      // Notify user about removed items
-      if (validation.hasInvalidItems) {
-        const removedItemNames = validation.removedItems.map(item => item.name).join(', ');
-        toast({
-          title: "Cart updated",
-          description: `Removed unavailable items: ${removedItemNames}`,
-          variant: "destructive"
-        });
-      }
+      // No longer show notifications for removed items - just accept everything
     } catch (error) {
       console.error('CartContext: Error initializing cart:', error);
       setCart([]);
@@ -111,7 +102,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     try {
       console.log("CartContext: Adding item to cart:", item);
       
-      // No validation needed for adding items - just add them directly
+      // No validation needed - just add items directly
       const unifiedItem: CartItem = {
         ...item,
         assignment_source: item.assignment_source || (item.restaurant_id ? 'nutrition_generation' : 'traditional_ordering')
@@ -199,9 +190,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     CartValidationService.clearStoredCart();
   };
 
+  // Keep validateCart method for compatibility but make it empty
   const validateCart = async () => {
-    // No validation needed - this method is kept for compatibility
-    console.log('CartContext: Cart validation skipped - no validation performed');
+    console.log('CartContext: Cart validation disabled - accepting all items');
+    // No validation performed - method kept for compatibility only
   };
 
   // Unified helper: Group cart items by restaurant
