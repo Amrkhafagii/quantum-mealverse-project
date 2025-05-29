@@ -92,7 +92,7 @@ export const useOrderSubmission = (
       // Create order items with enhanced error logging
       await createOrderItems(insertedOrder.id, items);
       
-      // Handle restaurant assignments for unified checkout
+      // Handle restaurant assignments for unified checkout - ALWAYS create assignments
       await handleUnifiedRestaurantAssignment(insertedOrder.id, data, items, userId);
       
       // Always record the order creation in history
@@ -158,38 +158,64 @@ export const useOrderSubmission = (
         unassignedCount: unassignedItems.length
       });
 
-      // For pre-assigned items, update the order status directly
+      // For pre-assigned items, create restaurant assignment records for dashboard visibility
       if (preAssignedItems.length > 0) {
-        console.log('Processing pre-assigned items:', preAssignedItems.map(item => ({
+        console.log('Creating restaurant assignments for pre-assigned items:', preAssignedItems.map(item => ({
           name: item.name,
           restaurant_id: item.restaurant_id,
           assignment_details: !!item.assignment_details
         })));
 
-        // Update order status to indicate some items are already assigned
-        await orderAssignmentService.updateOrderStatus(
-          orderId, 
-          'restaurant_assigned',
-          preAssignedItems[0].restaurant_id
-        );
+        // Create restaurant assignment records for each pre-assigned restaurant
+        const restaurantGroups = preAssignedItems.reduce((groups, item) => {
+          const restaurantId = item.restaurant_id!;
+          if (!groups[restaurantId]) {
+            groups[restaurantId] = [];
+          }
+          groups[restaurantId].push(item);
+          return groups;
+        }, {} as { [restaurantId: string]: CartItem[] });
 
-        // Record assignment history for pre-assigned items
-        for (const item of preAssignedItems) {
+        // Create assignment records for each restaurant
+        for (const [restaurantId, restaurantItems] of Object.entries(restaurantGroups)) {
+          await orderAssignmentService.createDirectAssignment(
+            orderId,
+            restaurantId,
+            {
+              assignment_type: 'nutrition_generated',
+              items: restaurantItems.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price
+              })),
+              estimated_prep_time: restaurantItems[0].estimated_prep_time,
+              distance_km: restaurantItems[0].distance_km
+            }
+          );
+
+          // Record assignment history for pre-assigned items
           await recordOrderHistory(
             orderId,
             'restaurant_pre_assigned',
-            item.restaurant_id,
+            restaurantId,
             {
-              item_name: item.name,
               assignment_source: 'nutrition_generation',
-              estimated_prep_time: item.estimated_prep_time,
-              distance_km: item.distance_km
+              items_count: restaurantItems.length,
+              estimated_prep_time: restaurantItems[0].estimated_prep_time,
+              distance_km: restaurantItems[0].distance_km
             },
             undefined,
             userId,
             'system'
           );
         }
+
+        // Update order status to indicate restaurant assignment
+        await orderAssignmentService.updateOrderStatus(
+          orderId, 
+          'restaurant_assigned',
+          Object.keys(restaurantGroups)[0] // Use first restaurant as primary
+        );
       }
 
       // For unassigned items (traditional orders), use the location-based assignment

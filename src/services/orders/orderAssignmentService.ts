@@ -26,6 +26,45 @@ export interface OrderNotification {
 
 export const orderAssignmentService = {
   /**
+   * Create a direct assignment for pre-assigned restaurants (nutrition-generated orders)
+   */
+  async createDirectAssignment(
+    orderId: string, 
+    restaurantId: string, 
+    metadata: any = {}
+  ): Promise<boolean> {
+    try {
+      console.log('Creating direct restaurant assignment:', {
+        orderId,
+        restaurantId,
+        metadata
+      });
+
+      // Create restaurant assignment record
+      const { error: assignmentError } = await supabase
+        .from('restaurant_assignments')
+        .insert({
+          order_id: orderId,
+          restaurant_id: restaurantId,
+          status: 'pending',
+          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
+          assignment_metadata: metadata
+        });
+
+      if (assignmentError) {
+        console.error('Error creating direct assignment:', assignmentError);
+        return false;
+      }
+
+      console.log('Direct assignment created successfully');
+      return true;
+    } catch (error) {
+      console.error('Error in createDirectAssignment:', error);
+      return false;
+    }
+  },
+
+  /**
    * Assign an order to restaurants based on location
    */
   async assignOrderToRestaurants(orderId: string, latitude: number, longitude: number): Promise<boolean> {
