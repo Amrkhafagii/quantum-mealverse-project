@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +89,9 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
         delivery_radius: values.delivery_radius,
         estimated_delivery_time: values.estimated_delivery_time,
         user_id: user?.id,
+        // Include default coordinates to satisfy the database schema
+        latitude: restaurant?.latitude || 37.7749,
+        longitude: restaurant?.longitude || -122.4194,
       };
 
       let response;
@@ -98,14 +100,14 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
         // Update existing restaurant
         response = await supabase
           .from('restaurants')
-          .update(updates)
+          .update(updates as any)
           .eq('id', restaurant.id)
           .select();
       } else {
         // Create new restaurant
         response = await supabase
           .from('restaurants')
-          .insert(updates)
+          .insert(updates as any)
           .select();
       }
 

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ interface AuthFormProps {
   mode: 'signup' | 'login';
   onSuccess?: (user: any) => void;
   userType?: 'customer' | 'restaurant' | 'delivery';
+  isRegister?: boolean;
 }
 
 interface FormData {
@@ -29,7 +31,7 @@ interface FormData {
   description?: string;
 }
 
-const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
+const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType, isRegister }) => {
   const [formData, setFormData] = useState<FormData>({});
   const [loading, setLoading] = useState(false);
 
@@ -45,12 +47,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
     setLoading(true);
 
     try {
-      if (mode === 'signup') {
+      const actualMode = mode || (isRegister ? 'signup' : 'login');
+      
+      if (actualMode === 'signup') {
         if (!formData.email || !formData.password) {
           throw new Error('Email and password are required');
         }
 
-        const { data, error } = await supabase.auth.signUp({
+        const { data: authData, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
@@ -65,7 +69,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
           throw new Error(error.message);
         }
 
-        if (userType === 'restaurant') {
+        if (userType === 'restaurant' && authData.user) {
           // Get coordinates for the restaurant
           const coordinates = await getCoordinatesFromAddress(
             `${formData.address}, ${formData.city}`
@@ -73,7 +77,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
 
           // Create restaurant profile with coordinates
           const restaurantData = {
-            user_id: data.user!.id,
+            user_id: authData.user.id,
             name: formData.name,
             email: formData.email,
             phone: formData.phone,
@@ -82,8 +86,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
             postal_code: formData.state,
             country: formData.country || 'US',
             description: formData.description,
-            latitude: coordinates?.latitude,
-            longitude: coordinates?.longitude,
+            latitude: coordinates?.latitude || 37.7749,
+            longitude: coordinates?.longitude || -122.4194,
           };
 
           const { error: restaurantError } = await supabase
@@ -94,10 +98,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
             console.error('Restaurant creation error:', restaurantError);
             throw new Error('Failed to create restaurant profile');
           }
-        } else if (userType === 'delivery') {
+        } else if (userType === 'delivery' && authData.user) {
           // Create delivery user profile
           const deliveryData = {
-            user_id: data.user!.id,
+            user_id: authData.user.id,
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone,
@@ -117,12 +121,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
           title: 'Success',
           description: 'Account created successfully!',
         });
+
+        onSuccess?.(authData.user);
       } else {
         if (!formData.email || !formData.password) {
           throw new Error('Email and password are required');
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
@@ -131,9 +137,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
           console.error('Login error:', error);
           throw new Error(error.message);
         }
-      }
 
-      onSuccess?.(data.user!);
+        onSuccess?.(authData.user);
+      }
     } catch (error: any) {
       console.error('Auth error:', error);
       toast({
@@ -146,14 +152,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
     }
   };
 
+  const actualMode = mode || (isRegister ? 'signup' : 'login');
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>{mode === 'signup' ? 'Sign Up' : 'Login'}</CardTitle>
+        <CardTitle>{actualMode === 'signup' ? 'Sign Up' : 'Login'}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'signup' && userType === 'restaurant' && (
+          {actualMode === 'signup' && userType === 'restaurant' && (
             <>
               <div>
                 <Label htmlFor="name">Restaurant Name</Label>
@@ -228,7 +236,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
             </>
           )}
 
-          {mode === 'signup' && userType === 'delivery' && (
+          {actualMode === 'signup' && userType === 'delivery' && (
             <>
               <div>
                 <Label htmlFor="firstName">First Name</Label>
@@ -286,7 +294,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
             />
           </div>
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? (mode === 'signup' ? 'Creating...' : 'Logging in...') : (mode === 'signup' ? 'Sign Up' : 'Login')}
+            {loading ? (actualMode === 'signup' ? 'Creating...' : 'Logging in...') : (actualMode === 'signup' ? 'Sign Up' : 'Login')}
           </Button>
         </form>
       </CardContent>
@@ -295,3 +303,4 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess, userType }) => {
 };
 
 export default AuthForm;
+export { AuthForm };
