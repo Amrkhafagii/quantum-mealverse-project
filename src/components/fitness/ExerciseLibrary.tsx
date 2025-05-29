@@ -1,291 +1,278 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Dumbbell, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Search, Dumbbell, Filter, Book, Play } from 'lucide-react';
+import { useExercises } from '@/hooks/useExercises';
+import { Exercise } from '@/types/fitness/exercises';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface ExerciseLibraryProps {
-  userId?: string;
-}
-
-// Sample exercise data - in a real app, this would come from the database
-const mockExercises = [
-  {
-    id: 'ex1',
-    name: 'Bench Press',
-    description: 'A compound exercise that develops the chest, shoulders, and triceps.',
-    muscle_groups: ['chest', 'shoulders', 'triceps'],
-    difficulty: 'intermediate',
-    equipment_needed: ['barbell', 'bench'],
-    instructions: [
-      'Lie on a flat bench with your feet flat on the ground',
-      'Grip the barbell with hands slightly wider than shoulder-width apart',
-      'Lower the barbell to your chest, keeping elbows at a 45-degree angle',
-      'Push the barbell back up to the starting position'
-    ]
-  },
-  {
-    id: 'ex2',
-    name: 'Squats',
-    description: 'A compound exercise that targets the quadriceps, hamstrings, and glutes.',
-    muscle_groups: ['quadriceps', 'hamstrings', 'glutes'],
-    difficulty: 'intermediate',
-    equipment_needed: ['barbell', 'squat rack'],
-    instructions: [
-      'Position the barbell on your upper back, gripping it with hands wider than shoulder-width',
-      'Feet should be shoulder-width apart with toes slightly pointed outward',
-      'Bend at the hips and knees to lower your body until thighs are parallel to the ground',
-      'Drive through your heels to return to the starting position'
-    ]
-  },
-  {
-    id: 'ex3',
-    name: 'Pull-ups',
-    description: 'An upper body compound exercise that works the back, biceps, and shoulders.',
-    muscle_groups: ['back', 'biceps', 'shoulders'],
-    difficulty: 'advanced',
-    equipment_needed: ['pull-up bar'],
-    instructions: [
-      'Hang from a pull-up bar with hands slightly wider than shoulder-width apart',
-      'Pull your body up until your chin clears the bar',
-      'Lower yourself back down with control',
-      'Repeat for the desired number of repetitions'
-    ]
-  },
-  {
-    id: 'ex4',
-    name: 'Push-ups',
-    description: 'A bodyweight exercise that targets the chest, shoulders, and triceps.',
-    muscle_groups: ['chest', 'shoulders', 'triceps'],
-    difficulty: 'beginner',
-    equipment_needed: [],
-    instructions: [
-      'Start in a plank position with hands slightly wider than shoulder-width apart',
-      'Keep your body in a straight line from head to heels',
-      'Lower your chest to the ground by bending your elbows',
-      'Push back up to the starting position'
-    ]
-  },
-  {
-    id: 'ex5',
-    name: 'Deadlift',
-    description: 'A compound exercise that works the entire posterior chain.',
-    muscle_groups: ['back', 'glutes', 'hamstrings'],
-    difficulty: 'advanced',
-    equipment_needed: ['barbell'],
-    instructions: [
-      'Stand with feet hip-width apart, barbell over midfoot',
-      'Bend at the hips and knees to grasp the barbell with hands shoulder-width apart',
-      'Lift the barbell by extending hips and knees, keeping back straight',
-      'Return the weight to the ground with control'
-    ]
-  }
-];
-
-const muscleGroups = [
-  { value: 'chest', label: 'Chest' },
-  { value: 'back', label: 'Back' },
-  { value: 'shoulders', label: 'Shoulders' },
-  { value: 'biceps', label: 'Biceps' },
-  { value: 'triceps', label: 'Triceps' },
-  { value: 'quadriceps', label: 'Quadriceps' },
-  { value: 'hamstrings', label: 'Hamstrings' },
-  { value: 'glutes', label: 'Glutes' },
-  { value: 'calves', label: 'Calves' },
-  { value: 'abs', label: 'Abs' }
-];
-
-const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ userId }) => {
+export const ExerciseLibrary: React.FC = () => {
+  const { exercises, isLoading, searchExercises } = useExercises();
   const [searchQuery, setSearchQuery] = useState('');
-  const [muscleFilter, setMuscleFilter] = useState('all');
-  const [difficultyFilter, setDifficultyFilter] = useState('all');
-  const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
-  
-  const toggleExercise = (id: string) => {
-    setExpandedExercise(expandedExercise === id ? null : id);
-  };
-  
-  const filteredExercises = mockExercises.filter(exercise => {
-    // Apply search filter
-    if (searchQuery && !exercise.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+
+  const muscleGroups = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quadriceps', 'hamstrings', 'glutes', 'abs', 'core', 'full body'];
+  const difficulties = ['beginner', 'intermediate', 'advanced'];
+
+  const filteredExercises = exercises.filter(exercise => {
+    const matchesSearch = searchQuery === '' || 
+      exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      exercise.muscle_groups.some(group => 
+        group.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     
-    // Apply muscle group filter
-    if (muscleFilter !== 'all' && !exercise.muscle_groups.includes(muscleFilter)) {
-      return false;
-    }
+    const matchesMuscleGroup = selectedMuscleGroup === '' || 
+      exercise.muscle_groups.includes(selectedMuscleGroup);
     
-    // Apply difficulty filter
-    if (difficultyFilter !== 'all' && exercise.difficulty !== difficultyFilter) {
-      return false;
-    }
-    
-    return true;
+    const matchesDifficulty = selectedDifficulty === '' || 
+      exercise.difficulty === selectedDifficulty;
+
+    return matchesSearch && matchesMuscleGroup && matchesDifficulty;
   });
-  
+
+  const handleExerciseSelect = (exercise: Exercise) => {
+    setSelectedExercise(exercise);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+              <CardContent className="p-4">
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-full mb-2" />
+                <Skeleton className="h-6 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader className="border-b border-quantum-cyan/20">
-        <CardTitle className="text-2xl text-quantum-cyan">Exercise Library</CardTitle>
-      </CardHeader>
-      
-      <CardContent className="pt-6">
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search exercises..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Exercise List */}
+      <div className="lg:col-span-2 space-y-4">
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Book className="mr-2 h-5 w-5 text-quantum-cyan" />
+              Exercise Library
+            </CardTitle>
             
-            <div className="flex gap-2">
-              <Select value={muscleFilter} onValueChange={setMuscleFilter}>
-                <SelectTrigger className="w-[160px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Muscle Group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Muscle Groups</SelectItem>
-                  {muscleGroups.map(group => (
-                    <SelectItem key={group.value} value={group.value}>{group.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Search and Filters */}
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search exercises..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-quantum-black/50"
+                />
+              </div>
               
-              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <Tabs defaultValue="all" className="mt-6">
-            <TabsList>
-              <TabsTrigger value="all">All Exercises</TabsTrigger>
-              <TabsTrigger value="weight">Weight Training</TabsTrigger>
-              <TabsTrigger value="bodyweight">Bodyweight</TabsTrigger>
-              <TabsTrigger value="cardio">Cardio</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="mt-4 space-y-3">
-              {filteredExercises.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <p>No exercises found matching your filters.</p>
-                </div>
-              ) : (
-                filteredExercises.map(exercise => (
-                  <div
-                    key={exercise.id}
-                    className="bg-quantum-darkBlue/40 rounded-md overflow-hidden"
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedMuscleGroup === '' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedMuscleGroup('')}
+                >
+                  All Muscles
+                </Button>
+                {muscleGroups.map(group => (
+                  <Button
+                    key={group}
+                    variant={selectedMuscleGroup === group ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedMuscleGroup(group)}
+                    className="capitalize"
                   >
-                    <div
-                      className="p-4 cursor-pointer flex justify-between items-center"
-                      onClick={() => toggleExercise(exercise.id)}
-                    >
-                      <div>
-                        <h3 className="font-medium flex items-center">
-                          <Dumbbell className="h-4 w-4 mr-2 text-quantum-cyan" />
-                          {exercise.name}
-                        </h3>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {exercise.muscle_groups.map(muscle => (
-                            <Badge
-                              key={muscle}
-                              variant="outline"
-                              className="text-xs bg-quantum-darkBlue/30"
-                            >
-                              {muscle}
-                            </Badge>
-                          ))}
-                          <Badge
-                            className={`text-xs ${
-                              exercise.difficulty === 'beginner'
-                                ? 'bg-green-600/20 text-green-400'
-                                : exercise.difficulty === 'intermediate'
-                                ? 'bg-yellow-600/20 text-yellow-400'
-                                : 'bg-red-600/20 text-red-400'
-                            }`}
-                          >
-                            {exercise.difficulty}
-                          </Badge>
-                        </div>
+                    {group}
+                  </Button>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant={selectedDifficulty === '' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedDifficulty('')}
+                >
+                  All Levels
+                </Button>
+                {difficulties.map(difficulty => (
+                  <Button
+                    key={difficulty}
+                    variant={selectedDifficulty === difficulty ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedDifficulty(difficulty)}
+                    className="capitalize"
+                  >
+                    {difficulty}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <ScrollArea className="h-96">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredExercises.map(exercise => (
+                  <Card
+                    key={exercise.id}
+                    className={`cursor-pointer transition-colors ${
+                      selectedExercise?.id === exercise.id 
+                        ? 'border-quantum-cyan bg-quantum-cyan/10' 
+                        : 'border-border hover:border-quantum-cyan/50 bg-quantum-black/30'
+                    }`}
+                    onClick={() => handleExerciseSelect(exercise)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium">{exercise.name}</h4>
+                        <Dumbbell className="h-4 w-4 text-quantum-cyan" />
                       </div>
                       
-                      {expandedExercise === exercise.id ? (
-                        <ChevronUp className="h-5 w-5 text-quantum-cyan" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-quantum-cyan" />
-                      )}
-                    </div>
-                    
-                    {expandedExercise === exercise.id && (
-                      <div className="p-4 pt-0 border-t border-quantum-cyan/20 mt-2">
-                        <p className="text-gray-300 mb-3">{exercise.description}</p>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {exercise.description}
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-1">
+                          {exercise.muscle_groups.slice(0, 3).map(group => (
+                            <Badge key={group} variant="secondary" className="text-xs capitalize">
+                              {group}
+                            </Badge>
+                          ))}
+                          {exercise.muscle_groups.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{exercise.muscle_groups.length - 3}
+                            </Badge>
+                          )}
+                        </div>
                         
-                        {exercise.equipment_needed.length > 0 && (
-                          <div className="mb-3">
-                            <p className="text-sm font-medium text-quantum-cyan mb-1">Equipment Needed:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {exercise.equipment_needed.map(equipment => (
-                                <Badge key={equipment} variant="outline" className="bg-quantum-darkBlue/30">
-                                  {equipment}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div>
-                          <p className="text-sm font-medium text-quantum-cyan mb-1">Instructions:</p>
-                          <ol className="list-decimal list-inside space-y-1 text-sm text-gray-300">
-                            {exercise.instructions.map((step, index) => (
-                              <li key={index}>{step}</li>
+                        <div className="flex justify-between items-center">
+                          <Badge variant="outline" className="capitalize">
+                            {exercise.difficulty}
+                          </Badge>
+                          <div className="flex gap-1">
+                            {exercise.equipment_needed.slice(0, 2).map(equipment => (
+                              <Badge key={equipment} variant="secondary" className="text-xs">
+                                {equipment}
+                              </Badge>
                             ))}
-                          </ol>
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {filteredExercises.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No exercises found matching your criteria.
+                </div>
               )}
-            </TabsContent>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Exercise Details */}
+      <div className="space-y-4">
+        {selectedExercise ? (
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>{selectedExercise.name}</span>
+                {selectedExercise.video_url && (
+                  <Button variant="outline" size="sm">
+                    <Play className="h-4 w-4 mr-2" />
+                    Watch
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
             
-            {/* Other tabs would be implemented similarly with filtered content */}
-            <TabsContent value="weight" className="mt-4">
-              <div className="text-center py-8 text-gray-400">
-                <p>Weight training exercises will be displayed here.</p>
+            <CardContent className="space-y-4">
+              {selectedExercise.description && (
+                <div>
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedExercise.description}
+                  </p>
+                </div>
+              )}
+              
+              <div>
+                <h4 className="font-medium mb-2">Target Muscles</h4>
+                <div className="flex flex-wrap gap-1">
+                  {selectedExercise.muscle_groups.map(group => (
+                    <Badge key={group} variant="secondary" className="capitalize">
+                      {group}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="bodyweight" className="mt-4">
-              <div className="text-center py-8 text-gray-400">
-                <p>Bodyweight exercises will be displayed here.</p>
+              
+              <div>
+                <h4 className="font-medium mb-2">Equipment Needed</h4>
+                <div className="flex flex-wrap gap-1">
+                  {selectedExercise.equipment_needed.map(equipment => (
+                    <Badge key={equipment} variant="outline">
+                      {equipment}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="cardio" className="mt-4">
-              <div className="text-center py-8 text-gray-400">
-                <p>Cardio exercises will be displayed here.</p>
+              
+              <div>
+                <h4 className="font-medium mb-2">Difficulty</h4>
+                <Badge variant="outline" className="capitalize">
+                  {selectedExercise.difficulty}
+                </Badge>
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </CardContent>
-    </Card>
+              
+              {selectedExercise.instructions && selectedExercise.instructions.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Instructions</h4>
+                  <ol className="text-sm text-muted-foreground space-y-1">
+                    {selectedExercise.instructions.map((instruction, index) => (
+                      <li key={index} className="flex">
+                        <span className="font-medium text-quantum-cyan mr-2">{index + 1}.</span>
+                        {instruction}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardContent className="p-6 text-center">
+              <Dumbbell className="h-12 w-12 text-quantum-cyan mx-auto mb-4" />
+              <h3 className="font-medium mb-2">Select an Exercise</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose an exercise from the library to view detailed instructions and information.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 };
 
