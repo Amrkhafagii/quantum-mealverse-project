@@ -4,9 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { RestaurantLayout } from '@/components/restaurant/RestaurantLayout';
-import { RestaurantDashboard as Dashboard } from '@/components/restaurant/RestaurantDashboard';
+import { RestaurantDashboard as Dashboard } from '@/components/restaurant/dashboard/RestaurantDashboard';
 import { RestaurantProfile } from '@/components/restaurant/profile/RestaurantProfile';
 import { RestaurantOnboarding } from '@/components/restaurant/onboarding/RestaurantOnboarding';
+import OrderManagement from '@/components/restaurant/orders/OrderManagement';
 
 const RestaurantDashboard = () => {
   const { isLoading, restaurant } = useRestaurantAuth();
@@ -43,14 +44,19 @@ const RestaurantDashboard = () => {
       <RestaurantLayout>
         <div className="space-y-6">
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="profile">Profile</TabsTrigger>
               <TabsTrigger value="menu">Menu</TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard" className="space-y-4">
               <Dashboard />
+            </TabsContent>
+
+            <TabsContent value="orders" className="space-y-4">
+              {restaurant && <OrderManagement restaurantId={restaurant.id} />}
             </TabsContent>
 
             <TabsContent value="profile" className="space-y-4">
