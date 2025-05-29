@@ -54,13 +54,20 @@ class RealtimeNotificationService {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          const notification = payload.new as Notification;
-          onNotification(notification);
+          const notification = payload.new as any;
+          // Convert data from Json to Record<string, any>
+          const convertedNotification: Notification = {
+            ...notification,
+            data: typeof notification.data === 'string' 
+              ? JSON.parse(notification.data) 
+              : notification.data || {}
+          };
+          onNotification(convertedNotification);
           
           // Show toast notification
           toast({
-            title: notification.title,
-            description: notification.message,
+            title: convertedNotification.title,
+            description: convertedNotification.message,
             duration: 5000,
           });
         }
@@ -97,8 +104,15 @@ class RealtimeNotificationService {
           filter: `order_id=eq.${orderId}`
         },
         (payload) => {
-          const event = payload.new as OrderEvent;
-          onEvent(event);
+          const event = payload.new as any;
+          // Convert event_data from Json to Record<string, any>
+          const convertedEvent: OrderEvent = {
+            ...event,
+            event_data: typeof event.event_data === 'string' 
+              ? JSON.parse(event.event_data) 
+              : event.event_data || {}
+          };
+          onEvent(convertedEvent);
         }
       )
       .subscribe();
@@ -108,47 +122,6 @@ class RealtimeNotificationService {
     return () => {
       channel.unsubscribe();
       this.channels.delete(channelName);
-    };
-  }
-
-  // Subscribe to all notifications for a user (for restaurant/delivery users)
-  subscribeToAllUserNotifications(
-    userId: string,
-    onNotification: (notification: Notification) => void,
-    onOrderEvent: (event: OrderEvent) => void
-  ): () => void {
-    const notificationUnsubscribe = this.subscribeToNotifications(userId, onNotification);
-    
-    // Also subscribe to order events where user is involved
-    const eventChannelName = `user_order_events_${userId}`;
-    
-    if (this.channels.has(eventChannelName)) {
-      this.channels.get(eventChannelName)?.unsubscribe();
-    }
-
-    const eventChannel = supabase
-      .channel(eventChannelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'order_events',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          const event = payload.new as OrderEvent;
-          onOrderEvent(event);
-        }
-      )
-      .subscribe();
-
-    this.channels.set(eventChannelName, eventChannel);
-
-    return () => {
-      notificationUnsubscribe();
-      eventChannel.unsubscribe();
-      this.channels.delete(eventChannelName);
     };
   }
 
@@ -166,7 +139,13 @@ class RealtimeNotificationService {
       return [];
     }
 
-    return data || [];
+    // Convert data field from Json to Record<string, any>
+    return (data || []).map(item => ({
+      ...item,
+      data: typeof item.data === 'string' 
+        ? JSON.parse(item.data) 
+        : item.data || {}
+    })) as Notification[];
   }
 
   // Mark notification as read

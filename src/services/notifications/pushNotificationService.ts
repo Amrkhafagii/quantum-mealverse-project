@@ -77,6 +77,39 @@ class PushNotificationService {
     }
   }
 
+  // Register push token (added method)
+  async registerToken(
+    userId: string,
+    token: string,
+    platform: 'ios' | 'android' | 'web'
+  ): Promise<boolean> {
+    return await realtimeNotificationService.registerPushToken(
+      userId,
+      token,
+      platform
+    );
+  }
+
+  // Send notification (added method)
+  async sendNotification(
+    userId: string,
+    title: string,
+    body: string,
+    data: Record<string, any> = {},
+    notificationType: string
+  ): Promise<string | null> {
+    return await realtimeNotificationService.createNotification(
+      userId,
+      title,
+      body,
+      notificationType,
+      data.orderId,
+      data.restaurantId,
+      data.deliveryUserId,
+      data
+    );
+  }
+
   // Show local notification (for web)
   showNotification(title: string, message: string, data?: any): void {
     if (!this.isSupported() || Notification.permission !== 'granted') {
@@ -90,14 +123,7 @@ class PushNotificationService {
         badge: '/badge-72x72.png',
         data: data,
         tag: data?.orderId || 'default',
-        requireInteraction: true,
-        actions: [
-          {
-            action: 'view',
-            title: 'View Details',
-            icon: '/icon-192x192.png'
-          }
-        ]
+        requireInteraction: true
       });
     });
   }

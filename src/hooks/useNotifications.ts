@@ -36,7 +36,14 @@ export const useNotifications = () => {
         throw error;
       }
 
-      const typedNotifications = data as Notification[];
+      // Convert data and properly type the notifications
+      const typedNotifications: Notification[] = (data || []).map(item => ({
+        ...item,
+        data: typeof item.data === 'string' 
+          ? JSON.parse(item.data) 
+          : item.data || {}
+      }));
+      
       setNotifications(typedNotifications);
       
       // Count unread notifications

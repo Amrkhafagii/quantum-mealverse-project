@@ -17,7 +17,13 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
       return [];
     }
     
-    return data as Notification[];
+    // Convert data field and map notification_type to expected format
+    return (data || []).map(item => ({
+      ...item,
+      data: typeof item.data === 'string' 
+        ? JSON.parse(item.data) 
+        : item.data || {}
+    })) as Notification[];
   } catch (error) {
     console.error('Error in getNotifications:', error);
     return [];

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Award, X, Trophy, TrendingUp, Bell, Calendar, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,7 +9,7 @@ export interface FitnessNotification {
   id: string;
   title: string;
   message: string;
-  type: 'achievement' | 'goal' | 'reminder' | 'streak' | 'measurement' | 'workout';
+  notification_type: 'achievement' | 'goal' | 'reminder' | 'streak' | 'measurement' | 'workout';
   read?: boolean;
   date: Date;
 }
@@ -23,7 +24,7 @@ export const FitnessNotificationItem: React.FC<FitnessNotificationProps> = ({
   onDismiss
 }) => {
   const getIcon = () => {
-    switch (notification.type) {
+    switch (notification.notification_type) {
       case 'achievement':
         return <Trophy className="h-5 w-5 text-yellow-400" />;
       case 'goal':
@@ -40,7 +41,7 @@ export const FitnessNotificationItem: React.FC<FitnessNotificationProps> = ({
   };
 
   const getBgColor = () => {
-    switch (notification.type) {
+    switch (notification.notification_type) {
       case 'achievement':
         return 'bg-yellow-900/30 border-yellow-600/30';
       case 'goal':
@@ -123,7 +124,7 @@ export const FitnessNotifications: React.FC<FitnessNotificationsProps> = ({
         id: n.id,
         title: n.title,
         message: n.message,
-        type: n.type as any,
+        notification_type: n.notification_type as any,
         read: n.is_read,
         date: new Date(n.created_at)
       }));
@@ -202,7 +203,7 @@ export const createNotification = async (
   userId: string, 
   title: string, 
   message: string, 
-  type: FitnessNotification['type'] = 'reminder',
+  notification_type: FitnessNotification['notification_type'] = 'reminder',
   link?: string
 ) => {
   try {
@@ -212,7 +213,7 @@ export const createNotification = async (
         user_id: userId,
         title,
         message,
-        type,
+        notification_type,
         link,
         is_read: false,
         created_at: new Date().toISOString()
