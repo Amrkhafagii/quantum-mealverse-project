@@ -67,6 +67,11 @@ const MainLayout: React.FC = () => {
                     <Orders />
                   </ProtectedRoute>
                 } />
+                <Route path="/orders/:orderId" element={
+                  <ProtectedRoute>
+                    <Orders />
+                  </ProtectedRoute>
+                } />
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <Profile />
