@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle, XCircle, Timer, AlertTriangle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Timer, AlertTriangle, Package, Utensils } from 'lucide-react';
 import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
 import { orderRejectionService } from '@/services/restaurant/orderRejectionService';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { OrderRejectionModal } from './OrderRejectionModal';
 
 interface OrderAssignmentCardProps {
@@ -28,6 +28,7 @@ interface OrderAssignmentCardProps {
         name: string;
         quantity: number;
         price: number;
+        special_instructions?: string;
       }>;
     };
   };
@@ -109,6 +110,30 @@ export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
   const isReassignment = assignment.assignment_metadata?.reassignment === true;
   const rejectionCount = order.rejection_count || 0;
 
+  // Analyze order complexity for preparation insights
+  const getPreparationInsights = () => {
+    const insights = [];
+    const totalItems = order.order_items.reduce((sum, item) => sum + item.quantity, 0);
+    const uniqueItems = order.order_items.length;
+    
+    if (totalItems > 5) {
+      insights.push({ type: 'quantity', message: `High quantity order (${totalItems} items)`, icon: Package });
+    }
+    
+    if (uniqueItems > 3) {
+      insights.push({ type: 'variety', message: `Multiple different items (${uniqueItems} varieties)`, icon: Utensils });
+    }
+
+    const hasSpecialInstructions = order.order_items.some(item => item.special_instructions);
+    if (hasSpecialInstructions) {
+      insights.push({ type: 'special', message: 'Contains special instructions', icon: AlertTriangle });
+    }
+
+    return insights;
+  };
+
+  const preparationInsights = getPreparationInsights();
+
   return (
     <>
       <Card className={`border-l-4 ${isReassignment ? 'border-l-yellow-500 bg-yellow-50' : 'border-l-orange-500'}`}>
@@ -156,6 +181,27 @@ export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
               </div>
             )}
 
+            {/* Preparation Insights */}
+            {preparationInsights.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h5 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Order Preparation Notes
+                </h5>
+                <div className="space-y-1">
+                  {preparationInsights.map((insight, index) => {
+                    const IconComponent = insight.icon;
+                    return (
+                      <div key={index} className="flex items-center gap-2 text-sm text-blue-800">
+                        <IconComponent className="h-3 w-3" />
+                        <span>{insight.message}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div>
               <h4 className="font-medium mb-2">Customer Details</h4>
               <p className="text-sm text-gray-600">Phone: {order.customer_phone}</p>
@@ -166,9 +212,17 @@ export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
               <h4 className="font-medium mb-2">Order Items</h4>
               <div className="space-y-2">
                 {order.order_items.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                    <span>{item.name} x {item.quantity}</span>
-                    <span>${item.price.toFixed(2)}</span>
+                  <div key={index} className="bg-gray-50 p-3 rounded">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{item.name} x {item.quantity}</span>
+                      <span className="font-medium">${item.price.toFixed(2)}</span>
+                    </div>
+                    {item.special_instructions && (
+                      <div className="mt-2 p-2 bg-yellow-100 border border-yellow-200 rounded text-sm">
+                        <span className="font-medium text-yellow-800">Special Instructions:</span>
+                        <p className="text-yellow-700 mt-1">{item.special_instructions}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -178,28 +232,59 @@ export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
               </div>
             </div>
 
-            <div className="flex space-x-2">
-              <Button
-                onClick={handleAccept}
-                disabled={loading || isExpired}
-                className="flex-1"
-              >
-                {loading ? (
-                  <Clock className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                Accept Order
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setShowRejectionModal(true)}
-                disabled={loading || isExpired}
-                className="flex-1"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject Order
-              </Button>
+            {/* Enhanced Action Buttons */}
+            <div className="space-y-3">
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handleAccept}
+                  disabled={loading || isExpired}
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <Clock className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Accept Order
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowRejectionModal(true)}
+                  disabled={loading || isExpired}
+                  className="flex-1"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Reject Order
+                </Button>
+              </div>
+              
+              {/* Quick Rejection Reasons */}
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-2">Common rejection reasons:</p>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs cursor-pointer hover:bg-red-50"
+                    onClick={() => setShowRejectionModal(true)}
+                  >
+                    Missing ingredients
+                  </Badge>
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs cursor-pointer hover:bg-red-50"
+                    onClick={() => setShowRejectionModal(true)}
+                  >
+                    Too busy
+                  </Badge>
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs cursor-pointer hover:bg-red-50"
+                    onClick={() => setShowRejectionModal(true)}
+                  >
+                    Equipment issues
+                  </Badge>
+                </div>
+              </div>
             </div>
 
             {isExpired && (
