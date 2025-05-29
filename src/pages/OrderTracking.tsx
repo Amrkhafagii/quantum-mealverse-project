@@ -14,7 +14,9 @@ const OrderTracking = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: order, isLoading } = useOrderData(orderId || '');
-  const { driverLocation } = useRealtimeLocation(orderId || '');
+  const { latestLocation } = useRealtimeLocation({ 
+    assignmentId: orderId || '' 
+  });
 
   useEffect(() => {
     if (!user) {
@@ -90,18 +92,18 @@ const OrderTracking = () => {
       <OrderTracker orderId={orderId} />
 
       {/* Driver Location Info */}
-      {driverLocation && (
+      {latestLocation && (
         <Card>
           <CardHeader>
             <CardTitle>Driver Location</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600">
-              Last updated: {new Date(driverLocation.timestamp).toLocaleTimeString()}
+              Last updated: {new Date(latestLocation.timestamp).toLocaleTimeString()}
             </p>
-            {driverLocation.accuracy && (
+            {latestLocation.accuracy && (
               <p className="text-xs text-gray-500">
-                Accuracy: ±{Math.round(driverLocation.accuracy)}m
+                Accuracy: ±{Math.round(latestLocation.accuracy)}m
               </p>
             )}
           </CardContent>
