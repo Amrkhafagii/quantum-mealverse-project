@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import {
   DeliveryAssignmentCriteria,
@@ -137,8 +136,8 @@ export class RestaurantDeliveryHandoffService {
 
       if (error) throw error;
 
-      // Update driver delivery count using RPC
-      await supabase.rpc('increment_delivery_count', {
+      // Update driver delivery count using RPC with type assertion
+      await (supabase.rpc as any)('increment_delivery_count', {
         user_id: deliveryUserId
       });
 
@@ -198,8 +197,8 @@ export class RestaurantDeliveryHandoffService {
 
         if (error) throw error;
 
-        // Decrease driver delivery count using RPC
-        await supabase.rpc('decrement_delivery_count', {
+        // Decrease driver delivery count using RPC with type assertion
+        await (supabase.rpc as any)('decrement_delivery_count', {
           user_id: deliveryUserId
         });
 

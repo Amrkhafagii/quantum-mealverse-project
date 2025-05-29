@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryAssignment } from '@/types/delivery-assignment';
 
@@ -31,7 +30,7 @@ export const getActiveDeliveryAssignments = async (
       `)
       .eq('delivery_user_id', deliveryUserId)
       .in('status', ['assigned', 'picked_up', 'on_the_way'])
-      .order('priority_score', { ascending: false }); // Remove nullsLast
+      .order('priority_score', { ascending: false });
 
     if (error) {
       console.error('Error fetching active assignments:', error);
@@ -201,8 +200,8 @@ export const updateDeliveryStatus = async (
         .single();
         
       if (assignment?.delivery_user_id) {
-        // Use raw SQL update for decrementing
-        await supabase.rpc('decrement_delivery_count', {
+        // Use raw SQL update for decrementing with type assertion
+        await (supabase.rpc as any)('decrement_delivery_count', {
           user_id: assignment.delivery_user_id
         });
       }
