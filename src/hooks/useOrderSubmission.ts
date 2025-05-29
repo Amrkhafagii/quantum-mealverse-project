@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +14,7 @@ import { sendOrderToWebhook } from '@/integrations/webhook';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { geofenceService } from '@/services/geofencing/GeofenceService';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -95,6 +95,9 @@ export const useOrderSubmission = (
       // Handle restaurant assignments for unified checkout - ALWAYS create assignments
       await handleUnifiedRestaurantAssignment(insertedOrder.id, data, items, userId);
       
+      // Create geofence zones safely (won't block order completion if it fails)
+      await createOrderGeofences(insertedOrder.id, data);
+      
       // Always record the order creation in history
       await recordOrderHistory(
         insertedOrder.id,
@@ -137,6 +140,38 @@ export const useOrderSubmission = (
         description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
+    }
+  };
+
+  // Safe geofence creation that won't block order completion
+  const createOrderGeofences = async (orderId: string, data: DeliveryFormValues) => {
+    try {
+      // Only create geofences for delivery orders with valid location data
+      if (data.deliveryMethod === 'delivery' && data.latitude && data.longitude) {
+        console.log('Creating geofence zones for order:', orderId);
+        
+        // Use restaurant location as pickup (if available) or fallback to delivery location
+        const pickupLocation = {
+          latitude: data.latitude, // For now, use delivery location as pickup fallback
+          longitude: data.longitude
+        };
+        
+        const deliveryLocation = {
+          latitude: data.latitude,
+          longitude: data.longitude
+        };
+        
+        await geofenceService.safeCreateOrderGeofences(
+          orderId,
+          pickupLocation,
+          deliveryLocation
+        );
+      } else {
+        console.log('Skipping geofence creation - not a delivery order or missing location data');
+      }
+    } catch (error) {
+      // Log but don't throw - order should continue successfully
+      console.error('Non-critical geofence creation error for order:', orderId, error);
     }
   };
 

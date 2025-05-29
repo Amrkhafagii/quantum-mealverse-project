@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GeofenceZone {
@@ -263,6 +262,17 @@ export class GeofenceService {
 
   async addGeofenceZone(zone: Omit<GeofenceZone, 'id'>): Promise<string | null> {
     try {
+      // Validate coordinates before attempting to create the zone
+      if (!this.isValidCoordinate(zone.latitude, zone.longitude)) {
+        console.error('Invalid coordinates for geofence zone:', {
+          latitude: zone.latitude,
+          longitude: zone.longitude,
+          zoneName: zone.name,
+          zoneType: zone.zone_type
+        });
+        return null;
+      }
+
       const { data, error } = await supabase
         .from('geofence_zones')
         .insert(zone)
@@ -275,10 +285,103 @@ export class GeofenceService {
       }
 
       this.activeZones.set(data.id, data as GeofenceZone);
+      console.log('Successfully created geofence zone:', {
+        id: data.id,
+        name: zone.name,
+        type: zone.zone_type
+      });
       return data.id;
     } catch (error) {
       console.error('Error adding geofence zone:', error);
       return null;
+    }
+  }
+
+  /**
+   * Validate that coordinates are valid numbers and within acceptable ranges
+   */
+  private isValidCoordinate(latitude: number | null | undefined, longitude: number | null | undefined): boolean {
+    if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+      return false;
+    }
+    
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return false;
+    }
+    
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return false;
+    }
+    
+    // Check if coordinates are within valid ranges
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Safely create geofence zones for an order - won't throw errors
+   */
+  async safeCreateOrderGeofences(orderId: string, pickupLocation: { latitude: number; longitude: number }, deliveryLocation: { latitude: number; longitude: number }, restaurantId?: string): Promise<void> {
+    try {
+      console.log('Creating geofence zones for order:', orderId);
+      
+      // Create pickup geofence zone
+      if (this.isValidCoordinate(pickupLocation.latitude, pickupLocation.longitude)) {
+        const pickupZoneId = await this.addGeofenceZone({
+          name: `Pickup Zone - Order ${orderId}`,
+          zone_type: 'pickup',
+          latitude: pickupLocation.latitude,
+          longitude: pickupLocation.longitude,
+          radius_meters: 100,
+          restaurant_id: restaurantId,
+          order_id: orderId,
+          is_active: true,
+          metadata: {
+            order_id: orderId,
+            created_for: 'pickup_tracking'
+          }
+        });
+        
+        if (pickupZoneId) {
+          console.log('Created pickup geofence zone:', pickupZoneId);
+        } else {
+          console.warn('Failed to create pickup geofence zone for order:', orderId);
+        }
+      } else {
+        console.warn('Invalid pickup coordinates, skipping pickup geofence creation:', pickupLocation);
+      }
+
+      // Create delivery geofence zone
+      if (this.isValidCoordinate(deliveryLocation.latitude, deliveryLocation.longitude)) {
+        const deliveryZoneId = await this.addGeofenceZone({
+          name: `Delivery Zone - Order ${orderId}`,
+          zone_type: 'delivery',
+          latitude: deliveryLocation.latitude,
+          longitude: deliveryLocation.longitude,
+          radius_meters: 50,
+          order_id: orderId,
+          is_active: true,
+          metadata: {
+            order_id: orderId,
+            created_for: 'delivery_tracking'
+          }
+        });
+        
+        if (deliveryZoneId) {
+          console.log('Created delivery geofence zone:', deliveryZoneId);
+        } else {
+          console.warn('Failed to create delivery geofence zone for order:', orderId);
+        }
+      } else {
+        console.warn('Invalid delivery coordinates, skipping delivery geofence creation:', deliveryLocation);
+      }
+      
+    } catch (error) {
+      // Log the error but don't throw - this allows the order to continue
+      console.error('Non-critical error creating geofence zones for order:', orderId, error);
     }
   }
 
