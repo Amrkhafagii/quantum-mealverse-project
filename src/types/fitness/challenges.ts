@@ -33,17 +33,10 @@ export interface Team {
   name: string;
   description?: string;
   created_by: string;
-  creator_id?: string;
   created_at: string;
-  updated_at?: string;
-  members_count?: number;
-  member_count?: number;
-  challenges_count?: number;
-  image_url?: string;
+  member_count: number;
   avatar_url?: string;
   total_points?: number;
-  is_active: boolean;
-  max_members: number;
 }
 
 export interface TeamMember {

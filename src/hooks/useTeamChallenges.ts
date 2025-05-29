@@ -142,7 +142,7 @@ export function useTeamChallenges() {
     }
   };
 
-  const handleCreateTeam = async (teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleCreateTeam = async (teamData: { name: string; description?: string; image_url?: string }) => {
     if (!user) return false;
 
     try {

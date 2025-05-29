@@ -1,21 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import type { Team } from '@/types/fitness/challenges';
 
 // Use the proper Supabase generated type
 type TeamRow = Database['public']['Tables']['teams']['Row'];
-
-// Define a simplified Team interface that matches the actual database schema
-interface Team {
-  id: string;
-  name: string;
-  description: string | null;
-  created_by: string;
-  created_at: string;
-  avatar_url: string | null;
-  member_count: number;
-  total_points: number;
-}
 
 // Simplified transform function with proper type handling
 const transformTeam = (team: TeamRow): Team => ({
