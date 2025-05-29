@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +21,7 @@ export const useOrderSubmission = (
     console.log('Starting order submission with data:', data);
 
     try {
-      // Create the order first
+      // Create the order first - no validation needed, accept any cart items
       const orderData = {
         user_id: userId || null,
         customer_name: data.fullName,
@@ -54,14 +55,16 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Create order items - transform id to meal_id
+      // Create order items directly - no menu validation
       const orderItems = items.map(item => ({
         order_id: order.id,
-        meal_id: item.id, // Transform id to meal_id for database
+        meal_id: item.id, // Use item id directly without validation
         name: item.name,
         quantity: item.quantity,
         price: item.price
       }));
+
+      console.log('Creating order items without validation:', orderItems);
 
       const { error: itemsError } = await supabase
         .from('order_items')
