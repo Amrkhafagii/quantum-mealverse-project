@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface OrderAssignment {
@@ -25,71 +26,22 @@ export interface OrderNotification {
 
 export const orderAssignmentService = {
   /**
-   * Create a direct assignment for pre-assigned restaurants (nutrition-generated orders)
+   * Assign an order to restaurants within radius
    */
-  async createDirectAssignment(
+  async assignOrderToNearbyRestaurants(
     orderId: string, 
-    restaurantId: string, 
-    metadata: any = {}
+    latitude: number, 
+    longitude: number, 
+    radiusKm: number = 5
   ): Promise<boolean> {
     try {
-      console.log('Creating direct restaurant assignment:', {
-        orderId,
-        restaurantId,
-        metadata
-      });
+      console.log(`Assigning order ${orderId} to restaurants within ${radiusKm}km`);
 
-      // Create restaurant assignment record with unified tracking
-      const { error: assignmentError } = await supabase
-        .from('restaurant_assignments')
-        .insert({
-          order_id: orderId,
-          restaurant_id: restaurantId,
-          status: 'pending',
-          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes
-          assignment_metadata: metadata,
-          assignment_source: 'nutrition_generated' // Track source for unified experience
-        });
-
-      if (assignmentError) {
-        console.error('Error creating direct assignment:', assignmentError);
-        return false;
-      }
-
-      // Update order with unified status tracking
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({
-          status: 'restaurant_assigned',
-          restaurant_id: restaurantId,
-          assignment_source: 'nutrition_generated',
-          assigned_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      if (orderError) {
-        console.error('Error updating order for direct assignment:', orderError);
-        return false;
-      }
-
-      console.log('Direct assignment created successfully with unified tracking');
-      return true;
-    } catch (error) {
-      console.error('Error in createDirectAssignment:', error);
-      return false;
-    }
-  },
-
-  /**
-   * Assign an order to restaurants based on location
-   */
-  async assignOrderToRestaurants(orderId: string, latitude: number, longitude: number): Promise<boolean> {
-    try {
-      // Find nearest restaurants
+      // Find nearby restaurants
       const { data: nearbyRestaurants, error } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: latitude,
         order_lng: longitude,
-        max_distance_km: 50
+        max_distance_km: radiusKm
       });
 
       if (error || !nearbyRestaurants?.length) {
@@ -97,6 +49,8 @@ export const orderAssignmentService = {
         await this.updateOrderStatus(orderId, 'no_restaurant_available');
         return false;
       }
+
+      console.log(`Found ${nearbyRestaurants.length} nearby restaurants`);
 
       // Create assignments for all nearby restaurants
       const assignments = nearbyRestaurants.map(restaurant => ({
@@ -118,15 +72,16 @@ export const orderAssignmentService = {
       // Update order status
       await this.updateOrderStatus(orderId, 'awaiting_restaurant');
 
+      console.log(`Successfully assigned order to ${assignments.length} restaurants`);
       return true;
     } catch (error) {
-      console.error('Error in assignOrderToRestaurants:', error);
+      console.error('Error in assignOrderToNearbyRestaurants:', error);
       return false;
     }
   },
 
   /**
-   * Handle restaurant response to order assignment with unified tracking
+   * Handle restaurant response to order assignment
    */
   async handleRestaurantResponse(
     assignmentId: string,
@@ -155,7 +110,7 @@ export const orderAssignmentService = {
       }
 
       if (action === 'accept') {
-        // Cancel other pending assignments
+        // Cancel other pending assignments for this order
         await supabase
           .from('restaurant_assignments')
           .update({ status: 'cancelled' })
@@ -163,14 +118,12 @@ export const orderAssignmentService = {
           .eq('status', 'pending')
           .neq('id', assignmentId);
 
-        // Update order with unified tracking - use proper timestamp fields
+        // Update order with restaurant assignment
         await supabase
           .from('orders')
           .update({
             restaurant_id: restaurantId,
-            status: 'restaurant_accepted',
-            accepted_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            status: 'restaurant_accepted'
           })
           .eq('id', assignment.order_id);
       } else {
@@ -194,40 +147,11 @@ export const orderAssignmentService = {
   },
 
   /**
-   * Update order status with unified tracking and proper timestamp fields
+   * Update order status
    */
   async updateOrderStatus(orderId: string, status: string, restaurantId?: string): Promise<boolean> {
     try {
-      const updateData: any = { 
-        status,
-        updated_at: new Date().toISOString()
-      };
-
-      // Add timestamp fields based on status for unified tracking
-      switch (status) {
-        case 'restaurant_assigned':
-          updateData.assigned_at = new Date().toISOString();
-          break;
-        case 'restaurant_accepted':
-          updateData.accepted_at = new Date().toISOString();
-          break;
-        case 'preparing':
-          updateData.preparation_started_at = new Date().toISOString();
-          break;
-        case 'ready_for_pickup':
-          updateData.ready_at = new Date().toISOString();
-          break;
-        case 'on_the_way':
-          updateData.picked_up_at = new Date().toISOString();
-          break;
-        case 'delivered':
-          updateData.delivered_at = new Date().toISOString();
-          break;
-        case 'cancelled':
-          updateData.cancelled_at = new Date().toISOString();
-          break;
-      }
-
+      const updateData: any = { status };
       if (restaurantId) {
         updateData.restaurant_id = restaurantId;
       }
@@ -297,7 +221,7 @@ export const orderAssignmentService = {
   },
 
   /**
-   * Handle expired assignments (simplified version without RPC call)
+   * Handle expired assignments
    */
   async handleExpiredAssignments(): Promise<number> {
     try {
@@ -323,6 +247,21 @@ export const orderAssignmentService = {
       if (error) {
         console.error('Error updating expired assignments:', error);
         return 0;
+      }
+
+      // Check orders with no pending assignments
+      const orderIds = [...new Set(expiredAssignments.map(a => a.order_id))];
+      
+      for (const orderId of orderIds) {
+        const { data: pendingAssignments } = await supabase
+          .from('restaurant_assignments')
+          .select('id')
+          .eq('order_id', orderId)
+          .eq('status', 'pending');
+
+        if (!pendingAssignments?.length) {
+          await this.updateOrderStatus(orderId, 'no_restaurant_accepted');
+        }
       }
 
       return expiredAssignments.length;

@@ -36,7 +36,7 @@ export const useOrderSubmission = (
     setIsSubmitting(true);
 
     try {
-      console.log('Starting simplified order submission for user:', userId);
+      console.log('Starting order submission with restaurant assignment for user:', userId);
       console.log('Cart items:', cartItems);
       console.log('Form data:', formData);
 
@@ -74,16 +74,16 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Step 2: Create order items directly without meal_id (using null)
+      // Step 2: Create order items
       const orderItems = cartItems.map(item => ({
         order_id: order.id,
-        meal_id: null, // Remove meal_id completely to avoid foreign key constraints
+        meal_id: null,
         name: item.name,
         price: item.price,
         quantity: item.quantity
       }));
 
-      console.log('Creating order items without meal_id:', orderItems);
+      console.log('Creating order items:', orderItems);
 
       const { data: createdOrderItems, error: orderItemsError } = await supabase
         .from('order_items')
@@ -97,12 +97,65 @@ export const useOrderSubmission = (
 
       console.log('Order items created successfully:', createdOrderItems);
 
+      // Step 3: Find restaurants within 5km radius and assign order
+      if (formData.latitude && formData.longitude) {
+        console.log('Finding nearby restaurants within 5km radius...');
+        
+        const { data: nearbyRestaurants, error: restaurantsError } = await supabase.rpc('find_nearest_restaurant', {
+          order_lat: formData.latitude,
+          order_lng: formData.longitude,
+          max_distance_km: 5.0
+        });
+
+        if (restaurantsError) {
+          console.error('Error finding nearby restaurants:', restaurantsError);
+          // Continue without restaurant assignment rather than failing the order
+        } else if (nearbyRestaurants && nearbyRestaurants.length > 0) {
+          console.log(`Found ${nearbyRestaurants.length} restaurants within 5km:`, nearbyRestaurants);
+
+          // Create assignments for all nearby restaurants
+          const assignments = nearbyRestaurants.map(restaurant => ({
+            order_id: order.id,
+            restaurant_id: restaurant.restaurant_id,
+            status: 'pending',
+            expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes expiry
+          }));
+
+          const { data: createdAssignments, error: assignmentError } = await supabase
+            .from('restaurant_assignments')
+            .insert(assignments)
+            .select();
+
+          if (assignmentError) {
+            console.error('Restaurant assignment error:', assignmentError);
+            // Log but don't fail the order
+          } else {
+            console.log(`Successfully assigned order to ${createdAssignments?.length || 0} restaurants`);
+            
+            // Update order status to indicate it's been assigned to restaurants
+            await supabase
+              .from('orders')
+              .update({ status: 'awaiting_restaurant' })
+              .eq('id', order.id);
+          }
+        } else {
+          console.log('No restaurants found within 5km radius');
+          // Update order status to indicate no restaurants available
+          await supabase
+            .from('orders')
+            .update({ status: 'no_restaurant_available' })
+            .eq('id', order.id);
+        }
+      } else {
+        console.log('No customer location provided, skipping restaurant assignment');
+      }
+
       // Success - clear cart and show success message
       clearCart();
       
       toast({
         title: "Order Placed Successfully!",
-        description: `Your order #${order.id?.slice(0, 8)} has been placed successfully.`,
+        description: `Your order #${order.id?.slice(0, 8)} has been placed and assigned to nearby restaurants.`,
         variant: "default"
       });
 

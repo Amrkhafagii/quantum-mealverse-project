@@ -5671,7 +5671,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          meal_id: string
+          meal_id: string | null
           name: string
           order_id: string
           price: number
@@ -5680,7 +5680,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          meal_id: string
+          meal_id?: string | null
           name: string
           order_id: string
           price: number
@@ -5689,7 +5689,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          meal_id?: string
+          meal_id?: string | null
           name?: string
           order_id?: string
           price?: number
