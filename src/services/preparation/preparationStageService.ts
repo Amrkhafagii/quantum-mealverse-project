@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PreparationStage {
@@ -141,9 +140,14 @@ export class PreparationStageService {
         };
       }
 
-      // Handle the RPC response properly
-      if (data && typeof data === 'object') {
-        return data as StageTransitionResult;
+      // Handle the RPC response properly with type guards
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const result = data as unknown as StageTransitionResult;
+        
+        // Validate the structure matches our expected interface
+        if (typeof result.success === 'boolean' && typeof result.message === 'string') {
+          return result;
+        }
       }
 
       return { success: false, message: 'No response from database' };
