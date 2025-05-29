@@ -33,21 +33,23 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
   }, [activeUserId]);
 
   return (
-    <div className="space-y-6">
-      {/* Quick Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Quick Stats Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
           <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6">
               <div className="flex items-center">
-                <Activity className="h-8 w-8 text-quantum-cyan" />
-                <div className="ml-3">
-                  <p className="text-sm text-gray-400">Total Workouts</p>
-                  <p className="text-2xl font-bold">{workoutStats?.total_workouts || 0}</p>
+                <Activity className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-quantum-cyan flex-shrink-0" />
+                <div className="ml-2 sm:ml-3 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-400 truncate">Total Workouts</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+                    {workoutStats?.total_workouts || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -60,12 +62,14 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           transition={{ delay: 0.2 }}
         >
           <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6">
               <div className="flex items-center">
-                <Target className="h-8 w-8 text-green-400" />
-                <div className="ml-3">
-                  <p className="text-sm text-gray-400">Current Streak</p>
-                  <p className="text-2xl font-bold">{workoutStats?.streak || 0}</p>
+                <Target className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-green-400 flex-shrink-0" />
+                <div className="ml-2 sm:ml-3 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-400 truncate">Current Streak</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+                    {workoutStats?.streak || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -76,14 +80,17 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          className="col-span-2 sm:col-span-1"
         >
           <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-yellow-400" />
-                <div className="ml-3">
-                  <p className="text-sm text-gray-400">Most Active Day</p>
-                  <p className="text-lg font-bold">{workoutStats?.most_active_day || 'N/A'}</p>
+                <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-yellow-400 flex-shrink-0" />
+                <div className="ml-2 sm:ml-3 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-400 truncate">Most Active Day</p>
+                  <p className="text-sm sm:text-base md:text-lg font-bold text-white truncate">
+                    {workoutStats?.most_active_day || 'N/A'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -94,14 +101,15 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
+          className="col-span-2 sm:col-span-1"
         >
           <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6">
               <div className="flex items-center">
-                <BarChart3 className="h-8 w-8 text-purple-400" />
-                <div className="ml-3">
-                  <p className="text-sm text-gray-400">This Week</p>
-                  <p className="text-2xl font-bold">
+                <BarChart3 className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-purple-400 flex-shrink-0" />
+                <div className="ml-2 sm:ml-3 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-400 truncate">This Week</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">
                     {history.filter(h => {
                       const weekAgo = new Date();
                       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -117,17 +125,17 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
 
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="bg-quantum-darkBlue/50 mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="recommendations">Smart Recommendations</TabsTrigger>
-          <TabsTrigger value="goals">Goals</TabsTrigger>
-          <TabsTrigger value="progress">Progress Charts</TabsTrigger>
-          <TabsTrigger value="history">Workout History</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <TabsList className="bg-quantum-darkBlue/50 mb-4 sm:mb-6 w-full sm:w-auto overflow-x-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap">Overview</TabsTrigger>
+          <TabsTrigger value="recommendations" className="text-xs sm:text-sm whitespace-nowrap">Smart Recommendations</TabsTrigger>
+          <TabsTrigger value="goals" className="text-xs sm:text-sm whitespace-nowrap">Goals</TabsTrigger>
+          <TabsTrigger value="progress" className="text-xs sm:text-sm whitespace-nowrap">Progress Charts</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm whitespace-nowrap">Workout History</TabsTrigger>
+          <TabsTrigger value="analytics" className="text-xs sm:text-sm whitespace-nowrap">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <FitnessAnalyticsDashboard userId={activeUserId} />
             <UserProgressJourney
               userId={activeUserId}
@@ -139,11 +147,11 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           <ProgressAnalytics userId={activeUserId} />
         </TabsContent>
 
-        <TabsContent value="recommendations" className="space-y-6">
+        <TabsContent value="recommendations" className="space-y-4 sm:space-y-6">
           <SmartRecommendations />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <AdaptiveDifficulty />
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <WorkoutVariations />
             </div>
           </div>
@@ -165,7 +173,7 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
         </TabsContent>
 
         <TabsContent value="analytics">
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <FitnessAnalyticsDashboard userId={activeUserId} />
             <ProgressAnalytics userId={activeUserId} />
           </div>
