@@ -86,43 +86,4 @@ export class CartValidationService {
       console.error('Error clearing stored cart:', error);
     }
   }
-
-  /**
-   * Validates a single item before adding to cart
-   */
-  static async validateItemForCart(item: CartItem): Promise<{
-    isValid: boolean;
-    updatedItem?: CartItem;
-    error?: string;
-  }> {
-    try {
-      const validation = await MenuValidationService.validateMenuItem(item.id);
-      
-      if (!validation.isValid) {
-        return {
-          isValid: false,
-          error: `"${item.name}" is no longer available in our menu`
-        };
-      }
-
-      // Update item with fresh data from menu if available
-      const updatedItem = validation.item ? {
-        ...item,
-        name: validation.item.name,
-        price: validation.item.price,
-        description: validation.item.description
-      } : item;
-
-      return {
-        isValid: true,
-        updatedItem
-      };
-    } catch (error) {
-      console.error('Error validating item for cart:', error);
-      return {
-        isValid: false,
-        error: 'Unable to validate item. Please try again.'
-      };
-    }
-  }
 }

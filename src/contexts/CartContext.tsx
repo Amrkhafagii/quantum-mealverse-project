@@ -105,24 +105,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const addToCart = async (item: CartItem): Promise<boolean> => {
     try {
-      // Validate the item before adding
-      const validation = await CartValidationService.validateItemForCart(item);
-      
-      if (!validation.isValid) {
-        toast({
-          title: "Item not available",
-          description: validation.error || "Item is no longer available",
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      const itemToAdd = validation.updatedItem || item;
-
-      // Ensure unified structure with restaurant assignment data
+      // No validation needed for adding items - just add them directly
       const unifiedItem: CartItem = {
-        ...itemToAdd,
-        assignment_source: itemToAdd.assignment_source || (itemToAdd.restaurant_id ? 'nutrition_generation' : 'traditional_ordering')
+        ...item,
+        assignment_source: item.assignment_source || (item.restaurant_id ? 'nutrition_generation' : 'traditional_ordering')
       };
 
       setCart((prevCart) => {
