@@ -24,7 +24,18 @@ const transformTeam = (team: any): Team => ({
 export const fetchTeams = async (): Promise<Team[]> => {
   const { data, error } = await supabase
     .from('teams')
-    .select('*')
+    .select(`
+      id,
+      name,
+      description,
+      created_by,
+      created_at,
+      avatar_url,
+      is_active,
+      max_members,
+      member_count,
+      total_points
+    `)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
@@ -49,7 +60,18 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   // Then get the team details
   const { data: teamData, error: teamError } = await supabase
     .from('teams')
-    .select('*')
+    .select(`
+      id,
+      name,
+      description,
+      created_by,
+      created_at,
+      avatar_url,
+      is_active,
+      max_members,
+      member_count,
+      total_points
+    `)
     .eq('id', membershipData.team_id)
     .single();
 

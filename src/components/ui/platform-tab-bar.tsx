@@ -6,6 +6,7 @@ import { Platform } from '@/utils/platform';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { hapticFeedback } from '@/utils/hapticFeedback';
 import { LucideIcon } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export interface TabItem {
   id: string;
@@ -45,7 +46,7 @@ export function PlatformTabBar({
   showLabels = true,
   animated = true,
 }: PlatformTabBarProps) {
-  const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
+  const { isPlatformIOS, isPlatformAndroid, isMobile, isTablet } = useResponsive();
   const [activeTab, setActiveTab] = useState(value || defaultValue || tabs[0]?.id);
   const [prevActiveTab, setPrevActiveTab] = useState<string | undefined>(undefined);
   const [animationDirection, setAnimationDirection] = useState<'left' | 'right'>('right');
@@ -74,63 +75,81 @@ export function PlatformTabBar({
   // Get platform-specific styles for the tabs list
   const getTabsListClasses = () => {
     const baseClasses = cn(
-      "w-full",
-      position === 'bottom' ? "order-1" : "order-0",
-      fullWidth && "grid",
-      fullWidth && `grid-cols-${tabs.length}`
+      "w-full relative",
+      position === 'bottom' ? "order-1" : "order-0"
     );
     
-    switch (effectiveVariant) {
-      case 'ios':
-        return cn(
-          baseClasses,
-          position === 'bottom' && "border-t border-gray-200 bg-white/80 backdrop-blur-lg pb-safe",
-          position === 'top' && "bg-white/80 backdrop-blur-lg pt-safe",
-          "h-14"
-        );
-      case 'android':
-        return cn(
-          baseClasses,
-          position === 'bottom' && "border-t border-gray-100 bg-white pb-safe",
-          position === 'top' && "bg-white pt-safe shadow-sm",
-          "h-16"
-        );
-      case 'segmented':
-        return cn(
-          baseClasses,
-          "bg-gray-100 p-1 rounded-lg h-auto"
-        );
-      default:
-        return baseClasses;
+    // Mobile-specific styling for better touch targets
+    if (isMobile) {
+      return cn(
+        baseClasses,
+        "flex overflow-x-auto scrollbar-hide touch-pan-x",
+        effectiveVariant === 'ios' && "bg-white/10 backdrop-blur-lg rounded-lg p-1",
+        effectiveVariant === 'android' && "bg-surface/50 border-b border-border",
+        !effectiveVariant.includes('ios') && !effectiveVariant.includes('android') && "bg-background/80 backdrop-blur-sm"
+      );
     }
+    
+    // Tablet and desktop styling
+    return cn(
+      baseClasses,
+      fullWidth && "grid",
+      fullWidth && `grid-cols-${Math.min(tabs.length, isTablet ? 4 : 6)}`,
+      effectiveVariant === 'ios' && "bg-white/10 backdrop-blur-lg rounded-lg p-1",
+      effectiveVariant === 'android' && "bg-surface/50 border-b border-border",
+      !effectiveVariant.includes('ios') && !effectiveVariant.includes('android') && "bg-background/80 backdrop-blur-sm"
+    );
   };
   
   // Get platform-specific styles for the tab trigger
   const getTabTriggerClasses = (tabId: string) => {
     const isActive = tabId === activeTab;
     
+    // Base mobile classes with proper touch targets
+    const mobileClasses = cn(
+      "flex-shrink-0 min-w-[80px] px-3 py-2 flex flex-col items-center justify-center",
+      "touch-manipulation select-none cursor-pointer transition-all duration-200",
+      "active:scale-95 hover:bg-white/5"
+    );
+    
+    // Base desktop classes
+    const desktopClasses = cn(
+      "flex items-center justify-center gap-2 px-4 py-3",
+      "transition-all duration-200 hover:bg-white/5"
+    );
+    
+    const classes = isMobile ? mobileClasses : desktopClasses;
+    
     switch (effectiveVariant) {
       case 'ios':
         return cn(
-          "flex flex-col items-center justify-center py-1 h-full",
-          isActive ? "text-blue-500" : "text-gray-500"
+          classes,
+          isActive 
+            ? "text-blue-500 bg-white/20 rounded-md" 
+            : "text-gray-400 hover:text-white"
         );
       case 'android':
         return cn(
-          "flex flex-col items-center justify-center py-1 h-full",
+          classes,
           isActive 
             ? "text-primary relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-8 after:h-0.5 after:bg-primary" 
-            : "text-gray-500"
+            : "text-gray-400 hover:text-white"
         );
       case 'segmented':
         return cn(
-          "py-1.5 px-3 rounded-md",
+          classes,
+          "rounded-md",
           isActive 
             ? "bg-white shadow-sm text-black" 
-            : "bg-transparent text-gray-600"
+            : "bg-transparent text-gray-400 hover:text-white"
         );
       default:
-        return "";
+        return cn(
+          classes,
+          isActive 
+            ? "text-white bg-white/10 rounded-md" 
+            : "text-gray-400 hover:text-white"
+        );
     }
   };
   
@@ -161,9 +180,9 @@ export function PlatformTabBar({
     if (!animated) return "";
     
     if (animationDirection === 'right') {
-      return "animate-in slide-in-from-right";
+      return "animate-in slide-in-from-right duration-300";
     } else {
-      return "animate-in slide-in-from-left";
+      return "animate-in slide-in-from-left duration-300";
     }
   };
   
@@ -173,13 +192,37 @@ export function PlatformTabBar({
     
     return (
       <div className={cn(
-        "absolute top-0 right-0 -mt-1 -mr-1 flex items-center justify-center rounded-full bg-red-500 text-white",
-        count > 99 ? "min-w-[22px] h-[22px] text-xs" : "min-w-[18px] h-[18px] text-xs"
+        "absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs",
+        count > 99 ? "min-w-[20px] h-[20px]" : "min-w-[16px] h-[16px]"
       )}>
         {count > 99 ? '99+' : count}
       </div>
     );
   };
+  
+  // Render tab content
+  const renderTabContent = (tab: TabItem) => (
+    <div className="relative">
+      {showIcons && tab.icon && (
+        <tab.icon className={cn(
+          "mx-auto transition-colors duration-200",
+          showLabels ? "mb-1 h-4 w-4" : "h-5 w-5",
+          isMobile && showLabels ? "h-4 w-4" : ""
+        )} />
+      )}
+      {renderBadge(tab.badgeCount)}
+      {showLabels && (
+        <span className={cn(
+          "text-xs font-medium transition-colors duration-200",
+          isMobile ? "block mt-1" : "ml-2",
+          effectiveVariant === 'ios' && "font-medium",
+          effectiveVariant === 'android' && "font-normal"
+        )}>
+          {isMobile ? tab.label.split(' ')[0] : tab.label}
+        </span>
+      )}
+    </div>
+  );
   
   return (
     <Tabs
@@ -187,51 +230,51 @@ export function PlatformTabBar({
       value={activeTab}
       onValueChange={handleTabChange}
       className={cn(
-        "flex flex-col",
+        "flex flex-col w-full",
         position === 'bottom' ? "flex-col-reverse" : "flex-col",
         className
       )}
     >
-      <TabsList className={cn(getTabsListClasses(), tabsListClassName)}>
-        {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.id}
-            value={tab.id}
-            disabled={tab.disabled}
-            className={getTabTriggerClasses(tab.id)}
-            onClick={() => handleTabChange(tab.id)}
-          >
-            <div className="relative">
-              {showIcons && tab.icon && (
-                <tab.icon className={cn(
-                  "mx-auto",
-                  showLabels ? "mb-1 h-5 w-5" : "h-6 w-6",
-                  tab.id === activeTab 
-                    ? effectiveVariant === 'ios' ? "text-blue-500" : "text-primary" 
-                    : "text-gray-500"
-                )} />
-              )}
-              {renderBadge(tab.badgeCount)}
-            </div>
-            {showLabels && (
-              <span className={cn(
-                "text-xs",
-                effectiveVariant === 'ios' && "font-medium",
-                effectiveVariant === 'android' && "font-normal"
-              )}>
-                {tab.label}
-              </span>
-            )}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      {/* Tab List */}
+      {isMobile ? (
+        <ScrollArea className="w-full">
+          <TabsList className={cn(getTabsListClasses(), tabsListClassName)}>
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                disabled={tab.disabled}
+                className={getTabTriggerClasses(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
+              >
+                {renderTabContent(tab)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </ScrollArea>
+      ) : (
+        <TabsList className={cn(getTabsListClasses(), tabsListClassName)}>
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              disabled={tab.disabled}
+              className={getTabTriggerClasses(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              {renderTabContent(tab)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      )}
       
-      <div className={cn("flex-1 overflow-hidden")}>
+      {/* Tab Content */}
+      <div className={cn("flex-1 overflow-hidden", isMobile ? "px-2" : "px-0")}>
         {tabs.map((tab) => (
           <div
             key={tab.id}
             className={cn(
-              "h-full",
+              "h-full overflow-y-auto",
               tab.id === activeTab ? "block" : "hidden",
               tab.id === activeTab && prevActiveTab ? getAnimationClasses() : ""
             )}
