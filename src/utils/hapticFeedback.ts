@@ -58,5 +58,3 @@ class HapticFeedbackService implements HapticFeedback {
 }
 
 export const hapticFeedback = new HapticFeedbackService();
-</lov-code>
-
