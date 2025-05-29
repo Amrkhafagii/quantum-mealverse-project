@@ -5,12 +5,16 @@ import { motion } from 'framer-motion';
 import { StarRating } from './reviews/StarRating';
 import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Minus, ShoppingCart, Leaf } from 'lucide-react';
+import { Plus, Minus, ShoppingCart, Leaf, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 import { supabase } from '@/integrations/supabase/client';
+import { convertMealToCartItemWithAssignment } from '@/services/mealPlan/mealToCartServiceWithAssignment';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import SustainabilityBadge from './sustainability/SustainabilityBadge';
+import { Meal, MealFood } from '@/types/food';
 
 interface GlobalMealRating {
   avg_rating: number;
@@ -21,8 +25,11 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { displayPrice } = useCurrencyConverter();
 
@@ -71,31 +78,106 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
     }
   }, [meal.id]);
 
+  // Convert MealType to Meal format for restaurant assignment
+  const convertToMealFormat = (mealType: MealType): Meal => {
+    // Create a basic meal structure for restaurant assignment
+    const mealFoods: MealFood[] = [
+      {
+        food: {
+          id: mealType.id,
+          name: mealType.name,
+          calories: mealType.calories || 0,
+          protein: mealType.protein || 0,
+          carbs: mealType.carbs || 0,
+          fat: mealType.fat || 0,
+          category: 'prepared_meal',
+          cookingState: 'cooked'
+        },
+        portionSize: 100 // Base portion for prepared meals
+      }
+    ];
+
+    return {
+      id: mealType.id,
+      name: mealType.name,
+      description: mealType.description || '',
+      foods: mealFoods,
+      totalCalories: mealType.calories || 0,
+      totalProtein: mealType.protein || 0,
+      totalCarbs: mealType.carbs || 0,
+      totalFat: mealType.fat || 0
+    };
+  };
+
   // Separate click handler for card navigation
   const handleCardClick = () => {
     navigate(`/meal/${meal.id}`);
   };
 
-  // Add to cart handler with stronger event stopping
-  const handleAddToCart = (e: React.MouseEvent) => {
+  // Add to cart handler with restaurant assignment
+  const handleAddToCart = async (e: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
+
+    if (!user?.id) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to add items to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAddingToCart(true);
     
-    console.log("Add to cart clicked for meal:", meal.name, "quantity:", quantity);
-    
-    // Create meal object with quantity for cart
-    const mealWithQuantity = {
-      ...meal,
-      quantity: quantity
-    };
-    
-    // Add to cart
-    addItem(mealWithQuantity);
-    
-    // Reset quantity after adding
-    setQuantity(1);
+    try {
+      console.log("Adding meal to cart with restaurant assignment:", meal.name, "quantity:", quantity);
+      
+      // Convert meal to proper format
+      const mealForAssignment = convertToMealFormat(meal);
+      
+      // Use restaurant assignment service
+      const cartItems = await convertMealToCartItemWithAssignment(
+        mealForAssignment,
+        user.id,
+        {
+          strategy: 'cheapest',
+          prefer_single_restaurant: true
+        }
+      );
+
+      // Add each cart item (there may be multiple if split across restaurants)
+      for (const cartItem of cartItems) {
+        // Update quantity for each cart item
+        const itemWithQuantity = {
+          ...cartItem,
+          quantity: quantity
+        };
+        
+        await addItem(itemWithQuantity);
+      }
+
+      toast({
+        title: "Item Added",
+        description: `${meal.name} added to cart with restaurant assignment`,
+        variant: "default"
+      });
+      
+      // Reset quantity after adding
+      setQuantity(1);
+      
+    } catch (error) {
+      console.error('Error adding meal to cart:', error);
+      toast({
+        title: "Assignment Failed",
+        description: error instanceof Error ? error.message : "No restaurants available for this item",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   // Quantity change handler with stronger event stopping
@@ -221,6 +303,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
                 className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('decrease')}
                 type="button"
+                disabled={isAddingToCart}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -233,6 +316,7 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
                 className="h-8 w-8 text-quantum-cyan hover:text-white hover:bg-quantum-cyan/20"
                 onClick={handleQuantityChange('increase')}
                 type="button"
+                disabled={isAddingToCart}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -242,9 +326,19 @@ export const CustomerMealCard = ({ meal }: { meal: MealType }) => {
               onClick={handleAddToCart}
               className="bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black relative z-20"
               type="button"
+              disabled={isAddingToCart}
             >
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              Add
+              {isAddingToCart ? (
+                <>
+                  <MapPin className="h-4 w-4 mr-1 animate-pulse" />
+                  Assigning...
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-1" />
+                  Add
+                </>
+              )}
             </Button>
           </div>
         </div>

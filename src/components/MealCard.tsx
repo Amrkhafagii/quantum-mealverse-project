@@ -1,9 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { HapticButton } from "@/components/ui/haptic-button";
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, MapPin } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { convertMealToCartItemWithAssignment } from '@/services/mealPlan/mealToCartServiceWithAssignment';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { Meal, MealFood } from '@/types/food';
 
 interface MealCardProps {
   name: string;
@@ -25,23 +29,91 @@ export const MealCard: React.FC<MealCardProps> = ({
   macros
 }) => {
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  const handleAddToCart = () => {
-    addItem({
-      id: Math.random().toString(36).substring(2, 9), // Temporary ID for demo
-      name,
-      description,
-      price,
-      calories,
-      protein: macros.protein,
-      carbs: macros.carbs,
-      fat: macros.fat,
-      is_active: true,
-      restaurant_id: '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      quantity: 1
-    });
+  // Convert MealCard props to Meal format for restaurant assignment
+  const convertToMealFormat = (): Meal => {
+    const mealId = Math.random().toString(36).substring(2, 9); // Generate temporary ID
+    
+    const mealFoods: MealFood[] = [
+      {
+        food: {
+          id: mealId,
+          name: name,
+          calories: calories,
+          protein: macros.protein,
+          carbs: macros.carbs,
+          fat: macros.fat,
+          category: 'prepared_meal',
+          cookingState: 'cooked'
+        },
+        portionSize: 100 // Base portion for prepared meals
+      }
+    ];
+
+    return {
+      id: mealId,
+      name: name,
+      description: description,
+      foods: mealFoods,
+      totalCalories: calories,
+      totalProtein: macros.protein,
+      totalCarbs: macros.carbs,
+      totalFat: macros.fat
+    };
+  };
+
+  const handleAddToCart = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to add items to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAddingToCart(true);
+    
+    try {
+      console.log("Adding meal to cart with restaurant assignment:", name);
+      
+      // Convert meal to proper format
+      const mealForAssignment = convertToMealFormat();
+      
+      // Use restaurant assignment service
+      const cartItems = await convertMealToCartItemWithAssignment(
+        mealForAssignment,
+        user.id,
+        {
+          strategy: 'cheapest',
+          prefer_single_restaurant: true
+        }
+      );
+
+      // Add each cart item (there may be multiple if split across restaurants)
+      for (const cartItem of cartItems) {
+        await addItem(cartItem);
+      }
+
+      toast({
+        title: "Item Added",
+        description: `${name} added to cart with restaurant assignment`,
+        variant: "default"
+      });
+      
+    } catch (error) {
+      console.error('Error adding meal to cart:', error);
+      toast({
+        title: "Assignment Failed",
+        description: error instanceof Error ? error.message : "No restaurants available for this item",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   return (
@@ -71,9 +143,19 @@ export const MealCard: React.FC<MealCardProps> = ({
           onClick={handleAddToCart}
           hapticEffect="success"
           className="w-full cyber-button flex items-center justify-center gap-2"
+          disabled={isAddingToCart}
         >
-          <ShoppingCart className="w-4 h-4" />
-          Add to Cart
+          {isAddingToCart ? (
+            <>
+              <MapPin className="w-4 h-4 animate-pulse" />
+              Assigning to Restaurants...
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="w-4 h-4" />
+              Add to Cart
+            </>
+          )}
         </HapticButton>
       </div>
     </Card>
