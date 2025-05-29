@@ -86,35 +86,30 @@ export const useOrderSubmission = (
 
       console.log('Resolved meal items:', resolvedItems);
 
-      // Create order items using resolved meal IDs
-      const orderItems = resolvedItems.map(item => ({
-        order_id: order.id,
-        meal_id: item.meal_id, // Use the resolved meal database ID
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity
-      }));
+      // Create order items using resolved meal IDs - insert each item individually
+      // This avoids potential conflicts with the unique constraint
+      for (const item of resolvedItems) {
+        const orderItem = {
+          order_id: order.id,
+          meal_id: item.meal_id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        };
 
-      console.log('Inserting order items with resolved meal IDs:', orderItems);
+        console.log('Inserting order item:', orderItem);
 
-      // Validate that all meal IDs exist before insertion
-      const mealIds = orderItems.map(item => item.meal_id);
-      const isValid = await MealResolutionService.validateMealIds(mealIds);
-      
-      if (!isValid) {
-        throw new Error('Some meal IDs could not be validated in the database');
+        const { error: itemError } = await supabase
+          .from('order_items')
+          .insert(orderItem);
+
+        if (itemError) {
+          console.error('Order item creation error:', itemError);
+          throw itemError;
+        }
       }
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) {
-        console.error('Order items creation error:', itemsError);
-        throw itemsError;
-      }
-
-      console.log('Order items created successfully');
+      console.log('All order items created successfully');
 
       // Clear cart and show success message
       clearCart();
