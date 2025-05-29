@@ -34,22 +34,23 @@ export function useTeamChallenges() {
 
       if (error) throw error;
       
-      // Map database fields to our Team type
+      // Safely map database fields to our Team type
       const mappedTeams: Team[] = (data || []).map(team => ({
         id: team.id,
         name: team.name,
-        description: team.description,
+        description: team.description || undefined,
         created_by: team.created_by,
         creator_id: team.created_by,
         created_at: team.created_at,
-        updated_at: team.updated_at,
-        image_url: team.image_url,
-        is_active: team.is_active,
-        max_members: team.max_members,
-        members_count: 0, // Will be populated separately if needed
-        member_count: 0,
-        challenges_count: 0,
-        total_points: 0
+        updated_at: team.updated_at || team.created_at,
+        image_url: team.avatar_url || team.image_url || undefined,
+        avatar_url: team.avatar_url || undefined,
+        is_active: team.is_active !== false, // Default to true if undefined
+        max_members: team.max_members || 50,
+        members_count: team.members_count || team.member_count || 0,
+        member_count: team.member_count || team.members_count || 0,
+        challenges_count: team.challenges_count || 0,
+        total_points: team.total_points || 0
       }));
       
       setTeams(mappedTeams);
@@ -81,23 +82,24 @@ export function useTeamChallenges() {
 
       if (error && error.code !== 'PGRST116') throw error;
       
-      if (data && data.team) {
+      if (data?.team) {
         const team = data.team as any;
         const mappedTeam: Team = {
           id: team.id,
           name: team.name,
-          description: team.description,
+          description: team.description || undefined,
           created_by: team.created_by,
           creator_id: team.created_by,
           created_at: team.created_at,
-          updated_at: team.updated_at,
-          image_url: team.image_url,
-          is_active: team.is_active,
-          max_members: team.max_members,
-          members_count: 0,
-          member_count: 0,
-          challenges_count: 0,
-          total_points: 0
+          updated_at: team.updated_at || team.created_at,
+          image_url: team.avatar_url || team.image_url || undefined,
+          avatar_url: team.avatar_url || undefined,
+          is_active: team.is_active !== false,
+          max_members: team.max_members || 50,
+          members_count: team.members_count || team.member_count || 0,
+          member_count: team.member_count || team.members_count || 0,
+          challenges_count: team.challenges_count || 0,
+          total_points: team.total_points || 0
         };
         
         setUserTeam(mappedTeam);
@@ -119,17 +121,19 @@ export function useTeamChallenges() {
 
       if (error) throw error;
       
-      // Map database fields to our TeamMember type
+      // Safely map database fields to our TeamMember type
       const mappedMembers: TeamMember[] = (data || []).map(member => ({
         id: member.id,
         user_id: member.user_id,
         team_id: member.team_id,
         role: member.role,
-        joined_date: member.joined_at,
-        joined_at: member.joined_at,
-        points_contributed: member.points_contributed || 0,
-        contribution_points: member.points_contributed || 0,
-        is_active: member.is_active
+        joined_date: member.joined_at || member.joined_date,
+        joined_at: member.joined_at || member.joined_date,
+        user_name: member.user_name || undefined,
+        profile_image: member.profile_image || undefined,
+        points_contributed: member.points_contributed || member.contribution_points || 0,
+        contribution_points: member.contribution_points || member.points_contributed || 0,
+        is_active: member.is_active !== false
       }));
       
       setTeamMembers(mappedMembers);
@@ -143,7 +147,7 @@ export function useTeamChallenges() {
       const { data, error } = await supabase
         .from('challenges')
         .select('*')
-        .eq('challenge_type', 'team')
+        .eq('type', 'team')
         .eq('is_active', true)
         .gte('end_date', new Date().toISOString())
         .order('start_date', { ascending: true });
