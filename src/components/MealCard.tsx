@@ -33,7 +33,11 @@ export const MealCard: React.FC<MealCardProps> = ({
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const handleAddToCart = async () => {
+    console.log("MealCard: Add to cart clicked for:", name);
+    console.log("User:", user);
+    
     if (!user?.id) {
+      console.log("MealCard: No user ID, showing login toast");
       toast({
         title: "Login Required",
         description: "Please log in to add items to cart",
@@ -45,22 +49,26 @@ export const MealCard: React.FC<MealCardProps> = ({
     setIsAddingToCart(true);
     
     try {
-      console.log("Adding meal to cart (simple):", name);
+      console.log("MealCard: Adding meal to cart (simple):", name);
       
       // Convert meal card props to meal format
       const meal = convertMealCardPropsToMeal({ name, calories, macros });
+      console.log("MealCard: Converted meal:", meal);
       
       // Validate meal
       const validation = validateMealForSimpleCart(meal);
       if (!validation.isValid) {
+        console.error("MealCard: Validation failed:", validation.errors);
         throw new Error(validation.errors.join(', '));
       }
       
       // Convert to simple cart item (no restaurant assignment)
       const cartItem = convertMealToSimpleCartItem(meal);
+      console.log("MealCard: Created cart item:", cartItem);
       
       // Add to cart
       const success = await addItem(cartItem);
+      console.log("MealCard: Add to cart result:", success);
       
       if (success) {
         toast({
@@ -68,10 +76,13 @@ export const MealCard: React.FC<MealCardProps> = ({
           description: `${name} added to cart`,
           variant: "default"
         });
+        console.log("MealCard: Success toast shown");
+      } else {
+        throw new Error("Failed to add item to cart");
       }
       
     } catch (error) {
-      console.error('Error adding meal to cart:', error);
+      console.error('MealCard: Error adding meal to cart:', error);
       toast({
         title: "Error Adding Item",
         description: error instanceof Error ? error.message : "Unable to add item to cart",
@@ -79,8 +90,11 @@ export const MealCard: React.FC<MealCardProps> = ({
       });
     } finally {
       setIsAddingToCart(false);
+      console.log("MealCard: Finished adding to cart, isAddingToCart:", false);
     }
   };
+
+  console.log("MealCard: Rendering meal card for:", name, "isAddingToCart:", isAddingToCart);
 
   return (
     <Card className="holographic-card p-6 transition-all duration-300 hover:scale-105">

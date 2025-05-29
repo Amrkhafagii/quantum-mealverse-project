@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { RestaurantAssignmentDetail } from '@/types/restaurantAssignment';
 import { CartValidationService } from '@/services/cart/cartValidationService';
@@ -75,14 +76,17 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   // Save cart to localStorage whenever it changes (after initialization)
   useEffect(() => {
     if (isInitialized) {
+      console.log("CartContext: Saving cart to localStorage:", cart);
       CartValidationService.updateStoredCart(cart);
     }
   }, [cart, isInitialized]);
 
   const initializeCart = async () => {
     try {
+      console.log("CartContext: Initializing cart from localStorage");
       const validation = await CartValidationService.validateAndCleanStoredCart();
       
+      console.log("CartContext: Loaded cart items:", validation.validItems);
       setCart(validation.validItems);
       
       // Notify user about removed items
@@ -95,25 +99,33 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error('Error initializing cart:', error);
+      console.error('CartContext: Error initializing cart:', error);
       setCart([]);
     } finally {
       setIsInitialized(true);
+      console.log("CartContext: Cart initialization complete");
     }
   };
 
   const addToCart = async (item: CartItem): Promise<boolean> => {
     try {
+      console.log("CartContext: Adding item to cart:", item);
+      
       // No validation needed for adding items - just add them directly
       const unifiedItem: CartItem = {
         ...item,
         assignment_source: item.assignment_source || (item.restaurant_id ? 'nutrition_generation' : 'traditional_ordering')
       };
 
+      console.log("CartContext: Unified item:", unifiedItem);
+
       setCart((prevCart) => {
+        console.log("CartContext: Previous cart:", prevCart);
         const existingItem = prevCart.find((cartItem) => cartItem.id === unifiedItem.id);
+        
         if (existingItem) {
-          return prevCart.map((cartItem) =>
+          console.log("CartContext: Item exists, updating quantity");
+          const updatedCart = prevCart.map((cartItem) =>
             cartItem.id === unifiedItem.id
               ? { 
                   ...cartItem, 
@@ -126,8 +138,14 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
                 }
               : cartItem
           );
+          console.log("CartContext: Updated cart with existing item:", updatedCart);
+          return updatedCart;
         }
-        return [...prevCart, unifiedItem];
+        
+        console.log("CartContext: Adding new item to cart");
+        const newCart = [...prevCart, unifiedItem];
+        console.log("CartContext: New cart:", newCart);
+        return newCart;
       });
 
       const assignmentInfo = unifiedItem.restaurant_id 
@@ -140,9 +158,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         variant: "default"
       });
 
+      console.log("CartContext: Successfully added item to cart");
       return true;
     } catch (error) {
-      console.error('Error adding item to cart:', error);
+      console.error('CartContext: Error adding item to cart:', error);
       toast({
         title: "Error adding item",
         description: "Unable to add item to cart. Please try again.",
@@ -156,10 +175,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const addItem = addToCart;
 
   const removeFromCart = (id: string) => {
+    console.log("CartContext: Removing item from cart:", id);
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
   const updateQuantity = (id: string, quantity: number) => {
+    console.log("CartContext: Updating quantity for item:", id, "to:", quantity);
     if (quantity <= 0) {
       removeFromCart(id);
       return;
@@ -173,13 +194,14 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const clearCart = () => {
+    console.log("CartContext: Clearing cart");
     setCart([]);
     CartValidationService.clearStoredCart();
   };
 
   const validateCart = async () => {
     // No validation needed - this method is kept for compatibility
-    console.log('Cart validation skipped - no validation performed');
+    console.log('CartContext: Cart validation skipped - no validation performed');
   };
 
   // Unified helper: Group cart items by restaurant
@@ -201,6 +223,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const hasRestaurantAssignments = (): boolean => {
     return cart.some(item => item.restaurant_id);
   };
+
+  console.log("CartContext: Rendering with cart:", cart.length, "items");
 
   return (
     <CartContext.Provider
