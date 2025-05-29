@@ -47,6 +47,8 @@ class AutomaticAssignmentService {
       throw error;
     }
 
+    // The trigger will automatically sync this status change to the orders table
+    console.log('Assignment accepted, bidirectional sync will update order status');
     return data as DeliveryAssignment;
   }
 
@@ -85,6 +87,8 @@ class AutomaticAssignmentService {
         order_id: assignment.order_id,
         reason: reason || 'No reason provided'
       });
+
+    console.log('Assignment rejected, will be available for reassignment');
   }
 
   // Get pending assignments for a delivery user
@@ -160,6 +164,49 @@ class AutomaticAssignmentService {
       console.error('Error updating assignment location:', error);
       throw error;
     }
+  }
+
+  // Complete delivery assignment
+  async completeDelivery(assignmentId: string): Promise<DeliveryAssignment> {
+    const { data, error } = await supabase
+      .from('delivery_assignments')
+      .update({ 
+        status: 'delivered',
+        delivery_time: new Date().toISOString()
+      })
+      .eq('id', assignmentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error completing delivery:', error);
+      throw error;
+    }
+
+    // The trigger will automatically sync this status change to the orders table
+    console.log('Delivery completed, bidirectional sync will update order status');
+    return data as DeliveryAssignment;
+  }
+
+  // Mark assignment as on the way
+  async markOnTheWay(assignmentId: string): Promise<DeliveryAssignment> {
+    const { data, error } = await supabase
+      .from('delivery_assignments')
+      .update({ 
+        status: 'on_the_way'
+      })
+      .eq('id', assignmentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error marking assignment as on the way:', error);
+      throw error;
+    }
+
+    // The trigger will automatically sync this status change to the orders table
+    console.log('Assignment marked as on the way, bidirectional sync will update order status');
+    return data as DeliveryAssignment;
   }
 }
 
