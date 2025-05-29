@@ -5859,6 +5859,61 @@ export type Database = {
           },
         ]
       }
+      order_rejections: {
+        Row: {
+          assignment_id: string | null
+          created_at: string | null
+          id: string
+          order_id: string
+          rejected_at: string | null
+          rejection_details: string | null
+          rejection_reason: string
+          restaurant_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string | null
+          id?: string
+          order_id: string
+          rejected_at?: string | null
+          rejection_details?: string | null
+          rejection_reason: string
+          restaurant_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          rejected_at?: string | null
+          rejection_details?: string | null
+          rejection_reason?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_rejections_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_rejections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_rejections_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_sequences: {
         Row: {
           day: number
@@ -5902,9 +5957,11 @@ export type Database = {
           estimated_preparation_time: number | null
           formatted_order_id: string | null
           id: string
+          last_rejected_at: string | null
           latitude: number | null
           locale: string | null
           longitude: number | null
+          max_rejection_attempts: number | null
           notes: string | null
           payment_method: string
           picked_up_at: string | null
@@ -5912,6 +5969,7 @@ export type Database = {
           ready_at: string | null
           refund_amount: number | null
           refund_status: string | null
+          rejection_count: number | null
           requires_chef_attention: boolean | null
           restaurant_attempts: Json | null
           restaurant_id: string | null
@@ -5942,9 +6000,11 @@ export type Database = {
           estimated_preparation_time?: number | null
           formatted_order_id?: string | null
           id?: string
+          last_rejected_at?: string | null
           latitude?: number | null
           locale?: string | null
           longitude?: number | null
+          max_rejection_attempts?: number | null
           notes?: string | null
           payment_method: string
           picked_up_at?: string | null
@@ -5952,6 +6012,7 @@ export type Database = {
           ready_at?: string | null
           refund_amount?: number | null
           refund_status?: string | null
+          rejection_count?: number | null
           requires_chef_attention?: boolean | null
           restaurant_attempts?: Json | null
           restaurant_id?: string | null
@@ -5982,9 +6043,11 @@ export type Database = {
           estimated_preparation_time?: number | null
           formatted_order_id?: string | null
           id?: string
+          last_rejected_at?: string | null
           latitude?: number | null
           locale?: string | null
           longitude?: number | null
+          max_rejection_attempts?: number | null
           notes?: string | null
           payment_method?: string
           picked_up_at?: string | null
@@ -5992,6 +6055,7 @@ export type Database = {
           ready_at?: string | null
           refund_amount?: number | null
           refund_status?: string | null
+          rejection_count?: number | null
           requires_chef_attention?: boolean | null
           restaurant_attempts?: Json | null
           restaurant_id?: string | null
@@ -6705,6 +6769,8 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string
+          rejection_details: string | null
+          rejection_reason: string | null
           restaurant_id: string
           status: string
           updated_at: string
@@ -6717,6 +6783,8 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id: string
+          rejection_details?: string | null
+          rejection_reason?: string | null
           restaurant_id: string
           status?: string
           updated_at?: string
@@ -6729,6 +6797,8 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string
+          rejection_details?: string | null
+          rejection_reason?: string | null
           restaurant_id?: string
           status?: string
           updated_at?: string
@@ -10734,6 +10804,15 @@ export type Database = {
       handle_expired_delivery_assignments: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      handle_order_rejection: {
+        Args: {
+          p_assignment_id: string
+          p_restaurant_id: string
+          p_rejection_reason: string
+          p_rejection_details?: string
+        }
+        Returns: boolean
       }
       initialize_payment_coordination: {
         Args: { p_order_id: string }
