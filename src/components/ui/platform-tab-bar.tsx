@@ -75,69 +75,61 @@ export function PlatformTabBar({
   // Get platform-specific styles for the tabs list
   const getTabsListClasses = () => {
     const baseClasses = cn(
-      "w-full relative",
+      "w-full relative flex",
       position === 'bottom' ? "order-1" : "order-0"
     );
     
-    // Mobile-specific styling for better touch targets
-    if (isMobile) {
-      return cn(
-        baseClasses,
-        "flex overflow-x-auto scrollbar-hide touch-pan-x",
-        effectiveVariant === 'ios' && "bg-white/10 backdrop-blur-lg rounded-lg p-1",
-        effectiveVariant === 'android' && "bg-surface/50 border-b border-border",
-        !effectiveVariant.includes('ios') && !effectiveVariant.includes('android') && "bg-background/80 backdrop-blur-sm"
-      );
-    }
+    // Remove complex grid calculations and use flexbox with proper scrolling
+    const scrollClasses = isMobile 
+      ? "overflow-x-auto scrollbar-hide" 
+      : fullWidth ? "justify-start" : "justify-center";
     
-    // Tablet and desktop styling
     return cn(
       baseClasses,
-      fullWidth && "grid",
-      fullWidth && `grid-cols-${Math.min(tabs.length, isTablet ? 4 : 6)}`,
+      scrollClasses,
       effectiveVariant === 'ios' && "bg-white/10 backdrop-blur-lg rounded-lg p-1",
       effectiveVariant === 'android' && "bg-surface/50 border-b border-border",
       !effectiveVariant.includes('ios') && !effectiveVariant.includes('android') && "bg-background/80 backdrop-blur-sm"
     );
   };
   
-  // Get platform-specific styles for the tab trigger
+  // Get platform-specific styles for the tab trigger with proper touch targets
   const getTabTriggerClasses = (tabId: string) => {
     const isActive = tabId === activeTab;
     
-    // Base mobile classes with proper touch targets
-    const mobileClasses = cn(
-      "flex-shrink-0 min-w-[80px] px-3 py-2 flex flex-col items-center justify-center",
+    // Platform-specific minimum touch target heights
+    const minHeight = isPlatformIOS ? 'min-h-[44px]' : 'min-h-[48px]';
+    
+    // Base classes with proper touch targets and spacing
+    const baseClasses = cn(
+      "flex-shrink-0 flex items-center justify-center gap-2",
       "touch-manipulation select-none cursor-pointer transition-all duration-200",
-      "active:scale-95 hover:bg-white/5"
+      "active:scale-95 hover:bg-white/5",
+      minHeight,
+      // Better spacing for different configurations
+      showIcons && showLabels ? "px-3 py-2" : "px-4 py-3",
+      // Minimum width to prevent cramping
+      isMobile ? "min-w-[80px]" : "min-w-[100px]"
     );
-    
-    // Base desktop classes
-    const desktopClasses = cn(
-      "flex items-center justify-center gap-2 px-4 py-3",
-      "transition-all duration-200 hover:bg-white/5"
-    );
-    
-    const classes = isMobile ? mobileClasses : desktopClasses;
     
     switch (effectiveVariant) {
       case 'ios':
         return cn(
-          classes,
+          baseClasses,
           isActive 
             ? "text-blue-500 bg-white/20 rounded-md" 
             : "text-gray-400 hover:text-white"
         );
       case 'android':
         return cn(
-          classes,
+          baseClasses,
           isActive 
             ? "text-primary relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-8 after:h-0.5 after:bg-primary" 
             : "text-gray-400 hover:text-white"
         );
       case 'segmented':
         return cn(
-          classes,
+          baseClasses,
           "rounded-md",
           isActive 
             ? "bg-white shadow-sm text-black" 
@@ -145,7 +137,7 @@ export function PlatformTabBar({
         );
       default:
         return cn(
-          classes,
+          baseClasses,
           isActive 
             ? "text-white bg-white/10 rounded-md" 
             : "text-gray-400 hover:text-white"
@@ -200,25 +192,28 @@ export function PlatformTabBar({
     );
   };
   
-  // Render tab content
+  // Render tab content with improved text handling
   const renderTabContent = (tab: TabItem) => (
-    <div className="relative">
+    <div className="relative flex items-center justify-center">
       {showIcons && tab.icon && (
         <tab.icon className={cn(
-          "mx-auto transition-colors duration-200",
-          showLabels ? "mb-1 h-4 w-4" : "h-5 w-5",
-          isMobile && showLabels ? "h-4 w-4" : ""
+          "transition-colors duration-200 flex-shrink-0",
+          showLabels ? "h-4 w-4" : "h-5 w-5",
+          showLabels && "mr-2"
         )} />
       )}
       {renderBadge(tab.badgeCount)}
       {showLabels && (
         <span className={cn(
-          "text-xs font-medium transition-colors duration-200",
-          isMobile ? "block mt-1" : "ml-2",
+          "font-medium transition-colors duration-200 truncate",
+          isMobile ? "text-xs" : "text-sm",
           effectiveVariant === 'ios' && "font-medium",
           effectiveVariant === 'android' && "font-normal"
         )}>
-          {isMobile ? tab.label.split(' ')[0] : tab.label}
+          {/* Truncate long labels on mobile for better fit */}
+          {isMobile && tab.label.length > 8 
+            ? `${tab.label.substring(0, 6)}...` 
+            : tab.label}
         </span>
       )}
     </div>
@@ -235,24 +230,8 @@ export function PlatformTabBar({
         className
       )}
     >
-      {/* Tab List */}
-      {isMobile ? (
-        <ScrollArea className="w-full">
-          <TabsList className={cn(getTabsListClasses(), tabsListClassName)}>
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                disabled={tab.disabled}
-                className={getTabTriggerClasses(tab.id)}
-                onClick={() => handleTabChange(tab.id)}
-              >
-                {renderTabContent(tab)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </ScrollArea>
-      ) : (
+      {/* Tab List with improved scrolling */}
+      <div className="w-full overflow-hidden">
         <TabsList className={cn(getTabsListClasses(), tabsListClassName)}>
           {tabs.map((tab) => (
             <TabsTrigger
@@ -266,7 +245,7 @@ export function PlatformTabBar({
             </TabsTrigger>
           ))}
         </TabsList>
-      )}
+      </div>
       
       {/* Tab Content */}
       <div className={cn("flex-1 overflow-hidden", isMobile ? "px-2" : "px-0")}>
