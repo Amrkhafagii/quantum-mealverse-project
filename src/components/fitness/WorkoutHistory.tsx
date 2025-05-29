@@ -43,7 +43,18 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({
         .single();
 
       if (error) throw error;
-      setWorkoutLog(data);
+      
+      // Transform the data to match our WorkoutLog type
+      const transformedData: WorkoutLog = {
+        ...data,
+        completed_exercises: Array.isArray(data.completed_exercises) 
+          ? data.completed_exercises 
+          : typeof data.completed_exercises === 'string' 
+            ? JSON.parse(data.completed_exercises) 
+            : []
+      };
+      
+      setWorkoutLog(transformedData);
     } catch (error) {
       console.error('Error fetching workout log:', error);
       toast({
