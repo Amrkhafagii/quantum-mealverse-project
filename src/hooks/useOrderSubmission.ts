@@ -37,9 +37,24 @@ export const useOrderSubmission = (
     setIsSubmitting(true);
 
     try {
-      console.log('Submitting order with data:', data);
+      console.log('=== ORDER SUBMISSION DEBUG START ===');
+      console.log('Order submission starting with:', {
+        userId,
+        itemCount: items.length,
+        totalAmount,
+        data
+      });
 
-      // Create the order with correct field mapping to match database schema
+      // Debug cart items
+      console.log('Cart items details:', items.map(item => ({
+        id: item.id,
+        name: item.name,
+        restaurant_id: item.restaurant_id,
+        price: item.price,
+        quantity: item.quantity
+      })));
+
+      // Create the order with correct field mapping
       const orderData = {
         user_id: userId,
         customer_name: data.fullName,
@@ -72,119 +87,168 @@ export const useOrderSubmission = (
 
       if (orderError) {
         console.error('Order creation error:', orderError);
-        throw orderError;
+        throw new Error(`Order creation failed: ${orderError.message}`);
       }
 
       console.log('Order created successfully:', order);
 
-      // Get the first restaurant_id from items or use a default
-      const defaultRestaurantId = items.find(item => item.restaurant_id)?.restaurant_id;
+      // Restaurant assignment logic with better error handling
+      let assignedRestaurantId = null;
       
-      if (!defaultRestaurantId) {
-        // If no restaurant is assigned, we'll need to assign one
-        // For now, we'll get the first available restaurant
-        const { data: firstRestaurant } = await supabase
+      // Check if items already have restaurant assignments
+      const itemsWithRestaurants = items.filter(item => item.restaurant_id);
+      const itemsWithoutRestaurants = items.filter(item => !item.restaurant_id);
+      
+      console.log('Restaurant assignment analysis:', {
+        totalItems: items.length,
+        itemsWithRestaurants: itemsWithRestaurants.length,
+        itemsWithoutRestaurants: itemsWithoutRestaurants.length
+      });
+
+      if (itemsWithRestaurants.length > 0) {
+        // Use the first restaurant ID from assigned items
+        assignedRestaurantId = itemsWithRestaurants[0].restaurant_id;
+        console.log('Using existing restaurant assignment:', assignedRestaurantId);
+      } else {
+        // Get a fallback restaurant with better error handling
+        console.log('No restaurant assignments found, getting fallback restaurant...');
+        
+        const { data: restaurants, error: restaurantError } = await supabase
           .from('restaurants')
-          .select('id')
+          .select('id, name, is_active')
           .eq('is_active', true)
-          .limit(1)
-          .single();
+          .limit(5);
           
-        if (!firstRestaurant) {
-          throw new Error('No active restaurants available');
+        console.log('Available restaurants query result:', { restaurants, error: restaurantError });
+        
+        if (restaurantError) {
+          console.error('Restaurant query error:', restaurantError);
+          throw new Error(`Failed to find restaurants: ${restaurantError.message}`);
         }
         
-        // Update order with restaurant assignment
+        if (!restaurants || restaurants.length === 0) {
+          console.error('No active restaurants found in database');
+          throw new Error('No active restaurants available. Please try again later.');
+        }
+        
+        assignedRestaurantId = restaurants[0].id;
+        console.log('Assigned fallback restaurant:', {
+          id: assignedRestaurantId,
+          name: restaurants[0].name,
+          availableCount: restaurants.length
+        });
+      }
+
+      // Update order with restaurant assignment
+      if (assignedRestaurantId) {
+        console.log('Updating order with restaurant assignment...');
+        
         const { error: updateError } = await supabase
           .from('orders')
-          .update({ restaurant_id: firstRestaurant.id })
+          .update({ restaurant_id: assignedRestaurantId })
           .eq('id', order.id);
           
         if (updateError) {
           console.error('Error updating order with restaurant:', updateError);
-          throw updateError;
+          throw new Error(`Failed to assign restaurant: ${updateError.message}`);
         }
         
-        console.log('Assigned order to restaurant:', firstRestaurant.id);
+        console.log('Order updated with restaurant assignment successfully');
       }
 
-      // Resolve cart items to actual meal database records
-      console.log('Resolving cart items to meal records...');
-      const resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
-        items,
-        defaultRestaurantId || order.restaurant_id
-      );
+      // Resolve cart items to meal records with enhanced error handling
+      console.log('Starting meal resolution process...');
+      
+      try {
+        const resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
+          items,
+          assignedRestaurantId
+        );
 
-      console.log('Resolved meal items:', resolvedItems);
-
-      // Create order items with proper handling of the unique constraint
-      for (const item of resolvedItems) {
-        try {
-          // Try to insert the order item
-          const orderItem = {
-            order_id: order.id,
-            meal_id: item.meal_id,
+        console.log('Meal resolution successful:', {
+          originalItemCount: items.length,
+          resolvedItemCount: resolvedItems.length,
+          resolvedItems: resolvedItems.map(item => ({
+            id: item.id,
             name: item.name,
+            meal_id: item.meal_id,
             price: item.price,
             quantity: item.quantity
-          };
+          }))
+        });
 
-          console.log('Inserting order item:', orderItem);
+        // Create order items with better error handling
+        console.log('Creating order items...');
+        
+        for (const [index, item] of resolvedItems.entries()) {
+          try {
+            const orderItem = {
+              order_id: order.id,
+              meal_id: item.meal_id,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity
+            };
 
-          const { error: itemError } = await supabase
-            .from('order_items')
-            .insert(orderItem);
+            console.log(`Creating order item ${index + 1}/${resolvedItems.length}:`, orderItem);
 
-          if (itemError) {
-            // If we get a unique constraint violation, update the existing item
-            if (itemError.code === '23505' && itemError.message?.includes('order_items_order_meal_unique')) {
-              console.log('Duplicate order item detected, updating existing item');
-              
-              // Get the existing item to add quantities
-              const { data: existingItem, error: fetchError } = await supabase
-                .from('order_items')
-                .select('quantity')
-                .eq('order_id', order.id)
-                .eq('meal_id', item.meal_id)
-                .single();
+            const { error: itemError } = await supabase
+              .from('order_items')
+              .insert(orderItem);
 
-              if (fetchError) {
-                console.error('Error fetching existing item:', fetchError);
-                throw fetchError;
+            if (itemError) {
+              // Handle unique constraint violations
+              if (itemError.code === '23505' && itemError.message?.includes('order_items_order_meal_unique')) {
+                console.log('Duplicate order item detected, updating existing item...');
+                
+                const { data: existingItem, error: fetchError } = await supabase
+                  .from('order_items')
+                  .select('quantity')
+                  .eq('order_id', order.id)
+                  .eq('meal_id', item.meal_id)
+                  .single();
+
+                if (fetchError) {
+                  console.error('Error fetching existing item:', fetchError);
+                  throw new Error(`Failed to fetch existing item: ${fetchError.message}`);
+                }
+
+                const { error: updateError } = await supabase
+                  .from('order_items')
+                  .update({ 
+                    quantity: existingItem.quantity + item.quantity,
+                    price: item.price
+                  })
+                  .eq('order_id', order.id)
+                  .eq('meal_id', item.meal_id);
+
+                if (updateError) {
+                  console.error('Error updating existing order item:', updateError);
+                  throw new Error(`Failed to update existing item: ${updateError.message}`);
+                }
+                
+                console.log(`Updated existing order item for meal_id: ${item.meal_id}`);
+              } else {
+                console.error('Order item creation error:', itemError);
+                throw new Error(`Failed to create order item: ${itemError.message}`);
               }
-
-              // Update with combined quantity
-              const { error: updateError } = await supabase
-                .from('order_items')
-                .update({ 
-                  quantity: existingItem.quantity + item.quantity,
-                  price: item.price // Update price in case it changed
-                })
-                .eq('order_id', order.id)
-                .eq('meal_id', item.meal_id);
-
-              if (updateError) {
-                console.error('Error updating existing order item:', updateError);
-                throw updateError;
-              }
-              
-              console.log(`Updated existing order item for meal_id: ${item.meal_id}`);
             } else {
-              console.error('Order item creation error:', itemError);
-              throw itemError;
+              console.log(`Successfully created order item ${index + 1} for meal_id: ${item.meal_id}`);
             }
-          } else {
-            console.log(`Successfully created order item for meal_id: ${item.meal_id}`);
+          } catch (itemProcessError) {
+            console.error(`Error processing order item ${index + 1}:`, item, itemProcessError);
+            throw itemProcessError;
           }
-        } catch (itemProcessError) {
-          console.error('Error processing order item:', item, itemProcessError);
-          throw itemProcessError;
         }
+
+        console.log('All order items processed successfully');
+
+      } catch (mealResolutionError) {
+        console.error('Meal resolution failed:', mealResolutionError);
+        throw new Error(`Failed to process meal items: ${mealResolutionError instanceof Error ? mealResolutionError.message : 'Unknown error'}`);
       }
 
-      console.log('All order items processed successfully');
-
-      // Clear cart and show success message
+      // Clear cart and show success
       clearCart();
       
       toast({
@@ -193,22 +257,17 @@ export const useOrderSubmission = (
         variant: "default"
       });
 
-      console.log('Order submission completed successfully');
+      console.log('=== ORDER SUBMISSION DEBUG END (SUCCESS) ===');
 
     } catch (error) {
-      console.error('Order submission failed:', error);
+      console.error('=== ORDER SUBMISSION DEBUG END (ERROR) ===');
+      console.error('Complete error details:', error);
       
-      // Provide more specific error messages
       let errorMessage = "Failed to place order. Please try again.";
       
       if (error instanceof Error) {
-        if (error.message.includes('restaurant')) {
-          errorMessage = "Unable to assign restaurant for your order. Please try again.";
-        } else if (error.message.includes('meal')) {
-          errorMessage = "There was an issue processing your meal items. Please try again.";
-        } else {
-          errorMessage = error.message;
-        }
+        errorMessage = error.message;
+        console.error('Error stack:', error.stack);
       }
       
       toast({

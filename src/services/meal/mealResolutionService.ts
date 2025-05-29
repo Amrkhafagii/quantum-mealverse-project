@@ -7,14 +7,10 @@ export interface ResolvedMealItem {
   name: string;
   price: number;
   quantity: number;
-  meal_id: string; // The actual database meal ID
+  meal_id: string;
 }
 
 export class MealResolutionService {
-  /**
-   * Resolves cart items to actual meal database records
-   * Either finds existing meals or creates new ones
-   */
   static async resolveCartItemsToMeals(
     cartItems: CartItem[],
     restaurantId: string
@@ -23,123 +19,159 @@ export class MealResolutionService {
       throw new Error('Restaurant ID is required for meal resolution');
     }
 
+    console.log('=== MEAL RESOLUTION DEBUG START ===');
+    console.log('Starting meal resolution:', {
+      itemCount: cartItems.length,
+      restaurantId,
+      items: cartItems.map(item => ({ id: item.id, name: item.name, price: item.price }))
+    });
+
     const resolvedItems: ResolvedMealItem[] = [];
 
-    for (const item of cartItems) {
+    for (const [index, item] of cartItems.entries()) {
       try {
-        console.log(`Resolving cart item "${item.name}" with restaurant: ${restaurantId}`);
+        console.log(`Processing item ${index + 1}/${cartItems.length}: "${item.name}"`);
 
-        // First, try to find existing meal by name and restaurant
+        // First, try to find existing meal
         let mealId = await this.findExistingMeal(item.name, restaurantId);
         
-        // If not found, create a new meal record
-        if (!mealId) {
+        if (mealId) {
+          console.log(`Found existing meal for "${item.name}": ${mealId}`);
+        } else {
+          console.log(`No existing meal found for "${item.name}", creating new meal...`);
           mealId = await this.createMealRecord(item, restaurantId);
+          console.log(`Created new meal for "${item.name}": ${mealId}`);
         }
 
-        resolvedItems.push({
+        const resolvedItem: ResolvedMealItem = {
           id: item.id,
           name: item.name,
           price: item.price,
           quantity: item.quantity,
           meal_id: mealId
-        });
+        };
 
-        console.log(`Resolved cart item "${item.name}" to meal_id: ${mealId}`);
+        resolvedItems.push(resolvedItem);
+        console.log(`Successfully resolved item ${index + 1}: "${item.name}" -> meal_id: ${mealId}`);
+
       } catch (error) {
-        console.error(`Failed to resolve cart item "${item.name}":`, error);
-        throw new Error(`Failed to resolve meal for item: ${item.name}`);
+        console.error(`Failed to resolve item ${index + 1} "${item.name}":`, error);
+        throw new Error(`Failed to resolve meal "${item.name}": ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
+    console.log('=== MEAL RESOLUTION DEBUG END (SUCCESS) ===');
+    console.log('Final resolved items:', resolvedItems);
     return resolvedItems;
   }
 
-  /**
-   * Find existing meal by name and restaurant
-   */
   private static async findExistingMeal(
     mealName: string,
     restaurantId: string
   ): Promise<string | null> {
-    console.log(`Looking for existing meal: "${mealName}" in restaurant: ${restaurantId}`);
+    console.log(`Searching for existing meal: "${mealName}" in restaurant: ${restaurantId}`);
 
-    const { data, error } = await supabase
-      .from('menu_items')
-      .select('id')
-      .eq('name', mealName)
-      .eq('restaurant_id', restaurantId)
-      .eq('is_available', true)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('id, name')
+        .eq('name', mealName)
+        .eq('restaurant_id', restaurantId)
+        .eq('is_available', true)
+        .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error finding existing meal:', error);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log(`No existing meal found for "${mealName}"`);
+          return null;
+        } else {
+          console.error('Database error while searching for existing meal:', error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+      }
+
+      console.log(`Found existing meal:`, { id: data.id, name: data.name });
+      return data.id;
+
+    } catch (error) {
+      console.error('Error in findExistingMeal:', error);
       throw error;
     }
-
-    return data?.id || null;
   }
 
-  /**
-   * Create a new meal record in the menu_items table
-   */
   private static async createMealRecord(
     cartItem: CartItem,
     restaurantId: string
   ): Promise<string> {
     console.log(`Creating new meal record for: "${cartItem.name}" in restaurant: ${restaurantId}`);
 
-    const mealData = {
-      name: cartItem.name,
-      description: cartItem.description || `Nutritionally optimized meal: ${cartItem.name}`,
-      price: cartItem.price,
-      restaurant_id: restaurantId, // Now guaranteed to be provided
-      category: 'Generated Meals',
-      is_available: true,
-      nutritional_info: cartItem.calories || cartItem.protein || cartItem.carbs || cartItem.fat ? {
-        calories: cartItem.calories,
-        protein: cartItem.protein,
-        carbs: cartItem.carbs,
-        fat: cartItem.fat
-      } : null,
-      preparation_time: cartItem.estimated_prep_time || 20,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const mealData = {
+        name: cartItem.name,
+        description: cartItem.description || `Nutritionally optimized meal: ${cartItem.name}`,
+        price: cartItem.price,
+        restaurant_id: restaurantId,
+        category: 'Generated Meals',
+        is_available: true,
+        nutritional_info: cartItem.calories || cartItem.protein || cartItem.carbs || cartItem.fat ? {
+          calories: cartItem.calories,
+          protein: cartItem.protein,
+          carbs: cartItem.carbs,
+          fat: cartItem.fat
+        } : null,
+        preparation_time: cartItem.estimated_prep_time || 20,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-    const { data, error } = await supabase
-      .from('menu_items')
-      .insert(mealData)
-      .select('id')
-      .single();
+      console.log('Meal data to insert:', mealData);
 
-    if (error) {
-      console.error('Error creating meal record:', error);
+      const { data, error } = await supabase
+        .from('menu_items')
+        .insert(mealData)
+        .select('id, name')
+        .single();
+
+      if (error) {
+        console.error('Database error while creating meal:', error);
+        throw new Error(`Failed to create meal in database: ${error.message}`);
+      }
+
+      if (!data?.id) {
+        console.error('No ID returned from meal creation');
+        throw new Error('Failed to create meal record - no ID returned');
+      }
+
+      console.log(`Successfully created meal:`, { id: data.id, name: data.name });
+      return data.id;
+
+    } catch (error) {
+      console.error('Error in createMealRecord:', error);
       throw error;
     }
-
-    if (!data?.id) {
-      throw new Error('Failed to create meal record - no ID returned');
-    }
-
-    console.log(`Created new meal record with ID: ${data.id} for restaurant: ${restaurantId}`);
-    return data.id;
   }
 
-  /**
-   * Validate that all meal IDs exist in the database
-   */
   static async validateMealIds(mealIds: string[]): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('menu_items')
-      .select('id')
-      .in('id', mealIds);
+    console.log('Validating meal IDs:', mealIds);
 
-    if (error) {
-      console.error('Error validating meal IDs:', error);
+    try {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('id')
+        .in('id', mealIds);
+
+      if (error) {
+        console.error('Error validating meal IDs:', error);
+        return false;
+      }
+
+      const isValid = data.length === mealIds.length;
+      console.log('Meal ID validation result:', { requested: mealIds.length, found: data.length, isValid });
+      
+      return isValid;
+    } catch (error) {
+      console.error('Exception during meal ID validation:', error);
       return false;
     }
-
-    return data.length === mealIds.length;
   }
 }
