@@ -5764,13 +5764,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "order_items_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "menu_items"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -9965,13 +9958,6 @@ export type Database = {
           source_type?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "order_items_meal_id_fkey"
-            columns: ["meal_id"]
-            isOneToOne: false
-            referencedRelation: "menu_items"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
