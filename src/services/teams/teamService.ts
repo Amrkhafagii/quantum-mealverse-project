@@ -7,17 +7,19 @@ import type { Team } from '@/types/fitness/challenges';
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 
 // Simplified transform function with proper type handling
-const transformTeam = (team: TeamRow): Team => ({
-  id: team.id,
-  name: team.name,
-  description: team.description,
-  created_by: team.created_by,
-  created_at: team.created_at,
-  avatar_url: team.avatar_url,
-  image_url: team.avatar_url, // Provide alias for component compatibility
-  member_count: team.member_count ?? 0,
-  total_points: team.total_points ?? 0
-});
+const transformTeam = (team: TeamRow): Team => {
+  return {
+    id: team.id,
+    name: team.name,
+    description: team.description,
+    created_by: team.created_by,
+    created_at: team.created_at,
+    avatar_url: team.avatar_url,
+    image_url: team.avatar_url, // Provide alias for component compatibility
+    member_count: team.member_count ?? 0,
+    total_points: team.total_points ?? 0
+  };
+};
 
 export const fetchTeams = async (): Promise<Team[]> => {
   const { data, error } = await supabase
