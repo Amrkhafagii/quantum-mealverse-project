@@ -38,29 +38,27 @@ export const useOrderSubmission = (
     try {
       console.log('Submitting order with data:', data);
 
-      // Create the order with only existing database fields
+      // Create the order with all required fields
       const orderData = {
         user_id: userId,
-        customer_name: data.fullName,
-        customer_email: data.email,
-        customer_phone: data.phone,
+        total_amount: totalAmount,
+        status: 'pending',
         delivery_address: data.address,
+        delivery_instructions: data.instructions || null,
+        phone_number: data.phone,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        // Add required fields that were missing
         city: data.city || 'Unknown',
+        customer_email: data.email,
+        customer_name: data.fullName,
+        customer_phone: data.phone,
         delivery_method: data.deliveryMethod || 'delivery',
         payment_method: data.paymentMethod || 'cash',
         delivery_fee: 0,
         subtotal: totalAmount,
-        total: totalAmount,
-        status: 'pending',
-        // Only include notes if the column exists - using a different field name
-        notes: data.instructions || null,
+        total: totalAmount
       };
-
-      // Add coordinates if available
-      if (data.latitude && data.longitude) {
-        orderData.latitude = data.latitude;
-        orderData.longitude = data.longitude;
-      }
 
       console.log('Creating order with data:', orderData);
 
