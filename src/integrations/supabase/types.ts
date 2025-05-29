@@ -5667,6 +5667,60 @@ export type Database = {
         }
         Relationships: []
       }
+      order_item_preparation: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          order_item_id: string
+          prep_time_minutes: number | null
+          preparation_stage_id: string
+          special_instructions: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_item_id: string
+          prep_time_minutes?: number | null
+          preparation_stage_id: string
+          special_instructions?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          prep_time_minutes?: number | null
+          preparation_stage_id?: string
+          special_instructions?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_preparation_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_preparation_preparation_stage_id_fkey"
+            columns: ["preparation_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_preparation_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -5855,6 +5909,69 @@ export type Database = {
             columns: ["meal_id"]
             isOneToOne: false
             referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_preparation_stages: {
+        Row: {
+          actual_duration_minutes: number | null
+          completed_at: string | null
+          created_at: string
+          estimated_duration_minutes: number | null
+          id: string
+          notes: string | null
+          order_id: string
+          restaurant_id: string
+          stage_name: string
+          stage_order: number
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_duration_minutes?: number | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          restaurant_id: string
+          stage_name: string
+          stage_order: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_duration_minutes?: number | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          restaurant_id?: string
+          stage_name?: string
+          stage_order?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_preparation_stages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_preparation_stages_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -9988,6 +10105,14 @@ export type Database = {
             }
         Returns: string
       }
+      advance_preparation_stage: {
+        Args: {
+          p_order_id: string
+          p_current_stage_name: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
       anonymize_user_location_data: {
         Args: { p_user_id: string; p_precision_level?: number }
         Returns: number
@@ -10155,6 +10280,10 @@ export type Database = {
       create_app_config_table: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      create_default_preparation_stages: {
+        Args: { p_order_id: string; p_restaurant_id: string }
+        Returns: undefined
       }
       create_multi_restaurant_assignment: {
         Args: {
@@ -10745,6 +10874,20 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }
+      }
+      get_order_preparation_progress: {
+        Args: { p_order_id: string }
+        Returns: {
+          stage_name: string
+          status: string
+          stage_order: number
+          started_at: string
+          completed_at: string
+          estimated_duration_minutes: number
+          actual_duration_minutes: number
+          notes: string
+          progress_percentage: number
+        }[]
       }
       get_proj4_from_srid: {
         Args: { "": number }
