@@ -121,6 +121,8 @@ export const useOrderSubmission = (
             expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes expiry
           }));
 
+          console.log('Creating restaurant assignments:', assignments);
+
           const { data: createdAssignments, error: assignmentError } = await supabase
             .from('restaurant_assignments')
             .insert(assignments)
@@ -128,15 +130,40 @@ export const useOrderSubmission = (
 
           if (assignmentError) {
             console.error('Restaurant assignment error:', assignmentError);
-            // Log but don't fail the order
+            
+            // Try to log more details about the assignment error
+            console.error('Assignment error details:', {
+              code: assignmentError.code,
+              message: assignmentError.message,
+              details: assignmentError.details,
+              hint: assignmentError.hint
+            });
+            
+            // Don't fail the order if assignment fails, but log it
+            toast({
+              title: "Order Placed",
+              description: `Order created but restaurant assignment failed. Order #${order.id?.slice(0, 8)}`,
+              variant: "destructive"
+            });
           } else {
             console.log(`Successfully assigned order to ${createdAssignments?.length || 0} restaurants`);
+            console.log('Created assignments:', createdAssignments);
             
             // Update order status to indicate it's been assigned to restaurants
-            await supabase
+            const { error: statusUpdateError } = await supabase
               .from('orders')
               .update({ status: 'awaiting_restaurant' })
               .eq('id', order.id);
+
+            if (statusUpdateError) {
+              console.error('Error updating order status:', statusUpdateError);
+            }
+
+            toast({
+              title: "Order Placed Successfully!",
+              description: `Your order #${order.id?.slice(0, 8)} has been assigned to ${createdAssignments?.length || 0} nearby restaurants.`,
+              variant: "default"
+            });
           }
         } else {
           console.log('No restaurants found within 5km radius');
@@ -145,19 +172,24 @@ export const useOrderSubmission = (
             .from('orders')
             .update({ status: 'no_restaurant_available' })
             .eq('id', order.id);
+
+          toast({
+            title: "Order Placed",
+            description: `Order #${order.id?.slice(0, 8)} created but no restaurants available in your area.`,
+            variant: "destructive"
+          });
         }
       } else {
         console.log('No customer location provided, skipping restaurant assignment');
+        toast({
+          title: "Order Placed",
+          description: `Order #${order.id?.slice(0, 8)} created. Location required for restaurant assignment.`,
+          variant: "default"
+        });
       }
 
-      // Success - clear cart and show success message
+      // Success - clear cart
       clearCart();
-      
-      toast({
-        title: "Order Placed Successfully!",
-        description: `Your order #${order.id?.slice(0, 8)} has been placed and assigned to nearby restaurants.`,
-        variant: "default"
-      });
 
       // Redirect to thank you page
       window.location.href = `/thank-you?orderId=${order.id}`;
