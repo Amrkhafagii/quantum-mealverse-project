@@ -41,7 +41,7 @@ export const fetchTeams = async (): Promise<Team[]> => {
 
   if (error) throw error;
   
-  return (data || []).map(transformTeam);
+  return (data || []).map(team => transformTeam(team));
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
@@ -80,7 +80,9 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   return teamData ? transformTeam(teamData) : null;
 };
 
-export const createTeam = async (userId: string, teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
+type CreateTeamData = Pick<Team, 'name' | 'description' | 'image_url' | 'is_active' | 'max_members'>;
+
+export const createTeam = async (userId: string, teamData: CreateTeamData): Promise<boolean> => {
   const { data, error } = await supabase
     .from('teams')
     .insert([{

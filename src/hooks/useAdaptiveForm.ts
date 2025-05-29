@@ -1,105 +1,74 @@
 
-import { useState, useEffect } from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { Platform } from '@/utils/platform';
+import { useForm, UseFormReturn } from 'react-hook-form';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { hapticFeedback } from '@/utils/hapticFeedback';
+import { Platform } from '@/utils/platform';
 
 export interface AdaptiveFormOptions {
-  onSuccess?: () => void;
-  onError?: () => void;
-  scrollToErrors?: boolean;
-  validateOnBlur?: boolean;
-  validateOnChange?: boolean;
-  showFeedback?: boolean;
+  hapticFeedback?: boolean;
+  autoScrollToError?: boolean;
+  keyboardAdjustment?: boolean;
 }
 
-export function useAdaptiveForm(form: UseFormReturn<any, any>, options: AdaptiveFormOptions = {}) {
+export interface AdaptiveFormReturn extends UseFormReturn {
+  isPlatformIOS: boolean;
+  isPlatformAndroid: boolean;
+  isMobile: boolean;
+  isSubmitting: boolean;
+  handleSubmit: (onSubmit: (data: any) => void) => (e?: React.FormEvent) => Promise<void>;
+}
+
+export const useAdaptiveForm = (
+  form: UseFormReturn,
+  options: AdaptiveFormOptions = {}
+): AdaptiveFormReturn => {
   const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  
-  // Platform-specific validation mode
-  useEffect(() => {
-    // iOS tends to validate on blur
-    // Android tends to validate on change
-    // Web typically validates on submit
-    if (isPlatformIOS) {
-      form.trigger(); // Trigger validation on form load for iOS
-    }
-  }, [isPlatformIOS, form]);
+  const { 
+    hapticFeedback: enableHaptic = true,
+    autoScrollToError = true,
+    keyboardAdjustment = true
+  } = options;
 
-  // Handle platform-specific error scrolling
-  useEffect(() => {
-    if (!options.scrollToErrors || !hasSubmitted) return;
-    
-    const firstErrorField = document.querySelector('.form-error');
-    if (firstErrorField) {
-      // Add platform-specific scrolling
-      if (isPlatformIOS) {
-        // iOS has smoother inertial scrolling
-        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Haptic feedback on error
-        if (Platform.isNative()) {
-          hapticFeedback.error();
-        }
-      } else if (isPlatformAndroid) {
-        // Android typically has more immediate scrolling
-        firstErrorField.scrollIntoView({ behavior: 'auto', block: 'center' });
-        
-        // Haptic feedback on error
-        if (Platform.isNative()) {
-          hapticFeedback.warning();
-        }
-      } else {
-        // Desktop behavior
-        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [form.formState.errors, hasSubmitted, options.scrollToErrors, isPlatformIOS, isPlatformAndroid]);
-
-  // Platform-aware submission handler
-  const handleSubmit = async (onSubmit: (values: any) => Promise<void> | void) => {
-    return form.handleSubmit(async (values) => {
-      setIsSubmitting(true);
-      setHasSubmitted(true);
+  const handleSubmit = (onSubmit: (data: any) => void) => {
+    return async (e?: React.FormEvent) => {
+      e?.preventDefault();
       
-      try {
-        await onSubmit(values);
-        
-        // Success feedback
-        if (options.showFeedback && Platform.isNative()) {
-          hapticFeedback.success();
+      const isValid = await form.trigger();
+      
+      if (!isValid) {
+        // Provide error haptic feedback
+        if (enableHaptic && Platform.isNative()) {
+          await hapticFeedback.error();
         }
         
-        if (options.onSuccess) {
-          options.onSuccess();
+        // Auto-scroll to first error
+        if (autoScrollToError) {
+          const firstError = Object.keys(form.formState.errors)[0];
+          if (firstError) {
+            const element = document.querySelector(`[name="${firstError}"]`) as HTMLElement;
+            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element?.focus();
+          }
         }
-      } catch (error) {
-        console.error('Form submission error:', error);
-        
-        // Error feedback
-        if (options.showFeedback && Platform.isNative()) {
-          hapticFeedback.error();
-        }
-        
-        if (options.onError) {
-          options.onError();
-        }
-      } finally {
-        setIsSubmitting(false);
+        return;
       }
-    });
+
+      // Provide success haptic feedback
+      if (enableHaptic && Platform.isNative()) {
+        await hapticFeedback.success();
+      }
+
+      const data = form.getValues();
+      onSubmit(data);
+    };
   };
 
   return {
-    form,
-    isSubmitting,
-    hasSubmitted,
-    handleSubmit,
+    ...form,
     isPlatformIOS,
     isPlatformAndroid,
     isMobile,
+    isSubmitting: form.formState.isSubmitting,
+    handleSubmit,
   };
-}
+};

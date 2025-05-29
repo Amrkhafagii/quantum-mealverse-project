@@ -3,10 +3,11 @@ import React from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { hapticFeedback } from "@/utils/hapticFeedback";
+import { Platform } from "@/utils/platform";
 
 interface TouchFriendlyButtonProps extends ButtonProps {
   touchClassName?: string;
-  hapticEffect?: 'light' | 'medium' | 'heavy' | 'success' | 'error' | 'warning' | 'selection' | 'confirmation' | 'longPress';
+  hapticEffect?: 'light' | 'medium' | 'heavy' | 'success' | 'error' | 'warning' | 'selection';
 }
 
 const TouchFriendlyButton: React.FC<TouchFriendlyButtonProps> = ({
@@ -24,10 +25,10 @@ const TouchFriendlyButton: React.FC<TouchFriendlyButtonProps> = ({
     ? `${className} ${touchClassName} touch-button touch-feedback`
     : className;
   
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     // Apply haptic feedback on mobile devices
-    if (isMobile) {
-      hapticFeedback[hapticEffect]?.();
+    if (isMobile && Platform.isNative()) {
+      await hapticFeedback[hapticEffect]();
     }
     
     // Call the original onClick handler if provided
