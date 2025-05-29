@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
 import { orderNotificationService } from '@/services/notifications/orderNotificationService';
@@ -69,7 +68,7 @@ export const useOrderIntegration = (restaurantId?: string, userId?: string) => {
 
   const assignOrderToRestaurants = async (orderId: string, latitude: number, longitude: number) => {
     try {
-      const success = await orderAssignmentService.assignOrderToRestaurants(orderId, latitude, longitude);
+      const success = await orderAssignmentService.assignOrderToNearbyRestaurants(orderId, latitude, longitude);
       
       if (success) {
         toast({
