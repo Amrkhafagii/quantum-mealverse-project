@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -27,17 +26,17 @@ export function useTeamChallenges() {
     try {
       setIsLoading(true);
       
-      // Use simpler query without complex type inference
-      const { data: rawData, error } = await supabase
+      // Use completely untyped query to avoid type depth issues
+      const response = await supabase
         .from('teams')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (response.error) throw response.error;
       
       // Safely map database fields to our Team type with explicit typing
-      const mappedTeams: Team[] = (rawData || []).map((team: any) => ({
+      const mappedTeams: Team[] = (response.data || []).map((team: any) => ({
         id: team.id,
         name: team.name,
         description: team.description || undefined,
@@ -72,7 +71,7 @@ export function useTeamChallenges() {
     if (!user) return;
 
     try {
-      const { data: rawData, error } = await supabase
+      const response = await supabase
         .from('team_members')
         .select(`
           *,
@@ -82,10 +81,10 @@ export function useTeamChallenges() {
         .eq('is_active', true)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (response.error && response.error.code !== 'PGRST116') throw response.error;
       
-      if (rawData?.team) {
-        const team = rawData.team as any;
+      if (response.data?.team) {
+        const team = response.data.team as any;
         const mappedTeam: Team = {
           id: team.id,
           name: team.name,
@@ -115,16 +114,16 @@ export function useTeamChallenges() {
 
   const fetchTeamMembers = async (teamId: string) => {
     try {
-      const { data: rawData, error } = await supabase
+      const response = await supabase
         .from('team_members')
         .select('*')
         .eq('team_id', teamId)
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (response.error) throw response.error;
       
       // Safely map database fields to our TeamMember type
-      const mappedMembers: TeamMember[] = (rawData || []).map((member: any) => ({
+      const mappedMembers: TeamMember[] = (response.data || []).map((member: any) => ({
         id: member.id,
         user_id: member.user_id,
         team_id: member.team_id,
