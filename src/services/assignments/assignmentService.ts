@@ -28,8 +28,8 @@ export class AssignmentService {
     return (data || []).map(assignment => ({
       ...assignment,
       status: assignment.status as RestaurantAssignment['status'],
-      assigned_at: assignment.created_at, // Use created_at as assigned_at
-      details: {} // Default empty details object
+      assigned_at: assignment.created_at,
+      details: {}
     }));
   }
 
@@ -92,8 +92,8 @@ export class AssignmentService {
     return (data || []).map(assignment => ({
       ...assignment,
       status: assignment.status as RestaurantAssignment['status'],
-      assigned_at: assignment.created_at, // Use created_at as assigned_at
-      details: {} // Default empty details object
+      assigned_at: assignment.created_at,
+      details: {}
     }));
   }
 

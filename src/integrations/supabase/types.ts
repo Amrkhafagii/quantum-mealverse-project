@@ -6771,6 +6771,8 @@ export type Database = {
           order_id: string
           rejection_details: string | null
           rejection_reason: string | null
+          responded_at: string | null
+          response_notes: string | null
           restaurant_id: string
           status: string
           updated_at: string
@@ -6785,6 +6787,8 @@ export type Database = {
           order_id: string
           rejection_details?: string | null
           rejection_reason?: string | null
+          responded_at?: string | null
+          response_notes?: string | null
           restaurant_id: string
           status?: string
           updated_at?: string
@@ -6799,6 +6803,8 @@ export type Database = {
           order_id?: string
           rejection_details?: string | null
           rejection_reason?: string | null
+          responded_at?: string | null
+          response_notes?: string | null
           restaurant_id?: string
           status?: string
           updated_at?: string
