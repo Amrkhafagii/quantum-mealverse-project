@@ -9467,13 +9467,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_workout_sessions_workout_plan_id"
-            columns: ["workout_plan_id"]
-            isOneToOne: false
-            referencedRelation: "workout_plans"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workout_sessions_workout_schedule_id_fkey"
             columns: ["workout_schedule_id"]
             isOneToOne: false
