@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -170,6 +169,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
     }, 500);
   };
 
+  const handleToggleAuthMode = () => {
+    if (isRegister) {
+      navigate('/login');
+    } else {
+      navigate('/signup');
+    }
+  };
+
   // Show location flow after successful auth
   if (showLocationFlow && userId) {
     return (
@@ -258,7 +265,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
       <div className="text-center">
         <button
           type="button"
-          onClick={() => window.history.back()}
+          onClick={handleToggleAuthMode}
           className="text-quantum-cyan hover:text-quantum-cyan/80 text-sm underline"
         >
           {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
