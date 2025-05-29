@@ -34,7 +34,8 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
           carbs: meal.carbs,
           fat: meal.fat,
           category: 'protein', // Use valid FoodCategory
-          cookingState: 'cooked'
+          cookingState: 'cooked',
+          portion: 100 // Add required portion property
         },
         portionSize: 100 // Base portion for prepared meals
       }
@@ -102,6 +103,9 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
     }
   };
 
+  // Check if meal has is_popular property (optional on MealType)
+  const isPopular = 'is_popular' in meal ? meal.is_popular : false;
+
   return (
     <Card className="holographic-card p-4 transition-all duration-300 hover:scale-105">
       <div className="space-y-4">
@@ -116,7 +120,7 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
         <div className="space-y-2">
           <div className="flex justify-between items-start">
             <h3 className="text-lg font-bold text-quantum-cyan neon-text">{meal.name}</h3>
-            {meal.is_popular && (
+            {isPopular && (
               <span className="text-xs bg-quantum-cyan text-quantum-black px-2 py-1 rounded">
                 Popular
               </span>

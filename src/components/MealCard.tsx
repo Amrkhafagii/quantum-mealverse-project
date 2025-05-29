@@ -47,7 +47,8 @@ export const MealCard: React.FC<MealCardProps> = ({
           carbs: macros.carbs,
           fat: macros.fat,
           category: 'protein', // Use valid FoodCategory
-          cookingState: 'cooked'
+          cookingState: 'cooked',
+          portion: 100 // Add required portion property
         },
         portionSize: 100 // Base portion for prepared meals
       }
