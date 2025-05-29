@@ -171,9 +171,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
 
   const handleToggleAuthMode = () => {
     if (isRegister) {
-      navigate('/login');
+      navigate('/auth', { state: { mode: 'login' } });
     } else {
-      navigate('/signup');
+      navigate('/auth', { state: { mode: 'signup' } });
     }
   };
 
