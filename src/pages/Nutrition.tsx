@@ -23,13 +23,11 @@ import MobileContainer from '@/components/mobile/MobileContainer';
 import { TouchOptimizerProvider } from '@/contexts/TouchOptimizerContext';
 import TouchFriendlyButton from '@/components/mobile/TouchFriendlyButton';
 
-type ActiveTab = 'calculator' | 'plans' | 'saved';
-
 const Nutrition = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('calculator');
+  const [activeTab, setActiveTab] = useState<string>('calculator');
   const [calculationResult, setCalculationResult] = useState<TDEEResult | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
 
@@ -41,7 +39,7 @@ const Nutrition = () => {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        .eq('type', 'reminder')
+        .eq('notification_type', 'reminder')
         .ilike('title', '%Meal Plan%')
         .eq('is_read', false)
         .then(({ data }) => {
@@ -75,6 +73,12 @@ const Nutrition = () => {
     sessionStorage.setItem('currentMealPlan', JSON.stringify(updatedPlan));
   };
 
+  const handleTabChange = (value: string | undefined) => {
+    if (value) {
+      setActiveTab(value);
+    }
+  };
+
   return (
     <TouchOptimizerProvider>
       <div className="min-h-screen bg-quantum-black text-white">
@@ -92,9 +96,7 @@ const Nutrition = () => {
               <ToggleGroup 
                 type="single" 
                 value={activeTab}
-                onValueChange={(value) => {
-                  if (value) setActiveTab(value as ActiveTab);
-                }}
+                onValueChange={handleTabChange}
                 className="justify-center bg-quantum-darkBlue/50 p-1 rounded-lg w-full max-w-md mx-auto"
               >
                 <ToggleGroupItem 
