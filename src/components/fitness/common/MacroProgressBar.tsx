@@ -53,15 +53,17 @@ const MacroProgressBar: React.FC<MacroProgressBarProps> = ({
         </span>
       </div>
       
-      <Progress 
-        value={percentage} 
-        max={100} 
-        className="h-2 bg-gray-700"
-        indicatorClassName={cn(
-          "transition-all duration-500",
-          isTargetMet ? "bg-green-500" : isLow && isCritical ? "bg-red-500" : colorClass.replace("text-", "bg-")
-        )}
-      />
+      <div className="relative">
+        <Progress 
+          value={percentage} 
+          className={cn(
+            "h-2 bg-gray-700",
+            isTargetMet ? "[&>div]:bg-green-500" : 
+            isLow && isCritical ? "[&>div]:bg-red-500" : 
+            `[&>div]:${colorClass.replace("text-", "bg-")}`
+          )}
+        />
+      </div>
       
       {isCritical && isLow && (
         <div className="flex items-center gap-1 mt-2 text-red-400 text-xs">

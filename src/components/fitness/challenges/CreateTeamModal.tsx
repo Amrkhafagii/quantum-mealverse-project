@@ -39,8 +39,8 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
     
     const success = await onTeamCreated({
       name: formData.name,
-      description: formData.description || null,
-      image_url: formData.image_url || null,
+      description: formData.description || undefined,
+      image_url: formData.image_url || undefined,
       created_by: '', // Will be set in the hook
       is_active: true,
       max_members: 50
