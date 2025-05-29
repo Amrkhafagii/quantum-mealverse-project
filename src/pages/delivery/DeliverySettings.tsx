@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { DeliveryLocationControls } from '@/components/delivery/DeliveryLocation
 import { DeliveryNotificationSettings } from '@/components/delivery/settings/DeliveryNotificationPreferences';
 import { AdvancedLocationSettings } from '@/components/delivery/settings/AdvancedLocationSettings';
 import { BatteryPerformanceSettings } from '@/components/delivery/settings/BatteryPerformanceSettings';
+import { LocationAccuracySettings } from '@/components/delivery/settings/LocationAccuracySettings';
 import DataRetentionSettings from '@/components/privacy/DataRetentionSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveryService } from '@/services/delivery/deliveryService';
@@ -86,8 +88,9 @@ const DeliverySettings = () => {
   return (
     <div className="space-y-6 p-4">
       <Tabs defaultValue="location">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="location">Location</TabsTrigger>
+          <TabsTrigger value="accuracy">Accuracy & Quality</TabsTrigger>
           <TabsTrigger value="battery">Battery & Performance</TabsTrigger>
           <TabsTrigger value="availability">Hours & Availability</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
@@ -139,6 +142,10 @@ const DeliverySettings = () => {
             onLocationUpdate={handleUpdateLocation}
             showHelp={true}
           />
+        </TabsContent>
+
+        <TabsContent value="accuracy" className="space-y-6">
+          <LocationAccuracySettings deliveryUserId={deliveryUser.id} />
         </TabsContent>
 
         <TabsContent value="battery" className="space-y-6">

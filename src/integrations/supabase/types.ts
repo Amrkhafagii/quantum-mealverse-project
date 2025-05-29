@@ -1526,6 +1526,166 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_location_accuracy_settings: {
+        Row: {
+          accuracy_weight: number | null
+          confidence_scoring_enabled: boolean
+          created_at: string
+          delivery_user_id: string
+          enable_backup_providers: boolean
+          enable_location_validation: boolean
+          fallback_provider: string | null
+          id: string
+          max_distance_jump_meters: number | null
+          max_speed_threshold_mps: number | null
+          minimum_accuracy_threshold: number
+          minimum_confidence_score: number | null
+          network_weight: number | null
+          primary_provider: string | null
+          provider_timeout_seconds: number | null
+          recency_weight: number | null
+          reject_low_accuracy_locations: boolean
+          source_weight: number | null
+          strict_accuracy_enforcement: boolean
+          updated_at: string
+          validate_distance_jumps: boolean
+          validate_speed_consistency: boolean
+        }
+        Insert: {
+          accuracy_weight?: number | null
+          confidence_scoring_enabled?: boolean
+          created_at?: string
+          delivery_user_id: string
+          enable_backup_providers?: boolean
+          enable_location_validation?: boolean
+          fallback_provider?: string | null
+          id?: string
+          max_distance_jump_meters?: number | null
+          max_speed_threshold_mps?: number | null
+          minimum_accuracy_threshold?: number
+          minimum_confidence_score?: number | null
+          network_weight?: number | null
+          primary_provider?: string | null
+          provider_timeout_seconds?: number | null
+          recency_weight?: number | null
+          reject_low_accuracy_locations?: boolean
+          source_weight?: number | null
+          strict_accuracy_enforcement?: boolean
+          updated_at?: string
+          validate_distance_jumps?: boolean
+          validate_speed_consistency?: boolean
+        }
+        Update: {
+          accuracy_weight?: number | null
+          confidence_scoring_enabled?: boolean
+          created_at?: string
+          delivery_user_id?: string
+          enable_backup_providers?: boolean
+          enable_location_validation?: boolean
+          fallback_provider?: string | null
+          id?: string
+          max_distance_jump_meters?: number | null
+          max_speed_threshold_mps?: number | null
+          minimum_accuracy_threshold?: number
+          minimum_confidence_score?: number | null
+          network_weight?: number | null
+          primary_provider?: string | null
+          provider_timeout_seconds?: number | null
+          recency_weight?: number | null
+          reject_low_accuracy_locations?: boolean
+          source_weight?: number | null
+          strict_accuracy_enforcement?: boolean
+          updated_at?: string
+          validate_distance_jumps?: boolean
+          validate_speed_consistency?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_location_accuracy_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_location_quality_logs: {
+        Row: {
+          accuracy: number | null
+          accuracy_score: number | null
+          backup_provider_used: boolean
+          battery_level: number | null
+          confidence_score: number | null
+          created_at: string
+          delivery_user_id: string
+          id: string
+          is_moving: boolean | null
+          latitude: number
+          location_provider: string | null
+          longitude: number
+          network_quality: string | null
+          network_score: number | null
+          network_type: string | null
+          recency_score: number | null
+          source_score: number | null
+          timestamp_recorded: string
+          validation_errors: string[] | null
+          validation_passed: boolean
+        }
+        Insert: {
+          accuracy?: number | null
+          accuracy_score?: number | null
+          backup_provider_used?: boolean
+          battery_level?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          delivery_user_id: string
+          id?: string
+          is_moving?: boolean | null
+          latitude: number
+          location_provider?: string | null
+          longitude: number
+          network_quality?: string | null
+          network_score?: number | null
+          network_type?: string | null
+          recency_score?: number | null
+          source_score?: number | null
+          timestamp_recorded: string
+          validation_errors?: string[] | null
+          validation_passed?: boolean
+        }
+        Update: {
+          accuracy?: number | null
+          accuracy_score?: number | null
+          backup_provider_used?: boolean
+          battery_level?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          delivery_user_id?: string
+          id?: string
+          is_moving?: boolean | null
+          latitude?: number
+          location_provider?: string | null
+          longitude?: number
+          network_quality?: string | null
+          network_score?: number | null
+          network_type?: string | null
+          recency_score?: number | null
+          source_score?: number | null
+          timestamp_recorded?: string
+          validation_errors?: string[] | null
+          validation_passed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_location_quality_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_location_settings: {
         Row: {
           auto_stop_sharing_after_delivery: boolean | null
@@ -10877,6 +11037,22 @@ export type Database = {
       valid_status_transition: {
         Args: { old_status: string; new_status: string }
         Returns: boolean
+      }
+      validate_location_quality: {
+        Args: {
+          p_delivery_user_id: string
+          p_latitude: number
+          p_longitude: number
+          p_accuracy: number
+          p_provider?: string
+          p_timestamp?: string
+        }
+        Returns: {
+          is_valid: boolean
+          confidence_score: number
+          validation_errors: string[]
+          should_use_backup: boolean
+        }[]
       }
       validate_menu_item_exists: {
         Args: { p_meal_id: string }
