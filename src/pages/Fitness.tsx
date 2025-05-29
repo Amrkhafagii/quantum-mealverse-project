@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,6 +11,8 @@ import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
 import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
+import UserAchievements from '@/components/fitness/UserAchievements';
+import { Trophy } from 'lucide-react';
 
 const FitnessPage = () => {
   const { user } = useAuth();
@@ -40,6 +43,10 @@ const FitnessPage = () => {
                 <TabsTrigger value="scheduler">Scheduler</TabsTrigger>
                 <TabsTrigger value="history">History</TabsTrigger>
                 <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+                <TabsTrigger value="achievements" className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4" />
+                  Achievements
+                </TabsTrigger>
               </TabsList>
             </div>
             
@@ -68,6 +75,10 @@ const FitnessPage = () => {
                 userId={user?.id}
                 onApplied={workoutData.fetchWorkoutPlans}
               />
+            </TabsContent>
+            
+            <TabsContent value="achievements" className="mt-2">
+              <UserAchievements userId={user?.id} />
             </TabsContent>
           </Tabs>
         </div>

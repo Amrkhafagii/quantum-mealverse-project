@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievement_progress: {
+        Row: {
+          achievement_id: string | null
+          completed: boolean | null
+          created_at: string | null
+          current_progress: number | null
+          id: string
+          target_progress: number
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          achievement_id?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          current_progress?: number | null
+          id?: string
+          target_progress: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          achievement_id?: string | null
+          completed?: boolean | null
+          created_at?: string | null
+          current_progress?: number | null
+          id?: string
+          target_progress?: number
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_progress_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       achievements: {
         Row: {
           criteria: string
@@ -12107,6 +12148,15 @@ export type Database = {
       }
       update_workout_analytics: {
         Args: { p_user_id: string }
+        Returns: undefined
+      }
+      update_workout_stats_and_achievements: {
+        Args: {
+          p_user_id: string
+          p_workout_date: string
+          p_duration: number
+          p_calories_burned?: number
+        }
         Returns: undefined
       }
       updategeometrysrid: {

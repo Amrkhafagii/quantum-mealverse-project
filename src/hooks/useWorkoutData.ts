@@ -10,6 +10,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import * as workoutService from '@/services/workout';
+import { getWorkoutStats } from '@/services/workout/workoutLogService';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useWorkoutData() {
@@ -82,25 +83,10 @@ export function useWorkoutData() {
       setIsLoading(true);
       if (!userId) return;
       
-      // Get the streak from user_streaks
-      const { data: streakData, error: streakError } = await supabase
-        .from('user_streaks')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('streak_type', 'workout')
-        .single();
-        
-      if (streakError && streakError.code !== 'PGRST116') throw streakError;
+      // Get workout stats from the new table
+      const stats = await getWorkoutStats(userId);
       
-      // Count the total workouts
-      const { count, error: countError } = await supabase
-        .from('workout_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-        
-      if (countError) throw countError;
-      
-      // Get the most active day
+      // Get the most active day from workout history
       const { data: historyData, error: historyError } = await supabase
         .from('workout_history')
         .select('*')
@@ -128,8 +114,8 @@ export function useWorkoutData() {
       });
       
       setWorkoutStats({
-        streak: streakData?.currentstreak || 0,
-        total_workouts: count || 0,
+        streak: stats.streak_days || 0,
+        total_workouts: stats.total_workouts || 0,
         most_active_day: mostActiveDay
       });
       
@@ -158,14 +144,15 @@ export function useWorkoutData() {
       const success = await workoutService.logWorkout(workoutLog);
       
       if (success) {
-        // Refresh workout stats
+        // Refresh workout stats and history
         if (workoutLog.user_id) {
-          fetchWorkoutStats(workoutLog.user_id);
+          await fetchWorkoutStats(workoutLog.user_id);
+          await fetchWorkoutHistory(workoutLog.user_id);
         }
         
         toast({
           title: "Success",
-          description: "Workout logged successfully",
+          description: "Workout logged successfully! Check your achievements.",
         });
         
         return { success: true, data: workoutLog };

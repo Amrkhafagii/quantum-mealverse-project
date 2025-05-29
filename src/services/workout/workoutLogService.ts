@@ -3,10 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { WorkoutLog } from '@/types/fitness';
 
 /**
- * Log a completed workout
+ * Log a completed workout and trigger achievement checking
  */
 export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
   try {
+    console.log('Logging workout:', workoutLog);
+    
     // Insert the workout log
     const { data: logData, error: logError } = await supabase
       .from('workout_logs')
@@ -22,7 +24,12 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
       .select()
       .single();
       
-    if (logError) throw logError;
+    if (logError) {
+      console.error('Error inserting workout log:', logError);
+      throw logError;
+    }
+    
+    console.log('Workout log inserted successfully:', logData);
     
     // Create a workout history entry for easier querying
     if (logData) {
@@ -33,7 +40,10 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
         .eq('id', workoutLog.workout_plan_id)
         .single();
         
-      if (planError) throw planError;
+      if (planError) {
+        console.error('Error fetching workout plan:', planError);
+        // Don't throw here, we can still continue without the plan name
+      }
       
       // Create history record
       const { error: historyError } = await supabase
@@ -42,18 +52,20 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
           user_id: workoutLog.user_id,
           workout_log_id: logData.id,
           date: workoutLog.date || new Date().toISOString(),
-          workout_plan_name: planData?.name || 'Unknown Plan',
-          workout_day_name: 'Workout Session', // Default if not provided
+          workout_plan_name: planData?.name || 'Custom Workout',
+          workout_day_name: 'Workout Session',
           duration: workoutLog.duration,
           exercises_completed: Array.isArray(workoutLog.completed_exercises) ? workoutLog.completed_exercises.length : 0,
           total_exercises: Array.isArray(workoutLog.completed_exercises) ? workoutLog.completed_exercises.length : 0,
           calories_burned: workoutLog.calories_burned
         }]);
         
-      if (historyError) throw historyError;
+      if (historyError) {
+        console.error('Error creating workout history:', historyError);
+        // Don't throw here, the main workout log was successful
+      }
       
-      // Update user streak
-      await updateUserStreak(workoutLog.user_id);
+      console.log('Workout logged successfully, achievements will be automatically checked via trigger');
     }
     
     return true;
@@ -64,67 +76,37 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
 };
 
 /**
- * Update the user's workout streak
+ * Get workout statistics for a user
  */
-const updateUserStreak = async (userId: string): Promise<void> => {
+export const getWorkoutStats = async (userId: string) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Get current streak info
-    const { data: streakData, error: streakError } = await supabase
-      .from('user_streaks')
+    const { data, error } = await supabase
+      .from('user_workout_stats')
       .select('*')
       .eq('user_id', userId)
-      .eq('streak_type', 'workout')
       .single();
       
-    if (streakError && streakError.code !== 'PGRST116') {
-      throw streakError;
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+      throw error;
     }
     
-    if (!streakData) {
-      // First time, create a new streak
-      await supabase
-        .from('user_streaks')
-        .insert([{
-          user_id: userId,
-          currentstreak: 1,
-          longeststreak: 1,
-          last_activity_date: today,
-          streak_type: 'workout'
-        }]);
-    } else {
-      const lastDate = new Date(streakData.last_activity_date);
-      const currentDate = new Date(today);
-      
-      // Calculate difference in days
-      const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
-      let newStreak = streakData.currentstreak;
-      
-      if (diffDays === 1) {
-        // Consecutive day
-        newStreak += 1;
-      } else if (diffDays > 1) {
-        // Streak broken
-        newStreak = 1;
-      } else {
-        // Same day, no change
-        return;
-      }
-      
-      // Update the streak
-      await supabase
-        .from('user_streaks')
-        .update({
-          currentstreak: newStreak,
-          longeststreak: Math.max(newStreak, streakData.longeststreak),
-          last_activity_date: today
-        })
-        .eq('id', streakData.id);
-    }
+    return data || {
+      total_workouts: 0,
+      streak_days: 0,
+      longest_streak: 0,
+      total_calories_burned: 0,
+      total_duration_minutes: 0,
+      most_active_day: 'N/A'
+    };
   } catch (error) {
-    console.error('Error updating streak:', error);
+    console.error('Error fetching workout stats:', error);
+    return {
+      total_workouts: 0,
+      streak_days: 0,
+      longest_streak: 0,
+      total_calories_burned: 0,
+      total_duration_minutes: 0,
+      most_active_day: 'N/A'
+    };
   }
 };
