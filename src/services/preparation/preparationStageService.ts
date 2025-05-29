@@ -37,6 +37,29 @@ export interface StageTransitionResult {
 
 export class PreparationStageService {
   /**
+   * Initialize preparation stages for a new order using database function
+   */
+  static async initializeOrderStages(orderId: string, restaurantId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.rpc('create_default_preparation_stages', {
+        p_order_id: orderId,
+        p_restaurant_id: restaurantId
+      });
+
+      if (error) {
+        console.error('Error creating preparation stages:', error);
+        return false;
+      }
+
+      console.log('Preparation stages created successfully for order:', orderId);
+      return true;
+    } catch (error) {
+      console.error('Error in initializeOrderStages:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get all preparation stages for an order
    */
   static async getOrderPreparationStages(orderId: string): Promise<PreparationStage[]> {

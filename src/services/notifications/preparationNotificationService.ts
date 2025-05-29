@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { pushNotificationService } from './pushNotificationService';
 
@@ -94,6 +93,53 @@ class PreparationNotificationService {
 
     } catch (error) {
       console.error('Error sending preparation notification:', error);
+    }
+  }
+
+  async sendDelayNotification({
+    userId,
+    orderId,
+    stageName,
+    delayMinutes
+  }: {
+    userId: string;
+    orderId: string;
+    stageName: string;
+    delayMinutes: number;
+  }): Promise<void> {
+    try {
+      const title = '⏰ Preparation Delay';
+      const body = `Your order is running ${delayMinutes} minutes behind schedule during ${stageName.replace('_', ' ')}`;
+
+      await pushNotificationService.sendNotification(
+        userId,
+        title,
+        body,
+        {
+          orderId,
+          stageName,
+          delayMinutes
+        },
+        'preparation_delay'
+      );
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          title,
+          message: body,
+          notification_type: 'preparation_delay',
+          data: {
+            orderId,
+            stageName,
+            delayMinutes
+          },
+          order_id: orderId
+        });
+
+    } catch (error) {
+      console.error('Error sending delay notification:', error);
     }
   }
 
