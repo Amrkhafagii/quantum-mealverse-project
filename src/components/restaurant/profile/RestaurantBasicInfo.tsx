@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { geocodeAddress } from '@/utils/geocoding';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -56,14 +56,9 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
   });
-
-  // Watch for address changes to trigger geocoding
-  const watchedAddress = watch('address');
-  const watchedCity = watch('city');
 
   useEffect(() => {
     if (restaurant) {
@@ -83,19 +78,6 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
   const onSubmit = async (values: FormData) => {
     setLoading(true);
     try {
-      let coordinates = {
-        latitude: restaurant?.latitude || 43.6532, // Default to Toronto
-        longitude: restaurant?.longitude || -79.3832
-      };
-
-      // If address or city changed, geocode the new address
-      const newAddress = `${values.address}, ${values.city}, ${values.country}`;
-      const oldAddress = `${restaurant?.address || ''}, ${restaurant?.city || ''}, ${restaurant?.country || ''}`;
-      
-      if (newAddress !== oldAddress) {
-        coordinates = await geocodeAddress(newAddress);
-      }
-
       const updates = {
         name: values.name,
         email: values.email,
@@ -107,8 +89,6 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
         description: values.description,
         delivery_radius: values.delivery_radius,
         estimated_delivery_time: values.estimated_delivery_time,
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
         user_id: user?.id,
       };
 
@@ -118,14 +98,14 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
         // Update existing restaurant
         response = await supabase
           .from('restaurants')
-          .update(updates as any) // Type assertion to bypass outdated types
+          .update(updates)
           .eq('id', restaurant.id)
           .select();
       } else {
         // Create new restaurant
         response = await supabase
           .from('restaurants')
-          .insert(updates as any) // Type assertion to bypass outdated types
+          .insert(updates)
           .select();
       }
 
