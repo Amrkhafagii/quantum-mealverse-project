@@ -5947,6 +5947,63 @@ export type Database = {
           },
         ]
       }
+      payment_confirmations: {
+        Row: {
+          confirmation_method: string | null
+          confirmation_status: string
+          confirmed_at: string | null
+          confirming_party: string
+          confirming_user_id: string | null
+          created_at: string | null
+          dispute_reason: string | null
+          id: string
+          order_id: string
+          payment_transaction_id: string
+          timeout_at: string | null
+        }
+        Insert: {
+          confirmation_method?: string | null
+          confirmation_status?: string
+          confirmed_at?: string | null
+          confirming_party: string
+          confirming_user_id?: string | null
+          created_at?: string | null
+          dispute_reason?: string | null
+          id?: string
+          order_id: string
+          payment_transaction_id: string
+          timeout_at?: string | null
+        }
+        Update: {
+          confirmation_method?: string | null
+          confirmation_status?: string
+          confirmed_at?: string | null
+          confirming_party?: string
+          confirming_user_id?: string | null
+          created_at?: string | null
+          dispute_reason?: string | null
+          id?: string
+          order_id?: string
+          payment_transaction_id?: string
+          timeout_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_confirmations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_confirmations_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_methods: {
         Row: {
           brand: string | null
@@ -5994,6 +6051,194 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_notifications: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          notification_type: string
+          order_id: string
+          read_at: string | null
+          recipient_id: string
+          recipient_type: string
+          sent_at: string | null
+          title: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          notification_type: string
+          order_id: string
+          read_at?: string | null
+          recipient_id: string
+          recipient_type: string
+          sent_at?: string | null
+          title: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          notification_type?: string
+          order_id?: string
+          read_at?: string | null
+          recipient_id?: string
+          recipient_type?: string
+          sent_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_status_coordination: {
+        Row: {
+          all_parties_confirmed: boolean | null
+          base_payment_status: string | null
+          confirmation_status: string | null
+          created_at: string | null
+          id: string
+          last_status_update: string | null
+          order_id: string
+          overall_payment_status: string
+          requires_manual_review: boolean | null
+          status_history: Json | null
+          tip_payment_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          all_parties_confirmed?: boolean | null
+          base_payment_status?: string | null
+          confirmation_status?: string | null
+          created_at?: string | null
+          id?: string
+          last_status_update?: string | null
+          order_id: string
+          overall_payment_status?: string
+          requires_manual_review?: boolean | null
+          status_history?: Json | null
+          tip_payment_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          all_parties_confirmed?: boolean | null
+          base_payment_status?: string | null
+          confirmation_status?: string | null
+          created_at?: string | null
+          id?: string
+          last_status_update?: string | null
+          order_id?: string
+          overall_payment_status?: string
+          requires_manual_review?: boolean | null
+          status_history?: Json | null
+          tip_payment_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_status_coordination_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          customer_id: string
+          delivery_user_id: string | null
+          external_transaction_id: string | null
+          failure_reason: string | null
+          id: string
+          metadata: Json | null
+          order_id: string
+          payment_method: string
+          payment_processor: string | null
+          processed_at: string | null
+          restaurant_id: string | null
+          status: string
+          transaction_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          customer_id: string
+          delivery_user_id?: string | null
+          external_transaction_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id: string
+          payment_method: string
+          payment_processor?: string | null
+          processed_at?: string | null
+          restaurant_id?: string | null
+          status?: string
+          transaction_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          customer_id?: string
+          delivery_user_id?: string | null
+          external_transaction_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string
+          payment_method?: string
+          payment_processor?: string | null
+          processed_at?: string | null
+          restaurant_id?: string | null
+          status?: string
+          transaction_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payouts: {
         Row: {
@@ -7895,6 +8140,76 @@ export type Database = {
         }
         Relationships: []
       }
+      tip_distributions: {
+        Row: {
+          created_at: string | null
+          delivery_user_id: string
+          distributed_at: string | null
+          distribution_status: string | null
+          driver_tip_amount: number
+          driver_tip_percentage: number | null
+          failure_reason: string | null
+          id: string
+          order_id: string
+          payment_transaction_id: string | null
+          platform_fee_amount: number | null
+          restaurant_tip_amount: number | null
+          total_tip_amount: number
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_user_id: string
+          distributed_at?: string | null
+          distribution_status?: string | null
+          driver_tip_amount: number
+          driver_tip_percentage?: number | null
+          failure_reason?: string | null
+          id?: string
+          order_id: string
+          payment_transaction_id?: string | null
+          platform_fee_amount?: number | null
+          restaurant_tip_amount?: number | null
+          total_tip_amount: number
+        }
+        Update: {
+          created_at?: string | null
+          delivery_user_id?: string
+          distributed_at?: string | null
+          distribution_status?: string | null
+          driver_tip_amount?: number
+          driver_tip_percentage?: number | null
+          failure_reason?: string | null
+          id?: string
+          order_id?: string
+          payment_transaction_id?: string | null
+          platform_fee_amount?: number | null
+          restaurant_tip_amount?: number | null
+          total_tip_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tip_distributions_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tip_distributions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tip_distributions_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       traffic_incidents: {
         Row: {
           created_at: string | null
@@ -9666,6 +9981,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      confirm_payment: {
+        Args: {
+          p_confirmation_id: string
+          p_confirming_user_id: string
+          p_confirmation_method?: string
+        }
+        Returns: boolean
+      }
       create_app_config_table: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -10325,6 +10648,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      initialize_payment_coordination: {
+        Args: { p_order_id: string }
+        Returns: string
+      }
       insert_recommendation_feedback: {
         Args: {
           p_user_id: string
@@ -10621,6 +10948,25 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      process_payment_transaction: {
+        Args: {
+          p_order_id: string
+          p_customer_id: string
+          p_transaction_type: string
+          p_amount: number
+          p_payment_method: string
+          p_external_transaction_id?: string
+        }
+        Returns: string
+      }
+      process_tip_distribution: {
+        Args: {
+          p_order_id: string
+          p_total_tip_amount: number
+          p_driver_tip_percentage?: number
+        }
+        Returns: string
+      }
       send_customer_notification: {
         Args: {
           p_order_id: string
@@ -10628,6 +10974,18 @@ export type Database = {
           p_title: string
           p_message: string
           p_data?: Json
+        }
+        Returns: string
+      }
+      send_payment_notification: {
+        Args: {
+          p_order_id: string
+          p_recipient_id: string
+          p_recipient_type: string
+          p_notification_type: string
+          p_title: string
+          p_message: string
+          p_amount?: number
         }
         Returns: string
       }
