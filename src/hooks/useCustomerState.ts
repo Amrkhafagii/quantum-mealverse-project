@@ -11,17 +11,16 @@ export const useCustomerState = () => {
 
   // Fetch restaurants using the correct hook
   const {
-    data: restaurants,
-    isLoading: restaurantsLoading,
+    restaurants,
+    loading: restaurantsLoading,
     error: restaurantsError
   } = useRestaurantsData();
 
-  // Fetch menu items
+  // Fetch menu items - this hook needs nearby restaurants
   const {
-    data: menuItems,
-    isLoading: menuLoading,
-    error: menuError
-  } = useMenuItems();
+    menuItems,
+    isLoading: menuLoading
+  } = useMenuItems(restaurants || []);
 
   const isLoading = restaurantsLoading || menuLoading;
 
@@ -35,21 +34,18 @@ export const useCustomerState = () => {
     if (restaurantsError) {
       setHasError(true);
       setErrorMessage('Failed to load restaurants');
-    } else if (menuError) {
-      setHasError(true);
-      setErrorMessage('Failed to load menu items');
     } else {
       setHasError(false);
       setErrorMessage(null);
     }
-  }, [restaurantsError, menuError]);
+  }, [restaurantsError]);
 
   return {
     user,
     restaurants,
     restaurantsError,
     menuItems,
-    menuError,
+    menuError: null, // useMenuItems doesn't expose error in this interface
     isLoading,
     hasError,
     errorMessage,

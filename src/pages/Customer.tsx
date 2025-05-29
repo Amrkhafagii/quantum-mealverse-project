@@ -9,6 +9,8 @@ import { ImprovedLocationPrompt } from '@/components/customer/ImprovedLocationPr
 import { CustomerErrorBoundary } from '@/components/customer/CustomerErrorBoundary';
 import { CustomerBreadcrumbs } from '@/components/customer/CustomerBreadcrumbs';
 import { CustomerNavigation } from '@/components/customer/CustomerNavigation';
+import { RestaurantAssignmentDebug } from '@/components/customer/RestaurantAssignmentDebug';
+import { LocationTroubleshootingGuide } from '@/components/customer/LocationTroubleshootingGuide';
 import { AnimatedContainer } from '@/components/performance/AnimatedContainer';
 import { useCustomerState } from '@/hooks/useCustomerState';
 import { useLocationHandler } from '@/hooks/useLocationHandler';
@@ -17,6 +19,7 @@ import { useCart } from '@/contexts/CartContext';
 const CustomerPage = () => {
   const navigate = useNavigate();
   const [isMapView, setIsMapView] = useState(false);
+  const [showDebugTools, setShowDebugTools] = useState(false);
   const { cart } = useCart();
   
   // Use the new location handler
@@ -82,9 +85,38 @@ const CustomerPage = () => {
               </div>
             </AnimatedContainer>
             
+            {/* Debug Tools Toggle */}
+            <AnimatedContainer animation="slideUp" delay={0.15}>
+              <div className="mb-4">
+                <button
+                  onClick={() => setShowDebugTools(!showDebugTools)}
+                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  {showDebugTools ? 'Hide' : 'Show'} Debug Tools
+                </button>
+              </div>
+            </AnimatedContainer>
+            
+            {/* Debug Tools */}
+            {showDebugTools && (
+              <AnimatedContainer animation="slideUp" delay={0.2}>
+                <div className="space-y-4 mb-8">
+                  <RestaurantAssignmentDebug 
+                    restaurants={restaurants || []}
+                    location={locationHandler.location}
+                  />
+                  <LocationTroubleshootingGuide
+                    permissionStatus={locationHandler.permissionStatus}
+                    hasLocation={hasLocation}
+                    error={locationHandler.error}
+                  />
+                </div>
+              </AnimatedContainer>
+            )}
+            
             {/* Location Prompt */}
             {showLocationPrompt && (
-              <AnimatedContainer animation="slideUp" delay={0.2}>
+              <AnimatedContainer animation="slideUp" delay={0.3}>
                 <ImprovedLocationPrompt
                   onRequestLocation={locationHandler.requestLocation}
                   onManualLocation={locationHandler.setManualLocation}
@@ -99,7 +131,7 @@ const CustomerPage = () => {
             
             {/* Main Content - Only show when location is available */}
             {hasLocation && (
-              <AnimatedContainer animation="slideUp" delay={0.3}>
+              <AnimatedContainer animation="slideUp" delay={0.4}>
                 <MainContent 
                   isMapView={isMapView}
                   menuItems={menuItems}
