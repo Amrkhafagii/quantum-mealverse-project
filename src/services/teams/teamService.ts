@@ -1,6 +1,24 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Team } from '@/types/fitness/challenges';
+
+// Define the Team interface directly to avoid type conflicts
+interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  created_by: string;
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+  image_url?: string;
+  avatar_url?: string;
+  is_active: boolean;
+  max_members: number;
+  members_count: number;
+  member_count: number;
+  challenges_count: number;
+  total_points: number;
+}
 
 // Helper function to transform raw team data to our Team type
 const transformTeam = (team: any): Team => ({
@@ -80,7 +98,13 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   return teamData ? transformTeam(teamData) : null;
 };
 
-type CreateTeamData = Pick<Team, 'name' | 'description' | 'image_url' | 'is_active' | 'max_members'>;
+type CreateTeamData = {
+  name: string;
+  description?: string;
+  image_url?: string;
+  is_active?: boolean;
+  max_members?: number;
+};
 
 export const createTeam = async (userId: string, teamData: CreateTeamData): Promise<boolean> => {
   const { data, error } = await supabase

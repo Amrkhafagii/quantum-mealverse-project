@@ -113,25 +113,30 @@ export const OptimizedScroll: React.FC<OptimizedScrollProps> = ({
   }, [onPullToRefresh, isPulling, pullDistance, enableHaptic]);
 
   // Platform-specific scroll styles
-  const getScrollStyles = () => {
+  const getScrollStyles = (): React.CSSProperties => {
+    const baseStyles: React.CSSProperties = {
+      overscrollBehavior: bounces ? 'auto' : 'contain',
+    };
+
     if (isPlatformIOS) {
       return {
+        ...baseStyles,
         WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: bounces ? 'auto' : 'contain',
         scrollbarWidth: showScrollIndicator ? 'thin' : 'none',
-      };
+      } as React.CSSProperties;
     }
     
     if (isPlatformAndroid) {
       return {
-        overscrollBehavior: bounces ? 'auto' : 'contain',
+        ...baseStyles,
         scrollbarWidth: showScrollIndicator ? 'thin' : 'none',
-      };
+      } as React.CSSProperties;
     }
     
     return {
+      ...baseStyles,
       scrollbarWidth: showScrollIndicator ? 'auto' : 'none',
-    };
+    } as React.CSSProperties;
   };
 
   const scrollClassName = cn(

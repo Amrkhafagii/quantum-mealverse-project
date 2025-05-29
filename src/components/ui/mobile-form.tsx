@@ -56,7 +56,8 @@ export const MobileForm = React.forwardRef<HTMLFormElement, MobileFormProps>(({
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        setActiveField(target.id || target.name || 'unknown');
+        const inputElement = target as HTMLInputElement | HTMLTextAreaElement;
+        setActiveField(inputElement.id || inputElement.name || 'unknown');
         
         // Scroll active field into view on iOS
         if (isPlatformIOS) {
