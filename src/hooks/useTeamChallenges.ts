@@ -1,8 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Team, TeamMember, Challenge, TeamChallengeProgress } from '@/types/fitness/challenges';
+import { fetchTeams, fetchUserTeam, createTeam } from '@/services/teams/teamService';
+import { fetchTeamMembers, joinTeam as joinTeamService, leaveTeam as leaveTeamService } from '@/services/teams/teamMemberService';
+import { fetchTeamChallenges, fetchTeamProgress } from '@/services/teams/teamChallengeService';
 
 export function useTeamChallenges() {
   const { user } = useAuth();
@@ -16,45 +19,17 @@ export function useTeamChallenges() {
 
   useEffect(() => {
     if (user) {
-      fetchTeams();
-      fetchUserTeam();
-      fetchTeamChallenges();
+      loadTeams();
+      loadUserTeam();
+      loadTeamChallenges();
     }
   }, [user]);
 
-  const fetchTeams = async () => {
+  const loadTeams = async () => {
     try {
       setIsLoading(true);
-      
-      // Use completely untyped query to avoid type depth issues
-      const response = await supabase
-        .from('teams')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (response.error) throw response.error;
-      
-      // Safely map database fields to our Team type with explicit typing
-      const mappedTeams: Team[] = (response.data || []).map((team: any) => ({
-        id: team.id,
-        name: team.name,
-        description: team.description || undefined,
-        created_by: team.created_by,
-        creator_id: team.created_by,
-        created_at: team.created_at,
-        updated_at: team.updated_at || team.created_at,
-        image_url: team.avatar_url || undefined,
-        avatar_url: team.avatar_url || undefined,
-        is_active: team.is_active !== false,
-        max_members: team.max_members || 50,
-        members_count: team.member_count || 0,
-        member_count: team.member_count || 0,
-        challenges_count: 0, // Default value since it's not in database
-        total_points: team.total_points || 0
-      }));
-      
-      setTeams(mappedTeams);
+      const teamsData = await fetchTeams();
+      setTeams(teamsData);
     } catch (error) {
       console.error('Error fetching teams:', error);
       toast({
@@ -67,104 +42,44 @@ export function useTeamChallenges() {
     }
   };
 
-  const fetchUserTeam = async () => {
+  const loadUserTeam = async () => {
     if (!user) return;
 
     try {
-      const response = await supabase
-        .from('team_members')
-        .select(`
-          *,
-          team:teams(*)
-        `)
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
-
-      if (response.error && response.error.code !== 'PGRST116') throw response.error;
+      const team = await fetchUserTeam(user.id);
+      setUserTeam(team);
       
-      if (response.data?.team) {
-        const team = response.data.team as any;
-        const mappedTeam: Team = {
-          id: team.id,
-          name: team.name,
-          description: team.description || undefined,
-          created_by: team.created_by,
-          creator_id: team.created_by,
-          created_at: team.created_at,
-          updated_at: team.updated_at || team.created_at,
-          image_url: team.avatar_url || undefined,
-          avatar_url: team.avatar_url || undefined,
-          is_active: team.is_active !== false,
-          max_members: team.max_members || 50,
-          members_count: team.member_count || 0,
-          member_count: team.member_count || 0,
-          challenges_count: 0,
-          total_points: team.total_points || 0
-        };
-        
-        setUserTeam(mappedTeam);
-        fetchTeamMembers(team.id);
-        fetchTeamProgress(team.id);
+      if (team) {
+        loadTeamMembers(team.id);
+        loadTeamProgress(team.id);
       }
     } catch (error) {
       console.error('Error fetching user team:', error);
     }
   };
 
-  const fetchTeamMembers = async (teamId: string) => {
+  const loadTeamMembers = async (teamId: string) => {
     try {
-      const response = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamId)
-        .eq('is_active', true);
-
-      if (response.error) throw response.error;
-      
-      // Safely map database fields to our TeamMember type
-      const mappedMembers: TeamMember[] = (response.data || []).map((member: any) => ({
-        id: member.id,
-        user_id: member.user_id,
-        team_id: member.team_id,
-        role: member.role,
-        joined_date: member.joined_at || member.joined_date,
-        joined_at: member.joined_at || member.joined_date,
-        user_name: undefined, // Not available in current query
-        profile_image: undefined, // Not available in current query
-        points_contributed: member.contribution_points || 0,
-        contribution_points: member.contribution_points || 0,
-        is_active: member.is_active !== false
-      }));
-      
-      setTeamMembers(mappedMembers);
+      const members = await fetchTeamMembers(teamId);
+      setTeamMembers(members);
     } catch (error) {
       console.error('Error fetching team members:', error);
     }
   };
 
-  const fetchTeamChallenges = async () => {
+  const loadTeamChallenges = async () => {
     try {
-      const { data, error } = await supabase
-        .from('challenges')
-        .select('*')
-        .eq('type', 'team')
-        .eq('is_active', true)
-        .gte('end_date', new Date().toISOString())
-        .order('start_date', { ascending: true });
-
-      if (error) throw error;
-      setTeamChallenges(data || []);
+      const challenges = await fetchTeamChallenges();
+      setTeamChallenges(challenges);
     } catch (error) {
       console.error('Error fetching team challenges:', error);
     }
   };
 
-  const fetchTeamProgress = async (teamId: string) => {
+  const loadTeamProgress = async (teamId: string) => {
     try {
-      // For now, set empty array until the database function is created
-      // In the future, this would query team_challenge_progress table
-      setTeamProgress([]);
+      const progress = await fetchTeamProgress(teamId);
+      setTeamProgress(progress);
     } catch (error) {
       console.error('Error fetching team progress:', error);
       setTeamProgress([]);
@@ -176,22 +91,14 @@ export function useTeamChallenges() {
 
     try {
       setIsLoading(true);
-      const { error } = await supabase
-        .from('team_members')
-        .insert([{
-          user_id: user.id,
-          team_id: teamId,
-          role: 'member'
-        }]);
-
-      if (error) throw error;
+      await joinTeamService(user.id, teamId);
 
       toast({
         title: "Success",
         description: "You've joined the team!",
       });
 
-      await fetchUserTeam();
+      await loadUserTeam();
       return true;
     } catch (error) {
       console.error('Error joining team:', error);
@@ -211,13 +118,7 @@ export function useTeamChallenges() {
 
     try {
       setIsLoading(true);
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('team_id', userTeam.id);
-
-      if (error) throw error;
+      await leaveTeamService(user.id, userTeam.id);
 
       toast({
         title: "Success",
@@ -241,42 +142,20 @@ export function useTeamChallenges() {
     }
   };
 
-  const createTeam = async (teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleCreateTeam = async (teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return false;
 
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('teams')
-        .insert([{
-          name: teamData.name,
-          description: teamData.description,
-          image_url: teamData.image_url,
-          created_by: user.id,
-          is_active: teamData.is_active,
-          max_members: teamData.max_members
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Automatically join the creator to the team
-      await supabase
-        .from('team_members')
-        .insert([{
-          user_id: user.id,
-          team_id: data.id,
-          role: 'admin'
-        }]);
+      await createTeam(user.id, teamData);
 
       toast({
         title: "Success",
         description: "Team created successfully!",
       });
 
-      await fetchTeams();
-      await fetchUserTeam();
+      await loadTeams();
+      await loadUserTeam();
       return true;
     } catch (error) {
       console.error('Error creating team:', error);
@@ -300,11 +179,11 @@ export function useTeamChallenges() {
     isLoading,
     joinTeam,
     leaveTeam,
-    createTeam,
+    createTeam: handleCreateTeam,
     refetch: () => {
-      fetchTeams();
-      fetchUserTeam();
-      fetchTeamChallenges();
+      loadTeams();
+      loadUserTeam();
+      loadTeamChallenges();
     }
   };
 }
