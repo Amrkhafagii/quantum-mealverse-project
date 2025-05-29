@@ -1,99 +1,130 @@
 
-import { UnifiedLocation } from '@/types/unifiedLocation';
+import { supabase } from '@/integrations/supabase/client';
+import { getBrowserLocation } from '@/utils/webGeolocation';
 
-export interface LocationServiceResult {
-  success: boolean;
-  data?: any;
-  error?: string;
+export interface LocationCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
 }
 
-export const locationService = {
-  // Store a new location entry - simplified mock implementation
-  async storeLocation(location: Partial<UnifiedLocation>): Promise<LocationServiceResult> {
-    try {
-      console.log('Storing location:', location);
-      return { success: true, data: location };
-    } catch (error: any) {
-      console.error('Error in storeLocation:', error);
-      return { success: false, error: error.message };
-    }
-  },
+export type UserType = 'customer' | 'restaurant' | 'delivery';
 
-  // Get locations for a specific user - simplified mock implementation
-  async getUserLocations(userId: string, limit: number = 100): Promise<LocationServiceResult> {
+export class LocationService {
+  /**
+   * Request location permission and get current coordinates
+   */
+  static async getCurrentLocation(): Promise<LocationCoordinates> {
     try {
-      console.log('Getting user locations for:', userId, 'limit:', limit);
-      return { success: true, data: [] };
-    } catch (error: any) {
-      console.error('Error in getUserLocations:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Get the most recent location for a user - simplified mock implementation
-  async getLastKnownLocation(userId: string): Promise<LocationServiceResult> {
-    try {
-      console.log('Getting last known location for:', userId);
-      return { success: true, data: null };
-    } catch (error: any) {
-      console.error('Error in getLastKnownLocation:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Get locations within a specific time range - simplified mock implementation
-  async getLocationsByTimeRange(
-    startTime: string, 
-    endTime: string, 
-    userId?: string
-  ): Promise<LocationServiceResult> {
-    try {
-      console.log('Getting locations by time range:', startTime, 'to', endTime, 'for user:', userId);
-      return { success: true, data: [] };
-    } catch (error: any) {
-      console.error('Error in getLocationsByTimeRange:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Delete locations older than specified days - simplified mock implementation
-  async cleanupOldLocations(retentionDays: number = 30): Promise<LocationServiceResult> {
-    try {
-      console.log('Cleaning up locations older than', retentionDays, 'days');
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error in cleanupOldLocations:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Get location statistics - simplified mock implementation
-  async getLocationStats(userId?: string): Promise<LocationServiceResult> {
-    try {
-      console.log('Getting location stats for user:', userId);
-      const stats = {
-        total_locations: 0,
-        sources: {},
-        average_accuracy: 0,
-        date_range: null
+      const location = await getBrowserLocation({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+      
+      return {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy || undefined
       };
-      return { success: true, data: stats };
-    } catch (error: any) {
-      console.error('Error in getLocationStats:', error);
-      return { success: false, error: error.message };
+    } catch (error) {
+      console.error('Failed to get current location:', error);
+      throw new Error('Location permission denied or unavailable');
     }
   }
-};
 
-// Add the missing export
-export const runRetentionPolicies = async () => {
-  try {
-    console.log('Running retention policies...');
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error running retention policies:', error);
-    return { success: false, error: error.message };
+  /**
+   * Update user location based on user type
+   */
+  static async updateUserLocation(userType: UserType, userId: string, coordinates: LocationCoordinates): Promise<void> {
+    console.log(`Updating location for ${userType} user:`, userId, coordinates);
+    
+    try {
+      switch (userType) {
+        case 'restaurant':
+          await this.updateRestaurantLocation(userId, coordinates);
+          break;
+        case 'delivery':
+          await this.updateDeliveryUserLocation(userId, coordinates);
+          break;
+        case 'customer':
+          await this.updateCustomerLocation(userId, coordinates);
+          break;
+        default:
+          throw new Error(`Unknown user type: ${userType}`);
+      }
+      
+      console.log(`Successfully updated location for ${userType} user`);
+    } catch (error) {
+      console.error(`Failed to update location for ${userType} user:`, error);
+      throw error;
+    }
   }
-};
 
-export default locationService;
+  /**
+   * Update restaurant location in restaurants table
+   */
+  private static async updateRestaurantLocation(userId: string, coordinates: LocationCoordinates): Promise<void> {
+    const { error } = await supabase
+      .from('restaurants')
+      .update({
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+      })
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error(`Failed to update restaurant location: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update delivery user location in delivery_users table
+   */
+  private static async updateDeliveryUserLocation(userId: string, coordinates: LocationCoordinates): Promise<void> {
+    const { error } = await supabase
+      .from('delivery_users')
+      .update({
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+      })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to update delivery user location: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update customer location in user_locations table
+   */
+  private static async updateCustomerLocation(userId: string, coordinates: LocationCoordinates): Promise<void> {
+    const { error } = await supabase
+      .from('user_locations')
+      .upsert({
+        user_id: userId,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        accuracy: coordinates.accuracy,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      throw new Error(`Failed to update customer location: ${error.message}`);
+    }
+  }
+
+  /**
+   * Request location permission and update user location
+   */
+  static async requestLocationAndUpdate(userType: UserType, userId: string): Promise<LocationCoordinates> {
+    try {
+      const coordinates = await this.getCurrentLocation();
+      await this.updateUserLocation(userType, userId, coordinates);
+      return coordinates;
+    } catch (error) {
+      console.error('Failed to request location and update:', error);
+      throw error;
+    }
+  }
+}

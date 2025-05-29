@@ -90,6 +90,9 @@ const RestaurantBasicInfo: React.FC<RestaurantBasicInfoProps> = ({
         delivery_radius: values.delivery_radius,
         estimated_delivery_time: values.estimated_delivery_time,
         user_id: user?.id,
+        // Add latitude and longitude fields with existing values or null
+        latitude: restaurant?.latitude || null,
+        longitude: restaurant?.longitude || null,
       };
 
       let response;
