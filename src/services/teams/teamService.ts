@@ -1,6 +1,38 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Team } from '@/types/fitness/challenges';
+
+// Define a type for the raw team data from Supabase
+interface RawTeam {
+  id: string;
+  name: string;
+  description?: string | null;
+  created_by: string;
+  created_at: string;
+  avatar_url?: string | null;
+  is_active?: boolean;
+  max_members?: number;
+  member_count?: number;
+  total_points?: number;
+}
+
+// Helper function to transform raw team data to our Team type
+const transformTeam = (team: RawTeam): Team => ({
+  id: team.id,
+  name: team.name,
+  description: team.description || undefined,
+  created_by: team.created_by,
+  creator_id: team.created_by,
+  created_at: team.created_at,
+  updated_at: team.created_at,
+  image_url: team.avatar_url || undefined,
+  avatar_url: team.avatar_url || undefined,
+  is_active: team.is_active !== false,
+  max_members: team.max_members || 50,
+  members_count: team.member_count || 0,
+  member_count: team.member_count || 0,
+  challenges_count: 0,
+  total_points: team.total_points || 0
+});
 
 export const fetchTeams = async (): Promise<Team[]> => {
   const { data, error } = await supabase
@@ -22,24 +54,7 @@ export const fetchTeams = async (): Promise<Team[]> => {
 
   if (error) throw error;
   
-  // Safely map database fields to our Team type
-  return (data || []).map((team: any) => ({
-    id: team.id,
-    name: team.name,
-    description: team.description || undefined,
-    created_by: team.created_by,
-    creator_id: team.created_by,
-    created_at: team.created_at,
-    updated_at: team.created_at, // Use created_at since updated_at doesn't exist
-    image_url: team.avatar_url || undefined,
-    avatar_url: team.avatar_url || undefined,
-    is_active: team.is_active !== false,
-    max_members: team.max_members || 50,
-    members_count: team.member_count || 0,
-    member_count: team.member_count || 0,
-    challenges_count: 0, // Default value since it's not in database
-    total_points: team.total_points || 0
-  }));
+  return (data || []).map(transformTeam);
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
@@ -67,24 +82,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   if (error && error.code !== 'PGRST116') throw error;
   
   if (data?.team) {
-    const team = data.team as any;
-    return {
-      id: team.id,
-      name: team.name,
-      description: team.description || undefined,
-      created_by: team.created_by,
-      creator_id: team.created_by,
-      created_at: team.created_at,
-      updated_at: team.created_at, // Use created_at since updated_at doesn't exist
-      image_url: team.avatar_url || undefined,
-      avatar_url: team.avatar_url || undefined,
-      is_active: team.is_active !== false,
-      max_members: team.max_members || 50,
-      members_count: team.member_count || 0,
-      member_count: team.member_count || 0,
-      challenges_count: 0,
-      total_points: team.total_points || 0
-    };
+    return transformTeam(data.team as RawTeam);
   }
   
   return null;
@@ -106,7 +104,6 @@ export const createTeam = async (userId: string, teamData: Omit<Team, 'id' | 'cr
 
   if (error) throw error;
 
-  // Automatically join the creator to the team
   await supabase
     .from('team_members')
     .insert([{
