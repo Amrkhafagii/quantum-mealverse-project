@@ -14,13 +14,14 @@ interface MealPricingResult {
 
 /**
  * Converts a meal plan meal into cart items with location-based restaurant assignment
+ * Phase 4: Simplified without validation restrictions
  */
 export const convertMealToCartItemWithAssignment = async (
   meal: Meal, 
   userId: string,
   options: RestaurantAssignmentOptions = {}
 ): Promise<CartItem[]> => {
-  console.log('Converting meal to cart items with location-based assignment:', meal.name);
+  console.log('Converting meal to cart items with simplified assignment:', meal.name);
 
   try {
     // Get restaurant assignment based on location only (no capability checks)
@@ -91,7 +92,7 @@ export const convertMealToCartItemWithAssignment = async (
       image_url: generateMealImageUrl(meal)
     };
 
-    console.log('Created cart item with location-based assignment:', {
+    console.log('Created cart item with simplified assignment:', {
       mealName: cartItem.name,
       totalPrice: pricing,
       restaurantName: pricing.restaurant_name,
@@ -181,35 +182,20 @@ const storeMealPlanCartItem = async (
 };
 
 /**
- * Validates that a meal can be converted to a cart item
+ * Phase 4: Simplified validation - accepts all meals without restrictions
  */
 export const validateMealForCart = (meal: Meal): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-
-  if (!meal.name || meal.name.trim() === '') {
-    errors.push('Meal must have a name');
-  }
-
-  if (!meal.foods || meal.foods.length === 0) {
-    errors.push('Meal must contain at least one food item');
-  }
-
-  if (meal.foods.some(mealFood => !mealFood.portionSize || mealFood.portionSize <= 0)) {
-    errors.push('All food items must have valid portion sizes');
-  }
-
-  if (meal.totalCalories <= 0) {
-    errors.push('Meal must have positive calorie content');
-  }
-
+  console.log('Phase 4: Accepting meal without validation restrictions:', meal.name);
+  
+  // Accept all meals - no validation restrictions
   return {
-    isValid: errors.length === 0,
-    errors
+    isValid: true,
+    errors: []
   };
 };
 
 /**
- * Batch converts multiple meals to cart items with location-based assignment
+ * Batch converts multiple meals to cart items with simplified assignment
  */
 export const convertMealsToCartItems = async (
   meals: Meal[], 
@@ -220,13 +206,7 @@ export const convertMealsToCartItems = async (
   const errors: string[] = [];
 
   for (const meal of meals) {
-    const validation = validateMealForCart(meal);
-    
-    if (!validation.isValid) {
-      errors.push(`${meal.name}: ${validation.errors.join(', ')}`);
-      continue;
-    }
-
+    // Phase 4: Skip validation - accept all meals
     try {
       const cartItems = await convertMealToCartItemWithAssignment(meal, userId, options);
       items.push(...cartItems);
