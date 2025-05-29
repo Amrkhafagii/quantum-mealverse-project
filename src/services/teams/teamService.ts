@@ -5,14 +5,26 @@ import { Team } from '@/types/fitness/challenges';
 export const fetchTeams = async (): Promise<Team[]> => {
   const { data, error } = await supabase
     .from('teams')
-    .select('*')
+    .select(`
+      id,
+      name,
+      description,
+      created_by,
+      created_at,
+      updated_at,
+      avatar_url,
+      is_active,
+      max_members,
+      member_count,
+      total_points
+    `)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   
   // Safely map database fields to our Team type
-  return (data || []).map((team: any) => ({
+  return (data || []).map((team) => ({
     id: team.id,
     name: team.name,
     description: team.description || undefined,
@@ -36,7 +48,19 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
     .from('team_members')
     .select(`
       *,
-      team:teams(*)
+      team:teams(
+        id,
+        name,
+        description,
+        created_by,
+        created_at,
+        updated_at,
+        avatar_url,
+        is_active,
+        max_members,
+        member_count,
+        total_points
+      )
     `)
     .eq('user_id', userId)
     .eq('is_active', true)
@@ -45,7 +69,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   if (error && error.code !== 'PGRST116') throw error;
   
   if (data?.team) {
-    const team = data.team as any;
+    const team = data.team;
     return {
       id: team.id,
       name: team.name,
