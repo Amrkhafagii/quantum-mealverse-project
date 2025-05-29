@@ -12,7 +12,8 @@ import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
 import UserAchievements from '@/components/fitness/UserAchievements';
-import { Trophy } from 'lucide-react';
+import { TeamChallenges } from '@/components/fitness/challenges/TeamChallenges';
+import { Trophy, Users } from 'lucide-react';
 
 const FitnessPage = () => {
   const { user } = useAuth();
@@ -43,6 +44,10 @@ const FitnessPage = () => {
                 <TabsTrigger value="scheduler">Scheduler</TabsTrigger>
                 <TabsTrigger value="history">History</TabsTrigger>
                 <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+                <TabsTrigger value="team-challenges" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Team Challenges
+                </TabsTrigger>
                 <TabsTrigger value="achievements" className="flex items-center gap-2">
                   <Trophy className="h-4 w-4" />
                   Achievements
@@ -75,6 +80,10 @@ const FitnessPage = () => {
                 userId={user?.id}
                 onApplied={workoutData.fetchWorkoutPlans}
               />
+            </TabsContent>
+            
+            <TabsContent value="team-challenges" className="mt-2">
+              <TeamChallenges />
             </TabsContent>
             
             <TabsContent value="achievements" className="mt-2">
