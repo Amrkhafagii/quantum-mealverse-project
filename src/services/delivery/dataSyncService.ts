@@ -25,7 +25,14 @@ class DeliveryDataSyncService {
       throw error;
     }
 
-    return data;
+    if (!data) return null;
+
+    // Cast enum-like fields to proper types
+    return {
+      ...data,
+      location_conflict_strategy: data.location_conflict_strategy as ConflictStrategy,
+      settings_conflict_strategy: data.settings_conflict_strategy as ConflictStrategy
+    };
   }
 
   async updateSyncSettings(
@@ -46,7 +53,12 @@ class DeliveryDataSyncService {
       throw error;
     }
 
-    return data;
+    // Cast enum-like fields to proper types
+    return {
+      ...data,
+      location_conflict_strategy: data.location_conflict_strategy as ConflictStrategy,
+      settings_conflict_strategy: data.settings_conflict_strategy as ConflictStrategy
+    };
   }
 
   // Sync Logging
@@ -126,7 +138,12 @@ class DeliveryDataSyncService {
       throw error;
     }
 
-    return data || [];
+    // Cast enum-like fields to proper types
+    return (data || []).map(log => ({
+      ...log,
+      sync_type: log.sync_type as SyncType,
+      operation_type: log.operation_type as OperationType
+    }));
   }
 
   // Conflict Management
@@ -185,7 +202,12 @@ class DeliveryDataSyncService {
       throw error;
     }
 
-    return data || [];
+    // Cast enum-like fields to proper types
+    return (data || []).map(conflict => ({
+      ...conflict,
+      conflict_type: conflict.conflict_type as ConflictType,
+      resolution_strategy: conflict.resolution_strategy as ConflictStrategy
+    }));
   }
 
   async resolveConflict(
@@ -210,7 +232,12 @@ class DeliveryDataSyncService {
       throw error;
     }
 
-    return data;
+    // Cast enum-like fields to proper types
+    return {
+      ...data,
+      conflict_type: data.conflict_type as ConflictType,
+      resolution_strategy: data.resolution_strategy as ConflictStrategy
+    };
   }
 
   // Analytics

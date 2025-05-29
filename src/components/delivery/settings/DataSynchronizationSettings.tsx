@@ -1,30 +1,16 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Sync, 
-  Database, 
-  Wifi, 
-  Battery, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle,
-  Clock,
-  HardDrive,
-  Settings,
-  RefreshCw,
-  Trash2
-} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertCircle, Database, RefreshCw, Settings, Clock, Wifi, Battery, HardDrive, Trash2 } from 'lucide-react';
 import { useDataSync } from '@/hooks/useDataSync';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -32,9 +18,7 @@ interface DataSynchronizationSettingsProps {
   deliveryUserId: string;
 }
 
-export const DataSynchronizationSettings: React.FC<DataSynchronizationSettingsProps> = ({
-  deliveryUserId
-}) => {
+export function DataSynchronizationSettings({ deliveryUserId }: DataSynchronizationSettingsProps) {
   const {
     settings,
     syncLogs,
@@ -42,507 +26,475 @@ export const DataSynchronizationSettings: React.FC<DataSynchronizationSettingsPr
     stats,
     loading,
     isProcessing,
-    updateStorageSettings,
-    updateSyncFrequency,
-    updateConflictResolution,
+    updateSettings,
     performManualSync,
     resolveConflict,
-    cleanupOldData
+    cleanupOldData,
+    updateStorageSettings,
+    updateSyncFrequency,
+    updateConflictResolution
   } = useDataSync(deliveryUserId);
 
   if (loading) {
     return (
-      <Card className="border border-quantum-cyan/20 bg-transparent">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center">
-            <div className="text-quantum-cyan">Loading sync settings...</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-muted-foreground">Loading sync settings...</div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!settings) {
     return (
-      <Card className="border border-quantum-cyan/20 bg-transparent">
-        <CardContent className="pt-6">
-          <div className="text-center text-red-400">
-            Failed to load sync settings. Please try refreshing.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-red-400">Failed to load sync settings</div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
-  const storageUsagePercent = stats ? (stats.storage_used_mb / stats.storage_limit_mb) * 100 : 0;
+  const storagePercentage = stats ? (stats.storage_used_mb / stats.storage_limit_mb) * 100 : 0;
 
   return (
     <div className="space-y-6">
-      <Card className="border border-quantum-cyan/20 bg-transparent">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Data Synchronization Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="storage" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="storage" className="flex items-center gap-2">
-                <HardDrive className="h-4 w-4" />
-                Storage
-              </TabsTrigger>
-              <TabsTrigger value="frequency" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Frequency
-              </TabsTrigger>
-              <TabsTrigger value="conflicts" className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Conflicts
-              </TabsTrigger>
-              <TabsTrigger value="logs" className="flex items-center gap-2">
-                <Sync className="h-4 w-4" />
-                Sync Logs
-              </TabsTrigger>
-            </TabsList>
+      <Tabs defaultValue="storage" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="storage">Storage</TabsTrigger>
+          <TabsTrigger value="frequency">Sync Frequency</TabsTrigger>
+          <TabsTrigger value="conflicts">Conflicts</TabsTrigger>
+          <TabsTrigger value="logs">Sync Logs</TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="storage" className="space-y-6">
-              <div className="space-y-4">
+        <TabsContent value="storage">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HardDrive className="h-5 w-5" />
+                Offline Storage Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Storage Usage */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Offline Storage Limits</h3>
-                  <Button 
-                    onClick={cleanupOldData} 
-                    disabled={isProcessing}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Cleanup Old Data
-                  </Button>
+                  <Label>Storage Usage</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {stats?.storage_used_mb || 0} MB / {settings.storage_limit_mb} MB
+                  </span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="max-locations">Maximum Offline Locations</Label>
-                    <Input
-                      id="max-locations"
-                      type="number"
-                      value={settings.max_offline_locations}
-                      onChange={(e) => updateStorageSettings(
-                        parseInt(e.target.value),
-                        settings.location_storage_duration_days,
-                        settings.storage_limit_mb,
-                        settings.auto_cleanup_enabled
-                      )}
-                      min="100"
-                      max="10000"
-                      step="100"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Number of location records to store locally
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="storage-duration">Storage Duration (days)</Label>
-                    <Input
-                      id="storage-duration"
-                      type="number"
-                      value={settings.location_storage_duration_days}
-                      onChange={(e) => updateStorageSettings(
-                        settings.max_offline_locations,
-                        parseInt(e.target.value),
-                        settings.storage_limit_mb,
-                        settings.auto_cleanup_enabled
-                      )}
-                      min="1"
-                      max="365"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      How long to keep data locally
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="storage-limit">Storage Limit (MB)</Label>
-                    <div className="space-y-2">
-                      <Slider
-                        value={[settings.storage_limit_mb]}
-                        onValueChange={(value) => updateStorageSettings(
-                          settings.max_offline_locations,
-                          settings.location_storage_duration_days,
-                          value[0],
-                          settings.auto_cleanup_enabled
-                        )}
-                        max={500}
-                        min={10}
-                        step={10}
-                      />
-                      <div className="text-sm text-muted-foreground">
-                        {settings.storage_limit_mb} MB limit
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="auto-cleanup"
-                        checked={settings.auto_cleanup_enabled}
-                        onCheckedChange={(checked) => updateStorageSettings(
-                          settings.max_offline_locations,
-                          settings.location_storage_duration_days,
-                          settings.storage_limit_mb,
-                          checked
-                        )}
-                      />
-                      <Label htmlFor="auto-cleanup">Auto Cleanup</Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically remove old data when limits are reached
-                    </p>
-                  </div>
-                </div>
-
-                {stats && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Storage Usage</Label>
-                      <span className="text-sm text-muted-foreground">
-                        {stats.storage_used_mb} MB / {stats.storage_limit_mb} MB
-                      </span>
-                    </div>
-                    <Progress value={storageUsagePercent} className="w-full" />
-                    {storageUsagePercent > 80 && (
-                      <p className="text-sm text-yellow-600">
-                        Storage is nearly full. Consider cleaning up old data.
-                      </p>
-                    )}
-                  </div>
-                )}
+                <Progress value={storagePercentage} className="w-full" />
               </div>
-            </TabsContent>
 
-            <TabsContent value="frequency" className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Sync Frequency Preferences</h3>
-                  <Button 
-                    onClick={performManualSync} 
-                    disabled={isProcessing}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isProcessing ? 'animate-spin' : ''}`} />
-                    Manual Sync
-                  </Button>
+              {/* Max Offline Locations */}
+              <div className="space-y-2">
+                <Label htmlFor="max-locations">Maximum Offline Locations</Label>
+                <Input
+                  id="max-locations"
+                  type="number"
+                  value={settings.max_offline_locations}
+                  onChange={(e) => updateStorageSettings(
+                    parseInt(e.target.value),
+                    settings.location_storage_duration_days,
+                    settings.storage_limit_mb,
+                    settings.auto_cleanup_enabled
+                  )}
+                  min="100"
+                  max="10000"
+                  step="100"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Number of location records to store offline
+                </p>
+              </div>
+
+              {/* Storage Duration */}
+              <div className="space-y-2">
+                <Label htmlFor="storage-duration">Storage Duration (Days)</Label>
+                <Input
+                  id="storage-duration"
+                  type="number"
+                  value={settings.location_storage_duration_days}
+                  onChange={(e) => updateStorageSettings(
+                    settings.max_offline_locations,
+                    parseInt(e.target.value),
+                    settings.storage_limit_mb,
+                    settings.auto_cleanup_enabled
+                  )}
+                  min="1"
+                  max="365"
+                />
+                <p className="text-sm text-muted-foreground">
+                  How long to keep location data before cleanup
+                </p>
+              </div>
+
+              {/* Storage Limit */}
+              <div className="space-y-2">
+                <Label htmlFor="storage-limit">Storage Limit (MB)</Label>
+                <Input
+                  id="storage-limit"
+                  type="number"
+                  value={settings.storage_limit_mb}
+                  onChange={(e) => updateStorageSettings(
+                    settings.max_offline_locations,
+                    settings.location_storage_duration_days,
+                    parseFloat(e.target.value),
+                    settings.auto_cleanup_enabled
+                  )}
+                  min="10"
+                  max="1000"
+                  step="10"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Maximum storage space for offline data
+                </p>
+              </div>
+
+              {/* Auto Cleanup */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto Cleanup</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically remove old data when limits are reached
+                  </p>
                 </div>
+                <Switch
+                  checked={settings.auto_cleanup_enabled}
+                  onCheckedChange={(checked) => updateStorageSettings(
+                    settings.max_offline_locations,
+                    settings.location_storage_duration_days,
+                    settings.storage_limit_mb,
+                    checked
+                  )}
+                />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="auto-sync"
-                        checked={settings.auto_sync_enabled}
-                        onCheckedChange={(checked) => updateSyncFrequency(
-                          checked,
-                          settings.sync_frequency_minutes,
-                          settings.wifi_only_sync,
-                          settings.battery_optimized_sync
-                        )}
-                      />
-                      <Label htmlFor="auto-sync">Enable Auto Sync</Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically sync data at regular intervals
-                    </p>
-                  </div>
+              <Button
+                onClick={cleanupOldData}
+                disabled={isProcessing}
+                variant="outline"
+                className="w-full"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clean Up Old Data Now
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="sync-frequency">Sync Frequency (minutes)</Label>
-                    <Select
-                      value={settings.sync_frequency_minutes.toString()}
-                      onValueChange={(value) => updateSyncFrequency(
-                        settings.auto_sync_enabled,
-                        parseInt(value),
-                        settings.wifi_only_sync,
-                        settings.battery_optimized_sync
-                      )}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 minute</SelectItem>
-                        <SelectItem value="5">5 minutes</SelectItem>
-                        <SelectItem value="15">15 minutes</SelectItem>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+        <TabsContent value="frequency">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Sync Frequency Preferences
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Auto Sync */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto Sync Enabled</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically sync data in the background
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.auto_sync_enabled}
+                  onCheckedChange={(checked) => updateSyncFrequency(
+                    checked,
+                    settings.sync_frequency_minutes,
+                    settings.wifi_only_sync,
+                    settings.battery_optimized_sync
+                  )}
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="wifi-only"
-                        checked={settings.wifi_only_sync}
-                        onCheckedChange={(checked) => updateSyncFrequency(
-                          settings.auto_sync_enabled,
-                          settings.sync_frequency_minutes,
-                          checked,
-                          settings.battery_optimized_sync
-                        )}
-                      />
-                      <Label htmlFor="wifi-only" className="flex items-center gap-2">
-                        <Wifi className="h-4 w-4" />
-                        WiFi Only Sync
-                      </Label>
-                    </div>
+              {/* Sync Frequency */}
+              <div className="space-y-2">
+                <Label htmlFor="sync-frequency">Sync Interval (Minutes)</Label>
+                <Select
+                  value={settings.sync_frequency_minutes.toString()}
+                  onValueChange={(value) => updateSyncFrequency(
+                    settings.auto_sync_enabled,
+                    parseInt(value),
+                    settings.wifi_only_sync,
+                    settings.battery_optimized_sync
+                  )}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 minute</SelectItem>
+                    <SelectItem value="5">5 minutes</SelectItem>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* WiFi Only */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wifi className="h-4 w-4" />
+                  <div>
+                    <Label>WiFi Only Sync</Label>
                     <p className="text-sm text-muted-foreground">
                       Only sync when connected to WiFi
                     </p>
                   </div>
+                </div>
+                <Switch
+                  checked={settings.wifi_only_sync}
+                  onCheckedChange={(checked) => updateSyncFrequency(
+                    settings.auto_sync_enabled,
+                    settings.sync_frequency_minutes,
+                    checked,
+                    settings.battery_optimized_sync
+                  )}
+                />
+              </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="battery-optimized"
-                        checked={settings.battery_optimized_sync}
-                        onCheckedChange={(checked) => updateSyncFrequency(
-                          settings.auto_sync_enabled,
-                          settings.sync_frequency_minutes,
-                          settings.wifi_only_sync,
-                          checked
-                        )}
-                      />
-                      <Label htmlFor="battery-optimized" className="flex items-center gap-2">
-                        <Battery className="h-4 w-4" />
-                        Battery Optimized
-                      </Label>
-                    </div>
+              {/* Battery Optimized */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Battery className="h-4 w-4" />
+                  <div>
+                    <Label>Battery Optimized Sync</Label>
                     <p className="text-sm text-muted-foreground">
                       Reduce sync frequency when battery is low
                     </p>
                   </div>
                 </div>
-
-                {stats && (
-                  <div className="space-y-2">
-                    <Separator />
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-green-400">{stats.successful_syncs}</div>
-                        <div className="text-sm text-muted-foreground">Successful</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-red-400">{stats.failed_syncs}</div>
-                        <div className="text-sm text-muted-foreground">Failed</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-blue-400">{stats.average_sync_duration}ms</div>
-                        <div className="text-sm text-muted-foreground">Avg Duration</div>
-                      </div>
-                    </div>
-                    {stats.last_sync_time && (
-                      <div className="text-center text-sm text-muted-foreground">
-                        Last sync: {formatDistanceToNow(new Date(stats.last_sync_time))} ago
-                      </div>
-                    )}
-                  </div>
-                )}
+                <Switch
+                  checked={settings.battery_optimized_sync}
+                  onCheckedChange={(checked) => updateSyncFrequency(
+                    settings.auto_sync_enabled,
+                    settings.sync_frequency_minutes,
+                    settings.wifi_only_sync,
+                    checked
+                  )}
+                />
               </div>
-            </TabsContent>
 
-            <TabsContent value="conflicts" className="space-y-6">
+              <Separator />
+
+              {/* Manual Sync */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Conflict Resolution Preferences</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="location-strategy">Location Conflict Strategy</Label>
-                    <Select
-                      value={settings.location_conflict_strategy}
-                      onValueChange={(value) => updateConflictResolution(
-                        value,
-                        settings.settings_conflict_strategy,
-                        settings.auto_resolve_conflicts,
-                        settings.prompt_for_manual_resolution
-                      )}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="server_wins">Server Wins</SelectItem>
-                        <SelectItem value="client_wins">Client Wins</SelectItem>
-                        <SelectItem value="timestamp_wins">Newest Wins</SelectItem>
-                        <SelectItem value="merge">Smart Merge</SelectItem>
-                        <SelectItem value="manual">Manual Resolution</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="settings-strategy">Settings Conflict Strategy</Label>
-                    <Select
-                      value={settings.settings_conflict_strategy}
-                      onValueChange={(value) => updateConflictResolution(
-                        settings.location_conflict_strategy,
-                        value,
-                        settings.auto_resolve_conflicts,
-                        settings.prompt_for_manual_resolution
-                      )}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="server_wins">Server Wins</SelectItem>
-                        <SelectItem value="client_wins">Client Wins</SelectItem>
-                        <SelectItem value="timestamp_wins">Newest Wins</SelectItem>
-                        <SelectItem value="merge">Smart Merge</SelectItem>
-                        <SelectItem value="manual">Manual Resolution</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="auto-resolve"
-                        checked={settings.auto_resolve_conflicts}
-                        onCheckedChange={(checked) => updateConflictResolution(
-                          settings.location_conflict_strategy,
-                          settings.settings_conflict_strategy,
-                          checked,
-                          settings.prompt_for_manual_resolution
-                        )}
-                      />
-                      <Label htmlFor="auto-resolve">Auto Resolve Conflicts</Label>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Manual Sync</Label>
                     <p className="text-sm text-muted-foreground">
-                      Automatically resolve conflicts using the selected strategy
+                      {stats?.last_sync_time 
+                        ? `Last sync: ${formatDistanceToNow(new Date(stats.last_sync_time))} ago`
+                        : 'Never synced'
+                      }
                     </p>
                   </div>
+                  <Button
+                    onClick={performManualSync}
+                    disabled={isProcessing}
+                    size="sm"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync Now
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="prompt-manual"
-                        checked={settings.prompt_for_manual_resolution}
-                        onCheckedChange={(checked) => updateConflictResolution(
-                          settings.location_conflict_strategy,
-                          settings.settings_conflict_strategy,
-                          settings.auto_resolve_conflicts,
-                          checked
-                        )}
-                      />
-                      <Label htmlFor="prompt-manual">Prompt for Manual Resolution</Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Show notifications for conflicts requiring manual resolution
-                    </p>
+        <TabsContent value="conflicts">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Conflict Resolution
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Location Conflicts Strategy */}
+              <div className="space-y-2">
+                <Label>Location Conflict Strategy</Label>
+                <Select
+                  value={settings.location_conflict_strategy}
+                  onValueChange={(value) => updateConflictResolution(
+                    value,
+                    settings.settings_conflict_strategy,
+                    settings.auto_resolve_conflicts,
+                    settings.prompt_for_manual_resolution
+                  )}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="server_wins">Server Wins</SelectItem>
+                    <SelectItem value="client_wins">Client Wins</SelectItem>
+                    <SelectItem value="timestamp_wins">Newest Wins</SelectItem>
+                    <SelectItem value="merge">Merge Data</SelectItem>
+                    <SelectItem value="manual">Manual Resolution</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Settings Conflicts Strategy */}
+              <div className="space-y-2">
+                <Label>Settings Conflict Strategy</Label>
+                <Select
+                  value={settings.settings_conflict_strategy}
+                  onValueChange={(value) => updateConflictResolution(
+                    settings.location_conflict_strategy,
+                    value,
+                    settings.auto_resolve_conflicts,
+                    settings.prompt_for_manual_resolution
+                  )}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="server_wins">Server Wins</SelectItem>
+                    <SelectItem value="client_wins">Client Wins</SelectItem>
+                    <SelectItem value="timestamp_wins">Newest Wins</SelectItem>
+                    <SelectItem value="merge">Merge Data</SelectItem>
+                    <SelectItem value="manual">Manual Resolution</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Auto Resolve */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto Resolve Conflicts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically resolve conflicts using the selected strategy
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.auto_resolve_conflicts}
+                  onCheckedChange={(checked) => updateConflictResolution(
+                    settings.location_conflict_strategy,
+                    settings.settings_conflict_strategy,
+                    checked,
+                    settings.prompt_for_manual_resolution
+                  )}
+                />
+              </div>
+
+              {/* Unresolved Conflicts */}
+              {conflicts.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Unresolved Conflicts</Label>
+                    <Badge variant="destructive">{conflicts.length}</Badge>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {conflicts.map((conflict) => (
+                      <div key={conflict.id} className="p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{conflict.conflict_type} conflict</p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDistanceToNow(new Date(conflict.created_at))} ago
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => resolveConflict(conflict.id, conflict.server_data)}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                {stats && stats.unresolved_conflicts > 0 && (
-                  <div className="border border-yellow-500/20 bg-yellow-500/10 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-yellow-600">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="font-medium">
-                        {stats.unresolved_conflicts} unresolved conflicts
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Some data conflicts require manual resolution.
-                    </p>
+        <TabsContent value="logs">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Sync Statistics & Logs
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Sync Stats */}
+              {stats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{stats.successful_syncs}</div>
+                    <div className="text-sm text-muted-foreground">Successful</div>
                   </div>
-                )}
-
-                {conflicts.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Recent Conflicts</h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {conflicts.slice(0, 5).map((conflict) => (
-                        <div key={conflict.id} className="border rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">{conflict.conflict_type}</Badge>
-                              <span className="text-sm text-muted-foreground">
-                                {formatDistanceToNow(new Date(conflict.created_at))} ago
-                              </span>
-                            </div>
-                            {conflict.resolved ? (
-                              <CheckCircle className="h-4 w-4 text-green-400" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-400" />
-                            )}
-                          </div>
-                          {!conflict.resolved && conflict.requires_user_input && (
-                            <Button
-                              size="sm"
-                              onClick={() => resolveConflict(conflict.id, conflict.server_data)}
-                              disabled={isProcessing}
-                            >
-                              Resolve
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{stats.failed_syncs}</div>
+                    <div className="text-sm text-muted-foreground">Failed</div>
                   </div>
-                )}
-              </div>
-            </TabsContent>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{stats.unresolved_conflicts}</div>
+                    <div className="text-sm text-muted-foreground">Conflicts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{stats.average_sync_duration}ms</div>
+                    <div className="text-sm text-muted-foreground">Avg Duration</div>
+                  </div>
+                </div>
+              )}
 
-            <TabsContent value="logs" className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Sync Operation Logs</h3>
-                
-                {syncLogs.length > 0 ? (
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {syncLogs.map((log) => (
-                      <div key={log.id} className="border rounded-lg p-3">
-                        <div className="flex items-center justify-between">
+              <Separator />
+
+              {/* Recent Sync Logs */}
+              <div className="space-y-2">
+                <Label>Recent Sync Operations</Label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {syncLogs.map((log) => (
+                    <div key={log.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
                           <div className="flex items-center gap-2">
                             <Badge variant={log.success ? "default" : "destructive"}>
                               {log.sync_type}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {formatDistanceToNow(new Date(log.start_time))} ago
-                            </span>
+                            <span className="text-sm">{log.operation_type}</span>
                           </div>
-                          {log.success ? (
-                            <CheckCircle className="h-4 w-4 text-green-400" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-400" />
-                          )}
+                          <p className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(log.start_time))} ago
+                            {log.duration_ms && ` • ${log.duration_ms}ms`}
+                            {log.locations_synced && ` • ${log.locations_synced} locations`}
+                          </p>
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {log.locations_synced} locations synced • {log.duration_ms}ms
-                          {log.conflicts_detected && log.conflicts_detected > 0 && (
-                            <> • {log.conflicts_detected} conflicts</>
-                          )}
-                        </div>
-                        {log.error_message && (
-                          <div className="text-sm text-red-400 mt-1">
-                            Error: {log.error_message}
-                          </div>
+                        {!log.success && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
                         )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    No sync operations recorded yet
-                  </div>
-                )}
+                      {log.error_message && (
+                        <p className="text-sm text-red-600 mt-2">{log.error_message}</p>
+                      )}
+                    </div>
+                  ))}
+                  {syncLogs.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No sync operations yet</p>
+                  )}
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
+}
