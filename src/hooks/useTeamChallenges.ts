@@ -33,7 +33,26 @@ export function useTeamChallenges() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTeams(data || []);
+      
+      // Map database fields to our Team type
+      const mappedTeams: Team[] = (data || []).map(team => ({
+        id: team.id,
+        name: team.name,
+        description: team.description,
+        created_by: team.created_by,
+        creator_id: team.created_by,
+        created_at: team.created_at,
+        updated_at: team.updated_at,
+        image_url: team.image_url,
+        is_active: team.is_active,
+        max_members: team.max_members,
+        members_count: 0, // Will be populated separately if needed
+        member_count: 0,
+        challenges_count: 0,
+        total_points: 0
+      }));
+      
+      setTeams(mappedTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
       toast({
@@ -63,9 +82,27 @@ export function useTeamChallenges() {
       if (error && error.code !== 'PGRST116') throw error;
       
       if (data && data.team) {
-        setUserTeam(data.team as Team);
-        fetchTeamMembers(data.team.id);
-        fetchTeamProgress(data.team.id);
+        const team = data.team as any;
+        const mappedTeam: Team = {
+          id: team.id,
+          name: team.name,
+          description: team.description,
+          created_by: team.created_by,
+          creator_id: team.created_by,
+          created_at: team.created_at,
+          updated_at: team.updated_at,
+          image_url: team.image_url,
+          is_active: team.is_active,
+          max_members: team.max_members,
+          members_count: 0,
+          member_count: 0,
+          challenges_count: 0,
+          total_points: 0
+        };
+        
+        setUserTeam(mappedTeam);
+        fetchTeamMembers(team.id);
+        fetchTeamProgress(team.id);
       }
     } catch (error) {
       console.error('Error fetching user team:', error);
@@ -81,7 +118,21 @@ export function useTeamChallenges() {
         .eq('is_active', true);
 
       if (error) throw error;
-      setTeamMembers(data || []);
+      
+      // Map database fields to our TeamMember type
+      const mappedMembers: TeamMember[] = (data || []).map(member => ({
+        id: member.id,
+        user_id: member.user_id,
+        team_id: member.team_id,
+        role: member.role,
+        joined_date: member.joined_at,
+        joined_at: member.joined_at,
+        points_contributed: member.points_contributed || 0,
+        contribution_points: member.points_contributed || 0,
+        is_active: member.is_active
+      }));
+      
+      setTeamMembers(mappedMembers);
     } catch (error) {
       console.error('Error fetching team members:', error);
     }
@@ -106,16 +157,8 @@ export function useTeamChallenges() {
 
   const fetchTeamProgress = async (teamId: string) => {
     try {
-      // Since team_challenge_progress might not be in Supabase types yet, we'll use a generic query
-      const { data, error } = await supabase
-        .rpc('get_team_challenge_progress', { team_id: teamId });
-
-      if (error && error.code !== '42883') { // Function doesn't exist error
-        console.error('Error fetching team progress:', error);
-        return;
-      }
-      
       // For now, set empty array until the database function is created
+      // In the future, this would query team_challenge_progress table
       setTeamProgress([]);
     } catch (error) {
       console.error('Error fetching team progress:', error);
