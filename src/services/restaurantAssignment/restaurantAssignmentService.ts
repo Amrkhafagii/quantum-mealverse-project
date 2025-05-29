@@ -2,362 +2,260 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Meal } from '@/types/food';
 import {
-  RestaurantFoodCapability,
-  MealPlanRestaurantAssignment,
   RestaurantAssignmentDetail,
-  MealFoodItem,
   CapableRestaurant,
-  MultiRestaurantAssignmentResult,
-  RestaurantAssignmentOptions
+  RestaurantAssignmentOptions,
+  MultiRestaurantAssignmentResult
 } from '@/types/restaurantAssignment';
 
 export class RestaurantAssignmentService {
   /**
-   * Find restaurants capable of preparing a complete meal
-   */
-  static async findCapableRestaurantsForMeal(
-    meal: Meal,
-    options: RestaurantAssignmentOptions = {}
-  ): Promise<CapableRestaurant[]> {
-    const {
-      max_distance_km = 50,
-      customer_latitude,
-      customer_longitude
-    } = options;
-
-    // Convert meal foods to the format expected by the database function
-    const foodItems = meal.foods.map(mealFood => ({
-      food_name: mealFood.food.name,
-      quantity: mealFood.portionSize
-    }));
-
-    try {
-      const { data, error } = await supabase.rpc('find_capable_restaurants_for_meal', {
-        p_food_items: foodItems,
-        p_max_distance_km: max_distance_km,
-        p_customer_lat: customer_latitude || null,
-        p_customer_lng: customer_longitude || null
-      });
-
-      if (error) {
-        console.error('Error finding capable restaurants:', error);
-        throw error;
-      }
-
-      return (data || []).map((restaurant: any) => ({
-        restaurant_id: restaurant.restaurant_id,
-        restaurant_name: restaurant.restaurant_name,
-        distance_km: restaurant.distance_km,
-        estimated_prep_time: restaurant.estimated_prep_time,
-        can_prepare_complete_meal: restaurant.can_prepare_complete_meal
-      }));
-    } catch (error) {
-      console.error('Error in findCapableRestaurantsForMeal:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if a specific restaurant can prepare all foods in a meal
-   */
-  static async checkRestaurantMealCapability(
-    restaurantId: string,
-    meal: Meal
-  ): Promise<boolean> {
-    const foodItems = meal.foods.map(mealFood => ({
-      food_name: mealFood.food.name,
-      quantity: mealFood.portionSize
-    }));
-
-    try {
-      const { data, error } = await supabase.rpc('check_restaurant_meal_capability', {
-        p_restaurant_id: restaurantId,
-        p_food_items: foodItems
-      });
-
-      if (error) {
-        console.error('Error checking restaurant capability:', error);
-        return false;
-      }
-
-      return data || false;
-    } catch (error) {
-      console.error('Error in checkRestaurantMealCapability:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Create a multi-restaurant assignment for a meal when no single restaurant can handle it
-   */
-  static async createMultiRestaurantAssignment(
-    meal: Meal,
-    options: RestaurantAssignmentOptions = {}
-  ): Promise<MultiRestaurantAssignmentResult> {
-    const {
-      customer_latitude,
-      customer_longitude
-    } = options;
-
-    const foodItems = meal.foods.map(mealFood => ({
-      food_name: mealFood.food.name,
-      quantity: mealFood.portionSize
-    }));
-
-    try {
-      const { data, error } = await supabase.rpc('create_multi_restaurant_assignment', {
-        p_food_items: foodItems,
-        p_customer_lat: customer_latitude || null,
-        p_customer_lng: customer_longitude || null
-      });
-
-      if (error) {
-        console.error('Error creating multi-restaurant assignment:', error);
-        throw error;
-      }
-
-      // Cast the JSON response to proper types
-      const result = data as any;
-      return {
-        assignments: result.assignments || [],
-        total_price: result.total_price || 0,
-        strategy: result.strategy || 'multi_restaurant'
-      };
-    } catch (error) {
-      console.error('Error in createMultiRestaurantAssignment:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get restaurant food capabilities for a specific restaurant
-   */
-  static async getRestaurantCapabilities(restaurantId: string): Promise<RestaurantFoodCapability[]> {
-    try {
-      const { data, error } = await supabase
-        .from('restaurant_food_capabilities')
-        .select(`
-          *,
-          food_items (
-            name,
-            category
-          )
-        `)
-        .eq('restaurant_id', restaurantId)
-        .eq('is_available', true);
-
-      if (error) {
-        console.error('Error fetching restaurant capabilities:', error);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Error in getRestaurantCapabilities:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Assign restaurants to a meal plan with the optimal strategy
+   * Assigns restaurants to a meal based on proximity only (no capability checks)
    */
   static async assignRestaurantsToMeal(
     meal: Meal,
     options: RestaurantAssignmentOptions = {}
   ): Promise<RestaurantAssignmentDetail[]> {
+    console.log('Assigning restaurants to meal based on proximity:', meal.name);
+
     const {
       strategy = 'single_restaurant',
-      prefer_single_restaurant = true
+      max_distance_km = 50,
+      customer_latitude,
+      customer_longitude
     } = options;
 
-    console.log('Assigning restaurants to meal:', meal.name, 'with strategy:', strategy);
-
     try {
-      // First, try to find restaurants that can prepare the complete meal
-      const capableRestaurants = await this.findCapableRestaurantsForMeal(meal, options);
-      
-      // Filter restaurants that can prepare the complete meal
-      const completeCapableRestaurants = capableRestaurants.filter(r => r.can_prepare_complete_meal);
+      // Get nearby restaurants based on location only
+      const nearbyRestaurants = await this.findNearbyRestaurants(
+        customer_latitude,
+        customer_longitude,
+        max_distance_km
+      );
 
-      if (completeCapableRestaurants.length > 0 && (strategy === 'single_restaurant' || prefer_single_restaurant)) {
-        // Use the best single restaurant
-        const bestRestaurant = completeCapableRestaurants[0];
-        
-        // Calculate pricing for this restaurant
-        const { MealPricingService } = await import('@/services/foodPricing/mealPricingService');
-        const pricing = await MealPricingService.calculateMealPrice(meal, bestRestaurant.restaurant_id);
-
-        return [{
-          restaurant_id: bestRestaurant.restaurant_id,
-          restaurant_name: bestRestaurant.restaurant_name,
-          food_items: meal.foods.map(mealFood => ({
-            food_name: mealFood.food.name,
-            quantity: mealFood.portionSize,
-            unit: 'grams'
-          })),
-          subtotal: pricing.total_price,
-          estimated_prep_time: bestRestaurant.estimated_prep_time,
-          distance_km: bestRestaurant.distance_km
-        }];
+      if (!nearbyRestaurants || nearbyRestaurants.length === 0) {
+        console.log('No nearby restaurants found, getting default restaurants');
+        return await this.getDefaultRestaurants(meal);
       }
 
-      // If no single restaurant can handle it, or strategy is multi-restaurant
-      if (strategy === 'multi_restaurant' || completeCapableRestaurants.length === 0) {
-        const multiAssignment = await this.createMultiRestaurantAssignment(meal, options);
-        return multiAssignment.assignments;
+      const assignments: RestaurantAssignmentDetail[] = [];
+
+      if (strategy === 'single_restaurant') {
+        // Assign to the nearest restaurant
+        const nearestRestaurant = nearbyRestaurants[0];
+        const assignment = this.createRestaurantAssignment(meal, nearestRestaurant);
+        assignments.push(assignment);
+      } else {
+        // For multi-restaurant, still assign to nearest for simplicity
+        const nearestRestaurant = nearbyRestaurants[0];
+        const assignment = this.createRestaurantAssignment(meal, nearestRestaurant);
+        assignments.push(assignment);
       }
 
-      // Fallback to cheapest strategy
-      if (strategy === 'cheapest') {
-        // For cheapest, we need to compare single vs multi-restaurant costs
-        let bestOption: RestaurantAssignmentDetail[] = [];
-        let bestPrice = Infinity;
-
-        // Check single restaurant options
-        for (const restaurant of completeCapableRestaurants) {
-          const { MealPricingService } = await import('@/services/foodPricing/mealPricingService');
-          const pricing = await MealPricingService.calculateMealPrice(meal, restaurant.restaurant_id);
-          
-          if (pricing.total_price < bestPrice) {
-            bestPrice = pricing.total_price;
-            bestOption = [{
-              restaurant_id: restaurant.restaurant_id,
-              restaurant_name: restaurant.restaurant_name,
-              food_items: meal.foods.map(mealFood => ({
-                food_name: mealFood.food.name,
-                quantity: mealFood.portionSize,
-                unit: 'grams'
-              })),
-              subtotal: pricing.total_price,
-              estimated_prep_time: restaurant.estimated_prep_time,
-              distance_km: restaurant.distance_km
-            }];
-          }
-        }
-
-        // Check multi-restaurant option
-        const multiAssignment = await this.createMultiRestaurantAssignment(meal, options);
-        if (multiAssignment.total_price < bestPrice) {
-          bestOption = multiAssignment.assignments;
-        }
-
-        return bestOption;
-      }
-
-      throw new Error('No restaurants found that can prepare this meal');
+      console.log('Restaurant assignment completed:', assignments);
+      return assignments;
     } catch (error) {
       console.error('Error in assignRestaurantsToMeal:', error);
-      throw error;
+      return await this.getDefaultRestaurants(meal);
     }
   }
 
   /**
-   * Save meal plan restaurant assignment to database
+   * Finds nearby restaurants based on customer location
+   */
+  private static async findNearbyRestaurants(
+    latitude?: number,
+    longitude?: number,
+    maxDistance: number = 50
+  ): Promise<any[]> {
+    try {
+      if (!latitude || !longitude) {
+        console.log('No customer location provided, getting default restaurants');
+        // Get any available restaurants when no location is provided
+        const { data: restaurants, error } = await supabase
+          .from('restaurants')
+          .select('id, name, address, latitude, longitude, phone')
+          .eq('is_active', true)
+          .limit(5);
+
+        if (error) throw error;
+        
+        return (restaurants || []).map((restaurant, index) => ({
+          restaurant_id: restaurant.id,
+          restaurant_name: restaurant.name,
+          distance_km: 5 + index, // Mock distance for restaurants without location
+          address: restaurant.address,
+          phone: restaurant.phone,
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude
+        }));
+      }
+
+      // Use the RPC function to find nearest restaurants
+      const { data: nearbyRestaurants, error } = await supabase.rpc('find_nearest_restaurant', {
+        order_lat: latitude,
+        order_lng: longitude,
+        max_distance_km: maxDistance
+      });
+
+      if (error) {
+        console.error('Error calling find_nearest_restaurant:', error);
+        throw error;
+      }
+
+      return nearbyRestaurants || [];
+    } catch (error) {
+      console.error('Error finding nearby restaurants:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Gets default restaurants when location-based search fails
+   */
+  private static async getDefaultRestaurants(meal: Meal): Promise<RestaurantAssignmentDetail[]> {
+    try {
+      const { data: restaurants, error } = await supabase
+        .from('restaurants')
+        .select('id, name, address, phone')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (error) throw error;
+
+      if (!restaurants || restaurants.length === 0) {
+        throw new Error('No restaurants available');
+      }
+
+      const restaurant = restaurants[0];
+      const assignment = this.createRestaurantAssignment(meal, {
+        restaurant_id: restaurant.id,
+        restaurant_name: restaurant.name,
+        distance_km: 5, // Default distance
+        address: restaurant.address,
+        phone: restaurant.phone
+      });
+
+      return [assignment];
+    } catch (error) {
+      console.error('Error getting default restaurants:', error);
+      throw new Error('No restaurants available for assignment');
+    }
+  }
+
+  /**
+   * Creates a restaurant assignment for a meal
+   */
+  private static createRestaurantAssignment(
+    meal: Meal,
+    restaurant: any
+  ): RestaurantAssignmentDetail {
+    // Calculate a simple price based on meal components
+    const basePrice = Math.max(meal.totalCalories * 0.05, 8.00); // $0.05 per calorie, minimum $8
+    
+    const foodItems = meal.foods.map(mealFood => ({
+      food_name: mealFood.food.name,
+      quantity: mealFood.portionSize,
+      unit: 'grams',
+      price_per_unit: 0.02, // Simple pricing
+      total_price: mealFood.portionSize * 0.02
+    }));
+
+    return {
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name,
+      food_items: foodItems,
+      subtotal: basePrice,
+      estimated_prep_time: 20 + (meal.foods.length * 5), // 20 base + 5 per food item
+      distance_km: restaurant.distance_km || 5
+    };
+  }
+
+  /**
+   * Legacy method - now just calls assignRestaurantsToMeal for compatibility
+   */
+  static async findCapableRestaurantsForMeal(
+    meal: Meal,
+    options: RestaurantAssignmentOptions = {}
+  ): Promise<CapableRestaurant[]> {
+    console.log('findCapableRestaurantsForMeal called - using proximity-based assignment');
+    
+    try {
+      const assignments = await this.assignRestaurantsToMeal(meal, options);
+      
+      return assignments.map(assignment => ({
+        restaurant_id: assignment.restaurant_id,
+        restaurant_name: assignment.restaurant_name,
+        distance_km: assignment.distance_km || 5,
+        estimated_prep_time: assignment.estimated_prep_time || 30,
+        can_prepare_complete_meal: true // Always true since we don't check capabilities
+      }));
+    } catch (error) {
+      console.error('Error in findCapableRestaurantsForMeal:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Legacy method - simplified to always return true
+   */
+  static async checkRestaurantMealCapability(
+    restaurantId: string,
+    meal: Meal
+  ): Promise<boolean> {
+    console.log('checkRestaurantMealCapability called - always returning true for proximity-based assignment');
+    return true; // Always return true since we don't check capabilities anymore
+  }
+
+  /**
+   * Creates a multi-restaurant assignment (simplified to single restaurant)
+   */
+  static async createMultiRestaurantAssignment(
+    meal: Meal,
+    options: RestaurantAssignmentOptions = {}
+  ): Promise<MultiRestaurantAssignmentResult> {
+    const assignments = await this.assignRestaurantsToMeal(meal, {
+      ...options,
+      strategy: 'single_restaurant'
+    });
+
+    const totalPrice = assignments.reduce((sum, assignment) => sum + assignment.subtotal, 0);
+
+    return {
+      assignments,
+      total_price: totalPrice,
+      strategy: 'proximity_based'
+    };
+  }
+
+  /**
+   * Saves meal plan assignment to database
    */
   static async saveMealPlanAssignment(
     mealPlanId: string,
     assignments: RestaurantAssignmentDetail[],
     strategy: string
-  ): Promise<MealPlanRestaurantAssignment | null> {
-    const totalPrice = assignments.reduce((sum, assignment) => sum + assignment.subtotal, 0);
-
+  ): Promise<boolean> {
     try {
-      const { data, error } = await supabase
+      const totalPrice = assignments.reduce((sum, assignment) => sum + assignment.subtotal, 0);
+
+      const { error } = await supabase
         .from('meal_plan_restaurant_assignments')
         .insert({
           meal_plan_id: mealPlanId,
-          restaurant_assignments: assignments as any, // Cast to Json type
+          restaurant_assignments: assignments as any,
           total_price: totalPrice,
           assignment_strategy: strategy
-        })
-        .select()
-        .single();
+        });
 
       if (error) {
         console.error('Error saving meal plan assignment:', error);
-        throw error;
-      }
-
-      // Cast the response to proper type
-      return {
-        ...data,
-        restaurant_assignments: (data.restaurant_assignments as unknown) as RestaurantAssignmentDetail[],
-        assignment_strategy: data.assignment_strategy as 'single_restaurant' | 'multi_restaurant' | 'cheapest'
-      };
-    } catch (error) {
-      console.error('Error in saveMealPlanAssignment:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get existing meal plan assignment
-   */
-  static async getMealPlanAssignment(mealPlanId: string): Promise<MealPlanRestaurantAssignment | null> {
-    try {
-      const { data, error } = await supabase
-        .from('meal_plan_restaurant_assignments')
-        .select('*')
-        .eq('meal_plan_id', mealPlanId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching meal plan assignment:', error);
-        return null;
-      }
-
-      if (!data) return null;
-
-      // Cast the response to proper type
-      return {
-        ...data,
-        restaurant_assignments: (data.restaurant_assignments as unknown) as RestaurantAssignmentDetail[],
-        assignment_strategy: data.assignment_strategy as 'single_restaurant' | 'multi_restaurant' | 'cheapest'
-      };
-    } catch (error) {
-      console.error('Error in getMealPlanAssignment:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Update restaurant food capabilities
-   */
-  static async updateRestaurantCapabilities(
-    restaurantId: string,
-    capabilities: Partial<RestaurantFoodCapability>[]
-  ): Promise<boolean> {
-    try {
-      for (const capability of capabilities) {
-        // Ensure required fields are present
-        if (!capability.food_item_id) {
-          console.error('Missing food_item_id for capability update');
-          continue;
-        }
-
-        const { error } = await supabase
-          .from('restaurant_food_capabilities')
-          .upsert({
-            restaurant_id: restaurantId,
-            food_item_id: capability.food_item_id,
-            is_available: capability.is_available ?? true,
-            preparation_time_minutes: capability.preparation_time_minutes,
-            minimum_quantity_grams: capability.minimum_quantity_grams,
-            maximum_quantity_grams: capability.maximum_quantity_grams,
-            updated_at: new Date().toISOString()
-          });
-
-        if (error) {
-          console.error('Error updating restaurant capability:', error);
-          throw error;
-        }
+        return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in updateRestaurantCapabilities:', error);
+      console.error('Error in saveMealPlanAssignment:', error);
       return false;
     }
   }
