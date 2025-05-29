@@ -1,45 +1,39 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { PreparationStageService } from '@/services/preparation/preparationStageService';
-import { useConnectionStatus } from './useConnectionStatus';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { PreparationStageService } from '@/services/preparation/preparationStageService';
+import { toast } from 'react-hot-toast';
 
 export const usePreparationStages = (orderId: string) => {
   const [stages, setStages] = useState<any[]>([]);
-  const [progress, setProgress] = useState<any[]>([]);
-  const [overallProgress, setOverallProgress] = useState<number>(0);
-  const [timerState, setTimerState] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdvancing, setIsAdvancing] = useState(false);
-  const [isSkipping, setIsSkipping] = useState(false);
-  const { isOnline } = useConnectionStatus();
+  const [overallProgress, setOverallProgress] = useState(0);
 
-  const loadStages = useCallback(async () => {
-    if (!orderId || !isOnline) return;
-
-    try {
-      setIsLoading(true);
-      const [stagesData, progressData, overallProg] = await Promise.all([
-        PreparationStageService.getOrderPreparationStages(orderId),
-        PreparationStageService.getPreparationProgress(orderId),
-        PreparationStageService.getOverallProgress(orderId)
-      ]);
-
-      setStages(stagesData);
-      setProgress(progressData);
-      setOverallProgress(overallProg);
-    } catch (error) {
-      console.error('Error loading preparation stages:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [orderId, isOnline]);
-
-  // Real-time updates
   useEffect(() => {
-    if (!orderId || !isOnline) return;
+    if (!orderId) return;
 
-    const channel = supabase
+    const fetchStages = async () => {
+      try {
+        setIsLoading(true);
+        const stageData = await PreparationStageService.getOrderPreparationStages(orderId);
+        setStages(stageData);
+        
+        // Calculate overall progress
+        const completedStages = stageData.filter(s => s.status === 'completed').length;
+        const progress = stageData.length > 0 ? (completedStages / stageData.length) * 100 : 0;
+        setOverallProgress(Math.round(progress));
+      } catch (error) {
+        console.error('Error fetching preparation stages:', error);
+        toast.error('Failed to load preparation stages');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStages();
+
+    // Set up real-time subscription for stage updates
+    const subscription = supabase
       .channel(`preparation_stages_${orderId}`)
       .on(
         'postgres_changes',
@@ -47,96 +41,77 @@ export const usePreparationStages = (orderId: string) => {
           event: '*',
           schema: 'public',
           table: 'order_preparation_stages',
-          filter: `order_id=eq.${orderId}`
+          filter: `order_id=eq.${orderId}`,
         },
         () => {
-          loadStages();
+          fetchStages();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      subscription.unsubscribe();
     };
-  }, [orderId, isOnline, loadStages]);
-
-  useEffect(() => {
-    loadStages();
-  }, [loadStages]);
-
-  const getCurrentStage = useCallback(() => {
-    return stages.find(stage => stage.status === 'in_progress') || null;
-  }, [stages]);
-
-  const startStage = async (stageName: string) => {
-    return await PreparationStageService.startStage(orderId, stageName);
-  };
+  }, [orderId]);
 
   const advanceStage = async (stageName: string, notes?: string) => {
-    setIsAdvancing(true);
     try {
       const result = await PreparationStageService.advanceStage(orderId, stageName, notes);
       if (result.success) {
-        await loadStages();
+        toast.success(`${stageName} stage completed!`);
+        // Refetch stages to get updated data
+        const updatedStages = await PreparationStageService.getOrderPreparationStages(orderId);
+        setStages(updatedStages);
+        
+        // Update progress
+        const completedStages = updatedStages.filter(s => s.status === 'completed').length;
+        const progress = updatedStages.length > 0 ? (completedStages / updatedStages.length) * 100 : 0;
+        setOverallProgress(Math.round(progress));
+      } else {
+        toast.error(result.message || 'Failed to advance stage');
       }
       return result;
-    } finally {
-      setIsAdvancing(false);
-    }
-  };
-
-  const skipStage = async (stageName: string, reason?: string) => {
-    setIsSkipping(true);
-    try {
-      const result = await PreparationStageService.skipStage(orderId, stageName, reason);
-      if (result) {
-        await loadStages();
-      }
-      return result;
-    } finally {
-      setIsSkipping(false);
+    } catch (error) {
+      console.error('Error advancing stage:', error);
+      toast.error('Failed to advance stage');
+      return { success: false, message: 'Failed to advance stage' };
     }
   };
 
   const updateNotes = async (stageName: string, notes: string) => {
-    return await PreparationStageService.updateStageNotes(orderId, stageName, notes);
+    try {
+      const success = await PreparationStageService.updateStageNotes(orderId, stageName, notes);
+      if (success) {
+        toast.success('Notes updated successfully');
+        // Refetch stages to get updated data
+        const updatedStages = await PreparationStageService.getOrderPreparationStages(orderId);
+        setStages(updatedStages);
+      } else {
+        toast.error('Failed to update notes');
+      }
+      return success;
+    } catch (error) {
+      console.error('Error updating notes:', error);
+      toast.error('Failed to update notes');
+      return false;
+    }
   };
 
-  const getEstimatedCompletionTime = async () => {
-    return await PreparationStageService.getEstimatedCompletionTime(orderId);
-  };
-
-  const getElapsedMinutes = (startedAt: string) => {
-    if (!startedAt) return 0;
-    const started = new Date(startedAt);
+  const getElapsedMinutes = (stageName: string) => {
+    const stage = stages.find(s => s.stage_name === stageName);
+    if (!stage || !stage.started_at) return 0;
+    
+    const startTime = new Date(stage.started_at);
     const now = new Date();
-    return Math.floor((now.getTime() - started.getTime()) / (1000 * 60));
-  };
-
-  const pauseTimer = () => {
-    setTimerState((prev: any) => prev ? { ...prev, isRunning: false } : null);
-  };
-
-  const resumeTimer = () => {
-    setTimerState((prev: any) => prev ? { ...prev, isRunning: true } : null);
+    return Math.floor((now.getTime() - startTime.getTime()) / (1000 * 60));
   };
 
   return {
     stages,
-    progress,
-    overallProgress,
-    timerState,
-    getCurrentStage,
-    startStage,
-    advanceStage,
-    skipStage,
-    updateNotes,
-    getEstimatedCompletionTime,
-    getElapsedMinutes,
-    pauseTimer,
-    resumeTimer,
     isLoading,
-    isAdvancing,
-    isSkipping
+    overallProgress,
+    advanceStage,
+    updateNotes,
+    getElapsedMinutes
   };
 };

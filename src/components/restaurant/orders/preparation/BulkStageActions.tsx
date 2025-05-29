@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, SkipForward, Clock } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FastForward, CheckCircle2, Clock } from 'lucide-react';
 import { usePreparationStages } from '@/hooks/usePreparationStages';
+import { toast } from 'react-hot-toast';
 
 interface BulkStageActionsProps {
   orderId: string;
@@ -10,100 +12,81 @@ interface BulkStageActionsProps {
   onSkipToReady?: () => void;
 }
 
-export const BulkStageActions: React.FC<BulkStageActionsProps> = ({ 
-  orderId, 
+export const BulkStageActions: React.FC<BulkStageActionsProps> = ({
+  orderId,
   onMarkAllComplete,
-  onSkipToReady 
+  onSkipToReady
 }) => {
-  const {
-    stages,
-    getCurrentStage,
-    advanceStage,
-    skipStage,
-    isAdvancing,
-    isSkipping
-  } = usePreparationStages(orderId);
+  const { stages, advanceStage } = usePreparationStages(orderId);
 
-  const currentStage = getCurrentStage();
-  const hasInProgressStage = !!currentStage;
-  const hasMultiplePendingStages = stages?.filter(s => s.status === 'pending').length > 1;
+  const handleMarkAllComplete = async () => {
+    try {
+      const pendingStages = stages.filter(s => s.status !== 'completed');
+      
+      for (const stage of pendingStages) {
+        await advanceStage(stage.stage_name, 'Bulk completion');
+      }
+      
+      toast.success('All stages marked as complete!');
+      onMarkAllComplete?.();
+    } catch (error) {
+      console.error('Error marking all stages complete:', error);
+      toast.error('Failed to complete all stages');
+    }
+  };
 
   const handleSkipToReady = async () => {
-    if (!stages) return;
-
-    // Skip all pending and in-progress stages except 'ready'
-    const stagesToSkip = stages.filter(
-      s => (s.status === 'pending' || s.status === 'in_progress') && s.stage_name !== 'ready'
-    );
-
-    for (const stage of stagesToSkip) {
-      await skipStage(stage.stage_name, 'Bulk skip to ready');
+    try {
+      // Find the ready stage and complete it directly
+      const readyStage = stages.find(s => s.stage_name === 'ready');
+      if (readyStage) {
+        await advanceStage('ready', 'Skipped to ready');
+        toast.success('Order marked as ready for pickup!');
+        onSkipToReady?.();
+      }
+    } catch (error) {
+      console.error('Error skipping to ready:', error);
+      toast.error('Failed to mark order as ready');
     }
-
-    // Mark ready stage as ready
-    const readyStage = stages.find(s => s.stage_name === 'ready');
-    if (readyStage && readyStage.status === 'pending') {
-      await advanceStage('ready', 'Order marked as ready');
-    }
-
-    onSkipToReady?.();
   };
 
-  const handleAdvanceAll = async () => {
-    if (!currentStage || !stages) return;
+  const hasIncompleteStages = stages.some(s => s.status !== 'completed');
+  const isReadyStageComplete = stages.find(s => s.stage_name === 'ready')?.status === 'completed';
 
-    // Complete current stage and advance through remaining stages
-    await advanceStage(currentStage.stage_name, 'Bulk completion');
-    onMarkAllComplete?.();
-  };
-
-  if (!hasInProgressStage && !hasMultiplePendingStages) {
+  if (!hasIncompleteStages) {
     return null;
   }
 
   return (
-    <div className="bg-gray-50 p-4 rounded-lg border">
-      <h4 className="font-medium text-gray-800 mb-3">Quick Actions</h4>
-      
-      <div className="flex flex-wrap gap-2">
-        {hasInProgressStage && (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center">
+          <Clock className="h-5 w-5 mr-2" />
+          Quick Actions
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex gap-3">
           <Button
-            size="sm"
-            onClick={handleAdvanceAll}
-            disabled={isAdvancing}
-            className="bg-green-500 hover:bg-green-600"
-          >
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Complete Current Stage
-          </Button>
-        )}
-        
-        {hasMultiplePendingStages && (
-          <Button
-            size="sm"
+            onClick={handleMarkAllComplete}
             variant="outline"
-            onClick={handleSkipToReady}
-            disabled={isSkipping}
-            className="border-orange-500 text-orange-600 hover:bg-orange-50"
+            className="flex-1"
           >
-            <SkipForward className="h-3 w-3 mr-1" />
-            Skip to Ready
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Mark All Complete
           </Button>
-        )}
-        
-        <Button
-          size="sm"
-          variant="outline"
-          className="border-blue-500 text-blue-600 hover:bg-blue-50"
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          Estimate Time
-        </Button>
-      </div>
-      
-      <p className="text-xs text-gray-500 mt-2">
-        Use bulk actions to quickly progress through stages when needed
-      </p>
-    </div>
+          
+          {!isReadyStageComplete && (
+            <Button
+              onClick={handleSkipToReady}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              <FastForward className="h-4 w-4 mr-2" />
+              Mark Ready for Pickup
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

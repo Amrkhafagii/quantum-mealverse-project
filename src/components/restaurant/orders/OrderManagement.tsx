@@ -1,346 +1,352 @@
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, MapPin, Phone, User } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Clock, CheckCircle, XCircle, Users, ChefHat } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { EnhancedOrderPreparation } from './preparation/EnhancedOrderPreparation';
-import { PreparationIntegrationService } from '@/services/preparation/preparationIntegrationService';
-
-interface Order {
-  id: string;
-  formatted_order_id: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_email: string;
-  delivery_address: string;
-  total: number;
-  status: string;
-  created_at: string;
-  notes?: string;
-  order_items?: Array<{
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-  }>;
-}
 
 interface OrderManagementProps {
   restaurantId: string;
 }
 
 const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [acceptedOrders, setAcceptedOrders] = useState<Order[]>([]);
-  const [preparationOrders, setPreparationOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('pending');
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchOrders();
-    
-    // Set up real-time subscription for orders
-    const channel = supabase
-      .channel('order_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-        },
-        () => {
-          fetchOrders();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [restaurantId]);
-
-  const fetchOrders = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch orders with restaurant assignments
-      const { data: orders, error } = await supabase
+  // Fetch pending orders (new orders waiting for restaurant acceptance)
+  const { data: pendingOrders = [], isLoading: pendingLoading } = useQuery({
+    queryKey: ['pending-orders', restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
-          order_items (
-            id,
-            name,
-            quantity,
-            price
-          )
+          order_items(*)
         `)
-        .in('id', 
-          await supabase
-            .from('restaurant_assignments')
-            .select('order_id')
-            .eq('restaurant_id', restaurantId)
-            .then(({ data }) => data?.map(a => a.order_id) || [])
-        )
-        .order('created_at', { ascending: false });
+        .eq('restaurant_id', restaurantId)
+        .in('status', ['pending', 'restaurant_assigned'])
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
 
-      if (orders) {
-        // Categorize orders by status
-        setPendingOrders(orders.filter(order => order.status === 'pending'));
-        setAcceptedOrders(orders.filter(order => order.status === 'restaurant_accepted'));
-        setPreparationOrders(orders.filter(order => 
-          ['preparing', 'ready_for_pickup'].includes(order.status)
-        ));
-      }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch orders",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAcceptOrder = async (orderId: string) => {
-    try {
-      // Update order status to restaurant_accepted
-      const { error: updateError } = await supabase
+  // Fetch accepted orders that are in preparation
+  const { data: preparationOrders = [], isLoading: preparationLoading } = useQuery({
+    queryKey: ['preparation-orders', restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('orders')
-        .update({ status: 'restaurant_accepted' })
-        .eq('id', orderId);
+        .select(`
+          *,
+          order_items(*),
+          order_preparation_stages(*)
+        `)
+        .eq('restaurant_id', restaurantId)
+        .in('status', ['restaurant_accepted', 'preparing'])
+        .order('created_at', { ascending: true });
 
-      if (updateError) throw updateError;
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 3000, // Refresh every 3 seconds for active preparation
+  });
 
-      // Initialize preparation tracking
-      await PreparationIntegrationService.initializePreparationTracking(orderId, restaurantId);
+  // Fetch orders ready for pickup
+  const { data: readyOrders = [], isLoading: readyLoading } = useQuery({
+    queryKey: ['ready-orders', restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(*)
+        `)
+        .eq('restaurant_id', restaurantId)
+        .eq('status', 'ready_for_pickup')
+        .order('created_at', { ascending: true });
 
-      toast({
-        title: "Success",
-        description: "Order accepted successfully",
-        variant: "default"
-      });
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
 
-      fetchOrders();
-    } catch (error) {
+  // Accept order mutation
+  const acceptOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'restaurant_accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .eq('restaurant_id', restaurantId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['preparation-orders'] });
+      toast.success('Order accepted successfully!');
+      // Automatically switch to preparation tab
+      setActiveTab('preparation');
+    },
+    onError: (error) => {
+      toast.error('Failed to accept order');
       console.error('Error accepting order:', error);
-      toast({
-        title: "Error",
-        description: "Failed to accept order",
-        variant: "destructive"
-      });
+    },
+  });
+
+  // Reject order mutation
+  const rejectOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'restaurant_rejected',
+          rejected_at: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .eq('restaurant_id', restaurantId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-orders'] });
+      toast.success('Order rejected');
+    },
+    onError: (error) => {
+      toast.error('Failed to reject order');
+      console.error('Error rejecting order:', error);
+    },
+  });
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const getOrderAge = (createdAt: string) => {
+    const now = new Date();
+    const created = new Date(createdAt);
+    const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes}m ago`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      return `${hours}h ${diffMinutes % 60}m ago`;
     }
   };
 
-  const handleStartPreparation = async (orderId: string) => {
-    try {
-      await PreparationIntegrationService.startPreparation(orderId);
-      
-      toast({
-        title: "Success",
-        description: "Preparation started",
-        variant: "default"
-      });
-
-      fetchOrders();
-    } catch (error) {
-      console.error('Error starting preparation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to start preparation",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'restaurant_accepted': return 'bg-blue-500';
-      case 'preparing': return 'bg-orange-500';
-      case 'ready_for_pickup': return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const OrderCard: React.FC<{ order: Order; showActions?: boolean; actionType?: string }> = ({ 
-    order, 
-    showActions = false, 
-    actionType 
-  }) => (
+  const PendingOrderCard = ({ order }: { order: any }) => (
     <Card className="mb-4">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="flex items-center space-x-2">
-              <span>Order #{order.formatted_order_id}</span>
-              <Badge className={getStatusColor(order.status)}>
-                {order.status.replace('_', ' ')}
-              </Badge>
+            <CardTitle className="text-lg">
+              Order #{order.formatted_order_id || order.id.substring(0, 8)}
             </CardTitle>
-            <CardDescription>
-              <Clock className="inline h-4 w-4 mr-1" />
-              {formatTime(order.created_at)} • ${order.total.toFixed(2)}
-            </CardDescription>
+            <p className="text-sm text-gray-500 mt-1">
+              {getOrderAge(order.created_at)} • {formatCurrency(order.total)}
+            </p>
           </div>
-          {showActions && (
-            <div className="space-x-2">
-              {actionType === 'accept' && (
-                <Button onClick={() => handleAcceptOrder(order.id)}>
-                  Accept Order
-                </Button>
-              )}
-              {actionType === 'start' && (
-                <Button onClick={() => handleStartPreparation(order.id)}>
-                  Start Preparation
-                </Button>
-              )}
-            </div>
-          )}
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
         </div>
       </CardHeader>
       
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <User className="h-4 w-4 text-gray-500" />
-              <span className="font-medium">{order.customer_name}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">{order.customer_phone}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <MapPin className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">{order.delivery_address}</span>
-            </div>
+        <div className="space-y-3">
+          <div>
+            <p className="font-medium">{order.customer_name}</p>
+            <p className="text-sm text-gray-600">{order.delivery_address}</p>
+            <p className="text-sm text-gray-600">{order.customer_phone}</p>
           </div>
           
           <div>
-            <h4 className="font-medium mb-2">Order Items</h4>
+            <h4 className="font-medium mb-2">Order Items:</h4>
             <div className="space-y-1">
-              {order.order_items?.map((item, index) => (
+              {order.order_items?.map((item: any, index: number) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span>{item.quantity}x {item.name}</span>
-                  <span>${item.price.toFixed(2)}</span>
+                  <span>{formatCurrency(item.price)}</span>
                 </div>
               ))}
             </div>
-            
-            {order.notes && (
-              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="text-sm text-yellow-800">Note: {order.notes}</p>
-              </div>
-            )}
+          </div>
+
+          {order.notes && (
+            <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-sm text-blue-800"><strong>Notes:</strong> {order.notes}</p>
+            </div>
+          )}
+          
+          <div className="flex gap-2 pt-2">
+            <Button 
+              onClick={() => acceptOrderMutation.mutate(order.id)}
+              disabled={acceptOrderMutation.isPending}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Accept Order
+            </Button>
+            <Button 
+              onClick={() => rejectOrderMutation.mutate(order.id)}
+              disabled={rejectOrderMutation.isPending}
+              variant="outline"
+              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Reject
+            </Button>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  const ReadyOrderCard = ({ order }: { order: any }) => (
+    <Card className="mb-4">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">
+              Order #{order.formatted_order_id || order.id.substring(0, 8)}
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              {getOrderAge(order.created_at)} • {formatCurrency(order.total)}
+            </p>
+          </div>
+          <Badge className="bg-green-100 text-green-800">
+            Ready for Pickup
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="space-y-3">
+          <div>
+            <p className="font-medium">{order.customer_name}</p>
+            <p className="text-sm text-gray-600">{order.delivery_address}</p>
+            <p className="text-sm text-gray-600">{order.customer_phone}</p>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-2">Order Items:</h4>
+            <div className="space-y-1">
+              {order.order_items?.map((item: any, index: number) => (
+                <div key={index} className="flex justify-between text-sm">
+                  <span>{item.quantity}x {item.name}</span>
+                  <span>{formatCurrency(item.price)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="pending" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending">
-            Pending Assignments ({pendingOrders.length})
+          <TabsTrigger value="pending" className="relative">
+            <Users className="h-4 w-4 mr-2" />
+            Pending Orders
+            {pendingOrders.length > 0 && (
+              <Badge className="ml-2 bg-red-500 text-white text-xs px-1 py-0">
+                {pendingOrders.length}
+              </Badge>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="accepted">
-            Accepted Orders ({acceptedOrders.length})
+          <TabsTrigger value="preparation" className="relative">
+            <ChefHat className="h-4 w-4 mr-2" />
+            In Preparation
+            {preparationOrders.length > 0 && (
+              <Badge className="ml-2 bg-blue-500 text-white text-xs px-1 py-0">
+                {preparationOrders.length}
+              </Badge>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="preparation">
-            Preparation ({preparationOrders.length})
+          <TabsTrigger value="ready" className="relative">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Ready for Pickup
+            {readyOrders.length > 0 && (
+              <Badge className="ml-2 bg-green-500 text-white text-xs px-1 py-0">
+                {readyOrders.length}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Pending Order Assignments</h2>
-            <Badge variant="outline">{pendingOrders.length} orders</Badge>
-          </div>
-          
-          {pendingOrders.length === 0 ? (
-            <Card>
-              <CardContent className="flex items-center justify-center py-8">
-                <p className="text-gray-500">No pending orders</p>
-              </CardContent>
-            </Card>
+          {pendingLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Loading pending orders...</p>
+            </div>
+          ) : pendingOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No pending orders</h3>
+              <p className="text-gray-600">New orders will appear here when customers place them.</p>
+            </div>
           ) : (
-            pendingOrders.map(order => (
-              <OrderCard 
-                key={order.id} 
-                order={order} 
-                showActions={true} 
-                actionType="accept" 
-              />
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="accepted" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Accepted Orders</h2>
-            <Badge variant="outline">{acceptedOrders.length} orders</Badge>
-          </div>
-          
-          {acceptedOrders.length === 0 ? (
-            <Card>
-              <CardContent className="flex items-center justify-center py-8">
-                <p className="text-gray-500">No accepted orders</p>
-              </CardContent>
-            </Card>
-          ) : (
-            acceptedOrders.map(order => (
-              <OrderCard 
-                key={order.id} 
-                order={order} 
-                showActions={true} 
-                actionType="start" 
-              />
+            pendingOrders.map((order) => (
+              <PendingOrderCard key={order.id} order={order} />
             ))
           )}
         </TabsContent>
 
         <TabsContent value="preparation" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Orders in Preparation</h2>
-            <Badge variant="outline">{preparationOrders.length} orders</Badge>
-          </div>
-          
-          {preparationOrders.length === 0 ? (
-            <Card>
-              <CardContent className="flex items-center justify-center py-8">
-                <p className="text-gray-500">No orders in preparation</p>
-              </CardContent>
-            </Card>
+          {preparationLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Loading preparation orders...</p>
+            </div>
+          ) : preparationOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <ChefHat className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No orders in preparation</h3>
+              <p className="text-gray-600">Accepted orders will appear here for preparation management.</p>
+            </div>
           ) : (
-            preparationOrders.map(order => (
+            preparationOrders.map((order) => (
               <EnhancedOrderPreparation key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="ready" className="space-y-4">
+          {readyLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Loading ready orders...</p>
+            </div>
+          ) : readyOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No orders ready</h3>
+              <p className="text-gray-600">Completed orders will appear here when ready for pickup.</p>
+            </div>
+          ) : (
+            readyOrders.map((order) => (
+              <ReadyOrderCard key={order.id} order={order} />
             ))
           )}
         </TabsContent>

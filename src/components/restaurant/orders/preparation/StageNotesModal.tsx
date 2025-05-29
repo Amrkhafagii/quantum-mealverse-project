@@ -1,41 +1,47 @@
 
 import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface StageNotesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (notes: string) => void;
   stageName: string;
-  currentNotes?: string;
 }
 
 export const StageNotesModal: React.FC<StageNotesModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  stageName,
-  currentNotes = ''
+  stageName
 }) => {
-  const [notes, setNotes] = useState(currentNotes);
+  const [notes, setNotes] = useState('');
 
   const handleSave = () => {
     onSave(notes);
+    setNotes('');
     onClose();
+  };
+
+  const formatStageName = (name: string) => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Notes for {stageName}</DialogTitle>
+          <DialogTitle>Add Notes for {formatStageName(stageName)}</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="py-4">
           <Textarea
-            placeholder="Add any special instructions or notes..."
+            placeholder="Enter any notes or observations for this stage..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
