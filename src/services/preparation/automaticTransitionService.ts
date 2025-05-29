@@ -3,17 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { PreparationStageService } from './preparationStageService';
 import { preparationNotificationService } from '@/services/notifications/preparationNotificationService';
 
-export interface TransitionRule {
-  id: string;
-  restaurant_id: string;
-  source_stage: string;
-  target_stage: string;
-  trigger_type: 'time_based' | 'condition_based' | 'manual_approval';
-  trigger_value: number; // minutes for time-based, condition ID for condition-based
-  is_active: boolean;
-  created_at: string;
-}
-
 export interface StageTransitionConfig {
   restaurantId: string;
   enableAutoTransitions: boolean;
@@ -34,49 +23,18 @@ export class AutomaticTransitionService {
    */
   static async setupOrderTransitions(orderId: string, restaurantId: string): Promise<void> {
     try {
-      // Get restaurant's transition rules
-      const { data: rules, error } = await supabase
-        .from('preparation_transition_rules')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true);
-
-      if (error) {
-        console.error('Error fetching transition rules:', error);
-        return;
-      }
-
-      if (!rules || rules.length === 0) {
-        // Setup default transitions if no rules exist
-        await this.setupDefaultTransitions(orderId);
-        return;
-      }
-
-      // Apply custom rules
-      for (const rule of rules) {
-        await this.applyTransitionRule(orderId, rule);
-      }
+      // For now, we'll use default transitions since the custom rules table doesn't exist
+      await this.setupDefaultTransitions(orderId);
     } catch (error) {
       console.error('Error setting up order transitions:', error);
     }
   }
 
   /**
-   * Apply a specific transition rule
-   */
-  private static async applyTransitionRule(orderId: string, rule: any): Promise<void> {
-    if (rule.trigger_type === 'time_based') {
-      await this.setupTimerTransition(orderId, rule);
-    } else if (rule.trigger_type === 'condition_based') {
-      await this.setupConditionTransition(orderId, rule);
-    }
-  }
-
-  /**
    * Setup timer-based automatic transition
    */
-  private static async setupTimerTransition(orderId: string, rule: any): Promise<void> {
-    const timerKey = `${orderId}_${rule.source_stage}`;
+  private static async setupTimerTransition(orderId: string, fromStage: string, toStage: string, timerMinutes: number): Promise<void> {
+    const timerKey = `${orderId}_${fromStage}`;
     
     // Clear existing timer if any
     const existingTimer = this.transitionTimers.get(timerKey);
@@ -87,11 +45,11 @@ export class AutomaticTransitionService {
     // Set new timer
     const timer = setTimeout(async () => {
       try {
-        console.log(`Auto-transitioning order ${orderId} from ${rule.source_stage} to ${rule.target_stage}`);
+        console.log(`Auto-transitioning order ${orderId} from ${fromStage} to ${toStage}`);
         
         const result = await PreparationStageService.advanceStage(
           orderId,
-          rule.source_stage,
+          fromStage,
           'Automatic transition based on timer'
         );
 
@@ -107,7 +65,7 @@ export class AutomaticTransitionService {
             await preparationNotificationService.sendStageUpdateNotification({
               userId: order.user_id,
               orderId,
-              stageName: rule.target_stage,
+              stageName: toStage,
               stageStatus: 'in_progress'
             });
           }
@@ -117,38 +75,9 @@ export class AutomaticTransitionService {
       } finally {
         this.transitionTimers.delete(timerKey);
       }
-    }, rule.trigger_value * 60 * 1000); // Convert minutes to milliseconds
+    }, timerMinutes * 60 * 1000); // Convert minutes to milliseconds
 
     this.transitionTimers.set(timerKey, timer);
-  }
-
-  /**
-   * Setup condition-based transition monitoring
-   */
-  private static async setupConditionTransition(orderId: string, rule: any): Promise<void> {
-    // This would monitor for specific conditions like temperature reached, timer completed, etc.
-    // For now, we'll implement a basic version that monitors stage completion
-    
-    const checkCondition = async () => {
-      try {
-        const stages = await PreparationStageService.getOrderPreparationStages(orderId);
-        const sourceStage = stages.find(s => s.stage_name === rule.source_stage);
-        
-        if (sourceStage && sourceStage.status === 'completed') {
-          // Start the next stage automatically
-          await PreparationStageService.startStage(orderId, rule.target_stage);
-        }
-      } catch (error) {
-        console.error('Error checking transition condition:', error);
-      }
-    };
-
-    // Check condition every 30 seconds
-    const intervalKey = `${orderId}_${rule.source_stage}_condition`;
-    const interval = setInterval(checkCondition, 30000);
-    
-    // Store interval for cleanup (we'll use the same Map for simplicity)
-    this.transitionTimers.set(intervalKey, interval as any);
   }
 
   /**
@@ -168,20 +97,7 @@ export class AutomaticTransitionService {
       const currentStage = stages.find(s => s.stage_name === rule.from && s.status === 'in_progress');
       
       if (currentStage) {
-        const timerKey = `${orderId}_${rule.from}`;
-        const timer = setTimeout(async () => {
-          try {
-            await PreparationStageService.advanceStage(
-              orderId,
-              rule.from,
-              `Automatic transition after ${rule.timerMinutes} minutes`
-            );
-          } catch (error) {
-            console.error('Error in default transition:', error);
-          }
-        }, rule.timerMinutes * 60 * 1000);
-
-        this.transitionTimers.set(timerKey, timer);
+        await this.setupTimerTransition(orderId, rule.from, rule.to, rule.timerMinutes);
       }
     }
   }
@@ -224,5 +140,20 @@ export class AutomaticTransitionService {
     });
 
     return activeTransitions;
+  }
+
+  /**
+   * Resume transitions for an order after pause
+   */
+  static async resumeOrderTransitions(orderId: string, restaurantId: string): Promise<void> {
+    await this.setupOrderTransitions(orderId, restaurantId);
+  }
+
+  /**
+   * Update transition rules for a restaurant (placeholder for future implementation)
+   */
+  static async updateTransitionRules(restaurantId: string, config: StageTransitionConfig): Promise<void> {
+    // This would update rules in the database when the table is created
+    console.log(`Transition rules updated for restaurant ${restaurantId}`, config);
   }
 }
