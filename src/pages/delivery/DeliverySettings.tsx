@@ -11,6 +11,7 @@ import { DeliveryNotificationSettings } from '@/components/delivery/settings/Del
 import { AdvancedLocationSettings } from '@/components/delivery/settings/AdvancedLocationSettings';
 import { BatteryPerformanceSettings } from '@/components/delivery/settings/BatteryPerformanceSettings';
 import { LocationAccuracySettings } from '@/components/delivery/settings/LocationAccuracySettings';
+import { DataSynchronizationSettings } from '@/components/delivery/settings/DataSynchronizationSettings';
 import DataRetentionSettings from '@/components/privacy/DataRetentionSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveryService } from '@/services/delivery/deliveryService';
@@ -88,10 +89,11 @@ const DeliverySettings = () => {
   return (
     <div className="space-y-6 p-4">
       <Tabs defaultValue="location">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="location">Location</TabsTrigger>
           <TabsTrigger value="accuracy">Accuracy & Quality</TabsTrigger>
           <TabsTrigger value="battery">Battery & Performance</TabsTrigger>
+          <TabsTrigger value="sync">Data Sync</TabsTrigger>
           <TabsTrigger value="availability">Hours & Availability</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -150,6 +152,10 @@ const DeliverySettings = () => {
 
         <TabsContent value="battery" className="space-y-6">
           <BatteryPerformanceSettings deliveryUserId={deliveryUser.id} />
+        </TabsContent>
+
+        <TabsContent value="sync" className="space-y-6">
+          <DataSynchronizationSettings deliveryUserId={deliveryUser.id} />
         </TabsContent>
 
         <TabsContent value="availability" className="space-y-6">

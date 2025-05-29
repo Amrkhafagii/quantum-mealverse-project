@@ -1177,6 +1177,89 @@ export type Database = {
           },
         ]
       }
+      delivery_data_sync_settings: {
+        Row: {
+          auto_cleanup_enabled: boolean
+          auto_resolve_conflicts: boolean
+          auto_sync_enabled: boolean
+          batch_sync_enabled: boolean
+          battery_optimized_sync: boolean
+          created_at: string
+          delivery_user_id: string
+          id: string
+          location_conflict_strategy: string
+          location_storage_duration_days: number
+          max_batch_size: number
+          max_offline_locations: number
+          priority_sync_enabled: boolean
+          prompt_for_manual_resolution: boolean
+          settings_conflict_strategy: string
+          storage_limit_mb: number
+          sync_compression_enabled: boolean
+          sync_frequency_minutes: number
+          sync_on_app_foreground: boolean
+          sync_on_network_change: boolean
+          updated_at: string
+          wifi_only_sync: boolean
+        }
+        Insert: {
+          auto_cleanup_enabled?: boolean
+          auto_resolve_conflicts?: boolean
+          auto_sync_enabled?: boolean
+          batch_sync_enabled?: boolean
+          battery_optimized_sync?: boolean
+          created_at?: string
+          delivery_user_id: string
+          id?: string
+          location_conflict_strategy?: string
+          location_storage_duration_days?: number
+          max_batch_size?: number
+          max_offline_locations?: number
+          priority_sync_enabled?: boolean
+          prompt_for_manual_resolution?: boolean
+          settings_conflict_strategy?: string
+          storage_limit_mb?: number
+          sync_compression_enabled?: boolean
+          sync_frequency_minutes?: number
+          sync_on_app_foreground?: boolean
+          sync_on_network_change?: boolean
+          updated_at?: string
+          wifi_only_sync?: boolean
+        }
+        Update: {
+          auto_cleanup_enabled?: boolean
+          auto_resolve_conflicts?: boolean
+          auto_sync_enabled?: boolean
+          batch_sync_enabled?: boolean
+          battery_optimized_sync?: boolean
+          created_at?: string
+          delivery_user_id?: string
+          id?: string
+          location_conflict_strategy?: string
+          location_storage_duration_days?: number
+          max_batch_size?: number
+          max_offline_locations?: number
+          priority_sync_enabled?: boolean
+          prompt_for_manual_resolution?: boolean
+          settings_conflict_strategy?: string
+          storage_limit_mb?: number
+          sync_compression_enabled?: boolean
+          sync_frequency_minutes?: number
+          sync_on_app_foreground?: boolean
+          sync_on_network_change?: boolean
+          updated_at?: string
+          wifi_only_sync?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_data_sync_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_documents: {
         Row: {
           created_at: string
@@ -2261,6 +2344,158 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_sync_conflicts: {
+        Row: {
+          auto_resolvable: boolean
+          conflict_score: number | null
+          conflict_type: string
+          created_at: string
+          delivery_user_id: string
+          id: string
+          local_data: Json
+          merged_data: Json | null
+          requires_user_input: boolean
+          resolution_strategy: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          resource_id: string | null
+          resource_type: string | null
+          server_data: Json
+          sync_log_id: string | null
+        }
+        Insert: {
+          auto_resolvable?: boolean
+          conflict_score?: number | null
+          conflict_type: string
+          created_at?: string
+          delivery_user_id: string
+          id?: string
+          local_data: Json
+          merged_data?: Json | null
+          requires_user_input?: boolean
+          resolution_strategy: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          server_data: Json
+          sync_log_id?: string | null
+        }
+        Update: {
+          auto_resolvable?: boolean
+          conflict_score?: number | null
+          conflict_type?: string
+          created_at?: string
+          delivery_user_id?: string
+          id?: string
+          local_data?: Json
+          merged_data?: Json | null
+          requires_user_input?: boolean
+          resolution_strategy?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          server_data?: Json
+          sync_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sync_conflicts_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sync_conflicts_log"
+            columns: ["sync_log_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_sync_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_sync_logs: {
+        Row: {
+          battery_level: number | null
+          conflicts_detected: number | null
+          conflicts_resolved: number | null
+          connection_quality: string | null
+          created_at: string
+          data_size_kb: number | null
+          delivery_user_id: string
+          duration_ms: number | null
+          end_time: string | null
+          error_details: Json | null
+          error_message: string | null
+          errors_encountered: number | null
+          id: string
+          locations_synced: number | null
+          network_type: string | null
+          operation_type: string
+          start_time: string
+          success: boolean
+          sync_trigger: string | null
+          sync_type: string
+        }
+        Insert: {
+          battery_level?: number | null
+          conflicts_detected?: number | null
+          conflicts_resolved?: number | null
+          connection_quality?: string | null
+          created_at?: string
+          data_size_kb?: number | null
+          delivery_user_id: string
+          duration_ms?: number | null
+          end_time?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          errors_encountered?: number | null
+          id?: string
+          locations_synced?: number | null
+          network_type?: string | null
+          operation_type: string
+          start_time: string
+          success?: boolean
+          sync_trigger?: string | null
+          sync_type: string
+        }
+        Update: {
+          battery_level?: number | null
+          conflicts_detected?: number | null
+          conflicts_resolved?: number | null
+          connection_quality?: string | null
+          created_at?: string
+          data_size_kb?: number | null
+          delivery_user_id?: string
+          duration_ms?: number | null
+          end_time?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          errors_encountered?: number | null
+          id?: string
+          locations_synced?: number | null
+          network_type?: string | null
+          operation_type?: string
+          start_time?: string
+          success?: boolean
+          sync_trigger?: string | null
+          sync_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sync_logs_delivery_user"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
             referencedColumns: ["id"]
           },
         ]
@@ -9019,6 +9254,20 @@ export type Database = {
         Args: { user_id: string; meal_id: string }
         Returns: boolean
       }
+      complete_sync_operation: {
+        Args: {
+          p_log_id: string
+          p_success: boolean
+          p_locations_synced?: number
+          p_conflicts_detected?: number
+          p_conflicts_resolved?: number
+          p_errors_encountered?: number
+          p_data_size_kb?: number
+          p_error_message?: string
+          p_error_details?: Json
+        }
+        Returns: boolean
+      }
       create_app_config_table: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -9712,6 +9961,33 @@ export type Database = {
           p_error_details?: Json
           p_related_order_id?: string
           p_is_critical?: boolean
+        }
+        Returns: string
+      }
+      log_sync_conflict: {
+        Args: {
+          p_delivery_user_id: string
+          p_sync_log_id: string
+          p_conflict_type: string
+          p_resource_id: string
+          p_resource_type: string
+          p_local_data: Json
+          p_server_data: Json
+          p_resolution_strategy?: string
+          p_conflict_score?: number
+        }
+        Returns: string
+      }
+      log_sync_operation: {
+        Args: {
+          p_delivery_user_id: string
+          p_sync_type: string
+          p_operation_type: string
+          p_sync_trigger?: string
+          p_start_time?: string
+          p_network_type?: string
+          p_connection_quality?: string
+          p_battery_level?: number
         }
         Returns: string
       }
