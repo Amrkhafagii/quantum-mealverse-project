@@ -11,7 +11,6 @@ export const fetchTeams = async (): Promise<Team[]> => {
       description,
       created_by,
       created_at,
-      updated_at,
       avatar_url,
       is_active,
       max_members,
@@ -24,14 +23,14 @@ export const fetchTeams = async (): Promise<Team[]> => {
   if (error) throw error;
   
   // Safely map database fields to our Team type
-  return (data || []).map((team) => ({
+  return (data || []).map((team: any) => ({
     id: team.id,
     name: team.name,
     description: team.description || undefined,
     created_by: team.created_by,
     creator_id: team.created_by,
     created_at: team.created_at,
-    updated_at: team.updated_at || team.created_at,
+    updated_at: team.created_at, // Use created_at since updated_at doesn't exist
     image_url: team.avatar_url || undefined,
     avatar_url: team.avatar_url || undefined,
     is_active: team.is_active !== false,
@@ -54,7 +53,6 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
         description,
         created_by,
         created_at,
-        updated_at,
         avatar_url,
         is_active,
         max_members,
@@ -69,7 +67,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   if (error && error.code !== 'PGRST116') throw error;
   
   if (data?.team) {
-    const team = data.team;
+    const team = data.team as any;
     return {
       id: team.id,
       name: team.name,
@@ -77,7 +75,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
       created_by: team.created_by,
       creator_id: team.created_by,
       created_at: team.created_at,
-      updated_at: team.updated_at || team.created_at,
+      updated_at: team.created_at, // Use created_at since updated_at doesn't exist
       image_url: team.avatar_url || undefined,
       avatar_url: team.avatar_url || undefined,
       is_active: team.is_active !== false,
