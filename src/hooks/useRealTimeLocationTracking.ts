@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { batteryOptimizedLocationService } from '@/services/location/BatteryOptimizedLocationService';
-import { geofenceService } from '@/services/geofencing/GeofenceService';
 import { customerNotificationService } from '@/services/notifications/CustomerNotificationService';
 import { useDeliveryUser } from '@/hooks/useDeliveryUser';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,7 +10,6 @@ interface LocationTrackingState {
   isTracking: boolean;
   batteryLevel: number;
   lastLocation: GeolocationPosition | null;
-  activeGeofences: number;
   error: string | null;
 }
 
@@ -23,7 +21,6 @@ export function useRealTimeLocationTracking(assignmentId?: string) {
     isTracking: false,
     batteryLevel: 100,
     lastLocation: null,
-    activeGeofences: 0,
     error: null
   });
 
@@ -34,9 +31,6 @@ export function useRealTimeLocationTracking(assignmentId?: string) {
     }
 
     try {
-      // Initialize geofencing service
-      await geofenceService.initialize(deliveryUser.id, assignmentId);
-      
       // Start battery optimized location tracking
       const success = await batteryOptimizedLocationService.startTracking(deliveryUser.id, assignmentId);
       
@@ -44,8 +38,7 @@ export function useRealTimeLocationTracking(assignmentId?: string) {
         setState(prev => ({ 
           ...prev, 
           isTracking: true, 
-          error: null,
-          activeGeofences: geofenceService.getActiveZones().length
+          error: null
         }));
         
         toast({
@@ -75,12 +68,10 @@ export function useRealTimeLocationTracking(assignmentId?: string) {
   const stopTracking = useCallback(async () => {
     try {
       await batteryOptimizedLocationService.stopTracking();
-      geofenceService.cleanup();
       
       setState(prev => ({ 
         ...prev, 
-        isTracking: false,
-        activeGeofences: 0
+        isTracking: false
       }));
       
       toast({
@@ -106,15 +97,6 @@ export function useRealTimeLocationTracking(assignmentId?: string) {
         batteryLevel,
         lastLocation
       }));
-
-      // Check geofences if we have a new location
-      if (lastLocation) {
-        geofenceService.checkGeofences(
-          lastLocation.coords.latitude,
-          lastLocation.coords.longitude,
-          lastLocation.coords.accuracy
-        );
-      }
     }, 5000); // Check every 5 seconds
 
     return () => clearInterval(interval);
@@ -132,7 +114,6 @@ export function useRealTimeLocationTracking(assignmentId?: string) {
     return () => {
       if (state.isTracking) {
         batteryOptimizedLocationService.stopTracking();
-        geofenceService.cleanup();
       }
     };
   }, [state.isTracking]);

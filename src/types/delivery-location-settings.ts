@@ -13,12 +13,6 @@ export interface DeliveryLocationSettings {
   medium_accuracy_interval: number;
   low_accuracy_interval: number;
   
-  // Geofencing preferences
-  delivery_zone_radius: number;
-  geofence_entry_notifications: boolean;
-  geofence_exit_notifications: boolean;
-  custom_geofence_zones: GeofenceZone[];
-  
   // Location sharing duration settings
   location_sharing_duration: number; // minutes
   auto_stop_sharing_after_delivery: boolean;
@@ -31,16 +25,6 @@ export interface DeliveryLocationSettings {
   
   created_at: string;
   updated_at: string;
-}
-
-export interface GeofenceZone {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  type: 'restaurant' | 'customer' | 'custom';
-  enabled: boolean;
 }
 
 export type DeliveryLocationSettingsUpdate = Partial<Omit<DeliveryLocationSettings, 'id' | 'delivery_user_id' | 'created_at' | 'updated_at'>>;

@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useIntelligentTracking } from '@/hooks/useIntelligentTracking';
-import { useGeofencing } from '@/hooks/useGeofencing';
 import { Button } from '@/components/ui/button';
 import { Battery, Bluetooth, Wifi, Thermometer } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -20,55 +19,9 @@ const BatteryEfficientTracker: React.FC = () => {
     }
   });
   
-  // Configure geofencing for restaurant and customer locations
-  const geofencing = useGeofencing({
-    batteryEfficient: true,
-    dataEfficient: true,
-    activeOnly: true,
-    onGeofenceEvent: (event) => {
-      if (event.eventType === 'enter') {
-        toast({
-          title: 'Geofence entered',
-          description: `You've entered the ${event.metadata?.type || 'defined'} area.`,
-          duration: 5000,
-        });
-      } else if (event.eventType === 'exit') {
-        toast({
-          title: 'Geofence exited',
-          description: `You've left the ${event.metadata?.type || 'defined'} area.`,
-          duration: 5000,
-        });
-      }
-    }
-  });
-  
-  // Setup geofences when activated
+  // Handle start tracking
   useEffect(() => {
     if (isActive) {
-      // Setup example geofences - in a real app these would be dynamically fetched
-      const restaurantGeofence = {
-        id: 'restaurant-1',
-        latitude: 37.7749,
-        longitude: -122.4194,
-        radius: 100,
-        notifyOnEntry: true,
-        notifyOnExit: true,
-        metadata: { type: 'restaurant', name: 'Example Restaurant' }
-      };
-      
-      const customerGeofence = {
-        id: 'customer-1',
-        latitude: 37.7755,
-        longitude: -122.4130,
-        radius: 100,
-        notifyOnEntry: true,
-        notifyOnExit: true,
-        metadata: { type: 'customer', name: 'Example Customer' }
-      };
-      
-      geofencing.addRegions([restaurantGeofence, customerGeofence]);
-      geofencing.startMonitoring();
-      
       // Notify that tracking is active
       toast({
         title: 'Tracking activated',
@@ -76,10 +29,9 @@ const BatteryEfficientTracker: React.FC = () => {
         duration: 3000,
       });
     } else {
-      geofencing.stopMonitoring();
       tracking.stopTracking?.();
     }
-  }, [isActive, geofencing, tracking]);
+  }, [isActive, tracking]);
   
   return (
     <div className="p-4">
@@ -117,7 +69,6 @@ const BatteryEfficientTracker: React.FC = () => {
         <div className="mt-3 text-xs space-y-1 text-muted-foreground">
           <p>Tracking mode: {tracking.trackingMode}</p>
           <p>Battery: {batteryLevel}% ({isLowBattery ? 'Low' : 'Normal'})</p>
-          <p>Active geofences: {geofencing.activeRegions.length}</p>
           <p>Update interval: {tracking.trackingInterval / 1000}s</p>
         </div>
       )}
