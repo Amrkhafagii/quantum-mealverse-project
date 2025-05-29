@@ -38,7 +38,7 @@ export const useOrderSubmission = (
     try {
       console.log('Submitting order with data:', data);
 
-      // Create the order
+      // Create the order with all required fields
       const orderData = {
         user_id: userId,
         total_amount: totalAmount,
@@ -47,7 +47,17 @@ export const useOrderSubmission = (
         delivery_instructions: data.instructions || null,
         phone_number: data.phone,
         latitude: data.latitude,
-        longitude: data.longitude
+        longitude: data.longitude,
+        // Add required fields that were missing
+        city: data.city || 'Unknown',
+        customer_email: data.email,
+        customer_name: data.fullName,
+        customer_phone: data.phone,
+        delivery_method: data.deliveryMethod || 'delivery',
+        payment_method: data.paymentMethod || 'cash',
+        delivery_fee: 0,
+        subtotal: totalAmount,
+        total: totalAmount
       };
 
       console.log('Creating order with data:', orderData);
@@ -65,17 +75,13 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Create order items
+      // Create order items with required meal_id field
       const orderItems = items.map(item => ({
         order_id: order.id,
+        meal_id: item.id, // Use item.id as meal_id
         name: item.name,
         price: item.price,
-        quantity: item.quantity,
-        description: item.description,
-        calories: item.calories,
-        protein: item.protein,
-        carbs: item.carbs,
-        fat: item.fat
+        quantity: item.quantity
       }));
 
       const { error: itemsError } = await supabase

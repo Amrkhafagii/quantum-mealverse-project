@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { DeliveryLocationSettings, DeliveryLocationSettingsUpdate } from '@/types/delivery-location-settings';
 
@@ -14,12 +15,8 @@ class DeliveryLocationSettingsService {
         throw error;
       }
 
-      // Convert the data to match our TypeScript interface
       if (data) {
-        return {
-          ...data,
-          custom_geofence_zones: this.parseGeofenceZones(data.custom_geofence_zones)
-        } as DeliveryLocationSettings;
+        return data as DeliveryLocationSettings;
       }
 
       return null;
@@ -34,17 +31,9 @@ class DeliveryLocationSettingsService {
     settings: DeliveryLocationSettingsUpdate
   ): Promise<DeliveryLocationSettings | null> {
     try {
-      // Convert GeofenceZone[] to Json format for database
-      const dbSettings = {
-        ...settings,
-        custom_geofence_zones: settings.custom_geofence_zones 
-          ? JSON.stringify(settings.custom_geofence_zones)
-          : undefined
-      };
-
       const { data, error } = await supabase
         .from('delivery_location_settings')
-        .update(dbSettings)
+        .update(settings)
         .eq('delivery_user_id', deliveryUserId)
         .select()
         .single();
@@ -54,12 +43,8 @@ class DeliveryLocationSettingsService {
         throw error;
       }
 
-      // Convert back to TypeScript interface
       if (data) {
-        return {
-          ...data,
-          custom_geofence_zones: this.parseGeofenceZones(data.custom_geofence_zones)
-        } as DeliveryLocationSettings;
+        return data as DeliveryLocationSettings;
       }
 
       return null;
@@ -67,19 +52,6 @@ class DeliveryLocationSettingsService {
       console.error('Error in updateLocationSettings:', error);
       return null;
     }
-  }
-
-  private parseGeofenceZones(zones: any): any[] {
-    if (!zones) return [];
-    if (Array.isArray(zones)) return zones;
-    if (typeof zones === 'string') {
-      try {
-        return JSON.parse(zones);
-      } catch {
-        return [];
-      }
-    }
-    return [];
   }
 
   async updateAccuracyThresholds(
@@ -102,18 +74,6 @@ class DeliveryLocationSettingsService {
     }
   ): Promise<DeliveryLocationSettings | null> {
     return this.updateLocationSettings(deliveryUserId, intervals);
-  }
-
-  async updateGeofencingSettings(
-    deliveryUserId: string,
-    settings: {
-      delivery_zone_radius?: number;
-      geofence_entry_notifications?: boolean;
-      geofence_exit_notifications?: boolean;
-      custom_geofence_zones?: any[];
-    }
-  ): Promise<DeliveryLocationSettings | null> {
-    return this.updateLocationSettings(deliveryUserId, settings);
   }
 
   async updateSharingSettings(

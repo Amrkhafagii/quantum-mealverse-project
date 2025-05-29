@@ -15,7 +15,6 @@ export const RealTimeLocationPanel: React.FC<RealTimeLocationPanelProps> = ({ as
     isTracking,
     batteryLevel,
     lastLocation,
-    activeGeofences,
     error,
     startTracking,
     stopTracking,
@@ -65,17 +64,6 @@ export const RealTimeLocationPanel: React.FC<RealTimeLocationPanelProps> = ({ as
           <span className={`text-sm font-medium ${getBatteryColor(batteryLevel)}`}>
             {batteryLevel}%
           </span>
-        </div>
-
-        {/* Active Geofences */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-quantum-cyan" />
-            <span className="text-sm">Active Zones</span>
-          </div>
-          <Badge variant="outline">
-            {activeGeofences}
-          </Badge>
         </div>
 
         {/* Last Location */}
