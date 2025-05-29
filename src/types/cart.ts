@@ -16,4 +16,5 @@ export interface CartItem {
   image_url?: string;
   dietary_tags?: string[];
   customizations?: Record<string, any>;
+  assignment_source?: 'nutrition_generation' | 'traditional_ordering' | 'manual';
 }
