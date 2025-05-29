@@ -1,197 +1,121 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import type { PushNotificationToken, PushNotification } from '@/types/delivery-features';
+import { realtimeNotificationService } from './realtimeNotificationService';
+
+export interface PushNotificationPermissionStatus {
+  permission: NotificationPermission;
+  isSupported: boolean;
+}
 
 class PushNotificationService {
-  async registerToken(
-    userId: string,
-    token: string,
-    platform: 'ios' | 'android' | 'web',
-    deviceId?: string
-  ): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('push_notification_tokens')
-        .upsert({
-          user_id: userId,
-          token,
-          platform,
-          device_id: deviceId,
-          is_active: true
-        });
+  private vapidKey = 'BKqP1J2RqKjh6J4A5F8RzPo2FfG4J3k7N5m8V9c6X1y2Z3a4B5c6D7e8F9g0H1i2J3k4L5m6N7o8P9q0R1s2T3u4';
 
-      return !error;
+  // Check if push notifications are supported
+  isSupported(): boolean {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+
+  // Get current permission status
+  getPermissionStatus(): PushNotificationPermissionStatus {
+    return {
+      permission: this.isSupported() ? Notification.permission : 'denied',
+      isSupported: this.isSupported()
+    };
+  }
+
+  // Request notification permission
+  async requestPermission(): Promise<NotificationPermission> {
+    if (!this.isSupported()) {
+      return 'denied';
+    }
+
+    const permission = await Notification.requestPermission();
+    
+    if (permission === 'granted') {
+      await this.setupServiceWorker();
+    }
+    
+    return permission;
+  }
+
+  // Setup service worker for push notifications
+  private async setupServiceWorker(): Promise<void> {
+    if (!('serviceWorker' in navigator)) return;
+
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered:', registration);
     } catch (error) {
-      console.error('Error registering push token:', error);
+      console.error('Service Worker registration failed:', error);
+    }
+  }
+
+  // Subscribe to push notifications
+  async subscribeToPush(userId: string): Promise<boolean> {
+    if (!this.isSupported() || Notification.permission !== 'granted') {
       return false;
     }
-  }
 
-  async unregisterToken(userId: string, token: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('push_notification_tokens')
-        .update({ is_active: false })
-        .eq('user_id', userId)
-        .eq('token', token);
-
-      return !error;
-    } catch (error) {
-      console.error('Error unregistering push token:', error);
-      return false;
-    }
-  }
-
-  async sendNotification(
-    userId: string,
-    title: string,
-    body: string,
-    data: Record<string, any> = {},
-    notificationType: string
-  ): Promise<string | null> {
-    try {
-      // Get user's active tokens
-      const { data: tokens } = await supabase
-        .from('push_notification_tokens')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true);
-
-      if (!tokens || tokens.length === 0) {
-        console.log('No active tokens found for user:', userId);
-        return null;
-      }
-
-      // Create notification record
-      const { data: notification, error } = await supabase
-        .from('push_notifications')
-        .insert({
-          user_id: userId,
-          title,
-          body,
-          data,
-          notification_type: notificationType
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Send to each platform
-      for (const token of tokens) {
-        await this.sendToDevice({
-          ...token,
-          platform: token.platform as 'ios' | 'android' | 'web'
-        }, title, body, data);
-      }
-
-      // Update notification status
-      await supabase
-        .from('push_notifications')
-        .update({ 
-          status: 'sent',
-          sent_at: new Date().toISOString()
-        })
-        .eq('id', notification.id);
-
-      return notification.id;
-    } catch (error) {
-      console.error('Error sending push notification:', error);
-      return null;
-    }
-  }
-
-  private async sendToDevice(
-    token: PushNotificationToken,
-    title: string,
-    body: string,
-    data: Record<string, any>
-  ): Promise<void> {
-    try {
-      if (token.platform === 'web') {
-        // Web push notification
-        await this.sendWebPush(token.token, title, body, data);
-      } else {
-        // Mobile push notification (FCM/APNS)
-        await this.sendMobilePush(token, title, body, data);
-      }
-    } catch (error) {
-      console.error(`Error sending to ${token.platform}:`, error);
-    }
-  }
-
-  private async sendWebPush(
-    token: string,
-    title: string,
-    body: string,
-    data: Record<string, any>
-  ): Promise<void> {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
       const registration = await navigator.serviceWorker.ready;
       
-      // Check if we have permission
-      if (Notification.permission === 'granted') {
-        registration.showNotification(title, {
-          body,
-          data,
-          icon: '/icon-192x192.png',
-          badge: '/badge-72x72.png',
-          tag: data.orderId || 'default'
-        });
-      }
-    }
-  }
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(this.vapidKey)
+      });
 
-  private async sendMobilePush(
-    token: PushNotificationToken,
-    title: string,
-    body: string,
-    data: Record<string, any>
-  ): Promise<void> {
-    // Call edge function to send mobile push
-    const { error } = await supabase.functions.invoke('send-push-notification', {
-      body: {
-        token: token.token,
-        platform: token.platform,
-        title,
-        body,
-        data
-      }
-    });
-
-    if (error) {
-      console.error('Error calling push notification function:', error);
-    }
-  }
-
-  async getUserNotifications(userId: string, limit = 50): Promise<PushNotification[]> {
-    try {
-      const { data, error } = await supabase
-        .from('push_notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      return (data || []).map(item => ({
-        ...item,
-        status: item.status as 'pending' | 'sent' | 'failed' | 'delivered',
-        data: typeof item.data === 'string' 
-          ? JSON.parse(item.data) 
-          : (item.data as Record<string, any>)
-      }));
+      const token = JSON.stringify(subscription);
+      
+      // Register the token with our backend
+      return await realtimeNotificationService.registerPushToken(
+        userId,
+        token,
+        'web'
+      );
     } catch (error) {
-      console.error('Error fetching notifications:', error);
-      return [];
+      console.error('Failed to subscribe to push notifications:', error);
+      return false;
     }
   }
 
-  async requestPermission(): Promise<NotificationPermission> {
-    if ('Notification' in window) {
-      const permission = await Notification.requestPermission();
-      return permission;
+  // Show local notification (for web)
+  showNotification(title: string, message: string, data?: any): void {
+    if (!this.isSupported() || Notification.permission !== 'granted') {
+      return;
     }
-    return 'denied';
+
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification(title, {
+        body: message,
+        icon: '/icon-192x192.png',
+        badge: '/badge-72x72.png',
+        data: data,
+        tag: data?.orderId || 'default',
+        requireInteraction: true,
+        actions: [
+          {
+            action: 'view',
+            title: 'View Details',
+            icon: '/icon-192x192.png'
+          }
+        ]
+      });
+    });
+  }
+
+  // Helper function to convert VAPID key
+  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
   }
 }
 

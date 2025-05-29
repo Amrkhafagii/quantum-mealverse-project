@@ -4910,36 +4910,73 @@ export type Database = {
       }
       notifications: {
         Row: {
-          created_at: string
+          created_at: string | null
+          data: Json | null
+          delivery_user_id: string | null
           id: string
-          is_read: boolean
-          link: string | null
+          is_read: boolean | null
           message: string
+          notification_type: string
+          order_id: string | null
+          read_at: string | null
+          restaurant_id: string | null
           title: string
-          type: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
+          data?: Json | null
+          delivery_user_id?: string | null
           id?: string
-          is_read?: boolean
-          link?: string | null
+          is_read?: boolean | null
           message: string
+          notification_type: string
+          order_id?: string | null
+          read_at?: string | null
+          restaurant_id?: string | null
           title: string
-          type?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
+          data?: Json | null
+          delivery_user_id?: string | null
           id?: string
-          is_read?: boolean
-          link?: string | null
+          is_read?: boolean | null
           message?: string
+          notification_type?: string
+          order_id?: string | null
+          read_at?: string | null
+          restaurant_id?: string | null
           title?: string
-          type?: string
+          updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_delivery_user_id_fkey"
+            columns: ["delivery_user_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nutrition_cart_items: {
         Row: {
@@ -9279,6 +9316,19 @@ export type Database = {
           p_customer_lng?: number
         }
         Returns: Json
+      }
+      create_notification: {
+        Args: {
+          p_user_id: string
+          p_title: string
+          p_message: string
+          p_notification_type: string
+          p_order_id?: string
+          p_restaurant_id?: string
+          p_delivery_user_id?: string
+          p_data?: Json
+        }
+        Returns: string
       }
       create_order_event: {
         Args: {

@@ -1,14 +1,10 @@
 
 import React, { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
-import {
-  sendOrderStatusNotification,
-  sendDeliveryApproachingNotification
-} from '@/services/notification/mobileNotificationService';
-import { useNotificationPermissions } from '@/hooks/useNotificationPermissions';
-import { Platform } from '@/utils/platform';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useOrderEvents } from '@/hooks/useOrderEvents';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface OrderStatusListenerProps {
   orderId: string;
@@ -17,130 +13,74 @@ interface OrderStatusListenerProps {
 
 /**
  * Component that listens for real-time order status changes
- * and triggers notifications on mobile devices
+ * and triggers notifications across all platforms
  */
 export const OrderStatusListener: React.FC<OrderStatusListenerProps> = ({
   orderId,
   order
 }) => {
   const { user } = useAuth();
-  const { isPermissionGranted, isSupported } = useNotificationPermissions();
+  const { showNotification, permission, requestPermission } = usePushNotifications();
+  const { events } = useOrderEvents(orderId);
   
-  // Subscribe to order status changes
+  // Request notification permission on mount
   useEffect(() => {
-    if (!orderId || !user || !isSupported || !isPermissionGranted) {
-      return;
+    if (permission === 'default') {
+      requestPermission();
     }
+  }, [permission, requestPermission]);
 
-    // Create a channel to listen for order changes
-    const channel = supabase
-      .channel(`order_status_${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`
-        },
-        (payload) => {
-          if (payload.new && payload.old && payload.new.status !== payload.old.status) {
-            handleOrderStatusChange(payload.new as Order, payload.old.status);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [orderId, user, isSupported, isPermissionGranted]);
-  
-  // Also listen for delivery location updates for proximity alerts
+  // Handle order events for push notifications
   useEffect(() => {
-    if (!orderId || !user || !isSupported || !isPermissionGranted || !order || 
-        order.status !== 'on_the_way') {
-      return;
-    }
-    
-    let hasTriggeredProximityAlert = false;
-    
-    // Listen for delivery location updates
-    const channel = supabase
-      .channel(`delivery_location_${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'delivery_locations',
-          filter: `order_id=eq.${orderId}`
-        },
-        (payload) => {
-          if (payload.new && !hasTriggeredProximityAlert) {
-            checkDeliveryProximity(payload.new, order);
-            hasTriggeredProximityAlert = true; // Only trigger once
-          }
+    if (events.length > 0) {
+      const latestEvent = events[0];
+      
+      if (latestEvent.event_type === 'status_changed' && permission === 'granted') {
+        const eventData = latestEvent.event_data;
+        const status = eventData.new_status;
+        
+        let title = 'Order Update';
+        let message = `Your order status has changed to ${status}`;
+        
+        switch (status) {
+          case 'restaurant_accepted':
+            title = 'Order Accepted';
+            message = 'Your order has been accepted and is being prepared';
+            break;
+          case 'preparing':
+            title = 'Order Being Prepared';
+            message = 'Your order is now being prepared';
+            break;
+          case 'ready_for_pickup':
+            title = 'Order Ready';
+            message = 'Your order is ready for pickup';
+            break;
+          case 'picked_up':
+            title = 'Order Picked Up';
+            message = 'Your order has been picked up and is on the way';
+            break;
+          case 'on_the_way':
+            title = 'Order On The Way';
+            message = 'Your order is on the way to you!';
+            break;
+          case 'delivered':
+            title = 'Order Delivered';
+            message = 'Your order has been delivered successfully!';
+            break;
+          case 'cancelled':
+            title = 'Order Cancelled';
+            message = 'Your order has been cancelled';
+            break;
         }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [orderId, user, isSupported, isPermissionGranted, order]);
-
-  // Handle order status changes
-  const handleOrderStatusChange = (updatedOrder: Order, previousStatus: string) => {
-    if (!Platform.isNative() || !isPermissionGranted) return;
-    
-    // Send notification for the status change
-    sendOrderStatusNotification(
-      updatedOrder.id || '',
-      updatedOrder.status,
-      updatedOrder.restaurant?.name
-    );
-  };
-  
-  // Check if delivery is close and send proximity notification
-  const checkDeliveryProximity = (deliveryLocation: any, customerOrder: Order) => {
-    if (!customerOrder.latitude || !customerOrder.longitude || !Platform.isNative() || !isPermissionGranted) {
-      return;
+        
+        showNotification(title, message, {
+          orderId,
+          status,
+          timestamp: eventData.timestamp
+        });
+      }
     }
-    
-    // Calculate distance between delivery and customer
-    const distance = calculateDistance(
-      deliveryLocation.latitude,
-      deliveryLocation.longitude,
-      customerOrder.latitude,
-      customerOrder.longitude
-    );
-    
-    // If driver is within 2 kilometers, send a proximity notification
-    if (distance <= 2) {
-      // Estimate arrival time (rough calculation: about 3 min per km at city speeds)
-      const estimatedMinutes = Math.max(1, Math.round(distance * 3));
-      sendDeliveryApproachingNotification(orderId, estimatedMinutes);
-    }
-  };
-  
-  // Calculate distance in kilometers between two coordinates using Haversine formula
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * 
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-  
-  // Helper to convert degrees to radians
-  const toRadians = (degrees: number): number => {
-    return degrees * (Math.PI / 180);
-  };
+  }, [events, permission, showNotification, orderId]);
 
   // This component doesn't render anything visible
   return null;

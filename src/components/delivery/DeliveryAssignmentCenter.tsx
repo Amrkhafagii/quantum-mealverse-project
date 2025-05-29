@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AutomaticAssignmentCard } from './AutomaticAssignmentCard';
 import { useAutomaticAssignments } from '@/hooks/useAutomaticAssignments';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { Bell, Package } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
@@ -21,6 +22,9 @@ export const DeliveryAssignmentCenter: React.FC<DeliveryAssignmentCenterProps> =
     rejectAssignment
   } = useAutomaticAssignments(deliveryUserId);
 
+  // Subscribe to real-time notifications
+  const { unreadCount } = useRealtimeNotifications();
+
   if (loading) {
     return (
       <Card className="border border-quantum-cyan/20 bg-transparent">
@@ -34,11 +38,18 @@ export const DeliveryAssignmentCenter: React.FC<DeliveryAssignmentCenterProps> =
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <Bell className="h-5 w-5 text-quantum-cyan" />
-        <h3 className="text-lg font-semibold text-quantum-cyan">
-          Delivery Assignments ({pendingAssignments.length})
-        </h3>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Bell className="h-5 w-5 text-quantum-cyan" />
+          <h3 className="text-lg font-semibold text-quantum-cyan">
+            Delivery Assignments ({pendingAssignments.length})
+          </h3>
+        </div>
+        {unreadCount > 0 && (
+          <div className="bg-red-500 text-white rounded-full px-2 py-1 text-xs">
+            {unreadCount} new notifications
+          </div>
+        )}
       </div>
 
       {pendingAssignments.length === 0 ? (
