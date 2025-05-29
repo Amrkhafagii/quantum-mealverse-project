@@ -1,22 +1,23 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Team } from '@/types/fitness/challenges';
 
-// Define a type for the raw team data from Supabase
-interface RawTeam {
+// Simplified interface for raw team data from database
+interface DatabaseTeam {
   id: string;
   name: string;
-  description?: string | null;
+  description: string | null;
   created_by: string;
   created_at: string;
-  avatar_url?: string | null;
-  is_active?: boolean;
-  max_members?: number;
-  member_count?: number;
-  total_points?: number;
+  avatar_url: string | null;
+  is_active: boolean;
+  max_members: number;
+  member_count: number;
+  total_points: number;
 }
 
 // Helper function to transform raw team data to our Team type
-const transformTeam = (team: RawTeam): Team => ({
+const transformTeam = (team: DatabaseTeam): Team => ({
   id: team.id,
   name: team.name,
   description: team.description || undefined,
@@ -37,24 +38,15 @@ const transformTeam = (team: RawTeam): Team => ({
 export const fetchTeams = async (): Promise<Team[]> => {
   const { data, error } = await supabase
     .from('teams')
-    .select(`
-      id,
-      name,
-      description,
-      created_by,
-      created_at,
-      avatar_url,
-      is_active,
-      max_members,
-      member_count,
-      total_points
-    `)
+    .select('id, name, description, created_by, created_at, avatar_url, is_active, max_members, member_count, total_points')
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   
-  return (data || []).map(transformTeam);
+  // Explicitly cast the data to our expected type
+  const teams = (data || []) as DatabaseTeam[];
+  return teams.map(transformTeam);
 };
 
 export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
@@ -62,18 +54,7 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
     .from('team_members')
     .select(`
       *,
-      team:teams(
-        id,
-        name,
-        description,
-        created_by,
-        created_at,
-        avatar_url,
-        is_active,
-        max_members,
-        member_count,
-        total_points
-      )
+      team:teams(id, name, description, created_by, created_at, avatar_url, is_active, max_members, member_count, total_points)
     `)
     .eq('user_id', userId)
     .eq('is_active', true)
@@ -82,7 +63,9 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
   if (error && error.code !== 'PGRST116') throw error;
   
   if (data?.team) {
-    return transformTeam(data.team as RawTeam);
+    // Explicitly cast the nested team data
+    const teamData = data.team as DatabaseTeam;
+    return transformTeam(teamData);
   }
   
   return null;
