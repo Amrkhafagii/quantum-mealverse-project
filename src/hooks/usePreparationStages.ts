@@ -106,12 +106,41 @@ export const usePreparationStages = (orderId: string) => {
     return Math.floor((now.getTime() - startTime.getTime()) / (1000 * 60));
   };
 
+  const getCurrentStage = () => {
+    return stages.find(s => s.status === 'in_progress') || null;
+  };
+
+  const getEstimatedCompletionTime = async () => {
+    try {
+      return await PreparationStageService.getEstimatedCompletionTime(orderId);
+    } catch (error) {
+      console.error('Error getting estimated completion time:', error);
+      return null;
+    }
+  };
+
+  // Calculate preparation progress (for customer view)
+  const progress = stages.map(stage => ({
+    stage_name: stage.stage_name,
+    status: stage.status,
+    stage_order: stage.stage_order,
+    started_at: stage.started_at,
+    completed_at: stage.completed_at,
+    estimated_duration_minutes: stage.estimated_duration_minutes,
+    actual_duration_minutes: stage.actual_duration_minutes,
+    notes: stage.notes,
+    progress_percentage: stage.status === 'completed' ? 100 : stage.status === 'in_progress' ? 50 : 0
+  }));
+
   return {
     stages,
     isLoading,
     overallProgress,
+    progress,
     advanceStage,
     updateNotes,
-    getElapsedMinutes
+    getElapsedMinutes,
+    getCurrentStage,
+    getEstimatedCompletionTime
   };
 };

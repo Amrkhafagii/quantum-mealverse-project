@@ -34,7 +34,6 @@ export const CustomerPreparationTracker: React.FC<CustomerPreparationTrackerProp
 }) => {
   const {
     stages,
-    progress,
     overallProgress,
     getCurrentStage,
     getEstimatedCompletionTime,
