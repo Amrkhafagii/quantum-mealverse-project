@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { MealResolutionService } from '@/services/meal/mealResolutionService';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -46,7 +47,7 @@ export const useOrderSubmission = (
         customer_phone: data.phone,
         delivery_address: data.address,
         city: data.city || 'Unknown',
-        notes: data.instructions || null, // Map instructions to notes column
+        notes: data.instructions || null,
         delivery_method: data.deliveryMethod || 'delivery',
         payment_method: data.paymentMethod || 'cash',
         delivery_fee: 0,
@@ -76,24 +77,37 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Create order items with required meal_id field
-      const orderItems = items.map(item => ({
+      // Resolve cart items to actual meal database records
+      console.log('Resolving cart items to meal records...');
+      const resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
+        items,
+        order.restaurant_id // Use order's restaurant_id if available
+      );
+
+      console.log('Resolved meal items:', resolvedItems);
+
+      // Create order items using resolved meal IDs
+      const orderItems = resolvedItems.map(item => ({
         order_id: order.id,
-        meal_id: item.id, // Use item.id as meal_id
+        meal_id: item.meal_id, // Use the resolved meal database ID
         name: item.name,
         price: item.price,
         quantity: item.quantity
       }));
 
-      console.log('Inserting order items:', orderItems);
+      console.log('Inserting order items with resolved meal IDs:', orderItems);
 
-      // Use upsert instead of insert with onConflict to handle potential duplicates
+      // Validate that all meal IDs exist before insertion
+      const mealIds = orderItems.map(item => item.meal_id);
+      const isValid = await MealResolutionService.validateMealIds(mealIds);
+      
+      if (!isValid) {
+        throw new Error('Some meal IDs could not be validated in the database');
+      }
+
       const { error: itemsError } = await supabase
         .from('order_items')
-        .upsert(orderItems, {
-          onConflict: 'order_id,meal_id',
-          ignoreDuplicates: false
-        });
+        .insert(orderItems);
 
       if (itemsError) {
         console.error('Order items creation error:', itemsError);
