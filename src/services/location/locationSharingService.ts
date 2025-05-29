@@ -17,7 +17,10 @@ export class LocationSharingService {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data || null;
+      return data ? {
+        ...data,
+        privacy_level: data.privacy_level as 'precise' | 'approximate' | 'disabled'
+      } : null;
     } catch (error) {
       console.error('Error getting location sharing permission:', error);
       return null;
@@ -47,7 +50,10 @@ export class LocationSharingService {
         .single();
 
       if (error) throw error;
-      return data;
+      return data ? {
+        ...data,
+        privacy_level: data.privacy_level as 'precise' | 'approximate' | 'disabled'
+      } : null;
     } catch (error) {
       console.error('Error updating location sharing settings:', error);
       return null;
