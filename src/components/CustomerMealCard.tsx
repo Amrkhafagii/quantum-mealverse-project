@@ -8,33 +8,14 @@ import { convertMealToCartItemWithAssignment } from '@/services/mealPlan/mealToC
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Meal, MealFood } from '@/types/food';
+import { MealType } from '@/types/meal';
 
 interface CustomerMealCardProps {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  image_url?: string;
-  is_popular?: boolean;
-  dietary_tags?: string[];
+  meal: MealType;
 }
 
 export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
-  id,
-  name,
-  description,
-  price,
-  calories,
-  protein,
-  carbs,
-  fat,
-  image_url,
-  is_popular,
-  dietary_tags = []
+  meal
 }) => {
   const { addItem } = useCart();
   const { user } = useAuth();
@@ -46,13 +27,13 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
     const mealFoods: MealFood[] = [
       {
         food: {
-          id: id,
-          name: name,
-          calories: calories,
-          protein: protein,
-          carbs: carbs,
-          fat: fat,
-          category: 'meat', // Use valid FoodCategory
+          id: meal.id,
+          name: meal.name,
+          calories: meal.calories,
+          protein: meal.protein,
+          carbs: meal.carbs,
+          fat: meal.fat,
+          category: 'protein', // Use valid FoodCategory
           cookingState: 'cooked'
         },
         portionSize: 100 // Base portion for prepared meals
@@ -60,13 +41,13 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
     ];
 
     return {
-      id: id,
-      name: name,
+      id: meal.id,
+      name: meal.name,
       foods: mealFoods,
-      totalCalories: calories,
-      totalProtein: protein,
-      totalCarbs: carbs,
-      totalFat: fat
+      totalCalories: meal.calories,
+      totalProtein: meal.protein,
+      totalCarbs: meal.carbs,
+      totalFat: meal.fat
     };
   };
 
@@ -83,7 +64,7 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
     setIsAddingToCart(true);
     
     try {
-      console.log("Adding meal to cart with restaurant assignment:", name);
+      console.log("Adding meal to cart with restaurant assignment:", meal.name);
       
       // Convert meal to proper format
       const mealForAssignment = convertToMealFormat();
@@ -105,7 +86,7 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
 
       toast({
         title: "Item Added",
-        description: `${name} added to cart with restaurant assignment`,
+        description: `${meal.name} added to cart with restaurant assignment`,
         variant: "default"
       });
       
@@ -124,49 +105,49 @@ export const CustomerMealCard: React.FC<CustomerMealCardProps> = ({
   return (
     <Card className="holographic-card p-4 transition-all duration-300 hover:scale-105">
       <div className="space-y-4">
-        {image_url && (
+        {meal.image_url && (
           <img 
-            src={image_url} 
-            alt={name}
+            src={meal.image_url} 
+            alt={meal.name}
             className="w-full h-32 object-cover rounded-md"
           />
         )}
         
         <div className="space-y-2">
           <div className="flex justify-between items-start">
-            <h3 className="text-lg font-bold text-quantum-cyan neon-text">{name}</h3>
-            {is_popular && (
+            <h3 className="text-lg font-bold text-quantum-cyan neon-text">{meal.name}</h3>
+            {meal.is_popular && (
               <span className="text-xs bg-quantum-cyan text-quantum-black px-2 py-1 rounded">
                 Popular
               </span>
             )}
           </div>
           
-          <p className="text-sm text-gray-300 line-clamp-2">{description}</p>
+          <p className="text-sm text-gray-300 line-clamp-2">{meal.description}</p>
           
           <div className="flex justify-between items-center">
-            <span className="text-lg font-bold text-quantum-cyan">${price.toFixed(2)}</span>
-            <span className="text-sm text-galaxy-purple">{calories} kcal</span>
+            <span className="text-lg font-bold text-quantum-cyan">${meal.price.toFixed(2)}</span>
+            <span className="text-sm text-galaxy-purple">{meal.calories} kcal</span>
           </div>
           
           <div className="grid grid-cols-3 gap-2 text-xs text-center">
             <div className="p-1 rounded bg-quantum-black/50">
               <p className="text-quantum-cyan">Protein</p>
-              <p>{protein}g</p>
+              <p>{meal.protein}g</p>
             </div>
             <div className="p-1 rounded bg-quantum-black/50">
               <p className="text-quantum-cyan">Carbs</p>
-              <p>{carbs}g</p>
+              <p>{meal.carbs}g</p>
             </div>
             <div className="p-1 rounded bg-quantum-black/50">
               <p className="text-quantum-cyan">Fat</p>
-              <p>{fat}g</p>
+              <p>{meal.fat}g</p>
             </div>
           </div>
           
-          {dietary_tags.length > 0 && (
+          {meal.dietary_tags && meal.dietary_tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {dietary_tags.map((tag, index) => (
+              {meal.dietary_tags.map((tag, index) => (
                 <span 
                   key={index}
                   className="text-xs bg-galaxy-purple/20 text-galaxy-purple px-2 py-1 rounded"
