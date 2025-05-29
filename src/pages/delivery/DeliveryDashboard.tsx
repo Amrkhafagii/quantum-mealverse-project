@@ -11,7 +11,7 @@ import { DeliveryHistory } from '@/components/delivery/dashboard/DeliveryHistory
 import { DriverAvailabilityPanel } from '@/components/delivery/DriverAvailabilityPanel';
 import { DeliveryDashboardErrorBoundary } from '@/components/delivery/DeliveryDashboardErrorBoundary';
 import { deliveryService } from '@/services/delivery/deliveryService';
-import { Navbar } from '@/components/Navbar';
+import Navbar from '@/components/Navbar';
 import { Loader2 } from 'lucide-react';
 
 const DeliveryDashboard = () => {
