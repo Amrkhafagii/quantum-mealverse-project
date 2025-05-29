@@ -13,7 +13,6 @@ import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
 import UserAchievements from '@/components/fitness/UserAchievements';
-import { TeamChallenges } from '@/components/fitness/challenges/TeamChallenges';
 import { ExerciseLibrary } from '@/components/fitness/ExerciseLibrary';
 import { 
   Activity, 
@@ -21,7 +20,6 @@ import {
   History, 
   Target, 
   Book, 
-  Users, 
   Trophy, 
   BarChart3 
 } from 'lucide-react';
@@ -83,12 +81,6 @@ const FitnessPage = () => {
       label: 'Exercises',
       icon: Book,
       content: <ExerciseLibrary />
-    },
-    {
-      id: 'team-challenges',
-      label: 'Teams',
-      icon: Users,
-      content: <TeamChallenges />
     },
     {
       id: 'achievements',
