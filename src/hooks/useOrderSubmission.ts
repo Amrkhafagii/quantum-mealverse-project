@@ -39,7 +39,7 @@ export const useOrderSubmission = (
       console.log('Submitting order with data:', data);
 
       // Create the order with only existing database fields
-      const orderData: any = {
+      const orderData = {
         user_id: userId,
         customer_name: data.fullName,
         customer_email: data.email,
