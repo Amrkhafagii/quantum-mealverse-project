@@ -1,258 +1,204 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Clock, 
-  PlayCircle, 
-  CheckCircle, 
-  StickyNote, 
-  User, 
-  Phone, 
-  MapPin,
-  ChefHat
-} from 'lucide-react';
 import { useDashboardStages } from '@/hooks/dashboard/useDashboardStages';
-import { StageNotesModal } from '@/components/restaurant/orders/preparation/StageNotesModal';
-import { formatDistanceToNow } from 'date-fns';
-import { GroupedOrder } from '@/services/dashboard/dashboardStageService';
+import { Clock, CheckCircle, Package, AlertCircle, RefreshCw } from 'lucide-react';
+import { format } from 'date-fns';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface OrderStagesDashboardProps {
   restaurantId: string;
 }
 
-export const OrderStagesDashboard: React.FC<OrderStagesDashboardProps> = ({ 
-  restaurantId 
-}) => {
-  const { orders, isLoading, advanceStage, updateStageNotes } = useDashboardStages(restaurantId);
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<{ orderId: string; stageName: string }>({ orderId: '', stageName: '' });
+export const OrderStagesDashboard: React.FC<OrderStagesDashboardProps> = ({ restaurantId }) => {
+  console.log('OrderStagesDashboard - Component mounted with restaurantId:', restaurantId);
 
-  const getStageIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in_progress':
-        return <PlayCircle className="h-4 w-4 text-blue-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+  const {
+    orders,
+    isLoading,
+    advanceStage,
+    updateStageNotes,
+    refetch
+  } = useDashboardStages(restaurantId);
+
+  console.log('OrderStagesDashboard - Data:', { orders, isLoading });
+
+  const handleAdvanceStage = async (orderId: string, stageName: string) => {
+    console.log('OrderStagesDashboard - Advancing stage:', { orderId, stageName });
+    try {
+      await advanceStage(orderId, stageName);
+    } catch (error) {
+      console.error('OrderStagesDashboard - Error advancing stage:', error);
     }
   };
 
   const getStageColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      default:
-        return 'bg-gray-50 text-gray-600 border-gray-200';
+      case 'completed': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      case 'pending': return 'bg-gray-400';
+      default: return 'bg-gray-300';
     }
   };
 
-  const formatStageName = (stageName: string) => {
-    return stageName
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  const handleAdvanceStage = async (orderId: string, stageName: string) => {
-    await advanceStage(orderId, stageName);
-  };
-
-  const handleAddNotes = (orderId: string, stageName: string) => {
-    setSelectedStage({ orderId, stageName });
-    setNotesModalOpen(true);
-  };
-
-  const handleSaveNotes = async (notes: string) => {
-    if (selectedStage.orderId && selectedStage.stageName) {
-      await updateStageNotes(selectedStage.orderId, selectedStage.stageName, notes);
-    }
-  };
-
-  const getCurrentStage = (order: GroupedOrder) => {
-    return order.stages.find(stage => stage.stage_status === 'in_progress');
-  };
-
-  const getNextPendingStage = (order: GroupedOrder) => {
-    return order.stages.find(stage => stage.stage_status === 'pending');
-  };
-
-  const getOrderAge = (createdAt: string) => {
-    try {
-      return formatDistanceToNow(new Date(createdAt), { addSuffix: true });
-    } catch {
-      return 'Unknown';
-    }
+  const formatStageName = (name: string) => {
+    return name.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-2 text-gray-600">Loading orders...</span>
-      </div>
-    );
-  }
-
-  if (orders.length === 0) {
+    console.log('OrderStagesDashboard - Showing loading state');
     return (
       <Card>
-        <CardContent className="text-center py-12">
-          <ChefHat className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Active Orders</h3>
-          <p className="text-gray-600">All orders are completed or no orders are currently being prepared.</p>
+        <CardContent className="p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading order stages...</p>
         </CardContent>
       </Card>
     );
   }
 
+  if (!orders || orders.length === 0) {
+    console.log('OrderStagesDashboard - No orders found');
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Order Stages</CardTitle>
+            <Button onClick={refetch} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Active Orders</h3>
+          <p className="text-gray-600">Orders with preparation stages will appear here.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  console.log('OrderStagesDashboard - Rendering orders:', orders.length);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Active Orders ({orders.length})</h2>
-        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-          Real-time Updates
-        </Badge>
-      </div>
+    <ErrorBoundary fallback={
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Component Error</h3>
+          <p className="text-red-600">There was an error loading the order stages.</p>
+        </CardContent>
+      </Card>
+    }>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Order Preparation Stages</h2>
+          <Button onClick={refetch} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {orders.map((order) => {
-          const currentStage = getCurrentStage(order);
-          const nextStage = getNextPendingStage(order);
-
-          return (
-            <Card key={order.order_id} className="border-l-4 border-l-blue-500">
-              <CardHeader className="pb-3">
+        <div className="grid gap-6">
+          {orders.map((order) => (
+            <Card key={order.order_id}>
+              <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    Order #{order.order_id.slice(0, 8)}
-                  </CardTitle>
+                  <div>
+                    <CardTitle className="text-lg">
+                      Order #{order.order_id.substring(0, 8)}
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">
+                      {order.customer_name} • EGP {order.total}
+                    </p>
+                  </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-blue-600">
-                      {order.overall_progress}%
-                    </div>
-                    <div className="text-sm text-gray-500">Complete</div>
-                  </div>
-                </div>
-                
-                <Progress value={order.overall_progress} className="h-2" />
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <User className="h-3 w-3 text-gray-500" />
-                      <span className="font-medium">{order.customer_name}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Phone className="h-3 w-3 text-gray-500" />
-                      <span className="text-gray-600">{order.customer_phone}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-3 w-3 text-gray-500" />
-                      <span className="text-gray-600 text-xs">{order.delivery_address}</span>
-                    </div>
-                    <div className="text-gray-500">
-                      ${order.total.toFixed(2)} • {getOrderAge(order.created_at)}
-                    </div>
+                    <Progress value={order.overall_progress} className="w-24 mb-1" />
+                    <p className="text-sm text-gray-600">{order.overall_progress}% Complete</p>
                   </div>
                 </div>
               </CardHeader>
-
+              
               <CardContent>
-                <div className="space-y-3">
-                  {order.stages.map((stage) => (
-                    <div 
-                      key={stage.stage_id} 
-                      className={`flex items-center justify-between p-3 rounded-lg border ${getStageColor(stage.stage_status)}`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {getStageIcon(stage.stage_status)}
-                        <div>
-                          <div className="font-medium">{formatStageName(stage.stage_name)}</div>
-                          <div className="text-sm">
-                            Est: {stage.estimated_duration_minutes}m
-                            {stage.actual_duration_minutes && (
-                              <span className="ml-2 text-green-600">
-                                (Completed in {stage.actual_duration_minutes}m)
-                              </span>
-                            )}
-                          </div>
-                          {stage.stage_notes && (
-                            <div className="text-xs text-gray-600 mt-1 flex items-center space-x-1">
-                              <StickyNote className="h-3 w-3" />
-                              <span>{stage.stage_notes}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        {stage.stage_status === 'in_progress' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleAdvanceStage(order.order_id, stage.stage_name)}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Complete
-                          </Button>
+                <div className="space-y-4">
+                  {order.stages && order.stages.length > 0 ? (
+                    order.stages.map((stage, index) => (
+                      <div key={stage.stage_id} className="relative">
+                        {index < order.stages.length - 1 && (
+                          <div className="absolute left-4 top-8 w-0.5 h-16 bg-gray-200"></div>
                         )}
                         
-                        {stage.stage_status === 'pending' && 
-                         stage.stage_order === order.stages.find(s => s.stage_status !== 'completed')?.stage_order && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleAdvanceStage(order.order_id, stage.stage_name)}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <PlayCircle className="h-3 w-3 mr-1" />
-                            Start
-                          </Button>
-                        )}
-
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddNotes(order.order_id, stage.stage_name)}
-                        >
-                          <StickyNote className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-start space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getStageColor(stage.stage_status)}`}>
+                            {stage.stage_status === 'completed' ? (
+                              <CheckCircle className="h-5 w-5 text-white" />
+                            ) : stage.stage_status === 'in_progress' ? (
+                              <Clock className="h-5 w-5 text-white" />
+                            ) : (
+                              <div className="w-3 h-3 bg-white rounded-full"></div>
+                            )}
+                          </div>
+                          
+                          <div className="flex-grow">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium">{formatStageName(stage.stage_name)}</h4>
+                                <p className="text-sm text-gray-600">
+                                  Estimated: {stage.estimated_duration_minutes} min
+                                  {stage.actual_duration_minutes && (
+                                    <span> • Actual: {stage.actual_duration_minutes} min</span>
+                                  )}
+                                </p>
+                                {stage.stage_started_at && (
+                                  <p className="text-xs text-gray-500">
+                                    Started: {format(new Date(stage.stage_started_at), 'HH:mm')}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center space-x-2">
+                                <Badge className={`${getStageColor(stage.stage_status)} text-white`}>
+                                  {stage.stage_status.replace('_', ' ')}
+                                </Badge>
+                                
+                                {stage.stage_status === 'in_progress' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAdvanceStage(order.order_id, stage.stage_name)}
+                                  >
+                                    Complete
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {stage.stage_notes && (
+                              <p className="text-sm text-gray-600 mt-2 bg-gray-50 p-2 rounded">
+                                {stage.stage_notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                      <p className="text-gray-600">No preparation stages found for this order</p>
                     </div>
-                  ))}
+                  )}
                 </div>
-
-                {currentStage && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm font-medium text-blue-900">
-                      Currently: {formatStageName(currentStage.stage_name)}
-                    </div>
-                    {currentStage.stage_started_at && (
-                      <div className="text-xs text-blue-700 mt-1">
-                        Started {formatDistanceToNow(new Date(currentStage.stage_started_at), { addSuffix: true })}
-                      </div>
-                    )}
-                  </div>
-                )}
               </CardContent>
             </Card>
-          );
-        })}
+          ))}
+        </div>
       </div>
-
-      <StageNotesModal
-        isOpen={notesModalOpen}
-        onClose={() => setNotesModalOpen(false)}
-        onSave={handleSaveNotes}
-        stageName={selectedStage.stageName}
-      />
-    </div>
+    </ErrorBoundary>
   );
 };
