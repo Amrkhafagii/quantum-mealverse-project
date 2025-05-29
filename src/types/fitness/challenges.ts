@@ -33,8 +33,10 @@ export interface Team {
   name: string;
   description?: string;
   created_by: string;
+  creator_id?: string; // Maps to database creator_id field
   created_at: string;
   member_count: number;
+  members_count?: number; // Maps to database members_count field
   avatar_url?: string;
   image_url?: string; // Alias for avatar_url for component compatibility
   total_points?: number;

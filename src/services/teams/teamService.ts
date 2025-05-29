@@ -6,17 +6,19 @@ import type { Team } from '@/types/fitness/challenges';
 // Use the proper Supabase generated type
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 
-// Simplified transform function with proper type handling
+// Transform function that maps all database fields to Team interface
 const transformTeam = (team: TeamRow): Team => {
   return {
     id: team.id,
     name: team.name,
     description: team.description,
     created_by: team.created_by,
+    creator_id: team.creator_id, // Map database field
     created_at: team.created_at,
     avatar_url: team.avatar_url,
     image_url: team.avatar_url, // Provide alias for component compatibility
     member_count: team.member_count ?? 0,
+    members_count: team.members_count ?? 0, // Map database field
     total_points: team.total_points ?? 0
   };
 };
@@ -29,9 +31,11 @@ export const fetchTeams = async (): Promise<Team[]> => {
       name,
       description,
       created_by,
+      creator_id,
       created_at,
       avatar_url,
       member_count,
+      members_count,
       total_points
     `)
     .order('created_at', { ascending: false });
@@ -60,9 +64,11 @@ export const fetchUserTeam = async (userId: string): Promise<Team | null> => {
       name,
       description,
       created_by,
+      creator_id,
       created_at,
       avatar_url,
       member_count,
+      members_count,
       total_points
     `)
     .eq('id', membershipData.team_id)
@@ -86,7 +92,8 @@ export const createTeam = async (userId: string, teamData: CreateTeamData): Prom
       name: teamData.name,
       description: teamData.description,
       avatar_url: teamData.image_url,
-      created_by: userId
+      created_by: userId,
+      creator_id: userId // Also set creator_id for consistency
     }])
     .select()
     .single();
