@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { SimpleLocation } from './useSimpleLocation';
+import { addDistanceToRestaurants } from '@/utils/distanceCalculation';
 
 export interface Restaurant {
   restaurant_id: string;
@@ -10,6 +11,8 @@ export interface Restaurant {
   restaurant_address: string;
   restaurant_email: string | null;
   distance_km?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface RestaurantsState {
@@ -22,7 +25,7 @@ interface RestaurantsState {
 export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => {
   const [state, setState] = useState<RestaurantsState>({
     restaurants: [],
-    loading: true, // Start with loading true to fetch all restaurants initially
+    loading: true,
     error: null,
     lastFetchLocation: null
   });
@@ -83,14 +86,16 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Fetch all active restaurants with their basic info
+      // Fetch all active restaurants with their coordinates
       const { data: allRestaurants, error: allError } = await supabase
         .from('restaurants')
         .select(`
           id,
           name,
           address,
-          email
+          email,
+          latitude,
+          longitude
         `)
         .eq('is_active', true)
         .order('name');
@@ -100,13 +105,22 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
       if (abortControllerRef.current?.signal.aborted) return;
 
       // Map the restaurant data to match the expected interface
-      const finalData = (allRestaurants || []).map(restaurant => ({
+      let finalData = (allRestaurants || []).map(restaurant => ({
         restaurant_id: restaurant.id,
         restaurant_name: restaurant.name,
         restaurant_address: restaurant.address,
         restaurant_email: restaurant.email,
-        distance_km: undefined // No distance when location isn't available
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+        distance_km: undefined // Will be calculated if location is available
       }));
+
+      // If location is available, calculate distances client-side
+      if (location?.latitude && location?.longitude) {
+        finalData = addDistanceToRestaurants(finalData, location.latitude, location.longitude);
+        // Sort by distance when location is available
+        finalData.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
+      }
 
       // Cache the result
       cacheRef.current.set(cacheKey, {
@@ -122,7 +136,7 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
         lastFetchLocation: null
       }));
 
-      console.log(`Found ${finalData.length} restaurants (all available)`);
+      console.log(`Found ${finalData.length} restaurants (all available)${location ? ' with distances calculated' : ''}`);
     } catch (err: any) {
       if (abortControllerRef.current?.signal.aborted) return;
       
@@ -134,7 +148,7 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
         restaurants: []
       }));
     }
-  }, [user, getCacheKey]);
+  }, [user, getCacheKey, location]);
 
   const fetchNearbyRestaurants = useCallback(async (userLocation: SimpleLocation) => {
     if (!user) {
@@ -171,7 +185,7 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Try to fetch nearby restaurants first
+      // Try to fetch nearby restaurants using the SQL function
       const { data: nearbyData, error: nearbyError } = await supabase.rpc('find_nearest_restaurant', {
         order_lat: userLocation.latitude,
         order_lng: userLocation.longitude,
@@ -180,11 +194,20 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
 
       if (abortControllerRef.current?.signal.aborted) return;
 
-      let finalData = nearbyData || [];
+      let finalData: Restaurant[] = [];
 
-      // If no nearby restaurants found, fallback to all restaurants
-      if (!nearbyData || nearbyData.length === 0) {
-        console.log('No nearby restaurants found, fetching all restaurants as fallback');
+      // If the SQL function returns data, use it directly
+      if (nearbyData && nearbyData.length > 0) {
+        finalData = nearbyData.map((item: any) => ({
+          restaurant_id: item.restaurant_id,
+          restaurant_name: item.restaurant_name,
+          restaurant_address: item.restaurant_address,
+          restaurant_email: item.restaurant_email,
+          distance_km: item.distance_km
+        }));
+      } else {
+        // Fallback: fetch all restaurants and calculate distances client-side
+        console.log('SQL function returned no results, falling back to client-side calculation');
         
         const { data: allRestaurants, error: allError } = await supabase
           .from('restaurants')
@@ -192,22 +215,36 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
             id,
             name,
             address,
-            email
+            email,
+            latitude,
+            longitude
           `)
           .eq('is_active', true)
-          .order('name')
-          .limit(20);
+          .order('name');
 
         if (allError) throw allError;
         
-        // Map the restaurant data to match the expected interface
-        finalData = (allRestaurants || []).map(restaurant => ({
+        // Map and calculate distances
+        const mappedRestaurants = (allRestaurants || []).map(restaurant => ({
           restaurant_id: restaurant.id,
           restaurant_name: restaurant.name,
           restaurant_address: restaurant.address,
           restaurant_email: restaurant.email,
-          distance_km: 0 // Set to 0 for fallback restaurants since we don't have location data
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude
         }));
+
+        // Calculate distances and filter by distance
+        const restaurantsWithDistance = addDistanceToRestaurants(
+          mappedRestaurants, 
+          userLocation.latitude, 
+          userLocation.longitude
+        );
+
+        // Filter restaurants within 50km and sort by distance
+        finalData = restaurantsWithDistance
+          .filter(restaurant => restaurant.distance_km <= 50)
+          .sort((a, b) => a.distance_km - b.distance_km);
       }
 
       if (abortControllerRef.current?.signal.aborted) return;
@@ -222,16 +259,16 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
         ...prev,
         restaurants: finalData,
         loading: false,
-        error: finalData.length === 0 ? 'No restaurants found' : null,
+        error: finalData.length === 0 ? 'No restaurants found in your area' : null,
         lastFetchLocation: userLocation
       }));
 
-      console.log(`Found ${finalData.length} restaurants near location`);
+      console.log(`Found ${finalData.length} restaurants near location with distances calculated`);
     } catch (err: any) {
       if (abortControllerRef.current?.signal.aborted) return;
       
-      console.error('Error fetching restaurants:', err);
-      // Fallback to all restaurants on error
+      console.error('Error fetching nearby restaurants:', err);
+      // Final fallback to all restaurants with distance calculation
       await fetchAllRestaurants();
     }
   }, [user, getCacheKey, fetchAllRestaurants]);
@@ -251,7 +288,7 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
   useEffect(() => {
     if (user) {
       if (location?.latitude && location?.longitude && locationChanged) {
-        // User has location, fetch nearby restaurants
+        // User has location, fetch nearby restaurants with distance calculation
         fetchNearbyRestaurants(location);
       } else if (!location) {
         // No location available, fetch all restaurants

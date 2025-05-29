@@ -7540,9 +7540,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_verified: boolean | null
-          latitude: number | null
+          latitude: number
           logo_url: string | null
-          longitude: number | null
+          longitude: number
           minimum_order_amount: number | null
           name: string
           onboarding_completed_at: string | null
@@ -7574,9 +7574,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
-          latitude?: number | null
+          latitude: number
           logo_url?: string | null
-          longitude?: number | null
+          longitude: number
           minimum_order_amount?: number | null
           name: string
           onboarding_completed_at?: string | null
@@ -7608,9 +7608,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_verified?: boolean | null
-          latitude?: number | null
+          latitude?: number
           logo_url?: string | null
-          longitude?: number | null
+          longitude?: number
           minimum_order_amount?: number | null
           name?: string
           onboarding_completed_at?: string | null
