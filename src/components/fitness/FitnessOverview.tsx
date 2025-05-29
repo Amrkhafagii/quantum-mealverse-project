@@ -15,6 +15,7 @@ import { EnhancedWorkoutHistory } from './analytics/EnhancedWorkoutHistory';
 import { SmartRecommendations } from './recommendations/SmartRecommendations';
 import { AdaptiveDifficulty } from './recommendations/AdaptiveDifficulty';
 import { WorkoutVariations } from './recommendations/WorkoutVariations';
+import CrossPlatformTester from './CrossPlatformTester';
 
 interface FitnessOverviewProps {
   userId?: string;
@@ -132,6 +133,9 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
           <TabsTrigger value="progress" className="text-xs sm:text-sm whitespace-nowrap">Progress Charts</TabsTrigger>
           <TabsTrigger value="history" className="text-xs sm:text-sm whitespace-nowrap">Workout History</TabsTrigger>
           <TabsTrigger value="analytics" className="text-xs sm:text-sm whitespace-nowrap">Analytics</TabsTrigger>
+          {process.env.NODE_ENV === 'development' && (
+            <TabsTrigger value="testing" className="text-xs sm:text-sm whitespace-nowrap">Testing</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 sm:space-y-6">
@@ -178,6 +182,12 @@ export const FitnessOverview: React.FC<FitnessOverviewProps> = ({ userId, workou
             <ProgressAnalytics userId={activeUserId} />
           </div>
         </TabsContent>
+
+        {process.env.NODE_ENV === 'development' && (
+          <TabsContent value="testing">
+            <CrossPlatformTester />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -180,6 +180,16 @@
     max-height: 60vh;
     overflow-y: auto;
   }
+  
+  /* Fitness dashboard specific landscape optimizations */
+  .fitness-stats-landscape {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .fitness-tabs-landscape {
+    margin-bottom: 1rem;
+  }
 }
 
 /* Portrait orientation optimizations */
@@ -191,6 +201,50 @@
   .portrait-full-width {
     width: 100%;
   }
+  
+  /* Better portrait layout for fitness cards */
+  .fitness-stats-portrait {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+/* Cross-platform testing utilities */
+.test-boundary {
+  outline: 2px dashed #ff6b6b;
+  outline-offset: 2px;
+}
+
+.test-pass {
+  background-color: rgba(72, 187, 120, 0.1);
+  border: 1px solid #48bb78;
+}
+
+.test-fail {
+  background-color: rgba(245, 101, 101, 0.1);
+  border: 1px solid #f56565;
+}
+
+/* Orientation change animations */
+.orientation-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Platform-specific optimizations */
+.ios-device {
+  /* iOS-specific smooth scrolling */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.android-device {
+  /* Android-specific optimizations */
+  overscroll-behavior: contain;
+}
+
+.web-platform {
+  /* Web-specific optimizations */
+  scroll-behavior: smooth;
 }
 
 /* Dark mode improvements */
@@ -228,4 +282,35 @@
 .focus-ring-enhanced:focus-visible {
   outline: 2px solid rgb(59 130 246);
   outline-offset: 2px;
+}
+
+/* Screen size specific classes for testing */
+@media (max-width: 320px) {
+  .test-screen-xs {
+    background-color: rgba(255, 0, 0, 0.1);
+  }
+}
+
+@media (min-width: 321px) and (max-width: 375px) {
+  .test-screen-sm {
+    background-color: rgba(255, 165, 0, 0.1);
+  }
+}
+
+@media (min-width: 376px) and (max-width: 768px) {
+  .test-screen-md {
+    background-color: rgba(255, 255, 0, 0.1);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .test-screen-lg {
+    background-color: rgba(0, 255, 0, 0.1);
+  }
+}
+
+@media (min-width: 1025px) {
+  .test-screen-xl {
+    background-color: rgba(0, 0, 255, 0.1);
+  }
 }

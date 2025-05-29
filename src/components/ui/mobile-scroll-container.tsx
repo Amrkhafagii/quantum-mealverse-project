@@ -25,13 +25,12 @@ export const MobileScrollContainer: React.FC<MobileScrollContainerProps> = ({
     // iOS specific scroll improvements
     isPlatformIOS && [
       'ios-scroll',
-      '-webkit-overflow-scrolling: touch',
-      'overscroll-behavior-y: none', // Prevent bounce
+      'overscroll-behavior-y-none', // Prevent bounce
     ],
     // Android specific scroll improvements
     isPlatformAndroid && [
       'android-scroll',
-      'overscroll-behavior: contain',
+      'overscroll-behavior-contain',
     ],
     // Mobile optimizations
     isMobile && [
@@ -42,7 +41,7 @@ export const MobileScrollContainer: React.FC<MobileScrollContainerProps> = ({
     className
   );
   
-  const containerStyle = {
+  const containerStyle: React.CSSProperties = {
     maxHeight: isMobile ? maxHeight : 'none',
     WebkitOverflowScrolling: isPlatformIOS ? 'touch' : undefined,
   };
