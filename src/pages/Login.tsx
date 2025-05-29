@@ -1,48 +1,27 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card } from "@/components/ui/card";
 import { AuthForm } from '@/components/AuthForm';
-import ParticleBackground from '@/components/ParticleBackground';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { useAuth } from '@/hooks/useAuth';
-import { Loader } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Login = () => {
-  const { user, loading } = useAuth();
-
-  // Show loading state while auth is in progress
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-quantum-black">
-        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
-      </div>
-    );
-  }
-
-  // If user is logged in, show loading (Auth page will handle redirect)
-  if (user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-quantum-black">
-        <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-quantum-black text-white relative">
-      <ParticleBackground />
-      <Navbar />
-      <div className="relative z-10 flex items-center justify-center min-h-screen py-20">
-        <div className="w-full max-w-md px-4">
-          <Card className="holographic-card p-8">
-            <h1 className="text-4xl font-bold text-quantum-cyan mb-8 text-center neon-text">HealthAndFix</h1>
-            <AuthForm />
-          </Card>
-        </div>
-      </div>
-      <Footer />
+    <div className="flex min-h-screen bg-quantum-black items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-quantum-darkBlue/80 border-quantum-cyan/30 backdrop-blur-md">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center text-quantum-cyan">Login</CardTitle>
+          <CardDescription className="text-center text-gray-400">
+            Sign in to your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AuthForm 
+            mode="login" 
+            onSuccess={() => {
+              window.location.href = '/';
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -14,7 +14,13 @@ const Signup = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AuthForm isRegister={true} />
+          <AuthForm 
+            mode="signup" 
+            userType="customer"
+            onSuccess={() => {
+              window.location.href = '/';
+            }}
+          />
         </CardContent>
       </Card>
     </div>
