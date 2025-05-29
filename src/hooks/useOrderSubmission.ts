@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/contexts/CartContext';
-import { MealResolutionService } from '@/services/meal/mealResolutionService';
 
 export const useOrderSubmission = (
   userId: string | undefined,
@@ -41,15 +40,7 @@ export const useOrderSubmission = (
       console.log('Cart items:', cartItems);
       console.log('Form data:', formData);
 
-      // Step 1: Resolve cart items to meal format (simplified, no validation)
-      const resolvedItems = await MealResolutionService.resolveCartItemsToMeals(
-        cartItems,
-        'default-restaurant' // Placeholder restaurant ID
-      );
-
-      console.log('Resolved items (no validation):', resolvedItems);
-
-      // Step 2: Create order record
+      // Step 1: Create order record
       const orderData = {
         user_id: userId,
         customer_name: formData.fullName,
@@ -83,16 +74,16 @@ export const useOrderSubmission = (
 
       console.log('Order created successfully:', order);
 
-      // Step 3: Create order items directly from resolved items (no validation)
-      const orderItems = resolvedItems.map(item => ({
+      // Step 2: Create order items directly without meal_id (using null)
+      const orderItems = cartItems.map(item => ({
         order_id: order.id,
-        meal_id: item.meal_id, // Using the mock meal ID from resolution service
+        meal_id: null, // Remove meal_id completely to avoid foreign key constraints
         name: item.name,
         price: item.price,
         quantity: item.quantity
       }));
 
-      console.log('Creating order items:', orderItems);
+      console.log('Creating order items without meal_id:', orderItems);
 
       const { data: createdOrderItems, error: orderItemsError } = await supabase
         .from('order_items')
