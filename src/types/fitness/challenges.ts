@@ -36,6 +36,7 @@ export interface Team {
   created_at: string;
   member_count: number;
   avatar_url?: string;
+  image_url?: string; // Alias for avatar_url for component compatibility
   total_points?: number;
 }
 

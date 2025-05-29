@@ -57,9 +57,9 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {team.image_url ? (
+                      {team.avatar_url ? (
                         <img 
-                          src={team.image_url} 
+                          src={team.avatar_url} 
                           alt={team.name}
                           className="w-12 h-12 rounded-full object-cover"
                         />

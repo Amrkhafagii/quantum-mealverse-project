@@ -10,12 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Team } from '@/types/fitness/challenges';
 
 interface CreateTeamModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTeamCreated: (teamData: Omit<Team, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+  onTeamCreated: (teamData: { name: string; description?: string; image_url?: string }) => Promise<boolean>;
 }
 
 export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
@@ -40,10 +39,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
     const success = await onTeamCreated({
       name: formData.name,
       description: formData.description || undefined,
-      image_url: formData.image_url || undefined,
-      created_by: '', // Will be set in the hook
-      is_active: true,
-      max_members: 50
+      image_url: formData.image_url || undefined
     });
     
     if (success) {

@@ -14,6 +14,7 @@ const transformTeam = (team: TeamRow): Team => ({
   created_by: team.created_by,
   created_at: team.created_at,
   avatar_url: team.avatar_url,
+  image_url: team.avatar_url, // Provide alias for component compatibility
   member_count: team.member_count ?? 0,
   total_points: team.total_points ?? 0
 });
