@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/use-toast';
 
 interface OrderTrackingEnhancementProps {
   order: Order;
-  children?: React.ReactNode; // For existing tracking components
+  children?: React.ReactNode;
 }
 
 export const OrderTrackingEnhancement: React.FC<OrderTrackingEnhancementProps> = ({
@@ -31,19 +31,21 @@ export const OrderTrackingEnhancement: React.FC<OrderTrackingEnhancementProps> =
           description: "You'll receive updates about your order preparation",
         });
       } else {
+        setNotificationsEnabled(false);
         toast({
-          title: "Notifications blocked",
+          title: "Notifications disabled",
           description: "Please enable notifications in your browser settings",
           variant: "destructive"
         });
       }
     } else {
-      setNotificationsEnabled(!notificationsEnabled);
+      const newState = !notificationsEnabled;
+      setNotificationsEnabled(newState);
       toast({
-        title: notificationsEnabled ? "Notifications disabled" : "Notifications enabled",
-        description: notificationsEnabled 
-          ? "You won't receive preparation updates" 
-          : "You'll receive updates about your order preparation",
+        title: newState ? "Notifications enabled" : "Notifications disabled",
+        description: newState 
+          ? "You'll receive updates about your order preparation" 
+          : "You won't receive preparation updates",
       });
     }
   };

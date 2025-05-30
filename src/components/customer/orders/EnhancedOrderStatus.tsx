@@ -36,7 +36,7 @@ export const EnhancedOrderStatus: React.FC<EnhancedOrderStatusProps> = ({ order 
   const getStatusMessage = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'Your order has been placed and is waiting for restaurant confirmation';
+        return 'Your order has been placed and is waiting for restaurant confirmation. We\'re finding the perfect restaurant to prepare your meal.';
       case 'restaurant_accepted':
         return 'Great! The restaurant has accepted your order and will start preparing it soon';
       case 'preparing':

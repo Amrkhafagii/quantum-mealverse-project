@@ -69,7 +69,7 @@ export const useCustomerPreparationUpdates = (orderId: string) => {
               duration: 5000,
             });
             
-            // Show push notification if permission granted
+            // Show push notification only if permission granted
             if (permission === 'granted') {
               showNotification(title, message, {
                 orderId,
