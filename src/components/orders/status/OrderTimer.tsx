@@ -1,51 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, MapPin } from 'lucide-react';
-import { useResponsive } from '@/responsive/core';
 
-interface OrderTimerProps {
-  startTime: Date;
-  deliveryLocation?: {
-    latitude: number;
-    longitude: number;
-  };
+import React, { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
+export interface OrderTimerProps {
+  expiresAt: Date;
+  orderId: string;
+  onTimerExpire?: () => void;
 }
 
-const calculateTimeRemaining = (startTime: Date): string => {
-  const now = new Date();
-  const difference = startTime.getTime() - now.getTime();
-
-  if (difference <= 0) {
-    return "Order arriving soon!";
-  }
-
-  const minutes = Math.floor((difference / (1000 * 60)) % 60);
-  const seconds = Math.floor((difference / 1000) % 60);
-
-  return `${minutes}m ${seconds}s`;
-};
-
-export const OrderTimer: React.FC<OrderTimerProps> = ({ startTime, deliveryLocation }) => {
-  const [timeRemaining, setTimeRemaining] = useState(calculateTimeRemaining(startTime));
-  const { isMobile } = useResponsive();
+export const OrderTimer: React.FC<OrderTimerProps> = ({
+  expiresAt,
+  orderId,
+  onTimerExpire
+}) => {
+  const [timeLeft, setTimeLeft] = useState<number>(0);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      setTimeRemaining(calculateTimeRemaining(startTime));
-    }, 1000);
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(expiresAt).getTime();
+      const difference = expiry - now;
+      
+      if (difference > 0) {
+        setTimeLeft(Math.floor(difference / 1000));
+      } else {
+        setTimeLeft(0);
+        onTimerExpire?.();
+      }
+    };
 
-    return () => clearInterval(intervalId);
-  }, [startTime]);
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [expiresAt, onTimerExpire]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  if (timeLeft <= 0) {
+    return (
+      <Badge variant="destructive" className="flex items-center gap-1">
+        <Clock className="h-3 w-3" />
+        Expired
+      </Badge>
+    );
+  }
 
   return (
-    <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-      <Clock className="h-4 w-4" />
-      <span>{timeRemaining}</span>
-      {deliveryLocation && isMobile && (
-        <>
-          <MapPin className="h-4 w-4" />
-          <span>{deliveryLocation.latitude.toFixed(2)}, {deliveryLocation.longitude.toFixed(2)}</span>
-        </>
-      )}
-    </div>
+    <Badge variant="outline" className="flex items-center gap-1">
+      <Clock className="h-3 w-3" />
+      {formatTime(timeLeft)}
+    </Badge>
   );
 };

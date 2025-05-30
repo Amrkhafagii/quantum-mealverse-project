@@ -1,114 +1,21 @@
+import { useState, useEffect } from 'react';
+import { useNetworkQuality } from '@/responsive/core/hooks';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useDeliveryLocationService } from './useDeliveryLocationService';
-import { useNetworkQuality } from './useNetworkQuality';
-import { DeliveryLocation } from '@/types/location';
-import { useBatteryMonitor } from '@/utils/batteryMonitor';
-import { calculateTrackingMode, getTrackingInterval, TrackingMode } from '@/utils/trackingModeCalculator';
+export const useIntelligentTracking = () => {
+  const { quality } = useNetworkQuality();
+  const [trackingEnabled, setTrackingEnabled] = useState(true);
 
-interface IntelligentTrackingOptions {
-  orderId?: string;
-  orderStatus?: string;
-  customerLocation?: { latitude: number; longitude: number };
-  restaurantLocation?: { latitude: number; longitude: number };
-  onLocationUpdate?: (location: DeliveryLocation) => void;
-  minimumBatteryLevel?: number; // Threshold to reduce tracking frequency
-  forceLowPowerMode?: boolean;
-}
-
-export function useIntelligentTracking({
-  orderId,
-  orderStatus = 'pending',
-  customerLocation,
-  restaurantLocation,
-  onLocationUpdate,
-  minimumBatteryLevel = 15,
-  forceLowPowerMode = false
-}: IntelligentTrackingOptions = {}) {
-  const { quality, isLowQuality } = useNetworkQuality();
-  const { batteryLevel, isLowBattery } = useBatteryMonitor({ minimumBatteryLevel });
-  
-  const [trackingMode, setTrackingMode] = useState<TrackingMode>('medium');
-  const [trackingInterval, setTrackingInterval] = useState(30000); // 30 seconds default
-  const [distanceToDestination, setDistanceToDestination] = useState<number | null>(null);
-  const [currentLocation, setCurrentLocation] = useState<DeliveryLocation | null>(null);
-
-  // Use the delivery location service for location tracking
-  const locationService = useDeliveryLocationService();
-  
-  // Extract only the properties we need
-  const location = locationService.lastLocation;
-  const isTracking = locationService.isTracking || false;
-  
-  // Define wrapper methods for location tracking
-  const updateLocation = async () => {
-    const result = await locationService.refreshLocation?.();
-    if (result && onLocationUpdate) {
-      onLocationUpdate(result);
-      setCurrentLocation(result);
+  useEffect(() => {
+    // Adjust tracking based on network quality
+    if (quality === '4G' || quality === '5G' || quality === 'WiFi') {
+      setTrackingEnabled(true);
+    } else {
+      setTrackingEnabled(false);
     }
-    return result || null;
-  };
-  
-  // Determine optimal tracking mode based on all factors
-  useEffect(() => {
-    const result = calculateTrackingMode({
-      isLowBattery,
-      isLowQuality,
-      orderStatus,
-      location,
-      customerLocation,
-      restaurantLocation,
-      forceLowPowerMode
-    });
-    
-    setTrackingMode(result.trackingMode);
-    setDistanceToDestination(result.distanceToDestination);
-  }, [isLowBattery, isLowQuality, orderStatus, location, customerLocation, restaurantLocation, forceLowPowerMode]);
-
-  // Update tracking interval based on tracking mode
-  useEffect(() => {
-    setTrackingInterval(getTrackingInterval(trackingMode));
-  }, [trackingMode]);
-
-  // Start tracking with the calculated interval
-  useEffect(() => {
-    if (!isTracking && orderId) {
-      // Start tracking if we have an order and we're not already tracking
-      locationService.startTracking && locationService.startTracking();
-    }
-    
-    // Set up the interval for location updates
-    const intervalId = setInterval(() => {
-      if (orderId) {
-        updateLocation().then(location => {
-          if (location && onLocationUpdate) {
-            onLocationUpdate(location);
-          }
-        });
-      }
-    }, trackingInterval);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [trackingInterval, orderId, isTracking]);
-
-  // Force an immediate location update
-  const forceLocationUpdate = useCallback(async () => {
-    const updatedLocation = await updateLocation();
-    return updatedLocation;
-  }, [updateLocation]);
+  }, [quality]);
 
   return {
-    location: currentLocation || location,
-    trackingMode,
-    trackingInterval,
-    batteryLevel,
-    isLowBattery,
-    distanceToDestination,
-    isTracking,
-    forceLocationUpdate,
-    stopTracking: locationService.stopTracking
+    trackingEnabled,
+    networkQuality: quality,
   };
-}
+};

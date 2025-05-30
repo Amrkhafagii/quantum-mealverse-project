@@ -155,19 +155,25 @@ const PlatformComponentsDemo = () => {
               </Button>
               
               <PlatformModal
-                open={showModal}
+                isOpen={showModal}
                 onOpenChange={setShowModal}
                 title="Demo Modal"
                 description="This modal adapts to your platform"
-                confirmText="Confirm"
-                cancelText="Cancel"
-                onConfirm={() => {
-                  console.log('Modal confirmed');
-                  setShowModal(false);
-                }}
-                onCancel={() => setShowModal(false)}
               >
-                <p>This is the modal content. The styling and behavior will adapt based on your platform.</p>
+                <div className="p-4 space-y-4">
+                  <p>This is the modal content. The styling and behavior will adapt based on your platform.</p>
+                  <div className="flex gap-2">
+                    <Button onClick={() => setShowModal(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={() => {
+                      console.log('Modal confirmed');
+                      setShowModal(false);
+                    }}>
+                      Confirm
+                    </Button>
+                  </div>
+                </div>
               </PlatformModal>
             </CardContent>
           </Card>
@@ -179,20 +185,19 @@ const PlatformComponentsDemo = () => {
               <CardTitle>Platform-Aware Dialog</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => setShowDialog(true)} className="w-full">
-                Open Dialog
-              </Button>
-              
               <PlatformAwareDialog
-                open={showDialog}
-                onOpenChange={setShowDialog}
+                trigger={<Button className="w-full">Open Dialog</Button>}
                 title="Demo Dialog"
                 description="This dialog follows platform conventions"
-                confirmText="OK"
-                cancelText="Cancel"
-                onConfirm={() => console.log('Dialog confirmed')}
-                onCancel={() => console.log('Dialog cancelled')}
-              />
+              >
+                <div className="p-4 space-y-4">
+                  <p>This is the dialog content.</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline">Cancel</Button>
+                    <Button>OK</Button>
+                  </div>
+                </div>
+              </PlatformAwareDialog>
             </CardContent>
           </Card>
         </TabsContent>
@@ -213,10 +218,9 @@ const PlatformComponentsDemo = () => {
                     </div>
                   )
                 }))}
-                defaultValue="home"
+                activeTab="home"
+                onTabChange={(tabId) => console.log('Tab changed:', tabId)}
                 variant="default"
-                showIcons={true}
-                showLabels={true}
               />
             </CardContent>
           </Card>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -5,6 +6,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Drawer,
@@ -12,6 +14,7 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
+  DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useResponsive } from '@/responsive/core/ResponsiveContext';
 

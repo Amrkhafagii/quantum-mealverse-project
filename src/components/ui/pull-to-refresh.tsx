@@ -1,211 +1,158 @@
+import React from 'react';
+import { useResponsive } from '@/responsive/core/ResponsiveContext';
 
-import React, { useState, useRef, useEffect, ReactNode } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { cn } from '@/lib/utils';
-
-export interface PullToRefreshProps {
+interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
-  children: ReactNode;
-  threshold?: number;
-  disabled?: boolean;
-  isRefreshing?: boolean;
-  className?: string;
+  children: React.ReactNode;
+  pullDistance?: number;
+  maxPullDistance?: number;
+  backgroundColor?: string;
+  spinnerColor?: string;
+  spinnerSize?: number;
+  pullText?: string;
+  releaseText?: string;
+  refreshingText?: string;
+  showIndicator?: boolean;
 }
 
-export const PullToRefresh: React.FC<PullToRefreshProps> = ({ 
-  onRefresh, 
-  children, 
-  threshold = 80,
-  disabled = false,
-  isRefreshing = false,
-  className
+export const PullToRefresh: React.FC<PullToRefreshProps> = ({
+  onRefresh,
+  children,
+  pullDistance = 80,
+  maxPullDistance = 120,
+  backgroundColor = 'transparent',
+  spinnerColor = '#000',
+  spinnerSize = 24,
+  pullText = 'Pull to refresh',
+  releaseText = 'Release to refresh',
+  refreshingText = 'Refreshing...',
+  showIndicator = true,
 }) => {
-  const { isMobile, isPlatformIOS, isPlatformAndroid } = useResponsive();
-  const [isFetching, setIsFetching] = useState(false);
-  const [startY, setStartY] = useState(0);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const touchStartTimeRef = useRef<number>(0);
-
-  // Handle externally controlled refreshing state
-  useEffect(() => {
-    if (isRefreshing) {
-      setIsFetching(true);
-    } else if (isRefreshing === false) {
-      setIsFetching(false);
-      setPullDistance(0);
-      setIsPulling(false);
-    }
-  }, [isRefreshing]);
+  const { isMobile } = useResponsive();
+  const [isPulling, setIsPulling] = React.useState(false);
+  const [pullY, setPullY] = React.useState(0);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const startYRef = React.useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (disabled || isFetching || !isMobile) return;
+    if (isRefreshing) return;
     
-    // Only activate pull if we're at the top of the scroll
-    const scrollElement = containerRef.current?.parentElement || window;
-    const scrollTop = scrollElement === window ? window.scrollY : (scrollElement as HTMLElement).scrollTop;
+    const scrollTop = containerRef.current?.scrollTop || 0;
     
-    if (scrollTop === 0) {
-      setStartY(e.touches[0].clientY);
-      touchStartTimeRef.current = Date.now();
+    // Only enable pull-to-refresh when at the top of the content
+    if (scrollTop <= 0) {
+      startYRef.current = e.touches[0].clientY;
       setIsPulling(true);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (disabled || !startY || isFetching || !isPulling || !isMobile) return;
+    if (!isPulling || isRefreshing || startYRef.current === null) return;
     
-    // Calculate pull distance
     const currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
+    const diff = currentY - startYRef.current;
     
-    // Only allow pulling down
+    // Only pull down, not up
     if (diff > 0) {
-      // Apply platform-specific resistance
-      let resistance = 0.4;
-      if (isPlatformIOS) {
-        resistance = 0.3; // iOS feels more natural with less resistance
-      } else if (isPlatformAndroid) {
-        resistance = 0.5; // Android can handle more resistance
-      }
+      // Apply resistance to make it harder to pull as you go
+      const resistance = 0.4;
+      const newPullY = Math.min(diff * resistance, maxPullDistance);
+      setPullY(newPullY);
       
-      const newDistance = Math.min(diff * resistance, threshold * 1.5);
-      setPullDistance(newDistance);
-      
-      // Prevent normal scrolling only if we're pulling significantly
-      if (newDistance > 10) {
-        e.preventDefault();
-      }
+      // Prevent default scrolling behavior when pulling
+      e.preventDefault();
     }
   };
 
   const handleTouchEnd = async () => {
-    if (disabled || !startY || isFetching || !isPulling || !isMobile) return;
+    if (!isPulling || isRefreshing) return;
     
-    const touchDuration = Date.now() - touchStartTimeRef.current;
-    
-    // If pulled past threshold and gesture was intentional (not too fast)
-    if (pullDistance > threshold && touchDuration > 100) {
+    if (pullY >= pullDistance) {
+      // Trigger refresh
+      setIsRefreshing(true);
+      setPullY(pullDistance / 2); // Show partial indicator during refresh
+      
       try {
-        setIsFetching(true);
         await onRefresh();
       } catch (error) {
-        console.error('Error during refresh:', error);
+        console.error('Refresh failed:', error);
       } finally {
-        setIsFetching(false);
+        setIsRefreshing(false);
+        setPullY(0);
       }
+    } else {
+      // Reset without refreshing
+      setPullY(0);
     }
     
-    // Reset
-    setStartY(0);
-    setPullDistance(0);
     setIsPulling(false);
-    touchStartTimeRef.current = 0;
+    startYRef.current = null;
   };
 
-  // Get platform-specific refresh indicator
-  const getRefreshIndicator = () => {
-    const progress = Math.min(pullDistance / threshold, 1);
-    const isReady = pullDistance > threshold;
-    
-    if (isPlatformIOS) {
-      return (
-        <div className={cn(
-          "flex items-center justify-center",
-          "bg-white/90 backdrop-blur-lg rounded-full p-2 shadow-sm",
-          "border border-gray-200"
-        )}>
-          {isFetching ? (
-            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-          ) : (
-            <RefreshCw 
-              className={cn(
-                "h-5 w-5 transition-all duration-200",
-                isReady ? "text-blue-500" : "text-gray-400"
-              )}
-              style={{
-                transform: !isFetching ? `rotate(${progress * 180}deg)` : 'none',
-              }}
-            />
-          )}
-        </div>
-      );
-    }
-    
-    if (isPlatformAndroid) {
-      return (
-        <div className="flex items-center justify-center">
-          <div className={cn(
-            "w-8 h-8 rounded-full border-2 border-gray-300",
-            "flex items-center justify-center transition-all duration-200",
-            isReady && "border-primary bg-primary/10"
-          )}>
-            {isFetching ? (
-              <Loader2 className="h-4 w-4 text-primary animate-spin" />
-            ) : (
-              <div 
-                className={cn(
-                  "w-2 h-2 rounded-full transition-all duration-200",
-                  isReady ? "bg-primary" : "bg-gray-400"
-                )}
-                style={{
-                  transform: `scale(${progress})`,
-                }}
-              />
-            )}
-          </div>
-        </div>
-      );
-    }
-    
-    // Default web indicator
-    return (
-      <div className="bg-background/80 backdrop-blur-sm shadow-md rounded-full p-2 border border-border">
-        <Loader2
-          className={cn(
-            "h-5 w-5 text-primary transition-all duration-200",
-            isFetching ? 'animate-spin' : ''
-          )}
-          style={{
-            transform: !isFetching ? `rotate(${progress * 360}deg)` : 'none',
-            opacity: Math.max(progress, 0.3)
-          }}
-        />
-      </div>
-    );
-  };
-
-  // Don't render pull-to-refresh on desktop
+  // Don't apply pull-to-refresh on non-mobile devices
   if (!isMobile) {
-    return <div className={className}>{children}</div>;
+    return <>{children}</>;
   }
 
   return (
-    <div
+    <div 
       ref={containerRef}
-      className={cn("relative", className)}
+      className="relative overflow-auto h-full"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Loading indicator */}
-      <div
-        className="absolute left-0 right-0 flex justify-center items-center transition-all duration-300 z-10"
-        style={{
-          transform: `translateY(${Math.max(pullDistance - 40, -40)}px)`,
-          opacity: isPulling ? Math.min(pullDistance / threshold, 1) : 0,
-        }}
-      >
-        {getRefreshIndicator()}
-      </div>
-
-      {/* Content with pull effect */}
-      <div
-        style={{
-          transform: `translateY(${pullDistance}px)`,
-          transition: isPulling ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      {/* Pull indicator */}
+      {showIndicator && (isPulling || isRefreshing) && (
+        <div 
+          className="absolute left-0 right-0 flex flex-col items-center justify-center overflow-hidden transition-transform duration-200"
+          style={{ 
+            height: `${pullY}px`,
+            top: 0,
+            backgroundColor,
+            transform: `translateY(-${pullY > 0 ? 0 : pullY}px)`,
+            zIndex: 10
+          }}
+        >
+          {isRefreshing ? (
+            <div className="flex flex-col items-center">
+              <div 
+                className="animate-spin rounded-full border-2 border-t-transparent"
+                style={{ 
+                  width: spinnerSize, 
+                  height: spinnerSize, 
+                  borderColor: spinnerColor,
+                  borderTopColor: 'transparent'
+                }}
+              />
+              <span className="text-xs mt-1">{refreshingText}</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <div 
+                className="rounded-full border-2"
+                style={{ 
+                  width: spinnerSize, 
+                  height: spinnerSize, 
+                  borderColor: spinnerColor,
+                  transform: `rotate(${(pullY / pullDistance) * 360}deg)`,
+                  opacity: pullY / pullDistance
+                }}
+              />
+              <span className="text-xs mt-1">
+                {pullY >= pullDistance ? releaseText : pullText}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Content with transform to show pull effect */}
+      <div 
+        style={{ 
+          transform: `translateY(${pullY}px)`,
+          transition: isPulling ? 'none' : 'transform 0.2s ease-out'
         }}
       >
         {children}
