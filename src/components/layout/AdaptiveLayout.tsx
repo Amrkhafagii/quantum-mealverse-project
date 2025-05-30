@@ -3,6 +3,12 @@ import React, { useEffect } from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
 import { PlatformContainer } from './PlatformContainer';
+import { 
+  useLayoutHelpers, 
+  MobileLayout, 
+  SidebarLayout, 
+  SplitLayout 
+} from './LayoutHelpers';
 
 interface AdaptiveLayoutProps {
   children: React.ReactNode;
@@ -13,6 +19,15 @@ interface AdaptiveLayoutProps {
   splitLayout?: boolean;
   foldableAware?: boolean;
   containerVariant?: 'default' | 'elevated' | 'outlined';
+  // New props for enhanced flexibility
+  breakpointBehavior?: {
+    forceMobileBelow?: 'sm' | 'md' | 'lg';
+    forceSidebarAbove?: 'sm' | 'md' | 'lg';
+  };
+  customLayoutRules?: {
+    mobileFirst?: boolean;
+    respectUserPreferences?: boolean;
+  };
 }
 
 export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
@@ -23,107 +38,81 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
   sidebarWidth = '300px',
   splitLayout = false,
   foldableAware = true,
-  containerVariant = 'default'
+  containerVariant = 'default',
+  breakpointBehavior,
+  customLayoutRules = { mobileFirst: true, respectUserPreferences: true }
 }) => {
-  const { 
-    isMobile, 
-    isTablet, 
-    isLandscape, 
-    isFoldable,
-    safeAreaLeft,
-    safeAreaRight
-  } = useResponsive();
+  const {
+    shouldUseMobileLayout,
+    shouldUseSidebarLayout,
+    shouldUseSplitLayout,
+    getSidebarConfig,
+    getContainerConfig,
+    deviceInfo
+  } = useLayoutHelpers();
   
   // Handle orientation change specifically for foldable devices
   useEffect(() => {
-    if (isFoldable) {
-      // In a real app, we'd use the native foldable APIs
+    if (deviceInfo.isFoldable && foldableAware) {
       console.log("Adapting layout for foldable device in", 
-        isLandscape ? "landscape" : "portrait", "mode");
+        deviceInfo.isLandscape ? "landscape" : "portrait", "mode");
     }
-  }, [isFoldable, isLandscape]);
+  }, [deviceInfo.isFoldable, deviceInfo.isLandscape, foldableAware]);
   
+  // Apply custom breakpoint behavior if specified
+  const shouldForceMobile = breakpointBehavior?.forceMobileBelow && 
+    (deviceInfo.isMobile || (breakpointBehavior.forceMobileBelow === 'md' && !deviceInfo.isTablet));
+  
+  const shouldForceSidebar = breakpointBehavior?.forceSidebarAbove && 
+    ((breakpointBehavior.forceSidebarAbove === 'sm' && !deviceInfo.isMobile) ||
+     (breakpointBehavior.forceSidebarAbove === 'md' && deviceInfo.isTablet));
+
   // Simple mobile view - single column layout
-  if (isMobile && !isLandscape) {
+  if (shouldUseMobileLayout(shouldForceMobile)) {
     return (
-      <PlatformContainer 
-        variant={containerVariant} 
-        className={cn('flex flex-col w-full', className)}
+      <MobileLayout
+        containerVariant={containerVariant}
+        className={className}
+        sidebarContent={sidebarContent}
       >
         {children}
-        {sidebarContent && (
-          <div className="mt-4 border-t pt-4">
-            {sidebarContent}
-          </div>
-        )}
-      </PlatformContainer>
+      </MobileLayout>
     );
   }
   
-  // Landscape mobile or tablet - side-by-side if we have sidebar content
-  if ((isMobile && isLandscape) || isTablet) {
-    // Calculate safe area padding for iOS/Android
-    const leftPadding = sidebarPosition === 'left' ? safeAreaLeft : 0;
-    const rightPadding = sidebarPosition === 'right' ? safeAreaRight : 0;
+  // Split layout for foldable devices
+  if (shouldUseSplitLayout(splitLayout, foldableAware)) {
+    return (
+      <SplitLayout
+        containerVariant={containerVariant}
+        className={className}
+      >
+        {children}
+      </SplitLayout>
+    );
+  }
+  
+  // Sidebar layout for larger screens or when forced
+  if (shouldUseSidebarLayout(sidebarContent) || shouldForceSidebar) {
+    const sidebarConfig = getSidebarConfig(sidebarPosition, sidebarWidth);
     
-    const sidebarStyle = {
-      width: sidebarWidth,
-      paddingLeft: sidebarPosition === 'left' ? `${leftPadding}px` : undefined,
-      paddingRight: sidebarPosition === 'right' ? `${rightPadding}px` : undefined,
-    };
-    
-    // For tablets and landscape mobile with sidebar content
-    if (sidebarContent) {
-      return (
-        <PlatformContainer 
-          variant={containerVariant} 
-          className={cn('flex w-full', className)}
-        >
-          {sidebarPosition === 'left' && (
-            <div 
-              className="shrink-0 border-r dark:border-gray-800" 
-              style={sidebarStyle}
-            >
-              {sidebarContent}
-            </div>
-          )}
-          
-          <div className="flex-1">
-            {children}
-          </div>
-          
-          {sidebarPosition === 'right' && (
-            <div 
-              className="shrink-0 border-l dark:border-gray-800" 
-              style={sidebarStyle}
-            >
-              {sidebarContent}
-            </div>
-          )}
-        </PlatformContainer>
-      );
-    }
-    
-    // If we have no sidebar content, but split layout is requested (e.g. for foldable devices)
-    if (splitLayout && isFoldable) {
-      return (
-        <PlatformContainer 
-          variant={containerVariant} 
-          className={cn('grid grid-cols-2 gap-4', className)}
-        >
-          <div className="col-span-1">
-            {React.Children.toArray(children)[0]}
-          </div>
-          <div className="col-span-1">
-            {React.Children.toArray(children).slice(1)}
-          </div>
-        </PlatformContainer>
-      );
-    }
+    return (
+      <SidebarLayout
+        containerVariant={containerVariant}
+        className={className}
+        sidebarContent={sidebarContent}
+        sidebarPosition={sidebarPosition}
+        sidebarConfig={sidebarConfig}
+      >
+        {children}
+      </SidebarLayout>
+    );
   }
   
   // Default layout (desktop or no special cases)
   if (sidebarContent) {
+    const sidebarConfig = getSidebarConfig(sidebarPosition, sidebarWidth);
+    
     return (
       <PlatformContainer 
         variant={containerVariant} 
@@ -131,8 +120,8 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
       >
         {sidebarPosition === 'left' && (
           <div 
-            className="shrink-0 border-r dark:border-gray-800" 
-            style={{ width: sidebarWidth }}
+            className={sidebarConfig.className}
+            style={sidebarConfig.style}
           >
             {sidebarContent}
           </div>
@@ -144,8 +133,8 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
         
         {sidebarPosition === 'right' && (
           <div 
-            className="shrink-0 border-l dark:border-gray-800" 
-            style={{ width: sidebarWidth }}
+            className={sidebarConfig.className}
+            style={sidebarConfig.style}
           >
             {sidebarContent}
           </div>

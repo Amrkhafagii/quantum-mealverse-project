@@ -2,10 +2,16 @@
 import React from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
+import { 
+  BreakpointSize, 
+  shouldRenderAtBreakpoint, 
+  getTouchTargetSize,
+  getResponsiveClasses 
+} from '@/utils/responsiveUtils';
 
 interface MobileBreakpointProps {
   children: React.ReactNode;
-  breakpoint?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  breakpoint?: BreakpointSize;
   hide?: boolean;
   show?: boolean;
   className?: string;
@@ -20,26 +26,16 @@ export const MobileBreakpoint: React.FC<MobileBreakpointProps> = ({
 }) => {
   const { isMobile, isTablet, isDesktop } = useResponsive();
   
-  const shouldRender = () => {
-    if (show && hide) return true; // If both are set, show by default
-    
-    switch (breakpoint) {
-      case 'xs':
-        return show ? isMobile : !hide || !isMobile;
-      case 'sm':
-        return show ? isMobile || isTablet : !hide || !(isMobile || isTablet);
-      case 'md':
-        return show ? isTablet : !hide || !isTablet;
-      case 'lg':
-        return show ? isDesktop : !hide || !isDesktop;
-      case 'xl':
-        return show ? isDesktop : !hide || !isDesktop;
-      default:
-        return true;
-    }
-  };
+  // Determine render mode based on props
+  const mode = show ? 'show' : hide ? 'hide' : 'show';
+  
+  const shouldRender = shouldRenderAtBreakpoint(
+    breakpoint,
+    { isMobile, isTablet, isDesktop },
+    mode
+  );
 
-  if (!shouldRender()) return null;
+  if (!shouldRender) return null;
 
   return <div className={className}>{children}</div>;
 };
@@ -62,21 +58,17 @@ export const TouchTarget: React.FC<TouchTargetProps> = ({
 }) => {
   const { isMobile } = useResponsive();
   
-  const sizeClasses = {
-    sm: 'min-h-[36px] min-w-[36px] p-2',
-    md: 'min-h-[44px] min-w-[44px] p-3',
-    lg: 'min-h-[52px] min-w-[52px] p-4'
-  };
-  
   const touchClasses = isMobile 
     ? 'touch-manipulation select-none active:scale-95 transition-transform duration-150'
     : 'hover:scale-105 transition-transform duration-150';
+
+  const sizeClasses = getTouchTargetSize(size, isMobile);
 
   return (
     <Component
       className={cn(
         'flex items-center justify-center rounded-lg',
-        sizeClasses[size],
+        sizeClasses,
         touchClasses,
         'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
         className
@@ -92,13 +84,7 @@ export const TouchTarget: React.FC<TouchTargetProps> = ({
 interface ResponsiveGridProps {
   children: React.ReactNode;
   className?: string;
-  cols?: {
-    xs?: number;
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-  };
+  cols?: Partial<Record<BreakpointSize, number>>;
 }
 
 export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
@@ -108,11 +94,7 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
 }) => {
   const gridClasses = cn(
     'grid gap-4',
-    `grid-cols-${cols.xs || 1}`,
-    `sm:grid-cols-${cols.sm || 2}`,
-    `md:grid-cols-${cols.md || 3}`,
-    `lg:grid-cols-${cols.lg || 4}`,
-    `xl:grid-cols-${cols.xl || 5}`,
+    getResponsiveClasses.grid(cols),
     className
   );
 
