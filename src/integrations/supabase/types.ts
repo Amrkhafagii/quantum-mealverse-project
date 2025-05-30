@@ -744,6 +744,51 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_addresses: {
+        Row: {
+          address: string
+          city: string
+          created_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_default: boolean | null
+          latitude: number | null
+          longitude: number | null
+          phone: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_default?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_default?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       delivery_analytics_daily: {
         Row: {
           average_delivery_time: number
@@ -6785,6 +6830,59 @@ export type Database = {
         }
         Relationships: []
       }
+      refund_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string
+          requested_amount: number
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason: string
+          requested_amount: number
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string
+          requested_amount?: number
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_refund_requests_order_id"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rest_timer_sessions: {
         Row: {
           actual_rest_seconds: number | null
@@ -8980,6 +9078,7 @@ export type Database = {
         Row: {
           error: string | null
           id: string
+          idempotency_key: string | null
           payload: Json | null
           processed_at: string | null
           request_data: Json | null
@@ -8991,6 +9090,7 @@ export type Database = {
         Insert: {
           error?: string | null
           id?: string
+          idempotency_key?: string | null
           payload?: Json | null
           processed_at?: string | null
           request_data?: Json | null
@@ -9002,6 +9102,7 @@ export type Database = {
         Update: {
           error?: string | null
           id?: string
+          idempotency_key?: string | null
           payload?: Json | null
           processed_at?: string | null
           request_data?: Json | null

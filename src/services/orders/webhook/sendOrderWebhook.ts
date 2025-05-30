@@ -14,10 +14,6 @@ const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozg
 
 /**
  * Generates an idempotency key for webhook requests
- * @param orderId - The order ID
- * @param action - The action being performed
- * @param attempt - The attempt number
- * @returns A unique idempotency key
  */
 const generateIdempotencyKey = (orderId: string, action: string, attempt: number = 1): string => {
   const timestamp = Math.floor(Date.now() / 1000); // Current timestamp in seconds
@@ -26,8 +22,6 @@ const generateIdempotencyKey = (orderId: string, action: string, attempt: number
 
 /**
  * Checks if a webhook request with the same idempotency key has been processed recently
- * @param idempotencyKey - The idempotency key to check
- * @returns Promise<boolean> - True if duplicate, false otherwise
  */
 const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
   try {
@@ -59,9 +53,6 @@ const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
 
 /**
  * Logs webhook request with idempotency key
- * @param webhookRequest - The webhook request object
- * @param idempotencyKey - The idempotency key
- * @returns Promise<boolean> - Success status
  */
 const logWebhookRequest = async (
   webhookRequest: SimpleOrderAssignmentRequest, 
@@ -70,14 +61,23 @@ const logWebhookRequest = async (
   try {
     console.log(`Logging webhook request for order ${webhookRequest.order_id} with key: ${idempotencyKey}`);
     
+    // Create a serializable payload object
+    const payload = {
+      order_id: webhookRequest.order_id,
+      request_type: 'find_restaurant',
+      request_data: {
+        order_id: webhookRequest.order_id,
+        latitude: webhookRequest.latitude,
+        longitude: webhookRequest.longitude,
+        action: webhookRequest.action,
+        expired_reassignment: webhookRequest.expired_reassignment || false
+      }
+    };
+    
     const { error } = await supabase
       .from('webhook_logs')
       .insert({
-        payload: {
-          order_id: webhookRequest.order_id,
-          request_type: 'find_restaurant',
-          request_data: webhookRequest
-        },
+        payload: payload as any, // Cast to avoid type issues with Json type
         idempotency_key: idempotencyKey
       });
 
@@ -96,8 +96,6 @@ const logWebhookRequest = async (
 
 /**
  * Calls webhook directly without using React hooks
- * @param payload - The webhook payload
- * @returns Promise with success status and optional error message
  */
 const callWebhook = async (payload: SimpleOrderAssignmentRequest): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -137,12 +135,6 @@ const callWebhook = async (payload: SimpleOrderAssignmentRequest): Promise<{ suc
 
 /**
  * Sends an order to the webhook service to find a restaurant with idempotency handling
- * @param orderId - The order ID
- * @param latitude - Customer latitude
- * @param longitude - Customer longitude
- * @param action - The action to perform (default: 'assign')
- * @param attempt - The attempt number (default: 1)
- * @returns Promise<boolean> - Success status
  */
 export const sendOrderToWebhook = async (
   orderId: string,
@@ -197,12 +189,6 @@ export const sendOrderToWebhook = async (
 
 /**
  * Sends order to webhook with retry mechanism and idempotency
- * @param orderId - The order ID
- * @param latitude - Customer latitude
- * @param longitude - Customer longitude
- * @param action - The action to perform (default: 'assign')
- * @param maxRetries - Maximum number of retry attempts (default: 3)
- * @returns Promise<boolean> - Success status
  */
 export const sendOrderToWebhookWithRetry = async (
   orderId: string,
