@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +11,12 @@ interface StageTimelineProps {
 
 export const StageTimeline: React.FC<StageTimelineProps> = ({ orderId }) => {
   const { stages, advanceStage, getElapsedMinutes } = usePreparationStages(orderId);
+  const [localStages, setLocalStages] = useState(stages);
+
+  // Update local state when stages change
+  useEffect(() => {
+    setLocalStages(stages);
+  }, [stages]);
 
   const getStageIcon = (status: string, stageName: string) => {
     switch (status) {
@@ -58,7 +63,7 @@ export const StageTimeline: React.FC<StageTimelineProps> = ({ orderId }) => {
     await advanceStage(stageName);
   };
 
-  if (!stages.length) {
+  if (!localStages.length) {
     return (
       <div className="text-center py-8">
         <Clock className="h-12 w-12 mx-auto text-gray-400 mb-4" />
@@ -69,7 +74,7 @@ export const StageTimeline: React.FC<StageTimelineProps> = ({ orderId }) => {
 
   return (
     <div className="space-y-3">
-      {stages.map((stage, index) => (
+      {localStages.map((stage, index) => (
         <Card key={stage.id} className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
