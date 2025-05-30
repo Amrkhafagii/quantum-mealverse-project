@@ -1,6 +1,7 @@
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 
@@ -8,12 +9,22 @@ import './index.css'
 import { LocationServiceProvider } from './contexts/LocationServiceContext'
 import { MapServiceProvider } from './contexts/MapServiceContext'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Root element not found. Make sure there is an element with id="root" in your HTML.');
+}
+
+const root = ReactDOM.createRoot(rootElement);
+
+root.render(
   <React.StrictMode>
-    <LocationServiceProvider enableTracking={true}>
-      <MapServiceProvider>
-        <App />
-      </MapServiceProvider>
-    </LocationServiceProvider>
+    <BrowserRouter>
+      <LocationServiceProvider enableTracking={true}>
+        <MapServiceProvider>
+          <App />
+        </MapServiceProvider>
+      </LocationServiceProvider>
+    </BrowserRouter>
   </React.StrictMode>,
-)
+);
