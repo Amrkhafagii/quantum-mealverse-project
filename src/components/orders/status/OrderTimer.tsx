@@ -4,13 +4,17 @@ import { Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export interface OrderTimerProps {
-  expiresAt: Date;
+  expiresAt?: Date;
+  startTime?: Date;
+  updatedAt?: string;
   orderId: string;
   onTimerExpire?: () => void;
 }
 
 export const OrderTimer: React.FC<OrderTimerProps> = ({
   expiresAt,
+  startTime,
+  updatedAt,
   orderId,
   onTimerExpire
 }) => {
@@ -19,7 +23,21 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
   useEffect(() => {
     const updateTimer = () => {
       const now = new Date().getTime();
-      const expiry = new Date(expiresAt).getTime();
+      let expiry: number;
+
+      if (expiresAt) {
+        expiry = new Date(expiresAt).getTime();
+      } else if (startTime) {
+        // Add 30 minutes to start time as default expiry
+        expiry = new Date(startTime).getTime() + (30 * 60 * 1000);
+      } else if (updatedAt) {
+        // Add 30 minutes to updated time as default expiry
+        expiry = new Date(updatedAt).getTime() + (30 * 60 * 1000);
+      } else {
+        // Default to 30 minutes from now
+        expiry = now + (30 * 60 * 1000);
+      }
+
       const difference = expiry - now;
       
       if (difference > 0) {
@@ -34,7 +52,7 @@ export const OrderTimer: React.FC<OrderTimerProps> = ({
     const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
-  }, [expiresAt, onTimerExpire]);
+  }, [expiresAt, startTime, updatedAt, onTimerExpire]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

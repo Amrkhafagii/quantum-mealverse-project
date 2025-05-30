@@ -13,7 +13,7 @@ import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
 import UserAchievements from '@/components/fitness/UserAchievements';
-import { ExerciseLibrary } from '@/components/fitness/ExerciseLibrary';
+import ExerciseLibrary from '@/components/fitness/ExerciseLibrary';
 import { 
   Activity, 
   Calendar, 

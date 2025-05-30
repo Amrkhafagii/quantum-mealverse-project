@@ -1,46 +1,132 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useResponsive } from '@/responsive/core/ResponsiveContext';
 
-interface PlatformTabBarProps extends React.HTMLAttributes<HTMLDivElement> {
-  tabs: {
-    id: string;
-    label: string;
-    content: React.ReactNode;
-  }[];
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
-  variant?: "default" | "secondary" | "outline" | "ghost";
+import React, { useState } from 'react';
+import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useResponsive } from '@/responsive/core/ResponsiveContext';
+import { Badge } from '@/components/ui/badge';
+
+export interface TabItem {
+  id: string;
+  label: string;
+  icon?: LucideIcon;
+  badgeCount?: number;
+  content?: React.ReactNode;
+}
+
+export interface PlatformTabBarProps {
+  tabs: TabItem[];
+  value?: string;
+  defaultValue?: string;
+  onChange?: (tabId: string) => void;
+  variant?: 'default' | 'pills' | 'underline';
+  position?: 'top' | 'bottom';
+  fullWidth?: boolean;
+  showIcons?: boolean;
+  showLabels?: boolean;
+  animated?: boolean;
+  className?: string;
+  tabsListClassName?: string;
 }
 
 export const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
   tabs,
-  activeTab,
-  onTabChange,
+  value,
+  defaultValue,
+  onChange,
+  variant = 'default',
+  position = 'top',
+  fullWidth = true,
+  showIcons = true,
+  showLabels = true,
+  animated = true,
   className,
-  variant = "default",
-  ...props
+  tabsListClassName,
 }) => {
-  const { isMobile } = useResponsive();
+  const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
+  const [activeTab, setActiveTab] = useState(value || defaultValue || tabs[0]?.id);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    onChange?.(tabId);
+  };
+
+  const getTabBarStyles = () => {
+    const baseStyles = "flex border-b border-border";
+    
+    if (isPlatformIOS) {
+      return cn(baseStyles, "bg-background/80 backdrop-blur-md");
+    } else if (isPlatformAndroid) {
+      return cn(baseStyles, "bg-background shadow-sm");
+    }
+    
+    return cn(baseStyles, "bg-background");
+  };
+
+  const getTabStyles = (isActive: boolean) => {
+    const baseStyles = "flex items-center justify-center p-3 cursor-pointer transition-colors";
+    
+    if (isPlatformIOS) {
+      return cn(
+        baseStyles,
+        isActive ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-gray-900"
+      );
+    } else if (isPlatformAndroid) {
+      return cn(
+        baseStyles,
+        isActive ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+      );
+    }
+    
+    return cn(
+      baseStyles,
+      isActive ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+    );
+  };
+
+  const activeTabContent = tabs.find(tab => tab.id === activeTab)?.content;
 
   return (
-    <div className={cn("flex flex-col", className)} {...props}>
-      <div className="flex space-x-2 mb-4">
-        {tabs.map((tab) => (
-          <Button
-            key={tab.id}
-            variant={activeTab === tab.id ? variant : "outline"}
-            onClick={() => onTabChange(tab.id)}
-          >
-            {tab.label}
-          </Button>
-        ))}
+    <div className={cn("w-full", className)}>
+      <div className={cn(getTabBarStyles(), tabsListClassName)}>
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTab;
+          const Icon = tab.icon;
+          
+          return (
+            <div
+              key={tab.id}
+              className={cn(
+                getTabStyles(isActive),
+                fullWidth && "flex-1"
+              )}
+              onClick={() => handleTabChange(tab.id)}
+            >
+              <div className="flex items-center space-x-2">
+                {showIcons && Icon && (
+                  <Icon className="h-5 w-5" />
+                )}
+                {showLabels && (
+                  <span className="text-sm font-medium">{tab.label}</span>
+                )}
+                {tab.badgeCount && tab.badgeCount > 0 && (
+                  <Badge variant="destructive" className="h-5 min-w-[20px] text-xs">
+                    {tab.badgeCount}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <div>
-        {tabs.find((tab) => tab.id === activeTab)?.content}
-      </div>
+      
+      {activeTabContent && (
+        <div className={cn(
+          "w-full",
+          animated && "transition-all duration-200 ease-in-out"
+        )}>
+          {activeTabContent}
+        </div>
+      )}
     </div>
   );
 };
