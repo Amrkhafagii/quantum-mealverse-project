@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import { Clock, Package, AlertCircle, RefreshCw, Bell } from 'lucide-react';
 import { OrderStagesDashboard } from '@/components/restaurant/dashboard/OrderStagesDashboard';
 import { PendingAssignmentsList } from './PendingAssignmentsList';
+import { OrderWithContext } from './OrderWithContext';
+import { EnhancedOrderPreparation } from './preparation/EnhancedOrderPreparation';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface OrderManagementProps {
@@ -129,32 +131,44 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
             ) : (
               <div className="space-y-4">
                 {activeOrders.map((order) => (
-                  <Card key={order.id}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            Order #{order.id.substring(0, 8)}
-                          </CardTitle>
-                          <p className="text-sm text-gray-600">
-                            {format(new Date(order.created_at!), 'MMM dd, yyyy at h:mm a')}
-                          </p>
+                  <OrderWithContext
+                    key={order.id}
+                    order={order}
+                    restaurantId={restaurantId}
+                    onAssignmentUpdate={refetch}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg">
+                              Order #{order.id.substring(0, 8)}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600">
+                              {format(new Date(order.created_at!), 'MMM dd, yyyy at h:mm a')}
+                            </p>
+                          </div>
+                          <Badge className={`${getStatusColor(order.status)} text-white`}>
+                            {formatStatus(order.status)}
+                          </Badge>
                         </div>
-                        <Badge className={`${getStatusColor(order.status)} text-white`}>
-                          {formatStatus(order.status)}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent>
-                      <div className="space-y-2">
-                        <p><strong>Customer:</strong> {order.customer_name}</p>
-                        <p><strong>Phone:</strong> {order.customer_phone}</p>
-                        <p><strong>Address:</strong> {order.delivery_address}</p>
-                        <p><strong>Total:</strong> EGP {order.total}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardHeader>
+                      
+                      <CardContent>
+                        <div className="space-y-2">
+                          <p><strong>Customer:</strong> {order.customer_name}</p>
+                          <p><strong>Phone:</strong> {order.customer_phone}</p>
+                          <p><strong>Address:</strong> {order.delivery_address}</p>
+                          <p><strong>Total:</strong> EGP {order.total}</p>
+                        </div>
+                        {order.status === 'preparing' && (
+                          <div className="mt-4">
+                            <EnhancedOrderPreparation />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </OrderWithContext>
                 ))}
               </div>
             )}

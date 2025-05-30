@@ -7,61 +7,41 @@ import { Textarea } from '@/components/ui/textarea';
 import { Clock, MapPin, Phone, User, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useOrderAssignment } from '@/hooks/useOrderAssignment';
+import { useOrderContext } from '@/contexts/OrderContext';
+import { useRestaurantAssignmentContext } from '@/contexts/RestaurantAssignmentContext';
 
-interface OrderAssignmentCardProps {
-  order: {
-    id: string;
-    customer_name: string;
-    customer_phone: string;
-    delivery_address: string;
-    total: number;
-    created_at: string;
-    status: string;
-    order_items?: Array<{
-      id: string;
-      name: string;
-      quantity: number;
-      price: number;
-    }>;
-  };
-  restaurantId: string;
-  onAssignmentUpdate?: () => void;
-}
-
-export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
-  order,
-  restaurantId,
-  onAssignmentUpdate
-}) => {
+export const OrderAssignmentCard: React.FC = () => {
+  const { order } = useOrderContext();
+  const { restaurantId, onAssignmentUpdate, isProcessing } = useRestaurantAssignmentContext();
   const [notes, setNotes] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [localProcessing, setLocalProcessing] = useState(false);
   const { acceptOrder, rejectOrder } = useOrderAssignment();
 
   const handleAccept = async () => {
-    setIsProcessing(true);
+    setLocalProcessing(true);
     try {
-      const success = await acceptOrder(order.id, restaurantId, notes);
+      const success = await acceptOrder(order.id!, restaurantId, notes);
       if (success && onAssignmentUpdate) {
         onAssignmentUpdate();
       }
     } catch (error) {
       console.error('Error accepting order:', error);
     } finally {
-      setIsProcessing(false);
+      setLocalProcessing(false);
     }
   };
 
   const handleReject = async () => {
-    setIsProcessing(true);
+    setLocalProcessing(true);
     try {
-      const success = await rejectOrder(order.id, restaurantId, notes);
+      const success = await rejectOrder(order.id!, restaurantId, notes);
       if (success && onAssignmentUpdate) {
         onAssignmentUpdate();
       }
     } catch (error) {
       console.error('Error rejecting order:', error);
     } finally {
-      setIsProcessing(false);
+      setLocalProcessing(false);
     }
   };
 
@@ -76,16 +56,18 @@ export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
     }
   };
 
+  const processing = isProcessing || localProcessing;
+
   return (
     <Card className="border-l-4 border-l-quantum-cyan">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">
-              Order #{order.id.substring(0, 8)}
+              Order #{order.id?.substring(0, 8)}
             </CardTitle>
             <p className="text-sm text-gray-600">
-              {format(new Date(order.created_at), 'MMM dd, yyyy at h:mm a')}
+              {format(new Date(order.created_at!), 'MMM dd, yyyy at h:mm a')}
             </p>
           </div>
           <Badge className={`${getStatusColor(order.status)} text-white`}>
@@ -151,20 +133,20 @@ export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
         <div className="flex gap-3 pt-4">
           <Button
             onClick={handleAccept}
-            disabled={isProcessing}
+            disabled={processing}
             className="flex-1 bg-green-600 hover:bg-green-700 text-white"
           >
             <CheckCircle className="h-4 w-4 mr-2" />
-            {isProcessing ? 'Accepting...' : 'Accept Order'}
+            {processing ? 'Accepting...' : 'Accept Order'}
           </Button>
           <Button
             onClick={handleReject}
-            disabled={isProcessing}
+            disabled={processing}
             variant="destructive"
             className="flex-1"
           >
             <XCircle className="h-4 w-4 mr-2" />
-            {isProcessing ? 'Rejecting...' : 'Reject Order'}
+            {processing ? 'Rejecting...' : 'Reject Order'}
           </Button>
         </div>
 

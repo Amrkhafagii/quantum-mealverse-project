@@ -2,29 +2,23 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Clock, User, MapPin, Phone, StickyNote } from 'lucide-react';
 import { StageTimeline } from './StageTimeline';
 import { BulkStageActions } from './BulkStageActions';
 import { StageNotesModal } from './StageNotesModal';
 import { usePreparationStages } from '@/hooks/usePreparationStages';
+import { useOrderContext } from '@/contexts/OrderContext';
 import { formatDistanceToNow } from 'date-fns';
 
-interface EnhancedOrderPreparationProps {
-  order: any; // Order type from your system
-}
-
-export const EnhancedOrderPreparation: React.FC<EnhancedOrderPreparationProps> = ({ 
-  order 
-}) => {
+export const EnhancedOrderPreparation: React.FC = () => {
+  const { order } = useOrderContext();
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('');
   
   const {
     updateNotes,
-    getElapsedMinutes,
     overallProgress
-  } = usePreparationStages(order.id);
+  } = usePreparationStages(order.id!);
 
   const handleAddNotes = (stageName: string) => {
     setSelectedStage(stageName);
@@ -39,7 +33,7 @@ export const EnhancedOrderPreparation: React.FC<EnhancedOrderPreparationProps> =
 
   const getOrderAge = () => {
     try {
-      return formatDistanceToNow(new Date(order.created_at), { addSuffix: true });
+      return formatDistanceToNow(new Date(order.created_at!), { addSuffix: true });
     } catch {
       return 'Unknown';
     }
@@ -103,7 +97,7 @@ export const EnhancedOrderPreparation: React.FC<EnhancedOrderPreparationProps> =
             <div>
               <h4 className="font-medium mb-2">Order Items</h4>
               <div className="space-y-1">
-                {order.order_items?.map((item: any, index: number) => (
+                {order.order_items?.map((item, index) => (
                   <div key={index} className="flex justify-between text-sm">
                     <span>{item.quantity}x {item.name}</span>
                     <span>${item.price?.toFixed(2)}</span>
@@ -127,13 +121,11 @@ export const EnhancedOrderPreparation: React.FC<EnhancedOrderPreparationProps> =
 
       {/* Bulk Actions */}
       <BulkStageActions 
-        orderId={order.id}
+        orderId={order.id!}
         onMarkAllComplete={() => {
-          // Optional callback for when bulk actions complete
           console.log('Bulk action completed');
         }}
         onSkipToReady={() => {
-          // Optional callback for skip to ready
           console.log('Skipped to ready');
         }}
       />
@@ -147,7 +139,7 @@ export const EnhancedOrderPreparation: React.FC<EnhancedOrderPreparationProps> =
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <StageTimeline orderId={order.id} />
+          <StageTimeline orderId={order.id!} />
         </CardContent>
       </Card>
 
