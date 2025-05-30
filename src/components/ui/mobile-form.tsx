@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-import { useResponsive } from '@/responsive/core/ResponsiveContext';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 import { hapticFeedback } from '@/utils/hapticFeedback';
 import { Platform } from '@/utils/platform';
 

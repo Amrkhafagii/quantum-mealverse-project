@@ -1,78 +1,123 @@
 
 import React, { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Clock, AlertCircle } from 'lucide-react';
+import { useResponsive } from '@/contexts/ResponsiveContext';
+import { hapticFeedback } from '@/utils/hapticFeedback';
 
 export interface OrderTimerProps {
-  expiresAt?: Date;
-  startTime?: Date;
-  updatedAt?: string;
+  estimatedTime?: string | Date;
+  updatedAt?: string | Date;
+  expiresAt?: string | Date;
   orderId?: string;
-  onTimerExpire?: () => void;
+  onTimerExpire?: () => Promise<void> | void;
 }
 
 export const OrderTimer: React.FC<OrderTimerProps> = ({
-  expiresAt,
-  startTime,
+  estimatedTime,
   updatedAt,
+  expiresAt,
   orderId,
   onTimerExpire
 }) => {
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
+  const { isMobile } = useResponsive();
+  
   useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      let expiry: number;
-
-      if (expiresAt) {
-        expiry = new Date(expiresAt).getTime();
-      } else if (startTime) {
-        // Add 30 minutes to start time as default expiry
-        expiry = new Date(startTime).getTime() + (30 * 60 * 1000);
-      } else if (updatedAt) {
-        // Add 30 minutes to updated time as default expiry
-        expiry = new Date(updatedAt).getTime() + (30 * 60 * 1000);
-      } else {
-        // Default to 30 minutes from now
-        expiry = now + (30 * 60 * 1000);
-      }
-
-      const difference = expiry - now;
+    const calculateRemainingTime = () => {
+      let targetTime: Date | null = null;
       
-      if (difference > 0) {
-        setTimeLeft(Math.floor(difference / 1000));
-      } else {
-        setTimeLeft(0);
-        onTimerExpire?.();
+      // Parse the estimated delivery time if provided
+      if (estimatedTime) {
+        targetTime = typeof estimatedTime === 'string' ? new Date(estimatedTime) : estimatedTime;
       }
+      // Or calculate from expires_at if available
+      else if (expiresAt) {
+        targetTime = typeof expiresAt === 'string' ? new Date(expiresAt) : expiresAt;
+      }
+      
+      if (targetTime) {
+        const now = new Date();
+        const diff = targetTime.getTime() - now.getTime();
+        
+        // If expired, trigger callback
+        if (diff <= 0 && !isExpired) {
+          setIsExpired(true);
+          if (onTimerExpire) {
+            onTimerExpire();
+          }
+          
+          // Provide haptic feedback when timer expires on mobile
+          if (isMobile) {
+            hapticFeedback.warning();
+          }
+          
+          return 0;
+        }
+        
+        return Math.max(0, Math.floor(diff / 1000));
+      }
+      
+      return 0;
     };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [expiresAt, startTime, updatedAt, onTimerExpire]);
-
-  const formatTime = (seconds: number) => {
+    // Initial calculation
+    setTimeRemaining(calculateRemainingTime());
+    
+    // Update timer every second
+    const intervalId = setInterval(() => {
+      setTimeRemaining(calculateRemainingTime());
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [estimatedTime, expiresAt, isExpired, onTimerExpire, isMobile]);
+  
+  // Format remaining time
+  const formatTime = (seconds: number): string => {
+    if (seconds <= 0) return '00:00';
+    
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (timeLeft <= 0) {
-    return (
-      <Badge variant="destructive" className="flex items-center gap-1">
-        <Clock className="h-3 w-3" />
-        Expired
-      </Badge>
-    );
-  }
-
+  // Calculate percentage for progress bar
+  const calculatePercentage = (): number => {
+    if (isExpired) return 100;
+    
+    // Default to 5 minutes if no estimate
+    const totalTime = 5 * 60; // 5 minutes in seconds
+    return Math.min(100, (1 - (timeRemaining / totalTime)) * 100);
+  };
+  
   return (
-    <Badge variant="outline" className="flex items-center gap-1">
-      <Clock className="h-3 w-3" />
-      {formatTime(timeLeft)}
-    </Badge>
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center">
+          <Clock className="h-4 w-4 mr-2 text-quantum-cyan" />
+          <span className="text-sm font-medium">
+            {isExpired ? 'Expected Time Passed' : 'Expected Time Remaining'}
+          </span>
+        </div>
+        <span className={`font-mono font-bold ${isExpired ? 'text-red-500' : 'text-quantum-cyan'}`}>
+          {formatTime(timeRemaining)}
+        </span>
+      </div>
+      
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div 
+          className={`h-2 rounded-full ${isExpired ? 'bg-red-500' : 'bg-quantum-cyan'}`}
+          style={{ width: `${calculatePercentage()}%` }}
+        ></div>
+      </div>
+      
+      {isExpired && (
+        <div className="mt-3 text-sm flex items-center text-amber-500">
+          <AlertCircle className="h-4 w-4 mr-1" />
+          <span>The estimated time has passed. Your order is still being processed.</span>
+        </div>
+      )}
+    </div>
   );
 };

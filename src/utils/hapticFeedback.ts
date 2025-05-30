@@ -1,65 +1,110 @@
 
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { Platform } from '@/utils/platform';
 
-type HapticStyle = 'light' | 'medium' | 'heavy';
+interface HapticFeedback {
+  selection: () => void;
+  impact: (style?: 'light' | 'medium' | 'heavy') => void;
+  notification: (type?: 'success' | 'warning' | 'error') => void;
+  light: () => void;
+  medium: () => void;
+  heavy: () => void;
+  success: () => void;
+  error: () => void;
+  warning: () => void;
+  contextual: (context: string) => void;
+}
 
-export const hapticFeedback = {
-  impact: async (style: HapticStyle = 'medium') => {
-    try {
-      const impactStyle = style === 'light' ? ImpactStyle.Light : 
-                         style === 'heavy' ? ImpactStyle.Heavy : 
-                         ImpactStyle.Medium;
-      await Haptics.impact({ style: impactStyle });
-    } catch (error) {
-      console.log('Haptic feedback not available:', error);
+class HapticFeedbackService implements HapticFeedback {
+  selection(): void {
+    if (Platform.isNative()) {
+      // For Capacitor apps, we would use the Haptics plugin
+      // import { Haptics, ImpactStyle } from '@capacitor/haptics';
+      // Haptics.selectionStart();
+      
+      // For now, we'll use web vibration API as fallback
+      this.webVibrate(10);
     }
-  },
-
-  selection: async () => {
-    try {
-      await Haptics.selectionStart();
-    } catch (error) {
-      console.log('Haptic feedback not available:', error);
-    }
-  },
-
-  success: async () => {
-    try {
-      await Haptics.notification({ type: NotificationType.Success });
-    } catch (error) {
-      console.log('Haptic feedback not available:', error);
-    }
-  },
-
-  warning: async () => {
-    try {
-      await Haptics.notification({ type: NotificationType.Warning });
-    } catch (error) {
-      console.log('Haptic feedback not available:', error);
-    }
-  },
-
-  error: async () => {
-    try {
-      await Haptics.notification({ type: NotificationType.Error });
-    } catch (error) {
-      console.log('Haptic feedback not available:', error);
-    }
-  },
-
-  light: async () => {
-    return hapticFeedback.impact('light');
-  },
-
-  medium: async () => {
-    return hapticFeedback.impact('medium');
-  },
-
-  heavy: async () => {
-    return hapticFeedback.impact('heavy');
-  },
-
-  contextual: async () => {
-    return hapticFeedback.selection();
   }
-};
+
+  impact(style: 'light' | 'medium' | 'heavy' = 'medium'): void {
+    if (Platform.isNative()) {
+      // For Capacitor apps:
+      // const impactStyle = style === 'light' ? ImpactStyle.Light : 
+      //                    style === 'heavy' ? ImpactStyle.Heavy : ImpactStyle.Medium;
+      // Haptics.impact({ style: impactStyle });
+      
+      // Web fallback
+      const duration = style === 'light' ? 20 : style === 'heavy' ? 80 : 50;
+      this.webVibrate(duration);
+    }
+  }
+
+  notification(type: 'success' | 'warning' | 'error' = 'success'): void {
+    if (Platform.isNative()) {
+      // For Capacitor apps:
+      // const notificationType = type === 'success' ? NotificationType.Success :
+      //                         type === 'error' ? NotificationType.Error : NotificationType.Warning;
+      // Haptics.notification({ type: notificationType });
+      
+      // Web fallback
+      const pattern = type === 'success' ? [50, 50, 50] : 
+                     type === 'error' ? [100, 100, 100] : [50, 100, 50];
+      this.webVibrate(pattern);
+    }
+  }
+
+  light(): void {
+    this.impact('light');
+  }
+
+  medium(): void {
+    this.impact('medium');
+  }
+
+  heavy(): void {
+    this.impact('heavy');
+  }
+
+  success(): void {
+    this.notification('success');
+  }
+
+  error(): void {
+    this.notification('error');
+  }
+
+  warning(): void {
+    this.notification('warning');
+  }
+
+  contextual(context: string): void {
+    switch (context) {
+      case 'success':
+        this.success();
+        break;
+      case 'error':
+        this.error();
+        break;
+      case 'warning':
+        this.warning();
+        break;
+      case 'selection':
+        this.selection();
+        break;
+      default:
+        this.medium();
+    }
+  }
+
+  private webVibrate(duration: number | number[]): void {
+    if ('vibrate' in navigator) {
+      try {
+        navigator.vibrate(duration);
+      } catch (error) {
+        console.warn('Vibration not supported or failed:', error);
+      }
+    }
+  }
+}
+
+export const hapticFeedback = new HapticFeedbackService();

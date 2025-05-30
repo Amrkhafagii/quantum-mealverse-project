@@ -1,9 +1,10 @@
+
 import React, { forwardRef, useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useResponsive } from '@/responsive/core/ResponsiveContext';
-import { Platform } from '@/responsive/utils/platform';
-import { hapticFeedback } from '@/utils/hapticFeedback';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Platform } from '@/utils/platform';
+import { hapticFeedback } from '@/utils/hapticFeedback';
 
 export interface PlatformListItemProps {
   children: React.ReactNode;

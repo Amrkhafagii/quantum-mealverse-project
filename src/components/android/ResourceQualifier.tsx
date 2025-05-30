@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useResponsive } from '@/responsive/core';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 
 type ResourceDensity = 'ldpi' | 'mdpi' | 'hdpi' | 'xhdpi' | 'xxhdpi' | 'xxxhdpi';
 type ScreenSize = 'small' | 'normal' | 'large' | 'xlarge';

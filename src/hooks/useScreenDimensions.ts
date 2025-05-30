@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Platform } from '../../utils/platform';
+import { Platform } from '@/utils/platform';
 
 type Dimensions = {
   width: number;

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Platform } from '@/responsive/utils';
-import { useNetworkQuality } from '@/responsive/core/hooks';
+import { Platform } from '@/utils/platform';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import NativeMap from './NativeMap';
 import { AccuracyLevel } from '../location/LocationAccuracyIndicator';
 

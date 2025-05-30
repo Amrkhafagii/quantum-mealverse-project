@@ -1,51 +1,58 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { useResponsive } from '@/responsive/core/ResponsiveContext';
+import SafeAreaView from './SafeAreaView';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MobileContainerProps {
   children: React.ReactNode;
   className?: string;
-  padded?: boolean;
-  respectSafeArea?: boolean;
+  fullHeight?: boolean;
+  noPadding?: boolean;
+  fullWidth?: boolean;
+  disableSafeArea?: boolean;
 }
 
 const MobileContainer: React.FC<MobileContainerProps> = ({
   children,
-  className,
-  padded = true,
-  respectSafeArea = true,
+  className = '',
+  fullHeight = false,
+  noPadding = false,
+  fullWidth = false,
+  disableSafeArea = false
 }) => {
-  const { 
-    isMobile, 
-    safeAreaTop, 
-    safeAreaBottom, 
-    safeAreaLeft, 
-    safeAreaRight 
-  } = useResponsive();
-
-  if (!isMobile) {
-    return <div className={className}>{children}</div>;
+  const isMobile = useIsMobile();
+  
+  let containerClasses = className;
+  containerClasses += ' transition-all duration-200';
+  
+  // Apply responsive classes
+  if (fullHeight) {
+    containerClasses += ' min-h-screen';
   }
-
-  const containerStyles: React.CSSProperties = respectSafeArea ? {
-    paddingTop: safeAreaTop,
-    paddingBottom: safeAreaBottom,
-    paddingLeft: safeAreaLeft,
-    paddingRight: safeAreaRight,
-  } : {};
-
+  
+  if (!noPadding) {
+    containerClasses += isMobile 
+      ? ' px-4 py-2' // Mobile padding
+      : ' px-8 py-4'; // Desktop padding
+  }
+  
+  if (!fullWidth) {
+    containerClasses += isMobile
+      ? ' w-full' // Full width on mobile
+      : ' max-w-7xl mx-auto'; // Container with max width on desktop
+  } else {
+    containerClasses += ' w-full';
+  }
+  
+  // Use SafeAreaView if not disabled
+  if (disableSafeArea) {
+    return <div className={containerClasses.trim()}>{children}</div>;
+  }
+  
   return (
-    <div 
-      className={cn(
-        'w-full',
-        padded && 'px-4',
-        className
-      )}
-      style={containerStyles}
-    >
+    <SafeAreaView className={containerClasses.trim()}>
       {children}
-    </div>
+    </SafeAreaView>
   );
 };
 

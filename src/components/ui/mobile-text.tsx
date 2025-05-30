@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useResponsive } from '@/responsive/core';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 
 interface MobileTextProps {
   children: React.ReactNode;

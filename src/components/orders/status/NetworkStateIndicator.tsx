@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useNetworkQuality } from '@/responsive/core/hooks';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, Wifi, WifiLow, AlertTriangle, CheckCircle2 } from 'lucide-react';
 

@@ -1,59 +1,98 @@
 
-import { NetworkType } from '@/types/unifiedLocation';
+import { NetworkInfo, NetworkType } from '@/types/unifiedLocation';
 
-export interface NetworkInfo {
-  type: NetworkType;
-  connected: boolean;
-  downlink?: number;
-  effectiveType?: string;
-  rtt?: number;
+// Get network information
+export function getNetworkInfo(): NetworkInfo {
+  const connected = navigator.onLine;
+  const type = getNetworkType();
+  const strength = getNetworkStrength();
+  
+  return {
+    connected,
+    type,
+    strength
+  };
 }
 
-export const getNetworkInfo = (): NetworkInfo => {
-  const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-  
-  if (!connection) {
-    return {
-      type: 'none',
-      connected: navigator.onLine
-    };
-  }
-
-  let networkType: NetworkType = 'none';
-  
-  if (connection.type) {
-    switch (connection.type) {
-      case 'wifi':
-        networkType = 'WiFi';
-        break;
-      case 'cellular':
-        if (connection.effectiveType === '4g') networkType = '4G';
-        else if (connection.effectiveType === '3g') networkType = '3G';
-        else if (connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g') networkType = '2G';
-        else networkType = '4G'; // default for cellular
-        break;
-      default:
-        networkType = 'none';
+// Get network type
+function getNetworkType(): NetworkType {
+  // Check if the Network Information API is available
+  if ('connection' in navigator) {
+    const connection = (navigator as any).connection;
+    
+    if (connection) {
+      const effectiveType = connection.effectiveType;
+      const type = connection.type;
+      
+      if (type === 'wifi') return 'wifi';
+      if (type === 'cellular') {
+        // Map effective type to our network types
+        if (effectiveType === '4g') return '4g';
+        if (effectiveType === '3g') return '3g';
+        if (effectiveType === '2g') return '2g';
+        if (effectiveType === 'slow-2g') return '2g';
+        return 'cellular';
+      }
+      
+      return 'unknown';
     }
-  } else if (connection.effectiveType) {
-    networkType = 'none';
   }
+  
+  // Fallback to online/offline status
+  return navigator.onLine ? 'unknown' : 'none';
+}
 
-  return {
-    type: networkType,
-    connected: navigator.onLine,
-    downlink: connection.downlink,
-    effectiveType: connection.effectiveType,
-    rtt: connection.rtt
+// Get network strength (0-100)
+function getNetworkStrength(): number | undefined {
+  // This is not easily available in browsers
+  // In a real app, you could measure RTT or throughput
+  
+  // Check if the Network Information API with downlink is available
+  if ('connection' in navigator) {
+    const connection = (navigator as any).connection;
+    
+    if (connection && 'downlink' in connection) {
+      // Convert downlink (Mbps) to a strength percentage
+      // Assuming max practical downlink is 100 Mbps for 100% strength
+      const downlink = connection.downlink;
+      return Math.min(100, Math.round((downlink / 100) * 100));
+    }
+  }
+  
+  return undefined;
+}
+
+// Monitor network quality changes
+export function monitorNetworkQuality(
+  callback: (info: NetworkInfo) => void
+): () => void {
+  const handleChange = () => {
+    callback(getNetworkInfo());
   };
-};
-
-export const isHighSpeedConnection = (networkInfo: NetworkInfo): boolean => {
-  return networkInfo.type === 'WiFi' || networkInfo.type === '5G' || networkInfo.type === '4G';
-};
-
-export const getConnectionSpeed = (networkInfo: NetworkInfo): 'high' | 'medium' | 'low' => {
-  if (networkInfo.type === 'WiFi' || networkInfo.type === '5G') return 'high';
-  if (networkInfo.type === '4G') return 'medium';
-  return 'low';
-};
+  
+  window.addEventListener('online', handleChange);
+  window.addEventListener('offline', handleChange);
+  
+  // Use Network Information API if available
+  if ('connection' in navigator) {
+    const connection = (navigator as any).connection;
+    
+    if (connection) {
+      connection.addEventListener('change', handleChange);
+    }
+  }
+  
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('online', handleChange);
+    window.removeEventListener('offline', handleChange);
+    
+    if ('connection' in navigator) {
+      const connection = (navigator as any).connection;
+      
+      if (connection) {
+        connection.removeEventListener('change', handleChange);
+      }
+    }
+  };
+}

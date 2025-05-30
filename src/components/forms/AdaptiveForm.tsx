@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useNetworkQuality } from '@/responsive/core/hooks';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { Card } from '@/components/ui/card';
 
 interface AdaptiveFormProps {

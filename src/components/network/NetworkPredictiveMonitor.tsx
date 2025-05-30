@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useNetworkQuality } from '@/responsive/core/hooks';
 
 interface NetworkPredictiveMonitorProps {
   children: React.ReactNode;

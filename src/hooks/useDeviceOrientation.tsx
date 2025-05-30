@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { useResponsive } from '../ResponsiveContext';
-import { Platform } from '../../utils/platform';
+import { useResponsive } from '@/contexts/ResponsiveContext';
+import { Platform } from '@/utils/platform';
 
 export type DeviceOrientationType = 'portrait' | 'landscape' | 'portrait-primary' | 'portrait-secondary' | 'landscape-primary' | 'landscape-secondary';
 

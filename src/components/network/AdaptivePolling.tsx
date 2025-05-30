@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNetworkQuality } from '@/responsive/core/hooks';
+import { useNetworkQuality } from '@/hooks/useNetworkQuality';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { getAdaptivePollingInterval } from '@/utils/networkAdaptation';
 import { useBatteryMonitor } from '@/utils/batteryMonitor';

@@ -1,10 +1,11 @@
+
 import React, { forwardRef } from 'react';
 import { AdaptiveForm } from '@/components/ui/adaptive-form';
 import { AdaptiveInputField } from '@/components/ui/adaptive-form-fields';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useResponsive } from '@/responsive/core';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 
 interface PlatformFormProps {
   children?: React.ReactNode;

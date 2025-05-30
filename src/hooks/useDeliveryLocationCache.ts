@@ -15,11 +15,11 @@ export function useDeliveryLocationCache() {
     if (diff < 60000) { // Less than 1 minute
       return 'fresh';
     } else if (diff < 300000) { // Less than 5 minutes
-      return 'stale';
+      return 'moderate';
     } else if (diff < 1800000) { // Less than 30 minutes
-      return 'expired';
+      return 'stale';
     } else {
-      return 'invalid';
+      return 'expired';
     }
   }, []);
 

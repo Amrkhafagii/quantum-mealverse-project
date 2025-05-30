@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useResponsive } from '@/responsive/core';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';

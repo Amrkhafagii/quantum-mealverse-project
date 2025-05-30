@@ -1,22 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useResponsive } from '@/responsive/core';
+import { useResponsive } from '@/contexts/ResponsiveContext';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Smartphone, 
-  Settings, 
-  Bell, 
-  Vibrate,
-  Camera,
-  Mic,
-  MapPin,
-  Fingerprint,
-  Shield,
-  WifiOff,
-  Battery
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Platform } from '@/utils/platform';
 import { hapticFeedback } from '@/utils/hapticFeedback';

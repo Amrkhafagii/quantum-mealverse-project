@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Platform } from '../../utils/platform';
-import { useIsMobile } from '../../core/hooks/useIsMobile';
+import { Platform } from '@/utils/platform';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SafeAreaViewProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ interface SafeAreaViewProps {
   as?: React.ElementType;
 }
 
-export const SafeAreaView: React.FC<SafeAreaViewProps> = ({
+const SafeAreaView: React.FC<SafeAreaViewProps> = ({
   children,
   className = '',
   disableTop = false,

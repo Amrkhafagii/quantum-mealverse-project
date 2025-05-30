@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
-import { useResponsive } from "@/responsive/core";
+import { useResponsive } from "@/contexts/ResponsiveContext";
 import SkipLink from "@/components/ui/a11y/skip-link";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";

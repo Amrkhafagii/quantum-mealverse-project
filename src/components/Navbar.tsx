@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
 import { Menu, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { useResponsive } from '@/responsive/core';
-import { Platform } from '@/responsive/utils';
-import { SafeAreaView } from '@/responsive/components/ui';
+import { useResponsive } from '@/contexts/ResponsiveContext';
+import { Platform } from '@/utils/platform';
+import SafeAreaView from '@/components/ios/SafeAreaView';
 
 // Import the refactored components
 import NavLinks from './navbar/NavLinks';

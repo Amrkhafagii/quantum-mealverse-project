@@ -2,8 +2,8 @@
 import React, { forwardRef } from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Platform } from '@/responsive/utils';
-import { useResponsive } from '@/responsive/core';
+import { Platform } from '@/utils/platform';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 import { hapticFeedback } from '@/utils/hapticFeedback';
 
 export interface PlatformButtonProps extends ButtonProps {

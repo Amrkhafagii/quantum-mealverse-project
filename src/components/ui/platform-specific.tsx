@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Platform } from '../../utils/platform';
-import { useResponsive } from '../../core/ResponsiveContext';
+import { Platform } from '@/utils/platform';
+import { useResponsive } from '@/contexts/ResponsiveContext';
 
 interface PlatformSpecificProps {
   children: React.ReactNode;
