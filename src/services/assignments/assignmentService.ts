@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { RestaurantAssignment } from '@/types/notifications';
+import { PreparationStageService } from '@/services/preparation/preparationStageService';
 
 export class AssignmentService {
   // Get pending assignments for a restaurant
@@ -45,6 +46,19 @@ export class AssignmentService {
   async acceptAssignment(assignmentId: string, notes?: string): Promise<void> {
     console.log('Accepting assignment:', assignmentId, 'with notes:', notes);
     
+    // Get assignment details first
+    const { data: assignment, error: fetchError } = await supabase
+      .from('restaurant_assignments')
+      .select('order_id, restaurant_id')
+      .eq('id', assignmentId)
+      .single();
+
+    if (fetchError || !assignment) {
+      console.error('Error fetching assignment details:', fetchError);
+      throw new Error('Failed to fetch assignment details');
+    }
+
+    // Update the assignment status
     const { error } = await supabase
       .from('restaurant_assignments')
       .update({
@@ -60,24 +74,50 @@ export class AssignmentService {
     }
 
     // Update order status
-    const { data: assignment } = await supabase
-      .from('restaurant_assignments')
-      .select('order_id, restaurant_id')
-      .eq('id', assignmentId)
-      .single();
+    const { error: orderUpdateError } = await supabase
+      .from('orders')
+      .update({
+        status: 'restaurant_accepted',
+        restaurant_id: assignment.restaurant_id
+      })
+      .eq('id', assignment.order_id);
 
-    if (assignment) {
-      const { error: orderUpdateError } = await supabase
-        .from('orders')
-        .update({
-          status: 'restaurant_accepted',
-          restaurant_id: assignment.restaurant_id
-        })
-        .eq('id', assignment.order_id);
+    if (orderUpdateError) {
+      console.error('Error updating order status:', orderUpdateError);
+      throw orderUpdateError;
+    }
 
-      if (orderUpdateError) {
-        console.error('Error updating order status:', orderUpdateError);
+    // Initialize preparation stages for the accepted order
+    try {
+      console.log('Initializing preparation stages for order:', assignment.order_id);
+      const stagesCreated = await PreparationStageService.initializeOrderStages(
+        assignment.order_id,
+        assignment.restaurant_id
+      );
+      
+      if (stagesCreated) {
+        console.log('Preparation stages created successfully');
+        
+        // Start the first stage (received) automatically
+        const firstStageStarted = await PreparationStageService.startStage(
+          assignment.order_id,
+          'received'
+        );
+        
+        if (firstStageStarted) {
+          console.log('First preparation stage (received) started successfully');
+        } else {
+          console.warn('Failed to start first preparation stage');
+        }
+      } else {
+        console.error('Failed to create preparation stages');
+        // Don't throw error here to avoid breaking the assignment acceptance
+        // The order is still accepted, just without preparation tracking
       }
+    } catch (stageError) {
+      console.error('Error initializing preparation stages:', stageError);
+      // Log the error but don't fail the assignment acceptance
+      // The restaurant can manually create stages if needed
     }
   }
 
