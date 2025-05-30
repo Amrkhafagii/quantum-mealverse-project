@@ -39,7 +39,7 @@ const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
       return false; // Allow request if we can't check
     }
 
-    return data && data.length > 0;
+    return Boolean(data && data.length > 0);
   } catch (error) {
     console.error('Critical error checking idempotency:', error);
     return false; // Allow request if we can't check
@@ -118,6 +118,8 @@ export const sendOrderToWebhook = async (
   attempt: number = 1
 ): Promise<boolean> => {
   try {
+    console.log(`Sending order ${orderId} to webhook - attempt ${attempt}`);
+    
     // Generate idempotency key
     const idempotencyKey = generateIdempotencyKey(orderId, action, attempt);
     
