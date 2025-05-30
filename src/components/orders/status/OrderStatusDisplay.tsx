@@ -27,7 +27,7 @@ const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
       <OrderStatusTimeline orderId={order.id} status={status} />
       
       {estimatedTime && status !== 'completed' && status !== 'cancelled' && (
-        <OrderTimer estimatedTime={estimatedTime} />
+        <OrderTimer startTime={new Date(estimatedTime)} />
       )}
       
       {(status === 'pending' || status === 'confirmed') && (

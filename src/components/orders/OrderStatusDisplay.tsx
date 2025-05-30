@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, PackageCheck, Truck } from 'lucide-react';
-import { OrderTimer } from './OrderTimer';
+import { OrderTimer } from './status/OrderTimer';
 
 interface OrderStatusDisplayProps {
   status: 'pending' | 'preparing' | 'enRoute' | 'delivered' | 'canceled';
@@ -69,7 +70,7 @@ export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({ status, 
             <p className="text-sm">
               Estimated Delivery Time:
             </p>
-            <OrderTimer estimatedDeliveryTime={estimatedTime} />
+            <OrderTimer startTime={estimatedTime} />
           </div>
         )}
       </CardContent>

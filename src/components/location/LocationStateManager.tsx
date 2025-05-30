@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,7 +7,8 @@ import {
   LocationError,
   LocationWatchOptions,
   LocationWatchCallback,
-  LocationData as LocationState,
+  LocationData,
+  LocationState,
   LocationAccuracy,
   LocationBackgroundMode,
 } from '@/types/location';
@@ -42,7 +44,7 @@ const LocationStateManager: React.FC<LocationStateManagerProps> = ({ children, d
   const { isPlatformIOS, isPlatformAndroid } = useResponsive();
 
   const updateLocation = useCallback(
-    (newLocation: LocationState['current'], error?: LocationError) => {
+    (newLocation: LocationData | null, error?: LocationError) => {
       setLocation((prev) => ({
         ...prev,
         current: newLocation,

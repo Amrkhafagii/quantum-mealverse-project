@@ -1,6 +1,4 @@
 
-// Hooks barrel export
-export { useIsMobile } from './useIsMobile';
-export { useScreenDimensions } from './useScreenDimensions';
-export { useDeviceOrientation } from './useDeviceOrientation';
+export { default as useDeviceOrientation } from './useDeviceOrientation';
 export { useNetworkQuality } from './useNetworkQuality';
+export { useResponsive } from '../ResponsiveContext';
