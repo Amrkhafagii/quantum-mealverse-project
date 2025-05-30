@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from './webhook/orderHistoryService';
@@ -10,7 +9,7 @@ export interface UnifiedOrderStatusUpdate {
   assignmentSource?: 'nutrition_generated' | 'traditional';
   metadata?: Record<string, any>;
   changedBy?: string;
-  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
+  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery' | 'admin';
 }
 
 /**
@@ -37,9 +36,9 @@ export const unifiedOrderStatusService = {
         assignmentSource
       });
 
-      // Map changedByType to ensure it's valid
+      // Map changedByType to ensure it's valid for database
       const mappedChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
-        changedByType === 'admin' ? 'system' : changedByType;
+        changedByType === 'admin' ? 'system' : changedByType as 'system' | 'customer' | 'restaurant' | 'delivery';
 
       // Prepare update data with timestamp fields
       const updateData: any = {
