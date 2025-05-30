@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { RestaurantAssignment } from '@/types/notifications';
 import { PreparationStageService } from '@/services/preparation/preparationStageService';
