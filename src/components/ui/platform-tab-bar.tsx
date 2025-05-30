@@ -3,31 +3,44 @@ import React from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
 
-interface PlatformTabItem {
+export interface TabItem {
   id: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: React.ComponentType<any> | React.ReactNode;
+  content?: React.ReactNode;
   badge?: number;
+  badgeCount?: number;
   disabled?: boolean;
 }
 
 interface PlatformTabBarProps {
-  items: PlatformTabItem[];
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
+  tabs: TabItem[];
+  value: string;
+  onChange: (tabId: string) => void;
   className?: string;
   variant?: 'default' | 'pills' | 'underline';
+  position?: 'top' | 'bottom';
+  fullWidth?: boolean;
+  showIcons?: boolean;
+  showLabels?: boolean;
+  animated?: boolean;
+  tabsListClassName?: string;
 }
 
-const getTabBarClasses = (isPlatformIOS: boolean, isPlatformAndroid: boolean) => {
-  let classes = 'flex w-full border-t border-border bg-background';
+const getTabBarClasses = (isPlatformIOS: boolean, isPlatformAndroid: boolean, position?: string) => {
+  let classes = 'flex w-full';
   
-  if (isPlatformIOS) {
-    classes += ' h-20 pb-safe-bottom';
-  } else if (isPlatformAndroid) {
-    classes += ' h-16 shadow-lg';
+  if (position === 'bottom') {
+    classes += ' border-t border-border bg-background';
+    if (isPlatformIOS) {
+      classes += ' h-20 pb-safe-bottom';
+    } else if (isPlatformAndroid) {
+      classes += ' h-16 shadow-lg';
+    } else {
+      classes += ' h-16';
+    }
   } else {
-    classes += ' h-16';
+    classes += ' border-b border-border bg-background h-12';
   }
   
   return classes;
@@ -72,71 +85,165 @@ const getTabItemClasses = (
 };
 
 export const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
-  items,
-  activeTab,
-  onTabChange,
+  tabs,
+  value,
+  onChange,
   className,
-  variant = 'default'
+  variant = 'default',
+  position = 'top',
+  fullWidth = false,
+  showIcons = true,
+  showLabels = true,
+  animated = true,
+  tabsListClassName
 }) => {
   const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
 
   const handleTabClick = (tabId: string, disabled: boolean) => {
     if (!disabled) {
-      onTabChange(tabId);
+      onChange(tabId);
     }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent, tabId: string, disabled: boolean) => {
     if ((event.key === 'Enter' || event.key === ' ') && !disabled) {
       event.preventDefault();
-      onTabChange(tabId);
+      onChange(tabId);
     }
   };
 
+  // If tabs have content, render as tabs with content panels
+  const hasContent = tabs.some(tab => tab.content);
+
+  if (hasContent) {
+    const activeTab = tabs.find(tab => tab.id === value);
+    
+    return (
+      <div className={cn('w-full', className)}>
+        <nav 
+          className={cn(getTabBarClasses(isPlatformIOS, isPlatformAndroid, position), tabsListClassName)}
+          role="tablist"
+          aria-label="Main navigation"
+        >
+          {tabs.map((tab, index) => {
+            const isActive = tab.id === value;
+            const badgeCount = tab.badge || tab.badgeCount;
+            const IconComponent = tab.icon;
+            
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                aria-selected={isActive}
+                aria-controls={`tabpanel-${tab.id}`}
+                aria-disabled={tab.disabled}
+                className={getTabItemClasses(isActive, !!tab.disabled, variant, isPlatformIOS)}
+                onClick={() => handleTabClick(tab.id, !!tab.disabled)}
+                onKeyDown={(e) => handleKeyDown(e, tab.id, !!tab.disabled)}
+              >
+                <div className="relative flex flex-col items-center gap-1">
+                  {showIcons && IconComponent && (
+                    <div className={cn(
+                      "transition-colors",
+                      isMobile ? "text-base" : "text-lg"
+                    )}>
+                      {React.isValidElement(IconComponent) ? 
+                        IconComponent : 
+                        React.createElement(IconComponent as React.ComponentType<any>)
+                      }
+                    </div>
+                  )}
+                  
+                  {showLabels && (
+                    <span className={cn(
+                      "text-xs font-medium leading-none",
+                      isMobile ? "text-[10px]" : "text-xs"
+                    )}>
+                      {tab.label}
+                    </span>
+                  )}
+                  
+                  {badgeCount && badgeCount > 0 && (
+                    <span 
+                      className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-destructive text-destructive-foreground text-[10px] font-semibold rounded-full flex items-center justify-center px-1"
+                      aria-label={`${badgeCount} notifications`}
+                    >
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </nav>
+        
+        {activeTab?.content && (
+          <div
+            id={`tabpanel-${activeTab.id}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab.id}`}
+            className={cn("w-full", animated && "animate-in fade-in-50 duration-200")}
+          >
+            {activeTab.content}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Simple tab bar without content panels
   return (
     <nav 
-      className={cn(getTabBarClasses(isPlatformIOS, isPlatformAndroid), className)}
+      className={cn(getTabBarClasses(isPlatformIOS, isPlatformAndroid, position), tabsListClassName, className)}
       role="tablist"
       aria-label="Main navigation"
     >
-      {items.map((item, index) => {
-        const isActive = item.id === activeTab;
+      {tabs.map((tab, index) => {
+        const isActive = tab.id === value;
+        const badgeCount = tab.badge || tab.badgeCount;
+        const IconComponent = tab.icon;
         
         return (
           <button
-            key={item.id}
+            key={tab.id}
             role="tab"
             tabIndex={isActive ? 0 : -1}
             aria-selected={isActive}
-            aria-controls={`tabpanel-${item.id}`}
-            aria-disabled={item.disabled}
-            className={getTabItemClasses(isActive, !!item.disabled, variant, isPlatformIOS)}
-            onClick={() => handleTabClick(item.id, !!item.disabled)}
-            onKeyDown={(e) => handleKeyDown(e, item.id, !!item.disabled)}
+            aria-controls={`tabpanel-${tab.id}`}
+            aria-disabled={tab.disabled}
+            className={getTabItemClasses(isActive, !!tab.disabled, variant, isPlatformIOS)}
+            onClick={() => handleTabClick(tab.id, !!tab.disabled)}
+            onKeyDown={(e) => handleKeyDown(e, tab.id, !!tab.disabled)}
           >
             <div className="relative flex flex-col items-center gap-1">
-              {item.icon && (
+              {showIcons && IconComponent && (
                 <div className={cn(
                   "transition-colors",
                   isMobile ? "text-base" : "text-lg"
                 )}>
-                  {item.icon}
+                  {React.isValidElement(IconComponent) ? 
+                    IconComponent : 
+                    React.createElement(IconComponent as React.ComponentType<any>)
+                  }
                 </div>
               )}
               
-              <span className={cn(
-                "text-xs font-medium leading-none",
-                isMobile ? "text-[10px]" : "text-xs"
-              )}>
-                {item.label}
-              </span>
+              {showLabels && (
+                <span className={cn(
+                  "text-xs font-medium leading-none",
+                  isMobile ? "text-[10px]" : "text-xs"
+                )}>
+                  {tab.label}
+                </span>
+              )}
               
-              {item.badge && item.badge > 0 && (
+              {badgeCount && badgeCount > 0 && (
                 <span 
                   className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-destructive text-destructive-foreground text-[10px] font-semibold rounded-full flex items-center justify-center px-1"
-                  aria-label={`${item.badge} notifications`}
+                  aria-label={`${badgeCount} notifications`}
                 >
-                  {item.badge > 99 ? '99+' : item.badge}
+                  {badgeCount > 99 ? '99+' : badgeCount}
                 </span>
               )}
             </div>
