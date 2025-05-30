@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Order } from '@/types/order';
@@ -10,12 +10,14 @@ export const useRestaurantOrders = (restaurantId: string) => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!restaurantId) return;
 
     try {
       setLoading(true);
       setError(null);
+
+      console.log('Fetching orders for restaurant:', restaurantId);
 
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
@@ -68,10 +70,12 @@ export const useRestaurantOrders = (restaurantId: string) => {
         })
       );
 
+      console.log('Successfully fetched orders:', ordersWithItems.length);
       setOrders(ordersWithItems);
     } catch (err) {
       console.error('Error fetching restaurant orders:', err);
-      setError('Failed to load orders');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load orders';
+      setError(errorMessage);
       toast({
         title: "Error",
         description: "Failed to load restaurant orders",
@@ -80,7 +84,7 @@ export const useRestaurantOrders = (restaurantId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId, toast]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
@@ -110,7 +114,7 @@ export const useRestaurantOrders = (restaurantId: string) => {
 
   useEffect(() => {
     fetchOrders();
-  }, [restaurantId]);
+  }, [fetchOrders]);
 
   return {
     orders,
