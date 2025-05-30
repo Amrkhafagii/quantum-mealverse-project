@@ -15,7 +15,7 @@ export const recordOrderHistory = async (
   details?: Record<string, unknown>,
   expiredAt?: string,
   changedBy?: string,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system',
+  changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system',
   visibility: boolean = true
 ): Promise<void> => {
   try {
@@ -106,6 +106,13 @@ export const recordOrderHistory = async (
       console.log(`Mapped status 'completed' to '${OrderStatus.DELIVERED}' for order_history`);
     }
     
+    // Determine the correct changed_by_type if not explicitly provided
+    let finalChangedByType = changedByType;
+    if (changedByType === 'system' && changedBy) {
+      // Let the database trigger handle the logic for determining the correct type
+      finalChangedByType = 'system'; // Will be overridden by trigger if needed
+    }
+    
     // Create history entry with conditional restaurant data
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
@@ -116,7 +123,7 @@ export const recordOrderHistory = async (
       details: details as any, // Type cast since we can't guarantee the shape
       expired_at: expiredAtUTC,
       changed_by: changedBy,
-      changed_by_type: changedByType,
+      changed_by_type: finalChangedByType,
       visibility
     };
     
@@ -135,11 +142,72 @@ export const recordOrderHistory = async (
     }
 
     // Log to console for debugging
-    console.log(`Order ${orderId} status updated to ${status} by restaurant ${restaurantId || 'unknown'}`);
+    console.log(`Order ${orderId} status updated to ${status} by ${changedByType} ${changedBy || 'unknown'}`);
   } catch (error) {
     console.error('Error recording order history:', error);
     // Don't throw here, but log the error to prevent the restaurant operation from failing
   }
+};
+
+/**
+ * Records order history specifically for restaurant actions
+ */
+export const recordRestaurantOrderHistory = async (
+  orderId: string,
+  status: string,
+  restaurantId: string,
+  changedBy?: string,
+  details?: Record<string, unknown>
+): Promise<void> => {
+  return recordOrderHistory(
+    orderId,
+    status,
+    restaurantId,
+    details,
+    undefined,
+    changedBy || restaurantId,
+    'restaurant'
+  );
+};
+
+/**
+ * Records order history specifically for customer actions
+ */
+export const recordCustomerOrderHistory = async (
+  orderId: string,
+  status: string,
+  customerId: string,
+  details?: Record<string, unknown>
+): Promise<void> => {
+  return recordOrderHistory(
+    orderId,
+    status,
+    null,
+    details,
+    undefined,
+    customerId,
+    'customer'
+  );
+};
+
+/**
+ * Records order history specifically for delivery actions
+ */
+export const recordDeliveryOrderHistory = async (
+  orderId: string,
+  status: string,
+  deliveryUserId: string,
+  details?: Record<string, unknown>
+): Promise<void> => {
+  return recordOrderHistory(
+    orderId,
+    status,
+    null,
+    details,
+    undefined,
+    deliveryUserId,
+    'delivery'
+  );
 };
 
 /**
@@ -176,7 +244,7 @@ export const addIdempotentOrderHistory = async (
   idempotencyKey: string,
   restaurantId?: string | null,
   details?: Record<string, unknown>,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
+  changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system'
 ): Promise<boolean> => {
   try {
     // Check if an entry with this idempotency key already exists
