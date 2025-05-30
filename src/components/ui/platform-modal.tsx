@@ -52,28 +52,36 @@ export function PlatformModal({
 }: PlatformModalProps) {
   const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
 
-  // Get platform-specific styles for the modal content
+  // Enhanced mobile-first modal content classes
   const getModalContentClasses = () => {
+    const baseClasses = "max-h-[85vh] overflow-y-auto";
+    const mobileClasses = isMobile 
+      ? "mx-4 my-8 w-[calc(100vw-2rem)] max-w-none" 
+      : "max-w-lg";
+    
     if (isPlatformIOS) {
       return cn(
-        "p-6 rounded-xl shadow-lg",
-        isMobile ? "mx-4" : ""
+        baseClasses,
+        mobileClasses,
+        "rounded-xl shadow-lg border-0 bg-white/95 backdrop-blur-md",
+        isMobile ? "p-5" : "p-6"
       );
     }
     
     if (isPlatformAndroid) {
       return cn(
-        "p-5 rounded-lg shadow-md",
-        isMobile ? "mx-5" : ""
+        baseClasses,
+        mobileClasses,
+        "rounded-lg shadow-md border border-gray-200",
+        isMobile ? "p-4" : "p-5"
       );
     }
     
-    return ""; // Default shadcn styles
+    return cn(baseClasses, mobileClasses);
   };
   
   // Handle confirm with haptic feedback
   const handleConfirm = () => {
-    // Provide haptic feedback on native platforms
     if (Platform.isNative()) {
       danger ? hapticFeedback.warning() : hapticFeedback.success();
     }
@@ -83,7 +91,6 @@ export function PlatformModal({
   
   // Handle cancel with haptic feedback
   const handleCancel = () => {
-    // Provide haptic feedback on native platforms
     if (Platform.isNative()) {
       hapticFeedback.selection();
     }
@@ -92,70 +99,91 @@ export function PlatformModal({
     if (onOpenChange) onOpenChange(false);
   };
   
-  // Get platform-specific button styles
+  // Enhanced platform-specific button styles with mobile optimization
   const getPrimaryButtonClasses = () => {
+    const mobileSize = isMobile ? "min-h-[44px] px-6 text-base" : "px-4 py-2";
+    
     if (isPlatformIOS) {
       return cn(
-        danger ? "bg-red-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600",
-        "font-medium"
+        mobileSize,
+        danger ? "bg-red-500 hover:bg-red-600 active:bg-red-700" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700",
+        "font-medium rounded-lg transition-colors"
       );
     }
     
     if (isPlatformAndroid) {
       return cn(
-        danger ? "bg-red-600 hover:bg-red-700" : "",
-        "rounded-full"
+        mobileSize,
+        danger ? "bg-red-600 hover:bg-red-700 active:bg-red-800" : "",
+        "rounded-full font-medium transition-colors"
       );
     }
     
-    return danger ? "bg-destructive hover:bg-destructive/90" : "";
+    return cn(
+      mobileSize,
+      danger ? "bg-destructive hover:bg-destructive/90" : "",
+      "transition-colors"
+    );
   };
   
-  // Get platform-specific cancel button styles
+  // Enhanced cancel button styles with mobile optimization
   const getCancelButtonClasses = () => {
+    const mobileSize = isMobile ? "min-h-[44px] px-6 text-base" : "px-4 py-2";
+    
     if (isPlatformIOS) {
-      return "text-blue-500 hover:bg-blue-50 border-0";
+      return cn(
+        mobileSize,
+        "text-blue-500 hover:bg-blue-50 active:bg-blue-100 border-0 bg-transparent",
+        "font-medium rounded-lg transition-colors"
+      );
     }
     
     if (isPlatformAndroid) {
-      return "rounded-full";
+      return cn(
+        mobileSize,
+        "rounded-full transition-colors"
+      );
     }
     
-    return "";
+    return cn(mobileSize, "transition-colors");
   };
 
-  // Get overlay background styles based on platform
-  const getOverlayStyle = () => {
+  // Enhanced close button with mobile-first design
+  const getCloseButtonClasses = () => {
+    const mobileSize = isMobile ? "top-4 right-4 p-2" : "top-3 right-3 p-1.5";
+    
     if (isPlatformIOS) {
-      return "bg-black/30 backdrop-blur-sm";
+      return cn(
+        "absolute rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 transition-colors",
+        mobileSize
+      );
     }
     
     if (isPlatformAndroid) {
-      return "bg-black/40";
+      return cn(
+        "absolute rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors",
+        mobileSize
+      );
     }
     
-    return "";
+    return cn("absolute rounded-sm transition-opacity hover:opacity-100", mobileSize);
   };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className={cn(getModalContentClasses(), contentClassName)}
-        // Note: We're using style for backdrop since overlayClassName isn't supported
-        style={{
-          "--overlay-bg": isPlatformIOS ? "rgba(0,0,0,0.3)" : isPlatformAndroid ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.8)"
-        } as React.CSSProperties}
+        aria-labelledby={title ? "modal-title" : undefined}
+        aria-describedby={description ? "modal-description" : undefined}
+        role="dialog"
+        aria-modal="true"
       >
         {showCloseButton && (
           <button
             onClick={handleCancel}
-            className={cn(
-              "absolute rounded-full",
-              isPlatformIOS ? "top-3 right-3 p-1.5 bg-gray-100" : 
-              isPlatformAndroid ? "top-2 right-2 p-1.5" : 
-              "top-4 right-4"
-            )}
-            aria-label="Close"
+            className={getCloseButtonClasses()}
+            aria-label="Close modal"
+            type="button"
           >
             <X className={cn(
               "h-4 w-4",
@@ -167,37 +195,50 @@ export function PlatformModal({
         )}
         
         {(title || description) && (
-          <DialogHeader>
+          <DialogHeader className={cn(
+            isPlatformIOS ? "text-center space-y-3" : 
+            isPlatformAndroid ? "space-y-2" : 
+            "space-y-1.5"
+          )}>
             {title && (
-              <DialogTitle className={cn(
-                isPlatformIOS ? "text-center text-xl" : 
-                isPlatformAndroid ? "text-lg font-medium" : 
-                ""
-              )}>
+              <DialogTitle 
+                id="modal-title"
+                className={cn(
+                  isPlatformIOS ? "text-xl font-semibold" : 
+                  isPlatformAndroid ? "text-lg font-medium" : 
+                  "text-lg font-semibold",
+                  isMobile ? "text-base" : ""
+                )}
+              >
                 {title}
               </DialogTitle>
             )}
             {description && (
-              <DialogDescription className={cn(
-                isPlatformIOS ? "text-center text-gray-500" : 
-                isPlatformAndroid ? "text-gray-600" : 
-                ""
-              )}>
+              <DialogDescription 
+                id="modal-description"
+                className={cn(
+                  isPlatformIOS ? "text-gray-500" : 
+                  isPlatformAndroid ? "text-gray-600" : 
+                  "text-muted-foreground",
+                  isMobile ? "text-sm" : ""
+                )}
+              >
                 {description}
               </DialogDescription>
             )}
           </DialogHeader>
         )}
         
-        <div className={className}>
+        <div className={cn("flex-1", className)}>
           {children}
         </div>
         
         {(showButtons || footerContent) && (
           <DialogFooter className={cn(
-            isPlatformIOS ? "flex-col space-y-2" : 
-            isPlatformAndroid ? "justify-end space-x-3" : 
-            ""
+            isPlatformIOS ? "flex-col space-y-3 pt-4" : 
+            isPlatformAndroid ? "flex-row justify-end space-x-3 pt-4" : 
+            "flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+            isMobile && !isPlatformIOS ? "flex-col space-y-3" : ""
           )}>
             {footerContent || (
               <>
@@ -207,6 +248,7 @@ export function PlatformModal({
                     variant="outline"
                     onClick={handleCancel}
                     className={getCancelButtonClasses()}
+                    aria-label={`${cancelText} and close modal`}
                   >
                     {cancelText}
                   </Button>
@@ -216,6 +258,7 @@ export function PlatformModal({
                     type="button"
                     onClick={handleConfirm}
                     className={getPrimaryButtonClasses()}
+                    aria-label={danger ? `${confirmText} (this action is destructive)` : confirmText}
                   >
                     {confirmText}
                   </Button>

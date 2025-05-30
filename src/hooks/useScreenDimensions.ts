@@ -1,6 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Platform } from '@/utils/platform';
+
+type ScreenSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+type DeviceType = 'mobile' | 'tablet' | 'desktop';
+type LocationFreshness = 'fresh' | 'stale' | 'expired';
 
 type Dimensions = {
   width: number;
@@ -8,81 +12,143 @@ type Dimensions = {
   isPortrait: boolean;
   isLandscape: boolean;
   aspectRatio: number;
-  deviceType: 'mobile' | 'tablet' | 'desktop';
-  screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  deviceType: DeviceType;
+  screenSize: ScreenSize;
   foldable: boolean;
 };
 
+// Screen size breakpoints (mobile-first approach)
+const SCREEN_BREAKPOINTS = {
+  xs: 0,
+  sm: 640,
+  md: 768,
+  lg: 1024,
+  xl: 1280,
+  '2xl': 1536,
+} as const;
+
+// Device type breakpoints
+const DEVICE_BREAKPOINTS = {
+  mobile: 768,
+  tablet: 1024,
+} as const;
+
+// Utility functions for clearer logic
+const calculateAspectRatio = (width: number, height: number): number => {
+  return Number((width / height).toFixed(2));
+};
+
+const determineOrientation = (width: number, height: number) => ({
+  isPortrait: height > width,
+  isLandscape: width >= height,
+});
+
+const classifyDeviceType = (width: number): DeviceType => {
+  if (width < DEVICE_BREAKPOINTS.mobile || Platform.isMobileBrowser()) {
+    return 'mobile';
+  }
+  if (width < DEVICE_BREAKPOINTS.tablet || Platform.isTablet()) {
+    return 'tablet';
+  }
+  return 'desktop';
+};
+
+const determineScreenSize = (width: number): ScreenSize => {
+  if (width >= SCREEN_BREAKPOINTS['2xl']) return '2xl';
+  if (width >= SCREEN_BREAKPOINTS.xl) return 'xl';
+  if (width >= SCREEN_BREAKPOINTS.lg) return 'lg';
+  if (width >= SCREEN_BREAKPOINTS.md) return 'md';
+  if (width >= SCREEN_BREAKPOINTS.sm) return 'sm';
+  return 'xs';
+};
+
+const detectFoldableDevice = (width: number, height: number, aspectRatio: number): boolean => {
+  // Enhanced foldable detection heuristics
+  if (!Platform.isAndroid()) return false;
+  
+  // Common foldable device patterns
+  const isUnfoldedTablet = aspectRatio > 1 && aspectRatio < 1.3 && width > 700 && width < 900;
+  const isUnfoldedPhone = width > 1200 && height < 900;
+  const hasUnusualAspectRatio = aspectRatio > 2.5 || (aspectRatio > 1.5 && aspectRatio < 1.8);
+  
+  return isUnfoldedTablet || isUnfoldedPhone || hasUnusualAspectRatio;
+};
+
 export const useScreenDimensions = (): Dimensions => {
-  const getScreenDimensions = (): Dimensions => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const isPortrait = height > width;
-    const isLandscape = !isPortrait;
-    const aspectRatio = width / height;
+  // Memoized calculation function for better performance
+  const calculateDimensions = useCallback((): Dimensions => {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
     
-    // Determine device type
-    let deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop';
-    if (width <= 640 || (Platform.isMobileBrowser() && width <= 768)) {
-      deviceType = 'mobile';
-    } else if (width <= 1024 || (Platform.isTablet() && width <= 1280)) {
-      deviceType = 'tablet';
-    }
-    
-    // Map width to screen size
-    let screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' = 'xs';
-    if (width >= 640) screenSize = 'sm';
-    if (width >= 768) screenSize = 'md';
-    if (width >= 1024) screenSize = 'lg';
-    if (width >= 1280) screenSize = 'xl';
-    if (width >= 1536) screenSize = '2xl';
-    
-    // Check if the device is likely a foldable - this is a heuristic
-    // In a real app, we would use specific Android APIs for this detection
-    const foldable = Platform.isAndroid() && (
-      // Potential indicators of foldable devices: unusual aspect ratios, specific heights
-      (aspectRatio > 1 && aspectRatio < 1.3 && width > 700 && width < 900) ||
-      (width > 1200 && height < 900 && Platform.isAndroid())
-    );
+    const orientation = determineOrientation(windowWidth, windowHeight);
+    const aspectRatio = calculateAspectRatio(windowWidth, windowHeight);
+    const deviceType = classifyDeviceType(windowWidth);
+    const screenSize = determineScreenSize(windowWidth);
+    const foldable = detectFoldableDevice(windowWidth, windowHeight, aspectRatio);
     
     return {
-      width,
-      height,
-      isPortrait,
-      isLandscape,
+      width: windowWidth,
+      height: windowHeight,
+      ...orientation,
       aspectRatio,
       deviceType,
       screenSize,
-      foldable
-    };
-  };
-
-  const [dimensions, setDimensions] = useState<Dimensions>(getScreenDimensions());
-
-  useEffect(() => {
-    const handleResize = () => {
-      setDimensions(getScreenDimensions());
-    };
-
-    // Throttle resize events for better performance
-    let resizeTimer: ReturnType<typeof setTimeout>;
-    
-    const throttledResize = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(handleResize, 100);
-    };
-
-    window.addEventListener('resize', throttledResize);
-    
-    // For orientation change on mobile devices
-    window.addEventListener('orientationchange', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', throttledResize);
-      window.removeEventListener('orientationchange', handleResize);
-      clearTimeout(resizeTimer);
+      foldable,
     };
   }, []);
 
+  const [dimensions, setDimensions] = useState<Dimensions>(calculateDimensions);
+
+  useEffect(() => {
+    // Throttled resize handler for better performance
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let animationId: number;
+    
+    const handleResize = () => {
+      // Cancel any pending updates
+      clearTimeout(timeoutId);
+      if (animationId) cancelAnimationFrame(animationId);
+      
+      // Use requestAnimationFrame for smooth updates
+      animationId = requestAnimationFrame(() => {
+        // Throttle with timeout to prevent excessive calculations
+        timeoutId = setTimeout(() => {
+          setDimensions(calculateDimensions());
+        }, 100);
+      });
+    };
+
+    // Optimized orientation change handler
+    const handleOrientationChange = () => {
+      // Small delay to ensure dimensions are updated after orientation change
+      setTimeout(() => {
+        setDimensions(calculateDimensions());
+      }, 150);
+    };
+
+    // Event listeners
+    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('orientationchange', handleOrientationChange, { passive: true });
+
+    // Cleanup function
+    return () => {
+      clearTimeout(timeoutId);
+      if (animationId) cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, [calculateDimensions]);
+
   return dimensions;
+};
+
+// Export utility functions for external use
+export {
+  SCREEN_BREAKPOINTS,
+  DEVICE_BREAKPOINTS,
+  calculateAspectRatio,
+  determineOrientation,
+  classifyDeviceType,
+  determineScreenSize,
+  detectFoldableDevice,
 };
