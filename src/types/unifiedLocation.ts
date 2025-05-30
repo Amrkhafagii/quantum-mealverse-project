@@ -1,112 +1,14 @@
-/**
- * Unified location types that standardize location data across different components
- */
 
-export type LocationFreshness = 'invalid' | 'fresh' | 'stale' | 'moderate' | 'expired';
+export type NetworkQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'high' | 'medium' | 'low' | 'offline' | 'unknown';
 
-export type LocationSource = 'gps' | 'network' | 'passive' | 'manual' | 'cached' | 'wifi' | 'cell' | 'unknown' | 'fusion';
+export type NetworkType = '4G' | '5G' | 'WiFi' | '3G' | '2G' | 'none';
 
-export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt';
-
-export type NetworkType = 'wifi' | 'cellular' | '4g' | '5g' | '3g' | '2g' | 'unknown' | 'none';
-
-export type NetworkQuality = 'high' | 'medium' | 'low' | 'offline' | 'poor' | 'very-poor' | 'fair' | 'moderate' | 'excellent' | 'good' | 'unknown';
-
-export interface NetworkInfo {
-  type: NetworkType;
-  connected: boolean;
-  strength?: number;
-  quality?: NetworkQuality;
-}
-
-export interface DeviceInfo {
-  platform: string;
-  model?: string;
-  manufacturer?: string;
-  version?: string;
-  uuid?: string;
-}
-
-export interface Platform {
-  os: string;
-  version: string;
-  isNative: boolean;
-}
-
-export interface UnifiedLocation {
+export interface LocationData {
   latitude: number;
   longitude: number;
   accuracy?: number;
-  altitude?: number | null;
-  altitudeAccuracy?: number | null;
-  heading?: number | null;
-  speed?: number | null;
-  timestamp: number | string;
-  source?: LocationSource;
-  id?: string;
-  networkInfo?: NetworkInfo;
-  device_info?: DeviceInfo;
-  is_anonymized?: boolean;
-  user_id?: string;
-  location_type?: string;
-  isMoving?: boolean;
-  battery_level?: number;
-  orderId?: string;
-  restaurantId?: string;
-  deliveryAssignmentId?: string;
+  timestamp?: number;
+  altitude?: number;
+  speed?: number;
+  heading?: number;
 }
-
-export interface ConfidenceScore {
-  overall: number;
-  accuracy: number;
-  recency: number;
-  source: number;
-  network: number;
-}
-
-export interface LocationHistoryEntry extends UnifiedLocation {
-  id: string;
-  user_id?: string;
-  created_at?: string;
-}
-
-export interface LocationQueryParams {
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
-  offset?: number;
-  source?: LocationSource[];
-  minAccuracy?: number;
-  userId?: string;
-  orderBy?: string;
-  orderDirection?: 'asc' | 'desc';
-  orderId?: string;
-  deliveryAssignmentId?: string;
-  restaurantId?: string;
-  locationType?: string;
-  includeExpired?: boolean;
-}
-
-export interface LocationPrivacySettings {
-  trackingEnabled: boolean;
-  anonymizeData: boolean;
-  retentionPeriodDays: number;
-  shareWithThirdParties: boolean;
-  automaticallyAnonymize?: boolean;
-  collectDeviceInfo?: boolean;
-  allowPreciseLocation?: boolean;
-  allowBackgroundTracking?: boolean;
-  precisionLevel?: number | string;
-  retentionDays?: number; // Alias for retentionPeriodDays for backward compatibility
-}
-
-export interface NetworkMetrics {
-  latency: number | null;
-  bandwidth?: number | null;
-  jitter?: number | null;
-  packetLoss?: number | null;
-  effectiveType?: string;
-  connectionType?: string;
-}
-
-export type LocationType = 'user' | 'restaurant' | 'driver' | 'customer' | 'order' | 'delivery' | 'unknown';

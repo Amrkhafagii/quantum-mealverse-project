@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { NetworkQuality, NetworkType } from '@/types/unifiedLocation';
+import { NetworkQuality } from '@/types/unifiedLocation';
 import { NetworkMetrics, NetworkQualityResult } from '@/types/networkQuality';
 
 export type { NetworkQuality } from '@/types/unifiedLocation';
@@ -11,6 +11,8 @@ export function useNetworkQuality(): NetworkQualityResult {
   const [metrics, setMetrics] = useState<NetworkMetrics>({
     latency: null,
     bandwidth: null,
+    downlink: null,
+    rtt: null,
     jitter: null,
     packetLoss: null,
     effectiveType: undefined
@@ -35,6 +37,8 @@ export function useNetworkQuality(): NetworkQualityResult {
           ...prev,
           latency: rtt || null,
           bandwidth: downlink || null,
+          downlink: downlink || null,
+          rtt: rtt || null,
           effectiveType: effectiveType
         }));
         
@@ -42,16 +46,17 @@ export function useNetworkQuality(): NetworkQualityResult {
         let detectedQuality: NetworkQuality = 'medium';
         
         if (effectiveType === '4g' && downlink > 10) {
-          detectedQuality = 'high';
-        } else if (effectiveType === '3g' || (downlink >= 1.5 && downlink <= 10)) {
-          detectedQuality = 'medium';
+          detectedQuality = 'excellent';
+        } else if (effectiveType === '4g' && downlink > 5) {
+          detectedQuality = 'good';
+        } else if (effectiveType === '3g' || (downlink >= 1.5 && downlink <= 5)) {
+          detectedQuality = 'fair';
         } else if (effectiveType === '2g' || downlink < 1.5) {
-          detectedQuality = 'low';
+          detectedQuality = 'poor';
         }
         
         setQuality(detectedQuality);
-        // Fixed: Check against all possible low quality values
-        const lowQualityValues: NetworkQuality[] = ['low', 'offline', 'poor', 'very-poor'];
+        const lowQualityValues: NetworkQuality[] = ['poor', 'very-poor', 'low', 'offline'];
         setIsLowQuality(lowQualityValues.includes(detectedQuality));
         
         return detectedQuality;

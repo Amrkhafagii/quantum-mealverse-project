@@ -7,7 +7,7 @@ export interface OrderTimerProps {
   expiresAt?: Date;
   startTime?: Date;
   updatedAt?: string;
-  orderId: string;
+  orderId?: string;
   onTimerExpire?: () => void;
 }
 

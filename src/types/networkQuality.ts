@@ -10,12 +10,12 @@ export interface NetworkMetrics {
 }
 
 export interface NetworkQualityResult {
-  quality: 'high' | 'medium' | 'low' | 'offline' | 'unknown';
+  quality: 'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'high' | 'medium' | 'low' | 'offline' | 'unknown';
   isLowQuality: boolean;
   metrics: NetworkMetrics;
   hasTransitioned: boolean;
   isFlaky: boolean;
   latency: number | null;
   bandwidth: number | null;
-  checkQuality: () => Promise<'high' | 'medium' | 'low' | 'offline' | 'unknown'>;
+  checkQuality: () => Promise<'excellent' | 'good' | 'fair' | 'poor' | 'very-poor' | 'high' | 'medium' | 'low' | 'offline' | 'unknown'>;
 }

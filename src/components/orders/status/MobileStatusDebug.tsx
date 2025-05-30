@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Bug } from 'lucide-react';
 
 interface MobileStatusDebugProps {
+  orderId?: string;
   onStatusFixed?: () => void;
 }
 
 export const MobileStatusDebug: React.FC<MobileStatusDebugProps> = ({
+  orderId,
   onStatusFixed
 }) => {
   return (
@@ -18,6 +20,7 @@ export const MobileStatusDebug: React.FC<MobileStatusDebugProps> = ({
         <CardTitle className="text-sm flex items-center gap-2">
           <Bug className="h-4 w-4" />
           Debug Panel
+          {orderId && <span className="text-xs opacity-60">({orderId})</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

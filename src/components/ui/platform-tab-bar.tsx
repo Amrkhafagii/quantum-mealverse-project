@@ -17,7 +17,9 @@ export interface PlatformTabBarProps {
   tabs: TabItem[];
   value?: string;
   defaultValue?: string;
+  activeTab?: string;
   onChange?: (tabId: string) => void;
+  onTabChange?: (tabId: string) => void;
   variant?: 'default' | 'pills' | 'underline';
   position?: 'top' | 'bottom';
   fullWidth?: boolean;
@@ -32,7 +34,9 @@ export const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
   tabs,
   value,
   defaultValue,
+  activeTab: propActiveTab,
   onChange,
+  onTabChange,
   variant = 'default',
   position = 'top',
   fullWidth = true,
@@ -43,11 +47,12 @@ export const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
   tabsListClassName,
 }) => {
   const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
-  const [activeTab, setActiveTab] = useState(value || defaultValue || tabs[0]?.id);
+  const [activeTab, setActiveTab] = useState(value || defaultValue || propActiveTab || tabs[0]?.id);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     onChange?.(tabId);
+    onTabChange?.(tabId);
   };
 
   const getTabBarStyles = () => {
@@ -130,3 +135,6 @@ export const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
     </div>
   );
 };
+
+// Export TabItem for external use
+export type { TabItem };
