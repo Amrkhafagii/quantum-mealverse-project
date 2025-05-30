@@ -64,5 +64,31 @@ export const hapticFeedback = {
   
   medium: async () => {
     await hapticFeedback.impact('medium');
+  },
+
+  heavy: async () => {
+    await hapticFeedback.impact('heavy');
+  },
+
+  contextual: async (context: 'success' | 'error' | 'warning' | 'info' | 'selection' | 'confirmation') => {
+    switch (context) {
+      case 'success':
+        await hapticFeedback.success();
+        break;
+      case 'error':
+        await hapticFeedback.error();
+        break;
+      case 'warning':
+        await hapticFeedback.warning();
+        break;
+      case 'selection':
+        await hapticFeedback.selection();
+        break;
+      case 'confirmation':
+        await hapticFeedback.medium();
+        break;
+      default:
+        await hapticFeedback.light();
+    }
   }
 };

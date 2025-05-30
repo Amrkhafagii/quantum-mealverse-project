@@ -1,155 +1,98 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Platform } from '../utils/platform';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from '@/responsive/utils/platform';
 
-interface ResponsiveContextType {
+export type ScreenSize = 'mobile' | 'tablet' | 'desktop';
+
+export interface ResponsiveContextType {
+  screenSize: ScreenSize;
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
+  isLandscape: boolean;
   isPlatformIOS: boolean;
   isPlatformAndroid: boolean;
-  isPlatformWeb: boolean;
   isInitialized: boolean;
   safeAreaTop: number;
   safeAreaBottom: number;
   safeAreaLeft: number;
   safeAreaRight: number;
-  // Additional properties that components expect
-  isLandscape: boolean;
-  isPortrait: boolean;
-  isFoldable: boolean;
-  statusBarHeight: number;
-  hasNotch: boolean;
-  hasDynamicIsland: boolean;
-  androidScreenSize: 'small' | 'normal' | 'large' | 'xlarge';
-  isDarkMode: boolean;
 }
 
 const ResponsiveContext = createContext<ResponsiveContextType | undefined>(undefined);
 
 interface ResponsiveProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children }) => {
+  const [screenSize, setScreenSize] = useState<ScreenSize>('mobile');
+  const [isLandscape, setIsLandscape] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [dimensions, setDimensions] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 0,
-    height: typeof window !== 'undefined' ? window.innerHeight : 0
-  });
-  const [safeArea, setSafeArea] = useState({
+  const [safeAreaInsets, setSafeAreaInsets] = useState({
     top: 0,
     bottom: 0,
     left: 0,
     right: 0
   });
 
-  // Platform detection (stable once determined)
-  const isPlatformIOS = Platform.isIOS();
-  const isPlatformAndroid = Platform.isAndroid();
-  const isPlatformWeb = Platform.isWeb();
-
-  // Responsive breakpoints
-  const isMobile = dimensions.width < 768;
-  const isTablet = dimensions.width >= 768 && dimensions.width < 1024;
-  const isDesktop = dimensions.width >= 1024;
-  
-  // Orientation detection
-  const isLandscape = dimensions.width > dimensions.height;
-  const isPortrait = !isLandscape;
-  
-  // Foldable detection (basic heuristic)
-  const isFoldable = isPlatformAndroid && (
-    (dimensions.width > 800 && dimensions.height < 700) ||
-    (isLandscape && dimensions.width > 1200)
-  );
-  
-  // Android screen size classification
-  const getAndroidScreenSize = (): 'small' | 'normal' | 'large' | 'xlarge' => {
-    if (dimensions.width < 426) return 'small';
-    if (dimensions.width < 640) return 'normal';
-    if (dimensions.width < 960) return 'large';
-    return 'xlarge';
-  };
-  
-  // Dark mode detection
-  const isDarkMode = typeof window !== 'undefined' 
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
-    : false;
-  
-  // iOS specific features
-  const hasNotch = isPlatformIOS && safeArea.top > 20;
-  const hasDynamicIsland = isPlatformIOS && safeArea.top > 47;
-  const statusBarHeight = isPlatformIOS ? safeArea.top : (isPlatformAndroid ? 24 : 0);
-
   useEffect(() => {
-    // Initialize dimensions and safe area
-    const updateDimensions = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
+    const updateScreenSize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('mobile');
+      } else if (width < 1024) {
+        setScreenSize('tablet');
+      } else {
+        setScreenSize('desktop');
+      }
+      
+      setIsLandscape(window.innerWidth > window.innerHeight);
     };
 
     const updateSafeArea = () => {
-      if (isPlatformIOS && typeof window !== 'undefined') {
-        // Get CSS custom properties for safe area
+      if (Platform.isNative()) {
+        // Get safe area insets from CSS environment variables
         const computedStyle = getComputedStyle(document.documentElement);
-        const top = parseInt(computedStyle.getPropertyValue('--sat').replace('px', '')) || 0;
-        const bottom = parseInt(computedStyle.getPropertyValue('--sab').replace('px', '')) || 0;
-        const left = parseInt(computedStyle.getPropertyValue('--sal').replace('px', '')) || 0;
-        const right = parseInt(computedStyle.getPropertyValue('--sar').replace('px', '')) || 0;
-        
-        setSafeArea({ top, bottom, left, right });
+        setSafeAreaInsets({
+          top: parseInt(computedStyle.getPropertyValue('--sat') || '0'),
+          bottom: parseInt(computedStyle.getPropertyValue('--sab') || '0'),
+          left: parseInt(computedStyle.getPropertyValue('--sal') || '0'),
+          right: parseInt(computedStyle.getPropertyValue('--sar') || '0')
+        });
       }
     };
 
-    // Initial setup
-    updateDimensions();
+    updateScreenSize();
     updateSafeArea();
-    
-    // Mark as initialized after initial setup
     setIsInitialized(true);
 
-    // Event listeners
-    window.addEventListener('resize', updateDimensions);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(() => {
-        updateDimensions();
-        updateSafeArea();
-      }, 100);
-    });
+    window.addEventListener('resize', updateScreenSize);
+    window.addEventListener('orientationchange', updateScreenSize);
 
     return () => {
-      window.removeEventListener('resize', updateDimensions);
-      window.removeEventListener('orientationchange', updateDimensions);
+      window.removeEventListener('resize', updateScreenSize);
+      window.removeEventListener('orientationchange', updateScreenSize);
     };
-  }, [isPlatformIOS]);
+  }, []);
 
-  const value: ResponsiveContextType = {
-    isMobile,
-    isTablet,
-    isDesktop,
-    isPlatformIOS,
-    isPlatformAndroid,
-    isPlatformWeb,
-    isInitialized,
-    safeAreaTop: safeArea.top,
-    safeAreaBottom: safeArea.bottom,
-    safeAreaLeft: safeArea.left,
-    safeAreaRight: safeArea.right,
+  const contextValue: ResponsiveContextType = {
+    screenSize,
+    isMobile: screenSize === 'mobile',
+    isTablet: screenSize === 'tablet',
+    isDesktop: screenSize === 'desktop',
     isLandscape,
-    isPortrait,
-    isFoldable,
-    statusBarHeight,
-    hasNotch,
-    hasDynamicIsland,
-    androidScreenSize: getAndroidScreenSize(),
-    isDarkMode,
+    isPlatformIOS: Platform.isIOS(),
+    isPlatformAndroid: Platform.isAndroid(),
+    isInitialized,
+    safeAreaTop: safeAreaInsets.top,
+    safeAreaBottom: safeAreaInsets.bottom,
+    safeAreaLeft: safeAreaInsets.left,
+    safeAreaRight: safeAreaInsets.right,
   };
 
   return (
-    <ResponsiveContext.Provider value={value}>
+    <ResponsiveContext.Provider value={contextValue}>
       {children}
     </ResponsiveContext.Provider>
   );

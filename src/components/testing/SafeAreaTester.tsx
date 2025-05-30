@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '@/responsive/core/ResponsiveContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
