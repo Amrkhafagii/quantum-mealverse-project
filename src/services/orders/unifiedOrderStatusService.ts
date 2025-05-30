@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from './webhook/orderHistoryService';
@@ -27,7 +28,7 @@ export const unifiedOrderStatusService = {
     metadata = {},
     changedBy,
     changedByType = 'system'
-  }: UnifiedOrderStatusUpdate): Promise<boolean> => {
+  }: UnifiedOrderStatusUpdate): Promise<boolean> {
     try {
       console.log('Updating unified order status:', {
         orderId,
