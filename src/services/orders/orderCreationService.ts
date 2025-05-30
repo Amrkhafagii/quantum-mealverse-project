@@ -146,11 +146,25 @@ export const createOrder = async (
       orderData.subtotal
     );
     
-    // Prepare final order data
-    const finalOrderData: OrderData = {
-      ...orderData,
+    // Prepare final order data for database insert
+    const finalOrderData = {
+      user_id: orderData.user_id,
+      customer_name: orderData.customer_name,
+      customer_phone: orderData.customer_phone,
+      customer_email: orderData.customer_email || '',
+      delivery_address: orderData.delivery_address,
+      city: orderData.city || '', // Ensure city is always a string
+      total: orderData.subtotal + deliveryFee, // Recalculate total with dynamic fee
+      subtotal: orderData.subtotal,
       delivery_fee: deliveryFee,
-      total: orderData.subtotal + deliveryFee // Recalculate total with dynamic fee
+      status: orderData.status,
+      payment_method: orderData.payment_method,
+      delivery_method: orderData.delivery_method,
+      special_instructions: orderData.special_instructions,
+      latitude: orderData.latitude,
+      longitude: orderData.longitude,
+      assignment_source: orderData.assignment_source,
+      is_mixed_order: orderData.is_mixed_order
     };
     
     console.log('Creating order with final data:', finalOrderData);

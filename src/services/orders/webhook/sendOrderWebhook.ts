@@ -1,7 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-interface OrderAssignmentRequest {
+// Simple local interface to avoid type complexity
+interface SimpleOrderAssignmentRequest {
   order_id: string;
   latitude: number;
   longitude: number;
@@ -50,7 +51,7 @@ const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
  * Logs webhook request with idempotency key
  */
 const logWebhookRequest = async (
-  webhookRequest: OrderAssignmentRequest, 
+  webhookRequest: SimpleOrderAssignmentRequest, 
   idempotencyKey: string
 ): Promise<boolean> => {
   try {
@@ -80,7 +81,7 @@ const logWebhookRequest = async (
 /**
  * Calls webhook directly without using React hooks
  */
-const callWebhook = async (payload: OrderAssignmentRequest): Promise<{ success: boolean; error?: string }> => {
+const callWebhook = async (payload: SimpleOrderAssignmentRequest): Promise<{ success: boolean; error?: string }> => {
   try {
     // Get current session for authentication
     const { data: authData } = await supabase.auth.getSession();
@@ -131,7 +132,7 @@ export const sendOrderToWebhook = async (
     }
 
     // Create the webhook request object
-    const webhookRequest: OrderAssignmentRequest = {
+    const webhookRequest: SimpleOrderAssignmentRequest = {
       order_id: orderId,
       latitude,
       longitude,

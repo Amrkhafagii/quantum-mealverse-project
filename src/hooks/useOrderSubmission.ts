@@ -32,6 +32,7 @@ export const useOrderSubmission = (
         customer_email: data.email || '',
         delivery_address: data.address,
         city: data.city || '',
+        total: totalAmount, // Add the missing total property
         subtotal: subtotal,
         status: 'pending',
         payment_method: data.paymentMethod || 'cash',
