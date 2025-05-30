@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { OrderAssignmentCard } from './OrderAssignmentCard';
+import { OrderWithContext } from './OrderWithContext';
 import { usePendingAssignments } from '@/hooks/usePendingAssignments';
 
 interface PendingAssignmentsListProps {
@@ -76,14 +77,37 @@ export const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
       </div>
 
       <div className="space-y-4">
-        {assignments.map((assignment) => (
-          <OrderAssignmentCard
-            key={assignment.id}
-            order={assignment.order}
-            restaurantId={restaurantId}
-            onAssignmentUpdate={refetch}
-          />
-        ))}
+        {assignments.map((assignment) => {
+          // Convert the assignment order to match Order interface
+          const orderData = {
+            id: assignment.order.id,
+            user_id: '', // Not provided by assignment data
+            customer_name: assignment.order.customer_name,
+            customer_email: '', // Not provided by assignment data
+            customer_phone: assignment.order.customer_phone,
+            delivery_address: assignment.order.delivery_address,
+            city: '', // Not provided by assignment data
+            delivery_method: 'delivery', // Default value
+            payment_method: 'card', // Default value
+            delivery_fee: 0,
+            subtotal: assignment.order.total,
+            total: assignment.order.total,
+            status: assignment.order.status,
+            created_at: assignment.order.created_at,
+            order_items: assignment.order.order_items || []
+          };
+
+          return (
+            <OrderWithContext
+              key={assignment.id}
+              order={orderData}
+              restaurantId={restaurantId}
+              onAssignmentUpdate={refetch}
+            >
+              <OrderAssignmentCard />
+            </OrderWithContext>
+          );
+        })}
       </div>
     </div>
   );

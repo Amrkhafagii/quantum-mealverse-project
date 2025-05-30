@@ -2,29 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-
-interface OrderItem {
-  id: string;
-  meal_id: string;
-  quantity: number;
-  name: string;
-  price: number;
-}
-
-interface RestaurantOrder {
-  id: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  delivery_address: string;
-  status: string;
-  total: number;
-  created_at: string;
-  order_items: OrderItem[];
-}
+import { Order } from '@/types/order';
 
 export const useRestaurantOrders = (restaurantId: string) => {
-  const [orders, setOrders] = useState<RestaurantOrder[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -40,13 +21,18 @@ export const useRestaurantOrders = (restaurantId: string) => {
         .from('orders')
         .select(`
           id,
+          user_id,
           customer_name,
           customer_email,
           customer_phone,
           delivery_address,
+          city,
+          delivery_method,
+          payment_method,
           status,
           total,
-          created_at
+          created_at,
+          notes
         `)
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
@@ -65,12 +51,19 @@ export const useRestaurantOrders = (restaurantId: string) => {
 
           if (itemsError) {
             console.error('Error fetching order items:', itemsError);
-            return { ...order, order_items: [] };
+            return { 
+              ...order, 
+              order_items: [],
+              delivery_fee: 0,
+              subtotal: order.total || 0
+            };
           }
 
           return {
             ...order,
-            order_items: itemsData || []
+            order_items: itemsData || [],
+            delivery_fee: 0,
+            subtotal: order.total || 0
           };
         })
       );
