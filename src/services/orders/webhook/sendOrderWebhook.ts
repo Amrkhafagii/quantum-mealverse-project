@@ -14,6 +14,10 @@ const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozg
 
 /**
  * Generates an idempotency key for webhook requests
+ * @param orderId - The order ID
+ * @param action - The action being performed
+ * @param attempt - The attempt number
+ * @returns A unique idempotency key
  */
 const generateIdempotencyKey = (orderId: string, action: string, attempt: number = 1): string => {
   const timestamp = Math.floor(Date.now() / 1000); // Current timestamp in seconds
@@ -22,9 +26,13 @@ const generateIdempotencyKey = (orderId: string, action: string, attempt: number
 
 /**
  * Checks if a webhook request with the same idempotency key has been processed recently
+ * @param idempotencyKey - The idempotency key to check
+ * @returns Promise<boolean> - True if duplicate, false otherwise
  */
 const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
   try {
+    console.log(`Checking idempotency for key: ${idempotencyKey}`);
+    
     // Check for recent webhook logs with the same key (within last 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     
@@ -40,7 +48,9 @@ const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
       return false; // Allow request if we can't check
     }
 
-    return Boolean(data && data.length > 0);
+    const isDuplicate = Boolean(data && data.length > 0);
+    console.log(`Idempotency check result: ${isDuplicate ? 'duplicate' : 'unique'}`);
+    return isDuplicate;
   } catch (error) {
     console.error('Critical error checking idempotency:', error);
     return false; // Allow request if we can't check
@@ -49,19 +59,24 @@ const checkIdempotency = async (idempotencyKey: string): Promise<boolean> => {
 
 /**
  * Logs webhook request with idempotency key
+ * @param webhookRequest - The webhook request object
+ * @param idempotencyKey - The idempotency key
+ * @returns Promise<boolean> - Success status
  */
 const logWebhookRequest = async (
   webhookRequest: SimpleOrderAssignmentRequest, 
   idempotencyKey: string
 ): Promise<boolean> => {
   try {
+    console.log(`Logging webhook request for order ${webhookRequest.order_id} with key: ${idempotencyKey}`);
+    
     const { error } = await supabase
       .from('webhook_logs')
       .insert({
         payload: {
           order_id: webhookRequest.order_id,
           request_type: 'find_restaurant',
-          request_data: JSON.parse(JSON.stringify(webhookRequest))
+          request_data: webhookRequest
         },
         idempotency_key: idempotencyKey
       });
@@ -71,6 +86,7 @@ const logWebhookRequest = async (
       return false;
     }
     
+    console.log('Successfully logged webhook request');
     return true;
   } catch (error) {
     console.error('Critical error logging webhook request:', error);
@@ -80,12 +96,21 @@ const logWebhookRequest = async (
 
 /**
  * Calls webhook directly without using React hooks
+ * @param payload - The webhook payload
+ * @returns Promise with success status and optional error message
  */
 const callWebhook = async (payload: SimpleOrderAssignmentRequest): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log(`Calling webhook for order ${payload.order_id} with action: ${payload.action}`);
+    
     // Get current session for authentication
     const { data: authData } = await supabase.auth.getSession();
     const token = authData.session?.access_token;
+
+    if (!token) {
+      console.error('No authentication token available');
+      return { success: false, error: 'Authentication required' };
+    }
 
     const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
       method: 'POST',
@@ -97,10 +122,12 @@ const callWebhook = async (payload: SimpleOrderAssignmentRequest): Promise<{ suc
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      return { success: false, error: errorData.error || 'Webhook request failed' };
+      const errorText = await response.text();
+      console.error(`Webhook call failed with status ${response.status}: ${errorText}`);
+      return { success: false, error: `Webhook request failed: ${response.status}` };
     }
 
+    console.log('Webhook call completed successfully');
     return { success: true };
   } catch (error) {
     console.error('Error in webhook call:', error);
@@ -110,6 +137,12 @@ const callWebhook = async (payload: SimpleOrderAssignmentRequest): Promise<{ suc
 
 /**
  * Sends an order to the webhook service to find a restaurant with idempotency handling
+ * @param orderId - The order ID
+ * @param latitude - Customer latitude
+ * @param longitude - Customer longitude
+ * @param action - The action to perform (default: 'assign')
+ * @param attempt - The attempt number (default: 1)
+ * @returns Promise<boolean> - Success status
  */
 export const sendOrderToWebhook = async (
   orderId: string,
@@ -119,7 +152,7 @@ export const sendOrderToWebhook = async (
   attempt: number = 1
 ): Promise<boolean> => {
   try {
-    console.log(`Sending order ${orderId} to webhook - attempt ${attempt}`);
+    console.log(`Starting webhook process for order ${orderId} - attempt ${attempt}, action: ${action}`);
     
     // Generate idempotency key
     const idempotencyKey = generateIdempotencyKey(orderId, action, attempt);
@@ -150,20 +183,26 @@ export const sendOrderToWebhook = async (
     const response = await callWebhook(webhookRequest);
     
     if (!response.success) {
-      console.error('Webhook error:', response.error);
+      console.error(`Webhook failed for order ${orderId}:`, response.error);
       return false;
     }
 
     console.log(`Successfully sent order ${orderId} to webhook with idempotency key ${idempotencyKey}`);
     return true;
   } catch (error) {
-    console.error('Error sending order to webhook:', error);
+    console.error(`Critical error sending order ${orderId} to webhook:`, error);
     return false;
   }
 };
 
 /**
  * Sends order to webhook with retry mechanism and idempotency
+ * @param orderId - The order ID
+ * @param latitude - Customer latitude
+ * @param longitude - Customer longitude
+ * @param action - The action to perform (default: 'assign')
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Promise<boolean> - Success status
  */
 export const sendOrderToWebhookWithRetry = async (
   orderId: string,
@@ -172,24 +211,29 @@ export const sendOrderToWebhookWithRetry = async (
   action: string = 'assign',
   maxRetries: number = 3
 ): Promise<boolean> => {
+  console.log(`Starting webhook with retry for order ${orderId} - max retries: ${maxRetries}`);
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`Webhook attempt ${attempt}/${maxRetries} for order ${orderId}`);
+      
       const success = await sendOrderToWebhook(orderId, latitude, longitude, action, attempt);
       if (success) {
+        console.log(`Webhook successful on attempt ${attempt} for order ${orderId}`);
         return true;
       }
       
       if (attempt < maxRetries) {
         // Wait before retrying (exponential backoff)
         const delay = Math.pow(2, attempt) * 1000;
+        console.log(`Retrying webhook for order ${orderId} in ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        console.log(`Retrying webhook request for order ${orderId}, attempt ${attempt + 1}`);
       }
     } catch (error) {
       console.error(`Webhook attempt ${attempt} failed for order ${orderId}:`, error);
     }
   }
   
-  console.error(`All webhook attempts failed for order ${orderId}`);
+  console.error(`All ${maxRetries} webhook attempts failed for order ${orderId}`);
   return false;
 };
