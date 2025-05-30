@@ -1,301 +1,123 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
-import { OrderStatus } from '@/types/restaurant';
 
-type OrderHistoryInsert = Database['public']['Tables']['order_history']['Insert'];
-type OrderHistoryRow = Database['public']['Tables']['order_history']['Row'];
+interface ServiceResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
 
 /**
- * Validates and normalizes changed_by_type to ensure it matches database constraints
+ * Validates and normalizes changed_by_type to ensure it meets database constraints
  */
-const validateChangedByType = (changedByType: string): 'system' | 'customer' | 'restaurant' | 'delivery' => {
+const validateChangedByType = (changedByType?: string): 'system' | 'customer' | 'restaurant' | 'delivery' => {
   const validTypes: ('system' | 'customer' | 'restaurant' | 'delivery')[] = ['system', 'customer', 'restaurant', 'delivery'];
   
-  // Normalize common variations
-  const normalized = changedByType.toLowerCase().trim();
-  
-  if (validTypes.includes(normalized as any)) {
-    return normalized as 'system' | 'customer' | 'restaurant' | 'delivery';
+  if (changedByType && validTypes.includes(changedByType as any)) {
+    return changedByType as 'system' | 'customer' | 'restaurant' | 'delivery';
   }
   
-  // Default fallback to system for any invalid values
-  console.warn(`Invalid changed_by_type '${changedByType}' provided, defaulting to 'system'`);
+  // Default to 'system' if invalid or undefined
   return 'system';
 };
 
 /**
- * Records an entry in the order history table with standardized UTC timestamps
+ * Records an order status change in the order history
  */
 export const recordOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId?: string | null,
   details?: Record<string, unknown>,
-  expiredAt?: string,
+  timestamp?: string,
   changedBy?: string,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system',
-  visibility: boolean = true
-): Promise<void> => {
+  changedByType?: string
+): Promise<ServiceResponse> => {
   try {
-    console.log(`Recording order history for order ${orderId} with status ${status}, restaurant ${restaurantId || 'null'}`);
-    
-    // Validate and normalize changed_by_type
-    const validChangedByType = validateChangedByType(changedByType);
-    
-    // For certain status types, we must have a restaurant_id
-    // Due to NOT NULL constraint
-    if (!restaurantId || restaurantId === 'unknown') {
-      console.log(`Restaurant ID is missing or unknown, attempting to find it from order data`);
-      
-      // Try to fetch the restaurant_id from the order
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select('restaurant_id, status')
-        .eq('id', orderId)
-        .single();
-      
-      if (orderData?.restaurant_id) {
-        restaurantId = orderData.restaurant_id;
-        console.log(`Successfully retrieved restaurant_id ${restaurantId} from orders table`);
-      } else {
-        console.warn('Could not retrieve restaurant_id from orders table');
-        // Default to null to satisfy the constraint
-        restaurantId = null;
-      }
-    }
+    const validatedChangedByType = validateChangedByType(changedByType);
     
     // Get restaurant name if restaurantId is provided
-    let restaurantName = 'Unknown Restaurant';
+    let restaurantName;
     if (restaurantId) {
-      const { data: restaurant } = await supabase
+      const { data: restaurantData, error: restaurantError } = await supabase
         .from('restaurants')
         .select('name')
         .eq('id', restaurantId)
         .single();
       
-      restaurantName = restaurant?.name || 'Unknown Restaurant';
-      console.log(`Retrieved restaurant name: ${restaurantName || 'null'}`);
+      if (restaurantError) {
+        console.error(`Failed to fetch restaurant name for ID ${restaurantId}:`, restaurantError);
+      } else {
+        restaurantName = restaurantData?.name;
+      }
     }
 
-    // Get previous status directly from the order table
-    const { data: orderData } = await supabase
-      .from('orders')
-      .select('status')
-      .eq('id', orderId)
-      .single();
-    
-    const previousStatus = orderData?.status;
-    console.log(`Previous status from order table: ${previousStatus || 'null'}`);
-
-    // Get the latest status from order_history as a fallback
-    let fallbackPreviousStatus = null;
-    if (!previousStatus) {
-      const { data: lastStatus } = await supabase
-        .from('order_history')
-        .select('status')
-        .eq('order_id', orderId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      fallbackPreviousStatus = lastStatus?.status;
-      console.log(`Fallback previous status from order_history: ${fallbackPreviousStatus || 'null'}`);
-    }
-    
-    // Ensure timestamps are in UTC
-    const now = new Date().toISOString();
-    const expiredAtUTC = expiredAt ? new Date(expiredAt).toISOString() : undefined;
-    
-    // Normalize status for order_history based on both OrderStatus enum and string aliases
-    let normalizedStatus = status;
-    
-    // Map any simplified status names to their canonical form for order_history
-    if (status === 'accepted') {
-      normalizedStatus = OrderStatus.RESTAURANT_ACCEPTED;
-      console.log(`Mapped status 'accepted' to '${OrderStatus.RESTAURANT_ACCEPTED}' for order_history`);
-    } else if (status === 'rejected') {
-      normalizedStatus = OrderStatus.RESTAURANT_REJECTED;
-      console.log(`Mapped status 'rejected' to '${OrderStatus.RESTAURANT_REJECTED}' for order_history`);
-    } else if (status === 'ready') {
-      normalizedStatus = OrderStatus.READY_FOR_PICKUP;
-      console.log(`Mapped status 'ready' to '${OrderStatus.READY_FOR_PICKUP}' for order_history`);
-    } else if (status === 'delivering') {
-      normalizedStatus = OrderStatus.ON_THE_WAY;
-      console.log(`Mapped status 'delivering' to '${OrderStatus.ON_THE_WAY}' for order_history`);
-    } else if (status === 'completed') {
-      normalizedStatus = OrderStatus.DELIVERED;
-      console.log(`Mapped status 'completed' to '${OrderStatus.DELIVERED}' for order_history`);
-    }
-    
-    // Create history entry with conditional restaurant data
-    const historyEntry: OrderHistoryInsert = {
-      order_id: orderId,
-      status: normalizedStatus,
-      previous_status: previousStatus || fallbackPreviousStatus || null,
-      restaurant_id: restaurantId,
-      restaurant_name: restaurantName,
-      details: details as any, // Type cast since we can't guarantee the shape
-      expired_at: expiredAtUTC,
-      changed_by: changedBy,
-      changed_by_type: validChangedByType, // Use validated type
-      visibility
-    };
-    
-    console.log('Adding history entry with validated changed_by_type:', historyEntry);
-    
-    // Insert record into order_history table
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('order_history')
-      .insert(historyEntry);
-      
+      .insert({
+        order_id: orderId,
+        status,
+        restaurant_id: restaurantId,
+        restaurant_name: restaurantName,
+        details: details || {},
+        created_at: timestamp || new Date().toISOString(),
+        changed_by: changedBy,
+        changed_by_type: validatedChangedByType
+      });
+
     if (error) {
-      console.error('Error recording order history:', error);
-      // Don't throw here, but log the error to prevent the restaurant operation from failing
-    } else {
-      console.log(`Successfully recorded order history for order ${orderId} with changed_by_type: ${validChangedByType}`);
+      console.error(`Error recording order history for order ${orderId}:`, error);
+      return { 
+        success: false, 
+        message: `Failed to record order history: ${error.message}` 
+      };
     }
 
-    // Log to console for debugging
-    console.log(`Order ${orderId} status updated to ${status} by ${validChangedByType} ${changedBy || 'unknown'}`);
+    console.log(`Successfully recorded order history for order ${orderId} with status ${status}`);
+    return { 
+      success: true, 
+      message: 'Order history recorded successfully' 
+    };
   } catch (error) {
-    console.error('Error recording order history:', error);
-    // Don't throw here, but log the error to prevent the restaurant operation from failing
+    console.error(`Critical error recording order history for order ${orderId}:`, error);
+    return { 
+      success: false, 
+      message: `Critical error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    };
   }
 };
 
 /**
- * Records order history specifically for restaurant actions
+ * Records restaurant-specific order history with enhanced context
  */
 export const recordRestaurantOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId: string,
   changedBy?: string,
-  details?: Record<string, unknown>
-): Promise<void> => {
-  return recordOrderHistory(
-    orderId,
-    status,
-    restaurantId,
-    details,
-    undefined,
-    changedBy || restaurantId,
-    'restaurant'
-  );
-};
-
-/**
- * Records order history specifically for customer actions
- */
-export const recordCustomerOrderHistory = async (
-  orderId: string,
-  status: string,
-  customerId: string,
-  details?: Record<string, unknown>
-): Promise<void> => {
-  return recordOrderHistory(
-    orderId,
-    status,
-    null,
-    details,
-    undefined,
-    customerId,
-    'customer'
-  );
-};
-
-/**
- * Records order history specifically for delivery actions
- */
-export const recordDeliveryOrderHistory = async (
-  orderId: string,
-  status: string,
-  deliveryUserId: string,
-  details?: Record<string, unknown>
-): Promise<void> => {
-  return recordOrderHistory(
-    orderId,
-    status,
-    null,
-    details,
-    undefined,
-    deliveryUserId,
-    'delivery'
-  );
-};
-
-/**
- * Gets the complete order history for an order
- */
-export const getOrderHistory = async (orderId: string, visibleOnly = false) => {
+  additionalDetails?: Record<string, unknown>
+): Promise<ServiceResponse> => {
   try {
-    let query = supabase
-      .from('order_history')
-      .select('*')
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: true });
-      
-    if (visibleOnly) {
-      query = query.eq('visibility', true);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching order history:', error);
-    return [];
-  }
-};
-
-/**
- * Adds an idempotent entry to order history to prevent duplicate status updates
- */
-export const addIdempotentOrderHistory = async (
-  orderId: string,
-  status: string,
-  idempotencyKey: string,
-  restaurantId?: string | null,
-  details?: Record<string, unknown>,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system'
-): Promise<boolean> => {
-  try {
-    // Check if an entry with this idempotency key already exists
-    const { data: existingEntry } = await supabase
-      .from('order_history')
-      .select('id')
-      .eq('order_id', orderId)
-      .eq('status', status)
-      .eq('details->>idempotencyKey', idempotencyKey) // Changed from -> to ->>
-      .maybeSingle();
-      
-    // If entry exists, don't create a duplicate
-    if (existingEntry) {
-      return false;
-    }
-    
-    // Add idempotency key to details
-    const detailsWithKey = {
-      ...(details || {}),
-      idempotencyKey
+    const details = {
+      ...additionalDetails,
+      restaurant_context: true,
+      timestamp: new Date().toISOString()
     };
-    
-    // Record the history with the idempotency key
-    await recordOrderHistory(
+
+    return await recordOrderHistory(
       orderId,
       status,
       restaurantId,
-      detailsWithKey,
+      details,
       undefined,
-      undefined,
-      changedByType
+      changedBy,
+      'restaurant'
     );
-    
-    return true;
   } catch (error) {
-    console.error('Error in idempotent order history:', error);
-    return false;
+    console.error(`Error recording restaurant order history for order ${orderId}:`, error);
+    return { 
+      success: false, 
+      message: `Failed to record restaurant order history: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    };
   }
 };

@@ -1,10 +1,83 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { RestaurantResponseRequest, WebhookResponse } from '@/types/webhook';
-import { logApiCall } from '@/services/loggerService';
 import { recordOrderHistory } from './orderHistoryService';
 
 const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozgutjvbrljeijybnyg.supabase.co/functions/v1';
+
+/**
+ * Logs webhook request with enhanced error handling
+ */
+const logWebhookRequest = async (url: string, requestBody: RestaurantResponseRequest): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('webhook_logs')
+      .insert({
+        payload: {
+          url,
+          request_type: 'restaurant_response',
+          request_data: JSON.parse(JSON.stringify(requestBody)),
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    if (error) {
+      console.error('Error logging webhook request:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Critical error logging webhook request:', error);
+    return false;
+  }
+};
+
+/**
+ * Handles order acceptance with efficient assignment cancellation
+ */
+const handleOrderAcceptance = async (orderId: string, restaurantId: string): Promise<boolean> => {
+  try {
+    // Update the order status to accepted
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ 
+        status: 'restaurant_accepted',
+        restaurant_id: restaurantId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
+      
+    if (orderError) {
+      console.error('Failed to update order status:', orderError);
+      return false;
+    }
+
+    console.log(`Successfully updated order ${orderId} status to restaurant_accepted`);
+    
+    // Cancel ALL other assignments for this order in a single operation
+    const { error: cancelError } = await supabase
+      .from('restaurant_assignments')
+      .update({ 
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+        details: { cancelled_reason: 'Order accepted by another restaurant' }
+      })
+      .eq('order_id', orderId)
+      .neq('status', 'accepted');
+      
+    if (cancelError) {
+      console.error('Failed to cancel other assignments:', cancelError);
+      return false;
+    }
+
+    console.log(`Successfully cancelled all other assignments for order ${orderId}`);
+    return true;
+  } catch (error) {
+    console.error('Critical error handling order acceptance:', error);
+    return false;
+  }
+};
 
 /**
  * Sends restaurant response (accept/reject) to the webhook
@@ -27,12 +100,12 @@ export const sendRestaurantResponse = async (
       action: action,
     };
 
+    // Log the request (don't fail if logging fails)
+    await logWebhookRequest(`${WEBHOOK_URL}/order-webhook`, requestBody);
+
     // Get current session for authentication
     const { data: authData } = await supabase.auth.getSession();
     const token = authData.session?.access_token;
-
-    // Log the request before sending
-    await logApiCall(`${WEBHOOK_URL}/order-webhook`, requestBody, null);
 
     const response = await fetch(`${WEBHOOK_URL}/order-webhook`, {
       method: 'POST',
@@ -51,52 +124,35 @@ export const sendRestaurantResponse = async (
     const responseData: WebhookResponse = await response.json();
     
     // Record the restaurant response in order_history
-    await recordOrderHistory(
+    const historyResult = await recordOrderHistory(
       orderId,
       `restaurant_${action}ed`,
       restaurantId,
       { assignment_id: assignmentId }
     );
     
-    // Update the order table directly if webhook might have failed
+    if (!historyResult.success) {
+      console.warn(`Failed to record history but webhook succeeded: ${historyResult.message}`);
+    }
+    
+    // Handle direct updates for acceptance
     if (action === 'accept') {
-      // Update the order status to accepted directly
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: `restaurant_${action}ed`,
-          restaurant_id: restaurantId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-        
-      if (error) {
-        console.error('Failed to update order status directly:', error);
-      } else {
-        console.log(`Successfully updated order ${orderId} status to restaurant_${action}ed`);
-        
-        // Cancel ALL other assignments for this order
-        const { error: cancelError } = await supabase
-          .from('restaurant_assignments')
-          .update({ 
-            status: 'cancelled',
-            updated_at: new Date().toISOString(),
-            details: { cancelled_reason: 'Order accepted by another restaurant' }
-          })
-          .eq('order_id', orderId)
-          .neq('status', 'accepted'); // Only exclude those already marked as accepted
-          
-        if (cancelError) {
-          console.error('Failed to cancel other assignments:', cancelError);
-        } else {
-          console.log(`Successfully cancelled all other assignments for order ${orderId}`);
-        }
+      const updateSuccess = await handleOrderAcceptance(orderId, restaurantId);
+      if (!updateSuccess) {
+        console.error('Webhook succeeded but direct order update failed');
+        return { 
+          success: false, 
+          error: 'Order acceptance processing failed' 
+        };
       }
     }
     
     return responseData;
   } catch (error) {
     console.error(`Error in sendRestaurantResponse:`, error);
-    return { success: false, error: 'Failed to send restaurant response to webhook' };
+    return { 
+      success: false, 
+      error: 'Failed to send restaurant response to webhook' 
+    };
   }
 };
