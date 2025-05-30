@@ -58,7 +58,7 @@ export const usePreparationStages = (orderId: string) => {
     try {
       const result = await PreparationStageService.advanceStage(orderId, stageName, notes);
       if (result.success) {
-        toast.success(`${stageName} stage completed!`);
+        toast.success(result.message || `${stageName} stage completed!`);
         // Refetch stages to get updated data
         const updatedStages = await PreparationStageService.getOrderPreparationStages(orderId);
         setStages(updatedStages);

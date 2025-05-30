@@ -74,7 +74,7 @@ export const useDashboardStages = (restaurantId: string) => {
     try {
       const result = await PreparationStageService.advanceStage(orderId, stageName, notes);
       if (result.success) {
-        toast.success(`${stageName.replace('_', ' ')} stage completed!`);
+        toast.success(result.message || `${stageName.replace('_', ' ')} stage completed!`);
         // Real-time will handle the refresh
       } else {
         toast.error(result.message || 'Failed to advance stage');
