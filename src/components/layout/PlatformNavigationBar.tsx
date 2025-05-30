@@ -4,7 +4,6 @@ import { useResponsive } from '@/contexts/ResponsiveContext';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { platform } from 'os';
 
 interface PlatformNavigationBarProps {
   title?: string;
@@ -17,6 +16,11 @@ interface PlatformNavigationBarProps {
   largeTitle?: boolean; // iOS-style large title
   elevated?: boolean; // Android-style elevation
 }
+
+const getBackButtonText = (backText?: string, isPlatformIOS?: boolean) => {
+  if (!isPlatformIOS) return null;
+  return backText || 'Back';
+};
 
 /**
  * Platform adaptive navigation bar that adjusts styling based on device
@@ -86,8 +90,11 @@ export const PlatformNavigationBar: React.FC<PlatformNavigationBarProps> = ({
   };
   
   const renderBackButton = () => {
+    if (!onBack) return null;
+    
     // iOS style back button
     if (isPlatformIOS) {
+      const buttonText = getBackButtonText(backText, isPlatformIOS);
       return (
         <Button
           variant="ghost"
@@ -95,7 +102,7 @@ export const PlatformNavigationBar: React.FC<PlatformNavigationBarProps> = ({
           onClick={onBack}
         >
           <ArrowLeft className="h-4 w-4" />
-          {backText || 'Back'}
+          {buttonText}
         </Button>
       );
     }

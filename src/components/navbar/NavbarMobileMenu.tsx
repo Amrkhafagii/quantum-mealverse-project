@@ -17,12 +17,15 @@ const NavbarMobileMenu: React.FC<NavbarMobileMenuProps> = ({
 }) => {
   if (!isOpen) return null;
   
+  // Provide safe fallback for user object
+  const safeUser = user || {};
+  
   return (
     <div className="sm:hidden" id="mobile-menu">
       <div className="px-2 pt-2 pb-3 space-y-1">
-        <NavLinks isMobile user={user} closeMenu={onCloseMenu} />
+        <NavLinks isMobile user={safeUser} closeMenu={onCloseMenu} />
         
-        {!user && (
+        {!safeUser.id && (
           <>
             <a
               href="/login"
@@ -41,9 +44,9 @@ const NavbarMobileMenu: React.FC<NavbarMobileMenuProps> = ({
           </>
         )}
         
-        {user && (
+        {safeUser.id && (
           <div 
-            className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium"
+            className="text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white block px-3 py-2 rounded-md text-base font-medium cursor-pointer"
             onClick={() => {
               onLogout();
               onCloseMenu();
