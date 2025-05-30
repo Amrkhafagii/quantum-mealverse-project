@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { PreparationStageService } from './preparationStageService';
 import { toast } from 'react-hot-toast';
@@ -92,18 +91,23 @@ export class BatchPreparationService {
     if (updates.length === 0) return true;
 
     try {
-      // Use a single transaction for all updates
-      const { error } = await supabase.rpc('batch_update_order_statuses', {
-        p_updates: updates.map(update => ({
-          order_id: update.orderId,
-          new_status: update.newStatus,
-          notes: update.notes || null
-        }))
-      });
+      // Process each order status update individually since we don't have a custom function
+      const updatePromises = updates.map(update => 
+        supabase
+          .from('orders')
+          .update({
+            status: update.newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', update.orderId)
+      );
 
-      if (error) {
-        console.error('Batch order status update failed:', error);
-        toast.error('Failed to update order statuses');
+      const results = await Promise.all(updatePromises);
+      const hasErrors = results.some(result => result.error);
+
+      if (hasErrors) {
+        console.error('Some order status updates failed');
+        toast.error('Failed to update some order statuses');
         return false;
       }
 
