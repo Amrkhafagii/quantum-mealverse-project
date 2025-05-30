@@ -1,543 +1,301 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { PreparationStageService } from './preparationStageService';
 import { PreparationTimerService } from './preparationTimerService';
-import { preparationNotificationService } from '@/services/notifications/preparationNotificationService';
-
-interface StageProgressionResult {
-  success: boolean;
-  message: string;
-  notificationsResult?: any;
-}
-
-interface EventDetails {
-  orderId: string;
-  stageName: string;
-  status: string;
-  metadata?: Record<string, any>;
-}
 
 export class PreparationIntegrationHub {
   /**
-   * Handle stage progression with parallel notifications
+   * Send notifications in parallel for improved performance
    */
-  static async handleStageProgression(
-    orderId: string,
-    targetStage: string,
-    userId?: string
-  ): Promise<StageProgressionResult> {
+  private static async sendNotificationsInParallel(notifications: Array<{
+    userId: string;
+    title: string;
+    message: string;
+    type: string;
+    orderId: string;
+    data?: any;
+  }>): Promise<void> {
     try {
-      console.log(`Handling stage progression for order ${orderId} to stage: ${targetStage}`);
+      const notificationPromises = notifications.map(async (notification) => {
+        const { error } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: notification.userId,
+            title: notification.title,
+            message: notification.message,
+            notification_type: notification.type,
+            order_id: notification.orderId,
+            data: notification.data
+          });
 
-      // Advance the stage
-      const stageResult = await PreparationStageService.advanceStage(orderId, targetStage);
-      
-      if (!stageResult.success) {
-        return {
-          success: false,
-          message: stageResult.message || 'Failed to advance stage'
-        };
-      }
-
-      // Send notifications in parallel if userId is provided
-      let notificationsResult;
-      if (userId) {
-        const notificationPromises = [
-          this.sendStageNotification(orderId, targetStage, 'completed', userId),
-          this.sendRestaurantNotification(orderId, targetStage, 'completed'),
-          this.logPreparationEvent({
-            orderId,
-            stageName: targetStage,
-            status: 'completed',
-            metadata: { userId, timestamp: new Date().toISOString() }
-          })
-        ];
-
-        try {
-          notificationsResult = await Promise.all(notificationPromises);
-          console.log('All notifications sent successfully');
-        } catch (notificationError) {
-          console.error('Some notifications failed:', notificationError);
-          // Don't fail the entire operation if notifications fail
+        if (error) {
+          console.error('Error sending notification:', error);
         }
-      }
+      });
 
-      return {
-        success: true,
-        message: `Stage ${targetStage} completed successfully`,
-        notificationsResult
-      };
+      await Promise.all(notificationPromises);
+      console.log(`Sent ${notifications.length} notifications in parallel`);
     } catch (error) {
-      console.error('Error in stage progression:', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+      console.error('Error sending notifications in parallel:', error);
     }
   }
 
   /**
-   * Detect and handle bottlenecks across multiple orders
+   * Handle stage progression with parallel notifications
+   */
+  static async handleStageProgression(
+    orderId: string, 
+    fromStage: string, 
+    toStage: string
+  ): Promise<void> {
+    try {
+      // Get order details for notifications
+      const { data: order } = await supabase
+        .from('orders')
+        .select('user_id, restaurant_id, customer_name')
+        .eq('id', orderId)
+        .single();
+
+      if (!order) {
+        console.error('Order not found for stage progression');
+        return;
+      }
+
+      // Prepare notifications for parallel sending
+      const notifications = [
+        {
+          userId: order.user_id,
+          title: 'Order Update',
+          message: `Your order has progressed from ${fromStage} to ${toStage}`,
+          type: 'preparation_update',
+          orderId,
+          data: {
+            fromStage,
+            toStage,
+            timestamp: new Date().toISOString()
+          }
+        }
+      ];
+
+      // Add restaurant notification if needed
+      if (order.restaurant_id) {
+        // Get restaurant owner for notification
+        const { data: restaurant } = await supabase
+          .from('restaurants')
+          .select('user_id')
+          .eq('id', order.restaurant_id)
+          .single();
+
+        if (restaurant?.user_id) {
+          notifications.push({
+            userId: restaurant.user_id,
+            title: 'Stage Progression',
+            message: `Order ${orderId} has progressed to ${toStage}`,
+            type: 'restaurant_preparation',
+            orderId,
+            data: {
+              fromStage,
+              toStage,
+              timestamp: new Date().toISOString()
+            }
+          });
+        }
+      }
+
+      // Send all notifications in parallel
+      await this.sendNotificationsInParallel(notifications);
+
+      // Log the progression event
+      await this.logPreparationEvent(
+        orderId,
+        'stage_progression',
+        `Progressed from ${fromStage} to ${toStage}`,
+        { fromStage, toStage }
+      );
+
+    } catch (error) {
+      console.error('Error handling stage progression:', error);
+    }
+  }
+
+  /**
+   * Detect and handle bottlenecks with notifications
    */
   static async detectAndHandleBottlenecks(restaurantId: string): Promise<void> {
     try {
-      console.log(`Detecting bottlenecks for restaurant ${restaurantId}`);
-
-      // Get all active preparation stages for the restaurant
-      const { data: activeStages, error } = await supabase
+      // Get stages that have been running too long
+      const { data: bottleneckStages } = await supabase
         .from('order_preparation_stages')
-        .select('*')
+        .select('order_id, stage_name, started_at, estimated_duration_minutes')
         .eq('restaurant_id', restaurantId)
         .eq('status', 'in_progress')
-        .gte('started_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()); // Last 2 hours
+        .not('started_at', 'is', null);
 
-      if (error) {
-        console.error('Error fetching active stages:', error);
-        return;
-      }
+      if (!bottleneckStages) return;
 
-      if (!activeStages || activeStages.length === 0) {
-        console.log('No active stages found for bottleneck detection');
-        return;
-      }
-
-      // Detect bottlenecks based on timing
       const now = new Date();
-      const bottlenecks = activeStages.filter(stage => {
-        if (!stage.started_at || !stage.estimated_duration_minutes) return false;
-        
-        const startTime = new Date(stage.started_at);
+      const bottlenecks = bottleneckStages.filter(stage => {
+        const startTime = new Date(stage.started_at!);
         const elapsedMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60);
-        const threshold = stage.estimated_duration_minutes * 1.5; // 50% over estimated time
-        
-        return elapsedMinutes > threshold;
+        return elapsedMinutes > (stage.estimated_duration_minutes * 1.5); // 50% over estimate
       });
 
-      if (bottlenecks.length > 0) {
-        console.log(`Found ${bottlenecks.length} bottlenecks`);
-        
-        // Handle each bottleneck
-        const bottleneckPromises = bottlenecks.map(stage => 
-          this.handleBottleneck(stage.order_id, stage.stage_name, restaurantId)
-        );
-        
-        await Promise.all(bottleneckPromises);
-      }
+      if (bottlenecks.length === 0) return;
+
+      // Get restaurant owner for notifications
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('user_id')
+        .eq('id', restaurantId)
+        .single();
+
+      if (!restaurant?.user_id) return;
+
+      // Prepare bottleneck notifications
+      const notifications = bottlenecks.map(bottleneck => ({
+        userId: restaurant.user_id,
+        title: 'Bottleneck Alert',
+        message: `Stage ${bottleneck.stage_name} for order ${bottleneck.order_id} is running behind schedule`,
+        type: 'bottleneck_alert',
+        orderId: bottleneck.order_id,
+        data: {
+          stageName: bottleneck.stage_name,
+          alertType: 'bottleneck',
+          timestamp: new Date().toISOString()
+        }
+      }));
+
+      // Send all bottleneck notifications in parallel
+      await this.sendNotificationsInParallel(notifications);
+
+      console.log(`Detected and notified about ${bottlenecks.length} bottlenecks`);
     } catch (error) {
       console.error('Error detecting bottlenecks:', error);
     }
   }
 
   /**
-   * Handle individual bottleneck
+   * Enhanced timer cleanup with lifecycle tracking
    */
-  private static async handleBottleneck(
-    orderId: string,
-    stageName: string,
-    restaurantId: string
-  ): Promise<void> {
-    try {
-      console.log(`Handling bottleneck for order ${orderId} at stage ${stageName}`);
-
-      // Send bottleneck notification to restaurant
-      await this.sendBottleneckAlert(orderId, stageName, restaurantId);
-
-      // Log the bottleneck event
-      await this.logPreparationEvent({
-        orderId,
-        stageName,
-        status: 'bottleneck_detected',
-        metadata: {
-          restaurantId,
-          detectedAt: new Date().toISOString()
-        }
-      });
-    } catch (error) {
-      console.error(`Error handling bottleneck for order ${orderId}:`, error);
-    }
-  }
-
-  /**
-   * Send stage completion notification to customer
-   */
-  private static async sendStageNotification(
-    orderId: string,
-    stageName: string,
-    status: string,
-    userId: string
-  ): Promise<void> {
-    try {
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title: 'Order Progress Update',
-          message: `Your order has completed the ${stageName.replace('_', ' ')} stage`,
-          notification_type: 'preparation_update',
-          order_id: orderId,
-          data: {
-            stageName,
-            status,
-            timestamp: new Date().toISOString()
-          }
-        });
-    } catch (error) {
-      console.error('Error sending stage notification:', error);
-    }
-  }
-
-  /**
-   * Send notification to restaurant staff
-   */
-  private static async sendRestaurantNotification(
-    orderId: string,
-    stageName: string,
-    status: string
-  ): Promise<void> {
-    try {
-      // Get restaurant info from order
-      const { data: order } = await supabase
-        .from('orders')
-        .select('restaurant_id')
-        .eq('id', orderId)
-        .single();
-
-      if (!order?.restaurant_id) {
-        console.log('No restaurant found for order');
-        return;
-      }
-
-      await supabase
-        .from('notifications')
-        .insert({
-          restaurant_id: order.restaurant_id,
-          title: 'Stage Completed',
-          message: `Order ${orderId} has completed ${stageName.replace('_', ' ')} stage`,
-          notification_type: 'stage_completion',
-          order_id: orderId,
-          data: {
-            stageName,
-            status,
-            timestamp: new Date().toISOString()
-          }
-        });
-    } catch (error) {
-      console.error('Error sending restaurant notification:', error);
-    }
-  }
-
-  /**
-   * Send bottleneck alert to restaurant
-   */
-  private static async sendBottleneckAlert(
-    orderId: string,
-    stageName: string,
-    restaurantId: string
-  ): Promise<void> {
-    try {
-      await supabase
-        .from('notifications')
-        .insert({
-          restaurant_id: restaurantId,
-          title: 'Bottleneck Alert',
-          message: `Order ${orderId} is experiencing delays at ${stageName.replace('_', ' ')} stage`,
-          notification_type: 'bottleneck_alert',
-          order_id: orderId,
-          data: {
-            stageName,
-            alertType: 'bottleneck',
-            timestamp: new Date().toISOString()
-          }
-        });
-    } catch (error) {
-      console.error('Error sending bottleneck alert:', error);
-    }
-  }
-
-  /**
-   * Log preparation events to database for analytics
-   */
-  private static async logPreparationEvent(eventDetails: EventDetails): Promise<void> {
-    try {
-      console.log('Logging preparation event:', eventDetails);
-
-      await supabase
-        .from('error_logs')
-        .insert({
-          error_type: 'preparation_event',
-          error_message: `${eventDetails.stageName}: ${eventDetails.status}`,
-          error_details: {
-            orderId: eventDetails.orderId,
-            stageName: eventDetails.stageName,
-            status: eventDetails.status,
-            ...eventDetails.metadata
-          },
-          related_order_id: eventDetails.orderId,
-          is_critical: false
-        });
-    } catch (error) {
-      console.error('Error logging preparation event:', error);
-    }
-  }
-
-  /**
-   * Get preparation events for analytics
-   */
-  static async getPreparationEvents(
-    restaurantId: string,
-    timeRange: 'day' | 'week' | 'month' = 'week'
-  ): Promise<any[]> {
-    try {
-      const timeRangeMap = {
-        day: 1,
-        week: 7,
-        month: 30
-      };
-
-      const daysBack = timeRangeMap[timeRange];
-      const startDate = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
-
-      const { data: events, error } = await supabase
-        .from('error_logs')
-        .select('*')
-        .eq('error_type', 'preparation_event')
-        .gte('created_at', startDate)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching preparation events:', error);
-        return [];
-      }
-
-      return events || [];
-    } catch (error) {
-      console.error('Error in getPreparationEvents:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Initialize preparation tracking when restaurant accepts order
-   */
-  static async initializePreparationTracking(orderId: string, restaurantId: string): Promise<boolean> {
-    try {
-      console.log(`Initializing preparation tracking for order ${orderId}`);
-      
-      // Check if preparation stages already exist
-      const existingStages = await PreparationStageService.getOrderPreparationStages(orderId);
-      
-      if (existingStages.length > 0) {
-        console.log('Preparation stages already exist for this order');
-        
-        // Initialize timer for in-progress stage if exists
-        const currentStage = existingStages.find(s => s.status === 'in_progress');
-        if (currentStage) {
-          PreparationTimerService.initializeExistingTimer(orderId);
-        }
-        
-        return true;
-      }
-
-      // Create default preparation stages using database function
-      const { error } = await supabase.rpc('create_default_preparation_stages', {
-        p_order_id: orderId,
-        p_restaurant_id: restaurantId
-      });
-
-      if (error) {
-        console.error('Error creating preparation stages:', error);
-        return false;
-      }
-
-      console.log('Preparation stages created successfully');
-      return true;
-    } catch (error) {
-      console.error('Error in initializePreparationTracking:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Start preparation when restaurant begins working on order
-   */
-  static async startPreparation(orderId: string): Promise<boolean> {
-    try {
-      // Start the ingredients_prep stage (first active stage after received)
-      const success = await PreparationStageService.startStage(orderId, 'ingredients_prep');
-      
-      if (success) {
-        // Start timer for the stage
-        PreparationTimerService.startTimer(orderId, 'ingredients_prep');
-        
-        // Update order status to 'preparing'
-        await supabase
-          .from('orders')
-          .update({ status: 'preparing' })
-          .eq('id', orderId);
-        
-        console.log(`Started preparation for order ${orderId}`);
-      }
-      
-      return success;
-    } catch (error) {
-      console.error('Error starting preparation:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Mark order as ready for pickup/delivery
-   */
-  static async markOrderReady(orderId: string): Promise<boolean> {
-    try {
-      // Complete the ready stage
-      const result = await PreparationStageService.advanceStage(orderId, 'ready');
-      
-      if (result.success) {
-        // Update order status to 'ready_for_pickup'
-        await supabase
-          .from('orders')
-          .update({ status: 'ready_for_pickup' })
-          .eq('id', orderId);
-        
-        // Stop any active timers
-        PreparationTimerService.stopTimer(orderId);
-        
-        console.log(`Order ${orderId} marked as ready`);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error marking order ready:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Handle order cancellation - cleanup preparation tracking
-   */
-  static async handleOrderCancellation(orderId: string): Promise<void> {
+  static async cleanupOrderTimers(orderId: string, reason: string = 'cleanup'): Promise<void> {
     try {
       // Stop any active timers
-      PreparationTimerService.stopTimer(orderId);
+      const stoppedTimer = PreparationTimerService.stopTimer(orderId);
       
-      // Mark all pending/in-progress stages as cancelled (using skipped status)
-      await supabase
-        .from('order_preparation_stages')
-        .update({
-          status: 'skipped',
-          notes: 'Order cancelled',
-          updated_at: new Date().toISOString()
-        })
-        .eq('order_id', orderId)
-        .in('status', ['pending', 'in_progress']);
-      
-      console.log(`Cleaned up preparation tracking for cancelled order ${orderId}`);
-    } catch (error) {
-      console.error('Error handling order cancellation:', error);
-    }
-  }
-
-  /**
-   * Sync preparation status with order status
-   */
-  static async syncPreparationWithOrderStatus(orderId: string): Promise<void> {
-    try {
-      const { data: order } = await supabase
-        .from('orders')
-        .select('status')
-        .eq('id', orderId)
-        .single();
-
-      if (!order) return;
-
-      const progress = await PreparationStageService.getPreparationProgress(orderId);
-      const currentStage = progress.find(p => p.status === 'in_progress');
-      
-      // Sync order status based on preparation progress
-      let newOrderStatus = order.status;
-      
-      if (currentStage) {
-        switch (currentStage.stage_name) {
-          case 'received':
-          case 'ingredients_prep':
-          case 'cooking':
-          case 'plating':
-          case 'quality_check':
-            newOrderStatus = 'preparing';
-            break;
-          case 'ready':
-            newOrderStatus = 'ready_for_pickup';
-            break;
-        }
-      } else {
-        // Check if all stages are completed
-        const allCompleted = progress.every(p => p.status === 'completed');
-        if (allCompleted) {
-          newOrderStatus = 'ready_for_pickup';
-        }
-      }
-      
-      // Update order status if it has changed
-      if (newOrderStatus !== order.status) {
-        await supabase
-          .from('orders')
-          .update({ status: newOrderStatus })
-          .eq('id', orderId);
+      if (stoppedTimer) {
+        console.log(`Stopped timer for order ${orderId}: ${reason}`);
         
-        console.log(`Synced order ${orderId} status to ${newOrderStatus}`);
+        // Log the cleanup event
+        await this.logPreparationEvent(
+          orderId,
+          'timer_cleanup',
+          `Timer stopped due to: ${reason}`,
+          { 
+            reason,
+            finalElapsedTime: stoppedTimer.elapsedTime,
+            stage: stoppedTimer.currentStage
+          }
+        );
+      }
+
+      // Update any in-progress stages if order is cancelled
+      if (reason === 'cancelled' || reason === 'completed') {
+        await supabase
+          .from('order_preparation_stages')
+          .update({
+            status: reason === 'cancelled' ? 'cancelled' : 'completed',
+            completed_at: new Date().toISOString(),
+            notes: `Order ${reason} - timer cleanup`
+          })
+          .eq('order_id', orderId)
+          .eq('status', 'in_progress');
       }
     } catch (error) {
-      console.error('Error syncing preparation with order status:', error);
+      console.error('Error cleaning up order timers:', error);
     }
   }
 
   /**
-   * Get preparation summary for restaurant dashboard
+   * Persistent event logging with database storage
    */
-  static async getRestaurantPreparationSummary(restaurantId: string): Promise<{
-    activeOrders: number;
-    averageCompletionTime: number;
-    stageBreakdown: Record<string, number>;
-  }> {
+  private static async logPreparationEvent(
+    orderId: string,
+    eventType: string,
+    message: string,
+    metadata?: any
+  ): Promise<void> {
     try {
-      const { data: activeStages } = await supabase
-        .from('order_preparation_stages')
-        .select('stage_name, status, actual_duration_minutes, order_id')
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'in_progress');
+      const { error } = await supabase
+        .from('error_logs')
+        .insert({
+          error_type: `preparation_${eventType}`,
+          error_message: message,
+          error_details: {
+            orderId,
+            eventType,
+            metadata: metadata || {},
+            timestamp: new Date().toISOString()
+          },
+          related_order_id: orderId,
+          is_critical: false
+        });
 
-      const { data: completedStages } = await supabase
-        .from('order_preparation_stages')
-        .select('actual_duration_minutes')
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'completed')
-        .not('actual_duration_minutes', 'is', null);
-
-      const activeOrders = new Set(activeStages?.map(s => s.order_id) || []).size;
-      
-      const averageCompletionTime = completedStages?.length 
-        ? completedStages.reduce((sum, s) => sum + (s.actual_duration_minutes || 0), 0) / completedStages.length
-        : 0;
-
-      const stageBreakdown: Record<string, number> = {};
-      activeStages?.forEach(stage => {
-        stageBreakdown[stage.stage_name] = (stageBreakdown[stage.stage_name] || 0) + 1;
-      });
-
-      return {
-        activeOrders,
-        averageCompletionTime: Math.round(averageCompletionTime),
-        stageBreakdown
-      };
+      if (error) {
+        console.error('Error logging preparation event:', error);
+      } else {
+        console.log(`Logged preparation event: ${eventType} for order ${orderId}`);
+      }
     } catch (error) {
-      console.error('Error getting preparation summary:', error);
-      return {
-        activeOrders: 0,
-        averageCompletionTime: 0,
-        stageBreakdown: {}
-      };
+      console.error('Critical error in preparation event logging:', error);
     }
+  }
+
+  /**
+   * Enhanced timer updates with versatile event handling
+   */
+  static emitTimerUpdate(orderId: string, updateData: {
+    currentStage: string;
+    elapsedTime: number;
+    isRunning: boolean;
+    progress?: number;
+    estimatedCompletion?: Date;
+    [key: string]: any;
+  }): void {
+    const event = new CustomEvent('preparationTimerUpdate', {
+      detail: {
+        orderId,
+        ...updateData,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    window.dispatchEvent(event);
+    
+    // Also emit a general preparation update event
+    const generalEvent = new CustomEvent('preparationUpdate', {
+      detail: {
+        type: 'timer',
+        orderId,
+        data: updateData
+      }
+    });
+    
+    window.dispatchEvent(generalEvent);
+  }
+
+  /**
+   * Subscribe to various preparation updates
+   */
+  static subscribeToPreparationUpdates(
+    callback: (updateType: string, data: any) => void
+  ): () => void {
+    const handler = (event: CustomEvent) => {
+      callback(event.detail.type || 'timer', event.detail);
+    };
+
+    window.addEventListener('preparationUpdate', handler as EventListener);
+    
+    return () => {
+      window.removeEventListener('preparationUpdate', handler as EventListener);
+    };
   }
 }

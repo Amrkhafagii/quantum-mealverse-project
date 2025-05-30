@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { PreparationStageService } from './preparationStageService';
 
@@ -8,25 +7,34 @@ export interface TimerState {
   startTime: Date;
   elapsedTime: number;
   isRunning: boolean;
+  estimatedCompletion?: Date;
+  progress?: number;
 }
 
 export class PreparationTimerService {
   private static activeTimers = new Map<string, TimerState>();
   private static intervals = new Map<string, NodeJS.Timeout>();
+  private static cleanupCallbacks = new Map<string, () => void>();
 
   /**
-   * Start timing for a preparation stage
+   * Start timing for a preparation stage with enhanced lifecycle tracking
    */
-  static startTimer(orderId: string, stageName: string): void {
+  static startTimer(orderId: string, stageName: string, estimatedDurationMinutes?: number): void {
     // Stop any existing timer for this order
     this.stopTimer(orderId);
+
+    const startTime = new Date();
+    const estimatedCompletion = estimatedDurationMinutes 
+      ? new Date(startTime.getTime() + estimatedDurationMinutes * 60 * 1000)
+      : undefined;
 
     const timerState: TimerState = {
       orderId,
       currentStage: stageName,
-      startTime: new Date(),
+      startTime,
       elapsedTime: 0,
-      isRunning: true
+      isRunning: true,
+      estimatedCompletion
     };
 
     this.activeTimers.set(orderId, timerState);
@@ -36,38 +44,75 @@ export class PreparationTimerService {
       const timer = this.activeTimers.get(orderId);
       if (timer && timer.isRunning) {
         timer.elapsedTime = Date.now() - timer.startTime.getTime();
+        
+        // Calculate progress if estimated duration is available
+        if (estimatedDurationMinutes) {
+          const progressPercent = Math.min(100, (timer.elapsedTime / (estimatedDurationMinutes * 60 * 1000)) * 100);
+          timer.progress = progressPercent;
+        }
+        
         this.activeTimers.set(orderId, timer);
         
-        // Emit timer update event
-        this.emitTimerUpdate(orderId, timer);
+        // Emit enhanced timer update event
+        this.emitEnhancedTimerUpdate(orderId, timer);
       }
     }, 1000);
 
     this.intervals.set(orderId, interval);
-    console.log(`Timer started for order ${orderId}, stage ${stageName}`);
+
+    // Set up cleanup callback for this timer
+    const cleanup = () => this.forceStopTimer(orderId, 'lifecycle_end');
+    this.cleanupCallbacks.set(orderId, cleanup);
+
+    console.log(`Enhanced timer started for order ${orderId}, stage ${stageName}`);
   }
 
   /**
-   * Stop timing for an order
+   * Stop timing for an order with reason tracking
    */
-  static stopTimer(orderId: string): TimerState | null {
+  static stopTimer(orderId: string, reason: string = 'normal_stop'): TimerState | null {
     const timer = this.activeTimers.get(orderId);
     const interval = this.intervals.get(orderId);
+    const cleanup = this.cleanupCallbacks.get(orderId);
 
     if (interval) {
       clearInterval(interval);
       this.intervals.delete(orderId);
     }
 
+    if (cleanup) {
+      this.cleanupCallbacks.delete(orderId);
+    }
+
     if (timer) {
       timer.isRunning = false;
       timer.elapsedTime = Date.now() - timer.startTime.getTime();
       this.activeTimers.delete(orderId);
-      console.log(`Timer stopped for order ${orderId}`);
+      
+      // Emit final timer update
+      this.emitEnhancedTimerUpdate(orderId, timer, { stopped: true, reason });
+      
+      console.log(`Timer stopped for order ${orderId} - reason: ${reason}`);
       return timer;
     }
 
     return null;
+  }
+
+  /**
+   * Force stop timer with cleanup (for emergency scenarios)
+   */
+  static forceStopTimer(orderId: string, reason: string): void {
+    const timer = this.stopTimer(orderId, reason);
+    if (timer) {
+      console.warn(`Force stopped timer for order ${orderId} - ${reason}`);
+      
+      // Emit force stop event
+      const event = new CustomEvent('preparationTimerForceStop', {
+        detail: { orderId, reason, timer }
+      });
+      window.dispatchEvent(event);
+    }
   }
 
   /**
@@ -106,7 +151,7 @@ export class PreparationTimerService {
         if (currentTimer && currentTimer.isRunning) {
           currentTimer.elapsedTime = Date.now() - currentTimer.startTime.getTime();
           this.activeTimers.set(orderId, currentTimer);
-          this.emitTimerUpdate(orderId, currentTimer);
+          this.emitEnhancedTimerUpdate(orderId, currentTimer);
         }
       }, 1000);
 
@@ -164,23 +209,93 @@ export class PreparationTimerService {
   }
 
   /**
-   * Clean up all timers (call on app unmount)
+   * Enhanced cleanup with comprehensive lifecycle management
    */
-  static cleanup(): void {
-    for (const [orderId] of this.activeTimers) {
-      this.stopTimer(orderId);
+  static cleanup(reason: string = 'app_unmount'): void {
+    const activeOrderIds = Array.from(this.activeTimers.keys());
+    
+    for (const orderId of activeOrderIds) {
+      this.forceStopTimer(orderId, reason);
     }
-    console.log('All preparation timers cleaned up');
+    
+    // Clear any remaining intervals
+    for (const interval of this.intervals.values()) {
+      clearInterval(interval);
+    }
+    
+    // Clear all maps
+    this.activeTimers.clear();
+    this.intervals.clear();
+    this.cleanupCallbacks.clear();
+    
+    console.log(`Comprehensive timer cleanup completed - ${activeOrderIds.length} timers stopped. Reason: ${reason}`);
   }
 
   /**
-   * Emit timer update event for real-time UI updates
+   * Enhanced timer update emission with versatile data
    */
-  private static emitTimerUpdate(orderId: string, timer: TimerState): void {
-    const event = new CustomEvent('preparationTimerUpdate', {
-      detail: { orderId, timer }
+  private static emitEnhancedTimerUpdate(orderId: string, timer: TimerState, additionalData?: any): void {
+    const updateData = {
+      orderId,
+      currentStage: timer.currentStage,
+      elapsedTime: timer.elapsedTime,
+      isRunning: timer.isRunning,
+      progress: timer.progress,
+      estimatedCompletion: timer.estimatedCompletion,
+      elapsedMinutes: Math.floor(timer.elapsedTime / (1000 * 60)),
+      timestamp: new Date().toISOString(),
+      ...additionalData
+    };
+
+    // Emit specific timer update event
+    const timerEvent = new CustomEvent('preparationTimerUpdate', {
+      detail: updateData
     });
-    window.dispatchEvent(event);
+    window.dispatchEvent(timerEvent);
+
+    // Emit general preparation update event
+    const generalEvent = new CustomEvent('preparationUpdate', {
+      detail: {
+        type: 'timer_update',
+        orderId,
+        data: updateData
+      }
+    });
+    window.dispatchEvent(generalEvent);
+  }
+
+  /**
+   * Get comprehensive timer statistics
+   */
+  static getTimerStatistics(): {
+    activeCount: number;
+    totalElapsedTime: number;
+    averageElapsedTime: number;
+    longestRunning?: { orderId: string; elapsedTime: number; stage: string };
+  } {
+    const timers = Array.from(this.activeTimers.values());
+    const activeCount = timers.length;
+    const totalElapsedTime = timers.reduce((sum, timer) => sum + timer.elapsedTime, 0);
+    const averageElapsedTime = activeCount > 0 ? totalElapsedTime / activeCount : 0;
+    
+    let longestRunning;
+    if (timers.length > 0) {
+      const longest = timers.reduce((max, timer) => 
+        timer.elapsedTime > max.elapsedTime ? timer : max
+      );
+      longestRunning = {
+        orderId: longest.orderId,
+        elapsedTime: longest.elapsedTime,
+        stage: longest.currentStage
+      };
+    }
+
+    return {
+      activeCount,
+      totalElapsedTime,
+      averageElapsedTime,
+      longestRunning
+    };
   }
 
   /**
@@ -229,7 +344,7 @@ export class PreparationTimerService {
           if (timer && timer.isRunning) {
             timer.elapsedTime = Date.now() - timer.startTime.getTime();
             this.activeTimers.set(orderId, timer);
-            this.emitTimerUpdate(orderId, timer);
+            this.emitEnhancedTimerUpdate(orderId, timer);
           }
         }, 1000);
 
