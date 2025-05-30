@@ -1,19 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useNavigation } from '@/hooks/useNavigation';
+import { formatDistance, formatDuration } from '@/utils/navigation/formatters';
+import { getManeuverIcon } from '@/utils/navigation/maneuverIcons';
+import { toast } from '@/hooks/use-toast';
 import { 
   Navigation, 
   MapPin, 
   Clock, 
   Route, 
-  AlertTriangle,
-  RotateCcw,
-  RotateCw,
-  ArrowUp
+  AlertTriangle
 } from 'lucide-react';
 
 interface NavigationPanelProps {
@@ -35,6 +35,8 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
   onNavigationStart,
   onNavigationStop
 }) => {
+  const [isActionInProgress, setIsActionInProgress] = useState(false);
+
   const {
     isNavigating,
     isCalculatingRoute,
@@ -53,17 +55,51 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
   const handleStartNavigation = async () => {
     if (!origin || !destination) return;
 
+    setIsActionInProgress(true);
     try {
       await startNavigation(origin, destination, waypoints);
+      
+      toast({
+        title: "Navigation Started",
+        description: "Turn-by-turn navigation is now active",
+      });
+      
       if (onNavigationStart) onNavigationStart();
     } catch (error) {
       console.error('Failed to start navigation:', error);
+      
+      toast({
+        title: "Navigation Failed",
+        description: "Could not start navigation. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsActionInProgress(false);
     }
   };
 
   const handleStopNavigation = async () => {
-    await stopNavigation();
-    if (onNavigationStop) onNavigationStop();
+    setIsActionInProgress(true);
+    try {
+      await stopNavigation();
+      
+      toast({
+        title: "Navigation Stopped",
+        description: "Navigation has been ended",
+      });
+      
+      if (onNavigationStop) onNavigationStop();
+    } catch (error) {
+      console.error('Failed to stop navigation:', error);
+      
+      toast({
+        title: "Error",
+        description: "Could not stop navigation properly",
+        variant: "destructive"
+      });
+    } finally {
+      setIsActionInProgress(false);
+    }
   };
 
   const handleCalculateRoute = async () => {
@@ -71,37 +107,20 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
 
     try {
       await calculateRoute(origin, destination, waypoints);
+      
+      toast({
+        title: "Route Calculated",
+        description: "Route has been calculated successfully",
+      });
     } catch (error) {
       console.error('Failed to calculate route:', error);
+      
+      toast({
+        title: "Route Calculation Failed",
+        description: "Could not calculate route. Please try again.",
+        variant: "destructive"
+      });
     }
-  };
-
-  const getManeuverIcon = (maneuver: string) => {
-    switch (maneuver) {
-      case 'turn-left':
-        return <RotateCcw className="h-6 w-6 text-quantum-cyan" />;
-      case 'turn-right':
-        return <RotateCw className="h-6 w-6 text-quantum-cyan" />;
-      default:
-        return <ArrowUp className="h-6 w-6 text-quantum-cyan" />;
-    }
-  };
-
-  const formatDistance = (meters: number): string => {
-    if (meters < 1000) {
-      return `${Math.round(meters)}m`;
-    }
-    return `${(meters / 1000).toFixed(1)}km`;
-  };
-
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) {
-      return `${minutes}min`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}min`;
   };
 
   return (
@@ -225,7 +244,7 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
                 onClick={handleCalculateRoute}
                 variant="outline"
                 className="flex-1"
-                disabled={isCalculatingRoute || !origin || !destination}
+                disabled={isCalculatingRoute || !origin || !destination || isActionInProgress}
               >
                 <Route className="h-4 w-4 mr-2" />
                 {isCalculatingRoute ? 'Calculating...' : 'Calculate Route'}
@@ -234,10 +253,10 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
               <Button
                 onClick={handleStartNavigation}
                 className="flex-1 bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                disabled={isCalculatingRoute || !origin || !destination || !currentRoute}
+                disabled={isCalculatingRoute || !origin || !destination || !currentRoute || isActionInProgress}
               >
                 <Navigation className="h-4 w-4 mr-2" />
-                Start Navigation
+                {isActionInProgress ? 'Starting...' : 'Start Navigation'}
               </Button>
             </>
           ) : (
@@ -245,8 +264,9 @@ export const NavigationPanel: React.FC<NavigationPanelProps> = ({
               onClick={handleStopNavigation}
               variant="destructive"
               className="w-full"
+              disabled={isActionInProgress}
             >
-              Stop Navigation
+              {isActionInProgress ? 'Stopping...' : 'Stop Navigation'}
             </Button>
           )}
         </div>
