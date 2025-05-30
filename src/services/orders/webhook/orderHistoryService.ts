@@ -1,9 +1,28 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { OrderStatus } from '@/types/restaurant';
 
 type OrderHistoryInsert = Database['public']['Tables']['order_history']['Insert'];
 type OrderHistoryRow = Database['public']['Tables']['order_history']['Row'];
+
+/**
+ * Validates and normalizes changed_by_type to ensure it matches database constraints
+ */
+const validateChangedByType = (changedByType: string): 'system' | 'customer' | 'restaurant' | 'delivery' => {
+  const validTypes: ('system' | 'customer' | 'restaurant' | 'delivery')[] = ['system', 'customer', 'restaurant', 'delivery'];
+  
+  // Normalize common variations
+  const normalized = changedByType.toLowerCase().trim();
+  
+  if (validTypes.includes(normalized as any)) {
+    return normalized as 'system' | 'customer' | 'restaurant' | 'delivery';
+  }
+  
+  // Default fallback to system for any invalid values
+  console.warn(`Invalid changed_by_type '${changedByType}' provided, defaulting to 'system'`);
+  return 'system';
+};
 
 /**
  * Records an entry in the order history table with standardized UTC timestamps
@@ -20,6 +39,9 @@ export const recordOrderHistory = async (
 ): Promise<void> => {
   try {
     console.log(`Recording order history for order ${orderId} with status ${status}, restaurant ${restaurantId || 'null'}`);
+    
+    // Validate and normalize changed_by_type
+    const validChangedByType = validateChangedByType(changedByType);
     
     // For certain status types, we must have a restaurant_id
     // Due to NOT NULL constraint
@@ -106,13 +128,6 @@ export const recordOrderHistory = async (
       console.log(`Mapped status 'completed' to '${OrderStatus.DELIVERED}' for order_history`);
     }
     
-    // Determine the correct changed_by_type if not explicitly provided
-    let finalChangedByType = changedByType;
-    if (changedByType === 'system' && changedBy) {
-      // Let the database trigger handle the logic for determining the correct type
-      finalChangedByType = 'system'; // Will be overridden by trigger if needed
-    }
-    
     // Create history entry with conditional restaurant data
     const historyEntry: OrderHistoryInsert = {
       order_id: orderId,
@@ -123,11 +138,11 @@ export const recordOrderHistory = async (
       details: details as any, // Type cast since we can't guarantee the shape
       expired_at: expiredAtUTC,
       changed_by: changedBy,
-      changed_by_type: finalChangedByType,
+      changed_by_type: validChangedByType, // Use validated type
       visibility
     };
     
-    console.log('Adding history entry:', historyEntry);
+    console.log('Adding history entry with validated changed_by_type:', historyEntry);
     
     // Insert record into order_history table
     const { data, error } = await supabase
@@ -138,11 +153,11 @@ export const recordOrderHistory = async (
       console.error('Error recording order history:', error);
       // Don't throw here, but log the error to prevent the restaurant operation from failing
     } else {
-      console.log(`Successfully recorded order history for order ${orderId}`);
+      console.log(`Successfully recorded order history for order ${orderId} with changed_by_type: ${validChangedByType}`);
     }
 
     // Log to console for debugging
-    console.log(`Order ${orderId} status updated to ${status} by ${changedByType} ${changedBy || 'unknown'}`);
+    console.log(`Order ${orderId} status updated to ${status} by ${validChangedByType} ${changedBy || 'unknown'}`);
   } catch (error) {
     console.error('Error recording order history:', error);
     // Don't throw here, but log the error to prevent the restaurant operation from failing
