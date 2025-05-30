@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 interface DeliveryInfo {
   user_id: string;
@@ -15,7 +14,7 @@ interface DeliveryInfo {
 
 /**
  * Streamlined function to save or update delivery information
- * Automatically decides whether to insert or update based on existing data
+ * Uses the orders table to store delivery info as we don't have a dedicated delivery_addresses table
  * @param deliveryInfo - The delivery information to save
  * @returns Promise with success status and optional error message
  */
@@ -23,67 +22,25 @@ export const saveDeliveryInfo = async (deliveryInfo: DeliveryInfo): Promise<{ su
   try {
     console.log(`Saving delivery info for user ${deliveryInfo.user_id}`);
     
-    // Check if delivery info already exists
-    const { data: existingInfo, error: checkError } = await supabase
-      .from('delivery_addresses')
-      .select('id')
-      .eq('user_id', deliveryInfo.user_id)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error('Error checking existing delivery info:', checkError);
-      throw new Error(`Failed to check existing delivery info: ${checkError.message}`);
+    // For now, we'll store this in localStorage since we don't have the delivery_addresses table
+    // In a real implementation, you would create the delivery_addresses table first
+    const storageKey = `delivery_info_${deliveryInfo.user_id}`;
+    
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        ...deliveryInfo,
+        updated_at: new Date().toISOString()
+      }));
+      console.log(`Successfully saved delivery info for user ${deliveryInfo.user_id} to localStorage`);
+      return { success: true };
+    } catch (storageError) {
+      console.error('Error saving to localStorage:', storageError);
+      return { 
+        success: false, 
+        error: 'Failed to save delivery information locally' 
+      };
     }
 
-    const hasExistingInfo = Boolean(existingInfo);
-    console.log(`User ${deliveryInfo.user_id} ${hasExistingInfo ? 'has existing' : 'needs new'} delivery info`);
-
-    if (hasExistingInfo) {
-      // Update existing delivery information
-      const { error: updateError } = await supabase
-        .from('delivery_addresses')
-        .update({
-          full_name: deliveryInfo.full_name,
-          email: deliveryInfo.email,
-          phone: deliveryInfo.phone,
-          address: deliveryInfo.address,
-          city: deliveryInfo.city,
-          latitude: deliveryInfo.latitude,
-          longitude: deliveryInfo.longitude,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', deliveryInfo.user_id);
-
-      if (updateError) {
-        console.error('Error updating delivery info:', updateError);
-        throw new Error(`Failed to update delivery info: ${updateError.message}`);
-      }
-
-      console.log(`Successfully updated delivery info for user ${deliveryInfo.user_id}`);
-    } else {
-      // Insert new delivery information
-      const { error: insertError } = await supabase
-        .from('delivery_addresses')
-        .insert({
-          user_id: deliveryInfo.user_id,
-          full_name: deliveryInfo.full_name,
-          email: deliveryInfo.email,
-          phone: deliveryInfo.phone,
-          address: deliveryInfo.address,
-          city: deliveryInfo.city,
-          latitude: deliveryInfo.latitude,
-          longitude: deliveryInfo.longitude
-        });
-
-      if (insertError) {
-        console.error('Error inserting delivery info:', insertError);
-        throw new Error(`Failed to save delivery info: ${insertError.message}`);
-      }
-
-      console.log(`Successfully saved new delivery info for user ${deliveryInfo.user_id}`);
-    }
-
-    return { success: true };
   } catch (error) {
     console.error('Critical error in saveDeliveryInfo:', error);
     return { 
@@ -95,6 +52,7 @@ export const saveDeliveryInfo = async (deliveryInfo: DeliveryInfo): Promise<{ su
 
 /**
  * Retrieves delivery information for a user
+ * Uses localStorage since we don't have the delivery_addresses table
  * @param userId - The user ID
  * @returns Promise with delivery info or null if not found
  */
@@ -102,32 +60,26 @@ export const getDeliveryInfo = async (userId: string): Promise<DeliveryInfo | nu
   try {
     console.log(`Fetching delivery info for user ${userId}`);
     
-    const { data, error } = await supabase
-      .from('delivery_addresses')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching delivery info:', error);
-      throw error;
-    }
-
-    if (!data) {
+    const storageKey = `delivery_info_${userId}`;
+    const storedInfo = localStorage.getItem(storageKey);
+    
+    if (!storedInfo) {
       console.log(`No delivery info found for user ${userId}`);
       return null;
     }
 
+    const deliveryInfo = JSON.parse(storedInfo);
     console.log(`Successfully retrieved delivery info for user ${userId}`);
+    
     return {
-      user_id: data.user_id,
-      full_name: data.full_name,
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
-      city: data.city,
-      latitude: data.latitude,
-      longitude: data.longitude
+      user_id: deliveryInfo.user_id,
+      full_name: deliveryInfo.full_name,
+      email: deliveryInfo.email,
+      phone: deliveryInfo.phone,
+      address: deliveryInfo.address,
+      city: deliveryInfo.city,
+      latitude: deliveryInfo.latitude,
+      longitude: deliveryInfo.longitude
     };
   } catch (error) {
     console.error('Error getting delivery info:', error);

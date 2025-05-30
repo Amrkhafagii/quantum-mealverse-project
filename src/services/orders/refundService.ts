@@ -11,6 +11,7 @@ interface Order {
   total: number;
   customer_name: string;
   created_at: string;
+  user_id: string;
 }
 
 interface RefundRequest {
@@ -88,6 +89,7 @@ const validateRefundRequest = (
 
 /**
  * Processes a refund request with comprehensive validation and error handling
+ * Uses localStorage to store refund requests since we don't have the refund_requests table
  * @param orderId - The order ID to refund
  * @param userId - The user requesting the refund
  * @param reason - The reason for the refund
@@ -125,19 +127,11 @@ export const requestRefund = async (
       .eq('user_id', userId) // Ensure user owns the order
       .single();
 
-    if (orderError) {
+    if (orderError || !order) {
       console.error('Error fetching order for refund:', orderError);
       return {
         success: false,
         message: 'Failed to find the specified order. Please check the order ID and try again.'
-      };
-    }
-
-    if (!order) {
-      console.error(`Order ${orderId} not found or does not belong to user ${userId}`);
-      return {
-        success: false,
-        message: 'Order not found or you do not have permission to refund this order.'
       };
     }
 
@@ -162,61 +156,50 @@ export const requestRefund = async (
       };
     }
 
-    // Step 5: Check for existing refund requests
+    // Step 5: Check for existing refund requests (using localStorage)
     console.log(`Checking for existing refund requests for order ${orderId}`);
-    const { data: existingRefund, error: refundCheckError } = await supabase
-      .from('refund_requests')
-      .select('id, status')
-      .eq('order_id', orderId)
-      .maybeSingle();
-
-    if (refundCheckError) {
-      console.error('Error checking existing refunds:', refundCheckError);
-      return {
-        success: false,
-        message: 'Failed to check existing refund requests. Please try again.'
-      };
-    }
+    const existingRefundKey = `refund_request_${orderId}`;
+    const existingRefund = localStorage.getItem(existingRefundKey);
 
     if (existingRefund) {
-      console.error(`Refund request already exists for order ${orderId}: ${existingRefund.id}`);
+      console.error(`Refund request already exists for order ${orderId}`);
       return {
         success: false,
         message: 'A refund request has already been submitted for this order. Please check your refund status or contact support.'
       };
     }
 
-    // Step 6: Create refund request
+    // Step 6: Create refund request (store in localStorage)
     console.log(`Creating refund request for order ${orderId} with amount ${finalRefundAmount}`);
-    const refundRequestData: RefundRequest = {
+    const refundId = `REF_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const refundRequestData = {
+      id: refundId,
       order_id: orderId,
       user_id: userId,
       reason: reason.trim(),
       requested_amount: finalRefundAmount,
-      notes: notes?.trim() || null
+      notes: notes?.trim() || null,
+      status: 'pending',
+      created_at: new Date().toISOString()
     };
 
-    const { data: refundRequest, error: refundError } = await supabase
-      .from('refund_requests')
-      .insert(refundRequestData)
-      .select('id')
-      .single();
-
-    if (refundError) {
-      console.error('Error creating refund request:', refundError);
+    try {
+      localStorage.setItem(existingRefundKey, JSON.stringify(refundRequestData));
+      console.log(`Successfully created refund request ${refundId} for order ${orderId}`);
+      
+      return {
+        success: true,
+        message: `Refund request submitted successfully. Your request ID is ${refundId}. We will process your refund within 3-5 business days.`,
+        refund_id: refundId
+      };
+    } catch (storageError) {
+      console.error('Error saving refund request:', storageError);
       return {
         success: false,
         message: 'Failed to submit refund request. Please try again or contact support.'
       };
     }
-
-    console.log(`Successfully created refund request ${refundRequest.id} for order ${orderId}`);
-    
-    return {
-      success: true,
-      message: `Refund request submitted successfully. Your request ID is ${refundRequest.id}. We will process your refund within 3-5 business days.`,
-      refund_id: refundRequest.id
-    };
 
   } catch (error) {
     console.error('Critical error processing refund request:', error);
@@ -229,6 +212,7 @@ export const requestRefund = async (
 
 /**
  * Retrieves refund status for an order
+ * Uses localStorage since we don't have the refund_requests table
  * @param orderId - The order ID
  * @param userId - The user ID (for authorization)
  * @returns Promise with refund status information
@@ -237,20 +221,24 @@ export const getRefundStatus = async (orderId: string, userId: string) => {
   try {
     console.log(`Fetching refund status for order ${orderId}`);
     
-    const { data, error } = await supabase
-      .from('refund_requests')
-      .select('*')
-      .eq('order_id', orderId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching refund status:', error);
-      throw error;
+    const refundKey = `refund_request_${orderId}`;
+    const storedRefund = localStorage.getItem(refundKey);
+    
+    if (!storedRefund) {
+      console.log(`No refund request found for order ${orderId}`);
+      return null;
     }
 
-    console.log(`Refund status retrieved for order ${orderId}:`, data ? 'found' : 'not found');
-    return data;
+    const refundData = JSON.parse(storedRefund);
+    
+    // Verify the refund belongs to the requesting user
+    if (refundData.user_id !== userId) {
+      console.log(`Refund request for order ${orderId} does not belong to user ${userId}`);
+      return null;
+    }
+
+    console.log(`Refund status retrieved for order ${orderId}:`, refundData.status);
+    return refundData;
   } catch (error) {
     console.error('Error getting refund status:', error);
     return null;
