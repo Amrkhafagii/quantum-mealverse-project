@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useResponsive } from '@/contexts/ResponsiveContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Platform } from '@/utils/platform';
 
 export type TransitionType = 'slide' | 'fade' | 'zoom' | 'none' | 'platform';
 
@@ -23,7 +22,7 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
   className = '',
   duration = 0.3
 }) => {
-  const { isPlatformIOS, isPlatformAndroid } = useResponsive();
+  const { isPlatformIOS, isPlatformAndroid, isMobile } = useResponsive();
   const [isInitialRender, setIsInitialRender] = useState(true);
   
   useEffect(() => {
@@ -53,6 +52,9 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
   }
   
   const getAnimations = () => {
+    // Enhanced animation configurations with better performance
+    const slideDistance = isMobile ? 15 : 20; // Reduced distance for mobile
+    
     switch (currentTransition) {
       case 'slide':
         let initial = {};
@@ -61,20 +63,20 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
         
         switch (direction) {
           case 'left':
-            initial = { x: -20, opacity: 0 };
-            exit = { x: 20, opacity: 0 };
+            initial = { x: -slideDistance, opacity: 0.8 };
+            exit = { x: slideDistance, opacity: 0.8 };
             break;
           case 'right':
-            initial = { x: 20, opacity: 0 };
-            exit = { x: -20, opacity: 0 };
+            initial = { x: slideDistance, opacity: 0.8 };
+            exit = { x: -slideDistance, opacity: 0.8 };
             break;
           case 'up':
-            initial = { y: -20, opacity: 0 };
-            exit = { y: 20, opacity: 0 };
+            initial = { y: -slideDistance, opacity: 0.8 };
+            exit = { y: slideDistance, opacity: 0.8 };
             break;
           case 'down':
-            initial = { y: 20, opacity: 0 };
-            exit = { y: -20, opacity: 0 };
+            initial = { y: slideDistance, opacity: 0.8 };
+            exit = { y: -slideDistance, opacity: 0.8 };
             break;
         }
         
@@ -88,10 +90,11 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
         };
         
       case 'zoom':
+        const scaleAmount = isMobile ? 0.98 : 0.95; // Less dramatic on mobile
         return {
-          initial: { scale: 0.95, opacity: 0 },
+          initial: { scale: scaleAmount, opacity: 0 },
           animate: { scale: 1, opacity: 1 },
-          exit: { scale: 0.95, opacity: 0 }
+          exit: { scale: scaleAmount, opacity: 0 }
         };
         
       case 'none':
@@ -106,6 +109,16 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
   
   const { initial, animate, exit } = getAnimations();
   
+  // Enhanced easing curves for different platforms
+  const getEasing = () => {
+    if (isPlatformIOS) {
+      return [0.25, 0.46, 0.45, 0.94]; // iOS-like easing
+    } else if (isPlatformAndroid) {
+      return [0.4, 0.0, 0.2, 1]; // Material Design easing
+    }
+    return 'easeOut'; // Web default
+  };
+  
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
@@ -115,9 +128,21 @@ export const ScreenTransition: React.FC<ScreenTransitionProps> = ({
         exit={exit}
         transition={{ 
           duration, 
-          ease: isPlatformIOS ? 'easeInOut' : 'easeOut' 
+          ease: getEasing(),
+          // Optimize for mobile performance
+          ...(isMobile && {
+            type: "tween",
+            stiffness: 300,
+            damping: 30
+          })
         }}
         className={className}
+        // Performance optimizations
+        style={{
+          willChange: 'transform, opacity',
+          backfaceVisibility: 'hidden',
+          perspective: 1000,
+        }}
       >
         {children}
       </motion.div>
