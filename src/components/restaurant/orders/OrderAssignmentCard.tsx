@@ -4,169 +4,174 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Clock, MapPin, Phone, DollarSign, Package } from 'lucide-react';
-import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
-import { useToast } from '@/components/ui/use-toast';
+import { Clock, MapPin, Phone, User, CheckCircle, XCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { useOrderAssignment } from '@/hooks/useOrderAssignment';
 
 interface OrderAssignmentCardProps {
-  assignment: any;
-  onResponse: () => void;
+  order: {
+    id: string;
+    customer_name: string;
+    customer_phone: string;
+    delivery_address: string;
+    total: number;
+    created_at: string;
+    status: string;
+    order_items?: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+  };
+  restaurantId: string;
+  onAssignmentUpdate?: () => void;
 }
 
 export const OrderAssignmentCard: React.FC<OrderAssignmentCardProps> = ({
-  assignment,
-  onResponse
+  order,
+  restaurantId,
+  onAssignmentUpdate
 }) => {
-  const { toast } = useToast();
-  const [responding, setResponding] = useState(false);
   const [notes, setNotes] = useState('');
-  const [showNotes, setShowNotes] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { acceptOrder, rejectOrder } = useOrderAssignment();
 
-  const handleResponse = async (action: 'accept' | 'reject') => {
+  const handleAccept = async () => {
+    setIsProcessing(true);
     try {
-      setResponding(true);
-      
-      const success = await orderAssignmentService.handleRestaurantResponse(
-        assignment.id,
-        assignment.restaurant_id,
-        action,
-        notes || undefined
-      );
-
-      if (success) {
-        toast({
-          title: action === 'accept' ? 'Order Accepted' : 'Order Rejected',
-          description: `You have ${action}ed the order assignment.`,
-          variant: action === 'accept' ? 'default' : 'destructive'
-        });
-        onResponse();
-      } else {
-        throw new Error('Failed to process response');
+      const success = await acceptOrder(order.id, restaurantId, notes);
+      if (success && onAssignmentUpdate) {
+        onAssignmentUpdate();
       }
     } catch (error) {
-      console.error('Error responding to assignment:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to process your response. Please try again.',
-        variant: 'destructive'
-      });
+      console.error('Error accepting order:', error);
     } finally {
-      setResponding(false);
-      setNotes('');
-      setShowNotes(false);
+      setIsProcessing(false);
     }
   };
 
-  const timeRemaining = new Date(assignment.expires_at).getTime() - new Date().getTime();
-  const minutesRemaining = Math.max(0, Math.floor(timeRemaining / (1000 * 60)));
+  const handleReject = async () => {
+    setIsProcessing(true);
+    try {
+      const success = await rejectOrder(order.id, restaurantId, notes);
+      if (success && onAssignmentUpdate) {
+        onAssignmentUpdate();
+      }
+    } catch (error) {
+      console.error('Error rejecting order:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'restaurant_assigned':
+        return 'bg-yellow-500';
+      case 'pending':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
 
   return (
-    <Card className="border-l-4 border-l-orange-500">
+    <Card className="border-l-4 border-l-quantum-cyan">
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">
-            Order #{assignment.orders?.id?.slice(-8)}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-orange-600">
-              <Clock className="h-3 w-3 mr-1" />
-              {minutesRemaining}m left
-            </Badge>
-            <Badge variant="secondary">New Assignment</Badge>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">
+              Order #{order.id.substring(0, 8)}
+            </CardTitle>
+            <p className="text-sm text-gray-600">
+              {format(new Date(order.created_at), 'MMM dd, yyyy at h:mm a')}
+            </p>
           </div>
+          <Badge className={`${getStatusColor(order.status)} text-white`}>
+            New Assignment
+          </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
         {/* Customer Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Customer Details</h4>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Name:</strong> {assignment.orders?.customer_name}</p>
-              <div className="flex items-center gap-1">
-                <Phone className="h-3 w-3" />
-                <span>{assignment.orders?.customer_phone}</span>
-              </div>
-              <div className="flex items-start gap-1">
-                <MapPin className="h-3 w-3 mt-0.5" />
-                <span>{assignment.orders?.delivery_address}</span>
-              </div>
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-quantum-cyan" />
+            <span className="font-medium">{order.customer_name}</span>
           </div>
-
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Order Summary</h4>
-            <div className="space-y-1 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3" />
-                <span><strong>Total:</strong> ${assignment.orders?.total?.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Package className="h-3 w-3" />
-                <span><strong>Items:</strong> {assignment.orders?.order_items?.length || 0}</span>
-              </div>
-              <p><strong>Placed:</strong> {new Date(assignment.orders?.created_at).toLocaleTimeString()}</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-quantum-cyan" />
+            <span>{order.customer_phone}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-quantum-cyan" />
+            <span className="text-sm">{order.delivery_address}</span>
           </div>
         </div>
 
         {/* Order Items */}
-        {assignment.orders?.order_items?.length > 0 && (
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Order Items</h4>
+        {order.order_items && order.order_items.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="font-medium">Order Items:</h4>
             <div className="space-y-1">
-              {assignment.orders.order_items.map((item: any, index: number) => (
-                <div key={index} className="flex justify-between text-sm">
+              {order.order_items.map((item) => (
+                <div key={item.id} className="flex justify-between text-sm">
                   <span>{item.quantity}x {item.name}</span>
-                  <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  <span>EGP {item.price}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Notes Section */}
-        {showNotes && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Response Notes (optional)
-            </label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes about this order..."
-              rows={3}
-            />
-          </div>
-        )}
+        {/* Order Total */}
+        <div className="flex justify-between items-center pt-2 border-t">
+          <span className="font-medium">Total Amount:</span>
+          <span className="text-lg font-bold text-quantum-cyan">
+            EGP {order.total}
+          </span>
+        </div>
+
+        {/* Response Notes */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Response Notes (Optional):
+          </label>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add any notes about this order assignment..."
+            className="min-h-[80px]"
+          />
+        </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-3 pt-4">
           <Button
-            onClick={() => handleResponse('accept')}
-            disabled={responding}
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            onClick={handleAccept}
+            disabled={isProcessing}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
           >
-            {responding ? 'Processing...' : 'Accept Order'}
+            <CheckCircle className="h-4 w-4 mr-2" />
+            {isProcessing ? 'Accepting...' : 'Accept Order'}
           </Button>
-          
           <Button
-            variant="outline"
-            onClick={() => setShowNotes(!showNotes)}
-            disabled={responding}
-          >
-            {showNotes ? 'Hide Notes' : 'Add Notes'}
-          </Button>
-          
-          <Button
+            onClick={handleReject}
+            disabled={isProcessing}
             variant="destructive"
-            onClick={() => handleResponse('reject')}
-            disabled={responding}
             className="flex-1"
           >
-            {responding ? 'Processing...' : 'Reject Order'}
+            <XCircle className="h-4 w-4 mr-2" />
+            {isProcessing ? 'Rejecting...' : 'Reject Order'}
           </Button>
+        </div>
+
+        {/* Time Indicator */}
+        <div className="flex items-center gap-2 text-sm text-gray-500 pt-2 border-t">
+          <Clock className="h-4 w-4" />
+          <span>Please respond within 15 minutes to maintain good rating</span>
         </div>
       </CardContent>
     </Card>

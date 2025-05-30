@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useRestaurantOrders } from '@/hooks/useRestaurantOrders';
 import { format } from 'date-fns';
-import { Clock, Package, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, Package, AlertCircle, RefreshCw, Bell } from 'lucide-react';
 import { OrderStagesDashboard } from '@/components/restaurant/dashboard/OrderStagesDashboard';
+import { PendingAssignmentsList } from './PendingAssignmentsList';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface OrderManagementProps {
@@ -18,7 +19,7 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
   console.log('OrderManagement - Component mounted with restaurantId:', restaurantId);
   
   const { orders, loading, error, refetch } = useRestaurantOrders(restaurantId);
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState('assignments');
 
   console.log('OrderManagement - Hook data:', { orders, loading, error });
 
@@ -97,12 +98,20 @@ const OrderManagement: React.FC<OrderManagementProps> = ({ restaurantId }) => {
       </Card>
     }>
       <div className="space-y-6">
-        <Tabs defaultValue="stages" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="assignments" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="assignments">
+              <Bell className="h-4 w-4 mr-2" />
+              Pending Assignments
+            </TabsTrigger>
             <TabsTrigger value="stages">Order Stages</TabsTrigger>
             <TabsTrigger value="active">Active Orders ({activeOrders.length})</TabsTrigger>
             <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="assignments" className="space-y-4">
+            <PendingAssignmentsList restaurantId={restaurantId} />
+          </TabsContent>
 
           <TabsContent value="stages" className="space-y-4">
             <OrderStagesDashboard restaurantId={restaurantId} />
