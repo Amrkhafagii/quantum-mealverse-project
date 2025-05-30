@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Navigation, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
@@ -84,7 +85,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-2 left-2 z-40"
           >
-            <Alert variant="warning">
+            <Alert>
               <AlertDescription>
                 {getStatusIcon()}
                 {getStatusMessage()}

@@ -5,6 +5,19 @@ export type TrackingMode = 'off' | 'passive' | 'battery-optimized' | 'medium' | 
 
 export type LocationFreshness = 'fresh' | 'stale' | 'invalid';
 
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  altitudeAccuracy?: number;
+  heading?: number;
+  speed?: number;
+  timestamp: number;
+  source?: LocationSource;
+  isMoving?: boolean;
+}
+
 export interface DeliveryLocation {
   latitude: number;
   longitude: number;
