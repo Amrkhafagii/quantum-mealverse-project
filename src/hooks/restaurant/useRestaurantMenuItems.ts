@@ -21,7 +21,7 @@ export const useRestaurantMenuItems = (restaurantId: string, category?: string) 
     filters.category = category;
   }
 
-  return useRestaurantData<MenuItem>({
+  const result = useRestaurantData({
     queryKey: `restaurant-menu-items${category ? `-${category}` : ''}`,
     tableName: 'menu_items',
     restaurantId,
@@ -29,10 +29,15 @@ export const useRestaurantMenuItems = (restaurantId: string, category?: string) 
     filters,
     orderBy: { column: 'name', ascending: true },
   });
+
+  return {
+    ...result,
+    data: result.data as MenuItem[]
+  };
 };
 
 export const usePopularMenuItems = (restaurantId: string, limit: number = 10) => {
-  return useRestaurantData<MenuItem>({
+  const result = useRestaurantData({
     queryKey: 'popular-menu-items',
     tableName: 'menu_items',
     restaurantId,
@@ -41,4 +46,9 @@ export const usePopularMenuItems = (restaurantId: string, limit: number = 10) =>
     orderBy: { column: 'order_count', ascending: false }, // Assuming you have an order_count field
     limit,
   });
+
+  return {
+    ...result,
+    data: result.data as MenuItem[]
+  };
 };

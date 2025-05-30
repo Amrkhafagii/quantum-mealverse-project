@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
-interface UseRestaurantDataOptions<T> {
+interface UseRestaurantDataOptions {
   queryKey: string;
   tableName: string;
   restaurantId: string;
@@ -12,19 +12,19 @@ interface UseRestaurantDataOptions<T> {
   orderBy?: { column: string; ascending?: boolean };
   limit?: number;
   enabled?: boolean;
-  onSuccess?: (data: T[]) => void;
+  onSuccess?: (data: any[]) => void;
   onError?: (error: Error) => void;
 }
 
-interface UseRestaurantDataReturn<T> {
-  data: T[];
+interface UseRestaurantDataReturn {
+  data: any[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
-export function useRestaurantData<T = any>({
+export function useRestaurantData({
   queryKey,
   tableName,
   restaurantId,
@@ -35,8 +35,8 @@ export function useRestaurantData<T = any>({
   enabled = true,
   onSuccess,
   onError
-}: UseRestaurantDataOptions<T>): UseRestaurantDataReturn<T> {
-  const [data, setData] = useState<T[]>([]);
+}: UseRestaurantDataOptions): UseRestaurantDataReturn {
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -53,8 +53,9 @@ export function useRestaurantData<T = any>({
 
       console.log(`Fetching ${queryKey} for restaurant:`, restaurantId);
 
-      let query = supabase
-        .from(tableName)
+      // Build query dynamically using string interpolation to avoid type issues
+      const queryBuilder = supabase.from(tableName as any);
+      let query = queryBuilder
         .select(selectFields)
         .eq('restaurant_id', restaurantId);
 

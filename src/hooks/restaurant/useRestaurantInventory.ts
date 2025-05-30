@@ -12,7 +12,7 @@ interface InventoryItem {
 }
 
 export const useRestaurantInventory = (restaurantId: string) => {
-  return useRestaurantData<InventoryItem>({
+  const result = useRestaurantData({
     queryKey: 'restaurant-inventory',
     tableName: 'restaurant_inventory',
     restaurantId,
@@ -20,10 +20,15 @@ export const useRestaurantInventory = (restaurantId: string) => {
     filters: { is_active: true },
     orderBy: { column: 'name', ascending: true },
   });
+
+  return {
+    ...result,
+    data: result.data as InventoryItem[]
+  };
 };
 
 export const useLowStockItems = (restaurantId: string) => {
-  return useRestaurantData<InventoryItem>({
+  const result = useRestaurantData({
     queryKey: 'low-stock-items',
     tableName: 'restaurant_inventory',
     restaurantId,
@@ -32,7 +37,12 @@ export const useLowStockItems = (restaurantId: string) => {
     orderBy: { column: 'current_stock', ascending: true },
     onSuccess: (data) => {
       // Filter low stock items in memory since Supabase comparison might be complex
-      return data.filter(item => item.current_stock <= item.minimum_stock);
+      return data.filter((item: any) => item.current_stock <= item.minimum_stock);
     }
   });
+
+  return {
+    ...result,
+    data: result.data.filter((item: any) => item.current_stock <= item.minimum_stock) as InventoryItem[]
+  };
 };

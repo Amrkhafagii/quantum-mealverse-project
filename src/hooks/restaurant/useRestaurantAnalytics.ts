@@ -19,7 +19,7 @@ export const useRestaurantAnalytics = (restaurantId: string, dateRange?: { from:
     filters.date = dateRange.from.toISOString().split('T')[0];
   }
 
-  return useRestaurantData<AnalyticsData>({
+  const result = useRestaurantData({
     queryKey: 'restaurant-analytics',
     tableName: 'restaurant_analytics',
     restaurantId,
@@ -28,4 +28,9 @@ export const useRestaurantAnalytics = (restaurantId: string, dateRange?: { from:
     orderBy: { column: 'date', ascending: false },
     limit: 30, // Last 30 days
   });
+
+  return {
+    ...result,
+    data: result.data as AnalyticsData[]
+  };
 };
