@@ -17,12 +17,24 @@ interface NavbarUserProps {
 }
 
 const NavbarUser: React.FC<NavbarUserProps> = ({ user, onLogout }) => {
+  // Provide safe fallbacks for user properties
+  const safeUser = user || {};
+  const displayName = safeUser.displayName || safeUser.email || 'User';
+  const photoURL = safeUser.photoURL || undefined;
+  const avatarFallback = displayName.charAt(0).toUpperCase() || '?';
+
+  const handleLogout = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onLogout();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <Avatar className="ml-4">
-          <AvatarImage src={user.photoURL || undefined} />
-          <AvatarFallback>{user.displayName?.charAt(0) || '?'}</AvatarFallback>
+          <AvatarImage src={photoURL} />
+          <AvatarFallback>{avatarFallback}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
@@ -31,7 +43,9 @@ const NavbarUser: React.FC<NavbarUserProps> = ({ user, onLogout }) => {
           <Link to="/profile">Profile</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
+          Logout
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
