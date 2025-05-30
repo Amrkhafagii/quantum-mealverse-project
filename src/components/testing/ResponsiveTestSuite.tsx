@@ -1,12 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useResponsive } from '@/responsive/core';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
-import { Platform } from '@/utils/platform';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Smartphone, 
+  Monitor, 
+  Tablet, 
+  RotateCcw, 
+  Cpu, 
+  Wifi,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  Eye,
+  Layout
+} from 'lucide-react';
 
 interface TestResult {
   test: string;

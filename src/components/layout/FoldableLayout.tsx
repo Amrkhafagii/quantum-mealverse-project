@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { Platform } from '@/utils/platform';
+import { useResponsive } from '@/responsive/core';
+import { Platform } from '@/responsive/utils';
 
 interface FoldableLayoutProps {
   children: React.ReactNode;

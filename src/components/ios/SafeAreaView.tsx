@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '@/responsive/core';
 import { cn } from '@/lib/utils';
 
 interface SafeAreaViewProps {

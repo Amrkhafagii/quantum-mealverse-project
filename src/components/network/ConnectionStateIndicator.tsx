@@ -1,117 +1,94 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Wifi, WifiOff, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { useConnectionStatus } from '@/hooks/useConnectionStatus';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
-import { Wifi, WifiOff, WifiLow, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+import { useNetworkQuality } from '@/responsive/core/hooks';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ConnectionStateIndicatorProps {
-  showText?: boolean;
   showQuality?: boolean;
-  className?: string;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'badge' | 'icon' | 'full';
+  position?: 'top' | 'bottom';
+  alwaysShow?: boolean;
+  variant?: 'slim' | 'normal';
 }
 
-export function ConnectionStateIndicator({ 
-  showText = false, 
-  showQuality = false,
-  className = '', 
-  size = 'md',
-  variant = 'icon'
-}: ConnectionStateIndicatorProps) {
+export const ConnectionStateIndicator: React.FC<ConnectionStateIndicatorProps> = ({
+  showQuality = true,
+  position = 'top',
+  alwaysShow = false,
+  variant = 'normal'
+}) => {
   const { isOnline, connectionType, wasOffline, resetWasOffline } = useConnectionStatus();
-  const { quality, isLowQuality, hasTransitioned } = useNetworkQuality();
-  const [showReconnecting, setShowReconnecting] = useState(false);
+  const { quality, isLowQuality } = useNetworkQuality();
+  const [visible, setVisible] = useState(false);
+  const [wasOnline, setWasOnline] = useState(isOnline);
   
-  // When connection is restored, briefly show a reconnected state
+  // Show the indicator when connection state changes
   useEffect(() => {
-    if (isOnline && wasOffline) {
-      setShowReconnecting(true);
-      const timer = setTimeout(() => {
-        setShowReconnecting(false);
-        resetWasOffline();
-      }, 3000);
-      return () => clearTimeout(timer);
+    // If the connection state has changed
+    if (isOnline !== wasOnline) {
+      setVisible(true);
+      
+      // Hide after 5 seconds if we transitioned to online
+      if (isOnline) {
+        const timer = setTimeout(() => {
+          setVisible(alwaysShow);
+          resetWasOffline();
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isOnline, wasOffline, resetWasOffline]);
+    
+    setWasOnline(isOnline);
+  }, [isOnline, wasOnline, alwaysShow, resetWasOffline]);
   
-  // Determine icon size based on size prop
-  const iconSize = {
-    sm: 14,
-    md: 16,
-    lg: 20
-  }[size];
+  // Keep visible when always show is true
+  useEffect(() => {
+    if (alwaysShow) {
+      setVisible(true);
+    }
+  }, [alwaysShow]);
   
-  // Determine indicator color based on connection state
-  const getColor = () => {
-    if (!isOnline) return "text-red-500";
-    if (showReconnecting) return "text-green-500";
-    if (isLowQuality) return "text-amber-500";
-    return "text-green-500";
+  const getBackgroundColor = () => {
+    if (!isOnline) return 'bg-red-500/90';
+    if (isLowQuality) return 'bg-amber-500/90';
+    return 'bg-green-500/90';
   };
   
-  // Determine icon based on connection state
   const getIcon = () => {
-    if (!isOnline) return <WifiOff size={iconSize} />;
-    if (isLowQuality) return <WifiLow size={iconSize} />;
-    return <Wifi size={iconSize} />;
+    if (!isOnline) return <WifiOff className={variant === 'slim' ? 'h-3 w-3' : 'h-4 w-4'} />;
+    if (isLowQuality) return <AlertTriangle className={variant === 'slim' ? 'h-3 w-3' : 'h-4 w-4'} />;
+    if (wasOffline) return <Clock className={variant === 'slim' ? 'h-3 w-3' : 'h-4 w-4'} />;
+    return <CheckCircle2 className={variant === 'slim' ? 'h-3 w-3' : 'h-4 w-4'} />;
   };
   
-  // Generate status text
-  const getStatusText = () => {
-    if (showReconnecting) return "Reconnected";
-    if (!isOnline) return "Offline";
-    if (isLowQuality) return "Poor Connection";
-    return connectionType === 'wifi' ? "Online (WiFi)" : "Online";
+  const getMessage = () => {
+    if (!isOnline) return 'Offline';
+    if (isLowQuality) return 'Poor connection';
+    if (wasOffline) return 'Back online';
+    return 'Online';
   };
   
-  // If using badge variant
-  if (variant === 'badge') {
-    return (
-      <Badge variant={isOnline ? "outline" : "secondary"} className={cn(
-        getColor(),
-        "flex items-center gap-1.5",
-        className
-      )}>
-        {getIcon()}
-        <span>{getStatusText()}</span>
-      </Badge>
-    );
-  }
-  
-  // Default icon or full variant
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div className={cn(
-            "flex items-center gap-1.5 transition-colors duration-300",
-            getColor(),
-            className
-          )}>
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, y: position === 'top' ? -20 : 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: position === 'top' ? -20 : 20 }}
+          transition={{ duration: 0.3 }}
+          className={`fixed ${position === 'top' ? 'top-4' : 'bottom-4'} left-0 right-0 mx-auto z-40 flex justify-center pointer-events-none`}
+        >
+          <div className={`${getBackgroundColor()} text-white rounded-full shadow-lg flex items-center ${variant === 'slim' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1'} pointer-events-auto`}>
             {getIcon()}
-            {(showText || variant === 'full') && <span className="text-sm">{getStatusText()}</span>}
-            {showQuality && quality !== 'unknown' && <span className="text-xs opacity-80">({quality})</span>}
+            <span className="ml-1">{getMessage()}</span>
+            {showQuality && quality && quality !== 'unknown' && variant !== 'slim' && (
+              <span className="ml-1 text-xs opacity-80">({quality})</span>
+            )}
           </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>
-            {getStatusText()}
-            {isOnline && connectionType && ` (${connectionType})`}
-          </p>
-          {!isOnline && (
-            <p className="text-xs text-amber-400">Some features may be limited</p>
-          )}
-          {isLowQuality && isOnline && (
-            <p className="text-xs text-amber-400">Reduced performance mode active</p>
-          )}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-}
+};
 
 export default ConnectionStateIndicator;

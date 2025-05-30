@@ -1,19 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { useDeviceOrientation } from '@/hooks/useDeviceOrientation';
-import { Platform } from '@/utils/platform';
+import { Badge } from '@/components/ui/badge';
+import { useResponsive } from '@/responsive/core';
+import { useDeviceOrientation } from '@/responsive/core/hooks';
+import { Separator } from '@/components/ui/separator';
 import { 
   Smartphone, 
-  Tablet, 
   Monitor, 
-  RotateCw, 
+  Tablet, 
+  RotateCcw, 
+  Cpu, 
   Wifi,
-  Battery,
-  TestTube
+  CheckCircle2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 
 interface ScreenTestResult {
@@ -183,7 +184,7 @@ export const CrossPlatformTester: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              <RotateCw className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4" />
               <span className="text-sm capitalize">{orientation}</span>
             </div>
             

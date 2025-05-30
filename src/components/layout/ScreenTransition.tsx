@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '@/responsive/core';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Platform } from '@/utils/platform';
+import { Platform } from '@/responsive/utils';
 
 export type TransitionType = 'slide' | 'fade' | 'zoom' | 'none' | 'platform';
 

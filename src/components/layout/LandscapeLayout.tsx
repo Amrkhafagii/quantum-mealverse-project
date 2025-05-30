@@ -1,8 +1,8 @@
 
 import React, { useEffect } from 'react';
-import { useDeviceOrientation } from '@/hooks/useDeviceOrientation';
-import { Platform } from '@/utils/platform';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useDeviceOrientation } from '@/responsive/core/hooks';
+import { Platform } from '@/responsive/utils';
+import { useResponsive } from '@/responsive/core';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
 

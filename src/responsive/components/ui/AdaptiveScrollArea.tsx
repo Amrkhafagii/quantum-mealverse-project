@@ -1,58 +1,57 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { useResponsive } from '@/responsive/core';
 
-interface MobileScrollContainerProps {
+import React from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { useResponsive } from '../../core/ResponsiveContext';
+
+interface AdaptiveScrollAreaProps {
   children: React.ReactNode;
   className?: string;
-  maxHeight?: string;
+  height?: string;
   enablePullToRefresh?: boolean;
   onRefresh?: () => void;
 }
 
-export const MobileScrollContainer: React.FC<MobileScrollContainerProps> = ({
+export const AdaptiveScrollArea: React.FC<AdaptiveScrollAreaProps> = ({
   children,
   className,
-  maxHeight = 'calc(100vh - 200px)',
+  height = '100%',
   enablePullToRefresh = false,
   onRefresh,
 }) => {
   const { isMobile, isPlatformIOS, isPlatformAndroid } = useResponsive();
   
   const scrollClasses = cn(
-    'overflow-y-auto overflow-x-hidden',
     // iOS specific scroll improvements
     isPlatformIOS && [
       'ios-scroll',
-      'overscroll-behavior-y-none', // Prevent bounce
+      'overscroll-behavior-y-none',
     ],
+    
     // Android specific scroll improvements
     isPlatformAndroid && [
       'android-scroll',
       'overscroll-behavior-contain',
     ],
+    
     // Mobile optimizations
     isMobile && [
       'scroll-smooth',
       'scrollbar-hide',
       'touch-manipulation',
     ],
+    
     className
   );
   
-  const containerStyle: React.CSSProperties = {
-    maxHeight: isMobile ? maxHeight : 'none',
-    WebkitOverflowScrolling: isPlatformIOS ? 'touch' : undefined,
-  };
-  
   return (
-    <div 
+    <ScrollArea 
       className={scrollClasses}
-      style={containerStyle}
+      style={{ height }}
     >
       {children}
-    </div>
+    </ScrollArea>
   );
 };
 
-export default MobileScrollContainer;
+export default AdaptiveScrollArea;

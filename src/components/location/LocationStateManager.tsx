@@ -1,6 +1,20 @@
-
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  LocationData, 
+  LocationConfig, 
+  LocationPermissionStatus,
+  LocationError,
+  LocationWatchOptions,
+  LocationWatchCallback,
+  LocationState,
+  LocationAccuracy,
+  LocationBackgroundMode
+} from '@/types/location';
+import { locationManager } from '@/utils/locationManager';
+import { TrackingMode } from '@/utils/trackingModeCalculator';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
+import { Platform } from '@/utils/platform';
+import { useResponsive } from '@/responsive/core';
 import { useLocationPermission } from '@/hooks/useLocationPermission';
 import { MapPin, AlertTriangle, MapPinOff, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -1,8 +1,7 @@
-
 import React, { useEffect } from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '@/responsive/core';
 import { cn } from '@/lib/utils';
-import { PlatformContainer } from './PlatformContainer';
+import { PlatformContainer } from '@/responsive/components/containers';
 
 interface AdaptiveLayoutProps {
   children: React.ReactNode;

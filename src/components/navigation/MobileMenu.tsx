@@ -1,192 +1,109 @@
-
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, LogIn, Utensils, ActivitySquare, Package, ChefHat, Truck } from 'lucide-react';
-import { Session } from '@supabase/supabase-js';
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Platform } from '@/utils/platform';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useCart } from '@/contexts/CartContext';
+import { Menu, X, User, ShoppingCart, LogOut, Home, Store, Utensils } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/responsive/core/hooks';
+import { 
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 interface MobileMenuProps {
-  isCustomerView: boolean;
-  isAdmin: boolean;
-  isRestaurant?: boolean;
-  session: Session | null;
-  toggleUserView: (checked: boolean) => void;
+  isOpen: boolean;
+  onCloseMenu: () => void;
+  user: any;
+  onLogout: () => void;
 }
 
-export const MobileMenu = ({ 
-  isCustomerView, 
-  isAdmin, 
-  isRestaurant = false,
-  session,
-  toggleUserView
-}: MobileMenuProps) => {
-  const isAuthenticated = !!session;
+const MobileMenu: React.FC<MobileMenuProps> = ({ 
+  isOpen, 
+  onCloseMenu, 
+  user, 
+  onLogout 
+}) => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { cart } = useCart();
   const isMobile = useIsMobile();
   
-  const user = session?.user;
-  const userType = user?.user_metadata?.user_type;
-  const isDeliveryUser = userType === 'delivery';
+  const handleLogout = async () => {
+    try {
+      await onLogout();
+      onCloseMenu();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Close the mobile menu when the route changes
+    onCloseMenu();
+  }, [location, onCloseMenu]);
   
-  // Don't show customer options for restaurant users unless they're an admin in customer view
-  const showCustomerOptions = !isRestaurant || (isAdmin && isCustomerView);
-  
-  // Apply touch-friendly styling conditionally
-  const linkClasses = isMobile 
-    ? "flex items-center space-x-2 p-4 rounded-lg hover:bg-quantum-darkBlue/50 active:bg-quantum-darkBlue/70 touch-feedback" 
-    : "flex items-center space-x-2 p-2 rounded-lg hover:bg-quantum-darkBlue/50";
-  
+  if (!isMobile) return null;
+
   return (
-    <div className={`p-4 pb-safe border-t border-quantum-cyan/20 md:hidden`}>
-      <div className="space-y-2">
-        {isDeliveryUser ? (
-          // Delivery user navigation
-          <>
-            <Link 
-              to="/delivery/dashboard" 
-              className={linkClasses}
-            >
-              <Truck className="h-5 w-5 text-quantum-cyan" />
-              <span>Delivery Dashboard</span>
-            </Link>
-            
-            <Link 
-              to="/profile" 
-              className={linkClasses}
-            >
-              <User className="h-5 w-5 text-quantum-cyan" />
-              <span>Profile</span>
-            </Link>
-          </>
-        ) : isCustomerView && showCustomerOptions ? (
-          // Customer navigation
-          <>
-            <Link 
-              to="/customer" 
-              className={linkClasses}
-            >
-              <Utensils className="h-5 w-5 text-quantum-cyan" />
-              <span>Order Food</span>
-            </Link>
-
-            {!isDeliveryUser && (
-              <Link 
-                to="/fitness" 
-                className={linkClasses}
-              >
-                <ActivitySquare className="h-5 w-5 text-quantum-cyan" />
-                <span>Fitness</span>
+    <Sheet open={isOpen} onOpenChange={onCloseMenu}>
+      <SheetContent className="sm:max-w-sm">
+        <SheetHeader>
+          <SheetTitle>Menu</SheetTitle>
+          <SheetDescription>
+            Navigate through the app.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="grid gap-4 py-4">
+          <Link to="/" className="flex items-center space-x-2 text-sm font-medium hover:underline">
+            <Home className="h-4 w-4" />
+            <span>Home</span>
+          </Link>
+          <Link to="/shop" className="flex items-center space-x-2 text-sm font-medium hover:underline">
+            <Store className="h-4 w-4" />
+            <span>Shop</span>
+          </Link>
+          {user && (
+            <>
+              <Link to="/customer" className="flex items-center space-x-2 text-sm font-medium hover:underline">
+                <Utensils className="h-4 w-4" />
+                <span>Customer</span>
               </Link>
-            )}
-            
-            {isAuthenticated && !isDeliveryUser && (
-              <Link 
-                to="/orders" 
-                className={linkClasses}
-              >
-                <Package className="h-5 w-5 text-quantum-cyan" />
-                <span>Track Orders</span>
+              <Link to="/orders" className="flex items-center space-x-2 text-sm font-medium hover:underline">
+                <ShoppingCart className="h-4 w-4" />
+                <span>Orders</span>
+                {cart.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{cart.length}</Badge>
+                )}
               </Link>
-            )}
-            
-            {!isDeliveryUser && (
-              <Link 
-                to="/cart" 
-                className={linkClasses}
-              >
-                <ShoppingCart className="h-5 w-5 text-quantum-cyan" />
-                <span>Cart</span>
+            </>
+          )}
+          {!user && (
+            <>
+              <Link to="/login" className="flex items-center space-x-2 text-sm font-medium hover:underline">
+                <User className="h-4 w-4" />
+                <span>Login</span>
               </Link>
-            )}
-            
-            {session ? (
-              <Link 
-                to="/auth" 
-                className={linkClasses}
-              >
-                <User className="h-5 w-5 text-quantum-cyan" />
-                <span>Account</span>
+              <Link to="/signup" className="flex items-center space-x-2 text-sm font-medium hover:underline">
+                <User className="h-4 w-4" />
+                <span>Signup</span>
               </Link>
-            ) : (
-              <>
-                <Link 
-                  to="/auth" 
-                  className={linkClasses}
-                >
-                  <LogIn className="h-5 w-5 text-quantum-cyan" />
-                  <span>Log In</span>
-                </Link>
-                
-                <Link 
-                  to="/auth" 
-                  state={{ mode: 'signup' }}
-                  className={`${linkClasses} bg-quantum-darkBlue/30 border border-quantum-cyan/20`}
-                >
-                  <Truck className="h-5 w-5 text-quantum-cyan" />
-                  <span>Become a Delivery Partner</span>
-                </Link>
-              </>
-            )}
-
-            {isRestaurant && (
-              <div className="pt-4 border-t border-quantum-cyan/20">
-                <Button
-                  variant="outline"
-                  className="w-full h-12 text-quantum-cyan border-quantum-cyan hover:bg-quantum-cyan/10 flex items-center gap-2 touch-feedback"
-                  onClick={() => navigate('/restaurant/dashboard')}
-                >
-                  <ChefHat className="h-5 w-5" />
-                  <span>Restaurant Dashboard</span>
-                </Button>
-              </div>
-            )}
-          </>
-        ) : (
-          // Admin navigation options
-          <>
-            <Link 
-              to="/admin" 
-              className={linkClasses}
-            >
-              <span>Dashboard</span>
-            </Link>
-            <Link 
-              to="/admin/menu" 
-              className={linkClasses}
-            >
-              <span>Menu</span>
-            </Link>
-            <Link 
-              to="/admin/orders" 
-              className={linkClasses}
-            >
-              <span>Orders</span>
-            </Link>
-            <Link 
-              to="/admin/settings" 
-              className={linkClasses}
-            >
-              <span>Settings</span>
-            </Link>
-          </>
-        )}
-        
-        {isAdmin && !isDeliveryUser && (
-          <div className="flex items-center space-x-2 pt-4 border-t border-quantum-cyan/20">
-            <Switch 
-              id="user-view-toggle" 
-              checked={!isCustomerView}
-              onCheckedChange={toggleUserView}
-              className="data-[state=checked]:bg-quantum-purple"
-            />
-            <Label htmlFor="user-view-toggle" className="cursor-pointer">Admin View</Label>
-          </div>
-        )}
-      </div>
-    </div>
+            </>
+          )}
+          {user && (
+            <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
+
+export default MobileMenu;

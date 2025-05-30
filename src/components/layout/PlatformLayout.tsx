@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { useDeviceOrientation } from '@/hooks/useDeviceOrientation';
-import { Platform } from '@/utils/platform';
+import { useDeviceOrientation } from '@/responsive/core/hooks';
+import { Platform } from '@/responsive/utils';
 import { TabsList, TabsTrigger, Tabs, TabsContent } from '../ui/tabs';
 import { Separator } from '../ui/separator';
 

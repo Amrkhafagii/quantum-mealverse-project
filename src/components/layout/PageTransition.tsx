@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import ScreenTransition, { TransitionType } from './ScreenTransition';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '@/responsive/core';
 
 interface PageTransitionProps {
   children: React.ReactNode;

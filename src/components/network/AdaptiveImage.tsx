@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNetworkQuality } from '@/hooks/useNetworkQuality';
+import { useNetworkQuality } from '@/responsive/core/hooks';
 import { getAdaptiveImageDimensions } from '@/utils/networkAdaptation';
 import { Skeleton } from '@/components/ui/skeleton';
 

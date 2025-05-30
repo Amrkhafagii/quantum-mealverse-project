@@ -1,27 +1,34 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { 
-  PlatformForm, 
-  PlatformInput, 
-  PlatformList, 
-  PlatformListItem, 
-  PlatformModal, 
-  PlatformTabBar, 
-  PlatformButton 
-} from '@/components/ui/platform-components';
-import * as z from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ChevronRight, Home, MessageCircle, Settings, User, MapPin } from 'lucide-react';
-import { hapticFeedback } from '@/utils/hapticFeedback';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import { AdaptiveCard } from '@/components/ui/adaptive-card';
-import { PlatformAwareDialog } from '@/components/ui/platform-aware-dialog';
-import { AdaptiveScrollArea } from '@/components/ui/adaptive-scroll-area';
+  Smartphone, 
+  Monitor, 
+  Tablet, 
+  Cpu, 
+  Wifi, 
+  WifiOff,
+  Battery,
+  Signal,
+  RotateCcw,
+  Sun,
+  Moon,
+  MapPin,
+  Bell,
+  Settings,
+  User,
+  ChevronRight,
+  Heart,
+  Share
+} from 'lucide-react';
+import { useResponsive } from '@/responsive/core';
+import { AdaptiveCard } from '@/responsive/components/ui';
+import { PlatformButton } from '@/components/ui/platform-button';
+import { AdaptiveScrollArea } from '@/responsive/components/ui';
+import { PlatformSpecific, IOSOnly, AndroidOnly, WebOnly } from '@/responsive/components/ui';
+import { SafeAreaView } from '@/responsive/components/ui';
 
 // Demo schema for the form
 const formSchema = z.object({
