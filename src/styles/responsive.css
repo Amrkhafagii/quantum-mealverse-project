@@ -1,16 +1,47 @@
 
-/* Responsive utilities */
+/* Mobile-first responsive utilities */
+
+/* Core responsive container */
+.responsive-container {
+  @apply w-full min-h-screen-safe flex flex-col;
+}
+
+.responsive-main-content {
+  @apply flex-1 w-full min-h-0;
+}
+
+.responsive-transition {
+  @apply w-full h-full;
+}
+
+/* Enhanced skip link with mobile-first approach */
+.skip-link-responsive {
+  @apply fixed top-2 left-2 z-50 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-md;
+  @apply transform -translate-y-full opacity-0 transition-transform duration-200;
+  @apply focus:translate-y-0 focus:opacity-100;
+}
+
+@media (min-width: 768px) {
+  .skip-link-responsive {
+    @apply top-4 left-4 px-4 py-2 text-base;
+  }
+}
 
 /* Device-specific classes */
-.ios-specific {
-  /* iOS-specific styles */
+.ios-device {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
-.android-specific {
-  /* Android-specific styles */
+.android-device {
+  overscroll-behavior: contain;
 }
 
-/* Safe area utilities for iOS */
+.web-platform {
+  scroll-behavior: smooth;
+}
+
+/* Safe area utilities for iOS - mobile first */
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0);
 }
@@ -32,85 +63,6 @@
   padding-right: env(safe-area-inset-right, 0);
 }
 
-/* Touch feedback for mobile devices */
-.touch-feedback {
-  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-  cursor: pointer;
-}
-
-.touch-feedback:active {
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
-}
-
-/* Enhanced responsive breakpoints */
-@media (max-width: 320px) {
-  /* Small phones */
-  .text-responsive {
-    font-size: 0.875rem;
-  }
-  
-  .padding-responsive {
-    padding: 0.75rem;
-  }
-}
-
-@media (min-width: 321px) and (max-width: 375px) {
-  /* Medium phones */
-  .text-responsive {
-    font-size: 1rem;
-  }
-  
-  .padding-responsive {
-    padding: 1rem;
-  }
-}
-
-@media (min-width: 376px) and (max-width: 414px) {
-  /* Large phones */
-  .text-responsive {
-    font-size: 1.125rem;
-  }
-  
-  .padding-responsive {
-    padding: 1.25rem;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1024px) {
-  /* Tablets */
-  .text-responsive {
-    font-size: 1.25rem;
-  }
-  
-  .padding-responsive {
-    padding: 1.5rem;
-  }
-}
-
-@media (min-width: 1025px) {
-  /* Desktop */
-  .text-responsive {
-    font-size: 1.375rem;
-  }
-  
-  .padding-responsive {
-    padding: 2rem;
-  }
-}
-
-/* Foldable device optimization */
-@media (min-width: 768px) and (max-width: 900px) {
-  .foldable-layout {
-    display: flex;
-  }
-  
-  .foldable-panel {
-    flex: 1;
-    min-width: 0;
-  }
-}
-
 /* Dynamic viewport units for mobile */
 .min-h-screen-safe {
   min-height: 100vh;
@@ -120,6 +72,90 @@
 .h-screen-safe {
   height: 100vh;
   height: 100dvh;
+}
+
+/* Touch feedback - mobile first */
+.touch-feedback {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.touch-feedback:active {
+  opacity: 0.7;
+}
+
+/* Responsive text utilities - mobile first */
+.text-responsive {
+  @apply text-sm;
+}
+
+@media (min-width: 375px) {
+  .text-responsive {
+    @apply text-base;
+  }
+}
+
+@media (min-width: 768px) {
+  .text-responsive {
+    @apply text-lg;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive {
+    @apply text-xl;
+  }
+}
+
+/* Responsive padding utilities - mobile first */
+.padding-responsive {
+  @apply p-3;
+}
+
+@media (min-width: 375px) {
+  .padding-responsive {
+    @apply p-4;
+  }
+}
+
+@media (min-width: 768px) {
+  .padding-responsive {
+    @apply p-6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .padding-responsive {
+    @apply p-8;
+  }
+}
+
+/* Orientation optimizations */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .compact-for-landscape {
+    @apply py-2 !important;
+  }
+  
+  .hidden-for-landscape {
+    @apply hidden !important;
+  }
+  
+  .landscape-scroll {
+    max-height: 60vh;
+    @apply overflow-y-auto;
+  }
+}
+
+/* Foldable device optimization */
+@media (min-width: 768px) and (max-width: 900px) and (orientation: landscape) {
+  .foldable-layout {
+    @apply flex;
+  }
+  
+  .foldable-panel {
+    @apply flex-1 min-w-0;
+  }
 }
 
 /* Keyboard aware layouts */
@@ -147,6 +183,26 @@
   display: none;
 }
 
+/* Touch target improvements - mobile first */
+.touch-target {
+  @apply min-h-11 min-w-11 flex items-center justify-center;
+}
+
+@media (min-width: 768px) {
+  .touch-target {
+    @apply min-h-10 min-w-10;
+  }
+}
+
+/* Focus improvements for accessibility */
+.focus-ring-enhanced {
+  @apply outline-none outline-offset-2;
+}
+
+.focus-ring-enhanced:focus-visible {
+  @apply outline-2 outline-primary;
+}
+
 /* Reduced motion preference support */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -160,101 +216,18 @@
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .responsive-contrast {
-    border: 2px solid;
-    filter: contrast(1.5);
+    @apply border-2 contrast-150;
   }
-}
-
-/* Landscape orientation optimizations */
-@media screen and (orientation: landscape) and (max-height: 500px) {
-  .compact-for-landscape {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-  }
-  
-  .hidden-for-landscape {
-    display: none !important;
-  }
-  
-  .landscape-scroll {
-    max-height: 60vh;
-    overflow-y: auto;
-  }
-  
-  /* Fitness dashboard specific landscape optimizations */
-  .fitness-stats-landscape {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-  }
-  
-  .fitness-tabs-landscape {
-    margin-bottom: 1rem;
-  }
-}
-
-/* Portrait orientation optimizations */
-@media screen and (orientation: portrait) {
-  .portrait-stack {
-    flex-direction: column;
-  }
-  
-  .portrait-full-width {
-    width: 100%;
-  }
-  
-  /* Better portrait layout for fitness cards */
-  .fitness-stats-portrait {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-}
-
-/* Cross-platform testing utilities */
-.test-boundary {
-  outline: 2px dashed #ff6b6b;
-  outline-offset: 2px;
-}
-
-.test-pass {
-  background-color: rgba(72, 187, 120, 0.1);
-  border: 1px solid #48bb78;
-}
-
-.test-fail {
-  background-color: rgba(245, 101, 101, 0.1);
-  border: 1px solid #f56565;
-}
-
-/* Orientation change animations */
-.orientation-transition {
-  transition: all 0.3s ease-in-out;
-}
-
-/* Platform-specific optimizations */
-.ios-device {
-  /* iOS-specific smooth scrolling */
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
-
-.android-device {
-  /* Android-specific optimizations */
-  overscroll-behavior: contain;
-}
-
-.web-platform {
-  /* Web-specific optimizations */
-  scroll-behavior: smooth;
 }
 
 /* Dark mode improvements */
 @media (prefers-color-scheme: dark) {
   .responsive-bg {
-    background-color: rgb(15 23 42);
+    @apply bg-slate-900;
   }
   
   .responsive-text {
-    color: rgb(241 245 249);
+    @apply text-slate-50;
   }
 }
 
@@ -264,27 +237,12 @@
   transform: translateZ(0);
 }
 
-/* Touch target improvements */
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Orientation change animations */
+.orientation-transition {
+  @apply transition-all duration-300 ease-in-out;
 }
 
-/* Focus improvements for accessibility */
-.focus-ring-enhanced {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
-
-.focus-ring-enhanced:focus-visible {
-  outline: 2px solid rgb(59 130 246);
-  outline-offset: 2px;
-}
-
-/* Screen size specific classes for testing */
+/* Screen size testing utilities (development only) */
 @media (max-width: 320px) {
   .test-screen-xs {
     background-color: rgba(255, 0, 0, 0.1);

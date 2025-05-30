@@ -20,6 +20,7 @@ import { NetworkPredictiveMonitor } from "@/components/network/NetworkPredictive
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Profile from "@/pages/Profile";
 import SafeAreaView from "@/components/ios/SafeAreaView";
+import { PlatformContainer } from "@/components/layout/PlatformContainer";
 
 // Restaurant routes
 import RestaurantDashboard from "@/pages/restaurant/Dashboard";
@@ -32,18 +33,48 @@ import DeliveryDashboard from "@/pages/delivery/DeliveryDashboard";
 import DeliverySettings from "@/pages/delivery/DeliverySettings";
 
 const MainLayout: React.FC = () => {
-  const { isMobile, isPlatformIOS } = useResponsive();
+  const { isMobile, isPlatformIOS, isTablet, isInitialized } = useResponsive();
   const location = useLocation();
+
+  // Show loading state until responsive context is initialized
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen-safe flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <NetworkStatusProvider>
       <NetworkPredictiveMonitor>
-        <SafeAreaView className="min-h-screen flex flex-col" disableTop>
-          {/* Accessibility skip link */}
-          <SkipLink targetId="main-content" />
+        <PlatformContainer 
+          variant="default" 
+          padding="none" 
+          maxWidth="none" 
+          fullHeight={true}
+          safeArea={isPlatformIOS}
+          className="responsive-container"
+        >
+          {/* Enhanced accessibility skip link - mobile-first */}
+          <SkipLink 
+            targetId="main-content" 
+            className="skip-link-responsive"
+          />
           
-          <div id="main-content" className="flex-1">
-            <PageTransition type="fade" className="w-full h-full">
+          <div 
+            id="main-content" 
+            className="flex-1 w-full responsive-main-content"
+            role="main"
+            aria-label="Main application content"
+          >
+            <PageTransition 
+              type={isMobile ? "fade" : "platform"} 
+              className="w-full h-full responsive-transition"
+            >
               <Routes location={location}>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
@@ -116,7 +147,7 @@ const MainLayout: React.FC = () => {
               </Routes>
             </PageTransition>
           </div>
-        </SafeAreaView>
+        </PlatformContainer>
       </NetworkPredictiveMonitor>
     </NetworkStatusProvider>
   );
