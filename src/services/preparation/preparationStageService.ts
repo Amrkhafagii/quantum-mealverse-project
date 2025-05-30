@@ -7,19 +7,19 @@ export interface PreparationStage {
   stage_name: string;
   stage_order: number;
   status: 'pending' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
-  started_at: string | null;
-  completed_at: string | null;
   estimated_duration_minutes: number;
-  actual_duration_minutes: number | null;
-  notes: string | null;
+  actual_duration_minutes?: number;
+  started_at?: string;
+  completed_at?: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface StageAdvanceResult {
   success: boolean;
-  nextStage?: string;
   message?: string;
+  nextStage?: string;
 }
 
 export class PreparationStageService {
@@ -76,7 +76,7 @@ export class PreparationStageService {
   /**
    * Get active stages for a restaurant
    */
-  static async getActiveStagesForRestaurant(restaurantId: string): Promise<PreparationStage[]> {
+  static async getActiveStages(restaurantId: string): Promise<PreparationStage[]> {
     const { data, error } = await supabase
       .from('order_preparation_stages')
       .select('*')
@@ -96,23 +96,60 @@ export class PreparationStageService {
   }
 
   /**
+   * Get completed stages for a restaurant
+   */
+  static async getCompletedStages(restaurantId: string): Promise<PreparationStage[]> {
+    const { data, error } = await supabase
+      .from('order_preparation_stages')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'completed')
+      .order('stage_order');
+
+    if (error) {
+      console.error('Error fetching completed stages:', error);
+      throw error;
+    }
+
+    return (data || []).map(stage => ({
+      ...stage,
+      status: stage.status as PreparationStage['status']
+    }));
+  }
+
+  /**
    * Initialize order stages
    */
   static async initializeOrderStages(orderId: string, restaurantId: string): Promise<boolean> {
     try {
-      const { error } = await supabase.rpc('create_default_preparation_stages', {
-        p_order_id: orderId,
-        p_restaurant_id: restaurantId
-      });
+      const defaultStages = [
+        { name: 'order_received', order: 1, duration: 5 },
+        { name: 'preparation_started', order: 2, duration: 15 },
+        { name: 'cooking', order: 3, duration: 20 },
+        { name: 'quality_check', order: 4, duration: 5 },
+        { name: 'packaging', order: 5, duration: 5 },
+        { name: 'ready_for_pickup', order: 6, duration: 0 }
+      ];
 
-      if (error) {
-        console.error('Error initializing order stages:', error);
-        return false;
-      }
+      const stagesToInsert = defaultStages.map(stage => ({
+        order_id: orderId,
+        restaurant_id: restaurantId,
+        stage_name: stage.name,
+        stage_order: stage.order,
+        status: stage.order === 1 ? 'in_progress' as const : 'pending' as const,
+        estimated_duration_minutes: stage.duration,
+        started_at: stage.order === 1 ? new Date().toISOString() : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
 
-      return true;
+      const { error } = await supabase
+        .from('order_preparation_stages')
+        .insert(stagesToInsert);
+
+      return !error;
     } catch (error) {
-      console.error('Error in initializeOrderStages:', error);
+      console.error('Error initializing order stages:', error);
       return false;
     }
   }
@@ -149,70 +186,89 @@ export class PreparationStageService {
   static async advanceStage(orderId: string, stageName: string, notes?: string): Promise<StageAdvanceResult> {
     try {
       // Complete current stage
-      const { error: completeError } = await supabase
+      const { data: currentStage, error: fetchError } = await supabase
         .from('order_preparation_stages')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          notes: notes || null
-        })
+        .select('*')
         .eq('order_id', orderId)
-        .eq('stage_name', stageName);
+        .eq('stage_name', stageName)
+        .single();
 
-      if (completeError) {
-        console.error('Error completing stage:', completeError);
+      if (fetchError || !currentStage) {
         return { 
           success: false, 
-          message: 'Failed to complete current stage' 
+          message: `Stage ${stageName} not found for order ${orderId}` 
         };
       }
 
-      // Find next stage
-      const { data: nextStageData } = await supabase
+      const now = new Date().toISOString();
+      let updateData: any = {
+        status: 'completed',
+        completed_at: now,
+        updated_at: now
+      };
+
+      if (notes) {
+        updateData.notes = notes;
+      }
+
+      if (currentStage.started_at) {
+        const startTime = new Date(currentStage.started_at);
+        const endTime = new Date(now);
+        const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+        updateData.actual_duration_minutes = durationMinutes;
+      }
+
+      const { error: updateError } = await supabase
+        .from('order_preparation_stages')
+        .update(updateData)
+        .eq('order_id', orderId)
+        .eq('stage_name', stageName);
+
+      if (updateError) {
+        console.error('Error updating stage:', updateError);
+        return { 
+          success: false, 
+          message: `Failed to update stage ${stageName}` 
+        };
+      }
+
+      // Start next stage if exists
+      const { data: nextStage } = await supabase
         .from('order_preparation_stages')
         .select('stage_name')
         .eq('order_id', orderId)
         .eq('status', 'pending')
-        .order('stage_order')
-        .limit(1);
+        .order('stage_order', { ascending: true })
+        .limit(1)
+        .single();
 
-      if (nextStageData && nextStageData.length > 0) {
-        const nextStageName = nextStageData[0].stage_name;
-        
-        // Start next stage
-        const { error: startError } = await supabase
+      if (nextStage) {
+        await supabase
           .from('order_preparation_stages')
           .update({
             status: 'in_progress',
-            started_at: new Date().toISOString()
+            started_at: now,
+            updated_at: now
           })
           .eq('order_id', orderId)
-          .eq('stage_name', nextStageName);
-
-        if (startError) {
-          console.error('Error starting next stage:', startError);
-          return { 
-            success: false, 
-            message: 'Failed to start next stage' 
-          };
-        }
+          .eq('stage_name', nextStage.stage_name);
 
         return { 
           success: true, 
-          nextStage: nextStageName,
-          message: `Advanced to ${nextStageName} stage`
+          message: `Stage ${stageName} completed, ${nextStage.stage_name} started`,
+          nextStage: nextStage.stage_name 
         };
       }
 
       return { 
         success: true, 
-        message: 'All stages completed' 
+        message: `Stage ${stageName} completed` 
       };
     } catch (error) {
-      console.error('Error advancing stage:', error);
+      console.error('Error in advanceStage:', error);
       return { 
         success: false, 
-        message: 'Failed to advance stage' 
+        message: 'Failed to advance stage due to an unexpected error' 
       };
     }
   }
@@ -225,20 +281,15 @@ export class PreparationStageService {
       const { error } = await supabase
         .from('order_preparation_stages')
         .update({
-          notes: notes,
+          notes,
           updated_at: new Date().toISOString()
         })
         .eq('order_id', orderId)
         .eq('stage_name', stageName);
 
-      if (error) {
-        console.error('Error updating stage notes:', error);
-        return false;
-      }
-
-      return true;
+      return !error;
     } catch (error) {
-      console.error('Error in updateStageNotes:', error);
+      console.error('Error updating stage notes:', error);
       return false;
     }
   }
@@ -250,29 +301,22 @@ export class PreparationStageService {
     try {
       const { data: stages } = await supabase
         .from('order_preparation_stages')
-        .select('status, estimated_duration_minutes, started_at')
+        .select('*')
         .eq('order_id', orderId)
-        .order('stage_order');
+        .order('stage_order', { ascending: true });
 
-      if (!stages || stages.length === 0) {
-        return null;
-      }
+      if (!stages || stages.length === 0) return null;
 
-      let totalRemainingMinutes = 0;
-      let currentTime = new Date();
+      const currentStage = stages.find(s => s.status === 'in_progress');
+      if (!currentStage) return null;
 
-      for (const stage of stages) {
-        if (stage.status === 'pending') {
-          totalRemainingMinutes += stage.estimated_duration_minutes;
-        } else if (stage.status === 'in_progress' && stage.started_at) {
-          const startTime = new Date(stage.started_at);
-          const elapsedMinutes = (currentTime.getTime() - startTime.getTime()) / (1000 * 60);
-          const remainingMinutes = Math.max(0, stage.estimated_duration_minutes - elapsedMinutes);
-          totalRemainingMinutes += remainingMinutes;
-        }
-      }
+      const remainingStages = stages.filter(s => s.status === 'pending' || s.status === 'in_progress');
+      const totalRemainingMinutes = remainingStages.reduce((total, stage) => {
+        return total + (stage.estimated_duration_minutes || 0);
+      }, 0);
 
-      const estimatedCompletion = new Date(currentTime.getTime() + (totalRemainingMinutes * 60 * 1000));
+      const now = new Date();
+      const estimatedCompletion = new Date(now.getTime() + (totalRemainingMinutes * 60 * 1000));
       return estimatedCompletion;
     } catch (error) {
       console.error('Error calculating estimated completion time:', error);
@@ -302,27 +346,89 @@ export class PreparationStageService {
   }
 
   /**
+   * Get current stage
+   */
+  static async getCurrentStage(orderId: string): Promise<PreparationStage | null> {
+    try {
+      const { data: stage } = await supabase
+        .from('order_preparation_stages')
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('status', 'in_progress')
+        .single();
+
+      return stage as PreparationStage || null;
+    } catch (error) {
+      console.error('Error getting current stage:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get stage stats
+   */
+  static async getStageStats(orderId: string, stageName: string): Promise<{ duration: number, started_at: string | null, completed_at: string | null }> {
+    const { data, error } = await supabase
+      .from('order_preparation_stages')
+      .select('estimated_duration_minutes, started_at, completed_at')
+      .eq('order_id', orderId)
+      .eq('stage_name', stageName)
+      .single();
+
+    if (error) {
+      console.error('Error fetching stage stats:', error);
+      throw error;
+    }
+
+    return {
+      duration: data.estimated_duration_minutes,
+      started_at: data.started_at,
+      completed_at: data.completed_at
+    };
+  }
+
+  /**
    * Bulk update stages
    */
-  static async bulkUpdateStages(stages: Partial<PreparationStage>[]): Promise<boolean> {
+  static async bulkUpdateStages(updates: Array<{
+    orderId: string;
+    stageName: string;
+    status?: 'pending' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
+    notes?: string;
+    restaurantId: string;
+  }>): Promise<boolean> {
     try {
-      if (stages.length === 0) {
-        console.warn('No stages provided for bulk update.');
-        return true;
-      }
+      // Process each update individually to ensure proper typing
+      const updatePromises = updates.map(async (update) => {
+        const updateData: any = {
+          updated_at: new Date().toISOString()
+        };
 
-      const { error } = await supabase
-        .from('order_preparation_stages')
-        .upsert(stages);
+        if (update.status) {
+          updateData.status = update.status;
+          if (update.status === 'completed') {
+            updateData.completed_at = new Date().toISOString();
+          } else if (update.status === 'in_progress') {
+            updateData.started_at = new Date().toISOString();
+          }
+        }
 
-      if (error) {
-        console.error('Error during bulk stage update:', error);
-        return false;
-      }
+        if (update.notes) {
+          updateData.notes = update.notes;
+        }
 
-      return true;
+        return supabase
+          .from('order_preparation_stages')
+          .update(updateData)
+          .eq('order_id', update.orderId)
+          .eq('stage_name', update.stageName)
+          .eq('restaurant_id', update.restaurantId);
+      });
+
+      const results = await Promise.all(updatePromises);
+      return results.every(result => !result.error);
     } catch (error) {
-      console.error('Error in bulkUpdateStages:', error);
+      console.error('Error in bulk update stages:', error);
       return false;
     }
   }
