@@ -1,7 +1,6 @@
 
-// Barrel export for the entire responsive system
-export * from './core';
+// Main responsive system exports
+export { ResponsiveProvider, useResponsive } from './core/ResponsiveContext';
+export * from './core/hooks';
 export * from './components';
-export * from './platform';
 export * from './utils';
-export * from './styles';

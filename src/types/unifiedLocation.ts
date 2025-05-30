@@ -53,3 +53,13 @@ export interface LocationHistoryEntry {
   timestamp: number;
   confidence: ConfidenceScore;
 }
+
+export interface NetworkMetrics {
+  latency: number | null;
+  bandwidth: number | null;
+  jitter: number | null;
+  packetLoss: number | null;
+  effectiveType: string | undefined;
+  downlink: number;
+  rtt: number;
+}
