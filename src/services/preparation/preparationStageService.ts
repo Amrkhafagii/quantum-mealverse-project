@@ -9,10 +9,24 @@ export interface PreparationStage {
   stage_order: number;
   status: 'pending' | 'in_progress' | 'completed' | 'skipped';
   estimated_duration_minutes: number;
+  actual_duration_minutes?: number;
   started_at?: string;
   completed_at?: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface PreparationProgress {
+  stage_name: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  stage_order: number;
+  started_at?: string;
+  completed_at?: string;
+  estimated_duration_minutes: number;
+  actual_duration_minutes?: number;
+  notes?: string;
+  progress_percentage: number;
 }
 
 export class PreparationStageService {
@@ -145,11 +159,21 @@ export class PreparationStageService {
         return [];
       }
 
-      return data || [];
+      return (data || []).map(stage => ({
+        ...stage,
+        status: stage.status as PreparationStage['status']
+      }));
     } catch (error) {
       console.error('Error in getOrderStages:', error);
       return [];
     }
+  }
+
+  /**
+   * Get all preparation stages for an order (alias for compatibility)
+   */
+  static async getOrderPreparationStages(orderId: string): Promise<PreparationStage[]> {
+    return this.getOrderStages(orderId);
   }
 
   /**
@@ -171,9 +195,127 @@ export class PreparationStageService {
         return null;
       }
 
-      return data || null;
+      return data ? { ...data, status: data.status as PreparationStage['status'] } : null;
     } catch (error) {
       console.error('Error in getCurrentStage:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Advance a stage (complete current and start next)
+   */
+  static async advanceStage(orderId: string, stageName: string, notes?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      console.log('Advancing stage:', stageName, 'for order:', orderId);
+
+      // Update stage notes if provided
+      if (notes) {
+        await this.updateStageNotes(orderId, stageName, notes);
+      }
+
+      // Complete the stage
+      const success = await this.completeStage(orderId, stageName, true);
+
+      if (success) {
+        return { success: true, message: 'Stage advanced successfully' };
+      } else {
+        return { success: false, message: 'Failed to advance stage' };
+      }
+    } catch (error) {
+      console.error('Error advancing stage:', error);
+      return { success: false, message: 'Error advancing stage' };
+    }
+  }
+
+  /**
+   * Update stage notes
+   */
+  static async updateStageNotes(orderId: string, stageName: string, notes: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('order_preparation_stages')
+        .update({
+          notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('order_id', orderId)
+        .eq('stage_name', stageName);
+
+      if (error) {
+        console.error('Error updating stage notes:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateStageNotes:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get preparation progress for an order
+   */
+  static async getPreparationProgress(orderId: string): Promise<PreparationProgress[]> {
+    try {
+      const stages = await this.getOrderStages(orderId);
+      
+      return stages.map(stage => ({
+        stage_name: stage.stage_name,
+        status: stage.status,
+        stage_order: stage.stage_order,
+        started_at: stage.started_at,
+        completed_at: stage.completed_at,
+        estimated_duration_minutes: stage.estimated_duration_minutes,
+        actual_duration_minutes: stage.actual_duration_minutes,
+        notes: stage.notes,
+        progress_percentage: stage.status === 'completed' ? 100 : stage.status === 'in_progress' ? 50 : 0
+      }));
+    } catch (error) {
+      console.error('Error getting preparation progress:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get estimated completion time for an order
+   */
+  static async getEstimatedCompletionTime(orderId: string): Promise<Date | null> {
+    try {
+      const stages = await this.getOrderStages(orderId);
+      
+      if (stages.length === 0) return null;
+
+      const currentStage = stages.find(s => s.status === 'in_progress');
+      const pendingStages = stages.filter(s => s.status === 'pending');
+
+      if (!currentStage && pendingStages.length === 0) {
+        // All stages completed
+        return new Date();
+      }
+
+      let totalMinutes = 0;
+
+      // Add remaining time for current stage
+      if (currentStage) {
+        const startTime = currentStage.started_at ? new Date(currentStage.started_at) : new Date();
+        const elapsed = (Date.now() - startTime.getTime()) / (1000 * 60);
+        const remaining = Math.max(0, currentStage.estimated_duration_minutes - elapsed);
+        totalMinutes += remaining;
+      }
+
+      // Add estimated time for pending stages
+      pendingStages.forEach(stage => {
+        totalMinutes += stage.estimated_duration_minutes;
+      });
+
+      const estimatedCompletion = new Date();
+      estimatedCompletion.setMinutes(estimatedCompletion.getMinutes() + totalMinutes);
+
+      return estimatedCompletion;
+    } catch (error) {
+      console.error('Error getting estimated completion time:', error);
       return null;
     }
   }
