@@ -1,344 +1,416 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { PreparationStageService } from './preparationStageService';
-import { PreparationTimerService } from './preparationTimerService';
+import { OptimizedPreparationAnalyticsService } from './optimizedPreparationAnalyticsService';
 
-interface NotificationPayload {
-  type: 'stage_completed' | 'stage_started' | 'bottleneck_detected' | 'preparation_complete';
+export interface StageProgressionEvent {
   orderId: string;
-  stage?: string;
+  restaurantId: string;
+  stageName: string;
+  previousStage: string | null;
+  timestamp: Date;
   metadata?: Record<string, any>;
 }
 
-interface PreparationEvent {
-  order_id: string;
-  event_type: string;
-  stage_name?: string;
-  event_data: Record<string, any>;
-  timestamp: string;
+export interface BottleneckAlert {
+  severity: 'low' | 'medium' | 'high';
+  stageName: string;
+  message: string;
+  recommendations: string[];
+  detectedAt: Date;
 }
 
 export class PreparationIntegrationHub {
   /**
    * Handle stage progression with parallel notifications
    */
-  static async handleStageProgression(
-    orderId: string, 
-    currentStage: string, 
-    nextStage?: string
-  ): Promise<boolean> {
+  static async handleStageProgression(event: StageProgressionEvent): Promise<void> {
     try {
-      console.log(`Handling stage progression for order ${orderId}: ${currentStage} -> ${nextStage || 'complete'}`);
-      
-      // Complete current stage
-      const stageResult = await PreparationStageService.advanceStage(orderId, currentStage);
-      
-      if (!stageResult.success) {
-        console.error(`Failed to advance stage ${currentStage} for order ${orderId}`);
-        return false;
-      }
+      console.log(`Handling stage progression for order ${event.orderId}: ${event.previousStage} -> ${event.stageName}`);
 
-      // Start next stage if exists
-      if (nextStage) {
-        await PreparationStageService.startStage(orderId, nextStage);
-        PreparationTimerService.startTimer(orderId, nextStage);
-      } else {
-        // Order preparation complete
-        PreparationTimerService.stopTimer(orderId);
-      }
-
-      // Send notifications in parallel for better performance
+      // Create notification promises for parallel execution
       const notificationPromises = [
-        this.sendStageCompletionNotification(orderId, currentStage),
-        nextStage ? this.sendStageStartNotification(orderId, nextStage) : null,
-        !nextStage ? this.sendPreparationCompleteNotification(orderId) : null
-      ].filter(Boolean);
+        this.notifyCustomerOfProgress(event),
+        this.notifyRestaurantOfProgress(event),
+        this.updateDeliveryETA(event)
+      ];
 
-      await Promise.all(notificationPromises);
+      // Execute notifications in parallel
+      const results = await Promise.allSettled(notificationPromises);
+      
+      // Log any failures
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const notificationTypes = ['customer', 'restaurant', 'delivery'];
+          console.error(`Failed to send ${notificationTypes[index]} notification:`, result.reason);
+        }
+      });
 
       // Log the progression event
       await this.logPreparationEvent({
-        order_id: orderId,
-        event_type: 'stage_progression',
-        stage_name: currentStage,
-        event_data: {
-          completed_stage: currentStage,
-          next_stage: nextStage,
-          progression_time: new Date().toISOString()
-        },
-        timestamp: new Date().toISOString()
+        type: 'stage_progression',
+        orderId: event.orderId,
+        restaurantId: event.restaurantId,
+        data: {
+          from_stage: event.previousStage,
+          to_stage: event.stageName,
+          timestamp: event.timestamp,
+          metadata: event.metadata
+        }
       });
 
-      return true;
+      console.log(`Successfully handled stage progression for order ${event.orderId}`);
     } catch (error) {
-      console.error('Error in handleStageProgression:', error);
-      return false;
+      console.error('Error handling stage progression:', error);
+      throw error;
     }
   }
 
   /**
-   * Send stage completion notification
+   * Detect and handle bottlenecks with enhanced logging
    */
-  private static async sendStageCompletionNotification(orderId: string, stage: string): Promise<void> {
+  static async detectAndHandleBottlenecks(restaurantId: string): Promise<BottleneckAlert[]> {
     try {
-      const payload: NotificationPayload = {
-        type: 'stage_completed',
-        orderId,
-        stage,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          completed_at: new Date().toISOString()
-        }
-      };
+      console.log(`Detecting bottlenecks for restaurant ${restaurantId}`);
 
-      // Here you would integrate with your notification service
-      console.log('Stage completion notification sent:', payload);
-      
-      // For now, we'll use a simple database log
-      await supabase
-        .from('preparation_notifications')
-        .insert({
-          order_id: orderId,
-          notification_type: 'stage_completed',
-          payload: payload,
-          sent_at: new Date().toISOString()
-        });
-    } catch (error) {
-      console.error('Error sending stage completion notification:', error);
-    }
-  }
-
-  /**
-   * Send stage start notification
-   */
-  private static async sendStageStartNotification(orderId: string, stage: string): Promise<void> {
-    try {
-      const payload: NotificationPayload = {
-        type: 'stage_started',
-        orderId,
-        stage,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          started_at: new Date().toISOString()
-        }
-      };
-
-      console.log('Stage start notification sent:', payload);
-      
-      await supabase
-        .from('preparation_notifications')
-        .insert({
-          order_id: orderId,
-          notification_type: 'stage_started',
-          payload: payload,
-          sent_at: new Date().toISOString()
-        });
-    } catch (error) {
-      console.error('Error sending stage start notification:', error);
-    }
-  }
-
-  /**
-   * Send preparation complete notification
-   */
-  private static async sendPreparationCompleteNotification(orderId: string): Promise<void> {
-    try {
-      const payload: NotificationPayload = {
-        type: 'preparation_complete',
-        orderId,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          completed_at: new Date().toISOString()
-        }
-      };
-
-      console.log('Preparation complete notification sent:', payload);
-      
-      await supabase
-        .from('preparation_notifications')
-        .insert({
-          order_id: orderId,
-          notification_type: 'preparation_complete',
-          payload: payload,
-          sent_at: new Date().toISOString()
-        });
-    } catch (error) {
-      console.error('Error sending preparation complete notification:', error);
-    }
-  }
-
-  /**
-   * Detect and handle bottlenecks
-   */
-  static async detectAndHandleBottlenecks(restaurantId: string): Promise<void> {
-    try {
-      const now = new Date();
-      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-      // Get stages that are taking longer than expected
-      const { data: delayedStages } = await supabase
-        .from('order_preparation_stages')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'in_progress')
-        .gte('started_at', oneHourAgo.toISOString());
-
-      const bottlenecks = (delayedStages || []).filter(stage => {
-        if (!stage.started_at || !stage.estimated_duration_minutes) return false;
-        
-        const startTime = new Date(stage.started_at);
-        const elapsedMinutes = (now.getTime() - startTime.getTime()) / (1000 * 60);
-        
-        return elapsedMinutes > stage.estimated_duration_minutes * 1.5; // 50% over estimate
-      });
-
-      // Send bottleneck notifications in parallel
-      const bottleneckPromises = bottlenecks.map(stage =>
-        this.sendBottleneckNotification(stage.order_id, stage.stage_name, {
-          elapsed_minutes: (now.getTime() - new Date(stage.started_at).getTime()) / (1000 * 60),
-          estimated_minutes: stage.estimated_duration_minutes
-        })
+      // Get analytics data
+      const analytics = await OptimizedPreparationAnalyticsService.getOptimizedPreparationAnalytics(
+        restaurantId,
+        'week'
       );
 
-      await Promise.all(bottleneckPromises);
+      const alerts: BottleneckAlert[] = [];
 
-      if (bottlenecks.length > 0) {
-        await this.logPreparationEvent({
-          order_id: 'system',
-          event_type: 'bottleneck_detection',
-          event_data: {
-            restaurant_id: restaurantId,
-            bottlenecks_found: bottlenecks.length,
-            affected_orders: bottlenecks.map(b => b.order_id),
-            detection_time: new Date().toISOString()
-          },
-          timestamp: new Date().toISOString()
-        });
+      // Process high and medium severity bottlenecks
+      for (const bottleneck of analytics.bottlenecks) {
+        if (bottleneck.severity === 'high' || bottleneck.severity === 'medium') {
+          const alert: BottleneckAlert = {
+            severity: bottleneck.severity,
+            stageName: bottleneck.stage,
+            message: bottleneck.description,
+            recommendations: this.generateBottleneckRecommendations(bottleneck),
+            detectedAt: new Date()
+          };
+
+          alerts.push(alert);
+
+          // Send alert notifications in parallel
+          const alertPromises = [
+            this.sendBottleneckAlert(restaurantId, alert),
+            this.logBottleneckDetection(restaurantId, bottleneck)
+          ];
+
+          await Promise.allSettled(alertPromises);
+        }
       }
+
+      // Log bottleneck detection event
+      await this.logPreparationEvent({
+        type: 'bottleneck_detection',
+        orderId: '', // Not order-specific
+        restaurantId,
+        data: {
+          bottlenecks_detected: analytics.bottlenecks.length,
+          high_severity: analytics.bottlenecks.filter(b => b.severity === 'high').length,
+          medium_severity: analytics.bottlenecks.filter(b => b.severity === 'medium').length,
+          timestamp: new Date()
+        }
+      });
+
+      console.log(`Detected ${alerts.length} bottleneck alerts for restaurant ${restaurantId}`);
+      return alerts;
     } catch (error) {
       console.error('Error detecting bottlenecks:', error);
-    }
-  }
-
-  /**
-   * Send bottleneck notification
-   */
-  private static async sendBottleneckNotification(
-    orderId: string, 
-    stage: string, 
-    metrics: { elapsed_minutes: number; estimated_minutes: number }
-  ): Promise<void> {
-    try {
-      const payload: NotificationPayload = {
-        type: 'bottleneck_detected',
-        orderId,
-        stage,
-        metadata: {
-          elapsed_minutes: metrics.elapsed_minutes,
-          estimated_minutes: metrics.estimated_minutes,
-          delay_percentage: ((metrics.elapsed_minutes - metrics.estimated_minutes) / metrics.estimated_minutes) * 100,
-          detected_at: new Date().toISOString()
-        }
-      };
-
-      console.log('Bottleneck notification sent:', payload);
-      
-      await supabase
-        .from('preparation_notifications')
-        .insert({
-          order_id: orderId,
-          notification_type: 'bottleneck_detected',
-          payload: payload,
-          sent_at: new Date().toISOString()
-        });
-    } catch (error) {
-      console.error('Error sending bottleneck notification:', error);
-    }
-  }
-
-  /**
-   * Log preparation event with persistent storage foundation
-   */
-  static async logPreparationEvent(event: PreparationEvent): Promise<void> {
-    try {
-      console.log('Logging preparation event:', event);
-      
-      // Store in preparation_events table for persistent logging
-      const { error } = await supabase
-        .from('preparation_events')
-        .insert({
-          order_id: event.order_id,
-          event_type: event.event_type,
-          stage_name: event.stage_name,
-          event_data: event.event_data,
-          timestamp: event.timestamp,
-          created_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('Error logging preparation event to database:', error);
-        // Fallback to console logging if database fails
-        console.log('Fallback event log:', JSON.stringify(event, null, 2));
-      }
-    } catch (error) {
-      console.error('Critical error in logPreparationEvent:', error);
-      // Always ensure events are logged somewhere, even if just to console
-      console.log('Emergency event log:', JSON.stringify(event, null, 2));
-    }
-  }
-
-  /**
-   * Get preparation event history
-   */
-  static async getPreparationEventHistory(
-    orderId: string, 
-    eventTypes?: string[]
-  ): Promise<PreparationEvent[]> {
-    try {
-      let query = supabase
-        .from('preparation_events')
-        .select('*')
-        .eq('order_id', orderId)
-        .order('timestamp', { ascending: false });
-
-      if (eventTypes && eventTypes.length > 0) {
-        query = query.in('event_type', eventTypes);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching preparation event history:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Error in getPreparationEventHistory:', error);
       return [];
     }
   }
 
   /**
-   * Clean up old events (retention policy)
+   * Send customer progress notification
    */
-  static async cleanupOldEvents(retentionDays: number = 30): Promise<void> {
+  private static async notifyCustomerOfProgress(event: StageProgressionEvent): Promise<void> {
     try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+      // Get order details
+      const { data: order } = await supabase
+        .from('orders')
+        .select('user_id, customer_name, formatted_order_id')
+        .eq('id', event.orderId)
+        .single();
 
-      const { error } = await supabase
-        .from('preparation_events')
-        .delete()
-        .lt('created_at', cutoffDate.toISOString());
+      if (!order) {
+        console.warn(`Order ${event.orderId} not found for customer notification`);
+        return;
+      }
 
-      if (error) {
-        console.error('Error cleaning up old preparation events:', error);
-      } else {
-        console.log(`Cleaned up preparation events older than ${retentionDays} days`);
+      const message = this.getStageProgressMessage(event.stageName);
+      
+      // Use existing notifications table
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: order.user_id,
+          title: 'Order Update',
+          message: `Your order ${order.formatted_order_id} ${message}`,
+          type: 'order_progress',
+          link: `/orders/${event.orderId}`
+        });
+
+      console.log(`Customer notification sent for order ${event.orderId}`);
+    } catch (error) {
+      console.error('Error sending customer notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send restaurant progress notification
+   */
+  private static async notifyRestaurantOfProgress(event: StageProgressionEvent): Promise<void> {
+    try {
+      // Get restaurant user
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('user_id')
+        .eq('id', event.restaurantId)
+        .single();
+
+      if (!restaurant) {
+        console.warn(`Restaurant ${event.restaurantId} not found for notification`);
+        return;
+      }
+
+      const message = `Order ${event.orderId} progressed to ${event.stageName.replace('_', ' ')}`;
+      
+      // Use existing notifications table
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: restaurant.user_id,
+          title: 'Order Progress Update',
+          message: message,
+          type: 'restaurant_progress',
+          link: `/restaurant/orders/${event.orderId}`
+        });
+
+      console.log(`Restaurant notification sent for order ${event.orderId}`);
+    } catch (error) {
+      console.error('Error sending restaurant notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update delivery ETA
+   */
+  private static async updateDeliveryETA(event: StageProgressionEvent): Promise<void> {
+    try {
+      if (event.stageName === 'ready_for_pickup') {
+        // Find delivery assignment
+        const { data: assignment } = await supabase
+          .from('delivery_assignments')
+          .select('id, delivery_user_id')
+          .eq('order_id', event.orderId)
+          .eq('status', 'accepted')
+          .single();
+
+        if (assignment) {
+          // Estimate new delivery time (e.g., 20 minutes from now)
+          const estimatedDeliveryTime = new Date();
+          estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + 20);
+
+          await supabase
+            .from('delivery_assignments')
+            .update({
+              estimated_delivery_time: estimatedDeliveryTime.toISOString()
+            })
+            .eq('id', assignment.id);
+
+          console.log(`Updated delivery ETA for order ${event.orderId}`);
+        }
       }
     } catch (error) {
-      console.error('Error in cleanupOldEvents:', error);
+      console.error('Error updating delivery ETA:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send bottleneck alert to restaurant
+   */
+  private static async sendBottleneckAlert(restaurantId: string, alert: BottleneckAlert): Promise<void> {
+    try {
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('user_id, name')
+        .eq('id', restaurantId)
+        .single();
+
+      if (!restaurant) {
+        console.warn(`Restaurant ${restaurantId} not found for bottleneck alert`);
+        return;
+      }
+
+      const title = `${alert.severity.toUpperCase()} Bottleneck Alert`;
+      const message = `${alert.message}\n\nRecommendations:\n${alert.recommendations.join('\n')}`;
+
+      // Use existing notifications table
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: restaurant.user_id,
+          title: title,
+          message: message,
+          type: 'bottleneck_alert',
+          link: '/restaurant/analytics'
+        });
+
+      console.log(`Bottleneck alert sent to restaurant ${restaurantId}`);
+    } catch (error) {
+      console.error('Error sending bottleneck alert:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Log bottleneck detection with enhanced data
+   */
+  private static async logBottleneckDetection(restaurantId: string, bottleneck: any): Promise<void> {
+    try {
+      await this.logPreparationEvent({
+        type: 'bottleneck_detected',
+        orderId: '', // Not order-specific
+        restaurantId,
+        data: {
+          stage: bottleneck.stage,
+          severity: bottleneck.severity,
+          variance: bottleneck.variance,
+          impact: bottleneck.impact,
+          frequency: bottleneck.frequency,
+          avg_delay: bottleneck.avgDelay,
+          description: bottleneck.description,
+          timestamp: new Date()
+        }
+      });
+
+      console.log(`Logged bottleneck detection for ${bottleneck.stage} at restaurant ${restaurantId}`);
+    } catch (error) {
+      console.error('Error logging bottleneck detection:', error);
+    }
+  }
+
+  /**
+   * Enhanced preparation event logging with persistent storage
+   */
+  private static async logPreparationEvent(event: {
+    type: string;
+    orderId: string;
+    restaurantId: string;
+    data: Record<string, any>;
+  }): Promise<void> {
+    try {
+      // Use error_logs table for now since preparation_events doesn't exist
+      await supabase.rpc('log_error', {
+        p_error_type: `preparation_${event.type}`,
+        p_error_message: `Preparation event: ${event.type}`,
+        p_error_details: {
+          order_id: event.orderId,
+          restaurant_id: event.restaurantId,
+          event_data: event.data,
+          logged_at: new Date().toISOString()
+        },
+        p_related_order_id: event.orderId || null,
+        p_is_critical: false
+      });
+
+      console.log(`Logged preparation event: ${event.type} for restaurant ${event.restaurantId}`);
+    } catch (error) {
+      console.error('Error logging preparation event:', error);
+      // Don't throw error to avoid breaking the main flow
+    }
+  }
+
+  /**
+   * Generate bottleneck recommendations
+   */
+  private static generateBottleneckRecommendations(bottleneck: any): string[] {
+    const recommendations: string[] = [];
+    const stageName = bottleneck.stage.replace('_', ' ');
+
+    switch (bottleneck.severity) {
+      case 'high':
+        recommendations.push(`Review ${stageName} staffing levels`);
+        recommendations.push(`Consider additional equipment or workspace optimization`);
+        recommendations.push(`Implement immediate process improvements`);
+        recommendations.push(`Monitor closely and reassess in 24 hours`);
+        break;
+        
+      case 'medium':
+        recommendations.push(`Analyze ${stageName} workflow for inefficiencies`);
+        recommendations.push(`Provide additional training if needed`);
+        recommendations.push(`Review timing expectations for this stage`);
+        break;
+        
+      case 'low':
+        recommendations.push(`Monitor ${stageName} performance trends`);
+        recommendations.push(`Consider minor process optimizations`);
+        break;
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Get user-friendly stage progress message
+   */
+  private static getStageProgressMessage(stageName: string): string {
+    const messages: Record<string, string> = {
+      'received': 'has been received and is being reviewed',
+      'ingredients_prep': 'ingredients are being prepared',
+      'cooking': 'is now being cooked',
+      'plating': 'is being plated and finished',
+      'quality_check': 'is undergoing final quality check',
+      'ready': 'is ready for pickup'
+    };
+
+    return messages[stageName] || `has progressed to ${stageName.replace('_', ' ')}`;
+  }
+
+  /**
+   * Get current preparation metrics for a restaurant
+   */
+  static async getCurrentPreparationMetrics(restaurantId: string): Promise<{
+    activeOrders: number;
+    averagePreparationTime: number;
+    bottleneckCount: number;
+    efficiencyScore: number;
+  }> {
+    try {
+      // Get active orders
+      const { data: activeOrders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('restaurant_id', restaurantId)
+        .in('status', ['restaurant_accepted', 'preparing']);
+
+      // Get recent analytics
+      const analytics = await OptimizedPreparationAnalyticsService.getOptimizedPreparationAnalytics(
+        restaurantId,
+        'week'
+      );
+
+      return {
+        activeOrders: activeOrders?.length || 0,
+        averagePreparationTime: analytics.performanceMetrics.averageCompletionTime,
+        bottleneckCount: analytics.bottlenecks.filter(b => b.severity !== 'low').length,
+        efficiencyScore: analytics.performanceMetrics.efficiencyScore
+      };
+    } catch (error) {
+      console.error('Error getting current preparation metrics:', error);
+      return {
+        activeOrders: 0,
+        averagePreparationTime: 0,
+        bottleneckCount: 0,
+        efficiencyScore: 0
+      };
     }
   }
 }

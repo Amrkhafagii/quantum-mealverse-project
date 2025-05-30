@@ -1,36 +1,34 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { subDays, format, startOfDay, endOfDay } from 'date-fns';
 
 export interface OptimizedPreparationAnalytics {
-  totalOrders: number;
-  averagePreparationTime: number;
+  bottlenecks: PreparationBottleneck[];
   stageCompletionRates: Record<string, number>;
-  bottlenecks: Array<{
-    stage: string;
-    averageTime: number;
-    expectedTime: number;
-    variance: number;
-    severity: 'low' | 'medium' | 'high';
-  }>;
-  peakHours: Array<{
-    hour: number;
-    orderCount: number;
-    averageTime: number;
-  }>;
   performanceMetrics: {
+    averageCompletionTime: number;
     onTimeDeliveryRate: number;
     customerSatisfactionScore: number;
-    stageEfficiency: Record<string, number>;
-    overallEfficiencyScore: number;
+    efficiencyScore: number;
+  };
+  realTimeMetrics: {
+    currentOrdersInProgress: number;
+    averageWaitTime: number;
+    staffUtilization: number;
+  };
+  trends: {
+    completionTimeHistory: Array<{ date: string; avgTime: number }>;
+    bottleneckFrequency: Record<string, number>;
   };
 }
 
-export interface DynamicSatisfactionMetrics {
-  averagePreparationTime: number;
-  onTimeDeliveryRate: number;
-  stageCompletionRate: number;
-  qualityScore: number;
+export interface PreparationBottleneck {
+  stage: string;
+  severity: 'low' | 'medium' | 'high';
+  variance: number;
+  impact: number;
+  frequency: number;
+  avgDelay: number;
+  description: string;
 }
 
 export class OptimizedPreparationAnalyticsService {
@@ -41,341 +39,487 @@ export class OptimizedPreparationAnalyticsService {
     restaurantId: string,
     timeRange: 'week' | 'month' | 'quarter' = 'month'
   ): Promise<OptimizedPreparationAnalytics> {
-    const days = timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 90;
-    const startDate = startOfDay(subDays(new Date(), days));
-    const endDate = endOfDay(new Date());
+    try {
+      console.log(`Fetching optimized preparation analytics for restaurant ${restaurantId}`);
 
-    // Get completed preparation stages with order data
-    const { data: stages, error } = await supabase
-      .from('order_preparation_stages')
-      .select(`
-        stage_name,
-        status,
-        estimated_duration_minutes,
-        actual_duration_minutes,
-        started_at,
-        completed_at,
-        order_id,
-        orders!inner(created_at, status, total, customer_rating)
-      `)
-      .eq('restaurant_id', restaurantId)
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+      const dateRange = this.getDateRange(timeRange);
+      
+      // Fetch preparation stages data with early bottleneck detection
+      const { data: stagesData, error: stagesError } = await supabase
+        .from('order_preparation_stages')
+        .select(`
+          *,
+          orders!inner(
+            id,
+            restaurant_id,
+            status,
+            total,
+            created_at
+          )
+        `)
+        .eq('orders.restaurant_id', restaurantId)
+        .gte('orders.created_at', dateRange.start)
+        .lte('orders.created_at', dateRange.end);
 
-    if (error) throw error;
-
-    const orderStages = stages || [];
-    const uniqueOrders = new Set(orderStages.map(s => s.order_id)).size;
-
-    // Pre-filter completed stages for performance
-    const completedStages = orderStages.filter(s => s.status === 'completed' && s.actual_duration_minutes);
-    
-    // Calculate basic metrics
-    const averagePreparationTime = completedStages.length > 0
-      ? completedStages.reduce((sum, s) => sum + (s.actual_duration_minutes || 0), 0) / completedStages.length
-      : 0;
-
-    // Optimized stage completion rates calculation
-    const stageGroups = this.groupStagesByName(orderStages);
-    const stageCompletionRates = this.calculateStageCompletionRates(stageGroups);
-
-    // Early bottleneck detection with severity classification
-    const bottlenecks = this.detectBottlenecksEarly(completedStages);
-
-    // Calculate peak hours efficiently
-    const peakHours = this.calculatePeakHours(orderStages);
-
-    // Dynamic customer satisfaction calculation
-    const customerSatisfactionScore = await this.calculateDynamicCustomerSatisfaction(
-      restaurantId,
-      {
-        averagePreparationTime,
-        onTimeDeliveryRate: this.calculateOnTimeDeliveryRate(completedStages),
-        stageCompletionRate: this.calculateOverallCompletionRate(stageCompletionRates),
-        qualityScore: this.calculateQualityScore(orderStages)
+      if (stagesError) {
+        console.error('Error fetching preparation stages:', stagesError);
+        throw new Error('Failed to fetch preparation stages data');
       }
+
+      // Process data and detect bottlenecks early
+      const analytics = await this.processAnalyticsData(stagesData || [], restaurantId, dateRange);
+      
+      console.log('Successfully processed optimized preparation analytics');
+      return analytics;
+    } catch (error) {
+      console.error('Error in getOptimizedPreparationAnalytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process analytics data with integrated bottleneck detection
+   */
+  private static async processAnalyticsData(
+    stagesData: any[],
+    restaurantId: string,
+    dateRange: { start: string; end: string }
+  ): Promise<OptimizedPreparationAnalytics> {
+    // Group stages by order and stage name
+    const stagesByOrder = new Map<string, any[]>();
+    const stageMetrics = new Map<string, { times: number[]; delays: number[] }>();
+
+    stagesData.forEach(stage => {
+      const orderId = stage.orders?.id || stage.order_id;
+      if (!stagesByOrder.has(orderId)) {
+        stagesByOrder.set(orderId, []);
+      }
+      stagesByOrder.get(orderId)!.push(stage);
+
+      // Track stage performance for bottleneck detection
+      if (stage.completed_at && stage.started_at) {
+        const stageName = stage.stage_name;
+        const duration = new Date(stage.completed_at).getTime() - new Date(stage.started_at).getTime();
+        const durationMinutes = duration / (1000 * 60);
+        
+        if (!stageMetrics.has(stageName)) {
+          stageMetrics.set(stageName, { times: [], delays: [] });
+        }
+        
+        const metrics = stageMetrics.get(stageName)!;
+        metrics.times.push(durationMinutes);
+        
+        // Calculate delay based on estimated duration
+        const estimatedDuration = stage.estimated_duration_minutes || 15;
+        const delay = Math.max(0, durationMinutes - estimatedDuration);
+        metrics.delays.push(delay);
+      }
+    });
+
+    // Detect bottlenecks with severity classification
+    const bottlenecks = this.detectBottlenecksWithSeverity(stageMetrics);
+
+    // Calculate stage completion rates
+    const stageCompletionRates = this.calculateStageCompletionRates(stagesData);
+
+    // Calculate performance metrics with dynamic customer satisfaction
+    const performanceMetrics = await this.calculatePerformanceMetrics(
+      stagesData,
+      restaurantId,
+      dateRange
     );
 
-    // Performance metrics
-    const onTimeDeliveryRate = this.calculateOnTimeDeliveryRate(completedStages);
-    const stageEfficiency = this.calculateStageEfficiency(stageGroups);
-    const overallEfficiencyScore = this.calculateOverallEfficiency(stageEfficiency, onTimeDeliveryRate);
+    // Calculate real-time metrics
+    const realTimeMetrics = await this.calculateRealTimeMetrics(restaurantId);
+
+    // Calculate trends
+    const trends = this.calculateTrends(stagesData, stageMetrics);
 
     return {
-      totalOrders: uniqueOrders,
-      averagePreparationTime,
-      stageCompletionRates,
       bottlenecks,
-      peakHours,
-      performanceMetrics: {
-        onTimeDeliveryRate,
-        customerSatisfactionScore,
-        stageEfficiency,
-        overallEfficiencyScore
-      }
+      stageCompletionRates,
+      performanceMetrics,
+      realTimeMetrics,
+      trends
     };
   }
 
   /**
-   * Group stages by name for efficient processing
+   * Enhanced bottleneck detection with severity classification
    */
-  private static groupStagesByName(stages: any[]): Record<string, any[]> {
-    return stages.reduce((groups, stage) => {
-      if (!groups[stage.stage_name]) {
-        groups[stage.stage_name] = [];
+  private static detectBottlenecksWithSeverity(
+    stageMetrics: Map<string, { times: number[]; delays: number[] }>
+  ): PreparationBottleneck[] {
+    const bottlenecks: PreparationBottleneck[] = [];
+
+    stageMetrics.forEach((metrics, stageName) => {
+      if (metrics.times.length < 2) return; // Need at least 2 data points
+
+      // Calculate variance and average
+      const avgTime = metrics.times.reduce((a, b) => a + b, 0) / metrics.times.length;
+      const variance = metrics.times.reduce((acc, time) => acc + Math.pow(time - avgTime, 2), 0) / metrics.times.length;
+      const variancePercentage = (Math.sqrt(variance) / avgTime) * 100;
+
+      // Calculate delay metrics
+      const avgDelay = metrics.delays.reduce((a, b) => a + b, 0) / metrics.delays.length;
+      const delayFrequency = metrics.delays.filter(d => d > 0).length / metrics.delays.length;
+
+      // Determine severity based on multiple factors
+      let severity: 'low' | 'medium' | 'high' = 'low';
+      let impact = 0;
+
+      if (variancePercentage > 50 && avgDelay > 10) {
+        severity = 'high';
+        impact = variancePercentage * avgDelay * delayFrequency;
+      } else if (variancePercentage > 30 || avgDelay > 5) {
+        severity = 'medium';
+        impact = (variancePercentage * avgDelay * delayFrequency) / 2;
+      } else if (variancePercentage > 15) {
+        severity = 'low';
+        impact = (variancePercentage * avgDelay * delayFrequency) / 4;
       }
-      groups[stage.stage_name].push(stage);
-      return groups;
-    }, {} as Record<string, any[]>);
+
+      // Only include stages that show significant bottleneck indicators
+      if (variancePercentage > 15 || avgDelay > 2) {
+        bottlenecks.push({
+          stage: stageName,
+          severity,
+          variance: variancePercentage,
+          impact,
+          frequency: delayFrequency,
+          avgDelay,
+          description: this.generateBottleneckDescription(stageName, severity, avgDelay, variancePercentage)
+        });
+      }
+    });
+
+    // Sort by impact (highest first)
+    return bottlenecks.sort((a, b) => b.impact - a.impact);
   }
 
   /**
-   * Calculate stage completion rates efficiently
+   * Generate descriptive bottleneck descriptions
    */
-  private static calculateStageCompletionRates(stageGroups: Record<string, any[]>): Record<string, number> {
-    const completionRates: Record<string, number> = {};
+  private static generateBottleneckDescription(
+    stage: string,
+    severity: 'low' | 'medium' | 'high',
+    avgDelay: number,
+    variance: number
+  ): string {
+    const stageDisplayName = stage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
     
-    Object.entries(stageGroups).forEach(([stageName, stageData]) => {
-      const completed = stageData.filter(s => s.status === 'completed').length;
-      completionRates[stageName] = stageData.length > 0 ? (completed / stageData.length) * 100 : 0;
+    switch (severity) {
+      case 'high':
+        return `${stageDisplayName} shows critical delays (avg: ${avgDelay.toFixed(1)}min) with high variability (${variance.toFixed(1)}%)`;
+      case 'medium':
+        return `${stageDisplayName} experiences moderate delays (avg: ${avgDelay.toFixed(1)}min) with some inconsistency`;
+      case 'low':
+        return `${stageDisplayName} has minor timing variations that could be optimized`;
+      default:
+        return `${stageDisplayName} bottleneck detected`;
+    }
+  }
+
+  /**
+   * Calculate stage completion rates
+   */
+  private static calculateStageCompletionRates(stagesData: any[]): Record<string, number> {
+    const stageStats = new Map<string, { total: number; completed: number }>();
+
+    stagesData.forEach(stage => {
+      const stageName = stage.stage_name;
+      if (!stageStats.has(stageName)) {
+        stageStats.set(stageName, { total: 0, completed: 0 });
+      }
+      
+      const stats = stageStats.get(stageName)!;
+      stats.total++;
+      if (stage.status === 'completed') {
+        stats.completed++;
+      }
+    });
+
+    const completionRates: Record<string, number> = {};
+    stageStats.forEach((stats, stageName) => {
+      completionRates[stageName] = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
     });
 
     return completionRates;
   }
 
   /**
-   * Early bottleneck detection with integrated severity classification
+   * Calculate performance metrics with dynamic customer satisfaction
    */
-  private static detectBottlenecksEarly(completedStages: any[]): OptimizedPreparationAnalytics['bottlenecks'] {
-    const stageGroups = this.groupStagesByName(completedStages);
-    const bottlenecks: OptimizedPreparationAnalytics['bottlenecks'] = [];
+  private static async calculatePerformanceMetrics(
+    stagesData: any[],
+    restaurantId: string,
+    dateRange: { start: string; end: string }
+  ): Promise<OptimizedPreparationAnalytics['performanceMetrics']> {
+    // Calculate average completion time
+    const completedOrders = stagesData
+      .filter(stage => stage.stage_name === 'ready' && stage.completed_at)
+      .map(stage => {
+        const orderStart = new Date(stage.orders?.created_at || stage.created_at);
+        const orderReady = new Date(stage.completed_at);
+        return (orderReady.getTime() - orderStart.getTime()) / (1000 * 60); // minutes
+      });
 
-    Object.entries(stageGroups).forEach(([stageName, stageData]) => {
-      if (stageData.length === 0) return;
+    const averageCompletionTime = completedOrders.length > 0
+      ? completedOrders.reduce((a, b) => a + b, 0) / completedOrders.length
+      : 0;
 
-      const averageTime = stageData.reduce((sum, s) => sum + (s.actual_duration_minutes || 0), 0) / stageData.length;
-      const expectedTime = stageData[0]?.estimated_duration_minutes || 0;
-      
-      if (expectedTime > 0) {
-        const variance = ((averageTime - expectedTime) / expectedTime) * 100;
-        
-        // Only include bottlenecks with significant variance
-        if (variance > 15) {
-          const severity = this.classifyBottleneckSeverity(variance);
-          
-          bottlenecks.push({
-            stage: stageName,
-            averageTime,
-            expectedTime,
-            variance,
-            severity
-          });
-        }
-      }
-    });
+    // Calculate on-time delivery rate (orders completed within estimated time)
+    const onTimeOrders = completedOrders.filter(time => time <= 45); // 45 minutes default
+    const onTimeDeliveryRate = completedOrders.length > 0
+      ? (onTimeOrders.length / completedOrders.length) * 100
+      : 100;
 
-    // Sort by severity and variance for prioritization
-    return bottlenecks.sort((a, b) => {
-      const severityOrder = { high: 3, medium: 2, low: 1 };
-      const severityDiff = severityOrder[b.severity] - severityOrder[a.severity];
-      return severityDiff !== 0 ? severityDiff : b.variance - a.variance;
-    });
+    // Dynamic customer satisfaction calculation
+    const customerSatisfactionScore = await this.calculateDynamicCustomerSatisfaction(
+      restaurantId,
+      dateRange,
+      averageCompletionTime,
+      onTimeDeliveryRate
+    );
+
+    // Calculate efficiency score
+    const efficiencyScore = this.calculateEfficiencyScore(
+      averageCompletionTime,
+      onTimeDeliveryRate,
+      customerSatisfactionScore
+    );
+
+    return {
+      averageCompletionTime,
+      onTimeDeliveryRate,
+      customerSatisfactionScore,
+      efficiencyScore
+    };
   }
 
   /**
-   * Classify bottleneck severity
-   */
-  private static classifyBottleneckSeverity(variance: number): 'low' | 'medium' | 'high' {
-    if (variance > 50) return 'high';
-    if (variance > 30) return 'medium';
-    return 'low';
-  }
-
-  /**
-   * Calculate peak hours efficiently
-   */
-  private static calculatePeakHours(stages: any[]): OptimizedPreparationAnalytics['peakHours'] {
-    const hourlyData: Record<number, { count: number; totalTime: number }> = {};
-    
-    stages.forEach(stage => {
-      if (stage.started_at) {
-        const hour = new Date(stage.started_at).getHours();
-        if (!hourlyData[hour]) hourlyData[hour] = { count: 0, totalTime: 0 };
-        hourlyData[hour].count++;
-        hourlyData[hour].totalTime += stage.actual_duration_minutes || 0;
-      }
-    });
-
-    return Object.entries(hourlyData)
-      .map(([hour, data]) => ({
-        hour: parseInt(hour),
-        orderCount: data.count,
-        averageTime: data.count > 0 ? data.totalTime / data.count : 0
-      }))
-      .sort((a, b) => b.orderCount - a.orderCount)
-      .slice(0, 6); // Top 6 peak hours
-  }
-
-  /**
-   * Calculate dynamic customer satisfaction score based on multiple metrics
+   * Dynamic customer satisfaction calculation based on available metrics
    */
   private static async calculateDynamicCustomerSatisfaction(
     restaurantId: string,
-    metrics: DynamicSatisfactionMetrics
+    dateRange: { start: string; end: string },
+    avgCompletionTime: number,
+    onTimeRate: number
   ): Promise<number> {
     try {
-      // Get recent customer ratings if available
-      const { data: recentRatings } = await supabase
-        .from('orders')
-        .select('customer_rating')
+      // Try to fetch actual review data
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select('rating')
         .eq('restaurant_id', restaurantId)
-        .not('customer_rating', 'is', null)
-        .gte('created_at', subDays(new Date(), 30).toISOString())
-        .limit(100);
+        .gte('created_at', dateRange.start)
+        .lte('created_at', dateRange.end)
+        .eq('status', 'approved');
 
-      let baseScore = 4.0; // Default baseline
-
-      // If we have actual ratings, use them as primary factor
-      if (recentRatings && recentRatings.length > 0) {
-        const avgRating = recentRatings.reduce((sum, r) => sum + (r.customer_rating || 0), 0) / recentRatings.length;
-        baseScore = avgRating;
+      if (reviews && reviews.length > 0) {
+        // Use actual review ratings
+        const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+        return (avgRating / 5) * 100; // Convert to percentage
       }
 
-      // Apply dynamic adjustments based on performance metrics
-      let adjustedScore = baseScore;
-
-      // On-time delivery impact (±0.5 points)
-      const onTimeImpact = (metrics.onTimeDeliveryRate - 80) / 40; // -0.5 to +0.5
-      adjustedScore += Math.max(-0.5, Math.min(0.5, onTimeImpact));
-
-      // Preparation time impact (±0.3 points)
-      const avgTimeThreshold = 25; // minutes
-      const timeImpact = (avgTimeThreshold - metrics.averagePreparationTime) / 50; // -0.3 to +0.3
-      adjustedScore += Math.max(-0.3, Math.min(0.3, timeImpact));
-
-      // Stage completion impact (±0.2 points)
-      const completionImpact = (metrics.stageCompletionRate - 85) / 75; // -0.2 to +0.2
-      adjustedScore += Math.max(-0.2, Math.min(0.2, completionImpact));
-
-      // Quality score impact (±0.3 points)
-      const qualityImpact = (metrics.qualityScore - 80) / 67; // -0.3 to +0.3
-      adjustedScore += Math.max(-0.3, Math.min(0.3, qualityImpact));
-
-      // Ensure score stays within valid range
-      return Math.max(1.0, Math.min(5.0, Number(adjustedScore.toFixed(2))));
+      // Fallback to calculated satisfaction based on performance metrics
+      return this.calculateEstimatedSatisfaction(avgCompletionTime, onTimeRate);
     } catch (error) {
-      console.error('Error calculating dynamic customer satisfaction:', error);
-      return 4.0; // Fallback to neutral score
+      console.warn('Could not fetch review data, using estimated satisfaction:', error);
+      return this.calculateEstimatedSatisfaction(avgCompletionTime, onTimeRate);
     }
   }
 
   /**
-   * Calculate on-time delivery rate
+   * Estimate customer satisfaction based on performance metrics
    */
-  private static calculateOnTimeDeliveryRate(completedStages: any[]): number {
-    if (completedStages.length === 0) return 0;
+  private static calculateEstimatedSatisfaction(avgCompletionTime: number, onTimeRate: number): number {
+    // Base satisfaction starts at 80%
+    let satisfaction = 80;
 
-    const onTimeOrders = completedStages.filter(s => {
-      if (!s.actual_duration_minutes || !s.estimated_duration_minutes) return false;
-      return s.actual_duration_minutes <= s.estimated_duration_minutes * 1.1; // 10% tolerance
-    }).length;
+    // Adjust based on completion time (faster = better)
+    if (avgCompletionTime <= 30) {
+      satisfaction += 10;
+    } else if (avgCompletionTime <= 45) {
+      satisfaction += 5;
+    } else if (avgCompletionTime > 60) {
+      satisfaction -= 10;
+    }
 
-    return (onTimeOrders / completedStages.length) * 100;
-  }
+    // Adjust based on on-time rate
+    if (onTimeRate >= 90) {
+      satisfaction += 10;
+    } else if (onTimeRate >= 80) {
+      satisfaction += 5;
+    } else if (onTimeRate < 70) {
+      satisfaction -= 15;
+    }
 
-  /**
-   * Calculate overall completion rate
-   */
-  private static calculateOverallCompletionRate(stageCompletionRates: Record<string, number>): number {
-    const rates = Object.values(stageCompletionRates);
-    return rates.length > 0 ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length : 0;
-  }
-
-  /**
-   * Calculate quality score based on consistency and performance
-   */
-  private static calculateQualityScore(stages: any[]): number {
-    if (stages.length === 0) return 80; // Default score
-
-    const completedStages = stages.filter(s => s.status === 'completed');
-    const completionRate = (completedStages.length / stages.length) * 100;
-
-    // Calculate consistency (lower variance is better)
-    const times = completedStages.map(s => s.actual_duration_minutes || 0);
-    const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length;
-    const variance = times.reduce((sum, time) => sum + Math.pow(time - avgTime, 2), 0) / times.length;
-    const consistency = Math.max(0, 100 - (Math.sqrt(variance) / avgTime) * 100);
-
-    // Combine completion rate and consistency
-    return (completionRate * 0.6) + (consistency * 0.4);
-  }
-
-  /**
-   * Calculate stage efficiency
-   */
-  private static calculateStageEfficiency(stageGroups: Record<string, any[]>): Record<string, number> {
-    const efficiency: Record<string, number> = {};
-
-    Object.entries(stageGroups).forEach(([stageName, stageData]) => {
-      const completedStages = stageData.filter(s => s.status === 'completed');
-      
-      if (completedStages.length > 0) {
-        const onTimeStages = completedStages.filter(s => 
-          s.actual_duration_minutes && s.estimated_duration_minutes &&
-          s.actual_duration_minutes <= s.estimated_duration_minutes
-        );
-        
-        efficiency[stageName] = (onTimeStages.length / completedStages.length) * 100;
-      } else {
-        efficiency[stageName] = 0;
-      }
-    });
-
-    return efficiency;
+    return Math.max(0, Math.min(100, satisfaction));
   }
 
   /**
    * Calculate overall efficiency score
    */
-  private static calculateOverallEfficiency(
-    stageEfficiency: Record<string, number>,
-    onTimeDeliveryRate: number
+  private static calculateEfficiencyScore(
+    avgCompletionTime: number,
+    onTimeRate: number,
+    customerSatisfactionScore: number
   ): number {
-    const efficiencyValues = Object.values(stageEfficiency);
-    const avgStageEfficiency = efficiencyValues.length > 0 
-      ? efficiencyValues.reduce((sum, eff) => sum + eff, 0) / efficiencyValues.length 
-      : 0;
+    // Weight factors: time (30%), on-time rate (40%), satisfaction (30%)
+    const timeScore = Math.max(0, 100 - (avgCompletionTime - 30)); // 30 min is optimal
+    const efficiencyScore = (timeScore * 0.3) + (onTimeRate * 0.4) + (customerSatisfactionScore * 0.3);
+    
+    return Math.max(0, Math.min(100, efficiencyScore));
+  }
 
-    // Weighted combination of stage efficiency and on-time delivery
-    return (avgStageEfficiency * 0.7) + (onTimeDeliveryRate * 0.3);
+  /**
+   * Calculate real-time metrics
+   */
+  private static async calculateRealTimeMetrics(
+    restaurantId: string
+  ): Promise<OptimizedPreparationAnalytics['realTimeMetrics']> {
+    try {
+      // Get current orders in progress
+      const { data: currentOrders } = await supabase
+        .from('orders')
+        .select('id, created_at')
+        .eq('restaurant_id', restaurantId)
+        .in('status', ['restaurant_accepted', 'preparing']);
+
+      const currentOrdersInProgress = currentOrders?.length || 0;
+
+      // Calculate average wait time for current orders
+      const averageWaitTime = currentOrders && currentOrders.length > 0
+        ? currentOrders.reduce((sum, order) => {
+            const waitTime = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60);
+            return sum + waitTime;
+          }, 0) / currentOrders.length
+        : 0;
+
+      // Estimate staff utilization (simplified calculation)
+      const staffUtilization = Math.min(100, currentOrdersInProgress * 25); // Assume 4 orders = 100% utilization
+
+      return {
+        currentOrdersInProgress,
+        averageWaitTime,
+        staffUtilization
+      };
+    } catch (error) {
+      console.error('Error calculating real-time metrics:', error);
+      return {
+        currentOrdersInProgress: 0,
+        averageWaitTime: 0,
+        staffUtilization: 0
+      };
+    }
+  }
+
+  /**
+   * Calculate trends
+   */
+  private static calculateTrends(
+    stagesData: any[],
+    stageMetrics: Map<string, { times: number[]; delays: number[] }>
+  ): OptimizedPreparationAnalytics['trends'] {
+    // Group completion times by date
+    const completionTimeByDate = new Map<string, number[]>();
+    
+    stagesData
+      .filter(stage => stage.stage_name === 'ready' && stage.completed_at)
+      .forEach(stage => {
+        const date = new Date(stage.completed_at).toISOString().split('T')[0];
+        const orderStart = new Date(stage.orders?.created_at || stage.created_at);
+        const orderReady = new Date(stage.completed_at);
+        const duration = (orderReady.getTime() - orderStart.getTime()) / (1000 * 60);
+        
+        if (!completionTimeByDate.has(date)) {
+          completionTimeByDate.set(date, []);
+        }
+        completionTimeByDate.get(date)!.push(duration);
+      });
+
+    // Calculate daily averages
+    const completionTimeHistory = Array.from(completionTimeByDate.entries())
+      .map(([date, times]) => ({
+        date,
+        avgTime: times.reduce((a, b) => a + b, 0) / times.length
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Calculate bottleneck frequency
+    const bottleneckFrequency: Record<string, number> = {};
+    stageMetrics.forEach((metrics, stageName) => {
+      const avgDelay = metrics.delays.reduce((a, b) => a + b, 0) / metrics.delays.length;
+      if (avgDelay > 2) { // Consider stages with >2min average delay as frequent bottlenecks
+        bottleneckFrequency[stageName] = metrics.delays.filter(d => d > 0).length;
+      }
+    });
+
+    return {
+      completionTimeHistory,
+      bottleneckFrequency
+    };
   }
 
   /**
    * Get bottleneck recommendations
    */
-  static getBottleneckRecommendations(bottlenecks: OptimizedPreparationAnalytics['bottlenecks']): string[] {
+  static getBottleneckRecommendations(bottlenecks: PreparationBottleneck[]): string[] {
     const recommendations: string[] = [];
 
     bottlenecks.forEach(bottleneck => {
+      const stageName = bottleneck.stage.replace('_', ' ');
+      
       switch (bottleneck.severity) {
         case 'high':
           recommendations.push(
-            `URGENT: ${bottleneck.stage} is severely delayed (${bottleneck.variance.toFixed(1)}% over estimate). Consider immediate process review.`
+            `URGENT: Review ${stageName} process - consider additional staff or equipment`
           );
           break;
         case 'medium':
           recommendations.push(
-            `${bottleneck.stage} is consistently delayed. Review workflow and consider staff training.`
+            `Optimize ${stageName} workflow - review procedures and timing`
           );
           break;
         case 'low':
           recommendations.push(
-            `${bottleneck.stage} shows minor delays. Monitor for trends and optimize when possible.`
+            `Monitor ${stageName} consistency - minor process improvements needed`
           );
           break;
       }
     });
 
+    // Add general recommendations if no specific bottlenecks
+    if (recommendations.length === 0) {
+      recommendations.push('No major bottlenecks detected - maintain current efficiency levels');
+    }
+
     return recommendations;
+  }
+
+  /**
+   * Get date range for analytics
+   */
+  private static getDateRange(timeRange: 'week' | 'month' | 'quarter'): { start: string; end: string } {
+    const end = new Date();
+    const start = new Date();
+
+    switch (timeRange) {
+      case 'week':
+        start.setDate(start.getDate() - 7);
+        break;
+      case 'month':
+        start.setMonth(start.getMonth() - 1);
+        break;
+      case 'quarter':
+        start.setMonth(start.getMonth() - 3);
+        break;
+    }
+
+    return {
+      start: start.toISOString(),
+      end: end.toISOString()
+    };
   }
 }
