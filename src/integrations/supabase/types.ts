@@ -6884,6 +6884,7 @@ export type Database = {
       }
       restaurant_assignments: {
         Row: {
+          assigned_at: string | null
           assignment_metadata: Json | null
           assignment_source: string | null
           created_at: string
@@ -6900,6 +6901,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
           assignment_metadata?: Json | null
           assignment_source?: string | null
           created_at?: string
@@ -6916,6 +6918,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
           assignment_metadata?: Json | null
           assignment_source?: string | null
           created_at?: string

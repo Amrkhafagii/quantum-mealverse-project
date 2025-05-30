@@ -40,7 +40,7 @@ export const usePendingAssignments = (restaurantId: string) => {
           id,
           order_id,
           expires_at,
-          assigned_at,
+          created_at,
           orders!inner (
             id,
             customer_name,
@@ -60,7 +60,7 @@ export const usePendingAssignments = (restaurantId: string) => {
         .eq('restaurant_id', restaurantId)
         .eq('status', 'pending')
         .gt('expires_at', new Date().toISOString())
-        .order('assigned_at', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (fetchError) {
         console.error('Error fetching assignments:', fetchError);
@@ -75,7 +75,7 @@ export const usePendingAssignments = (restaurantId: string) => {
         id: assignment.id,
         order_id: assignment.order_id,
         expires_at: assignment.expires_at,
-        assigned_at: assignment.assigned_at,
+        assigned_at: assignment.created_at,
         order: {
           ...assignment.orders,
           order_items: assignment.orders.order_items || []
