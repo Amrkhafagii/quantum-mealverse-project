@@ -81,6 +81,50 @@ export class PreparationTimerService {
     }
   }
 
+  static async initializeExistingTimer(orderId: string): Promise<boolean> {
+    try {
+      // Check if timer already exists
+      if (this.activeTimers.has(orderId)) {
+        console.log(`Timer already exists for order: ${orderId}`);
+        return true;
+      }
+
+      // Get current stage
+      const currentStage = await PreparationStageService.getCurrentStage(orderId);
+      if (!currentStage || currentStage.status !== 'in_progress') {
+        console.log(`No in-progress stage found for order: ${orderId}`);
+        return false;
+      }
+
+      // Calculate elapsed time from when stage started
+      const startTime = currentStage.started_at ? new Date(currentStage.started_at) : new Date();
+      const elapsedTime = this.calculateElapsedTime(startTime);
+      const estimatedCompletion = await this.setEstimatedCompletion(orderId);
+
+      const timer: ActiveTimer = {
+        orderId: orderId,
+        startTime: startTime,
+        currentStage: currentStage.stage_name,
+        elapsedTime: elapsedTime,
+        isRunning: true,
+        estimatedCompletion: estimatedCompletion,
+      };
+
+      this.activeTimers.set(orderId, timer);
+      console.log(`Existing timer initialized for order ${orderId}, stage ${currentStage.stage_name}`);
+
+      // Start the interval
+      timer.intervalId = setInterval(() => {
+        this.updateTimerProgress(orderId);
+      }, this.timerInterval);
+
+      return true;
+    } catch (error) {
+      console.error('Error initializing existing timer:', error);
+      return false;
+    }
+  }
+
   static stopTimer(orderId: string): ActiveTimer | undefined {
     const timer = this.activeTimers.get(orderId);
     if (!timer) {
@@ -116,7 +160,7 @@ export class PreparationTimerService {
       const updates = [{
         orderId: orderId,
         stageName: currentStage,
-        status: 'skipped',
+        status: 'skipped' as const, // Type assertion to match the expected union type
         notes: 'Skipped due to workflow adjustment',
         restaurantId: '' //TODO: fix this
       }];
@@ -188,5 +232,38 @@ export class PreparationTimerService {
     } catch (error) {
       console.error('Error resetting all timers:', error);
     }
+  }
+
+  static getTimerStats(): {
+    activeTimers: number;
+    averageElapsedTime: number;
+    longestRunningTimer: { orderId: string; elapsedTime: number } | null;
+  } {
+    const timers = Array.from(this.activeTimers.values());
+    const activeTimers = timers.length;
+    
+    if (activeTimers === 0) {
+      return {
+        activeTimers: 0,
+        averageElapsedTime: 0,
+        longestRunningTimer: null
+      };
+    }
+
+    const totalElapsed = timers.reduce((sum, timer) => sum + timer.elapsedTime, 0);
+    const averageElapsedTime = Math.round(totalElapsed / activeTimers);
+    
+    const longestTimer = timers.reduce((longest, current) => 
+      current.elapsedTime > longest.elapsedTime ? current : longest
+    );
+
+    return {
+      activeTimers,
+      averageElapsedTime,
+      longestRunningTimer: {
+        orderId: longestTimer.orderId,
+        elapsedTime: longestTimer.elapsedTime
+      }
+    };
   }
 }
