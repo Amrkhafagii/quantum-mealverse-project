@@ -1,115 +1,101 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import React from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useCart } from '@/contexts/CartContext';
-import Navbar from '@/components/Navbar';
-import ParticleBackground from '@/components/ParticleBackground';
-import Footer from '@/components/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CheckCircle, Clock, MapPin } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { toast } from '@/hooks/use-toast';
-import { Order } from '@/types/order';
 import { OrderStatusDisplay } from '@/components/orders/status/OrderStatusDisplay';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import ParticleBackground from '@/components/ParticleBackground';
 
-const OrderConfirmation: React.FC = () => {
+interface Order {
+  id: string;
+  status: string;
+  created_at: string;
+  estimated_delivery_time?: string;
+}
+
+const OrderConfirmation = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { user } = useAuth();
-  const { clearCart } = useCart();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      if (!orderId) return;
+  const { data: order, isLoading, error } = useQuery({
+    queryKey: ['order', orderId],
+    queryFn: async () => {
+      if (!orderId) throw new Error('Order ID is required');
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
 
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              *
-            )
-          `)
-          .eq('id', orderId)
-          .single();
+      if (error) throw error;
+      return data as Order;
+    },
+    enabled: !!orderId,
+  });
 
-        if (error) {
-          console.error('Error fetching order:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load order details.",
-            variant: "destructive",
-          });
-        } else {
-          setOrder(data);
-          clearCart();
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrder();
-  }, [orderId, clearCart, toast]);
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-quantum-black text-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan"></div>
+      </div>
+    );
   }
 
-  if (!orderId) {
-    return <Navigate to="/customer" replace />;
+  if (error || !order) {
+    return (
+      <div className="min-h-screen bg-quantum-black text-white relative">
+        <ParticleBackground />
+        <Navbar />
+        <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
+          <Card className="max-w-md mx-auto bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle className="text-center text-red-400">Order Not Found</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-gray-400">
+                We couldn't find an order with ID: {orderId}
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-quantum-black via-quantum-darkBlue to-quantum-black text-white relative">
+    <div className="min-h-screen bg-quantum-black text-white relative">
       <ParticleBackground />
       <Navbar />
       
-      <main className="relative z-10 pt-24 pb-12 container mx-auto px-4">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {loading ? (
-            <Card className="holographic-card p-8">
-              <div className="flex items-center justify-center">
-                <Clock className="h-8 w-8 animate-spin mr-3" />
-                <span className="text-lg">Loading order details...</span>
-              </div>
-            </Card>
-          ) : !order ? (
-            <Card className="holographic-card p-8">
+      <main className="container mx-auto px-4 pt-24 pb-12 relative z-10">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6 text-center">Order Confirmation</h1>
+          
+          <Card className="mb-6 bg-quantum-darkBlue/30 border-quantum-cyan/20">
+            <CardHeader>
+              <CardTitle className="text-center text-green-400">
+                Order Placed Successfully!
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-gray-300 mb-4">
+                Thank you for your order. We'll prepare your meal with care.
+              </p>
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-red-400 mb-4">Order Not Found</h1>
-                <p className="text-gray-300 mb-6">
-                  We couldn't find the order you're looking for.
-                </p>
-                <Button onClick={() => window.history.back()}>
-                  Go Back
-                </Button>
+                <span className="text-quantum-cyan font-mono">Order #{orderId}</span>
               </div>
-            </Card>
-          ) : (
-            <>
-              <Card className="holographic-card p-8">
-                <div className="text-center mb-6">
-                  <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
-                  <h1 className="text-3xl font-bold text-quantum-cyan mb-2">
-                    Order Confirmed!
-                  </h1>
-                  <p className="text-gray-300">
-                    Order #{order.formatted_order_id || order.id}
-                  </p>
-                </div>
+            </CardContent>
+          </Card>
 
-                <OrderStatusDisplay order={order} />
-              </Card>
-            </>
-          )}
+          <OrderStatusDisplay
+            orderId={orderId!}
+            status={order.status}
+            estimatedTime={order.estimated_delivery_time}
+          />
         </div>
       </main>
       

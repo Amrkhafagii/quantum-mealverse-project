@@ -11,7 +11,7 @@ export const convertToDeliveryLocation = (unifiedLocation: UnifiedLocation): Del
     altitudeAccuracy: unifiedLocation.altitudeAccuracy,
     heading: unifiedLocation.heading,
     speed: unifiedLocation.speed,
-    timestamp: new Date(unifiedLocation.timestamp).getTime(),
+    timestamp: unifiedLocation.timestamp,
     source: unifiedLocation.source as any,
     isMoving: unifiedLocation.isMoving
   };
@@ -26,10 +26,9 @@ export const convertToUnifiedLocation = (deliveryLocation: DeliveryLocation): Pa
     altitudeAccuracy: deliveryLocation.altitudeAccuracy,
     heading: deliveryLocation.heading,
     speed: deliveryLocation.speed,
-    timestamp: new Date(deliveryLocation.timestamp).toISOString(),
+    timestamp: deliveryLocation.timestamp,
     source: deliveryLocation.source as any,
-    isMoving: deliveryLocation.isMoving,
-    location_type: 'delivery'
+    isMoving: deliveryLocation.isMoving
   };
 };
 
@@ -39,5 +38,5 @@ export const getFreshnessLevel = (timestamp: number): LocationFreshness => {
   
   if (ageInMinutes <= 5) return 'fresh';
   if (ageInMinutes <= 30) return 'stale';
-  return 'invalid';
+  return 'expired';
 };

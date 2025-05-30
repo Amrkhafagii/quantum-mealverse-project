@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMobile } from '@/hooks/use-mobile';
-import { MobileContainer } from '@/components/mobile/MobileContainer';
-import { ResponsiveContainer } from '@/components/ui/responsive-container';
+import MobileContainer from '@/components/mobile/MobileContainer';
+import ResponsiveContainer from '@/components/ui/responsive-container';
 import { TouchFriendlyButton } from '@/components/mobile/TouchFriendlyButton';
 
 interface MealPlanItem {
@@ -45,24 +45,39 @@ const Nutrition = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanItem[]>([]);
   const { isMobile } = useMobile();
 
-  const { data: meals, isLoading, error } = useQuery('meals', async () => {
-    const { data, error } = await supabase
-      .from('meals')
-      .select('*');
+  const { data: meals, isLoading, error } = useQuery({
+    queryKey: ['meals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meals')
+        .select('*');
 
-    if (error) {
-      console.error('Error fetching meals:', error);
-      toast.error('Failed to load meals');
-      throw error;
+      if (error) {
+        console.error('Error fetching meals:', error);
+        toast.error('Failed to load meals');
+        throw error;
+      }
+      
+      // Transform the data to match our interface
+      return data?.map(meal => ({
+        meal_id: meal.id || '',
+        meal_name: meal.name || meal.title || '',
+        description: meal.description || '',
+        image_url: meal.image_url || '',
+        calories: meal.calories || 0,
+        protein: meal.protein || 0,
+        carbs: meal.carbs || 0,
+        fat: meal.fat || 0,
+        category: meal.category || '',
+        rating: meal.rating || 4.5,
+        portions: 1
+      })) as MealPlanItem[] || [];
     }
-    return data as MealPlanItem[];
   });
 
   useEffect(() => {
     if (meals) {
-      // Initialize portions to 1 for each meal
-      const initialMealPlan = meals.map(meal => ({ ...meal, portions: 1 }));
-      setMealPlan(initialMealPlan);
+      setMealPlan(meals);
     }
   }, [meals]);
 
@@ -93,7 +108,7 @@ const Nutrition = () => {
   const { totalCalories, totalProtein, totalCarbs, totalFat } = calculateTotals();
 
   if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  if (error) return <div>Error loading meals</div>;
 
   return (
     <ResponsiveContainer>

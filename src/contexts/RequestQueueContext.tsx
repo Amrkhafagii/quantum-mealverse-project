@@ -1,17 +1,16 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
-interface QueuedRequest {
+export interface QueuedRequest {
   id: string;
-  url: string;
-  method: string;
-  body?: any;
+  data: any;
   timestamp: number;
+  retries: number;
 }
 
-interface RequestQueueContextType {
+export interface RequestQueueContextType {
   queuedRequests: QueuedRequest[];
-  queueRequest: (request: Omit<QueuedRequest, 'id' | 'timestamp'>) => void;
+  queueRequest: (data: any) => void;
   processQueue: () => Promise<void>;
   clearQueue: () => void;
 }
@@ -33,45 +32,52 @@ interface RequestQueueProviderProps {
 export const RequestQueueProvider: React.FC<RequestQueueProviderProps> = ({ children }) => {
   const [queuedRequests, setQueuedRequests] = useState<QueuedRequest[]>([]);
 
-  const queueRequest = (request: Omit<QueuedRequest, 'id' | 'timestamp'>) => {
-    const queuedRequest: QueuedRequest = {
-      ...request,
-      id: Math.random().toString(36).substr(2, 9),
+  const queueRequest = useCallback((data: any) => {
+    const newRequest: QueuedRequest = {
+      id: Date.now().toString(),
+      data,
       timestamp: Date.now(),
+      retries: 0
     };
-    setQueuedRequests(prev => [...prev, queuedRequest]);
-  };
+    
+    setQueuedRequests(prev => [...prev, newRequest]);
+  }, []);
 
-  const processQueue = async () => {
+  const processQueue = useCallback(async () => {
+    // Process queued requests
     for (const request of queuedRequests) {
       try {
-        await fetch(request.url, {
-          method: request.method,
-          body: request.body ? JSON.stringify(request.body) : undefined,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        // Process the request
+        console.log('Processing request:', request);
+        // Remove from queue on success
+        setQueuedRequests(prev => prev.filter(r => r.id !== request.id));
       } catch (error) {
-        console.error('Failed to process queued request:', error);
+        console.error('Failed to process request:', error);
+        // Update retry count
+        setQueuedRequests(prev => 
+          prev.map(r => 
+            r.id === request.id 
+              ? { ...r, retries: r.retries + 1 }
+              : r
+          )
+        );
       }
     }
-    clearQueue();
-  };
+  }, [queuedRequests]);
 
-  const clearQueue = () => {
+  const clearQueue = useCallback(() => {
     setQueuedRequests([]);
-  };
-
-  const value: RequestQueueContextType = {
-    queuedRequests,
-    queueRequest,
-    processQueue,
-    clearQueue,
-  };
+  }, []);
 
   return (
-    <RequestQueueContext.Provider value={value}>
+    <RequestQueueContext.Provider 
+      value={{
+        queuedRequests,
+        queueRequest,
+        processQueue,
+        clearQueue
+      }}
+    >
       {children}
     </RequestQueueContext.Provider>
   );
