@@ -39,7 +39,7 @@ export const OrdersHistoryList: React.FC<OrdersHistoryListProps> = ({ userId }) 
     enabled: !!userId,
   });
   
-  const getStatusColor = (status: string) => {
+  const getStatusColor = React.useCallback((status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-500 hover:bg-yellow-600';
       case 'processing': return 'bg-blue-500 hover:bg-blue-600';
@@ -48,11 +48,11 @@ export const OrdersHistoryList: React.FC<OrdersHistoryListProps> = ({ userId }) 
       case 'cancelled': return 'bg-red-500 hover:bg-red-600';
       default: return 'bg-gray-500 hover:bg-gray-600';
     }
-  };
+  }, []);
   
-  const viewOrderDetails = (orderId: string) => {
+  const viewOrderDetails = React.useCallback((orderId: string) => {
     navigate(`/orders/${orderId}`);
-  };
+  }, [navigate]);
   
   if (isLoading) {
     return <div className="text-center py-4">Loading your orders...</div>;

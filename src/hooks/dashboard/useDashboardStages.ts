@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardStageService, GroupedOrder } from '@/services/dashboard/dashboardStageService';
 import { PreparationStageService } from '@/services/preparation/preparationStageService';
@@ -9,7 +9,9 @@ export const useDashboardStages = (restaurantId: string) => {
   const [orders, setOrders] = useState<GroupedOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
+    if (!restaurantId) return;
+    
     try {
       const ordersData = await DashboardStageService.getRestaurantOrdersWithStages(restaurantId);
       setOrders(ordersData);
@@ -19,12 +21,12 @@ export const useDashboardStages = (restaurantId: string) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [restaurantId]);
 
   useEffect(() => {
-    if (!restaurantId) return;
-
     fetchOrders();
+
+    if (!restaurantId) return;
 
     // Set up real-time subscription for preparation stages
     const stageChannel = supabase
@@ -66,9 +68,9 @@ export const useDashboardStages = (restaurantId: string) => {
       stageChannel.unsubscribe();
       orderChannel.unsubscribe();
     };
-  }, [restaurantId]);
+  }, [restaurantId, fetchOrders]);
 
-  const advanceStage = async (orderId: string, stageName: string, notes?: string) => {
+  const advanceStage = useCallback(async (orderId: string, stageName: string, notes?: string) => {
     try {
       const result = await PreparationStageService.advanceStage(orderId, stageName, notes);
       if (result.success) {
@@ -83,9 +85,9 @@ export const useDashboardStages = (restaurantId: string) => {
       toast.error('Failed to advance stage');
       return { success: false, message: 'Failed to advance stage' };
     }
-  };
+  }, []);
 
-  const updateStageNotes = async (orderId: string, stageName: string, notes: string) => {
+  const updateStageNotes = useCallback(async (orderId: string, stageName: string, notes: string) => {
     try {
       const success = await PreparationStageService.updateStageNotes(orderId, stageName, notes);
       if (success) {
@@ -100,7 +102,7 @@ export const useDashboardStages = (restaurantId: string) => {
       toast.error('Failed to update notes');
       return false;
     }
-  };
+  }, []);
 
   return {
     orders,

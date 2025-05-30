@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PendingAssignment {
@@ -29,7 +29,9 @@ export const usePendingAssignments = (restaurantId: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
+    if (!restaurantId) return;
+    
     try {
       setLoading(true);
       console.log('Fetching pending assignments for restaurant:', restaurantId);
@@ -99,12 +101,12 @@ export const usePendingAssignments = (restaurantId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
 
   useEffect(() => {
-    if (!restaurantId) return;
-
     fetchAssignments();
+
+    if (!restaurantId) return;
 
     // Set up real-time subscription for new assignments
     const channel = supabase
@@ -127,7 +129,7 @@ export const usePendingAssignments = (restaurantId: string) => {
     return () => {
       channel.unsubscribe();
     };
-  }, [restaurantId]);
+  }, [restaurantId, fetchAssignments]);
 
   return {
     assignments,
