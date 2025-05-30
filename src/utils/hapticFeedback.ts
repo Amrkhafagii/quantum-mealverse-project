@@ -1,12 +1,15 @@
 
-import { HapticEngine } from '@capacitor/haptics';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 type HapticStyle = 'light' | 'medium' | 'heavy';
 
 export const hapticFeedback = {
   impact: async (style: HapticStyle = 'medium') => {
     try {
-      await HapticEngine.impact({ style });
+      const impactStyle = style === 'light' ? ImpactStyle.Light : 
+                         style === 'heavy' ? ImpactStyle.Heavy : 
+                         ImpactStyle.Medium;
+      await Haptics.impact({ style: impactStyle });
     } catch (error) {
       console.log('Haptic feedback not available:', error);
     }
@@ -14,7 +17,7 @@ export const hapticFeedback = {
 
   selection: async () => {
     try {
-      await HapticEngine.selectionStart();
+      await Haptics.selectionStart();
     } catch (error) {
       console.log('Haptic feedback not available:', error);
     }
@@ -22,7 +25,7 @@ export const hapticFeedback = {
 
   success: async () => {
     try {
-      await HapticEngine.notification({ type: 'success' });
+      await Haptics.notification({ type: NotificationType.Success });
     } catch (error) {
       console.log('Haptic feedback not available:', error);
     }
@@ -30,7 +33,7 @@ export const hapticFeedback = {
 
   warning: async () => {
     try {
-      await HapticEngine.notification({ type: 'warning' });
+      await Haptics.notification({ type: NotificationType.Warning });
     } catch (error) {
       console.log('Haptic feedback not available:', error);
     }
@@ -38,7 +41,7 @@ export const hapticFeedback = {
 
   error: async () => {
     try {
-      await HapticEngine.notification({ type: 'error' });
+      await Haptics.notification({ type: NotificationType.Error });
     } catch (error) {
       console.log('Haptic feedback not available:', error);
     }

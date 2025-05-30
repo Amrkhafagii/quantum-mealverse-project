@@ -1,39 +1,49 @@
 
 import React from 'react';
-import { OrderStatusMessage } from './OrderStatusMessage';
-import { OrderStatusTimeline } from '../OrderStatusTimeline';
-import CancelOrderButton from './CancelOrderButton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { OrderTimer } from './OrderTimer';
-import { Order } from '@/types/order';
 
 interface OrderStatusDisplayProps {
-  order: Order;
-  assignmentStatus?: any;
-  onOrderUpdate?: () => void;
+  orderId: string;
+  status?: string;
+  estimatedTime?: string;
 }
 
-const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
-  order,
-  assignmentStatus,
-  onOrderUpdate
+export const OrderStatusDisplay: React.FC<OrderStatusDisplayProps> = ({
+  orderId,
+  status = 'pending',
+  estimatedTime
 }) => {
-  const status = order.status;
-  const estimatedTime = assignmentStatus?.estimated_time;
-  
   return (
-    <div className="order-status-display p-4">
-      <OrderStatusMessage status={status} order={order} />
-      
-      <OrderStatusTimeline orderId={order.id} status={status} />
-      
-      {estimatedTime && status !== 'completed' && status !== 'cancelled' && (
-        <OrderTimer startTime={new Date(estimatedTime)} />
-      )}
-      
-      {(status === 'pending' || status === 'confirmed') && (
-        <CancelOrderButton orderId={order.id} onCancel={onOrderUpdate} />
-      )}
-    </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          Order Status
+          <Badge variant="outline">{status}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span>Order ID:</span>
+            <span className="font-mono text-sm">{orderId}</span>
+          </div>
+          
+          {estimatedTime && (
+            <div className="flex justify-between items-center">
+              <span>Estimated Time:</span>
+              <span>{estimatedTime}</span>
+            </div>
+          )}
+          
+          <OrderTimer
+            orderId={orderId}
+            startTime={new Date()}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

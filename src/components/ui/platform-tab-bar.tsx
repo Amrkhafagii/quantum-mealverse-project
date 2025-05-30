@@ -135,6 +135,3 @@ export const PlatformTabBar: React.FC<PlatformTabBarProps> = ({
     </div>
   );
 };
-
-// Export TabItem for external use
-export type { TabItem };

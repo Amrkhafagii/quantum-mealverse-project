@@ -10,6 +10,7 @@ export interface ResponsiveContextType {
   isPlatformWeb: boolean;
   screenSize: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   orientation: 'portrait' | 'landscape';
+  isLandscape: boolean;
   safeAreaTop: number;
   safeAreaBottom: number;
   safeAreaLeft: number;
@@ -21,6 +22,7 @@ export interface ResponsiveContextType {
   androidScreenSize: string;
   isDarkMode: boolean;
   isFoldable: boolean;
+  isInitialized: boolean;
 }
 
 const ResponsiveContext = createContext<ResponsiveContextType | undefined>(undefined);
@@ -47,6 +49,7 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
     isPlatformWeb: true,
     screenSize: 'lg',
     orientation: 'landscape',
+    isLandscape: true,
     safeAreaTop: 0,
     safeAreaBottom: 0,
     safeAreaLeft: 0,
@@ -58,6 +61,7 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
     androidScreenSize: 'normal',
     isDarkMode: false,
     isFoldable: false,
+    isInitialized: false,
   });
 
   useEffect(() => {
@@ -77,6 +81,7 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
 
       const orientation = height > width ? 'portrait' : 'landscape';
       const isPortraitMode = orientation === 'portrait';
+      const isLandscapeMode = orientation === 'landscape';
       
       // Basic platform detection
       const userAgent = navigator.userAgent;
@@ -96,6 +101,7 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
         isPlatformWeb: isWeb,
         screenSize,
         orientation,
+        isLandscape: isLandscapeMode,
         safeAreaTop: 0,
         safeAreaBottom: 0,
         safeAreaLeft: 0,
@@ -107,6 +113,7 @@ export const ResponsiveProvider: React.FC<ResponsiveProviderProps> = ({ children
         androidScreenSize: isAndroid ? 'normal' : 'normal',
         isDarkMode: isDark,
         isFoldable: false,
+        isInitialized: true,
       });
     };
 
