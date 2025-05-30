@@ -14,10 +14,14 @@ export const updateOrderStatus = async (
   restaurantId: string | null,
   details?: Record<string, unknown>,
   changedBy?: string,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'admin' = 'system'
+  changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system'
 ): Promise<boolean> => {
   try {
     console.log(`Updating order ${orderId} status to ${newStatus}`);
+    
+    // Map changedByType to ensure it's valid
+    const mappedChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
+      changedByType === 'admin' ? 'system' : changedByType;
     
     // Update order status
     const { error: updateError } = await supabase
@@ -43,7 +47,7 @@ export const updateOrderStatus = async (
       details,
       undefined,
       changedBy,
-      changedByType
+      mappedChangedByType
     );
     
     return true;

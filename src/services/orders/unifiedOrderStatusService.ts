@@ -10,7 +10,7 @@ export interface UnifiedOrderStatusUpdate {
   assignmentSource?: 'nutrition_generated' | 'traditional';
   metadata?: Record<string, any>;
   changedBy?: string;
-  changedByType?: 'system' | 'customer' | 'restaurant' | 'admin';
+  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
 }
 
 /**
@@ -36,6 +36,10 @@ export const unifiedOrderStatusService = {
         restaurantId,
         assignmentSource
       });
+
+      // Map changedByType to ensure it's valid
+      const mappedChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
+        changedByType === 'admin' ? 'system' : changedByType;
 
       // Prepare update data with timestamp fields
       const updateData: any = {
@@ -93,7 +97,7 @@ export const unifiedOrderStatusService = {
         },
         undefined,
         changedBy,
-        changedByType
+        mappedChangedByType
       );
 
       console.log(`Successfully updated order ${orderId} to status ${newStatus}`);
