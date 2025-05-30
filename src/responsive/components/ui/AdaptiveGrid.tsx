@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '../../core/ResponsiveContext';
 import { cn } from '@/lib/utils';
-import { Platform } from '@/utils/platform';
+import { Platform } from '../../utils/platform';
 
 interface AdaptiveGridProps {
   children: React.ReactNode;

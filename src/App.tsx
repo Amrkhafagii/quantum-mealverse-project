@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +22,7 @@ import RestaurantOrders from "./pages/restaurant/Orders";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
-import { ResponsiveProvider } from "./contexts/ResponsiveContext";
+import { ResponsiveProvider } from "./responsive/core";
 import { GoogleMapsProvider } from "./contexts/GoogleMapsContext";
 import { SkipToContent } from "./components/accessibility/SkipToContent";
 import ComplexOrderDemo from '@/pages/ComplexOrderDemo';

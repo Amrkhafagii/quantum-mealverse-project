@@ -1,0 +1,89 @@
+
+/* Responsive utilities */
+
+/* Device-specific classes */
+.ios-specific {
+  /* iOS-specific styles */
+}
+
+.android-specific {
+  /* Android-specific styles */
+}
+
+/* Safe area utilities for iOS */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.py-safe {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Touch-friendly utilities */
+.touch-button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.touch-feedback {
+  transition: transform 0.1s ease-in-out;
+}
+
+.touch-feedback:active {
+  transform: scale(0.98);
+}
+
+/* Platform-specific scrolling */
+.ios-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbars */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile-specific optimizations */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+.overscroll-behavior-contain {
+  overscroll-behavior: contain;
+}
+
+/* Responsive grid utilities */
+.grid-responsive {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+@media (max-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: 1fr;
+  }
+}

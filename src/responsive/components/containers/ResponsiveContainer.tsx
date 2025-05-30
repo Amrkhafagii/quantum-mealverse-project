@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { useResponsive } from '@/contexts/ResponsiveContext';
+import { useResponsive } from '../../core/ResponsiveContext';
 import { cn } from '@/lib/utils';
-import SafeAreaView from '@/components/ui/SafeAreaView';
-import PlatformErrorBoundary from '@/components/ui/PlatformErrorBoundary';
+import { SafeAreaView } from '../ui/SafeAreaView';
+import { PlatformErrorBoundary } from '../ui/PlatformErrorBoundary';
 
 interface ResponsiveContainerProps {
   children: React.ReactNode;

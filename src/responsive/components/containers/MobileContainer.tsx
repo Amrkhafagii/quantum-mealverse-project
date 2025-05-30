@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { useResponsive } from '@/contexts/ResponsiveContext';
-import SafeAreaView from '@/components/ui/SafeAreaView';
+import { useResponsive } from '../../core/ResponsiveContext';
+import { SafeAreaView } from '../ui/SafeAreaView';
 
 interface MobileContainerProps {
   children: React.ReactNode;

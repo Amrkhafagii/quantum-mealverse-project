@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Platform } from '@/utils/platform';
+import { Platform } from '../utils/platform';
 
 interface ResponsiveContextType {
   isMobile: boolean;

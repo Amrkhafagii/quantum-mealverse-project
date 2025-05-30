@@ -1,5 +1,5 @@
 
-import { Platform } from '@/utils/platform';
+import { Platform } from './platform';
 
 interface MapOptions {
   isMobile: boolean;
