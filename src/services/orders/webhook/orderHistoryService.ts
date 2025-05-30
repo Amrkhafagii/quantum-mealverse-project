@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/types/database';
 
 interface ServiceResponse {
   success: boolean;
@@ -28,7 +29,7 @@ export const recordOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId?: string | null,
-  details?: Record<string, unknown>,
+  details?: Record<string, any>,
   timestamp?: string,
   changedBy?: string,
   changedByType?: string
@@ -52,6 +53,9 @@ export const recordOrderHistory = async (
       }
     }
 
+    // Convert details to Json type if provided
+    const jsonDetails: Json = details ? JSON.parse(JSON.stringify(details)) : {};
+
     const { error } = await supabase
       .from('order_history')
       .insert({
@@ -59,7 +63,7 @@ export const recordOrderHistory = async (
         status,
         restaurant_id: restaurantId,
         restaurant_name: restaurantName,
-        details: details || {},
+        details: jsonDetails,
         created_at: timestamp || new Date().toISOString(),
         changed_by: changedBy,
         changed_by_type: validatedChangedByType
@@ -95,7 +99,7 @@ export const recordRestaurantOrderHistory = async (
   status: string,
   restaurantId: string,
   changedBy?: string,
-  additionalDetails?: Record<string, unknown>
+  additionalDetails?: Record<string, any>
 ): Promise<ServiceResponse> => {
   try {
     const details = {

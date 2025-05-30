@@ -1,7 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { OrderAssignmentRequest } from '@/types/webhook';
 import { useWebhook } from '@/hooks/useWebhook';
+
+interface OrderAssignmentRequest {
+  order_id: string;
+  latitude: number;
+  longitude: number;
+  action: string;
+  expired_reassignment?: boolean;
+}
 
 /**
  * Generates an idempotency key for webhook requests
