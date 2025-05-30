@@ -18,6 +18,9 @@ interface DeliveryMapViewProps {
   estimatedArrivalTime?: Date | null;
   isOnline?: boolean;
   showRoute?: boolean;
+  activeAssignment?: any;
+  className?: string;
+  showControls?: boolean;
 }
 
 const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
@@ -26,7 +29,10 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
   restaurantLocation,
   estimatedArrivalTime,
   isOnline,
-  showRoute = true
+  showRoute = true,
+  activeAssignment,
+  className,
+  showControls = true
 }) => {
   const { quality } = useNetworkQuality();
   const [showOfflineAlert, setShowOfflineAlert] = useState(!isOnline);
@@ -60,7 +66,7 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
   };
   
   return (
-    <Card className="w-full h-full flex flex-col">
+    <Card className={`w-full h-full flex flex-col ${className}`}>
       <CardContent className="p-0 flex-grow relative">
         {showOfflineAlert && (
           <motion.div
@@ -106,4 +112,6 @@ const DeliveryMapView: React.FC<DeliveryMapViewProps> = ({
   );
 };
 
+// Export both named and default
+export { DeliveryMapView };
 export default DeliveryMapView;

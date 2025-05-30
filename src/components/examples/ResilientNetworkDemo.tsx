@@ -124,7 +124,7 @@ const ResilientNetworkDemo: React.FC<ResilientNetworkDemoProps> = () => {
         )}
         
         {data && (
-          <Alert variant="success">
+          <Alert variant="default">
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
               {data.message} (Fetched at {data.timestamp})

@@ -60,5 +60,9 @@ export const hapticFeedback = {
   
   light: async () => {
     await hapticFeedback.impact('light');
+  },
+  
+  medium: async () => {
+    await hapticFeedback.impact('medium');
   }
 };

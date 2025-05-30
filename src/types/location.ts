@@ -5,6 +5,12 @@ export type TrackingMode = 'off' | 'passive' | 'battery-optimized' | 'medium' | 
 
 export type LocationFreshness = 'fresh' | 'stale' | 'invalid';
 
+export type LocationPermissionStatus = 'granted' | 'denied' | 'prompt' | 'restricted';
+
+export type LocationAccuracy = 'low' | 'medium' | 'high' | 'best';
+
+export type LocationBackgroundMode = 'none' | 'location' | 'significant-changes' | 'background-app-refresh';
+
 export interface LocationData {
   latitude: number;
   longitude: number;
@@ -43,7 +49,40 @@ export interface LocationHistoryEntry {
 }
 
 export interface LocationPermissionHookResponse {
-  permissionStatus: 'granted' | 'denied' | 'prompt';
+  permissionStatus: LocationPermissionStatus;
   requestPermission: () => Promise<boolean>;
   isRequesting: boolean;
 }
+
+export interface LocationConfig {
+  enableHighAccuracy: boolean;
+  timeout: number;
+  maximumAge: number;
+  trackingMode: TrackingMode;
+  backgroundMode: LocationBackgroundMode;
+  distanceFilter: number;
+  desiredAccuracy: LocationAccuracy;
+}
+
+export interface LocationError {
+  code: number;
+  message: string;
+  timestamp: number;
+}
+
+export interface LocationState {
+  current: LocationData | null;
+  isTracking: boolean;
+  permission: LocationPermissionStatus;
+  error: LocationError | null;
+  config: LocationConfig;
+  history: LocationHistoryEntry[];
+}
+
+export interface LocationWatchOptions {
+  enableHighAccuracy?: boolean;
+  timeout?: number;
+  maximumAge?: number;
+}
+
+export type LocationWatchCallback = (location: LocationData | null, error?: LocationError) => void;
