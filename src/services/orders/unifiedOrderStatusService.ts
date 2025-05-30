@@ -9,7 +9,7 @@ export interface UnifiedOrderStatusUpdate {
   assignmentSource?: 'nutrition_generated' | 'traditional';
   metadata?: Record<string, any>;
   changedBy?: string;
-  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery' | 'admin';
+  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
 }
 
 /**
@@ -27,7 +27,7 @@ export const unifiedOrderStatusService = {
     metadata = {},
     changedBy,
     changedByType = 'system'
-  }: UnifiedOrderStatusUpdate): Promise<boolean> {
+  }: UnifiedOrderStatusUpdate): Promise<boolean> => {
     try {
       console.log('Updating unified order status:', {
         orderId,
@@ -36,9 +36,11 @@ export const unifiedOrderStatusService = {
         assignmentSource
       });
 
-      // Map changedByType to ensure it's valid for database
-      const mappedChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
-        changedByType === 'admin' ? 'system' : changedByType as 'system' | 'customer' | 'restaurant' | 'delivery';
+      // Ensure changedByType is valid for database constraint
+      const validChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
+        ['system', 'customer', 'restaurant', 'delivery'].includes(changedByType) 
+          ? changedByType as 'system' | 'customer' | 'restaurant' | 'delivery'
+          : 'system';
 
       // Prepare update data with timestamp fields
       const updateData: any = {
@@ -96,7 +98,7 @@ export const unifiedOrderStatusService = {
         },
         undefined,
         changedBy,
-        mappedChangedByType
+        validChangedByType
       );
 
       console.log(`Successfully updated order ${orderId} to status ${newStatus}`);
