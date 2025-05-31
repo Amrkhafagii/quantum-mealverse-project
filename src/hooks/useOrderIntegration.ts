@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
 import { orderNotificationService } from '@/services/notifications/orderNotificationService';
@@ -66,19 +67,19 @@ export const useOrderIntegration = (restaurantId?: string, userId?: string) => {
     }
   };
 
-  const assignOrderToRestaurants = async (orderId: string, latitude: number, longitude: number) => {
+  const assignOrderToRestaurants = async (orderId: string, restaurantIds: string[]) => {
     try {
-      const success = await orderAssignmentService.assignOrderToNearbyRestaurants(orderId, latitude, longitude);
+      const success = await orderAssignmentService.assignOrderToRestaurants(orderId, restaurantIds);
       
       if (success) {
         toast({
           title: 'Order Assigned',
-          description: 'Order has been assigned to nearby restaurants',
+          description: 'Order has been assigned to restaurants',
         });
       } else {
         toast({
           title: 'Assignment Failed',
-          description: 'No restaurants available in your area',
+          description: 'Failed to assign order to restaurants',
           variant: 'destructive'
         });
       }
