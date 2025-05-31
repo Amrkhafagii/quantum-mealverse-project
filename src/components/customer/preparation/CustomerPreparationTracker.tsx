@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +36,7 @@ export const CustomerPreparationTracker: React.FC<CustomerPreparationTrackerProp
     overallProgress,
     getCurrentStage,
     getEstimatedCompletionTime,
-    isLoading
+    loading
   } = usePreparationStages(orderId);
 
   const [estimatedCompletion, setEstimatedCompletion] = useState<Date | null>(null);
@@ -49,12 +48,12 @@ export const CustomerPreparationTracker: React.FC<CustomerPreparationTrackerProp
       setEstimatedCompletion(time);
     };
     
-    if (orderId && !isLoading) {
+    if (orderId && !loading) {
       updateEstimatedTime();
     }
-  }, [orderId, isLoading, getEstimatedCompletionTime]);
+  }, [orderId, loading, getEstimatedCompletionTime]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardContent className="p-6 text-center">

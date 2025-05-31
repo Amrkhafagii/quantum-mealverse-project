@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -197,6 +196,32 @@ export const usePreparationStages = (orderId: string) => {
     }
   }, [stages, fetchStages, toast]);
 
+  const getCurrentStage = useCallback(() => {
+    return stages.find(stage => stage.status === 'in_progress') || null;
+  }, [stages]);
+
+  const getEstimatedCompletionTime = useCallback(async (): Promise<Date | null> => {
+    if (!stages.length) return null;
+
+    const currentStage = getCurrentStage();
+    if (!currentStage) return null;
+
+    // Calculate remaining time based on current stage and pending stages
+    const pendingStages = stages.filter(s => s.status === 'pending' || s.status === 'in_progress');
+    const totalRemainingMinutes = pendingStages.reduce((acc, stage) => acc + stage.estimated_duration_minutes, 0);
+
+    return new Date(Date.now() + totalRemainingMinutes * 60 * 1000);
+  }, [stages, getCurrentStage]);
+
+  const getElapsedMinutes = useCallback((stageName: string): number => {
+    const stage = stages.find(s => s.stage_name === stageName);
+    if (!stage || !stage.started_at) return 0;
+
+    const startTime = new Date(stage.started_at).getTime();
+    const currentTime = new Date().getTime();
+    return Math.floor((currentTime - startTime) / (1000 * 60));
+  }, [stages]);
+
   useEffect(() => {
     fetchStages();
   }, [fetchStages]);
@@ -234,6 +259,10 @@ export const usePreparationStages = (orderId: string) => {
     overallProgress,
     advanceStage,
     updateNotes,
-    refetch: fetchStages
+    refetch: fetchStages,
+    getCurrentStage,
+    getEstimatedCompletionTime,
+    getElapsedMinutes,
+    isLoading: loading // Add alias for consistency
   };
 };
