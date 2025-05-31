@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useDeliveryRating } from '@/hooks/delivery/useDeliveryRating';
+import { useToast } from '@/hooks/use-toast';
 import { Star } from 'lucide-react';
 
 interface DeliveryRatingModalProps {
@@ -26,6 +27,7 @@ export const DeliveryRatingModal: React.FC<DeliveryRatingModalProps> = ({
   deliveryUserName
 }) => {
   const { loading, submitRating } = useDeliveryRating(assignmentId, customerId);
+  const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [categoryRatings, setCategoryRatings] = useState({
@@ -36,7 +38,27 @@ export const DeliveryRatingModal: React.FC<DeliveryRatingModalProps> = ({
   });
 
   const handleSubmit = async () => {
-    if (rating === 0) return;
+    if (rating === 0) {
+      toast({
+        title: 'Rating required',
+        description: 'Please provide an overall rating before submitting.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Check if any category ratings are provided but incomplete
+    const providedCategoryRatings = Object.values(categoryRatings).filter(r => r > 0);
+    const totalCategories = Object.keys(categoryRatings).length;
+    
+    if (providedCategoryRatings.length > 0 && providedCategoryRatings.length < totalCategories) {
+      toast({
+        title: 'Complete category ratings',
+        description: 'Please rate all categories or leave them all empty.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const success = await submitRating(
       orderId,
@@ -107,13 +129,13 @@ export const DeliveryRatingModal: React.FC<DeliveryRatingModalProps> = ({
 
           {/* Overall rating */}
           <div className="text-center space-y-2">
-            <p className="font-medium">Overall Rating</p>
+            <p className="font-medium">Overall Rating *</p>
             <StarRating value={rating} onChange={setRating} size="h-8 w-8" />
           </div>
 
           {/* Category ratings */}
           <div className="space-y-3">
-            <p className="font-medium text-sm">Rate specific aspects:</p>
+            <p className="font-medium text-sm">Rate specific aspects (optional):</p>
             {categories.map((category) => (
               <div key={category.key} className="flex items-center justify-between">
                 <span className="text-sm">{category.label}</span>

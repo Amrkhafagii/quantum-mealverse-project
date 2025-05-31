@@ -1,4 +1,3 @@
-
 import { realtimeNotificationService } from './realtimeNotificationService';
 
 export interface PushNotificationPermissionStatus {
@@ -199,19 +198,7 @@ class PushNotificationService {
           badge: '/badge-72x72.png',
           data: data,
           tag: data?.orderId || 'default',
-          requireInteraction: true,
-          actions: [
-            {
-              action: 'view',
-              title: 'View Details',
-              icon: '/icons/view.png'
-            },
-            {
-              action: 'close',
-              title: 'Close',
-              icon: '/icons/close.png'
-            }
-          ]
+          requireInteraction: true
         });
       }).catch(error => {
         console.error('Error showing notification:', error);
