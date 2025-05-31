@@ -118,7 +118,7 @@ const validateAndTransformItems = async (items: CartItem[]): Promise<ValidationR
 };
 
 /**
- * Creates a new order with enhanced logging and validation
+ * Creates a new order with automatic restaurant assignment trigger
  */
 export const createOrder = async (
   orderData: Omit<OrderData, 'delivery_fee'> & { deliveryMethod?: string },
@@ -153,23 +153,24 @@ export const createOrder = async (
       customer_phone: orderData.customer_phone,
       customer_email: orderData.customer_email || '',
       delivery_address: orderData.delivery_address,
-      city: orderData.city || '', // Ensure city is always a string
-      total: orderData.subtotal + deliveryFee, // Recalculate total with dynamic fee
+      city: orderData.city || '',
+      total: orderData.subtotal + deliveryFee,
       subtotal: orderData.subtotal,
       delivery_fee: deliveryFee,
-      status: orderData.status,
+      status: 'pending', // Start with pending - trigger will create assignment
       payment_method: orderData.payment_method,
       delivery_method: orderData.delivery_method,
       special_instructions: orderData.special_instructions,
       latitude: orderData.latitude,
       longitude: orderData.longitude,
       assignment_source: orderData.assignment_source,
-      is_mixed_order: orderData.is_mixed_order
+      is_mixed_order: orderData.is_mixed_order,
+      restaurant_id: null // Will be set when assignment is accepted
     };
     
     console.log('Creating order with final data:', finalOrderData);
     
-    // Insert order
+    // Insert order - this will automatically trigger assignment creation
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert(finalOrderData)
@@ -181,7 +182,7 @@ export const createOrder = async (
       throw new Error(`Order creation failed: ${orderError.message}`);
     }
     
-    console.log('Order created successfully:', order.id);
+    console.log('Order created successfully with automatic assignment trigger:', order.id);
     
     // Create order items in batch
     const orderItems = validation.validItems.map(item => ({
@@ -207,7 +208,7 @@ export const createOrder = async (
       throw new Error(`Order items creation failed: ${itemsError.message}`);
     }
     
-    console.log('Order items created successfully');
+    console.log('Order and items created successfully - assignment auto-created by trigger');
     
     return {
       success: true,
@@ -243,3 +244,4 @@ export const hasMixedOrderTypes = (items: CartItem[]): boolean => {
   const sourceTypes = new Set(items.map(item => determineSourceType(item)));
   return sourceTypes.size > 1;
 };
+

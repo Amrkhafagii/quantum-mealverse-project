@@ -36,6 +36,7 @@ export const usePendingAssignments = (restaurantId: string) => {
       setLoading(true);
       console.log('Fetching pending assignments for restaurant:', restaurantId);
 
+      // Query assignments for this specific restaurant (including auto-created ones)
       const { data, error: fetchError } = await supabase
         .from('restaurant_assignments')
         .select(`
@@ -108,7 +109,7 @@ export const usePendingAssignments = (restaurantId: string) => {
 
     if (!restaurantId) return;
 
-    // Set up real-time subscription for new assignments
+    // Set up real-time subscription for assignment changes
     const channel = supabase
       .channel(`restaurant_assignments_${restaurantId}`)
       .on(
@@ -138,3 +139,4 @@ export const usePendingAssignments = (restaurantId: string) => {
     refetch: fetchAssignments
   };
 };
+

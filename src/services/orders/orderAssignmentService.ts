@@ -26,62 +26,64 @@ export interface OrderNotification {
 
 export const orderAssignmentService = {
   /**
-   * Assign an order to restaurants within radius
+   * Assign an order to specific restaurants (post-trigger creation)
    */
-  async assignOrderToNearbyRestaurants(
+  async assignOrderToRestaurants(
     orderId: string, 
-    latitude: number, 
-    longitude: number, 
-    radiusKm: number = 5
+    restaurantIds: string[]
   ): Promise<boolean> {
     try {
-      console.log(`Assigning order ${orderId} to restaurants within ${radiusKm}km`);
+      console.log(`Assigning order ${orderId} to specific restaurants:`, restaurantIds);
 
-      // Find nearby restaurants
-      const { data: nearbyRestaurants, error } = await supabase.rpc('find_nearest_restaurant', {
-        order_lat: latitude,
-        order_lng: longitude,
-        max_distance_km: radiusKm
-      });
-
-      if (error || !nearbyRestaurants?.length) {
-        console.error('No restaurants found nearby:', error);
-        await this.updateOrderStatus(orderId, 'no_restaurant_available');
-        return false;
-      }
-
-      console.log(`Found ${nearbyRestaurants.length} nearby restaurants`);
-
-      // Create assignments for all nearby restaurants
-      const assignments = nearbyRestaurants.map(restaurant => ({
+      // Update existing pending assignment or create new ones for specific restaurants
+      const assignments = restaurantIds.map(restaurantId => ({
         order_id: orderId,
-        restaurant_id: restaurant.restaurant_id,
+        restaurant_id: restaurantId,
         status: 'pending',
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes
       }));
 
-      const { error: assignmentError } = await supabase
+      // First, update or replace the auto-created assignment
+      const { error: updateError } = await supabase
         .from('restaurant_assignments')
-        .insert(assignments);
+        .update({
+          restaurant_id: restaurantIds[0], // Assign first restaurant
+          status: 'pending'
+        })
+        .eq('order_id', orderId)
+        .eq('status', 'pending')
+        .is('restaurant_id', null);
 
-      if (assignmentError) {
-        console.error('Error creating assignments:', assignmentError);
-        return false;
+      if (updateError) {
+        console.error('Error updating initial assignment:', updateError);
       }
 
-      // Update order status
+      // Create additional assignments for other restaurants if multiple
+      if (restaurantIds.length > 1) {
+        const additionalAssignments = assignments.slice(1);
+        const { error: assignmentError } = await supabase
+          .from('restaurant_assignments')
+          .insert(additionalAssignments);
+
+        if (assignmentError) {
+          console.error('Error creating additional assignments:', assignmentError);
+          return false;
+        }
+      }
+
+      // Update order status to indicate assignment
       await this.updateOrderStatus(orderId, 'awaiting_restaurant');
 
-      console.log(`Successfully assigned order to ${assignments.length} restaurants`);
+      console.log(`Successfully assigned order to ${restaurantIds.length} restaurants`);
       return true;
     } catch (error) {
-      console.error('Error in assignOrderToNearbyRestaurants:', error);
+      console.error('Error in assignOrderToRestaurants:', error);
       return false;
     }
   },
 
   /**
-   * Handle restaurant response to order assignment
+   * Handle restaurant response to order assignment (leverages triggers)
    */
   async handleRestaurantResponse(
     assignmentId: string,
@@ -90,16 +92,18 @@ export const orderAssignmentService = {
     notes?: string
   ): Promise<boolean> {
     try {
-      // Update the assignment
+      console.log(`Restaurant ${restaurantId} ${action}ing assignment ${assignmentId}`);
+
+      // Update the assignment - this will trigger the order update automatically
       const { data: assignment, error: updateError } = await supabase
         .from('restaurant_assignments')
         .update({
           status: action === 'accept' ? 'accepted' : 'rejected',
           responded_at: new Date().toISOString(),
-          response_notes: notes
+          response_notes: notes,
+          restaurant_id: restaurantId // Ensure restaurant_id is set
         })
         .eq('id', assignmentId)
-        .eq('restaurant_id', restaurantId)
         .eq('status', 'pending')
         .select()
         .single();
@@ -109,24 +113,9 @@ export const orderAssignmentService = {
         return false;
       }
 
-      if (action === 'accept') {
-        // Cancel other pending assignments for this order
-        await supabase
-          .from('restaurant_assignments')
-          .update({ status: 'cancelled' })
-          .eq('order_id', assignment.order_id)
-          .eq('status', 'pending')
-          .neq('id', assignmentId);
+      console.log(`Assignment ${action}ed successfully, triggers will handle order update`);
 
-        // Update order with restaurant assignment
-        await supabase
-          .from('orders')
-          .update({
-            restaurant_id: restaurantId,
-            status: 'restaurant_accepted'
-          })
-          .eq('id', assignment.order_id);
-      } else {
+      if (action === 'reject') {
         // Check if any assignments are still pending
         const { data: pendingAssignments } = await supabase
           .from('restaurant_assignments')
@@ -190,7 +179,7 @@ export const orderAssignmentService = {
   },
 
   /**
-   * Get restaurant's pending assignments
+   * Get restaurant's pending assignments (improved query)
    */
   async getRestaurantPendingAssignments(restaurantId: string): Promise<any[]> {
     const { data, error } = await supabase
@@ -204,6 +193,7 @@ export const orderAssignmentService = {
           delivery_address,
           total,
           created_at,
+          status,
           order_items(*)
         )
       `)
@@ -271,3 +261,4 @@ export const orderAssignmentService = {
     }
   }
 };
+
