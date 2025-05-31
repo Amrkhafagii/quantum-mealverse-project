@@ -1,36 +1,150 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { DashboardStageService, GroupedOrder } from '@/services/dashboard/dashboardStageService';
-import { PreparationStageService } from '@/services/preparation/preparationStageService';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useDashboardStages = (restaurantId: string) => {
   const [orders, setOrders] = useState<GroupedOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const fetchOrders = useCallback(async () => {
     if (!restaurantId) return;
-    
+
     try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('Dashboard: Fetching orders with stages for restaurant:', restaurantId);
+      
       const ordersData = await DashboardStageService.getRestaurantOrdersWithStages(restaurantId);
+      
+      console.log('Dashboard: Fetched orders:', ordersData.length);
       setOrders(ordersData);
-    } catch (error) {
-      console.error('Error fetching dashboard orders:', error);
-      toast.error('Failed to load orders');
+      
+      // Perform cleanup validation periodically
+      const cleanup = await DashboardStageService.validateAndCleanupPreparationData(restaurantId);
+      if (cleanup.cleaned > 0) {
+        console.log(`Dashboard: Cleaned up ${cleanup.cleaned} inconsistent records`);
+      }
+      
+      if (cleanup.errors.length > 0) {
+        console.warn('Dashboard: Cleanup errors:', cleanup.errors);
+      }
+      
+    } catch (err) {
+      console.error('Dashboard: Error fetching orders with stages:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load preparation stages';
+      setError(errorMessage);
+      
+      toast({
+        title: "Error",
+        description: "Failed to load order preparation stages",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, toast]);
+
+  const advanceStage = useCallback(async (orderId: string, stageName: string) => {
+    try {
+      console.log('Dashboard: Advancing stage:', { orderId, stageName });
+      
+      const success = await DashboardStageService.advanceToNextStage(orderId, stageName);
+      
+      if (success) {
+        toast({
+          title: "Stage Advanced",
+          description: "Order stage has been advanced successfully",
+        });
+        
+        // Refresh data
+        await fetchOrders();
+      } else {
+        throw new Error('Failed to advance stage');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Dashboard: Error advancing stage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to advance preparation stage",
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [fetchOrders, toast]);
+
+  const updateStageNotes = useCallback(async (stageName: string, notes: string) => {
+    try {
+      // Find the stage to update
+      const orderWithStage = orders.find(order => 
+        order.stages.some(stage => stage.stage_name === stageName)
+      );
+      
+      if (!orderWithStage) {
+        throw new Error('Stage not found');
+      }
+      
+      const stage = orderWithStage.stages.find(s => s.stage_name === stageName);
+      if (!stage) {
+        throw new Error('Stage not found');
+      }
+
+      const { error } = await supabase
+        .from('order_preparation_stages')
+        .update({ notes })
+        .eq('id', stage.stage_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Notes Updated",
+        description: "Stage notes have been updated successfully",
+      });
+      
+      // Refresh data
+      await fetchOrders();
+      
+      return true;
+    } catch (error) {
+      console.error('Dashboard: Error updating stage notes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update stage notes",
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [orders, fetchOrders, toast]);
 
   useEffect(() => {
     fetchOrders();
+  }, [fetchOrders]);
 
+  useEffect(() => {
     if (!restaurantId) return;
 
-    // Set up real-time subscription for preparation stages
-    const stageChannel = supabase
-      .channel(`dashboard_stages_${restaurantId}`)
+    // Set up real-time subscription for order changes
+    const channel = supabase
+      .channel(`order_stages_${restaurantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        (payload) => {
+          console.log('Dashboard: Order update received:', payload);
+          fetchOrders();
+        }
+      )
       .on(
         'postgres_changes',
         {
@@ -39,76 +153,24 @@ export const useDashboardStages = (restaurantId: string) => {
           table: 'order_preparation_stages',
           filter: `restaurant_id=eq.${restaurantId}`,
         },
-        () => {
-          console.log('Stage update received, refreshing orders');
-          fetchOrders();
-        }
-      )
-      .subscribe();
-
-    // Set up real-time subscription for order status changes
-    const orderChannel = supabase
-      .channel(`dashboard_orders_${restaurantId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `restaurant_id=eq.${restaurantId}`,
-        },
-        () => {
-          console.log('Order update received, refreshing orders');
+        (payload) => {
+          console.log('Dashboard: Stage update received:', payload);
           fetchOrders();
         }
       )
       .subscribe();
 
     return () => {
-      stageChannel.unsubscribe();
-      orderChannel.unsubscribe();
+      channel.unsubscribe();
     };
   }, [restaurantId, fetchOrders]);
-
-  const advanceStage = useCallback(async (orderId: string, stageName: string, notes?: string) => {
-    try {
-      const result = await PreparationStageService.advanceStage(orderId, stageName, notes);
-      if (result.success) {
-        toast.success(result.message || `${stageName.replace('_', ' ')} stage completed!`);
-        // Real-time will handle the refresh
-      } else {
-        toast.error(result.message || 'Failed to advance stage');
-      }
-      return result;
-    } catch (error) {
-      console.error('Error advancing stage:', error);
-      toast.error('Failed to advance stage');
-      return { success: false, message: 'Failed to advance stage' };
-    }
-  }, []);
-
-  const updateStageNotes = useCallback(async (orderId: string, stageName: string, notes: string) => {
-    try {
-      const success = await PreparationStageService.updateStageNotes(orderId, stageName, notes);
-      if (success) {
-        toast.success('Notes updated successfully');
-        // Real-time will handle the refresh
-      } else {
-        toast.error('Failed to update notes');
-      }
-      return success;
-    } catch (error) {
-      console.error('Error updating notes:', error);
-      toast.error('Failed to update notes');
-      return false;
-    }
-  }, []);
 
   return {
     orders,
     isLoading,
+    error,
+    refetch: fetchOrders,
     advanceStage,
-    updateStageNotes,
-    refetch: fetchOrders
+    updateStageNotes
   };
 };
