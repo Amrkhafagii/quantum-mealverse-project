@@ -60,7 +60,7 @@ export const usePendingAssignments = (restaurantId: string) => {
             )
           )
         `)
-        .eq('restaurant_id', restaurantId)
+        .or(`restaurant_id.eq.${restaurantId},restaurant_id.is.null`)
         .eq('status', 'pending')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: true });
@@ -125,6 +125,19 @@ export const usePendingAssignments = (restaurantId: string) => {
           fetchAssignments();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'restaurant_assignments',
+          filter: `restaurant_id=is.null`,
+        },
+        () => {
+          console.log('New unassigned order received, refreshing...');
+          fetchAssignments();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -139,4 +152,3 @@ export const usePendingAssignments = (restaurantId: string) => {
     refetch: fetchAssignments
   };
 };
-

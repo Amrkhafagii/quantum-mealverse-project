@@ -19,6 +19,7 @@ export const useRestaurantOrders = (restaurantId: string) => {
 
       console.log('Fetching orders for restaurant:', restaurantId);
 
+      // Query orders that are either assigned to this restaurant OR unassigned (pending assignments)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
@@ -34,9 +35,10 @@ export const useRestaurantOrders = (restaurantId: string) => {
           status,
           total,
           created_at,
-          notes
+          notes,
+          restaurant_id
         `)
-        .eq('restaurant_id', restaurantId)
+        .or(`restaurant_id.eq.${restaurantId},restaurant_id.is.null`)
         .order('created_at', { ascending: false });
 
       if (ordersError) {

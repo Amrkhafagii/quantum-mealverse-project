@@ -12,40 +12,51 @@ export const useOrderAssignment = () => {
     try {
       console.log('Accepting order:', { orderId, restaurantId, notes });
 
-      // Find the assignment for this restaurant and order
-      const { data: assignment, error: findError } = await supabase
-        .from('restaurant_assignments')
-        .select('id')
-        .eq('order_id', orderId)
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'pending')
-        .single();
+      // First update the order with restaurant_id and status
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          restaurant_id: restaurantId,
+          status: 'restaurant_accepted'
+        })
+        .eq('id', orderId);
 
-      if (findError || !assignment) {
-        console.error('Assignment not found:', findError);
+      if (orderError) {
+        console.error('Error updating order:', orderError);
         toast({
           title: 'Error',
-          description: 'Order assignment not found',
+          description: 'Failed to accept order',
           variant: 'destructive'
         });
         return false;
       }
 
-      // Update the assignment status - triggers will handle the rest
+      // Then update the assignment status
       const { error: assignmentError } = await supabase
         .from('restaurant_assignments')
         .update({
           status: 'accepted',
           responded_at: new Date().toISOString(),
-          response_notes: notes
+          response_notes: notes,
+          restaurant_id: restaurantId
         })
-        .eq('id', assignment.id);
+        .eq('order_id', orderId)
+        .eq('status', 'pending');
 
       if (assignmentError) {
         console.error('Error updating assignment:', assignmentError);
+        // Try to rollback the order update
+        await supabase
+          .from('orders')
+          .update({
+            restaurant_id: null,
+            status: 'pending'
+          })
+          .eq('id', orderId);
+        
         toast({
           title: 'Error',
-          description: 'Failed to accept order assignment',
+          description: 'Failed to update assignment status',
           variant: 'destructive'
         });
         return false;
@@ -57,7 +68,7 @@ export const useOrderAssignment = () => {
         .update({ status: 'cancelled' })
         .eq('order_id', orderId)
         .eq('status', 'pending')
-        .neq('id', assignment.id);
+        .neq('restaurant_id', restaurantId);
 
       // Initialize preparation stages
       const { error: stagesError } = await supabase.rpc('create_default_preparation_stages', {
@@ -94,34 +105,17 @@ export const useOrderAssignment = () => {
     try {
       console.log('Rejecting order:', { orderId, restaurantId, notes });
 
-      // Find the assignment for this restaurant and order
-      const { data: assignment, error: findError } = await supabase
-        .from('restaurant_assignments')
-        .select('id')
-        .eq('order_id', orderId)
-        .eq('restaurant_id', restaurantId)
-        .eq('status', 'pending')
-        .single();
-
-      if (findError || !assignment) {
-        console.error('Assignment not found:', findError);
-        toast({
-          title: 'Error',
-          description: 'Order assignment not found',
-          variant: 'destructive'
-        });
-        return false;
-      }
-
-      // Update the assignment status
+      // Update the assignment status to rejected
       const { error: assignmentError } = await supabase
         .from('restaurant_assignments')
         .update({
           status: 'rejected',
           responded_at: new Date().toISOString(),
-          response_notes: notes
+          response_notes: notes,
+          restaurant_id: restaurantId
         })
-        .eq('id', assignment.id);
+        .eq('order_id', orderId)
+        .eq('status', 'pending');
 
       if (assignmentError) {
         console.error('Error updating assignment:', assignmentError);
@@ -172,4 +166,3 @@ export const useOrderAssignment = () => {
     isLoading
   };
 };
-
