@@ -22,42 +22,84 @@ class PushNotificationService {
     };
   }
 
-  // Request notification permission
+  // Request notification permission with better error handling
   async requestPermission(): Promise<NotificationPermission> {
     if (!this.isSupported()) {
+      console.warn('Push notifications not supported');
       return 'denied';
     }
 
-    const permission = await Notification.requestPermission();
-    
-    if (permission === 'granted') {
-      await this.setupServiceWorker();
-    }
-    
-    return permission;
-  }
-
-  // Setup service worker for push notifications
-  private async setupServiceWorker(): Promise<void> {
-    if (!('serviceWorker' in navigator)) return;
-
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered:', registration);
+      const permission = await Notification.requestPermission();
+      
+      if (permission === 'granted') {
+        try {
+          await this.setupServiceWorker();
+        } catch (serviceWorkerError) {
+          console.error('Service worker setup failed:', serviceWorkerError);
+          // Don't fail the permission request if service worker setup fails
+        }
+      }
+      
+      return permission;
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
+      console.error('Error requesting notification permission:', error);
+      return 'denied';
     }
   }
 
-  // Subscribe to push notifications
+  // Setup service worker for push notifications with retry logic
+  private async setupServiceWorker(): Promise<void> {
+    if (!('serviceWorker' in navigator)) {
+      throw new Error('Service Worker not supported');
+    }
+
+    const maxRetries = 3;
+    let retries = 0;
+
+    while (retries < maxRetries) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered:', registration);
+        return;
+      } catch (error) {
+        retries++;
+        console.error(`Service Worker registration attempt ${retries} failed:`, error);
+        
+        if (retries >= maxRetries) {
+          throw new Error(`Service Worker registration failed after ${maxRetries} attempts`);
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+      }
+    }
+  }
+
+  // Subscribe to push notifications with comprehensive error handling
   async subscribeToPush(userId: string): Promise<boolean> {
-    if (!this.isSupported() || Notification.permission !== 'granted') {
+    if (!this.isSupported()) {
+      console.error('Push notifications not supported');
+      return false;
+    }
+
+    if (Notification.permission !== 'granted') {
+      console.error('Notification permission not granted');
       return false;
     }
 
     try {
       const registration = await navigator.serviceWorker.ready;
       
+      // Check if already subscribed
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log('Already subscribed to push notifications');
+        const token = JSON.stringify(existingSubscription);
+        return await realtimeNotificationService.registerPushToken(userId, token, 'web');
+      }
+      
+      // Create new subscription
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: this.urlBase64ToUint8Array(this.vapidKey)
@@ -66,31 +108,53 @@ class PushNotificationService {
       const token = JSON.stringify(subscription);
       
       // Register the token with our backend
-      return await realtimeNotificationService.registerPushToken(
-        userId,
-        token,
-        'web'
-      );
+      const success = await realtimeNotificationService.registerPushToken(userId, token, 'web');
+      
+      if (success) {
+        console.log('Successfully subscribed to push notifications');
+      } else {
+        console.error('Failed to register push token with backend');
+      }
+      
+      return success;
     } catch (error) {
       console.error('Failed to subscribe to push notifications:', error);
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('permission')) {
+          console.error('Permission denied or revoked');
+        } else if (error.message.includes('vapid')) {
+          console.error('VAPID key configuration error');
+        } else if (error.message.includes('endpoint')) {
+          console.error('Push service endpoint error');
+        }
+      }
+      
       return false;
     }
   }
 
-  // Register push token (added method)
+  // Register push token with enhanced validation
   async registerToken(
     userId: string,
     token: string,
     platform: 'ios' | 'android' | 'web'
   ): Promise<boolean> {
-    return await realtimeNotificationService.registerPushToken(
-      userId,
-      token,
-      platform
-    );
+    if (!userId || !token) {
+      console.error('Invalid userId or token for registration');
+      return false;
+    }
+
+    try {
+      return await realtimeNotificationService.registerPushToken(userId, token, platform);
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      return false;
+    }
   }
 
-  // Send notification (added method)
+  // Send notification with validation
   async sendNotification(
     userId: string,
     title: string,
@@ -98,50 +162,107 @@ class PushNotificationService {
     data: Record<string, any> = {},
     notificationType: string
   ): Promise<string | null> {
-    return await realtimeNotificationService.createNotification(
-      userId,
-      title,
-      body,
-      notificationType,
-      data.orderId,
-      data.restaurantId,
-      data.deliveryUserId,
-      data
-    );
+    if (!userId || !title || !body) {
+      console.error('Invalid parameters for sending notification');
+      return null;
+    }
+
+    try {
+      return await realtimeNotificationService.createNotification(
+        userId,
+        title,
+        body,
+        notificationType,
+        data.orderId,
+        data.restaurantId,
+        data.deliveryUserId,
+        data
+      );
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      return null;
+    }
   }
 
-  // Show local notification (for web)
+  // Show local notification with error handling
   showNotification(title: string, message: string, data?: any): void {
     if (!this.isSupported() || Notification.permission !== 'granted') {
+      console.warn('Cannot show notification: not supported or permission denied');
       return;
     }
 
-    navigator.serviceWorker.ready.then(registration => {
-      registration.showNotification(title, {
-        body: message,
-        icon: '/icon-192x192.png',
-        badge: '/badge-72x72.png',
-        data: data,
-        tag: data?.orderId || 'default',
-        requireInteraction: true
+    try {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, {
+          body: message,
+          icon: '/icon-192x192.png',
+          badge: '/badge-72x72.png',
+          data: data,
+          tag: data?.orderId || 'default',
+          requireInteraction: true,
+          actions: [
+            {
+              action: 'view',
+              title: 'View Details',
+              icon: '/icons/view.png'
+            },
+            {
+              action: 'close',
+              title: 'Close',
+              icon: '/icons/close.png'
+            }
+          ]
+        });
+      }).catch(error => {
+        console.error('Error showing notification:', error);
       });
-    });
+    } catch (error) {
+      console.error('Error preparing notification:', error);
+    }
   }
 
   // Helper function to convert VAPID key
   private urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
+    try {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
 
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
 
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    } catch (error) {
+      console.error('Error converting VAPID key:', error);
+      throw new Error('Invalid VAPID key format');
     }
-    return outputArray;
+  }
+
+  // Unsubscribe from push notifications
+  async unsubscribe(): Promise<boolean> {
+    if (!this.isSupported()) {
+      return false;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      
+      if (subscription) {
+        const success = await subscription.unsubscribe();
+        console.log('Unsubscribed from push notifications:', success);
+        return success;
+      }
+      
+      return true; // Already unsubscribed
+    } catch (error) {
+      console.error('Error unsubscribing from push notifications:', error);
+      return false;
+    }
   }
 }
 
