@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AssignmentHealth {
@@ -38,12 +37,12 @@ export class AssignmentMonitoringService {
         .eq('status', 'pending')
         .lt('expires_at', new Date().toISOString());
 
-      // Count orders without valid restaurant assignments
+      // Count orders without valid restaurant assignments - fixed ambiguous column reference
       const { data: ordersWithoutAssignments } = await supabase
         .from('orders')
-        .select('id')
-        .eq('status', 'pending')
-        .is('restaurant_id', null);
+        .select('o.id')
+        .eq('o.status', 'pending')
+        .is('o.restaurant_id', null);
 
       const orphanedOrders = ordersWithoutAssignments?.filter(async (order) => {
         const { count } = await supabase
@@ -54,17 +53,19 @@ export class AssignmentMonitoringService {
         return (count || 0) === 0;
       }).length || 0;
 
-      // Count inconsistent states (orders with status mismatch)
+      // Count inconsistent states (orders with status mismatch) - fixed with explicit aliases
       const { data: inconsistentOrders } = await supabase
         .from('orders')
         .select(`
-          id,
-          status,
-          restaurant_id,
-          restaurant_assignments!inner(status)
+          o.id,
+          o.status,
+          o.restaurant_id,
+          ra.status
         `)
-        .neq('status', 'pending')
-        .is('restaurant_id', null);
+        .from('orders o')
+        .leftJoin('restaurant_assignments ra', 'o.id', 'ra.order_id')
+        .neq('o.status', 'pending')
+        .is('o.restaurant_id', null);
 
       return {
         totalPendingAssignments: pendingCount || 0,
@@ -136,16 +137,17 @@ export class AssignmentMonitoringService {
         }
       }
 
-      // 2. Fix orders with inconsistent states
+      // 2. Fix orders with inconsistent states - fixed with explicit column references
       const { data: inconsistentOrders, error: inconsistentError } = await supabase
         .from('orders')
         .select(`
-          id,
-          status,
-          restaurant_id
+          o.id,
+          o.status,
+          o.restaurant_id
         `)
-        .eq('status', 'restaurant_accepted')
-        .is('restaurant_id', null);
+        .from('orders o')
+        .eq('o.status', 'restaurant_accepted')
+        .is('o.restaurant_id', null);
 
       if (inconsistentError) {
         errors.push(`Error finding inconsistent orders: ${inconsistentError.message}`);

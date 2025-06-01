@@ -6994,7 +6994,7 @@ export type Database = {
           rejection_reason: string | null
           responded_at: string | null
           response_notes: string | null
-          restaurant_id: string
+          restaurant_id: string | null
           status: string
           updated_at: string
         }
@@ -7011,7 +7011,7 @@ export type Database = {
           rejection_reason?: string | null
           responded_at?: string | null
           response_notes?: string | null
-          restaurant_id: string
+          restaurant_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -7028,7 +7028,7 @@ export type Database = {
           rejection_reason?: string | null
           responded_at?: string | null
           response_notes?: string | null
-          restaurant_id?: string
+          restaurant_id?: string | null
           status?: string
           updated_at?: string
         }

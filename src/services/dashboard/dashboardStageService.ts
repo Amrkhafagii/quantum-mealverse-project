@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface OrderWithStages {
@@ -209,6 +208,7 @@ export class DashboardStageService {
 
   /**
    * Data validation and cleanup for preparation stages
+   * Fixed UUID syntax error by properly constructing the query
    */
   static async validateAndCleanupPreparationData(restaurantId: string): Promise<{
     cleaned: number;
@@ -219,15 +219,23 @@ export class DashboardStageService {
 
     try {
       // 1. Find orphaned preparation stages (stages without valid orders)
+      // Fixed: Get valid order IDs first, then use them properly in the query
+      const { data: validOrders } = await supabase
+        .from('orders')
+        .select('id');
+
+      if (!validOrders || validOrders.length === 0) {
+        return { cleaned: 0, errors: ['No valid orders found'] };
+      }
+
+      // Extract UUID values without quotes for the not.in filter
+      const validOrderIds = validOrders.map(o => o.id);
+
       const { data: orphanedStages, error: orphanError } = await supabase
         .from('order_preparation_stages')
         .select('id, order_id')
         .eq('restaurant_id', restaurantId)
-        .not('order_id', 'in', 
-          `(${await supabase.from('orders').select('id').then(res => 
-            res.data?.map(o => `'${o.id}'`).join(',') || "''"
-          )})`
-        );
+        .not('order_id', 'in', `(${validOrderIds.join(',')})`);
 
       if (orphanError) {
         errors.push(`Error finding orphaned stages: ${orphanError.message}`);
