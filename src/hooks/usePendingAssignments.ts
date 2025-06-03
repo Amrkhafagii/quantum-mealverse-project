@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,24 +35,10 @@ export const usePendingAssignments = (restaurantId: string) => {
       setLoading(true);
       console.log('Fetching pending assignments for restaurant:', restaurantId);
 
-      // Simplified query without deeply nested relationships to avoid ambiguity
-      const { data, error: fetchError } = await supabase
+      // Step 1: Fetch only restaurant_assignments data to avoid ambiguity
+      const { data: assignmentsData, error: fetchError } = await supabase
         .from('restaurant_assignments')
-        .select(`
-          id,
-          order_id,
-          expires_at,
-          created_at,
-          orders!restaurant_assignments_order_id_fkey (
-            id,
-            customer_name,
-            customer_phone,
-            delivery_address,
-            total,
-            created_at,
-            status
-          )
-        `)
+        .select('id, order_id, expires_at, created_at')
         .or(`restaurant_id.eq.${restaurantId},restaurant_id.is.null`)
         .eq('status', 'pending')
         .gt('expires_at', new Date().toISOString())
@@ -65,14 +50,23 @@ export const usePendingAssignments = (restaurantId: string) => {
         return;
       }
 
-      console.log('Fetched assignments:', data);
+      console.log('Fetched assignments:', assignmentsData);
 
-      // Transform the data and fetch order items separately to avoid ambiguity
+      // Step 2: For each assignment, fetch order data separately
       const transformedData = await Promise.all(
-        (data || []).map(async (assignment) => {
-          const orderData = assignment.orders as any;
-          
-          // Fetch order items separately to avoid nested query ambiguity
+        (assignmentsData || []).map(async (assignment) => {
+          // Fetch order details separately
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select('id, customer_name, customer_phone, delivery_address, total, created_at, status')
+            .eq('id', assignment.order_id)
+            .single();
+
+          if (orderError) {
+            console.error('Error fetching order for assignment:', assignment.id, orderError);
+          }
+
+          // Fetch order items separately
           const { data: orderItems, error: itemsError } = await supabase
             .from('order_items')
             .select('id, name, quantity, price')
@@ -82,6 +76,7 @@ export const usePendingAssignments = (restaurantId: string) => {
             console.error('Error fetching order items for order:', assignment.order_id, itemsError);
           }
 
+          // Step 3: Maintain same data structure
           return {
             id: assignment.id,
             order_id: assignment.order_id,
