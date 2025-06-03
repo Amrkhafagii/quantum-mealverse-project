@@ -11057,6 +11057,22 @@ export type Database = {
           progress_percentage: number
         }[]
       }
+      get_pending_restaurant_assignments: {
+        Args: { p_restaurant_id: string }
+        Returns: {
+          assignment_id: string
+          order_id: string
+          expires_at: string
+          assigned_at: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          order_total: number
+          order_created_at: string
+          order_status: string
+          order_items: Json
+        }[]
+      }
       get_proj4_from_srid: {
         Args: { "": number }
         Returns: string
