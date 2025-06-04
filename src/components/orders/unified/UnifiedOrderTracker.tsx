@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +12,7 @@ interface UnifiedOrderTrackerProps {
 export const UnifiedOrderTracker: React.FC<UnifiedOrderTrackerProps> = ({ orderId }) => {
   const { orderData, loading, error } = useUnifiedOrderStatus(orderId);
 
-  if (loading) {
+  if (loading.initial) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -35,7 +34,9 @@ export const UnifiedOrderTracker: React.FC<UnifiedOrderTrackerProps> = ({ orderI
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-red-500">{error || 'Order not found'}</p>
+          <p className="text-red-500">
+            {error ? error.message : 'Order not found'}
+          </p>
         </CardContent>
       </Card>
     );
