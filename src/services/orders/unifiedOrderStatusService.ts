@@ -13,12 +13,69 @@ export interface UnifiedOrderStatusUpdate {
   changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
 }
 
+export interface StatusValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 /**
  * Unified order status service that handles both nutrition-generated and traditional orders
  */
 export const unifiedOrderStatusService = {
   /**
-   * Update order status with unified tracking for all order types
+   * Validate if a status transition is logically valid
+   */
+  validateStatusTransition(currentStatus: string, newStatus: OrderStatus, restaurantId?: string): StatusValidationResult {
+    const result: StatusValidationResult = {
+      isValid: true,
+      errors: [],
+      warnings: []
+    };
+
+    // Define valid status transitions
+    const validTransitions: Record<string, OrderStatus[]> = {
+      'pending': [OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.CANCELLED],
+      'awaiting_restaurant': [OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.CANCELLED],
+      'restaurant_assigned': [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.RESTAURANT_REJECTED, OrderStatus.CANCELLED],
+      'restaurant_accepted': [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+      'preparing': [OrderStatus.READY_FOR_PICKUP, OrderStatus.CANCELLED],
+      'ready_for_pickup': [OrderStatus.ON_THE_WAY, OrderStatus.CANCELLED],
+      'on_the_way': [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+      'delivered': [], // Terminal state
+      'cancelled': [], // Terminal state
+      'restaurant_rejected': [OrderStatus.RESTAURANT_ASSIGNED] // Can be reassigned
+    };
+
+    // Check if transition is valid
+    const allowedTransitions = validTransitions[currentStatus] || [];
+    if (!allowedTransitions.includes(newStatus)) {
+      result.isValid = false;
+      result.errors.push(`Invalid status transition from '${currentStatus}' to '${newStatus}'`);
+    }
+
+    // Validate restaurant ID requirements
+    const statusesRequiringRestaurant = [
+      OrderStatus.RESTAURANT_ACCEPTED,
+      OrderStatus.PREPARING,
+      OrderStatus.READY_FOR_PICKUP
+    ];
+
+    if (statusesRequiringRestaurant.includes(newStatus) && !restaurantId) {
+      result.isValid = false;
+      result.errors.push(`Status '${newStatus}' requires a restaurant_id but none was provided`);
+    }
+
+    // Add warnings for unusual transitions
+    if (currentStatus === 'restaurant_rejected' && newStatus === OrderStatus.RESTAURANT_ASSIGNED) {
+      result.warnings.push('Order is being reassigned after rejection');
+    }
+
+    return result;
+  },
+
+  /**
+   * Update order status with enhanced validation and logging
    */
   async updateOrderStatus({
     orderId,
@@ -30,12 +87,47 @@ export const unifiedOrderStatusService = {
     changedByType = 'system'
   }: UnifiedOrderStatusUpdate): Promise<boolean> {
     try {
-      console.log('Updating unified order status:', {
+      console.log('🔄 Starting unified order status update:', {
         orderId,
         newStatus,
         restaurantId,
-        assignmentSource
+        assignmentSource,
+        changedByType
       });
+
+      // Get current order state for validation
+      const { data: currentOrder, error: fetchError } = await supabase
+        .from('orders')
+        .select('status, restaurant_id, assignment_source')
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching current order state:', fetchError);
+        return false;
+      }
+
+      if (!currentOrder) {
+        console.error('❌ Order not found:', orderId);
+        return false;
+      }
+
+      // Validate status transition
+      const validation = this.validateStatusTransition(
+        currentOrder.status,
+        newStatus,
+        restaurantId || currentOrder.restaurant_id
+      );
+
+      if (!validation.isValid) {
+        console.error('❌ Status validation failed:', validation.errors);
+        throw new Error(`Status validation failed: ${validation.errors.join(', ')}`);
+      }
+
+      // Log warnings if any
+      if (validation.warnings.length > 0) {
+        console.warn('⚠️ Status transition warnings:', validation.warnings);
+      }
 
       // Ensure changedByType is valid for database constraint
       const validChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
@@ -43,38 +135,25 @@ export const unifiedOrderStatusService = {
           ? changedByType as 'system' | 'customer' | 'restaurant' | 'delivery'
           : 'system';
 
-      // Prepare update data with timestamp fields
+      // Prepare update data with enhanced logic
       const updateData: any = {
         status: newStatus,
         updated_at: new Date().toISOString(),
-        ...(restaurantId && { restaurant_id: restaurantId }),
+        // Handle restaurant_id population logic
+        ...(this.shouldUpdateRestaurantId(newStatus, restaurantId, currentOrder.restaurant_id) && {
+          restaurant_id: restaurantId || currentOrder.restaurant_id
+        }),
+        // Preserve or set assignment source
         ...(assignmentSource && { assignment_source: assignmentSource })
       };
 
       // Add appropriate timestamp fields based on status
-      switch (newStatus) {
-        case OrderStatus.RESTAURANT_ASSIGNED:
-          updateData.assigned_at = new Date().toISOString();
-          break;
-        case OrderStatus.RESTAURANT_ACCEPTED:
-          updateData.accepted_at = new Date().toISOString();
-          break;
-        case OrderStatus.PREPARING:
-          updateData.preparation_started_at = new Date().toISOString();
-          break;
-        case OrderStatus.READY_FOR_PICKUP:
-          updateData.ready_at = new Date().toISOString();
-          break;
-        case OrderStatus.ON_THE_WAY:
-          updateData.picked_up_at = new Date().toISOString();
-          break;
-        case OrderStatus.DELIVERED:
-          updateData.delivered_at = new Date().toISOString();
-          break;
-        case OrderStatus.CANCELLED:
-          updateData.cancelled_at = new Date().toISOString();
-          break;
+      const timestampField = this.getTimestampFieldForStatus(newStatus);
+      if (timestampField) {
+        updateData[timestampField] = new Date().toISOString();
       }
+
+      console.log('📝 Updating order with data:', updateData);
 
       // Update the order
       const { error: orderError } = await supabase
@@ -83,31 +162,79 @@ export const unifiedOrderStatusService = {
         .eq('id', orderId);
 
       if (orderError) {
-        console.error('Error updating order status:', orderError);
+        console.error('❌ Error updating order status:', orderError);
         return false;
       }
 
-      // Record in order history with assignment source
+      // Record in order history with enhanced metadata
+      const historyMetadata = {
+        ...metadata,
+        assignment_source: assignmentSource || currentOrder.assignment_source,
+        unified_tracking: true,
+        previous_status: currentOrder.status,
+        restaurant_id_changed: updateData.restaurant_id !== currentOrder.restaurant_id,
+        validation_warnings: validation.warnings
+      };
+
       await recordOrderHistory(
         orderId,
         newStatus,
-        restaurantId,
-        {
-          ...metadata,
-          assignment_source: assignmentSource,
-          unified_tracking: true
-        },
+        restaurantId || currentOrder.restaurant_id,
+        historyMetadata,
         undefined,
         changedBy,
         validChangedByType
       );
 
-      console.log(`Successfully updated order ${orderId} to status ${newStatus}`);
+      console.log(`✅ Successfully updated order ${orderId} from ${currentOrder.status} to ${newStatus}`);
       return true;
     } catch (error) {
-      console.error('Error in unified order status update:', error);
+      console.error('❌ Error in unified order status update:', error);
       return false;
     }
+  },
+
+  /**
+   * Determine if restaurant_id should be updated based on status and current state
+   */
+  shouldUpdateRestaurantId(newStatus: OrderStatus, providedRestaurantId?: string, currentRestaurantId?: string): boolean {
+    // Always update if we have a new restaurant ID
+    if (providedRestaurantId && providedRestaurantId !== currentRestaurantId) {
+      return true;
+    }
+
+    // Don't update if restaurant is already set and no new one provided
+    if (currentRestaurantId && !providedRestaurantId) {
+      return false;
+    }
+
+    // Update for statuses that require restaurant assignment
+    const statusesRequiringRestaurant = [
+      OrderStatus.RESTAURANT_ASSIGNED,
+      OrderStatus.RESTAURANT_ACCEPTED,
+      OrderStatus.PREPARING,
+      OrderStatus.READY_FOR_PICKUP
+    ];
+
+    return statusesRequiringRestaurant.includes(newStatus) && providedRestaurantId;
+  },
+
+  /**
+   * Get the appropriate timestamp field for a given status
+   */
+  getTimestampFieldForStatus(status: OrderStatus): string | null {
+    const timestampMap: Record<OrderStatus, string> = {
+      [OrderStatus.RESTAURANT_ASSIGNED]: 'assigned_at',
+      [OrderStatus.RESTAURANT_ACCEPTED]: 'accepted_at',
+      [OrderStatus.PREPARING]: 'preparation_started_at',
+      [OrderStatus.READY_FOR_PICKUP]: 'ready_at',
+      [OrderStatus.ON_THE_WAY]: 'picked_up_at',
+      [OrderStatus.DELIVERED]: 'delivered_at',
+      [OrderStatus.CANCELLED]: 'cancelled_at',
+      [OrderStatus.RESTAURANT_REJECTED]: null
+    };
+
+    return timestampMap[status] || null;
   },
 
   /**
@@ -115,6 +242,8 @@ export const unifiedOrderStatusService = {
    */
   async getOrderStatusWithTracking(orderId: string): Promise<any> {
     try {
+      console.log('🔍 Fetching order status with tracking for:', orderId);
+
       const { data: order, error } = await supabase
         .from('orders')
         .select(`
@@ -132,17 +261,20 @@ export const unifiedOrderStatusService = {
         .single();
 
       if (error) {
-        console.error('Error fetching order status:', error);
+        console.error('❌ Error fetching order status:', error);
         return null;
       }
 
-      return {
+      const result = {
         ...order,
         statusHistory: order.order_history || [],
         isUnifiedTracking: true
       };
+
+      console.log('✅ Successfully fetched order with tracking data');
+      return result;
     } catch (error) {
-      console.error('Error in getOrderStatusWithTracking:', error);
+      console.error('❌ Error in getOrderStatusWithTracking:', error);
       return null;
     }
   },
@@ -158,6 +290,13 @@ export const unifiedOrderStatusService = {
     notes?: string
   ): Promise<boolean> {
     try {
+      console.log('🏪 Updating restaurant assignment status:', {
+        assignmentId,
+        orderId,
+        newStatus,
+        restaurantId
+      });
+
       // Update restaurant assignment
       const { error: assignmentError } = await supabase
         .from('restaurant_assignments')
@@ -169,7 +308,7 @@ export const unifiedOrderStatusService = {
         .eq('id', assignmentId);
 
       if (assignmentError) {
-        console.error('Error updating assignment:', assignmentError);
+        console.error('❌ Error updating assignment:', assignmentError);
         return false;
       }
 
@@ -185,7 +324,7 @@ export const unifiedOrderStatusService = {
 
       // Update order with unified tracking
       if (orderStatus) {
-        await this.updateOrderStatus({
+        const success = await this.updateOrderStatus({
           orderId,
           newStatus: orderStatus,
           restaurantId,
@@ -196,11 +335,17 @@ export const unifiedOrderStatusService = {
             response_notes: notes
           }
         });
+
+        if (!success) {
+          console.error('❌ Failed to update order status after assignment update');
+          return false;
+        }
       }
 
+      console.log('✅ Successfully updated restaurant assignment status');
       return true;
     } catch (error) {
-      console.error('Error updating restaurant assignment status:', error);
+      console.error('❌ Error updating restaurant assignment status:', error);
       return false;
     }
   }
