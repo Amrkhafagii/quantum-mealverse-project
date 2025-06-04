@@ -1,60 +1,174 @@
+
 import { sendOrderToWebhook } from './webhook/sendOrderWebhook';
 import { getAssignmentStatus } from './webhook/assignmentStatus';
 import { recordOrderHistory } from './webhook/orderHistoryService';
 import { OrderStatus } from '@/types/webhook';
 import { supabase } from '@/integrations/supabase/client';
 
+interface UpdateOrderStatusParams {
+  orderId: string;
+  newStatus: OrderStatus;
+  restaurantId?: string | null;
+  details?: Record<string, unknown>;
+  changedBy?: string;
+  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
+}
+
+interface WebhookValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
 /**
- * Updates an order status and records the change in history
+ * Validates webhook request parameters
+ */
+const validateUpdateOrderParams = (params: UpdateOrderStatusParams): WebhookValidationError[] => {
+  const errors: WebhookValidationError[] = [];
+
+  if (!params.orderId || typeof params.orderId !== 'string' || params.orderId.trim() === '') {
+    errors.push({
+      field: 'orderId',
+      message: 'Order ID is required and must be a non-empty string',
+      code: 'MISSING_ORDER_ID'
+    });
+  }
+
+  if (!params.newStatus || typeof params.newStatus !== 'string') {
+    errors.push({
+      field: 'newStatus',
+      message: 'New status is required and must be a valid OrderStatus',
+      code: 'MISSING_STATUS'
+    });
+  }
+
+  // Validate status against enum values
+  if (params.newStatus && !Object.values(OrderStatus).includes(params.newStatus)) {
+    errors.push({
+      field: 'newStatus',
+      message: `Invalid status: ${params.newStatus}. Must be one of: ${Object.values(OrderStatus).join(', ')}`,
+      code: 'INVALID_STATUS'
+    });
+  }
+
+  // Validate changedByType if provided
+  if (params.changedByType && !['system', 'customer', 'restaurant', 'delivery'].includes(params.changedByType)) {
+    errors.push({
+      field: 'changedByType',
+      message: 'changedByType must be one of: system, customer, restaurant, delivery',
+      code: 'INVALID_CHANGED_BY_TYPE'
+    });
+  }
+
+  return errors;
+};
+
+/**
+ * Updates an order status with comprehensive error handling and validation
  */
 export const updateOrderStatus = async (
   orderId: string,
   newStatus: OrderStatus,
-  restaurantId: string | null,
+  restaurantId: string | null = null,
   details?: Record<string, unknown>,
   changedBy?: string,
   changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system'
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string; validationErrors?: WebhookValidationError[] }> => {
   try {
-    console.log(`Updating order ${orderId} status to ${newStatus}`);
+    console.log(`🔄 Starting order status update for ${orderId} to ${newStatus}`);
     
-    // Ensure changedByType is valid for database constraint
-    const validChangedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 
-      ['system', 'customer', 'restaurant', 'delivery'].includes(changedByType) 
-        ? changedByType as 'system' | 'customer' | 'restaurant' | 'delivery'
-        : 'system';
-    
-    // Update order status
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ 
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-        // Add restaurant_id to the order when the status is accepted
-        ...(newStatus === OrderStatus.RESTAURANT_ACCEPTED ? { restaurant_id: restaurantId } : {})
-      })
-      .eq('id', orderId);
-      
-    if (updateError) {
-      console.error('Failed to update order status:', updateError);
-      return false;
-    }
-    
-    // Record to order history
-    await recordOrderHistory(
+    // Validate input parameters
+    const validationErrors = validateUpdateOrderParams({
       orderId,
       newStatus,
       restaurantId,
       details,
-      undefined,
       changedBy,
-      validChangedByType
-    );
-    
-    return true;
+      changedByType
+    });
+
+    if (validationErrors.length > 0) {
+      console.error('❌ Validation failed for order status update:', validationErrors);
+      return { 
+        success: false, 
+        error: 'Validation failed: ' + validationErrors.map(e => e.message).join(', '),
+        validationErrors 
+      };
+    }
+
+    // Check if order exists before attempting update
+    const { data: existingOrder, error: orderCheckError } = await supabase
+      .from('orders')
+      .select('id, status')
+      .eq('id', orderId)
+      .single();
+
+    if (orderCheckError) {
+      if (orderCheckError.code === 'PGRST116') {
+        console.error(`❌ Order not found: ${orderId}`);
+        return { 
+          success: false, 
+          error: `Order with ID ${orderId} not found` 
+        };
+      }
+      console.error('❌ Database error checking order:', orderCheckError);
+      return { 
+        success: false, 
+        error: 'Database error while checking order existence' 
+      };
+    }
+
+    // Prepare update data with timestamp
+    const updateData: any = {
+      status: newStatus,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add restaurant_id if this is a restaurant acceptance
+    if (newStatus === OrderStatus.RESTAURANT_ACCEPTED && restaurantId) {
+      updateData.restaurant_id = restaurantId;
+    }
+
+    // Update order status in database
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId);
+
+    if (updateError) {
+      console.error('❌ Failed to update order status in database:', updateError);
+      return { 
+        success: false, 
+        error: `Database update failed: ${updateError.message}` 
+      };
+    }
+
+    // Record to order history with error handling
+    try {
+      await recordOrderHistory(
+        orderId,
+        newStatus,
+        restaurantId,
+        details,
+        undefined, // notes
+        changedBy,
+        changedByType
+      );
+      console.log('✅ Order history recorded successfully');
+    } catch (historyError) {
+      console.warn('⚠️ Failed to record order history (non-critical):', historyError);
+      // Don't fail the entire operation if history recording fails
+    }
+
+    console.log(`✅ Successfully updated order ${orderId} status to ${newStatus}`);
+    return { success: true };
+
   } catch (error) {
-    console.error('Error updating order status:', error);
-    return false;
+    console.error('❌ Critical error updating order status:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    };
   }
 };
 
