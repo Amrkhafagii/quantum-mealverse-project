@@ -26,12 +26,37 @@ export const useOrderData = (orderId: string) => {
         // Use unified order status service for consistent data
         const unifiedData = await unifiedOrderStatusService.getOrderStatusWithTracking(orderId);
         if (unifiedData) {
-          // Transform to match Order interface
+          // Transform to match Order interface - provide default values for missing properties
           const formattedData: Order = {
-            ...unifiedData,
-            restaurant: unifiedData.restaurant_id ? {
+            id: unifiedData.id,
+            user_id: unifiedData.user_id || '',
+            customer_name: unifiedData.customer_name,
+            customer_email: unifiedData.customer_email || '',
+            customer_phone: unifiedData.customer_phone || '',
+            delivery_address: unifiedData.delivery_address,
+            city: unifiedData.city || '',
+            notes: unifiedData.notes,
+            delivery_method: unifiedData.delivery_method || 'delivery',
+            payment_method: unifiedData.payment_method || 'cash',
+            delivery_fee: unifiedData.delivery_fee || 0,
+            subtotal: unifiedData.subtotal || 0,
+            total: unifiedData.total,
+            status: unifiedData.status,
+            latitude: unifiedData.latitude,
+            longitude: unifiedData.longitude,
+            formatted_order_id: unifiedData.formatted_order_id,
+            created_at: unifiedData.created_at,
+            updated_at: unifiedData.updated_at,
+            restaurant_id: unifiedData.restaurant_id,
+            assignment_source: unifiedData.assignment_source,
+            restaurant: unifiedData.restaurant ? {
+              id: unifiedData.restaurant.id,
+              name: unifiedData.restaurant.name,
+              latitude: unifiedData.restaurant.latitude,
+              longitude: unifiedData.restaurant.longitude
+            } : unifiedData.restaurant_id ? {
               id: unifiedData.restaurant_id,
-              name: unifiedData.restaurant_name || '',
+              name: '',
               latitude: null,
               longitude: null
             } : undefined
@@ -106,7 +131,10 @@ export const useOrderData = (orderId: string) => {
         // Format data consistently
         const formattedData: Order = {
           ...orderData,
-          restaurant: restaurantData || { id: orderData.restaurant_id || '', name: '' }
+          restaurant: restaurantData || (orderData.restaurant_id ? { 
+            id: orderData.restaurant_id, 
+            name: '' 
+          } : undefined)
         };
         
         // Store for offline access
