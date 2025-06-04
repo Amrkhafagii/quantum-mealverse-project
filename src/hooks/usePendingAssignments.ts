@@ -1,41 +1,13 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Order } from '@/types/order';
 
 interface PendingAssignment {
   id: string;
   order_id: string;
   expires_at: string;
   assigned_at: string;
-  order: {
-    id: string;
-    user_id?: string;
-    customer_name: string;
-    customer_email?: string;
-    customer_phone: string;
-    delivery_address: string;
-    city?: string;
-    delivery_method?: string;
-    payment_method?: string;
-    delivery_fee?: number;
-    subtotal?: number;
-    total: number;
-    created_at: string;
-    updated_at?: string;
-    status: string;
-    latitude?: number;
-    longitude?: number;
-    formatted_order_id?: string;
-    restaurant_id?: string;
-    assignment_source?: string;
-    notes?: string;
-    order_items?: Array<{
-      id: string;
-      name: string;
-      quantity: number;
-      price: number;
-    }>;
-  };
+  order: Order;
 }
 
 export const usePendingAssignments = (restaurantId: string) => {
@@ -65,14 +37,14 @@ export const usePendingAssignments = (restaurantId: string) => {
       console.log('Fetched assignments via RPC:', data);
 
       // Transform the data from the RPC function to match our interface
-      const transformedData = (data || []).map((row: any) => ({
+      const transformedData: PendingAssignment[] = (data || []).map((row: any) => ({
         id: row.assignment_id,
         order_id: row.order_id,
         expires_at: row.expires_at,
         assigned_at: row.assigned_at,
         order: {
           id: row.order_id,
-          user_id: row.user_id || '', // Ensure required field has value
+          user_id: row.user_id || 'unknown-user', // Ensure required field has value
           customer_name: row.customer_name || 'Unknown Customer',
           customer_email: row.customer_email || '',
           customer_phone: row.customer_phone || '',
@@ -93,7 +65,7 @@ export const usePendingAssignments = (restaurantId: string) => {
           assignment_source: row.assignment_source || 'unknown',
           notes: row.notes,
           order_items: row.order_items || []
-        }
+        } as Order
       }));
 
       setAssignments(transformedData);
