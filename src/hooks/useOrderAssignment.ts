@@ -1,14 +1,15 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { orderActionToasts } from '@/utils/orderActionToasts';
 
 export const useOrderAssignment = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const acceptOrder = async (orderId: string, restaurantId: string, notes?: string): Promise<boolean> => {
     setIsLoading(true);
+    let orderUpdated = false;
+    
     try {
       console.log('Accepting order:', { orderId, restaurantId, notes });
 
@@ -23,13 +24,11 @@ export const useOrderAssignment = () => {
 
       if (orderError) {
         console.error('Error updating order:', orderError);
-        toast({
-          title: 'Error',
-          description: 'Failed to accept order',
-          variant: 'destructive'
-        });
+        orderActionToasts.error('accept', 'Failed to accept order');
         return false;
       }
+
+      orderUpdated = true;
 
       // Then update the assignment status
       const { error: assignmentError } = await supabase
@@ -45,30 +44,38 @@ export const useOrderAssignment = () => {
 
       if (assignmentError) {
         console.error('Error updating assignment:', assignmentError);
-        // Try to rollback the order update
-        await supabase
-          .from('orders')
-          .update({
-            restaurant_id: null,
-            status: 'pending'
-          })
-          .eq('id', orderId);
         
-        toast({
-          title: 'Error',
-          description: 'Failed to update assignment status',
-          variant: 'destructive'
-        });
+        // Attempt rollback
+        try {
+          await supabase
+            .from('orders')
+            .update({
+              restaurant_id: null,
+              status: 'pending'
+            })
+            .eq('id', orderId);
+          
+          orderActionToasts.error('accept', 'Failed to update assignment status');
+        } catch (rollbackError) {
+          console.error('Rollback failed:', rollbackError);
+          orderActionToasts.rollbackError('accept');
+        }
+        
         return false;
       }
 
       // Cancel other pending assignments for this order
-      await supabase
+      const { error: cancelError } = await supabase
         .from('restaurant_assignments')
         .update({ status: 'cancelled' })
         .eq('order_id', orderId)
         .eq('status', 'pending')
         .neq('restaurant_id', restaurantId);
+
+      if (cancelError) {
+        console.warn('Error cancelling other assignments:', cancelError);
+        // Don't fail the acceptance for this, just log it
+      }
 
       // Initialize preparation stages
       const { error: stagesError } = await supabase.rpc('create_default_preparation_stages', {
@@ -82,18 +89,38 @@ export const useOrderAssignment = () => {
         console.warn('Preparation stages not created, but order accepted');
       }
 
-      toast({
-        title: 'Success',
-        description: 'Order accepted successfully!'
-      });
       return true;
     } catch (error) {
       console.error('Error accepting order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to accept order',
-        variant: 'destructive'
-      });
+      
+      // Attempt rollback if order was updated
+      if (orderUpdated) {
+        try {
+          await supabase
+            .from('orders')
+            .update({
+              restaurant_id: null,
+              status: 'pending'
+            })
+            .eq('id', orderId);
+        } catch (rollbackError) {
+          console.error('Rollback failed:', rollbackError);
+          orderActionToasts.rollbackError('accept');
+          return false;
+        }
+      }
+      
+      // Determine error type and show appropriate toast
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          orderActionToasts.networkError('accept');
+        } else {
+          orderActionToasts.error('accept', error.message);
+        }
+      } else {
+        orderActionToasts.error('accept', 'An unexpected error occurred');
+      }
+      
       return false;
     } finally {
       setIsLoading(false);
@@ -119,11 +146,7 @@ export const useOrderAssignment = () => {
 
       if (assignmentError) {
         console.error('Error updating assignment:', assignmentError);
-        toast({
-          title: 'Error',
-          description: 'Failed to reject order assignment',
-          variant: 'destructive'
-        });
+        orderActionToasts.error('reject', 'Failed to reject order assignment');
         return false;
       }
 
@@ -142,18 +165,20 @@ export const useOrderAssignment = () => {
           .eq('id', orderId);
       }
 
-      toast({
-        title: 'Success',
-        description: 'Order rejected successfully'
-      });
       return true;
     } catch (error) {
       console.error('Error rejecting order:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reject order',
-        variant: 'destructive'
-      });
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          orderActionToasts.networkError('reject');
+        } else {
+          orderActionToasts.error('reject', error.message);
+        }
+      } else {
+        orderActionToasts.error('reject', 'An unexpected error occurred');
+      }
+      
       return false;
     } finally {
       setIsLoading(false);

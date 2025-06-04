@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { OrderProvider } from '@/contexts/OrderContext';
-import { RestaurantAssignmentProvider } from '@/contexts/RestaurantAssignmentContext';
+import { UnifiedOrderProvider } from '@/contexts/UnifiedOrderContext';
 import { Order } from '@/types/order';
 
 interface OrderWithContextProps {
@@ -20,22 +19,18 @@ export const OrderWithContext: React.FC<OrderWithContextProps> = ({
   children
 }) => {
   return (
-    <OrderProvider
+    <UnifiedOrderProvider
       value={{
         order,
         restaurantId,
-        onUpdate: onAssignmentUpdate
+        onAssignmentUpdate,
+        isProcessing,
+        onUpdate: onAssignmentUpdate,
+        isLoading: isProcessing,
+        error: null
       }}
     >
-      <RestaurantAssignmentProvider
-        value={{
-          restaurantId,
-          onAssignmentUpdate,
-          isProcessing
-        }}
-      >
-        {children}
-      </RestaurantAssignmentProvider>
-    </OrderProvider>
+      {children}
+    </UnifiedOrderProvider>
   );
 };

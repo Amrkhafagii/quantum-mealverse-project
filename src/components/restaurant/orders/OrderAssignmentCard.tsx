@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,10 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Clock, MapPin, Phone, User, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useOrderAssignment } from '@/hooks/useOrderAssignment';
-import { useOrderContext } from '@/contexts/OrderContext';
-import { useRestaurantAssignmentContext } from '@/contexts/RestaurantAssignmentContext';
+import { useOrderContext } from '@/contexts/UnifiedOrderContext';
+import { useRestaurantAssignmentContext } from '@/contexts/UnifiedOrderContext';
 import { OrderActionConfirmationModal } from './OrderActionConfirmationModal';
-import { showOrderActionFeedback } from './OrderActionFeedback';
+import { orderActionToasts } from '@/utils/orderActionToasts';
 
 export const OrderAssignmentCard: React.FC = () => {
   const { order } = useOrderContext();
@@ -27,7 +26,7 @@ export const OrderAssignmentCard: React.FC = () => {
 
   const handleAcceptClick = () => {
     if (!order.customer_name || !order.total) {
-      showOrderActionFeedback.validationError('Order information is incomplete');
+      orderActionToasts.error('accept', 'Order information is incomplete');
       return;
     }
     setConfirmationModal({ isOpen: true, action: 'accept' });
@@ -35,7 +34,7 @@ export const OrderAssignmentCard: React.FC = () => {
 
   const handleRejectClick = () => {
     if (!order.customer_name) {
-      showOrderActionFeedback.validationError('Order information is incomplete');
+      orderActionToasts.error('reject', 'Order information is incomplete');
       return;
     }
     setConfirmationModal({ isOpen: true, action: 'reject' });
@@ -55,7 +54,7 @@ export const OrderAssignmentCard: React.FC = () => {
       }
 
       if (success) {
-        showOrderActionFeedback.success(action, order.customer_name);
+        orderActionToasts.success(action, order.customer_name);
         setConfirmationModal({ isOpen: false, action: null });
         setNotes(''); // Clear notes after successful action
         
@@ -65,17 +64,7 @@ export const OrderAssignmentCard: React.FC = () => {
       }
     } catch (error) {
       console.error(`Error ${confirmationModal.action}ing order:`, error);
-      
-      // Determine if it's a network error or other error
-      if (error instanceof Error) {
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          showOrderActionFeedback.networkError(action);
-        } else {
-          showOrderActionFeedback.error(action, error.message);
-        }
-      } else {
-        showOrderActionFeedback.error(action, 'An unexpected error occurred');
-      }
+      // Error handling is now done in the hook with centralized toasts
     }
   };
 
