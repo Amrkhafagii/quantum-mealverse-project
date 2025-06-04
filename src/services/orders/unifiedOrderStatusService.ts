@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from '../orders/webhook/orderHistoryService';
@@ -14,15 +13,32 @@ interface UpdateOrderStatusParams {
 
 interface OrderStatusData {
   id: string;
-  status: string;
-  assignment_source: string;
+  user_id?: string;
   customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
   delivery_address: string;
+  city?: string;
+  notes?: string;
+  delivery_method?: string;
+  payment_method?: string;
+  delivery_fee?: number;
+  subtotal?: number;
   total: number;
+  status: string;
+  latitude?: number;
+  longitude?: number;
+  assignment_source: string;
   created_at: string;
   updated_at: string;
   formatted_order_id?: string;
   restaurant_id?: string;
+  restaurant?: {
+    id: string;
+    name: string;
+    latitude?: number;
+    longitude?: number;
+  };
   statusHistory?: any[];
   isUnifiedTracking: boolean;
 }
@@ -224,21 +240,23 @@ export class UnifiedOrderStatusService {
    * Get user-friendly status messages
    */
   static getStatusMessage(status: string): string {
-    const statusMessages: Partial<Record<OrderStatus, string>> = {
-      [OrderStatus.PENDING]: 'Order received and being processed',
-      [OrderStatus.AWAITING_RESTAURANT]: 'Looking for available restaurants',
-      [OrderStatus.RESTAURANT_ASSIGNED]: 'Restaurant has been assigned',
-      [OrderStatus.RESTAURANT_ACCEPTED]: 'Restaurant accepted your order',
-      [OrderStatus.PROCESSING]: 'Order is being processed',
-      [OrderStatus.PREPARING]: 'Your order is being prepared',
-      [OrderStatus.READY_FOR_PICKUP]: 'Order is ready for pickup',
-      [OrderStatus.ON_THE_WAY]: 'Your order is on the way',
-      [OrderStatus.DELIVERED]: 'Order has been delivered',
-      [OrderStatus.CANCELLED]: 'Order has been cancelled',
-      [OrderStatus.RESTAURANT_REJECTED]: 'Restaurant declined the order'
+    const statusMessages: Record<string, string> = {
+      'pending': 'Order received and being processed',
+      'awaiting_restaurant': 'Looking for available restaurants',
+      'restaurant_assigned': 'Restaurant has been assigned',
+      'restaurant_accepted': 'Restaurant accepted your order',
+      'processing': 'Order is being processed',
+      'preparing': 'Your order is being prepared',
+      'ready_for_pickup': 'Order is ready for pickup',
+      'on_the_way': 'Your order is on the way',
+      'delivered': 'Order has been delivered',
+      'cancelled': 'Order has been cancelled',
+      'restaurant_rejected': 'Restaurant declined the order',
+      'expired_assignment': 'Assignment expired',
+      'no_restaurant_available': 'No restaurant available'
     };
 
-    return statusMessages[status as OrderStatus] || 'Order status updated';
+    return statusMessages[status] || 'Order status updated';
   }
 
   /**
@@ -246,15 +264,15 @@ export class UnifiedOrderStatusService {
    */
   static canCancelOrder(status: string): boolean {
     const cancellableStatuses = [
-      OrderStatus.PENDING,
-      OrderStatus.AWAITING_RESTAURANT,
-      OrderStatus.RESTAURANT_ASSIGNED,
-      OrderStatus.RESTAURANT_ACCEPTED,
-      OrderStatus.PROCESSING,
-      OrderStatus.PREPARING
+      'pending',
+      'awaiting_restaurant',
+      'restaurant_assigned',
+      'restaurant_accepted',
+      'processing',
+      'preparing'
     ];
 
-    return cancellableStatuses.includes(status as OrderStatus);
+    return cancellableStatuses.includes(status);
   }
 
   /**
