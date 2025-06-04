@@ -97,31 +97,8 @@ export const PendingAssignmentsList: React.FC<PendingAssignmentsListProps> = ({
             );
           }
 
-          // Convert the assignment order to match Order interface with robust fallbacks
-          const orderData = {
-            id: assignment.order.id,
-            user_id: assignment.order.user_id || '', // Provide fallback
-            customer_name: assignment.order.customer_name || 'Unknown Customer',
-            customer_email: assignment.order.customer_email || '',
-            customer_phone: assignment.order.customer_phone || '',
-            delivery_address: assignment.order.delivery_address || 'Address not provided',
-            city: assignment.order.city || '',
-            delivery_method: assignment.order.delivery_method || 'delivery',
-            payment_method: assignment.order.payment_method || 'card',
-            delivery_fee: assignment.order.delivery_fee || 0,
-            subtotal: assignment.order.subtotal || assignment.order.total || 0,
-            total: assignment.order.total || 0,
-            status: assignment.order.status || 'pending',
-            latitude: assignment.order.latitude,
-            longitude: assignment.order.longitude,
-            formatted_order_id: assignment.order.formatted_order_id,
-            created_at: assignment.order.created_at || new Date().toISOString(),
-            updated_at: assignment.order.updated_at || new Date().toISOString(),
-            restaurant_id: assignment.order.restaurant_id,
-            assignment_source: assignment.order.assignment_source || 'unknown',
-            notes: assignment.order.notes,
-            order_items: assignment.order.order_items || []
-          };
+          // The order data is already properly formatted from the hook
+          const orderData = assignment.order;
 
           return (
             <OrderWithContext

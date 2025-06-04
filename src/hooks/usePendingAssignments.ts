@@ -9,12 +9,26 @@ interface PendingAssignment {
   assigned_at: string;
   order: {
     id: string;
+    user_id?: string;
     customer_name: string;
+    customer_email?: string;
     customer_phone: string;
     delivery_address: string;
+    city?: string;
+    delivery_method?: string;
+    payment_method?: string;
+    delivery_fee?: number;
+    subtotal?: number;
     total: number;
     created_at: string;
+    updated_at?: string;
     status: string;
+    latitude?: number;
+    longitude?: number;
+    formatted_order_id?: string;
+    restaurant_id?: string;
+    assignment_source?: string;
+    notes?: string;
     order_items?: Array<{
       id: string;
       name: string;
@@ -58,12 +72,26 @@ export const usePendingAssignments = (restaurantId: string) => {
         assigned_at: row.assigned_at,
         order: {
           id: row.order_id,
+          user_id: row.user_id || '',
           customer_name: row.customer_name,
+          customer_email: row.customer_email || '',
           customer_phone: row.customer_phone,
           delivery_address: row.delivery_address,
+          city: row.city || '',
+          delivery_method: row.delivery_method || 'delivery',
+          payment_method: row.payment_method || 'card',
+          delivery_fee: row.delivery_fee || 0,
+          subtotal: row.subtotal || row.order_total || 0,
           total: row.order_total,
           created_at: row.order_created_at,
+          updated_at: row.order_updated_at || row.order_created_at,
           status: row.order_status,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          formatted_order_id: row.formatted_order_id,
+          restaurant_id: row.restaurant_id,
+          assignment_source: row.assignment_source || 'unknown',
+          notes: row.notes,
           order_items: row.order_items || []
         }
       }));
