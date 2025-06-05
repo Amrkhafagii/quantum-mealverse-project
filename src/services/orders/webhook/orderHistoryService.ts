@@ -24,27 +24,6 @@ const validateChangedByType = (changedByType?: string, context?: string): ValidC
     isIncluded: changedByType ? validChangedByTypes.includes(changedByType as any) : false
   });
 
-  // Handle the "user" case by mapping it to appropriate type based on context
-  if (changedByType === 'user') {
-    console.log('📍 Mapping "user" to appropriate type based on context:', context);
-    
-    // Map "user" to the most appropriate type based on context
-    if (context && context.includes('restaurant')) {
-      console.log('✅ Mapping "user" to "restaurant" based on context');
-      return 'restaurant';
-    } else if (context && context.includes('customer')) {
-      console.log('✅ Mapping "user" to "customer" based on context');
-      return 'customer';
-    } else if (context && context.includes('delivery')) {
-      console.log('✅ Mapping "user" to "delivery" based on context');
-      return 'delivery';
-    } else {
-      // Default fallback for "user" when context is unclear
-      console.log('✅ Mapping "user" to "system" as safe fallback');
-      return 'system';
-    }
-  }
-
   if (changedByType && validChangedByTypes.includes(changedByType as any)) {
     console.log('✅ changedByType validation passed:', changedByType);
     return changedByType as ValidChangedByType;
@@ -81,7 +60,7 @@ export const recordOrderHistory = async (
       rawChangedByType: JSON.stringify(changedByType)
     });
 
-    // Create context for better "user" mapping
+    // Create context for better validation
     const context = `${status}_${restaurantId ? 'restaurant' : 'system'}`;
     const validatedChangedByType = validateChangedByType(changedByType, context);
     

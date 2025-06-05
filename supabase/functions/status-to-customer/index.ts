@@ -89,17 +89,8 @@ Deno.serve(async (req) => {
       restaurantName = restaurant?.name;
     }
 
-    // Validate and map changedByType properly
+    // Validate and set changedByType properly
     let finalChangedByType = changedByType || 'system';
-    
-    // Map "user" to appropriate type based on context
-    if (finalChangedByType === 'user') {
-      if (restaurantId) {
-        finalChangedByType = 'restaurant';
-      } else {
-        finalChangedByType = 'system';
-      }
-    }
     
     // Ensure changedByType is valid
     const validTypes = ['system', 'customer', 'restaurant', 'delivery'];
