@@ -21,9 +21,15 @@ export const restaurantOrderStatusService = {
     restaurantId,
     changedBy,
     notes
-  }: OrderStatusUpdateParams): Promise<boolean> {
+  }: OrderStatusUpdateParams): Promise<boolean> => {
     try {
-      console.log(`Restaurant updating order ${orderId} to status ${status}`);
+      console.log(`🏪 Restaurant updating order ${orderId} to status ${status}:`, {
+        orderId,
+        status,
+        restaurantId,
+        changedBy,
+        notes
+      });
 
       // Update the order status in the main orders table
       const { error: orderUpdateError } = await supabase
@@ -36,12 +42,12 @@ export const restaurantOrderStatusService = {
         .eq('id', orderId);
 
       if (orderUpdateError) {
-        console.error('Error updating order status:', orderUpdateError);
+        console.error('❌ Error updating order status:', orderUpdateError);
         throw orderUpdateError;
       }
 
       // Record the history entry with restaurant context
-      await recordRestaurantOrderHistory(
+      const historyResult = await recordRestaurantOrderHistory(
         orderId,
         status,
         restaurantId,
@@ -49,9 +55,15 @@ export const restaurantOrderStatusService = {
         {
           notes,
           source: 'restaurant_dashboard',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          action_type: 'status_update'
         }
       );
+
+      if (!historyResult.success) {
+        console.warn('⚠️ Failed to record order history, but order update succeeded:', historyResult.message);
+        // Don't fail the entire operation if history recording fails
+      }
 
       toast({
         title: 'Order Updated',
@@ -60,7 +72,12 @@ export const restaurantOrderStatusService = {
 
       return true;
     } catch (error) {
-      console.error('Error in restaurant order status service:', error);
+      console.error('❌ Error in restaurant order status service:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        orderId,
+        status,
+        restaurantId
+      });
       toast({
         title: 'Error',
         description: 'Failed to update order status',

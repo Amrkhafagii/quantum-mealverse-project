@@ -11,14 +11,29 @@ interface ServiceResponse {
 /**
  * Validates and normalizes changed_by_type to ensure it meets database constraints
  */
-const validateChangedByType = (changedByType?: string): 'system' | 'customer' | 'restaurant' | 'delivery' => {
-  const validTypes: ('system' | 'customer' | 'restaurant' | 'delivery')[] = ['system', 'customer', 'restaurant', 'delivery'];
-  
-  if (changedByType && validTypes.includes(changedByType as any)) {
-    return changedByType as 'system' | 'customer' | 'restaurant' | 'delivery';
+const validChangedByTypes = ['system', 'customer', 'restaurant', 'delivery'] as const;
+type ValidChangedByType = typeof validChangedByTypes[number];
+
+const validateChangedByType = (changedByType?: string): ValidChangedByType => {
+  // Log the input value for debugging
+  console.log('🔍 Validating changedByType input:', { 
+    input: changedByType, 
+    type: typeof changedByType,
+    isString: typeof changedByType === 'string',
+    isIncluded: changedByType ? validChangedByTypes.includes(changedByType as any) : false
+  });
+
+  if (changedByType && validChangedByTypes.includes(changedByType as any)) {
+    console.log('✅ changedByType validation passed:', changedByType);
+    return changedByType as ValidChangedByType;
   }
   
-  // Default to 'system' if invalid or undefined
+  console.warn('⚠️ changedByType validation failed, defaulting to system:', {
+    input: changedByType,
+    validTypes: validChangedByTypes,
+    defaulting: 'system'
+  });
+  
   return 'system';
 };
 
@@ -35,6 +50,15 @@ export const recordOrderHistory = async (
   changedByType?: string
 ): Promise<ServiceResponse> => {
   try {
+    console.log('📝 Recording order history:', {
+      orderId,
+      status,
+      restaurantId,
+      changedBy,
+      changedByType: changedByType,
+      rawChangedByType: JSON.stringify(changedByType)
+    });
+
     const validatedChangedByType = validateChangedByType(changedByType);
     
     // Get restaurant name if restaurantId is provided
@@ -56,34 +80,54 @@ export const recordOrderHistory = async (
     // Convert details to Json type if provided
     const jsonDetails: Json = details ? JSON.parse(JSON.stringify(details)) : {};
 
+    // Log the final values before insertion
+    const insertData = {
+      order_id: orderId,
+      status,
+      restaurant_id: restaurantId,
+      restaurant_name: restaurantName,
+      details: jsonDetails,
+      created_at: timestamp || new Date().toISOString(),
+      changed_by: changedBy,
+      changed_by_type: validatedChangedByType
+    };
+
+    console.log('🚀 Inserting order history with validated data:', {
+      ...insertData,
+      detailsSize: JSON.stringify(jsonDetails).length
+    });
+
     const { error } = await supabase
       .from('order_history')
-      .insert({
-        order_id: orderId,
-        status,
-        restaurant_id: restaurantId,
-        restaurant_name: restaurantName,
-        details: jsonDetails,
-        created_at: timestamp || new Date().toISOString(),
-        changed_by: changedBy,
-        changed_by_type: validatedChangedByType
-      });
+      .insert(insertData);
 
     if (error) {
-      console.error(`Error recording order history for order ${orderId}:`, error);
+      console.error(`❌ Error recording order history for order ${orderId}:`, {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        insertData: insertData
+      });
       return { 
         success: false, 
         message: `Failed to record order history: ${error.message}` 
       };
     }
 
-    console.log(`Successfully recorded order history for order ${orderId} with status ${status}`);
+    console.log(`✅ Successfully recorded order history for order ${orderId} with status ${status}`);
     return { 
       success: true, 
       message: 'Order history recorded successfully' 
     };
   } catch (error) {
-    console.error(`Critical error recording order history for order ${orderId}:`, error);
+    console.error(`💥 Critical error recording order history for order ${orderId}:`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      orderId,
+      status,
+      changedByType
+    });
     return { 
       success: false, 
       message: `Critical error: ${error instanceof Error ? error.message : 'Unknown error'}` 
@@ -102,6 +146,13 @@ export const recordRestaurantOrderHistory = async (
   additionalDetails?: Record<string, any>
 ): Promise<ServiceResponse> => {
   try {
+    console.log('🏪 Recording restaurant order history:', {
+      orderId,
+      status,
+      restaurantId,
+      changedBy
+    });
+
     const details = {
       ...additionalDetails,
       restaurant_context: true,
@@ -118,7 +169,12 @@ export const recordRestaurantOrderHistory = async (
       'restaurant'
     );
   } catch (error) {
-    console.error(`Error recording restaurant order history for order ${orderId}:`, error);
+    console.error(`❌ Error recording restaurant order history for order ${orderId}:`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      orderId,
+      status,
+      restaurantId
+    });
     return { 
       success: false, 
       message: `Failed to record restaurant order history: ${error instanceof Error ? error.message : 'Unknown error'}` 
