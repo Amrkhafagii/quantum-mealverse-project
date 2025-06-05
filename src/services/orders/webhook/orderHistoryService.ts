@@ -14,14 +14,36 @@ interface ServiceResponse {
 const validChangedByTypes = ['system', 'customer', 'restaurant', 'delivery'] as const;
 type ValidChangedByType = typeof validChangedByTypes[number];
 
-const validateChangedByType = (changedByType?: string): ValidChangedByType => {
+const validateChangedByType = (changedByType?: string, context?: string): ValidChangedByType => {
   // Log the input value for debugging
   console.log('🔍 Validating changedByType input:', { 
     input: changedByType, 
+    context: context || 'unknown',
     type: typeof changedByType,
     isString: typeof changedByType === 'string',
     isIncluded: changedByType ? validChangedByTypes.includes(changedByType as any) : false
   });
+
+  // Handle the "user" case by mapping it to appropriate type based on context
+  if (changedByType === 'user') {
+    console.log('📍 Mapping "user" to appropriate type based on context:', context);
+    
+    // Map "user" to the most appropriate type based on context
+    if (context && context.includes('restaurant')) {
+      console.log('✅ Mapping "user" to "restaurant" based on context');
+      return 'restaurant';
+    } else if (context && context.includes('customer')) {
+      console.log('✅ Mapping "user" to "customer" based on context');
+      return 'customer';
+    } else if (context && context.includes('delivery')) {
+      console.log('✅ Mapping "user" to "delivery" based on context');
+      return 'delivery';
+    } else {
+      // Default fallback for "user" when context is unclear
+      console.log('✅ Mapping "user" to "system" as safe fallback');
+      return 'system';
+    }
+  }
 
   if (changedByType && validChangedByTypes.includes(changedByType as any)) {
     console.log('✅ changedByType validation passed:', changedByType);
@@ -59,7 +81,9 @@ export const recordOrderHistory = async (
       rawChangedByType: JSON.stringify(changedByType)
     });
 
-    const validatedChangedByType = validateChangedByType(changedByType);
+    // Create context for better "user" mapping
+    const context = `${status}_${restaurantId ? 'restaurant' : 'system'}`;
+    const validatedChangedByType = validateChangedByType(changedByType, context);
     
     // Get restaurant name if restaurantId is provided
     let restaurantName;
@@ -166,7 +190,7 @@ export const recordRestaurantOrderHistory = async (
       details,
       undefined,
       changedBy,
-      'restaurant'
+      'restaurant' // Always use 'restaurant' for restaurant-specific actions
     );
   } catch (error) {
     console.error(`❌ Error recording restaurant order history for order ${orderId}:`, {

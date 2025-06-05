@@ -89,11 +89,27 @@ Deno.serve(async (req) => {
       restaurantName = restaurant?.name;
     }
 
-    // Determine the correct changed_by_type based on context
+    // Validate and map changedByType properly
     let finalChangedByType = changedByType || 'system';
     
-    // If changedBy is provided and no changedByType, try to determine it
-    if (changedBy && !changedByType) {
+    // Map "user" to appropriate type based on context
+    if (finalChangedByType === 'user') {
+      if (restaurantId) {
+        finalChangedByType = 'restaurant';
+      } else {
+        finalChangedByType = 'system';
+      }
+    }
+    
+    // Ensure changedByType is valid
+    const validTypes = ['system', 'customer', 'restaurant', 'delivery'];
+    if (!validTypes.includes(finalChangedByType)) {
+      console.warn(`Invalid changedByType "${finalChangedByType}", defaulting to "system"`);
+      finalChangedByType = 'system';
+    }
+    
+    // If changedBy is provided and no valid changedByType, try to determine it
+    if (changedBy && finalChangedByType === 'system') {
       // Check if changedBy is a restaurant user
       const { data: userType } = await supabase
         .from('user_types')
