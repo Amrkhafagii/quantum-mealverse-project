@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { orderActionToasts } from '@/utils/orderActionToasts';
-import { recordRestaurantOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 
 export const useOrderAssignment = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -12,7 +11,7 @@ export const useOrderAssignment = () => {
     let orderUpdated = false;
     
     try {
-      console.log('🎯 Accepting order:', { orderId, restaurantId, notes });
+      console.log('Accepting order:', { orderId, restaurantId, notes });
 
       // First update the order with restaurant_id and status
       const { error: orderError } = await supabase
@@ -24,31 +23,12 @@ export const useOrderAssignment = () => {
         .eq('id', orderId);
 
       if (orderError) {
-        console.error('❌ Error updating order:', orderError);
+        console.error('Error updating order:', orderError);
         orderActionToasts.error('accept', 'Failed to accept order');
         return false;
       }
 
       orderUpdated = true;
-
-      // Record order history with proper validation
-      const historyResult = await recordRestaurantOrderHistory(
-        orderId,
-        'restaurant_accepted',
-        restaurantId,
-        undefined, // changedBy - could be passed if available
-        {
-          response_notes: notes,
-          action: 'accept',
-          source: 'restaurant_assignment',
-          timestamp: new Date().toISOString()
-        }
-      );
-
-      if (!historyResult.success) {
-        console.warn('⚠️ Failed to record order history for acceptance:', historyResult.message);
-        // Don't fail the acceptance, just log the warning
-      }
 
       // Then update the assignment status
       const { error: assignmentError } = await supabase
@@ -63,7 +43,7 @@ export const useOrderAssignment = () => {
         .eq('status', 'pending');
 
       if (assignmentError) {
-        console.error('❌ Error updating assignment:', assignmentError);
+        console.error('Error updating assignment:', assignmentError);
         
         // Attempt rollback
         try {
@@ -77,7 +57,7 @@ export const useOrderAssignment = () => {
           
           orderActionToasts.error('accept', 'Failed to update assignment status');
         } catch (rollbackError) {
-          console.error('💥 Rollback failed:', rollbackError);
+          console.error('Rollback failed:', rollbackError);
           orderActionToasts.rollbackError('accept');
         }
         
@@ -93,7 +73,7 @@ export const useOrderAssignment = () => {
         .neq('restaurant_id', restaurantId);
 
       if (cancelError) {
-        console.warn('⚠️ Error cancelling other assignments:', cancelError);
+        console.warn('Error cancelling other assignments:', cancelError);
         // Don't fail the acceptance for this, just log it
       }
 
@@ -104,14 +84,14 @@ export const useOrderAssignment = () => {
       });
 
       if (stagesError) {
-        console.error('❌ Error creating preparation stages:', stagesError);
+        console.error('Error creating preparation stages:', stagesError);
         // Don't fail the acceptance for this, just log it
-        console.warn('⚠️ Preparation stages not created, but order accepted');
+        console.warn('Preparation stages not created, but order accepted');
       }
 
       return true;
     } catch (error) {
-      console.error('💥 Error accepting order:', error);
+      console.error('Error accepting order:', error);
       
       // Attempt rollback if order was updated
       if (orderUpdated) {
@@ -124,7 +104,7 @@ export const useOrderAssignment = () => {
             })
             .eq('id', orderId);
         } catch (rollbackError) {
-          console.error('💥 Rollback failed:', rollbackError);
+          console.error('Rollback failed:', rollbackError);
           orderActionToasts.rollbackError('accept');
           return false;
         }
@@ -150,26 +130,7 @@ export const useOrderAssignment = () => {
   const rejectOrder = async (orderId: string, restaurantId: string, notes?: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      console.log('❌ Rejecting order:', { orderId, restaurantId, notes });
-
-      // Record order history for rejection
-      const historyResult = await recordRestaurantOrderHistory(
-        orderId,
-        'restaurant_rejected',
-        restaurantId,
-        undefined, // changedBy - could be passed if available
-        {
-          response_notes: notes,
-          action: 'reject',
-          source: 'restaurant_assignment',
-          timestamp: new Date().toISOString()
-        }
-      );
-
-      if (!historyResult.success) {
-        console.warn('⚠️ Failed to record order history for rejection:', historyResult.message);
-        // Don't fail the rejection, just log the warning
-      }
+      console.log('Rejecting order:', { orderId, restaurantId, notes });
 
       // Update the assignment status to rejected
       const { error: assignmentError } = await supabase
@@ -184,7 +145,7 @@ export const useOrderAssignment = () => {
         .eq('status', 'pending');
 
       if (assignmentError) {
-        console.error('❌ Error updating assignment:', assignmentError);
+        console.error('Error updating assignment:', assignmentError);
         orderActionToasts.error('reject', 'Failed to reject order assignment');
         return false;
       }
@@ -206,7 +167,7 @@ export const useOrderAssignment = () => {
 
       return true;
     } catch (error) {
-      console.error('💥 Error rejecting order:', error);
+      console.error('Error rejecting order:', error);
       
       if (error instanceof Error) {
         if (error.message.includes('network') || error.message.includes('fetch')) {

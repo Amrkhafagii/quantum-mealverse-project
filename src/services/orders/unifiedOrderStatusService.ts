@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from '../orders/webhook/orderHistoryService';
@@ -43,33 +42,6 @@ interface OrderStatusData {
   statusHistory?: any[];
   isUnifiedTracking: boolean;
 }
-
-/**
- * Validates and normalizes changedByType to ensure it meets database constraints
- */
-const validChangedByTypes = ['system', 'customer', 'restaurant', 'delivery'] as const;
-type ValidChangedByType = typeof validChangedByTypes[number];
-
-const validateChangedByType = (changedByType?: string): ValidChangedByType => {
-  console.log('🔍 Validating changedByType in unifiedOrderStatusService:', { 
-    input: changedByType, 
-    type: typeof changedByType,
-    isValid: changedByType ? validChangedByTypes.includes(changedByType as any) : false
-  });
-
-  if (changedByType && validChangedByTypes.includes(changedByType as any)) {
-    console.log('✅ changedByType validation passed in unifiedOrderStatusService:', changedByType);
-    return changedByType as ValidChangedByType;
-  }
-  
-  console.warn('⚠️ changedByType validation failed in unifiedOrderStatusService, defaulting to system:', {
-    input: changedByType,
-    validTypes: validChangedByTypes,
-    defaulting: 'system'
-  });
-  
-  return 'system';
-};
 
 export class UnifiedOrderStatusService {
   /**
@@ -153,16 +125,12 @@ export class UnifiedOrderStatusService {
     } = params;
 
     try {
-      console.log('🔄 Updating order status in unifiedOrderStatusService:', {
+      console.log('🔄 Updating order status:', {
         orderId,
         newStatus,
         restaurantId,
-        changedByType: changedByType,
-        rawChangedByType: JSON.stringify(changedByType)
+        changedByType
       });
-
-      // Validate changedByType before proceeding
-      const validatedChangedByType = validateChangedByType(changedByType);
 
       // First, get the current order to validate the transition
       const currentOrder = await this.getOrderStatusWithTracking(orderId);
@@ -202,7 +170,7 @@ export class UnifiedOrderStatusService {
         return false;
       }
 
-      // Record in order history with enhanced metadata and validated changedByType
+      // Record in order history with enhanced metadata
       const historyMetadata = {
         ...metadata,
         assignment_source: assignmentSource || currentOrder.assignment_source,
@@ -210,39 +178,25 @@ export class UnifiedOrderStatusService {
         status_change_timestamp: new Date().toISOString()
       };
 
-      console.log('📝 Recording order history with validated changedByType:', {
-        orderId,
-        newStatus,
-        restaurantId,
-        validatedChangedByType,
-        originalChangedByType: changedByType
-      });
-
       await recordOrderHistory(
         orderId,
         newStatus,
         restaurantId,
         historyMetadata,
-        undefined, // timestamp
+        undefined, // notes
         undefined, // changedBy (user ID)
-        validatedChangedByType
+        changedByType
       );
 
       console.log('✅ Order status updated successfully:', {
         orderId,
         from: currentOrder.status,
-        to: newStatus,
-        changedByType: validatedChangedByType
+        to: newStatus
       });
 
       return true;
     } catch (error) {
-      console.error('❌ Error updating order status in unifiedOrderStatusService:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        orderId,
-        newStatus,
-        changedByType
-      });
+      console.error('❌ Error updating order status:', error);
       return false;
     }
   }
