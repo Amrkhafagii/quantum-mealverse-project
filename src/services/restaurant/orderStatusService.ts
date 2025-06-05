@@ -21,7 +21,7 @@ export const restaurantOrderStatusService = {
     restaurantId,
     changedBy,
     notes
-  }: OrderStatusUpdateParams): Promise<boolean> => {
+  }: OrderStatusUpdateParams): Promise<boolean> {
     try {
       console.log(`🏪 Restaurant updating order ${orderId} to status ${status}:`, {
         orderId,
