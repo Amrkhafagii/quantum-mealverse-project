@@ -88,8 +88,7 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
         order_id,
         meal_id,
         quantity,
-        price,
-        special_instructions
+        price
       `)
       .eq('order_id', orderId);
 

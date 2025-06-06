@@ -54,8 +54,7 @@ export const fetchRestaurantOrders = async (restaurantId: string): Promise<Resta
           id,
           meal_id,
           quantity,
-          price,
-          special_instructions
+          price
         )
       `)
       .eq('restaurant_id', restaurantId)
@@ -327,8 +326,7 @@ export const getRestaurantOrderById = async (
           id,
           meal_id,
           quantity,
-          price,
-          special_instructions
+          price
         )
       `)
       .eq('id', orderId)
