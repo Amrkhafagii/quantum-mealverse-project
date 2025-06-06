@@ -52,12 +52,12 @@ export const fetchRestaurantOrders = async (restaurantId: string): Promise<Resta
       .select(`
         *,
         order_items (
-          *,
-          meal:meals!order_items_meal_id_fkey (
-            name,
-            description,
-            image_url
-          )
+          id,
+          meal_id,
+          quantity,
+          price,
+          customizations,
+          special_instructions
         )
       `)
       .eq('restaurant_id', restaurantId)
@@ -76,6 +76,9 @@ export const fetchRestaurantOrders = async (restaurantId: string): Promise<Resta
   }
 };
 
+// Export alias for backward compatibility
+export const getRestaurantOrders = fetchRestaurantOrders;
+
 /**
  * Fetch pending restaurant assignments
  */
@@ -90,13 +93,12 @@ export const fetchPendingAssignments = async (restaurantId: string) => {
         order:orders!restaurant_assignments_order_id_fkey (
           *,
           order_items (
-            *,
-            meal:meals!order_items_meal_id_fkey (
-              name,
-              description,
-              image_url,
-              price
-            )
+            id,
+            meal_id,
+            quantity,
+            price,
+            customizations,
+            special_instructions
           )
         )
       `)
@@ -306,6 +308,9 @@ export const updateRestaurantOrderStatus = async (
   }
 };
 
+// Export alias for backward compatibility
+export const updateOrderStatus = updateRestaurantOrderStatus;
+
 /**
  * Get restaurant order by ID
  */
@@ -321,12 +326,12 @@ export const getRestaurantOrderById = async (
       .select(`
         *,
         order_items (
-          *,
-          meal:meals!order_items_meal_id_fkey (
-            name,
-            description,
-            image_url
-          )
+          id,
+          meal_id,
+          quantity,
+          price,
+          customizations,
+          special_instructions
         )
       `)
       .eq('id', orderId)

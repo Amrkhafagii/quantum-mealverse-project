@@ -46,11 +46,23 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({
         .from('order_preparation_stages')
         .select('*')
         .eq('order_id', orderId)
-        .order('order_index');
+        .order('stage_order');
 
       if (error) throw error;
 
-      setStages(data || []);
+      // Map database fields to component interface
+      const mappedStages: PreparationStage[] = (data || []).map(stage => ({
+        id: stage.id,
+        name: stage.stage_name,
+        description: stage.notes,
+        estimated_duration_minutes: stage.estimated_duration_minutes,
+        order_index: stage.stage_order,
+        status: stage.status as 'pending' | 'in_progress' | 'completed',
+        started_at: stage.started_at,
+        completed_at: stage.completed_at
+      }));
+
+      setStages(mappedStages);
     } catch (error) {
       console.error('Error loading preparation stages:', error);
       toast({

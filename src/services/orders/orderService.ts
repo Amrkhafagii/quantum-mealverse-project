@@ -85,12 +85,13 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
     const { data, error } = await supabase
       .from('order_items')
       .select(`
-        *,
-        meal:meals!order_items_meal_id_fkey (
-          name,
-          description,
-          image_url
-        )
+        id,
+        order_id,
+        meal_id,
+        quantity,
+        price,
+        customizations,
+        special_instructions
       `)
       .eq('order_id', orderId);
 
