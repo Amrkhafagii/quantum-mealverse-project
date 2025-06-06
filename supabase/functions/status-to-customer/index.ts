@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { orderId, status, restaurantId, changedBy, changedByType } = await req.json();
+    const { orderId, status, restaurantId } = await req.json();
 
     if (!orderId || !status) {
       return new Response(
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Updating order ${orderId} status to ${status} by ${changedByType || 'system'}`);
+    console.log(`Updating order ${orderId} status to ${status}`);
 
     // Validate status transition
     const allowedStatuses = ['accepted', 'preparing', 'ready_for_pickup', 'on_the_way', 'delivered'];
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       .insert({
         order_id: orderId,
         new_status: status,
-        previous_status: oldStatus // Now tracking the old status
+        previous_status: oldStatus
       });
 
     if (historyError) {
@@ -89,28 +89,7 @@ Deno.serve(async (req) => {
       restaurantName = restaurant?.name;
     }
 
-    // Determine the correct changed_by_type based on context
-    let finalChangedByType = changedByType || 'system';
-    
-    // If changedBy is provided and no changedByType, try to determine it
-    if (changedBy && !changedByType) {
-      // Check if changedBy is a restaurant user
-      const { data: userType } = await supabase
-        .from('user_types')
-        .select('type')
-        .eq('user_id', changedBy)
-        .single();
-      
-      if (userType?.type === 'restaurant') {
-        finalChangedByType = 'restaurant';
-      } else if (userType?.type === 'customer') {
-        finalChangedByType = 'customer';
-      } else if (userType?.type === 'delivery') {
-        finalChangedByType = 'delivery';
-      }
-    }
-
-    // Add entry to order_history table with proper changed_by_type
+    // Add entry to order_history table
     const { error: orderHistoryError } = await supabase
       .from('order_history')
       .insert({
@@ -119,8 +98,6 @@ Deno.serve(async (req) => {
         previous_status: oldStatus,
         restaurant_id: restaurantId,
         restaurant_name: restaurantName,
-        changed_by: changedBy,
-        changed_by_type: finalChangedByType,
         details: {
           previous_status: oldStatus,
           updated_via: 'status-to-customer webhook',

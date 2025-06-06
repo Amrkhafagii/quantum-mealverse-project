@@ -9,20 +9,6 @@ interface ServiceResponse {
 }
 
 /**
- * Validates and normalizes changed_by_type to ensure it meets database constraints
- */
-const validateChangedByType = (changedByType?: string): 'system' | 'customer' | 'restaurant' | 'delivery' => {
-  const validTypes: ('system' | 'customer' | 'restaurant' | 'delivery')[] = ['system', 'customer', 'restaurant', 'delivery'];
-  
-  if (changedByType && validTypes.includes(changedByType as any)) {
-    return changedByType as 'system' | 'customer' | 'restaurant' | 'delivery';
-  }
-  
-  // Default to 'system' if invalid or undefined
-  return 'system';
-};
-
-/**
  * Records an order status change in the order history
  */
 export const recordOrderHistory = async (
@@ -30,13 +16,9 @@ export const recordOrderHistory = async (
   status: string,
   restaurantId?: string | null,
   details?: Record<string, any>,
-  timestamp?: string,
-  changedBy?: string,
-  changedByType?: string
+  timestamp?: string
 ): Promise<ServiceResponse> => {
   try {
-    const validatedChangedByType = validateChangedByType(changedByType);
-    
     // Get restaurant name if restaurantId is provided
     let restaurantName;
     if (restaurantId) {
@@ -64,9 +46,7 @@ export const recordOrderHistory = async (
         restaurant_id: restaurantId,
         restaurant_name: restaurantName,
         details: jsonDetails,
-        created_at: timestamp || new Date().toISOString(),
-        changed_by: changedBy,
-        changed_by_type: validatedChangedByType
+        created_at: timestamp || new Date().toISOString()
       });
 
     if (error) {
@@ -98,7 +78,6 @@ export const recordRestaurantOrderHistory = async (
   orderId: string,
   status: string,
   restaurantId: string,
-  changedBy?: string,
   additionalDetails?: Record<string, any>
 ): Promise<ServiceResponse> => {
   try {
@@ -112,10 +91,7 @@ export const recordRestaurantOrderHistory = async (
       orderId,
       status,
       restaurantId,
-      details,
-      undefined,
-      changedBy,
-      'restaurant'
+      details
     );
   } catch (error) {
     console.error(`Error recording restaurant order history for order ${orderId}:`, error);

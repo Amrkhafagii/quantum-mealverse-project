@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from '../orders/webhook/orderHistoryService';
@@ -8,7 +9,6 @@ interface UpdateOrderStatusParams {
   restaurantId?: string;
   assignmentSource?: string;
   metadata?: Record<string, any>;
-  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
 }
 
 interface OrderStatusData {
@@ -120,16 +120,14 @@ export class UnifiedOrderStatusService {
       newStatus,
       restaurantId,
       assignmentSource,
-      metadata = {},
-      changedByType = 'system'
+      metadata = {}
     } = params;
 
     try {
       console.log('🔄 Updating order status:', {
         orderId,
         newStatus,
-        restaurantId,
-        changedByType
+        restaurantId
       });
 
       // First, get the current order to validate the transition
@@ -182,10 +180,7 @@ export class UnifiedOrderStatusService {
         orderId,
         newStatus,
         restaurantId,
-        historyMetadata,
-        undefined, // notes
-        undefined, // changedBy (user ID)
-        changedByType
+        historyMetadata
       );
 
       console.log('✅ Order status updated successfully:', {

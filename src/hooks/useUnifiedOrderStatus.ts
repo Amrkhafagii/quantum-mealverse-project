@@ -149,8 +149,7 @@ export const useUnifiedOrderStatus = (orderId: string) => {
         newStatus: newStatus as any,
         restaurantId,
         assignmentSource: orderData.assignment_source,
-        metadata,
-        changedByType: 'customer'
+        metadata
       });
 
       if (success) {

@@ -5611,8 +5611,6 @@ export type Database = {
       order_history: {
         Row: {
           assignment_source: string | null
-          changed_by: string | null
-          changed_by_type: string
           created_at: string
           details: Json | null
           expired_at: string | null
@@ -5626,8 +5624,6 @@ export type Database = {
         }
         Insert: {
           assignment_source?: string | null
-          changed_by?: string | null
-          changed_by_type?: string
           created_at?: string
           details?: Json | null
           expired_at?: string | null
@@ -5641,8 +5637,6 @@ export type Database = {
         }
         Update: {
           assignment_source?: string | null
-          changed_by?: string | null
-          changed_by_type?: string
           created_at?: string
           details?: Json | null
           expired_at?: string | null

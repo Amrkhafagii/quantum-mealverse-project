@@ -7,7 +7,6 @@ export interface OrderStatusUpdateParams {
   orderId: string;
   status: string;
   restaurantId: string;
-  changedBy?: string;
   notes?: string;
 }
 
@@ -19,7 +18,6 @@ export const restaurantOrderStatusService = {
     orderId,
     status,
     restaurantId,
-    changedBy,
     notes
   }: OrderStatusUpdateParams): Promise<boolean> {
     try {
@@ -45,7 +43,6 @@ export const restaurantOrderStatusService = {
         orderId,
         status,
         restaurantId,
-        changedBy,
         {
           notes,
           source: 'restaurant_dashboard',
@@ -73,12 +70,11 @@ export const restaurantOrderStatusService = {
   /**
    * Accepts a restaurant assignment
    */
-  async acceptOrder(orderId: string, restaurantId: string, changedBy?: string, notes?: string): Promise<boolean> {
+  async acceptOrder(orderId: string, restaurantId: string, notes?: string): Promise<boolean> {
     return this.updateOrderStatus({
       orderId,
       status: 'restaurant_accepted',
       restaurantId,
-      changedBy,
       notes: notes || 'Order accepted by restaurant'
     });
   },
@@ -86,12 +82,11 @@ export const restaurantOrderStatusService = {
   /**
    * Rejects a restaurant assignment
    */
-  async rejectOrder(orderId: string, restaurantId: string, changedBy?: string, reason?: string): Promise<boolean> {
+  async rejectOrder(orderId: string, restaurantId: string, reason?: string): Promise<boolean> {
     return this.updateOrderStatus({
       orderId,
       status: 'restaurant_rejected',
       restaurantId,
-      changedBy,
       notes: reason || 'Order rejected by restaurant'
     });
   },
@@ -99,12 +94,11 @@ export const restaurantOrderStatusService = {
   /**
    * Marks order as preparing
    */
-  async startPreparation(orderId: string, restaurantId: string, changedBy?: string): Promise<boolean> {
+  async startPreparation(orderId: string, restaurantId: string): Promise<boolean> {
     return this.updateOrderStatus({
       orderId,
       status: 'preparing',
       restaurantId,
-      changedBy,
       notes: 'Order preparation started'
     });
   },
@@ -112,12 +106,11 @@ export const restaurantOrderStatusService = {
   /**
    * Marks order as ready for pickup
    */
-  async markReady(orderId: string, restaurantId: string, changedBy?: string): Promise<boolean> {
+  async markReady(orderId: string, restaurantId: string): Promise<boolean> {
     return this.updateOrderStatus({
       orderId,
       status: 'ready_for_pickup',
       restaurantId,
-      changedBy,
       notes: 'Order ready for pickup'
     });
   }

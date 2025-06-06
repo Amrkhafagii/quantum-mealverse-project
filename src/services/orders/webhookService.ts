@@ -10,8 +10,6 @@ interface UpdateOrderStatusParams {
   newStatus: OrderStatus;
   restaurantId?: string | null;
   details?: Record<string, unknown>;
-  changedBy?: string;
-  changedByType?: 'system' | 'customer' | 'restaurant' | 'delivery';
 }
 
 interface WebhookValidationError {
@@ -51,15 +49,6 @@ const validateUpdateOrderParams = (params: UpdateOrderStatusParams): WebhookVali
     });
   }
 
-  // Validate changedByType if provided
-  if (params.changedByType && !['system', 'customer', 'restaurant', 'delivery'].includes(params.changedByType)) {
-    errors.push({
-      field: 'changedByType',
-      message: 'changedByType must be one of: system, customer, restaurant, delivery',
-      code: 'INVALID_CHANGED_BY_TYPE'
-    });
-  }
-
   return errors;
 };
 
@@ -70,9 +59,7 @@ export const updateOrderStatus = async (
   orderId: string,
   newStatus: OrderStatus,
   restaurantId: string | null = null,
-  details?: Record<string, unknown>,
-  changedBy?: string,
-  changedByType: 'system' | 'customer' | 'restaurant' | 'delivery' = 'system'
+  details?: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string; validationErrors?: WebhookValidationError[] }> => {
   try {
     console.log(`🔄 Starting order status update for ${orderId} to ${newStatus}`);
@@ -82,9 +69,7 @@ export const updateOrderStatus = async (
       orderId,
       newStatus,
       restaurantId,
-      details,
-      changedBy,
-      changedByType
+      details
     });
 
     if (validationErrors.length > 0) {
@@ -149,10 +134,7 @@ export const updateOrderStatus = async (
         orderId,
         newStatus,
         restaurantId,
-        details,
-        undefined, // notes
-        changedBy,
-        changedByType
+        details
       );
       console.log('✅ Order history recorded successfully');
     } catch (historyError) {
