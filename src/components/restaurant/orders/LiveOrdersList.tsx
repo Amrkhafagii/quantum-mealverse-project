@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Package, DollarSign } from 'lucide-react';
 import { fetchRestaurantOrders, updateOrderStatus, type RestaurantOrder } from '@/services/restaurant/orderService';
+import { OrderStatus } from '@/types/webhook';
 import { toast } from '@/hooks/use-toast';
 
 interface LiveOrdersListProps {
@@ -47,7 +48,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({
   const handleAcceptOrder = async (orderId: string) => {
     setUpdating(orderId);
     try {
-      const success = await updateOrderStatus(orderId, 'restaurant_accepted', restaurantId);
+      const success = await updateOrderStatus(orderId, OrderStatus.RESTAURANT_ACCEPTED, restaurantId);
       if (success) {
         toast({
           title: 'Order Accepted',
@@ -65,7 +66,7 @@ export const LiveOrdersList: React.FC<LiveOrdersListProps> = ({
   const handleStartPreparation = async (orderId: string) => {
     setUpdating(orderId);
     try {
-      const success = await updateOrderStatus(orderId, 'preparing', restaurantId);
+      const success = await updateOrderStatus(orderId, OrderStatus.PREPARING, restaurantId);
       if (success) {
         toast({
           title: 'Preparation Started',

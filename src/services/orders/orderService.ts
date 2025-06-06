@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { recordOrderHistory } from './webhook/orderHistoryService';
 import { OrderStatus } from '@/types/webhook';
@@ -90,7 +89,6 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
         meal_id,
         quantity,
         price,
-        customizations,
         special_instructions
       `)
       .eq('order_id', orderId);
