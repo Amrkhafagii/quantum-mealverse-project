@@ -1,367 +1,266 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { CartItem } from '@/contexts/CartContext';
-import { OrderStatus } from '@/types/webhook';
-import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
 import { recordOrderHistory } from './webhook/orderHistoryService';
-import { MenuValidationService } from '@/services/validation/menuValidationService';
+import { OrderStatus } from '@/types/webhook';
+
+export interface Order {
+  id: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  delivery_address: string;
+  city?: string;
+  notes?: string;
+  delivery_method?: string;
+  payment_method?: string;
+  delivery_fee?: number;
+  subtotal?: number;
+  total: number;
+  status: string;
+  latitude?: number;
+  longitude?: number;
+  assignment_source: string;
+  created_at: string;
+  updated_at: string;
+  formatted_order_id?: string;
+  restaurant_id?: string;
+  user_id?: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  meal_id: string;
+  quantity: number;
+  price: number;
+  customizations?: any;
+  special_instructions?: string;
+  meal?: {
+    name: string;
+    description?: string;
+    image_url?: string;
+  };
+}
 
 /**
- * Creates a new order in the database
+ * Fetch orders for a specific user
  */
-export const createOrder = async (
-  userId: string,
-  deliveryInfo: DeliveryFormValues,
-  items: CartItem[],
-  totalAmount: number,
-  initialStatus: string = OrderStatus.PENDING
-) => {
+export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
   try {
-    // Create subtotal from items - using flat structure
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    console.log('Fetching orders for user:', userId);
     
-    // Calculate delivery fee based on delivery method
-    const deliveryFee = deliveryInfo.deliveryMethod === 'delivery' ? 2.99 : 0;
-    
-    // Format order ID for display (e.g., ORD-20250425-XXXX)
-    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randomPart = Math.floor(1000 + Math.random() * 9000);
-    const formattedOrderId = `ORD-${timestamp}-${randomPart}`;
-    
-    // Insert the order - removing latitude and longitude from direct insertion
-    const { data: insertedOrder, error } = await supabase
+    const { data, error } = await supabase
       .from('orders')
-      .insert({
-        user_id: userId,
-        customer_name: deliveryInfo.fullName,
-        customer_email: deliveryInfo.email,
-        customer_phone: deliveryInfo.phone,
-        delivery_address: deliveryInfo.address,
-        city: deliveryInfo.city,
-        notes: deliveryInfo.notes,
-        delivery_method: deliveryInfo.deliveryMethod,
-        payment_method: deliveryInfo.paymentMethod,
-        status: initialStatus,
-        delivery_fee: deliveryFee,
-        subtotal,
-        total: totalAmount,
-        formatted_order_id: formattedOrderId,
-      })
-      .select()
-      .single();
-      
-    if (error) throw error;
-    return insertedOrder;
+      .select(`
+        *,
+        restaurant:restaurants!orders_restaurant_id_fkey (
+          name,
+          address,
+          phone
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user orders:', error);
+      throw error;
+    }
+
+    console.log('Successfully fetched orders:', data?.length || 0);
+    return data || [];
   } catch (error) {
-    console.error('Error creating order:', error);
+    console.error('Error in fetchUserOrders:', error);
     throw error;
   }
 };
 
 /**
- * Creates order items for a given order with enhanced validation
+ * Fetch order items for a specific order
  */
-export const createOrderItems = async (orderId: string, items: CartItem[]) => {
+export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => {
   try {
-    console.log('Creating order items for order:', {
-      orderId,
-      itemsCount: items.length,
-      itemsStructure: items.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        hasNestedMeal: item.hasOwnProperty('meal'),
-        structure: item.hasOwnProperty('meal') ? 'nested' : 'flat'
-      }))
-    });
-
-    // First, validate all cart items exist in menu_items table
-    const validation = await MenuValidationService.validateCartItems(items);
+    console.log('Fetching order items for order:', orderId);
     
-    if (validation.invalidItems.length > 0) {
-      const invalidItemNames = validation.invalidItems.map(item => item.name).join(', ');
-      throw new Error(`The following items are no longer available: ${invalidItemNames}. Please refresh your cart and try again.`);
-    }
-
-    if (validation.validItems.length === 0) {
-      throw new Error('No valid items found in cart. Please add items to your cart before placing an order.');
-    }
-
-    // Use validated items instead of original items
-    const validatedItems = validation.validItems;
-
-    // Map items with defensive programming to handle both nested and flat structures
-    const orderItems = validatedItems.map((item, index) => {
-      try {
-        // Handle both nested (legacy) and flat (current) structures
-        let mealId: string;
-        let price: number;
-        let name: string;
-        let quantity: number;
-
-        // Check if this is a nested structure (legacy format)
-        if (item.hasOwnProperty('meal') && (item as any).meal) {
-          console.log(`Item ${index} has nested structure (legacy format)`);
-          const nestedItem = item as any;
-          mealId = nestedItem.meal?.id || nestedItem.id;
-          price = nestedItem.meal?.price || nestedItem.price;
-          name = nestedItem.meal?.name || nestedItem.name;
-          quantity = nestedItem.quantity;
-        } else {
-          // Flat structure (current format)
-          console.log(`Item ${index} has flat structure (current format)`);
-          mealId = item.id;
-          price = item.price;
-          name = item.name;
-          quantity = item.quantity;
-        }
-
-        // Validate required fields
-        if (!mealId) {
-          throw new Error(`Missing meal ID for item at index ${index}`);
-        }
-        if (!name) {
-          throw new Error(`Missing name for item at index ${index}`);
-        }
-        if (typeof price !== 'number' || price < 0) {
-          throw new Error(`Invalid price for item at index ${index}: ${price}`);
-        }
-        if (typeof quantity !== 'number' || quantity <= 0) {
-          throw new Error(`Invalid quantity for item at index ${index}: ${quantity}`);
-        }
-
-        console.log(`Successfully mapped item ${index}:`, {
-          meal_id: mealId,
-          name,
-          price,
-          quantity,
-          order_id: orderId
-        });
-
-        return {
-          order_id: orderId,
-          meal_id: mealId,
-          quantity,
-          price,
-          name
-        };
-      } catch (itemError) {
-        console.error(`Error mapping item at index ${index}:`, {
-          error: itemError,
-          item,
-          itemKeys: Object.keys(item)
-        });
-        throw new Error(`Failed to map item at index ${index}: ${itemError instanceof Error ? itemError.message : String(itemError)}`);
-      }
-    });
-
-    console.log('Final order items to insert:', orderItems);
-    
-    const { error: itemsError } = await supabase
+    const { data, error } = await supabase
       .from('order_items')
-      .insert(orderItems);
-      
-    if (itemsError) {
-      console.error('Database insertion error for order items:', {
-        error: itemsError,
-        orderId,
-        itemsCount: orderItems.length
-      });
-      throw itemsError;
+      .select(`
+        *,
+        meal:meals!order_items_meal_id_fkey (
+          name,
+          description,
+          image_url
+        )
+      `)
+      .eq('order_id', orderId);
+
+    if (error) {
+      console.error('Error fetching order items:', error);
+      throw error;
     }
-    
-    console.log(`Successfully created ${orderItems.length} order items for order ${orderId}`);
-    
-    // Record the items in order history
+
+    console.log('Successfully fetched order items:', data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchOrderItems:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update order status
+ */
+export const updateOrderStatus = async (
+  orderId: string,
+  newStatus: OrderStatus,
+  restaurantId?: string,
+  metadata?: Record<string, any>
+): Promise<boolean> => {
+  try {
+    console.log('Updating order status:', { orderId, newStatus, restaurantId });
+
+    // Update the order status
+    const updateData: any = {
+      status: newStatus,
+      updated_at: new Date().toISOString()
+    };
+
+    if (restaurantId) {
+      updateData.restaurant_id = restaurantId;
+    }
+
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId);
+
+    if (orderError) {
+      console.error('Error updating order status:', orderError);
+      throw orderError;
+    }
+
+    // Record the history
     await recordOrderHistory(
       orderId,
-      OrderStatus.PENDING,
-      null,
-      { items_count: validatedItems.length }
+      newStatus,
+      restaurantId,
+      metadata
     );
-  } catch (error) {
-    console.error('Critical error in createOrderItems:', {
-      error,
-      orderId,
-      itemsReceived: items.length,
-      errorMessage: error instanceof Error ? error.message : String(error)
-    });
-    throw error;
-  }
-};
 
-/**
- * Saves delivery information for a user
- */
-export const saveDeliveryInfo = async (
-  userId: string, 
-  deliveryInfo: DeliveryFormValues,
-  hasExistingInfo: boolean
-) => {
-  try {
-    if (hasExistingInfo) {
-      // Update existing delivery info
-      const { error } = await supabase
-        .from('delivery_info')
-        .update({
-          full_name: deliveryInfo.fullName,
-          phone: deliveryInfo.phone,
-          address: deliveryInfo.address,
-          city: deliveryInfo.city,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-    } else {
-      // Insert new delivery info
-      const { error } = await supabase
-        .from('delivery_info')
-        .insert({
-          user_id: userId,
-          full_name: deliveryInfo.fullName,
-          phone: deliveryInfo.phone,
-          address: deliveryInfo.address,
-          city: deliveryInfo.city
-        });
-        
-      if (error) throw error;
-    }
-    
+    console.log('Successfully updated order status');
     return true;
   } catch (error) {
-    console.error('Error saving delivery info:', error);
-    throw error;
+    console.error('Error in updateOrderStatus:', error);
+    return false;
   }
 };
 
 /**
- * Saves user location to the database
+ * Cancel an order
  */
-export const saveUserLocation = async (
-  userId: string,
-  latitude: number,
-  longitude: number
-) => {
+export const cancelOrder = async (
+  orderId: string,
+  reason?: string,
+  restaurantId?: string
+): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('user_locations')
-      .upsert({
-        user_id: userId,
-        latitude,
-        longitude,
-        timestamp: new Date().toISOString()
-      });
-      
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error saving user location:', error);
-    throw error;
-  }
-};
+    console.log('Cancelling order:', { orderId, reason });
 
-/**
- * Cancels an order by updating its status
- */
-export const cancelOrder = async (orderId: string) => {
-  try {
-    // Update order status directly through supabase
     const { error } = await supabase
       .from('orders')
-      .update({ 
+      .update({
         status: OrderStatus.CANCELLED,
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId);
-    
+
     if (error) {
+      console.error('Error cancelling order:', error);
       throw error;
     }
-    
-    // Record in order history
+
+    // Record the cancellation in history
     await recordOrderHistory(
       orderId,
       OrderStatus.CANCELLED,
-      null,
-      { cancelled_at: new Date().toISOString() },
-      undefined,
-      'customer'
+      restaurantId,
+      { 
+        cancellation_reason: reason || 'Order cancelled',
+        cancelled_at: new Date().toISOString()
+      }
     );
-    
+
+    console.log('Successfully cancelled order');
     return true;
   } catch (error) {
-    console.error('Error cancelling order:', error);
-    throw error;
+    console.error('Error in cancelOrder:', error);
+    return false;
   }
 };
 
 /**
- * Processes a refund request
+ * Get order by ID with full details
  */
-export const requestRefund = async (
-  orderId: string, 
-  reason: string, 
-  userId: string, 
-  amount?: number
-) => {
+export const getOrderById = async (orderId: string): Promise<Order | null> => {
   try {
-    // Get the order to check if refund is allowed
-    const { data: order, error: orderError } = await supabase
+    console.log('Fetching order by ID:', orderId);
+    
+    const { data, error } = await supabase
       .from('orders')
-      .select('total, status')
+      .select(`
+        *,
+        restaurant:restaurants!orders_restaurant_id_fkey (
+          name,
+          address,
+          phone,
+          latitude,
+          longitude
+        )
+      `)
       .eq('id', orderId)
       .single();
-      
-    if (orderError || !order) {
-      throw new Error('Order not found');
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.warn('Order not found:', orderId);
+        return null;
+      }
+      console.error('Error fetching order:', error);
+      throw error;
     }
-    
-    // Only allow refunds for delivered or cancelled orders
-    if (order.status !== OrderStatus.DELIVERED && order.status !== OrderStatus.CANCELLED) {
-      throw new Error(`Cannot request refund for order in ${order.status} state`);
-    }
-    
-    // If amount not provided, refund the full amount
-    const refundAmount = amount || order.total;
-    
-    // Update order status to REFUNDED
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({
-        status: OrderStatus.REFUNDED,
-        refund_status: 'requested',
-        refund_amount: refundAmount
-      })
-      .eq('id', orderId);
-      
-    if (updateError) {
-      throw updateError;
-    }
-    
-    // Record the refund request
-    await recordOrderHistory(
-      orderId,
-      OrderStatus.REFUNDED,
-      null,
-      { 
-        reason: reason,
-        refund_amount: refundAmount,
-        requested_at: new Date().toISOString()
-      },
-      undefined,
-      userId,
-      'customer'
-    );
-    
-    return true;
+
+    console.log('Successfully fetched order');
+    return data;
   } catch (error) {
-    console.error('Error requesting refund:', error);
+    console.error('Error in getOrderById:', error);
     throw error;
   }
 };
 
 /**
- * Central export for recordOrderHistory for backward compatibility
+ * Get order history for an order
  */
-export { recordOrderHistory } from './webhook/orderHistoryService';
+export const getOrderHistory = async (orderId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('order_history')
+      .select(`
+        *,
+        restaurant:restaurants!order_history_restaurant_id_fkey (
+          name
+        )
+      `)
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching order history:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getOrderHistory:', error);
+    throw error;
+  }
+};

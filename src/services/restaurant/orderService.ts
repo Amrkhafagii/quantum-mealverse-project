@@ -1,398 +1,351 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { RestaurantOrder, OrderStatus } from '@/types/restaurant';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
-import { Database } from '@/integrations/supabase/types';
-import { Json } from '@/types/database';
-import { fromSupabaseJson } from '@/utils/supabaseUtils';
-import { fixOrderStatus } from '@/utils/orderStatusFix';
+import { OrderStatus } from '@/types/webhook';
+
+export interface RestaurantOrder {
+  id: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  delivery_address: string;
+  city?: string;
+  notes?: string;
+  delivery_method?: string;
+  payment_method?: string;
+  delivery_fee?: number;
+  subtotal?: number;
+  total: number;
+  status: string;
+  latitude?: number;
+  longitude?: number;
+  assignment_source: string;
+  created_at: string;
+  updated_at: string;
+  formatted_order_id?: string;
+  restaurant_id?: string;
+  user_id?: string;
+  order_items?: Array<{
+    id: string;
+    meal_id: string;
+    quantity: number;
+    price: number;
+    customizations?: any;
+    special_instructions?: string;
+    meal?: {
+      name: string;
+      description?: string;
+      image_url?: string;
+    };
+  }>;
+}
 
 /**
- * Update an order's status with proper validation and history tracking
- * @param orderId Order ID
- * @param newStatus New status to apply
- * @param restaurantId Restaurant ID
- * @param details Additional details for the history
- * @returns Success or failure
+ * Fetch orders assigned to a specific restaurant
  */
-export const updateOrderStatus = async (
+export const fetchRestaurantOrders = async (restaurantId: string): Promise<RestaurantOrder[]> => {
+  try {
+    console.log('Fetching orders for restaurant:', restaurantId);
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          *,
+          meal:meals!order_items_meal_id_fkey (
+            name,
+            description,
+            image_url
+          )
+        )
+      `)
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching restaurant orders:', error);
+      throw error;
+    }
+
+    console.log('Successfully fetched restaurant orders:', data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchRestaurantOrders:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch pending restaurant assignments
+ */
+export const fetchPendingAssignments = async (restaurantId: string) => {
+  try {
+    console.log('Fetching pending assignments for restaurant:', restaurantId);
+    
+    const { data, error } = await supabase
+      .from('restaurant_assignments')
+      .select(`
+        *,
+        order:orders!restaurant_assignments_order_id_fkey (
+          *,
+          order_items (
+            *,
+            meal:meals!order_items_meal_id_fkey (
+              name,
+              description,
+              image_url,
+              price
+            )
+          )
+        )
+      `)
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching pending assignments:', error);
+      throw error;
+    }
+
+    console.log('Successfully fetched pending assignments:', data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchPendingAssignments:', error);
+    throw error;
+  }
+};
+
+/**
+ * Accept a restaurant assignment
+ */
+export const acceptRestaurantAssignment = async (
   orderId: string,
-  newStatus: OrderStatus,
   restaurantId: string,
-  details?: Record<string, unknown>
+  notes?: string
 ): Promise<boolean> => {
   try {
-    console.log(`Starting to update order ${orderId} to status ${newStatus} by restaurant ${restaurantId}`);
-    
-    // Get current order
-    const { data: order, error: orderError } = await supabase
+    console.log('Accepting restaurant assignment:', { orderId, restaurantId, notes });
+
+    // Update the order with restaurant_id and status
+    const { error: orderError } = await supabase
       .from('orders')
-      .select('status')
-      .eq('id', orderId)
-      .eq('restaurant_id', restaurantId)
-      .maybeSingle();
-      
-    if (orderError) {
-      console.error('Failed to fetch order:', orderError);
-      return false;
-    }
-    
-    // For accept/reject actions, we don't need to check current status as restaurant_id might not be set yet
-    if (!order && (newStatus === OrderStatus.RESTAURANT_ACCEPTED || newStatus === OrderStatus.RESTAURANT_REJECTED)) {
-      console.log(`Order not found with restaurant_id constraint, handling accept/reject case`);
-      
-      // Fetch order without restaurant_id constraint for accept/reject actions
-      const { data: baseOrder, error: baseOrderError } = await supabase
-        .from('orders')
-        .select('status')
-        .eq('id', orderId)
-        .single();
-        
-      if (baseOrderError || !baseOrder) {
-        console.error('Failed to fetch order without restaurant constraint:', baseOrderError);
-        return false;
-      }
-      
-      const currentStatus = baseOrder.status;
-      console.log(`Current order status: ${currentStatus}`);
-      
-      // Validate the status transition
-      if (!isValidStatusTransition(currentStatus, newStatus)) {
-        console.error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
-        return false;
-      }
-      
-      // For acceptance, also update restaurant_id
-      if (newStatus === OrderStatus.RESTAURANT_ACCEPTED) {
-        console.log(`Accepting order ${orderId}, setting restaurant_id to ${restaurantId}`);
-        
-        // Update order status and restaurant_id
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ 
-            status: newStatus,
-            restaurant_id: restaurantId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-          
-        if (updateError) {
-          console.error('Failed to update order status:', updateError);
-          return false;
-        }
-        
-        // Update assignment status if assignment_id is provided in details
-        if (details && details.assignment_id) {
-          // Properly type cast the assignment_id to string
-          const assignmentId = String(details.assignment_id);
-          
-          const { error: assignmentError } = await supabase
-            .from('restaurant_assignments')
-            .update({ 
-              status: 'accepted',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', assignmentId);
-            
-          if (assignmentError) {
-            console.error('Failed to update assignment status:', assignmentError);
-            // Continue anyway, as the order status has been updated
-          } else {
-            console.log(`Successfully updated assignment ${assignmentId} to accepted`);
-          }
-          
-          // IMPROVED: Cancel ALL other assignments for this order, not just pending ones
-          const { error: cancelError } = await supabase
-            .from('restaurant_assignments')
-            .update({ 
-              status: 'cancelled',
-              updated_at: new Date().toISOString(),
-              details: { cancelled_reason: 'Order accepted by another restaurant' }
-            })
-            .eq('order_id', orderId)
-            .neq('id', assignmentId);
-            
-          if (cancelError) {
-            console.error('Failed to cancel other assignments:', cancelError);
-          } else {
-            console.log(`Successfully cancelled all other assignments for order ${orderId}`);
-          }
-        } else {
-          // If no specific assignment_id but order is accepted, cancel all restaurant assignments
-          // for other restaurants to ensure consistency
-          const { error: cancelError } = await supabase
-            .from('restaurant_assignments')
-            .update({ 
-              status: 'cancelled',
-              updated_at: new Date().toISOString(),
-              details: { cancelled_reason: 'Order accepted directly by restaurant' }
-            })
-            .eq('order_id', orderId)
-            .neq('restaurant_id', restaurantId);
-            
-          if (cancelError) {
-            console.error('Failed to cancel assignments for other restaurants:', cancelError);
-          }
-        }
-      } else {
-        // For rejection, just update status
-        console.log(`Rejecting order ${orderId}`);
-        
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ 
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-          
-        if (updateError) {
-          console.error('Failed to update order status:', updateError);
-          return false;
-        }
-        
-        // Update assignment status if assignment_id is provided in details
-        if (details && details.assignment_id) {
-          // Properly type cast the assignment_id to string
-          const assignmentId = String(details.assignment_id);
-          
-          const { error: assignmentError } = await supabase
-            .from('restaurant_assignments')
-            .update({ 
-              status: 'rejected',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', assignmentId);
-            
-          if (assignmentError) {
-            console.error('Failed to update assignment status:', assignmentError);
-            // Continue anyway, as the order status has been updated
-          } else {
-            console.log(`Successfully updated assignment ${assignmentId} to rejected`);
-          }
-          
-          // Check if there are still pending assignments for this order
-          const { data: pendingAssignments, error: pendingError } = await supabase
-            .from('restaurant_assignments')
-            .select('id')
-            .eq('order_id', orderId)
-            .eq('status', 'pending');
-            
-          if (pendingError) {
-            console.error('Failed to check pending assignments:', pendingError);
-          } else if (!pendingAssignments || pendingAssignments.length === 0) {
-            console.log(`No more pending assignments for order ${orderId}, updating to no_restaurant_accepted`);
-            
-            // If no pending assignments remain, update to no_restaurant_accepted
-            const { error: noAcceptError } = await supabase
-              .from('orders')
-              .update({
-                status: OrderStatus.NO_RESTAURANT_ACCEPTED,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', orderId);
-              
-            if (noAcceptError) {
-              console.error('Failed to update order to no_restaurant_accepted:', noAcceptError);
-            } else {
-              console.log(`Successfully updated order ${orderId} to no_restaurant_accepted`);
-            }
-          }
-        }
-      }
-      
-      // Run additional fix to ensure DB consistency
-      await fixOrderStatus(orderId);
-      
-      // Get restaurant name for the order history
-      const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('name')
-        .eq('id', restaurantId)
-        .single();
-        
-      const restaurantName = restaurant?.name || 'Unknown Restaurant';
-      
-      // Record to order history with the restaurant ID that accepted/rejected
-      // Cast details to Record<string, unknown> type for compatibility with recordOrderHistory
-      const detailsWithRestaurant = details 
-        ? { ...details, restaurantName } 
-        : { restaurantName };
-        
-      await recordOrderHistory(
-        orderId,
-        newStatus,
-        restaurantId,
-        detailsWithRestaurant as Record<string, unknown>,
-        undefined,
-        undefined,
-        'restaurant'  // Explicitly set changed_by_type
-      );
-      
-      return true;
-    }
-    
-    // For non-accept/reject actions or if order exists with restaurant id
-    if (!order) {
-      console.error(`Order not found with id ${orderId} and restaurant_id ${restaurantId}`);
-      return false;
-    }
-    
-    // Validate status transition
-    if (!isValidStatusTransition(order.status, newStatus)) {
-      console.error(`Invalid status transition from ${order.status} to ${newStatus}`);
-      return false;
-    }
-    
-    // Update order status
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ 
-        status: newStatus,
+      .update({
+        restaurant_id: restaurantId,
+        status: OrderStatus.RESTAURANT_ACCEPTED,
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId);
-      
-    if (updateError) {
-      console.error('Failed to update order status:', updateError);
-      return false;
+
+    if (orderError) {
+      console.error('Error updating order for acceptance:', orderError);
+      throw orderError;
     }
-    
-    // Get restaurant name for the order history
-    const { data: restaurant } = await supabase
-      .from('restaurants')
-      .select('name')
-      .eq('id', restaurantId)
-      .single();
-      
-    const restaurantName = restaurant?.name || 'Unknown Restaurant';
-    
-    // Cast details to Record<string, unknown> type for compatibility with recordOrderHistory
-    const detailsWithRestaurant = details 
-      ? { ...details, restaurantName } 
-      : { restaurantName };
-      
-    // Record to order history
+
+    // Update the assignment status
+    const { error: assignmentError } = await supabase
+      .from('restaurant_assignments')
+      .update({
+        status: 'accepted',
+        responded_at: new Date().toISOString(),
+        response_notes: notes
+      })
+      .eq('order_id', orderId)
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'pending');
+
+    if (assignmentError) {
+      console.error('Error updating assignment status:', assignmentError);
+      throw assignmentError;
+    }
+
+    // Cancel other pending assignments for this order
+    const { error: cancelError } = await supabase
+      .from('restaurant_assignments')
+      .update({ status: 'cancelled' })
+      .eq('order_id', orderId)
+      .eq('status', 'pending')
+      .neq('restaurant_id', restaurantId);
+
+    if (cancelError) {
+      console.warn('Error cancelling other assignments:', cancelError);
+    }
+
+    // Record the acceptance in order history
     await recordOrderHistory(
       orderId,
-      newStatus,
+      OrderStatus.RESTAURANT_ACCEPTED,
       restaurantId,
-      detailsWithRestaurant as Record<string, unknown>,
-      undefined,
-      undefined,
-      'restaurant'
+      {
+        notes: notes || 'Order accepted by restaurant',
+        source: 'restaurant_dashboard'
+      }
     );
-    
+
+    console.log('Successfully accepted restaurant assignment');
     return true;
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error('Error in acceptRestaurantAssignment:', error);
     return false;
   }
 };
 
 /**
- * Get active orders for a restaurant
- * @param restaurantId Restaurant ID
- * @returns Array of orders
+ * Reject a restaurant assignment
  */
-export const getRestaurantOrders = async (
+export const rejectRestaurantAssignment = async (
+  orderId: string,
   restaurantId: string,
-  statusFilter?: OrderStatus[]
-): Promise<RestaurantOrder[]> => {
+  reason?: string
+): Promise<boolean> => {
   try {
-    console.log(`Fetching orders for restaurant ${restaurantId} with status filter:`, statusFilter);
-    
-    // First check restaurant_assignments table for assignments to this restaurant
-    const { data: assignments, error: assignmentsError } = await supabase
+    console.log('Rejecting restaurant assignment:', { orderId, restaurantId, reason });
+
+    // Update the assignment status to rejected
+    const { error: assignmentError } = await supabase
       .from('restaurant_assignments')
-      .select('order_id, status')
-      .eq('restaurant_id', restaurantId);
-      
-    if (assignmentsError) {
-      console.error('Error fetching restaurant assignments:', assignmentsError);
+      .update({
+        status: 'rejected',
+        responded_at: new Date().toISOString(),
+        response_notes: reason
+      })
+      .eq('order_id', orderId)
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'pending');
+
+    if (assignmentError) {
+      console.error('Error updating assignment status:', assignmentError);
+      throw assignmentError;
     }
-    
-    console.log('All assignments for this restaurant:', assignments);
-    
-    // Get assigned order IDs, include both 'pending' and 'accepted' assignments
-    const assignedOrderIds = assignments
-      ?.filter(a => ['pending', 'accepted'].includes(a.status))
-      ?.map(a => a.order_id) || [];
-      
-    console.log('Filtered assigned order IDs:', assignedOrderIds);
-    
-    // Create a query for orders
-    let query = supabase
-      .from('orders')
-      .select('*, order_items(*)');
-      
-    // If we have status filters, apply them
-    if (statusFilter && statusFilter.length > 0) {
-      query = query.in('status', statusFilter);
+
+    // Check if any assignments are still pending
+    const { data: pendingAssignments } = await supabase
+      .from('restaurant_assignments')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('status', 'pending');
+
+    // If no more pending assignments, update order status
+    if (!pendingAssignments?.length) {
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          status: OrderStatus.NO_RESTAURANT_AVAILABLE,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (orderError) {
+        console.error('Error updating order status after rejection:', orderError);
+      }
+
+      // Record the rejection in order history
+      await recordOrderHistory(
+        orderId,
+        OrderStatus.NO_RESTAURANT_AVAILABLE,
+        restaurantId,
+        {
+          rejection_reason: reason || 'Order rejected by restaurant',
+          source: 'restaurant_dashboard'
+        }
+      );
     }
-    
-    // Apply restaurant filter - either directly assigned or through assignments table
-    if (assignedOrderIds.length > 0) {
-      // Get orders either by restaurant_id OR by being in the assigned order IDs
-      query = query.or(`restaurant_id.eq.${restaurantId},id.in.(${assignedOrderIds.join(',')})`);
-    } else {
-      // Just get by restaurant_id
-      query = query.eq('restaurant_id', restaurantId);
-    }
-    
-    // Complete the query
-    const { data, error } = await query.order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching restaurant orders:', error);
-      throw error;
-    }
-    
-    console.log('Orders fetched:', data?.length, data);
-    return data as unknown as RestaurantOrder[];
+
+    console.log('Successfully rejected restaurant assignment');
+    return true;
   } catch (error) {
-    console.error('Error fetching restaurant orders:', error);
-    return [];
+    console.error('Error in rejectRestaurantAssignment:', error);
+    return false;
   }
 };
 
 /**
- * Checks if a status transition is valid
+ * Update restaurant order status
  */
-const isValidStatusTransition = (currentStatus: string, newStatus: string): boolean => {
-  // Define valid transitions for each status
-  const validTransitions: Record<string, OrderStatus[]> = {
-    [OrderStatus.AWAITING_RESTAURANT]: [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.RESTAURANT_REJECTED],
-    [OrderStatus.RESTAURANT_ASSIGNED]: [OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.RESTAURANT_REJECTED],
-    [OrderStatus.RESTAURANT_ACCEPTED]: [OrderStatus.PREPARING],
-    [OrderStatus.PREPARING]: [OrderStatus.READY_FOR_PICKUP],
-    [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.ON_THE_WAY],
-    [OrderStatus.ON_THE_WAY]: [OrderStatus.DELIVERED],
-    // Pending state is used when initially creating an order - Allow direct acceptance from pending
-    [OrderStatus.PENDING]: [OrderStatus.AWAITING_RESTAURANT, OrderStatus.RESTAURANT_ASSIGNED, OrderStatus.RESTAURANT_ACCEPTED, OrderStatus.RESTAURANT_REJECTED],
-    // Terminal states
-    [OrderStatus.DELIVERED]: [],
-    [OrderStatus.CANCELLED]: [],
-    [OrderStatus.REFUNDED]: [],
-    [OrderStatus.RESTAURANT_REJECTED]: []
-  };
-  
-  // Handle all status alias variations
-  let normalizedCurrent = currentStatus;
-  let normalizedNew = newStatus;
-  
-  // Map friendly status names to their canonical forms
-  if (currentStatus === 'accepted') normalizedCurrent = OrderStatus.RESTAURANT_ACCEPTED;
-  if (newStatus === 'accepted') normalizedNew = OrderStatus.RESTAURANT_ACCEPTED;
-  if (currentStatus === 'rejected') normalizedCurrent = OrderStatus.RESTAURANT_REJECTED;
-  if (newStatus === 'rejected') normalizedNew = OrderStatus.RESTAURANT_REJECTED;
-  if (currentStatus === 'ready') normalizedCurrent = OrderStatus.READY_FOR_PICKUP;
-  if (newStatus === 'ready') normalizedNew = OrderStatus.READY_FOR_PICKUP;
-  if (currentStatus === 'delivering') normalizedCurrent = OrderStatus.ON_THE_WAY;
-  if (newStatus === 'delivering') normalizedNew = OrderStatus.ON_THE_WAY;
-  if (currentStatus === 'completed') normalizedCurrent = OrderStatus.DELIVERED;
-  if (newStatus === 'completed') normalizedNew = OrderStatus.DELIVERED;
-  
-  // Check if the transition is valid - Use string comparison instead of enum comparison
-  const allowed = validTransitions[normalizedCurrent];
-  return allowed ? allowed.includes(normalizedNew as OrderStatus) : false;
+export const updateRestaurantOrderStatus = async (
+  orderId: string,
+  newStatus: OrderStatus,
+  restaurantId: string,
+  notes?: string
+): Promise<boolean> => {
+  try {
+    console.log('Updating restaurant order status:', { orderId, newStatus, restaurantId, notes });
+
+    // Update the order status
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId)
+      .eq('restaurant_id', restaurantId);
+
+    if (orderError) {
+      console.error('Error updating restaurant order status:', orderError);
+      throw orderError;
+    }
+
+    // Record the status change in history
+    await recordOrderHistory(
+      orderId,
+      newStatus,
+      restaurantId,
+      {
+        notes: notes || `Status updated to ${newStatus}`,
+        source: 'restaurant_dashboard'
+      }
+    );
+
+    console.log('Successfully updated restaurant order status');
+    return true;
+  } catch (error) {
+    console.error('Error in updateRestaurantOrderStatus:', error);
+    return false;
+  }
+};
+
+/**
+ * Get restaurant order by ID
+ */
+export const getRestaurantOrderById = async (
+  orderId: string,
+  restaurantId: string
+): Promise<RestaurantOrder | null> => {
+  try {
+    console.log('Fetching restaurant order by ID:', { orderId, restaurantId });
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          *,
+          meal:meals!order_items_meal_id_fkey (
+            name,
+            description,
+            image_url
+          )
+        )
+      `)
+      .eq('id', orderId)
+      .eq('restaurant_id', restaurantId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.warn('Restaurant order not found:', { orderId, restaurantId });
+        return null;
+      }
+      console.error('Error fetching restaurant order:', error);
+      throw error;
+    }
+
+    console.log('Successfully fetched restaurant order');
+    return data;
+  } catch (error) {
+    console.error('Error in getRestaurantOrderById:', error);
+    throw error;
+  }
 };
