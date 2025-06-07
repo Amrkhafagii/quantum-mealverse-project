@@ -76,7 +76,7 @@ export const validateOrderAccess = async (
       .from('orders')
       .select(`
         id, 
-        user_id, 
+        customer_id, 
         restaurant_id,
         restaurants!orders_restaurant_id_fkey (
           user_id
@@ -93,7 +93,7 @@ export const validateOrderAccess = async (
     }
 
     // Check if user owns the order or owns the restaurant
-    const isOrderOwner = order.user_id === userId;
+    const isOrderOwner = order.customer_id === userId;
     const isRestaurantOwner = order.restaurants?.user_id === userId;
 
     if (!isOrderOwner && !isRestaurantOwner) {

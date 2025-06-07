@@ -108,14 +108,14 @@ export const useRestaurantAnalytics = (
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       // Calculate unique customers
-      const uniqueCustomerIds = new Set(currentOrders?.map(order => order.user_id) || []);
+      const uniqueCustomerIds = new Set(currentOrders?.map(order => order.customer_id) || []);
       const totalCustomers = uniqueCustomerIds.size;
 
       // Calculate repeat customers (customers who ordered more than once)
       const customerOrderCounts: Record<string, number> = {};
       currentOrders?.forEach(order => {
-        if (order.user_id) {
-          customerOrderCounts[order.user_id] = (customerOrderCounts[order.user_id] || 0) + 1;
+        if (order.customer_id) {
+          customerOrderCounts[order.customer_id] = (customerOrderCounts[order.customer_id] || 0) + 1;
         }
       });
       const repeatCustomers = Object.values(customerOrderCounts).filter(count => count > 1).length;

@@ -30,7 +30,7 @@ export const OrdersHistoryList: React.FC<OrdersHistoryListProps> = ({ userId }) 
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('user_id', userId)
+        .eq('customer_id', userId)
         .order('created_at', { ascending: false });
         
       if (error) throw error;

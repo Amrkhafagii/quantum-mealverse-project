@@ -29,7 +29,7 @@ export const useOrdersData = (userId?: string) => {
       const { data, error } = await supabase
         .from('orders')
         .select('*, order_items(*)')
-        .eq('user_id', userId)
+        .eq('customer_id', userId)
         .not('status', 'eq', 'delivered')
         .not('status', 'eq', 'cancelled')
         .not('status', 'eq', 'rejected')
@@ -84,7 +84,7 @@ export const useOrdersData = (userId?: string) => {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('user_id', userId)
+        .eq('customer_id', userId)
         .in('status', ['delivered', 'cancelled', 'rejected'])
         .order('created_at', { ascending: false })
         .limit(5);

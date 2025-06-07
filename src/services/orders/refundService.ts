@@ -108,7 +108,7 @@ export const requestRefund = async (
       .from('orders')
       .select('id, status, total, customer_name, created_at, user_id')
       .eq('id', orderId)
-      .eq('user_id', userId) // Ensure user owns the order
+      .eq('customer_id', userId) // Ensure user owns the order
       .single();
 
     if (orderError || !order) {

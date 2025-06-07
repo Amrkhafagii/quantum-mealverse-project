@@ -62,7 +62,7 @@ export const useCheckoutAuth = () => {
             const { data: previousOrders } = await supabase
               .from('orders')
               .select('*')
-              .eq('user_id', session.user.id)
+              .eq('customer_id', session.user.id)
               .order('created_at', { ascending: false })
               .limit(1)
               .maybeSingle();

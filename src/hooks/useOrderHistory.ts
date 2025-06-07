@@ -13,7 +13,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   formatted_order_id?: string;
-  user_id: string;
+  customer_id: string;
   restaurant_id: string;
   status: string;
   total: number;
@@ -48,7 +48,7 @@ export function useOrderHistory(userId?: string) {
           *,
           order_items (*)
         `)
-        .eq('user_id', userId)
+        .eq('customer_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) {

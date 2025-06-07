@@ -23,7 +23,7 @@ export interface Order {
   updated_at: string;
   formatted_order_id?: string;
   restaurant_id?: string;
-  user_id?: string;
+  customer_id?: string;
 }
 
 export interface OrderItem {
@@ -58,7 +58,7 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
           phone
         )
       `)
-      .eq('user_id', userId)
+      .eq('customer_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -114,13 +114,13 @@ export class AutomaticTransitionService {
             try {
               const { data: order } = await supabase
                 .from('orders')
-                .select('user_id')
+                .select('customer_id')
                 .eq('id', orderId)
                 .single();
 
-              if (order?.user_id) {
+              if (order?.customer_id) {
                 await preparationNotificationService.sendStageUpdateNotification({
-                  userId: order.user_id,
+                  userId: order.customer_id,
                   orderId,
                   stageName: toStage,
                   stageStatus: 'in_progress'

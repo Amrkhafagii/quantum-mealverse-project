@@ -13,7 +13,7 @@ interface UpdateOrderStatusParams {
 
 interface OrderStatusData {
   id: string;
-  user_id?: string;
+  customer_id?: string;
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;

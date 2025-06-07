@@ -75,7 +75,7 @@ export const OrderHistoryList: React.FC<OrderHistoryListProps> = ({ restaurantId
         // Create a properly typed Order object - handling latitude and longitude correctly
         const order: Order = {
           id: orderData.id,
-          user_id: orderData.user_id,
+          customer_id: orderData.customer_id,
           customer_name: orderData.customer_name,
           customer_email: orderData.customer_email,
           customer_phone: orderData.customer_phone,

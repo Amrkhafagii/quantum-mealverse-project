@@ -51,7 +51,7 @@ export class PreparationIntegrationHub {
       // Get order details for notifications
       const { data: order } = await supabase
         .from('orders')
-        .select('user_id, restaurant_id, customer_name')
+        .select('customer_id, restaurant_id, customer_name')
         .eq('id', orderId)
         .single();
 
@@ -63,7 +63,7 @@ export class PreparationIntegrationHub {
       // Prepare notifications for parallel sending
       const notifications = [
         {
-          userId: order.user_id,
+          userId: order.customer_id,
           title: 'Order Update',
           message: `Your order has progressed from ${fromStage} to ${toStage}`,
           type: 'preparation_update',

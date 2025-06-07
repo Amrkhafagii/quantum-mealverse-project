@@ -24,7 +24,7 @@ export const useRestaurantOrders = (restaurantId: string) => {
         .from('orders')
         .select(`
           id,
-          user_id,
+          customer_id,
           customer_name,
           customer_email,
           customer_phone,

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/types/cart';
 
 interface OrderData {
-  user_id: string | null;
+  customer_id: string | null;
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
@@ -94,7 +94,7 @@ export const createOrder = async (
   orderData: Omit<OrderData, 'delivery_fee'> & { deliveryMethod?: string },
   items: CartItem[]
 ): Promise<{ success: boolean; orderId?: string; error?: string }> => {
-  console.log(`Creating order for user ${orderData.user_id} with total amount: ${orderData.total}`);
+  console.log(`Creating order for user ${orderData.customer_id} with total amount: ${orderData.total}`);
   console.log('Order data:', JSON.stringify(orderData, null, 2));
   
   try {
@@ -118,7 +118,7 @@ export const createOrder = async (
     
     // Prepare final order data for database insert
     const finalOrderData = {
-      user_id: orderData.user_id,
+      customer_id: orderData.customer_id,
       customer_name: orderData.customer_name,
       customer_phone: orderData.customer_phone,
       customer_email: orderData.customer_email || '',

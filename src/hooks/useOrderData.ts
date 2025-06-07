@@ -29,7 +29,7 @@ export const useOrderData = (orderId: string) => {
           // Transform to match Order interface - provide default values for missing properties
           const formattedData: Order = {
             id: unifiedData.id,
-            user_id: unifiedData.user_id || '',
+            customer_id: unifiedData.customer_id || '',
             customer_name: unifiedData.customer_name,
             customer_email: unifiedData.customer_email || '',
             customer_phone: unifiedData.customer_phone || '',

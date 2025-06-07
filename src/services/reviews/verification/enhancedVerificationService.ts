@@ -40,7 +40,7 @@ export const verifyPurchaseWithDetails = async (
         quantity,
         orders(
           id, 
-          user_id,
+          customer_id,
           created_at, 
           status,
           delivery_method,
@@ -48,7 +48,7 @@ export const verifyPurchaseWithDetails = async (
         )
       `)
       .eq('meal_id', mealId)
-      .eq('orders.user_id', userId)
+      .eq('orders.customer_id', userId)
       .order('orders.created_at', { ascending: false });
 
     if (itemsError) throw itemsError;

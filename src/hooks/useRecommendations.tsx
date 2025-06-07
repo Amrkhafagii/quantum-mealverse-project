@@ -27,7 +27,7 @@ export const useRecommendations = (type: RecommendationType = 'personalized') =>
         const { data: recentOrders } = await supabase
           .from('orders')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('customer_id', user.id)
           .order('created_at', { ascending: false })
           .limit(5);
           

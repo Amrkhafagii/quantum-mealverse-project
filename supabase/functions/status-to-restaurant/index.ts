@@ -46,10 +46,10 @@ const validateOrderAccess = async (supabase: any, orderId: string, userId: strin
       .from('orders')
       .select(`
         id, 
-        user_id, 
+        customer_id, 
         restaurant_id,
         restaurants!orders_restaurant_id_fkey (
-          user_id
+          customer_id
         )
       `)
       .eq('id', orderId)
@@ -60,7 +60,7 @@ const validateOrderAccess = async (supabase: any, orderId: string, userId: strin
     }
 
     // Check if user owns the order or owns the restaurant
-    const isOrderOwner = order.user_id === userId;
+    const isOrderOwner = order.customer_id === userId;
     const isRestaurantOwner = order.restaurants?.user_id === userId;
 
     if (!isOrderOwner && !isRestaurantOwner) {
@@ -156,16 +156,16 @@ Deno.serve(async (req) => {
         // Get the user id from the order
         const { data: order } = await supabase
           .from('orders')
-          .select('user_id, restaurant_id')
+          .select('customer_id, restaurant_id')
           .eq('id', statusChange.record_id)
           .maybeSingle();
           
-        if (order?.user_id) {
+        if (order?.customer_id) {
           // Try to get the most recent location for this user
           const { data: userLocation } = await supabase
             .from('user_locations')
             .select('latitude, longitude')
-            .eq('user_id', order.user_id)
+            .eq('user_id', order.customer_id)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
