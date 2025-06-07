@@ -135,7 +135,8 @@ export const createOrder = async (
       longitude: orderData.longitude,
       assignment_source: orderData.assignment_source,
       is_mixed_order: orderData.is_mixed_order,
-      restaurant_id: null // Will be set when assignment is accepted
+      restaurant_id: null // Will be set when assignment is accepted,
+
     };
     
     console.log('Creating order with final data:', finalOrderData);
