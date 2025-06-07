@@ -6182,7 +6182,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at?: string
-          user_id: string
+          customer_id: string
         }
         Update: {
           accepted_at?: string | null
