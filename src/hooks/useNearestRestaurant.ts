@@ -44,9 +44,9 @@ export const useNearestRestaurant = () => {
     
     try {
       const { data, error } = await supabase.rpc('find_nearest_restaurant', {
-        order_lat: location.latitude,
-        order_lng: location.longitude,
-        max_distance_km: maxDistance
+        order_lat: parseFloat(location.latitude.toString()), // force to double
+        order_lng: parseFloat(location.longitude.toString()), // force to double
+        max_distance_km: parseFloat(maxDistance.toString()) // force to double
       });
 
       if (error) {

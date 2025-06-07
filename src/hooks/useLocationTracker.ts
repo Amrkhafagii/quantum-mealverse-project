@@ -85,10 +85,11 @@ export const useLocationTracker = () => {
         );
       }).then(position => {
         const newLocation: DeliveryLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: position.timestamp,
+            latitude: parseFloat(position.coords.latitude.toString()), // Ensure double precision
+            longitude: parseFloat(position.coords.longitude.toString()), // Ensure double precision
+            accuracy: position.coords.accuracy,
+            timestamp: Date.now(),
+        
           source: 'gps',
           speed: position.coords.speed || undefined,
           heading: position.coords.heading || undefined,

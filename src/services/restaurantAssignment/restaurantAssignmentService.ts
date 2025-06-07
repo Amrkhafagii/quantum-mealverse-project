@@ -28,11 +28,10 @@ export class RestaurantAssignmentService {
     try {
       // Get nearby restaurants based on location only
       const nearbyRestaurants = await this.findNearbyRestaurants(
-        customer_latitude,
-        customer_longitude,
+        parseFloat(customer_latitude.toString()), // Ensure double precision
+        parseFloat(customer_longitude.toString()), // Ensure double precision
         max_distance_km
-      );
-
+    );
       if (!nearbyRestaurants || nearbyRestaurants.length === 0) {
         console.log('No nearby restaurants found, getting default restaurants');
         return await this.getDefaultRestaurants(meal);

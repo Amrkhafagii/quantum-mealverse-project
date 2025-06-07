@@ -187,10 +187,10 @@ export const useOptimizedRestaurantsData = (location: SimpleLocation | null) => 
     try {
       // Try to fetch nearby restaurants using the SQL function
       const { data: nearbyData, error: nearbyError } = await supabase.rpc('find_nearest_restaurant', {
-        order_lat: userLocation.latitude,
-        order_lng: userLocation.longitude,
-        max_distance_km: 50
-      });
+        order_lat: parseFloat(userLocation.latitude.toString()), // Ensure double precision
+        order_lng: parseFloat(userLocation.longitude.toString()), // Ensure double precision
+        max_distance_km: 50 // Already a number
+    });
 
       if (abortControllerRef.current?.signal.aborted) return;
 
