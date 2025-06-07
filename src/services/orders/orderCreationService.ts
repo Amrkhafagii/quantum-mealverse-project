@@ -143,11 +143,10 @@ export const createOrder = async (
     
     // Insert order - this will automatically trigger assignment creation
     const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert(finalOrderData)
-      .select()
-      .single();
-    
+    .from('orders')
+    .insert(finalOrderData)
+    .select('id, customer_id, status, total, created_at') // Explicit columns
+    .single();
     if (orderError) {
       console.error('Failed to create order:', orderError);
       throw new Error(`Order creation failed: ${orderError.message}`);
