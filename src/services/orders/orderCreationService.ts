@@ -76,13 +76,43 @@ const calculateDeliveryFee = (
  * Validates and transforms cart items for order creation
  */
 const validateAndTransformItems = async (items: CartItem[]): Promise<ValidationResult> => {
-  console.log(`Validation skipped – accepting all ${items.length} items as valid`);
-
+  console.log(`Validating ${items.length} cart items`);
+  
+  const validItems: CartItem[] = [];
+  const invalidItems: CartItem[] = [];
+  const errors: string[] = [];
+  
+  for (const item of items) {
+    try {
+      // Basic validation (only price and quantity are required now)
+      if (item.price == null || item.quantity == null) {
+        invalidItems.push(item);
+        errors.push(`Invalid item data for ${item.name || 'unnamed item'}`);
+        continue;
+      }
+      
+      // Price and quantity must be positive
+      if (item.price <= 0 || item.quantity <= 0) {
+        invalidItems.push(item);
+        errors.push(`Invalid price or quantity for ${item.name || 'unnamed item'}`);
+        continue;
+      }
+      
+      validItems.push(item);
+    } catch (error) {
+      console.error(`Error validating item ${item.name}:`, error);
+      invalidItems.push(item);
+      errors.push(`Validation error for ${item.name || 'unnamed item'}`);
+    }
+  }
+  
+  console.log(`Validation complete: ${validItems.length} valid, ${invalidItems.length} invalid`);
+  
   return {
-    isValid: true,
-    validItems: items,
-    invalidItems: [],
-    errors: []
+    isValid: invalidItems.length === 0,
+    validItems,
+    invalidItems,
+    errors
   };
 };
 
