@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/types/database';
+import { getCurrentUser, validateOrderAccess } from '@/services/auth/userValidation';
 
 interface ServiceResponse {
   success: boolean;
@@ -9,7 +10,7 @@ interface ServiceResponse {
 }
 
 /**
- * Records an order status change in the order history
+ * Records an order status change in the order history with user validation
  */
 export const recordOrderHistory = async (
   orderId: string,
@@ -19,6 +20,20 @@ export const recordOrderHistory = async (
   timestamp?: string
 ): Promise<ServiceResponse> => {
   try {
+    // Validate user authentication for user-initiated requests
+    const userValidation = await getCurrentUser();
+    if (userValidation.success && userValidation.user) {
+      // If user is authenticated, validate order access
+      const accessValidation = await validateOrderAccess(orderId, userValidation.user.id);
+      if (!accessValidation.success) {
+        console.warn(`User ${userValidation.user.id} attempted unauthorized access to order ${orderId}`);
+        return { 
+          success: false, 
+          message: accessValidation.message 
+        };
+      }
+    }
+
     // Get restaurant name if restaurantId is provided
     let restaurantName;
     if (restaurantId) {
@@ -72,7 +87,7 @@ export const recordOrderHistory = async (
 };
 
 /**
- * Records restaurant-specific order history with enhanced context
+ * Records restaurant-specific order history with enhanced context and validation
  */
 export const recordRestaurantOrderHistory = async (
   orderId: string,
@@ -81,10 +96,33 @@ export const recordRestaurantOrderHistory = async (
   additionalDetails?: Record<string, any>
 ): Promise<ServiceResponse> => {
   try {
+    // Validate user authentication for restaurant operations
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      return { 
+        success: false, 
+        message: 'Authentication required for restaurant operations' 
+      };
+    }
+
+    // Validate restaurant ownership
+    const { validateRestaurantOwnership } = await import('@/services/auth/userValidation');
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      return { 
+        success: false, 
+        message: ownershipValidation.message 
+      };
+    }
+
     const details = {
       ...additionalDetails,
       restaurant_context: true,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      updated_by_user_id: userValidation.user.id
     };
 
     return await recordOrderHistory(

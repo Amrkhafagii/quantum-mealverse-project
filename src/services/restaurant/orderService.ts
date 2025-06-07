@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { recordOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 import { OrderStatus } from '@/types/webhook';
+import { getCurrentUser, validateRestaurantOwnership, validateOrderAccess } from '@/services/auth/userValidation';
 
 export interface RestaurantOrder {
   id: string;
@@ -40,12 +41,27 @@ export interface RestaurantOrder {
 }
 
 /**
- * Fetch orders assigned to a specific restaurant
+ * Fetch orders assigned to a specific restaurant with user validation
  */
 export const fetchRestaurantOrders = async (restaurantId: string): Promise<RestaurantOrder[]> => {
   try {
     console.log('Fetching orders for restaurant:', restaurantId);
     
+    // Validate user authentication
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      throw new Error('Authentication required');
+    }
+
+    // Validate restaurant ownership
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      throw new Error(ownershipValidation.message || 'Unauthorized access to restaurant');
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -77,11 +93,26 @@ export const fetchRestaurantOrders = async (restaurantId: string): Promise<Resta
 export const getRestaurantOrders = fetchRestaurantOrders;
 
 /**
- * Fetch pending restaurant assignments
+ * Fetch pending restaurant assignments with user validation
  */
 export const fetchPendingAssignments = async (restaurantId: string) => {
   try {
     console.log('Fetching pending assignments for restaurant:', restaurantId);
+    
+    // Validate user authentication
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      throw new Error('Authentication required');
+    }
+
+    // Validate restaurant ownership
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      throw new Error(ownershipValidation.message || 'Unauthorized access to restaurant');
+    }
     
     const { data, error } = await supabase
       .from('restaurant_assignments')
@@ -117,7 +148,7 @@ export const fetchPendingAssignments = async (restaurantId: string) => {
 };
 
 /**
- * Accept a restaurant assignment
+ * Accept a restaurant assignment with user validation
  */
 export const acceptRestaurantAssignment = async (
   orderId: string,
@@ -126,6 +157,23 @@ export const acceptRestaurantAssignment = async (
 ): Promise<boolean> => {
   try {
     console.log('Accepting restaurant assignment:', { orderId, restaurantId, notes });
+
+    // Validate user authentication
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      console.error('Authentication required for assignment acceptance');
+      return false;
+    }
+
+    // Validate restaurant ownership
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      console.error('Unauthorized restaurant access:', ownershipValidation.message);
+      return false;
+    }
 
     // Update the order with restaurant_id and status
     const { error: orderError } = await supabase
@@ -178,7 +226,8 @@ export const acceptRestaurantAssignment = async (
       restaurantId,
       {
         notes: notes || 'Order accepted by restaurant',
-        source: 'restaurant_dashboard'
+        source: 'restaurant_dashboard',
+        updated_by_user_id: userValidation.user.id
       }
     );
 
@@ -191,7 +240,7 @@ export const acceptRestaurantAssignment = async (
 };
 
 /**
- * Reject a restaurant assignment
+ * Reject a restaurant assignment with user validation
  */
 export const rejectRestaurantAssignment = async (
   orderId: string,
@@ -200,6 +249,23 @@ export const rejectRestaurantAssignment = async (
 ): Promise<boolean> => {
   try {
     console.log('Rejecting restaurant assignment:', { orderId, restaurantId, reason });
+
+    // Validate user authentication
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      console.error('Authentication required for assignment rejection');
+      return false;
+    }
+
+    // Validate restaurant ownership
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      console.error('Unauthorized restaurant access:', ownershipValidation.message);
+      return false;
+    }
 
     // Update the assignment status to rejected
     const { error: assignmentError } = await supabase
@@ -246,7 +312,8 @@ export const rejectRestaurantAssignment = async (
         restaurantId,
         {
           rejection_reason: reason || 'Order rejected by restaurant',
-          source: 'restaurant_dashboard'
+          source: 'restaurant_dashboard',
+          updated_by_user_id: userValidation.user.id
         }
       );
     }
@@ -260,7 +327,7 @@ export const rejectRestaurantAssignment = async (
 };
 
 /**
- * Update restaurant order status
+ * Update restaurant order status with user validation
  */
 export const updateRestaurantOrderStatus = async (
   orderId: string,
@@ -270,6 +337,23 @@ export const updateRestaurantOrderStatus = async (
 ): Promise<boolean> => {
   try {
     console.log('Updating restaurant order status:', { orderId, newStatus, restaurantId, notes });
+
+    // Validate user authentication
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      console.error('Authentication required for order status update');
+      return false;
+    }
+
+    // Validate restaurant ownership
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      console.error('Unauthorized restaurant access:', ownershipValidation.message);
+      return false;
+    }
 
     // Update the order status
     const { error: orderError } = await supabase
@@ -293,7 +377,8 @@ export const updateRestaurantOrderStatus = async (
       restaurantId,
       {
         notes: notes || `Status updated to ${newStatus}`,
-        source: 'restaurant_dashboard'
+        source: 'restaurant_dashboard',
+        updated_by_user_id: userValidation.user.id
       }
     );
 
@@ -309,7 +394,7 @@ export const updateRestaurantOrderStatus = async (
 export const updateOrderStatus = updateRestaurantOrderStatus;
 
 /**
- * Get restaurant order by ID
+ * Get restaurant order by ID with user validation
  */
 export const getRestaurantOrderById = async (
   orderId: string,
@@ -318,6 +403,21 @@ export const getRestaurantOrderById = async (
   try {
     console.log('Fetching restaurant order by ID:', { orderId, restaurantId });
     
+    // Validate user authentication
+    const userValidation = await getCurrentUser();
+    if (!userValidation.success || !userValidation.user) {
+      throw new Error('Authentication required');
+    }
+
+    // Validate restaurant ownership
+    const ownershipValidation = await validateRestaurantOwnership(
+      restaurantId, 
+      userValidation.user.id
+    );
+    if (!ownershipValidation.success) {
+      throw new Error(ownershipValidation.message || 'Unauthorized access to restaurant');
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .select(`

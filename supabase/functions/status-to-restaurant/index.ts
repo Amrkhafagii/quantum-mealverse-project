@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -14,6 +13,65 @@ interface StatusChange {
   old_status: string | null;
   metadata?: Record<string, any>;
 }
+
+/**
+ * Validate user authentication from request headers
+ */
+const validateUserAuth = async (req: Request, supabase: any) => {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { user: null, error: 'No valid authorization header' };
+    }
+
+    const token = authHeader.substring(7);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return { user: null, error: 'Invalid or expired token' };
+    }
+
+    return { user, error: null };
+  } catch (error) {
+    return { user: null, error: 'Authentication validation failed' };
+  }
+};
+
+/**
+ * Validate user has access to the order
+ */
+const validateOrderAccess = async (supabase: any, orderId: string, userId: string) => {
+  try {
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select(`
+        id, 
+        user_id, 
+        restaurant_id,
+        restaurants!orders_restaurant_id_fkey (
+          user_id
+        )
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) {
+      return { hasAccess: false, message: 'Order not found' };
+    }
+
+    // Check if user owns the order or owns the restaurant
+    const isOrderOwner = order.user_id === userId;
+    const isRestaurantOwner = order.restaurants?.user_id === userId;
+
+    if (!isOrderOwner && !isRestaurantOwner) {
+      return { hasAccess: false, message: 'Unauthorized access to order' };
+    }
+
+    return { hasAccess: true, message: 'Access granted' };
+  } catch (error) {
+    return { hasAccess: false, message: 'Error validating order access' };
+  }
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -51,6 +109,31 @@ Deno.serve(async (req) => {
           status: 400 
         }
       );
+    }
+
+    // For order status changes, validate user access
+    if (statusChange.table === 'orders' && statusChange.status_column === 'status') {
+      const authValidation = await validateUserAuth(req, supabase);
+      if (authValidation.user) {
+        const accessValidation = await validateOrderAccess(
+          supabase, 
+          statusChange.record_id, 
+          authValidation.user.id
+        );
+        if (!accessValidation.hasAccess) {
+          console.warn(`Unauthorized access attempt: ${accessValidation.message}`);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: accessValidation.message 
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+              status: 403 
+            }
+          );
+        }
+      }
     }
 
     console.log(`Forwarding status change: ${JSON.stringify(statusChange)}`);

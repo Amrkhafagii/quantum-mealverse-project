@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { recordRestaurantOrderHistory } from '@/services/orders/webhook/orderHistoryService';
 import { toast } from '@/hooks/use-toast';
+import { getCurrentUser, validateRestaurantOwnership } from '@/services/auth/userValidation';
 
 export interface OrderStatusUpdateParams {
   orderId: string;
@@ -12,7 +13,7 @@ export interface OrderStatusUpdateParams {
 
 export const restaurantOrderStatusService = {
   /**
-   * Updates order status from restaurant interface with proper history tracking
+   * Updates order status from restaurant interface with proper history tracking and user validation
    */
   async updateOrderStatus({
     orderId,
@@ -23,6 +24,31 @@ export const restaurantOrderStatusService = {
     try {
       console.log(`Restaurant updating order ${orderId} to status ${status}`);
 
+      // Validate user authentication
+      const userValidation = await getCurrentUser();
+      if (!userValidation.success || !userValidation.user) {
+        toast({
+          title: 'Authentication Error',
+          description: userValidation.message || 'Please log in to continue',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // Validate restaurant ownership
+      const ownershipValidation = await validateRestaurantOwnership(
+        restaurantId, 
+        userValidation.user.id
+      );
+      if (!ownershipValidation.success) {
+        toast({
+          title: 'Unauthorized',
+          description: ownershipValidation.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
       // Update the order status in the main orders table
       const { error: orderUpdateError } = await supabase
         .from('orders')
@@ -31,7 +57,8 @@ export const restaurantOrderStatusService = {
           restaurant_id: restaurantId,
           updated_at: new Date().toISOString()
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('restaurant_id', restaurantId); // Additional security check
 
       if (orderUpdateError) {
         console.error('Error updating order status:', orderUpdateError);
@@ -46,7 +73,8 @@ export const restaurantOrderStatusService = {
         {
           notes,
           source: 'restaurant_dashboard',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          updated_by_user_id: userValidation.user.id
         }
       );
 
