@@ -84,26 +84,25 @@ const validateAndTransformItems = async (items: CartItem[]): Promise<ValidationR
   
   for (const item of items) {
     try {
-      // Basic validation
-      if (!item.id || !item.name || !item.price || !item.quantity) {
+      // Basic validation (only price and quantity are required now)
+      if (item.price == null || item.quantity == null) {
         invalidItems.push(item);
-        errors.push(`Invalid item data for ${item.name || 'unknown item'}`);
+        errors.push(`Invalid item data for ${item.name || 'unnamed item'}`);
         continue;
       }
       
-      // Price validation
+      // Price and quantity must be positive
       if (item.price <= 0 || item.quantity <= 0) {
         invalidItems.push(item);
-        errors.push(`Invalid price or quantity for ${item.name}`);
+        errors.push(`Invalid price or quantity for ${item.name || 'unnamed item'}`);
         continue;
       }
       
-      // Item is valid
       validItems.push(item);
     } catch (error) {
       console.error(`Error validating item ${item.name}:`, error);
       invalidItems.push(item);
-      errors.push(`Validation error for ${item.name}`);
+      errors.push(`Validation error for ${item.name || 'unnamed item'}`);
     }
   }
   
@@ -116,6 +115,7 @@ const validateAndTransformItems = async (items: CartItem[]): Promise<ValidationR
     errors
   };
 };
+
 
 /**
  * Creates a new order with automatic restaurant assignment trigger
