@@ -107,6 +107,7 @@ export const createOrder = async (
         error: `Invalid items: ${validation.errors.join(', ')}`
       };
     }
+    
     // Calculate dynamic delivery fee
     const deliveryFee = calculateDeliveryFee(
       orderData.latitude,
@@ -141,12 +142,10 @@ export const createOrder = async (
     
     // Insert order - this will automatically trigger assignment creation
     const { data: order, error: orderError } = await supabase
-  .from('orders')
-  .select(`
-    *,
-    users(id, name)      
-  `)
-  .maybeSingle();
+      .from('orders')
+      .insert(finalOrderData)
+      .select()
+      .single();
     
     if (orderError) {
       console.error('Failed to create order:', orderError);
@@ -186,8 +185,7 @@ export const createOrder = async (
       orderId: order.id
     };
     
-    
-    console.error('Critical error in order creation:', error);
+  } catch (error) {
     console.error('Critical error in order creation:', error);
     return {
       success: false,
