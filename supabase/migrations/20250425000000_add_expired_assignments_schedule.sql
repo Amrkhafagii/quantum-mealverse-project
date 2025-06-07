@@ -24,7 +24,7 @@ BEGIN
     SET status = 'expired', updated_at = now_timestamp
     WHERE id = assignment.id;
     
-    -- Log in restaurant_assignment_history
+    -- Log in restaurant_assignment_history (if this table exists)
     INSERT INTO restaurant_assignment_history (
       order_id, restaurant_id, status, notes
     ) VALUES (
@@ -32,21 +32,23 @@ BEGIN
       assignment.restaurant_id, 
       'expired', 
       'Automatically expired by scheduled function at ' || now_timestamp
-    );
+    ) ON CONFLICT DO NOTHING;
     
-    -- Log in order_history (using a valid status)
+    -- Log in order_history using current table structure
     INSERT INTO order_history (
       order_id, 
       status, 
       restaurant_id, 
-      details, 
-      expired_at
+      details
     ) VALUES (
       assignment.order_id, 
-      'expired_assignment', -- Using a valid status in the check constraint
+      'expired_assignment',
       assignment.restaurant_id, 
-      jsonb_build_object('assignment_id', assignment.id), 
-      now_timestamp
+      jsonb_build_object(
+        'assignment_id', assignment.id,
+        'expired_at', now_timestamp,
+        'auto_expired', true
+      )
     );
     
     -- Check if this was the last pending assignment
@@ -61,19 +63,6 @@ BEGIN
       -- Update order status
       UPDATE orders
       SET status = 'no_restaurant_accepted'
-      WHERE id = assignment.order_id;
-      
-      -- Log in order_status_history
-      INSERT INTO order_status_history (
-        order_id, 
-        previous_status, 
-        new_status
-      ) 
-      SELECT
-        assignment.order_id,
-        status,
-        'no_restaurant_accepted'
-      FROM orders
       WHERE id = assignment.order_id;
       
       -- Log in order_history
