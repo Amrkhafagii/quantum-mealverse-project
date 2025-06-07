@@ -122,7 +122,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
         // Create a properly typed Order object - handling latitude/longitude correctly
         const order: Order = {
           id: orderData.id,
-          user_id: orderData.customer_id,
+          customer_id: orderData.customer_id,
           customer_name: orderData.customer_name,
           customer_email: orderData.customer_email,
           customer_phone: orderData.customer_phone,
@@ -218,7 +218,7 @@ export const ReadyForPickupList: React.FC<ReadyForPickupListProps> = ({ restaura
           // Create a properly typed Order object
           const order: Order = {
             id: orderData.id,
-            user_id: orderData.customer_id,
+            customer_id: orderData.customer_id,
             customer_name: orderData.customer_name,
             customer_email: orderData.customer_email,
             customer_phone: orderData.customer_phone,
