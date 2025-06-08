@@ -24,49 +24,66 @@ export async function getExpiredAssignments(supabase: any): Promise<Assignment[]
 }
 
 export async function markAssignmentExpired(supabase: any, assignment: Assignment, now: string) {
-  // Insert new record with expired status
-  const { error: insertError } = await supabase
-    .from('restaurant_assignments')
-    .insert({
-      order_id: assignment.order_id,
-      restaurant_id: assignment.restaurant_id, 
-      status: 'expired',
-      created_at: now,
-      notes: `Automatically expired at ${now}`
-    });
-
-  if (insertError) throw insertError;
-  
-  // Also update the original assignment to expired
+  // Update the assignment status to expired
   const { error: updateError } = await supabase
     .from('restaurant_assignments')
-    .update({ status: 'expired' })
+    .update({ 
+      status: 'expired',
+      updated_at: now
+    })
     .eq('id', assignment.id);
     
   if (updateError) throw updateError;
 }
 
 export async function logAssignmentHistory(supabase: any, assignment: Assignment, now: string) {
-  // This function is now redundant since we're using restaurant_assignments directly
-  // Kept for API compatibility
-  return;
+  // Get restaurant name for logging
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('name')
+    .eq('id', assignment.restaurant_id)
+    .single();
+
+  // Log in order_history
+  const { error: historyError } = await supabase
+    .from('order_history')
+    .insert({
+      order_id: assignment.order_id,
+      status: 'expired_assignment',
+      restaurant_id: assignment.restaurant_id,
+      restaurant_name: restaurant?.name || null,
+      details: {
+        assignment_id: assignment.id,
+        expired_at: now,
+        auto_expired: true
+      }
+    });
+
+  if (historyError) {
+    console.error('Error logging assignment history:', historyError);
+    throw historyError;
+  }
 }
 
 export async function checkRemainingAssignments(supabase: any, orderId: string): Promise<{ 
   noPending: boolean; 
   noAccepted: boolean; 
 }> {
-  const { data: recentAssignments } = await supabase
+  // Use aliases to avoid ambiguous column references
+  const { data: pendingAssignments } = await supabase
     .from('restaurant_assignments')
-    .select('id, status')
+    .select('ra.id')
     .eq('order_id', orderId)
-    .order('created_at', { ascending: false });
+    .eq('status', 'pending');
 
-  const pendingAssignments = recentAssignments?.filter(a => a.status === 'pending') || [];
-  const acceptedAssignments = recentAssignments?.filter(a => a.status === 'accepted') || [];
+  const { data: acceptedAssignments } = await supabase
+    .from('restaurant_assignments')
+    .select('ra.id')
+    .eq('order_id', orderId)
+    .eq('status', 'accepted');
 
   return {
-    noPending: pendingAssignments.length === 0,
-    noAccepted: acceptedAssignments.length === 0
+    noPending: !pendingAssignments || pendingAssignments.length === 0,
+    noAccepted: !acceptedAssignments || acceptedAssignments.length === 0
   };
 }

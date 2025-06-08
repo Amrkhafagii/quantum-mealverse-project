@@ -1,15 +1,24 @@
 
 export async function logOrderExpiration(supabase: any, orderId: string, restaurantId: string, assignmentId: string, now: string) {
-  // Use the valid status 'expired_assignment' instead of 'assignment_expired'
+  // Get restaurant name
+  const { data: restaurant } = await supabase
+    .from('restaurants')
+    .select('name')
+    .eq('id', restaurantId)
+    .single();
+
+  // Use the valid status 'expired_assignment' 
   const { error: orderHistoryError } = await supabase
     .from('order_history')
     .insert({
       order_id: orderId,
       status: 'expired_assignment',
       restaurant_id: restaurantId,
-      restaurant_name: null, // Add null restaurant_name to avoid constraints
-      details: { assignment_id: assignmentId },
-      expired_at: now
+      restaurant_name: restaurant?.name || null,
+      details: { 
+        assignment_id: assignmentId,
+        expired_at: now
+      }
     });
 
   if (orderHistoryError) {
@@ -25,7 +34,7 @@ export async function updateOrderStatus(supabase: any, orderId: string) {
     // Get current order status for history record
     const { data: currentOrder, error: fetchError } = await supabase
       .from('orders')
-      .select('status')
+      .select('o.status, o.customer_id')
       .eq('id', orderId)
       .single();
 
@@ -52,8 +61,8 @@ export async function updateOrderStatus(supabase: any, orderId: string) {
         order_id: orderId,
         status: 'no_restaurant_accepted',
         previous_status: currentOrder?.status,
-        restaurant_id: null, // Use null to avoid constraints
-        restaurant_name: null, // Use null to avoid constraints
+        restaurant_id: null,
+        restaurant_name: null,
         details: { reason: 'All restaurant assignments expired' }
       });
 

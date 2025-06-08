@@ -6103,6 +6103,7 @@ export type Database = {
           complexity_score: number | null
           created_at: string
           customer_email: string
+          customer_id: string
           customer_name: string
           customer_phone: string
           delivered_at: string | null
@@ -6137,7 +6138,6 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string
-          customer_id: string
         }
         Insert: {
           accepted_at?: string | null
@@ -6148,6 +6148,7 @@ export type Database = {
           complexity_score?: number | null
           created_at?: string
           customer_email: string
+          customer_id: string
           customer_name: string
           customer_phone: string
           delivered_at?: string | null
@@ -6182,7 +6183,6 @@ export type Database = {
           subtotal: number
           total: number
           updated_at?: string
-          customer_id: string
         }
         Update: {
           accepted_at?: string | null
@@ -6193,6 +6193,7 @@ export type Database = {
           complexity_score?: number | null
           created_at?: string
           customer_email?: string
+          customer_id?: string
           customer_name?: string
           customer_phone?: string
           delivered_at?: string | null
@@ -6227,7 +6228,6 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
-          customer_id?: string
         }
         Relationships: [
           {
@@ -11119,6 +11119,10 @@ export type Database = {
           applied_at: string
           created_at: string
         }[]
+      }
+      get_user_info: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       get_user_workout_preferences: {
         Args: { p_user_id: string }

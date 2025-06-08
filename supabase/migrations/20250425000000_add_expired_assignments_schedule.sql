@@ -1,5 +1,5 @@
 
--- Create a function to check for expired assignments
+-- Create a function to check for expired assignments with proper table aliases
 CREATE OR REPLACE FUNCTION check_expired_assignments()
 RETURNS void AS $$
 DECLARE
@@ -12,38 +12,30 @@ BEGIN
   -- Log execution
   RAISE NOTICE 'Running check_expired_assignments at %', now_timestamp;
   
-  -- Find all pending assignments that have expired
+  -- Find all pending assignments that have expired (5 minutes timeout)
   FOR assignment IN 
-    SELECT ra.id, ra.order_id, ra.restaurant_id, ra.expires_at
+    SELECT ra.id, ra.order_id, ra.restaurant_id, ra.created_at
     FROM restaurant_assignments ra
     WHERE ra.status = 'pending' 
-    AND ra.expires_at < now_timestamp
+    AND ra.created_at < (now_timestamp - INTERVAL '5 minutes')
   LOOP
     -- Update the assignment status to expired
     UPDATE restaurant_assignments
     SET status = 'expired', updated_at = now_timestamp
     WHERE id = assignment.id;
     
-    -- Log in restaurant_assignment_history (if this table exists)
-    INSERT INTO restaurant_assignment_history (
-      order_id, restaurant_id, status, notes
-    ) VALUES (
-      assignment.order_id, 
-      assignment.restaurant_id, 
-      'expired', 
-      'Automatically expired by scheduled function at ' || now_timestamp
-    ) ON CONFLICT DO NOTHING;
-    
-    -- Log in order_history using current table structure
+    -- Log in order_history using proper column names
     INSERT INTO order_history (
       order_id, 
       status, 
-      restaurant_id, 
+      restaurant_id,
+      restaurant_name,
       details
     ) VALUES (
       assignment.order_id, 
       'expired_assignment',
-      assignment.restaurant_id, 
+      assignment.restaurant_id,
+      (SELECT r.name FROM restaurants r WHERE r.id = assignment.restaurant_id),
       jsonb_build_object(
         'assignment_id', assignment.id,
         'expired_at', now_timestamp,
@@ -51,10 +43,10 @@ BEGIN
       )
     );
     
-    -- Check if this was the last pending assignment
+    -- Check if this was the last pending assignment with proper aliases
     SELECT 
-      (SELECT COUNT(*) = 0 FROM restaurant_assignments WHERE order_id = assignment.order_id AND status = 'pending') as no_pending,
-      (SELECT COUNT(*) = 0 FROM restaurant_assignments WHERE order_id = assignment.order_id AND status = 'accepted') as no_accepted
+      (SELECT COUNT(*) = 0 FROM restaurant_assignments ra2 WHERE ra2.order_id = assignment.order_id AND ra2.status = 'pending') as no_pending,
+      (SELECT COUNT(*) = 0 FROM restaurant_assignments ra3 WHERE ra3.order_id = assignment.order_id AND ra3.status = 'accepted') as no_accepted
     INTO
       no_pending, no_accepted;
     
@@ -68,11 +60,15 @@ BEGIN
       -- Log in order_history
       INSERT INTO order_history (
         order_id, 
-        status, 
+        status,
+        restaurant_id,
+        restaurant_name,
         details
       ) VALUES (
         assignment.order_id, 
-        'no_restaurant_accepted', 
+        'no_restaurant_accepted',
+        NULL,
+        NULL,
         jsonb_build_object('reason', 'All restaurant assignments expired')
       );
       
