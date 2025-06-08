@@ -106,7 +106,7 @@ export const requestRefund = async (
     console.log(`Fetching order ${orderId} for refund eligibility check`);
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, status, total, customer_name, created_at, user_id')
+      .select('id, status, total, customer_name, created_at, customer_id')
       .eq('id', orderId)
       .eq('customer_id', userId) // Ensure user owns the order
       .single();

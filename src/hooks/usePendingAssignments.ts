@@ -44,7 +44,7 @@ export const usePendingAssignments = (restaurantId: string) => {
         assigned_at: row.assigned_at,
         order: {
           id: row.order_id,
-          user_id: row.user_id || 'unknown-user', // Ensure required field has value
+          customer_id: row.user_id || 'unknown-user', // Ensure required field has value
           customer_name: row.customer_name || 'Unknown Customer',
           customer_email: row.customer_email || '',
           customer_phone: row.customer_phone || '',
