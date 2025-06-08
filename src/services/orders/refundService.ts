@@ -11,7 +11,7 @@ interface Order {
   total: number;
   customer_name: string;
   created_at: string;
-  user_id: string;
+  customer_id: string; // Changed from user_id to customer_id
 }
 
 interface RefundRequest {
@@ -108,7 +108,7 @@ export const requestRefund = async (
       .from('orders')
       .select('id, status, total, customer_name, created_at, customer_id')
       .eq('id', orderId)
-      .eq('customer_id', userId) // Ensure user owns the order
+      .eq('customer_id', userId) // Use customer_id instead of user_id
       .single();
 
     if (orderError || !order) {
