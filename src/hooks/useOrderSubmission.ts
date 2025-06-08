@@ -26,7 +26,7 @@ export const useOrderSubmission = (
       
       // Prepare order data
       const orderData = {
-        user_id: userId || null,
+        customer_id: userId || null,
         customer_name: data.fullName,
         customer_phone: data.phone,
         customer_email: data.email || '',
