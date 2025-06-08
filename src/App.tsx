@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -85,6 +86,14 @@ function App() {
                           <Navigate to={`/order-confirmation/${window.location.pathname.split('/').pop()}`} replace />
                         </ProtectedRoute>
                       } />
+                      
+                      {/* Add the missing track-order route */}
+                      <Route path="/track-order/:orderId" element={
+                        <ProtectedRoute allowedUserTypes={['customer']}>
+                          <OrderTracking />
+                        </ProtectedRoute>
+                      } />
+                      
                       <Route path="/nutrition" element={<Nutrition />} />
                       <Route path="/customer" element={
                         <ProtectedRoute allowedUserTypes={['customer']}>
