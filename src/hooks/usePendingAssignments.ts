@@ -45,7 +45,7 @@ export const usePendingAssignments = (restaurantId: string) => {
         assigned_at: row.assigned_at,
         order: {
           id: row.order_id,
-          customer_id: row.customer_id || row.user_id || 'unknown-user', // Use customer_id, fallback to user_id, then default
+          customer_id: row.customer_id || 'unknown-user',
           customer_name: row.customer_name || 'Unknown Customer',
           customer_email: row.customer_email || '',
           customer_phone: row.customer_phone || '',

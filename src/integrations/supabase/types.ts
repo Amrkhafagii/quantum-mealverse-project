@@ -11058,12 +11058,26 @@ export type Database = {
           order_id: string
           expires_at: string
           assigned_at: string
+          customer_id: string
           customer_name: string
+          customer_email: string
           customer_phone: string
           delivery_address: string
+          city: string
+          delivery_method: string
+          payment_method: string
+          delivery_fee: number
+          subtotal: number
           order_total: number
           order_created_at: string
+          order_updated_at: string
           order_status: string
+          latitude: number
+          longitude: number
+          formatted_order_id: string
+          restaurant_id: string
+          assignment_source: string
+          notes: string
           order_items: Json
         }[]
       }
