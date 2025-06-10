@@ -17,4 +17,8 @@ export interface CartItem {
   dietary_tags?: string[];
   customizations?: Record<string, any>;
   assignment_source?: 'nutrition_generation' | 'traditional_ordering' | 'manual';
+  // Add missing properties for order creation
+  source_type?: 'nutrition_generation' | 'traditional_ordering' | 'manual';
+  meal_id?: string | null;
+  menu_item_id?: string | null;
 }
