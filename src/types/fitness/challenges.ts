@@ -1,27 +1,31 @@
 
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+  is_active: boolean;
+}
+
 export interface Challenge {
   id: string;
   title: string;
-  description?: string;
+  description: string;
+  type: string;
   start_date: string;
   end_date: string;
-  goal_type?: string;
   target_value: number;
-  goal_value?: number;
-  type: string;
-  status?: string;
   created_by: string;
+  team_id?: string;
   is_active: boolean;
-  reward_points?: number;
-  participants_count?: number;
-  challenge_type?: string;
 }
 
-export interface ChallengeParticipant {
+export interface TeamMember {
   id: string;
+  team_id: string;
   user_id: string;
-  challenge_id: string;
+  role: 'member' | 'admin' | 'owner';
   joined_date: string;
-  progress: number;
-  completed: boolean;
+  is_active: boolean;
 }

@@ -17,4 +17,6 @@ export interface FitnessGoal {
   target_body_fat?: number;
   created_at?: string;
   updated_at?: string;
+  type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'endurance' | 'strength';
+  is_active: boolean;
 }

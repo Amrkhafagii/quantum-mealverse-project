@@ -12,7 +12,9 @@ export interface UserAchievement {
   id: string;
   user_id: string;
   achievement_id: string;
-  date_achieved: string;
+  unlocked_at: string;
+  date_achieved?: string;
+  progress?: number;
 }
 
 export interface Achievement {
@@ -22,6 +24,11 @@ export interface Achievement {
   icon: string;
   criteria: string;
   points: number;
+}
+
+export interface ExtendedUserAchievement extends UserAchievement {
+  achievement: Achievement;
+  date_achieved?: string;
 }
 
 export interface StreakReward {

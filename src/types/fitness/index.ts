@@ -40,5 +40,10 @@ export {
   UserWorkoutStats,
   WorkoutSet,
   DailyQuest,
-  FitnessGoal
+  FitnessGoal,
+  StreakReward,
+  StreakRewardsProps,
+  Team,
+  Challenge,
+  TeamMember
 } from '../fitness';

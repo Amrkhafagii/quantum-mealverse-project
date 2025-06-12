@@ -1,6 +1,6 @@
 
 export interface WorkoutPlan {
-  id?: string;
+  id: string; // Made required to match database expectations
   user_id: string; // Changed from number to string (UUID)
   name: string;
   description?: string;
@@ -22,7 +22,8 @@ export interface WorkoutLog {
   duration?: number;
   calories_burned?: number;
   notes?: string;
-  completed_exercises: CompletedExercise[];
+  completed_exercises: CompletedExercise[]; // Keep this name consistent
+  exercises_completed?: CompletedExercise[]; // Add alias for backward compatibility
   created_at?: string;
 }
 
@@ -111,6 +112,8 @@ export interface Exercise {
 }
 
 export interface CompletedExercise {
+  exercise_id?: string;
+  name?: string; // Add this missing property
   exercise_name: string;
   sets_completed: number;
   reps_completed: number[];
@@ -161,8 +164,8 @@ export interface UserAchievement {
   id: string;
   user_id: string; // Changed from number to string (UUID)
   achievement_id: string;
-  unlocked_at: string;
-  date_achieved?: string; // Add this missing property
+  unlocked_at: string; // Make this required since ExtendedUserAchievement expects it
+  date_achieved?: string; // Add this missing property as optional
   progress?: number;
 }
 
@@ -197,6 +200,7 @@ export interface UserWorkoutStats {
   most_active_day: string;
   calories_burned?: number;
   streak?: number;
+  achievements?: number; // Add this missing property
 }
 
 export interface WorkoutSet {
@@ -234,5 +238,72 @@ export interface FitnessGoal {
   current_value: number;
   target_date: string;
   created_at: string;
+  is_active: boolean;
+  // Add missing properties that components expect
+  title?: string;
+  name?: string;
+  description?: string;
+  status?: 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
+  target_weight?: number;
+  target_body_fat?: number;
+  start_date?: string;
+  category?: string;
+  updated_at?: string;
+}
+
+// Add missing types for other components
+export interface StreakReward {
+  id: string;
+  days_required: number;
+  streak_days?: number;
+  days?: number;
+  streak_length?: number;
+  reward_name: string;
+  title?: string;
+  reward_description: string;
+  reward_value: number | string;
+  reward_type?: string;
+  reward_image?: string;
+  icon?: string;
+  points?: number;
+  is_claimed?: boolean;
+}
+
+export interface StreakRewardsProps {
+  currentStreak: number;
+  rewards: StreakReward[];
+  userId?: string;
+  longestStreak?: number;
+  onClaimReward?: (rewardId: string) => void;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+  is_active: boolean;
+}
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  start_date: string;
+  end_date: string;
+  target_value: number;
+  created_by: string;
+  team_id?: string;
+  is_active: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'member' | 'admin' | 'owner';
+  joined_date: string;
   is_active: boolean;
 }
