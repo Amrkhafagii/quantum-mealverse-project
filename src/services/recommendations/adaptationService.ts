@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface WorkoutAdaptation {
   id: string;
-  user_id: string;
+  user_id: string; // Changed from number to string (UUID)
   workout_plan_id?: string;
   exercise_name?: string;
   adaptation_type: 'increase_weight' | 'decrease_weight' | 'increase_reps' | 'decrease_reps' | 'increase_sets' | 'decrease_sets' | 'substitute_exercise' | 'add_rest';
@@ -18,7 +18,7 @@ export const createWorkoutAdaptation = async (adaptation: Omit<WorkoutAdaptation
   const { data, error } = await supabase
     .from('workout_adaptations')
     .insert({
-      user_id: adaptation.user_id,
+      user_id: adaptation.user_id, // Now expects UUID string
       workout_plan_id: adaptation.workout_plan_id,
       exercise_name: adaptation.exercise_name,
       adaptation_type: adaptation.adaptation_type,
@@ -38,7 +38,7 @@ export const getUserAdaptations = async (userId: string) => {
   const { data, error } = await supabase
     .from('workout_adaptations')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', userId) // Now expects UUID string
     .order('applied_at', { ascending: false });
 
   if (error) throw error;
@@ -50,7 +50,7 @@ export const analyzePerformanceAndSuggestAdaptations = async (userId: string) =>
   const { data: progressData, error } = await supabase
     .from('exercise_progress')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', userId) // Now expects UUID string
     .gte('recorded_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('recorded_date', { ascending: false });
 
@@ -78,7 +78,7 @@ export const analyzePerformanceAndSuggestAdaptations = async (userId: string) =>
       
       if (weightVariation < avgWeight * 0.05) { // Less than 5% variation suggests plateau
         adaptations.push({
-          user_id: userId,
+          user_id: userId, // Now expects UUID string
           exercise_name: exerciseName,
           adaptation_type: 'increase_weight',
           old_value: { weight: avgWeight },

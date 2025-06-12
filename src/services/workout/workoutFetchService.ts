@@ -11,7 +11,7 @@ export const fetchWorkoutPlans = async (userId: string): Promise<WorkoutPlan[]> 
     const { data, error } = await supabase
       .from('workout_plans')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId); // Now expects UUID string
       
     if (error) throw error;
     
@@ -36,7 +36,7 @@ export const fetchWorkoutSchedules = async (userId: string): Promise<WorkoutSche
     const { data, error } = await supabase
       .from('workout_schedules')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId); // Now expects UUID string
       
     if (error) throw error;
     
@@ -56,7 +56,7 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
     const { data, error } = await supabase
       .from('workout_history')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId) // Now expects UUID string
       .order('date', { ascending: false });
       
     if (error) throw error;

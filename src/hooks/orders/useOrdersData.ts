@@ -5,7 +5,7 @@ import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { getActiveOrders, storeActiveOrder } from '@/utils/offlineStorage/ordersService';
 import { useCallback } from 'react';
 
-export const useOrdersData = (userId?: string) => {
+export const useOrdersData = (userId?: string) => { // userId is UUID string
   const { isOnline } = useConnectionStatus();
   
   const fetchActiveOrders = useCallback(async () => {
@@ -29,7 +29,7 @@ export const useOrdersData = (userId?: string) => {
       const { data, error } = await supabase
         .from('orders')
         .select('*, order_items(*)')
-        .eq('customer_id', userId)
+        .eq('customer_id', userId) // customer_id expects UUID string
         .not('status', 'eq', 'delivered')
         .not('status', 'eq', 'cancelled')
         .not('status', 'eq', 'rejected')
@@ -84,7 +84,7 @@ export const useOrdersData = (userId?: string) => {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('customer_id', userId)
+        .eq('customer_id', userId) // customer_id expects UUID string
         .in('status', ['delivered', 'cancelled', 'rejected'])
         .order('created_at', { ascending: false })
         .limit(5);

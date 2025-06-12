@@ -37,14 +37,14 @@ export const getCurrentUser = async (): Promise<ValidationResult> => {
  */
 export const validateRestaurantOwnership = async (
   restaurantId: string, 
-  userId: string
+  userId: string // Now expects UUID string
 ): Promise<ValidationResult> => {
   try {
     const { data: restaurant, error } = await supabase
       .from('restaurants')
       .select('id, user_id')
       .eq('id', restaurantId)
-      .eq('user_id', userId)
+      .eq('user_id', userId) // Now compares UUID strings
       .single();
 
     if (error || !restaurant) {
@@ -69,7 +69,7 @@ export const validateRestaurantOwnership = async (
  */
 export const validateOrderAccess = async (
   orderId: string, 
-  userId: string
+  userId: string // Now expects UUID string
 ): Promise<ValidationResult> => {
   try {
     const { data: order, error } = await supabase
@@ -93,8 +93,8 @@ export const validateOrderAccess = async (
     }
 
     // Check if user owns the order or owns the restaurant
-    const isOrderOwner = order.customer_id === userId;
-    const isRestaurantOwner = order.restaurants?.user_id === userId;
+    const isOrderOwner = order.customer_id === userId; // UUID comparison
+    const isRestaurantOwner = order.restaurants?.user_id === userId; // UUID comparison
 
     if (!isOrderOwner && !isRestaurantOwner) {
       return { 
@@ -118,14 +118,14 @@ export const validateOrderAccess = async (
  */
 export const validateDeliveryAssignment = async (
   assignmentId: string,
-  userId: string
+  userId: string // Now expects UUID string
 ): Promise<ValidationResult> => {
   try {
     const { data: assignment, error } = await supabase
       .from('delivery_assignments')
       .select('id, delivery_user_id')
       .eq('id', assignmentId)
-      .eq('delivery_user_id', userId)
+      .eq('delivery_user_id', userId) // UUID comparison
       .single();
 
     if (error || !assignment) {

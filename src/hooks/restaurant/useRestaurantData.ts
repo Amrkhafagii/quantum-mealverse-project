@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 interface UseRestaurantDataOptions {
   queryKey: string;
   tableName: string;
-  restaurantId: string;
+  restaurantId: string; // This is already UUID string
   selectFields?: string;
   filters?: Record<string, any>;
   orderBy?: { column: string; ascending?: boolean };
@@ -57,7 +57,7 @@ export function useRestaurantData({
       const queryBuilder = supabase.from(tableName as any);
       let query = queryBuilder
         .select(selectFields)
-        .eq('restaurant_id', restaurantId);
+        .eq('restaurant_id', restaurantId); // restaurantId is already UUID string
 
       // Apply additional filters
       Object.entries(filters).forEach(([key, value]) => {

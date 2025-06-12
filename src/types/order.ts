@@ -1,7 +1,7 @@
 
 export interface Order {
   id?: string;
-  customer_id: string;
+  customer_id: string; // This should remain as customer_id (UUID)
   customer_name: string;
   customer_email: string;
   customer_phone: string;

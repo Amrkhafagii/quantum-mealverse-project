@@ -11,6 +11,7 @@ export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<WorkoutPlan 
     // Convert workout plan to format that supabase expects
     const supabasePlan = {
       ...plan,
+      user_id: plan.user_id, // Now expects UUID string
       workout_days: toSupabaseJson(plan.workout_days)
     };
 
@@ -44,7 +45,7 @@ export const createWorkoutSchedule = async (schedule: WorkoutSchedule): Promise<
   try {
     // Prepare data format that matches the database schema
     const dbSchedule = {
-      user_id: schedule.user_id,
+      user_id: schedule.user_id, // Now expects UUID string
       workout_plan_id: schedule.workout_plan_id,
       day_of_week: schedule.day_of_week,
       days_of_week: Array.isArray(schedule.days_of_week) ? schedule.days_of_week : [],

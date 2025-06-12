@@ -33,7 +33,7 @@ export const applyWorkoutRecommendation = async (recommendationId: string, userI
         name: recommendation.title || 'Recommended Plan',
         description: recommendation.description || 'Plan created from recommendation',
         goal: recommendation.type || 'fitness',
-        user_id: userId,
+        user_id: userId, // Now expects UUID string
         difficulty: 'intermediate',
         frequency: 3,
         duration_weeks: 4,

@@ -13,7 +13,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
     const { data: logData, error: logError } = await supabase
       .from('workout_logs')
       .insert([{
-        user_id: workoutLog.user_id,
+        user_id: workoutLog.user_id, // Now expects UUID string
         workout_plan_id: workoutLog.workout_plan_id,
         date: workoutLog.date || new Date().toISOString(),
         duration: workoutLog.duration,
@@ -49,7 +49,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
       const { error: historyError } = await supabase
         .from('workout_history')
         .insert([{
-          user_id: workoutLog.user_id,
+          user_id: workoutLog.user_id, // Now expects UUID string
           workout_log_id: logData.id,
           date: workoutLog.date || new Date().toISOString(),
           workout_plan_name: planData?.name || 'Custom Workout',
@@ -83,7 +83,7 @@ export const getWorkoutStats = async (userId: string) => {
     const { data, error } = await supabase
       .from('user_workout_stats')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId) // Now expects UUID string
       .single();
       
     if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found

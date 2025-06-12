@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/types/cart';
 
 export interface OrderData {
-  customer_id: string | null;
+  customer_id: string | null; // This should remain as customer_id (UUID)
   customer_name: string;
   customer_phone: string;
   customer_email: string;
@@ -38,11 +38,11 @@ export const createOrder = async (orderData: OrderData, items: CartItem[]): Prom
     console.log('Creating order with data:', orderData);
     console.log('Order items:', items);
 
-    // Create the main order using customer_id instead of user_id
+    // Create the main order using customer_id (not user_id)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        customer_id: orderData.customer_id,
+        customer_id: orderData.customer_id, // This is correct - orders use customer_id
         customer_name: orderData.customer_name,
         customer_phone: orderData.customer_phone,
         customer_email: orderData.customer_email,
