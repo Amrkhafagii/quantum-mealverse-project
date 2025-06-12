@@ -19,3 +19,26 @@ export interface HydrationData {
   lastUpdated: string;
   glassSize: number;
 }
+
+// Re-export main fitness types to ensure backwards compatibility
+export {
+  WorkoutPlan,
+  WorkoutLog,
+  ExerciseSet,
+  WorkoutSchedule,
+  WorkoutHistoryItem,
+  SavedMealPlan,
+  WorkoutDay,
+  Exercise,
+  CompletedExercise,
+  UserProfile,
+  ExerciseProgress,
+  Achievement,
+  UserAchievement,
+  ExtendedUserAchievement,
+  UserMeasurement,
+  UserWorkoutStats,
+  WorkoutSet,
+  DailyQuest,
+  FitnessGoal
+} from '../fitness';

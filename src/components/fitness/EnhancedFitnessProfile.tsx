@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,13 +19,13 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
   const hasWorkoutStats = !!workoutStats;
 
   const weightProgress = hasMeasurement && userProfile?.goal_weight
-    ? Math.min(100, Math.max(0, 100 - ((latestMeasurement.weight || 0) - (userProfile.goal_weight || 0)) / (userProfile.weight - (userProfile.goal_weight || 0)) * 100))
+    ? Math.min(100, Math.max(0, 100 - ((latestMeasurement.weight || 0) - (userProfile.goal_weight || 0)) / ((userProfile.weight || 0) - (userProfile.goal_weight || 0)) * 100))
     : 0;
 
-  // Get the primary fitness goal from array if available
+  // Get the primary fitness goal from array if available, fallback to single goal
   const primaryFitnessGoal = userProfile?.fitness_goals && userProfile.fitness_goals.length > 0
     ? userProfile.fitness_goals[0]
-    : "Weight Loss";
+    : userProfile?.fitness_goal || "Weight Loss";
 
   return (
     <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
@@ -32,7 +33,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
         <div className="profile-header">
           <Avatar className="h-20 w-20">
             <AvatarImage src={`https://avatar.vercel.sh/${userId}.png`} alt={userProfile?.display_name || "User Avatar"} />
-            <AvatarFallback>{userProfile?.display_name?.substring(0, 2).toUpperCase() || "UN"}</AvatarFallback>
+            <AvatarFallback>{(userProfile?.display_name || "UN").substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="profile-info">
             <h2 className="text-2xl font-semibold">{userProfile?.display_name || "User"}</h2>
@@ -59,7 +60,7 @@ const EnhancedFitnessProfile = ({ userId, userProfile, latestMeasurement, workou
             </div>
             <div className="stat-content">
               <div className="stat-title">Streak</div>
-              <div className="stat-value">{workoutStats?.streak || 0} days</div>
+              <div className="stat-value">{workoutStats?.streak || workoutStats?.streak_days || 0} days</div>
             </div>
           </div>
           <div className="stat-card">

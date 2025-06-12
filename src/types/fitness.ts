@@ -1,3 +1,4 @@
+
 export interface WorkoutPlan {
   id?: string;
   user_id: string; // Changed from number to string (UUID)
@@ -66,11 +67,12 @@ export interface WorkoutHistoryItem {
 }
 
 export interface SavedMealPlan {
-  id?: string;
+  id: string;
   user_id: string; // Changed from number to string (UUID)
   name: string;
   description?: string;
   meals: any[];
+  meal_plan?: any; // Add this missing property
   nutritional_targets?: {
     calories: number;
     protein: number;
@@ -79,6 +81,9 @@ export interface SavedMealPlan {
   };
   tags?: string[];
   is_favorite?: boolean;
+  is_active?: boolean; // Add this missing property
+  expires_at?: string; // Add this missing property
+  date_created?: string; // Add this missing property
   created_at?: string;
   updated_at?: string;
 }
@@ -89,14 +94,20 @@ export interface WorkoutDay {
 }
 
 export interface Exercise {
+  id?: string;
+  exercise_id?: string;
   name: string;
+  exercise_name?: string;
   target_muscle: string;
   sets: number;
   reps: number | string;
   weight?: number;
   rest: number;
+  rest_time?: number;
+  rest_seconds?: number;
   notes?: string;
   preparation_time?: number;
+  duration?: number;
 }
 
 export interface CompletedExercise {
@@ -112,10 +123,14 @@ export interface UserProfile {
   user_id: string; // Changed from number to string (UUID)
   height?: number;
   weight?: number;
+  goal_weight?: number; // Add this missing property
   age?: number;
   gender?: 'male' | 'female' | 'other';
   activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extra_active';
   fitness_goal?: 'lose_weight' | 'gain_muscle' | 'maintain' | 'improve_endurance';
+  fitness_goals?: string[]; // Add this missing property
+  fitness_level?: string; // Add this missing property
+  display_name?: string; // Add this missing property
   created_at?: string;
   updated_at?: string;
 }
@@ -147,5 +162,77 @@ export interface UserAchievement {
   user_id: string; // Changed from number to string (UUID)
   achievement_id: string;
   unlocked_at: string;
+  date_achieved?: string; // Add this missing property
   progress?: number;
+}
+
+export interface ExtendedUserAchievement extends UserAchievement {
+  achievement: Achievement;
+  date_achieved?: string; // Add this missing property
+}
+
+// Add missing interfaces
+export interface UserMeasurement {
+  id?: string;
+  user_id: string;
+  date: string;
+  weight?: number;
+  body_fat?: number;
+  chest?: number;
+  waist?: number;
+  hips?: number;
+  arms?: number;
+  legs?: number;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface UserWorkoutStats {
+  user_id: string;
+  total_workouts: number;
+  streak_days: number;
+  longest_streak: number;
+  total_calories_burned: number;
+  total_duration_minutes: number;
+  most_active_day: string;
+  calories_burned?: number;
+  streak?: number;
+}
+
+export interface WorkoutSet {
+  id?: string;
+  exercise_id: string;
+  set_number: number;
+  weight: number;
+  reps: number;
+  rest_time?: number;
+  completed?: boolean;
+}
+
+export interface DailyQuest {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  type: 'tracking' | 'workout' | 'nutrition' | 'activity';
+  requirements: {
+    action?: string;
+    min_duration?: number;
+    macro?: string;
+    target?: number;
+    steps?: number;
+  };
+  completed: boolean;
+  deadline?: string;
+}
+
+export interface FitnessGoal {
+  id: string;
+  user_id: string;
+  type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'endurance' | 'strength';
+  target_value: number;
+  current_value: number;
+  target_date: string;
+  created_at: string;
+  is_active: boolean;
 }

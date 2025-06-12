@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Exercise, WorkoutSet } from '@/types/fitness';
+import { Exercise } from '@/types/fitness';
 import { Timer, Dumbbell } from 'lucide-react';
 
 interface ExerciseSet {
@@ -38,7 +38,7 @@ const ExerciseLogForm: React.FC<ExerciseLogFormProps> = ({
   useEffect(() => {
     // Initialize exercise log data
     const initialExerciseData = exercises.map(exercise => ({
-      exercise_id: exercise.exercise_id || exercise.id,
+      exercise_id: exercise.exercise_id || exercise.id || exercise.name,
       name: exercise.name,
       exercise_name: exercise.exercise_name || exercise.name,
       sets_completed: Array(exercise.sets).fill(0).map((_, index) => ({
