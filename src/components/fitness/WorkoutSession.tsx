@@ -5,13 +5,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { WorkoutPlan, WorkoutDay, WorkoutSet, WorkoutLog } from '@/types/fitness';
+import { WorkoutPlan, WorkoutDay, WorkoutLog } from '@/types/fitness';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
+import { useAuth } from '@/hooks/useAuth';
 import { Check, X } from 'lucide-react';
 import ExerciseLogForm from './ExerciseLogForm';
-import WorkoutTimer from './WorkoutTimer';
 import { checkAchievements, updateWorkoutStreak } from '@/services/achievementService';
-import { HapticButton } from '@/components/ui/haptic-button';
+
+interface WorkoutTimerProps {
+  onDurationChange: (duration: number) => void;
+}
+
+const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ onDurationChange }) => {
+  const [seconds, setSeconds] = useState(0);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSeconds(prevSeconds => {
+        const newSeconds = prevSeconds + 1;
+        onDurationChange(newSeconds);
+        return newSeconds;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [onDurationChange]);
+  
+  const formatTime = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes
+      .toString()
+      .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+  
+  return (
+    <div className="bg-quantum-black/40 p-4 rounded-lg text-center">
+      <div className="text-sm text-gray-400 mb-1">Workout Duration</div>
+      <div className="text-3xl font-bold font-mono">{formatTime(seconds)}</div>
+    </div>
+  );
+};
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
@@ -22,6 +58,7 @@ interface WorkoutSessionProps {
 
 const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onComplete, onCancel }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { logWorkout } = useWorkoutData();
   const [duration, setDuration] = useState(0);
   const [caloriesBurned, setCaloriesBurned] = useState<number | undefined>(undefined);
@@ -39,9 +76,18 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
   };
   
   const handleCompleteWorkout = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to complete a workout.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Check if any sets were completed
     const anySetCompleted = completedExercises.some(exercise => 
-      exercise.sets_completed.some((set: any) => set.completed)
+      exercise.sets_completed && exercise.sets_completed.length > 0
     );
     
     if (!anySetCompleted) {
@@ -53,34 +99,33 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
       return;
     }
     
-    // Filter out sets that weren't completed
-    const filteredExercises = completedExercises.map(exercise => ({
-      ...exercise,
-      sets_completed: exercise.sets_completed.filter((set: any) => set.completed)
-    })).filter(exercise => exercise.sets_completed.length > 0);
+    // Filter out exercises that have no completed sets
+    const filteredExercises = completedExercises.filter(exercise => 
+      exercise.sets_completed && exercise.sets_completed.length > 0
+    );
     
-    // Create workout log
+    // Create workout log with proper UUID user_id
     const workoutLog: WorkoutLog = {
       id: crypto.randomUUID(),
-      user_id: plan.user_id,
+      user_id: user.id, // Use authenticated user's UUID
       workout_plan_id: plan.id,
       date: new Date().toISOString(),
       duration: Math.round(duration / 60), // Convert to minutes
       calories_burned: caloriesBurned || null,
       notes: notes || null,
-      completed_exercises: filteredExercises,
-      exercises_completed: [] // Add the required property even if it's empty
+      exercises_completed: [], // Add empty array for required property
+      completed_exercises: filteredExercises
     };
     
     try {
       const result = await logWorkout(workoutLog);
       
-      if (result) {
-        // Update streak data
-        await updateWorkoutStreak(plan.user_id, workoutLog.date);
+      if (result?.success) {
+        // Update streak data with authenticated user ID
+        await updateWorkoutStreak(user.id, workoutLog.date);
         
         // Check for achievements earned
-        await checkAchievements(plan.user_id, workoutLog);
+        await checkAchievements(user.id, workoutLog);
         
         toast({
           title: "Workout logged successfully",
@@ -150,13 +195,9 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
               <X className="h-4 w-4 mr-2" /> Cancel
             </Button>
             
-            <HapticButton 
-              hapticEffect="success" 
-              className="bg-green-500 hover:bg-green-600" 
-              onClick={handleCompleteWorkout}
-            >
+            <Button className="bg-green-500 hover:bg-green-600" onClick={handleCompleteWorkout}>
               <Check className="h-4 w-4 mr-2" /> Complete Workout
-            </HapticButton>
+            </Button>
           </div>
         </div>
       </CardContent>

@@ -9,11 +9,11 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
   try {
     console.log('Logging workout:', workoutLog);
     
-    // Insert the workout log
+    // Insert the workout log using auth user_id (UUID)
     const { data: logData, error: logError } = await supabase
       .from('workout_logs')
       .insert([{
-        user_id: workoutLog.user_id, // Now expects UUID string
+        user_id: workoutLog.user_id, // Already a UUID string from auth
         workout_plan_id: workoutLog.workout_plan_id,
         date: workoutLog.date || new Date().toISOString(),
         duration: workoutLog.duration,
@@ -45,11 +45,11 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
         // Don't throw here, we can still continue without the plan name
       }
       
-      // Create history record
+      // Create history record using auth user_id (UUID)
       const { error: historyError } = await supabase
         .from('workout_history')
         .insert([{
-          user_id: workoutLog.user_id, // Now expects UUID string
+          user_id: workoutLog.user_id, // Already a UUID string from auth
           workout_log_id: logData.id,
           date: workoutLog.date || new Date().toISOString(),
           workout_plan_name: planData?.name || 'Custom Workout',
@@ -76,14 +76,14 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
 };
 
 /**
- * Get workout statistics for a user
+ * Get workout statistics for a user using auth UUID
  */
 export const getWorkoutStats = async (userId: string) => {
   try {
     const { data, error } = await supabase
       .from('user_workout_stats')
       .select('*')
-      .eq('user_id', userId) // Now expects UUID string
+      .eq('user_id', userId) // Already a UUID string from auth
       .single();
       
     if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found

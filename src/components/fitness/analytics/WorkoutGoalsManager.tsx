@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Target, Calendar, TrendingUp, Edit, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
 import { WorkoutGoal } from '@/types/fitness/analytics';
 import { GoalForm } from './GoalForm';
 
 export const WorkoutGoalsManager: React.FC = () => {
+  const { user } = useAuth();
   const { goals, isLoading, createGoal, updateGoal, deleteGoal } = useWorkoutAnalytics();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<WorkoutGoal | null>(null);
@@ -32,16 +34,40 @@ export const WorkoutGoalsManager: React.FC = () => {
   };
 
   const handleCreateGoal = async (goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    await createGoal(goalData);
+    if (!user?.id) return;
+    
+    // Create goal with authenticated user's UUID
+    const goalWithUserId = {
+      ...goalData,
+      user_id: user.id
+    };
+    
+    await createGoal(goalWithUserId);
     setShowCreateForm(false);
   };
 
   const handleEditGoal = async (goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-    if (editingGoal) {
-      await updateGoal(editingGoal.id, goalData);
+    if (editingGoal && user?.id) {
+      const goalWithUserId = {
+        ...goalData,
+        user_id: user.id
+      };
+      
+      await updateGoal(editingGoal.id, goalWithUserId);
       setEditingGoal(null);
     }
   };
+
+  // Don't render if user is not authenticated
+  if (!user?.id) {
+    return (
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="p-8 text-center">
+          <p className="text-gray-400">Please log in to manage your workout goals.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (showCreateForm || editingGoal) {
     return (

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { 
   WorkoutPlan, 
@@ -33,9 +34,10 @@ export function useWorkoutData() {
   const fetchWorkoutPlans = async (userId?: string) => {
     try {
       setIsLoading(true);
-      if (!userId) return;
+      const authUserId = userId || user?.id;
+      if (!authUserId) return;
       
-      const data = await workoutService.fetchWorkoutPlans(userId);
+      const data = await workoutService.fetchWorkoutPlans(authUserId);
       setWorkoutPlans(data);
     } catch (error) {
       console.error('Error fetching workout plans:', error);
@@ -52,9 +54,10 @@ export function useWorkoutData() {
   const fetchWorkoutSchedules = async (userId?: string) => {
     try {
       setIsLoading(true);
-      if (!userId) return;
+      const authUserId = userId || user?.id;
+      if (!authUserId) return;
       
-      const data = await workoutService.fetchWorkoutSchedules(userId);
+      const data = await workoutService.fetchWorkoutSchedules(authUserId);
       setSchedules(data);
     } catch (error) {
       console.error('Error fetching workout schedules:', error);
@@ -66,9 +69,10 @@ export function useWorkoutData() {
   const fetchWorkoutHistory = async (userId?: string) => {
     try {
       setIsLoading(true);
-      if (!userId) return;
+      const authUserId = userId || user?.id;
+      if (!authUserId) return;
       
-      const data = await workoutService.fetchWorkoutHistory(userId);
+      const data = await workoutService.fetchWorkoutHistory(authUserId);
       setHistory(data || []);
     } catch (error) {
       console.error('Error fetching workout history:', error);
@@ -85,16 +89,17 @@ export function useWorkoutData() {
   const fetchWorkoutStats = async (userId?: string) => {
     try {
       setIsLoading(true);
-      if (!userId) return;
+      const authUserId = userId || user?.id;
+      if (!authUserId) return;
       
-      // Get workout stats from the new table
-      const stats = await getWorkoutStats(userId);
+      // Get workout stats from the new table using auth UUID
+      const stats = await getWorkoutStats(authUserId);
       
-      // Get the most active day from workout history
+      // Get the most active day from workout history using auth UUID
       const { data: historyData, error: historyError } = await supabase
         .from('workout_history')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', authUserId)
         .order('date', { ascending: false })
         .limit(30);
         
@@ -131,7 +136,7 @@ export function useWorkoutData() {
           : 0;
       
       setWorkoutStats({
-        user_id: userId,
+        user_id: authUserId,
         streak: stats?.streak_days || 0,
         total_workouts: stats?.total_workouts || 0,
         most_active_day: mostActiveDay,
@@ -158,26 +163,29 @@ export function useWorkoutData() {
     try {
       setIsLoading(true);
       
-      // Make sure user_id is always provided
-      if (!workoutLog.user_id) {
+      // Ensure user_id is always the authenticated user's UUID
+      const logWithAuthUserId = {
+        ...workoutLog,
+        user_id: workoutLog.user_id || user?.id
+      };
+      
+      if (!logWithAuthUserId.user_id) {
         throw new Error("User ID is required for workout logs");
       }
       
-      const success = await workoutService.logWorkout(workoutLog);
+      const success = await workoutService.logWorkout(logWithAuthUserId);
       
       if (success) {
-        // Refresh workout stats and history
-        if (workoutLog.user_id) {
-          await fetchWorkoutStats(workoutLog.user_id);
-          await fetchWorkoutHistory(workoutLog.user_id);
-        }
+        // Refresh workout stats and history using auth UUID
+        await fetchWorkoutStats(logWithAuthUserId.user_id);
+        await fetchWorkoutHistory(logWithAuthUserId.user_id);
         
         toast({
           title: "Success",
           description: "Workout logged successfully! Check your achievements.",
         });
         
-        return { success: true, data: workoutLog };
+        return { success: true, data: logWithAuthUserId };
       } else {
         throw new Error("Failed to log workout");
       }
