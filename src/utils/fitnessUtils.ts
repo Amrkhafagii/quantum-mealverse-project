@@ -152,6 +152,33 @@ export const validateWorkoutPlan = (workoutDays: WorkoutDay[]): {
   };
 };
 
+// Get sets from completed exercise - handles different data structures
+export const getSetsFromCompletedExercise = (exercise: CompletedExercise): any[] => {
+  if (exercise.sets_completed && Array.isArray(exercise.sets_completed)) {
+    return exercise.sets_completed.map((set, index) => ({
+      set_number: set.set_number || index + 1,
+      reps: set.reps,
+      weight: set.weight,
+      rest_time: set.rest_time,
+      duration: set.rest_time,
+      notes: set.notes
+    }));
+  }
+  
+  // Fallback for legacy data structure
+  if (exercise.reps_completed && exercise.weight_used) {
+    return exercise.reps_completed.map((reps, index) => ({
+      set_number: index + 1,
+      reps,
+      weight: exercise.weight_used?.[index] || 0,
+      rest_time: 60,
+      duration: 60
+    }));
+  }
+  
+  return [];
+};
+
 // Convert completed exercises to exercise sets format
 export const convertToExerciseSets = (completedExercises: CompletedExercise[], userId: string): ExerciseSet[] => {
   const exerciseSets: ExerciseSet[] = [];
@@ -166,7 +193,6 @@ export const convertToExerciseSets = (completedExercises: CompletedExercise[], u
         reps: typeof set.reps === 'string' ? parseInt(set.reps) : set.reps,
         rest_time: set.rest_time,
         notes: set.notes,
-        completed: set.completed,
         set_number: index + 1,
         created_at: new Date().toISOString()
       });

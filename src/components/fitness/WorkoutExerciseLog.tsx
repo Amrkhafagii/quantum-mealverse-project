@@ -57,9 +57,11 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
     onLogComplete();
   };
   
-  // Calculate the total sets completed
+  // Calculate the total sets completed - check for completed status or assume completed if set exists
   const totalSets = completedExercises.reduce((total, exercise) => {
-    const completedSets = exercise.sets_completed?.filter((set: any) => set.completed)?.length || 0;
+    const completedSets = exercise.sets_completed?.filter((set: any) => 
+      set.completed !== undefined ? set.completed : true
+    ).length || 0;
     return total + completedSets;
   }, 0);
   

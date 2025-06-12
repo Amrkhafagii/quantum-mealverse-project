@@ -117,15 +117,28 @@ export function useWorkoutData() {
         }
       });
       
+      // Handle different response formats from getWorkoutStats
+      const caloriesBurned = (stats && 'calories_burned' in stats) 
+        ? stats.calories_burned 
+        : (stats && 'total_calories_burned' in stats) 
+          ? stats.total_calories_burned 
+          : 0;
+          
+      const totalTime = (stats && 'total_time' in stats) 
+        ? stats.total_time 
+        : (stats && 'total_duration_minutes' in stats) 
+          ? stats.total_duration_minutes 
+          : 0;
+      
       setWorkoutStats({
         user_id: userId,
-        streak: stats.streak_days || 0,
-        total_workouts: stats.total_workouts || 0,
+        streak: stats?.streak_days || 0,
+        total_workouts: stats?.total_workouts || 0,
         most_active_day: mostActiveDay,
-        streak_days: stats.streak_days || 0,
-        longest_streak: stats.streak_days || 0,
-        total_calories_burned: stats.calories_burned || 0,
-        total_duration_minutes: stats.total_time || 0
+        streak_days: stats?.streak_days || 0,
+        longest_streak: stats?.streak_days || 0,
+        total_calories_burned: caloriesBurned,
+        total_duration_minutes: totalTime
       });
       
       setHistory(historyData || []);
