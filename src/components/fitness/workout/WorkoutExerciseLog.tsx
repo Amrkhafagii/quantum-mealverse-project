@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,15 +47,15 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
     onLogComplete();
   };
   
-  // Calculate the total sets completed
+  // Calculate the total sets completed - assume all sets in sets_completed array are completed
   const totalSets = completedExercises.reduce((total, exercise) => {
-    const completedSets = exercise.sets_completed.filter(set => set.completed).length;
+    const completedSets = exercise.sets_completed?.length || 0;
     return total + completedSets;
   }, 0);
   
   // Calculate the total sets
   const allSets = completedExercises.reduce((total, exercise) => {
-    return total + exercise.sets_completed.length;
+    return total + (exercise.sets_completed?.length || 0);
   }, 0);
   
   const completion = allSets > 0 ? Math.round((totalSets / allSets) * 100) : 0;
