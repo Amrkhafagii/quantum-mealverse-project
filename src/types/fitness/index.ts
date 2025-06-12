@@ -10,7 +10,7 @@ export * from './recommendations';
 export * from './scheduling';
 
 // Only export from workouts file, avoiding duplicates
-export {
+export type {
   WorkoutPlan,
   WorkoutDay,
   Exercise,

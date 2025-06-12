@@ -3,10 +3,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { 
   UserStreak, 
   UserAchievement, 
-  Achievement,
+  Achievement
+} from '@/types/fitness/achievements';
+import {
   Challenge,
   ChallengeParticipant
-} from '@/types/fitness/achievements';
+} from '@/types/fitness/challenges';
 
 // Get user streak data
 export async function getUserStreak(userId: string, streakType: 'workout' | 'nutrition' | 'meditation' = 'workout') {
