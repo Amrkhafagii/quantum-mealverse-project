@@ -18,6 +18,7 @@ export interface WorkoutDay {
   id?: string;
   name?: string;
   day_name: string;
+  day_number?: number;
   exercises: Exercise[];
 }
 
@@ -36,6 +37,7 @@ export interface Exercise {
   notes?: string;
   preparation_time?: number;
   duration?: number;
+  completed?: boolean;
 }
 
 export interface WorkoutLog {
@@ -71,6 +73,8 @@ export interface ExerciseSet {
   notes?: string;
   workout_log_id?: string;
   created_at?: string;
+  completed?: boolean;
+  set_number?: number;
 }
 
 export interface WorkoutSet {
@@ -124,4 +128,17 @@ export interface WorkoutRecommendation {
   dismissed: boolean;
   applied: boolean;
   applied_at?: string;
+}
+
+export interface UserWorkoutStats {
+  user_id: string;
+  streak: number;
+  total_workouts: number;
+  most_active_day: string;
+  streak_days: number;
+  longest_streak: number;
+  total_calories_burned: number;
+  total_duration_minutes: number;
+  calories_burned?: number;
+  achievements?: number;
 }

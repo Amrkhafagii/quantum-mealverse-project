@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal, GoalStatus } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,7 +39,9 @@ export const getUserFitnessGoals = async (userId: string): Promise<{
         target_weight: goal.target_weight,
         target_body_fat: goal.target_body_fat,
         created_at: goal.created_at,
-        updated_at: goal.updated_at
+        updated_at: goal.updated_at,
+        type: 'weight_loss', // Default type
+        is_active: true // Default active state
       };
     });
     
@@ -89,7 +92,9 @@ export const createFitnessGoal = async (
       current_value: 0,
       start_date: data[0].created_at,
       category: 'weight',
-      status: data[0].status as GoalStatus // Properly cast to GoalStatus
+      status: data[0].status as GoalStatus, // Properly cast to GoalStatus
+      type: 'weight_loss', // Default type
+      is_active: true // Default active state
     };
     
     return { data: mappedGoal, error: null };
@@ -314,7 +319,9 @@ export const fetchGoals = async (userId: string): Promise<FitnessGoal[]> => {
         target_weight: goal.target_weight,
         target_body_fat: goal.target_body_fat,
         created_at: goal.created_at,
-        updated_at: goal.updated_at
+        updated_at: goal.updated_at,
+        type: 'weight_loss', // Default type
+        is_active: true // Default active state
       };
     }) || [];
     

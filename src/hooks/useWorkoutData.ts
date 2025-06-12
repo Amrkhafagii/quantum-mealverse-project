@@ -124,9 +124,9 @@ export function useWorkoutData() {
         total_workouts: stats.total_workouts || 0,
         most_active_day: mostActiveDay,
         streak_days: stats.streak_days || 0,
-        longest_streak: stats.longest_streak || 0,
-        total_calories_burned: stats.total_calories_burned || 0,
-        total_duration_minutes: stats.total_duration_minutes || 0
+        longest_streak: stats.streak_days || 0, // Use streak_days as fallback
+        total_calories_burned: stats.calories_burned || 0, // Map calories_burned to total_calories_burned
+        total_duration_minutes: stats.total_time || 0 // Map total_time to total_duration_minutes
       });
       
       setHistory(historyData || []);
