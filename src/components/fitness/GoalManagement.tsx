@@ -3,507 +3,303 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, Plus, Trash, CheckCircle, PlusCircle, Pencil, X, Trophy } from 'lucide-react';
-import { format, isValid } from 'date-fns';
-import { getUserFitnessGoals, addFitnessGoal, updateFitnessGoal, deleteFitnessGoal, updateGoalStatus } from '@/services/fitnessGoalService';
-import { FitnessGoal } from '@/types/fitness';
+import { Plus, Target, Edit, Trash2 } from 'lucide-react';
+import { FitnessGoal, GoalStatus } from '@/types/fitness';
+import { getUserFitnessGoals, addFitnessGoal, updateFitnessGoal, deleteFitnessGoal } from '@/services/fitnessGoalService';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 
-interface GoalManagementProps {
-  userId?: string;
-}
-
-const GoalManagement: React.FC<GoalManagementProps> = ({ userId }) => {
+const GoalManagement: React.FC = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [goals, setGoals] = useState<FitnessGoal[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FitnessGoal | null>(null);
-  
-  // Form data for creating/editing goals
-  const [goalName, setGoalName] = useState('');
-  const [goalDescription, setGoalDescription] = useState('');
-  const [targetDate, setTargetDate] = useState<Date | null>(null);
-  const [targetWeight, setTargetWeight] = useState<number | null>(null);
-  const [targetBodyFat, setTargetBodyFat] = useState<number | null>(null);
-  
-  // Load goals when component mounts or userId changes
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    target_weight: 0,
+    target_body_fat: 0,
+    target_date: '',
+    status: 'active' as GoalStatus
+  });
+
   useEffect(() => {
-    if (userId) {
-      loadGoals();
+    if (user?.id) {
+      fetchGoals();
     }
-  }, [userId]);
-  
-  const loadGoals = async () => {
-    if (!userId) return;
-    
-    setLoading(true);
+  }, [user?.id]);
+
+  const fetchGoals = async () => {
     try {
-      const { data, error } = await getUserFitnessGoals(userId);
-      
-      if (error) throw error;
-      
+      setLoading(true);
+      const { data } = await getUserFitnessGoals(user!.id);
       if (data) {
-        // Sort goals: active first, then by target date
-        const sortedGoals = [...data].sort((a, b) => {
-          // First sort by status
-          if (a.status !== b.status) {
-            if (a.status === 'active') return -1;
-            if (b.status === 'active') return 1;
-            if (a.status === 'completed') return -1;
-            if (b.status === 'completed') return 1;
-          }
-          
-          // Then sort by target date (if both have target dates)
-          if (a.target_date && b.target_date) {
-            return new Date(a.target_date).getTime() - new Date(b.target_date).getTime();
-          }
-          
-          // If only one has a target date, put it first
-          if (a.target_date) return -1;
-          if (b.target_date) return 1;
-          
-          // Finally, sort by created date
-          return new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime();
-        });
-        
-        setGoals(sortedGoals as FitnessGoal[]);
+        setGoals(data);
       }
     } catch (error) {
-      console.error('Error loading goals:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load fitness goals',
-        variant: 'destructive'
-      });
+      console.error('Error fetching goals:', error);
     } finally {
       setLoading(false);
     }
   };
-  
-  const resetForm = () => {
-    setGoalName('');
-    setGoalDescription('');
-    setTargetDate(null);
-    setTargetWeight(null);
-    setTargetBodyFat(null);
-    setEditingGoal(null);
-    setShowAddForm(false);
-  };
-  
-  const handleEditGoal = (goal: FitnessGoal) => {
-    setEditingGoal(goal);
-    setGoalName(goal.name || goal.title);
-    setGoalDescription(goal.description || '');
-    setTargetDate(goal.target_date ? new Date(goal.target_date) : null);
-    setTargetWeight(goal.target_weight || null);
-    setTargetBodyFat(goal.target_body_fat || null);
-    setShowAddForm(true);
-  };
-  
-  const handleUpdateStatus = async (goalId: string, status: 'active' | 'completed' | 'abandoned') => {
-    if (!userId) return;
-    
-    try {
-      const { error } = await updateGoalStatus(goalId, status);
-      
-      if (error) throw error;
-      
-      // Update local state to reflect the change
-      setGoals((prevGoals) => 
-        prevGoals.map(goal => 
-          goal.id === goalId 
-            ? { ...goal, status } as FitnessGoal
-            : goal
-        )
-      );
-      
-      const statusText = {
-        'active': 'Active',
-        'completed': 'Completed',
-        'abandoned': 'Abandoned'
-      }[status];
-      
-      toast({
-        title: 'Goal Updated',
-        description: `Goal marked as ${statusText}`
-      });
-    } catch (error) {
-      console.error('Error updating goal status:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update goal status',
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  const handleDeleteGoal = async (goalId: string) => {
-    if (!userId) return;
-    
-    try {
-      const { error } = await deleteFitnessGoal(goalId);
-      
-      if (error) throw error;
-      
-      // Remove the goal from local state
-      setGoals(prevGoals => prevGoals.filter(goal => goal.id !== goalId));
-      
-      toast({
-        title: 'Goal Deleted',
-        description: 'Fitness goal has been deleted'
-      });
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete fitness goal',
-        variant: 'destructive'
-      });
-    }
-  };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userId) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to create fitness goals',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    if (!goalName) {
-      toast({
-        title: 'Required Field',
-        description: 'Please enter a goal name',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    // Prepare the goal object with the correct properties matching FitnessGoal interface
     const goalData: FitnessGoal = {
-      id: editingGoal?.id || uuidv4(),
-      user_id: userId,
-      name: goalName,  // Use name for database compatibility
-      title: goalName, // Add title property for interface compatibility
-      description: goalDescription,
-      target_date: targetDate ? targetDate.toISOString() : '',
-      target_weight: targetWeight || undefined,
-      target_body_fat: targetBodyFat || undefined,
-      status: editingGoal?.status || 'active',
-      target_value: targetWeight || 0, // Use target weight as the target value
-      current_value: 0, // Default current value
-      start_date: editingGoal?.start_date || new Date().toISOString(),
-      category: editingGoal?.category || 'weight', // Default category
-      created_at: editingGoal?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      id: editingGoal?.id || '',
+      user_id: user!.id,
+      title: formData.title,
+      name: formData.title,
+      description: formData.description,
+      target_value: formData.target_weight,
+      current_value: 0,
+      start_date: new Date().toISOString(),
+      target_date: formData.target_date,
+      category: 'weight',
+      status: formData.status,
+      target_weight: formData.target_weight,
+      target_body_fat: formData.target_body_fat,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      type: 'weight_loss',
+      is_active: true
     };
-    
+
     try {
-      let result;
-      
       if (editingGoal) {
-        // Update existing goal
-        result = await updateFitnessGoal(goalData.id, goalData);
-        
-        if (result.error) throw result.error;
-        
-        // Update the goal in local state
-        setGoals(prevGoals => 
-          prevGoals.map(goal => 
-            goal.id === editingGoal.id 
-              ? result.data as FitnessGoal
-              : goal
-          )
-        );
-        
+        await updateFitnessGoal(editingGoal.id, goalData);
         toast({
-          title: 'Goal Updated',
-          description: 'Fitness goal has been updated successfully'
+          title: "Success",
+          description: "Goal updated successfully",
         });
       } else {
-        // Add new goal
-        result = await addFitnessGoal(goalData);
-        
-        if (result.error) throw result.error;
-        
-        // Add the new goal to local state
-        if (result.data) {
-          setGoals(prevGoals => [result.data as FitnessGoal, ...prevGoals]);
-        }
-        
+        await addFitnessGoal(goalData);
         toast({
-          title: 'Goal Created',
-          description: 'New fitness goal has been created'
+          title: "Success", 
+          description: "Goal created successfully",
         });
       }
       
-      // Reset the form
-      resetForm();
+      setShowForm(false);
+      setEditingGoal(null);
+      setFormData({
+        title: '',
+        description: '',
+        target_weight: 0,
+        target_body_fat: 0,
+        target_date: '',
+        status: 'active'
+      });
+      fetchGoals();
     } catch (error) {
       console.error('Error saving goal:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to save fitness goal',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to save goal",
+        variant: "destructive"
       });
     }
   };
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-blue-500">Active</Badge>;
-      case 'completed':
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case 'abandoned':
-        return <Badge className="bg-gray-500">Abandoned</Badge>;
-      default:
-        return <Badge className="bg-blue-500">Active</Badge>;
+
+  const handleEdit = (goal: FitnessGoal) => {
+    setEditingGoal(goal);
+    setFormData({
+      title: goal.title,
+      description: goal.description,
+      target_weight: goal.target_weight || 0,
+      target_body_fat: goal.target_body_fat || 0,
+      target_date: goal.target_date,
+      status: goal.status
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (goalId: string) => {
+    try {
+      await deleteFitnessGoal(goalId);
+      toast({
+        title: "Success",
+        description: "Goal deleted successfully",
+      });
+      fetchGoals();
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete goal",
+        variant: "destructive"
+      });
     }
   };
-  
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Goal Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">Loading goals...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Card className="bg-quantum-darkBlue/30 border border-quantum-cyan/20">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-2xl font-bold text-quantum-cyan">Fitness Goals</CardTitle>
-          <Button 
-            onClick={() => setShowAddForm(!showAddForm)} 
-            className="bg-quantum-cyan hover:bg-quantum-cyan/90"
-          >
-            {showAddForm ? (
-              <>
-                <X className="h-4 w-4 mr-2" /> Cancel
-              </>
-            ) : (
-              <>
-                <PlusCircle className="h-4 w-4 mr-2" /> New Goal
-              </>
-            )}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Your Fitness Goals
+          </CardTitle>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Goal
           </Button>
         </CardHeader>
-        
         <CardContent>
-          {/* Goal Form */}
-          {showAddForm && (
-            <Card className="bg-quantum-black/40 border border-quantum-purple/20 mb-6">
-              <CardContent className="pt-6">
-                <form onSubmit={handleSubmit}>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="goalName" className="block text-sm font-medium mb-1">Goal Name *</label>
-                      <Input
-                        id="goalName"
-                        value={goalName}
-                        onChange={(e) => setGoalName(e.target.value)}
-                        placeholder="E.g., Lose 5kg by summer"
-                        className="bg-quantum-black/30"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="goalDescription" className="block text-sm font-medium mb-1">Description</label>
-                      <Textarea
-                        id="goalDescription"
-                        value={goalDescription}
-                        onChange={(e) => setGoalDescription(e.target.value)}
-                        placeholder="Details about your goal..."
-                        className="bg-quantum-black/30"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Target Date</label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal bg-quantum-black/30"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {targetDate ? format(targetDate, 'PPP') : <span>Pick a date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-quantum-black border border-quantum-cyan/20">
-                            <Calendar
-                              mode="single"
-                              selected={targetDate || undefined}
-                              onSelect={setTargetDate}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="targetWeight" className="block text-sm font-medium mb-1">Target Weight (kg)</label>
-                        <Input
-                          id="targetWeight"
-                          type="number"
-                          value={targetWeight || ''}
-                          onChange={(e) => setTargetWeight(e.target.value ? Number(e.target.value) : null)}
-                          placeholder="70.5"
-                          className="bg-quantum-black/30"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="targetBodyFat" className="block text-sm font-medium mb-1">Target Body Fat (%)</label>
-                        <Input
-                          id="targetBodyFat"
-                          type="number"
-                          value={targetBodyFat || ''}
-                          onChange={(e) => setTargetBodyFat(e.target.value ? Number(e.target.value) : null)}
-                          placeholder="15"
-                          className="bg-quantum-black/30"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="pt-2 flex justify-end space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={resetForm}
-                      >
-                        Cancel
+          {goals.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No goals set yet. Create your first fitness goal!
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {goals.map((goal) => (
+                <div key={goal.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold">{goal.title}</h3>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(goal)}>
+                        <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        type="submit"
-                        className="bg-quantum-purple hover:bg-quantum-purple/90"
-                      >
-                        {editingGoal ? 'Update Goal' : 'Create Goal'}
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(goal.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Goals List */}
-          {loading ? (
-            <div className="text-center py-8">
-              <p className="text-gray-400">Loading goals...</p>
-            </div>
-          ) : goals.length === 0 ? (
-            <div className="text-center py-12 bg-quantum-black/30 rounded-lg">
-              <Trophy className="h-12 w-12 mx-auto text-quantum-cyan/50 mb-4" />
-              <h3 className="text-lg font-medium text-quantum-cyan mb-1">No Goals Yet</h3>
-              <p className="text-gray-400 mb-4">Create your first fitness goal to stay motivated</p>
-              <Button 
-                onClick={() => setShowAddForm(true)} 
-                className="bg-quantum-purple hover:bg-quantum-purple/90"
-              >
-                <PlusCircle className="h-4 w-4 mr-2" /> Create Goal
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {goals.map(goal => (
-                <Card key={goal.id} className="bg-quantum-black/30 border border-quantum-cyan/20">
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-start">
-                          <div className="flex-1">
-                            <h3 className="font-medium text-lg flex items-center gap-2">
-                              {goal.name || goal.title}
-                              <span className="ml-2">{getStatusBadge(goal.status)}</span>
-                            </h3>
-                            <p className="text-sm text-gray-400 mb-2">
-                              {goal.target_date ? (
-                                <>Target: {format(new Date(goal.target_date), 'PP')}</>
-                              ) : 'No target date'}
-                            </p>
-                            <p className="text-gray-300">{goal.description}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                          {goal.target_weight && (
-                            <div className="bg-quantum-darkBlue/30 px-3 py-2 rounded-md">
-                              <p className="text-xs text-gray-400">Target Weight</p>
-                              <p className="font-medium">{goal.target_weight} kg</p>
-                            </div>
-                          )}
-                          
-                          {goal.target_body_fat && (
-                            <div className="bg-quantum-darkBlue/30 px-3 py-2 rounded-md">
-                              <p className="text-xs text-gray-400">Target Body Fat</p>
-                              <p className="font-medium">{goal.target_body_fat}%</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-row md:flex-col gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleEditGoal(goal)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        
-                        {goal.status === 'active' ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleUpdateStatus(goal.id, 'completed')}
-                            className="bg-green-500/10 border-green-500 hover:bg-green-500/20"
-                          >
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          </Button>
-                        ) : goal.status === 'completed' ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleUpdateStatus(goal.id, 'active')}
-                            className="bg-blue-500/10 border-blue-500 hover:bg-blue-500/20"
-                          >
-                            <CheckCircle className="h-4 w-4 text-blue-500" />
-                          </Button>
-                        ) : (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleUpdateStatus(goal.id, 'active')}
-                            className="bg-blue-500/10 border-blue-500 hover:bg-blue-500/20"
-                          >
-                            <CheckCircle className="h-4 w-4 text-blue-500" />
-                          </Button>
-                        )}
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleDeleteGoal(goal.id)}
-                          className="bg-red-500/10 border-red-500/50 hover:bg-red-500/20"
-                        >
-                          <Trash className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <p className="text-sm text-gray-600 mb-2">{goal.description}</p>
+                  <div className="flex justify-between text-sm">
+                    <span>Target: {goal.target_weight}kg</span>
+                    <span className={`capitalize ${goal.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`}>
+                      {goal.status}
+                    </span>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingGoal ? 'Edit Goal' : 'Create New Goal'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="title">Goal Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="target_weight">Target Weight (kg)</Label>
+                  <Input
+                    id="target_weight"
+                    type="number"
+                    value={formData.target_weight}
+                    onChange={(e) => setFormData({ ...formData, target_weight: parseFloat(e.target.value) })}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="target_body_fat">Target Body Fat (%)</Label>
+                  <Input
+                    id="target_body_fat"
+                    type="number"
+                    value={formData.target_body_fat}
+                    onChange={(e) => setFormData({ ...formData, target_body_fat: parseFloat(e.target.value) })}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="target_date">Target Date</Label>
+                  <Input
+                    id="target_date"
+                    type="date"
+                    value={formData.target_date}
+                    onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value: GoalStatus) => setFormData({ ...formData, status: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="not_started">Not Started</SelectItem>
+                      <SelectItem value="abandoned">Abandoned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button type="submit">
+                  {editingGoal ? 'Update Goal' : 'Create Goal'}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingGoal(null);
+                    setFormData({
+                      title: '',
+                      description: '',
+                      target_weight: 0,
+                      target_body_fat: 0,
+                      target_date: '',
+                      status: 'active'
+                    });
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

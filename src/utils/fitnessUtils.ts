@@ -1,171 +1,177 @@
 
-import { WorkoutPlan, WorkoutDay, Exercise, CompletedExercise, WorkoutSet } from '@/types/fitness';
+import { Exercise, WorkoutDay, CompletedExercise, ExerciseSet } from '@/types/fitness';
 
-/**
- * Normalizes exercise data to handle both old and new schema formats
- */
-export function normalizeExercise(exercise: Exercise | WorkoutSet): Exercise {
-  // Create a base exercise object with required fields
-  const normalized: Partial<Exercise> = {
-    id: 'id' in exercise ? exercise.id : ((exercise as any).exercise_id || crypto.randomUUID()),
-    name: 'name' in exercise ? exercise.name : ((exercise as any).exercise_name || ''),
-    target_muscle: 'target_muscle' in exercise ? (exercise as Exercise).target_muscle : 'unknown',
-    sets: 'sets' in exercise ? (exercise as Exercise).sets : ((exercise as any).sets || 1),
-    reps: 'reps' in exercise ? exercise.reps : (exercise as WorkoutSet).reps
+// Calculate total volume for an exercise (sets * reps * weight)
+export const calculateExerciseVolume = (sets: number, reps: number, weight: number): number => {
+  return sets * reps * weight;
+};
+
+// Calculate calories burned for a workout (rough estimate)
+export const estimateCaloriesBurned = (durationMinutes: number, intensity: 'low' | 'medium' | 'high'): number => {
+  const baseRate = {
+    low: 3.5,
+    medium: 6.0,
+    high: 8.5
   };
   
-  // Add optional fields if they exist in either type
-  if ('exercise_id' in exercise || (exercise as any).exercise_id) {
-    normalized.exercise_id = (exercise as any).exercise_id;
-  }
-  
-  if ('exercise_name' in exercise || (exercise as any).exercise_name) {
-    normalized.exercise_name = (exercise as any).exercise_name;
-  }
-  
-  if ('rest' in exercise) {
-    normalized.rest = (exercise as Exercise).rest;
-  }
-  
-  if ('rest_time' in exercise || (exercise as any).rest_time) {
-    normalized.rest_time = (exercise as any).rest_time;
-  }
-  
-  if ('duration' in exercise) {
-    normalized.duration = exercise.duration;
-  }
-  
-  if ('completed' in exercise || (exercise as any).completed !== undefined) {
-    (normalized as Exercise).completed = (exercise as any).completed;
-  }
-  
-  return normalized as Exercise;
-}
+  // Assuming average weight of 70kg
+  const averageWeight = 70;
+  return Math.round((baseRate[intensity] * averageWeight * durationMinutes) / 60);
+};
 
-/**
- * Normalizes workout day data to handle both old and new schema formats
- */
-export function normalizeWorkoutDay(day: WorkoutDay): WorkoutDay {
-  // Extend the WorkoutDay with name property for compatibility
-  const extendedDay: WorkoutDay & { name?: string } = {
-    ...day,
-    name: day.name || (day as any).name || '',
-    day_name: day.day_name || (day as any).name || '',
-  };
-  
-  // Handle the name property if it exists
-  if ((day as any).name) {
-    extendedDay.name = (day as any).name;
+// Check if workout day is completed
+export const isWorkoutDayCompleted = (workoutDay: WorkoutDay): boolean => {
+  if (!workoutDay.exercises || workoutDay.exercises.length === 0) {
+    return false;
   }
   
-  // Add order if it exists
-  if ((day as any).order !== undefined) {
-    (extendedDay as any).order = (day as any).order || 0;
-  }
-  
-  // Normalize exercises
-  extendedDay.exercises = Array.isArray(day.exercises) 
-    ? day.exercises.map(normalizeExercise) 
-    : [];
-    
-  return extendedDay;
-}
+  return workoutDay.exercises.every(exercise => {
+    // For the purposes of this function, we'll check if exercise has basic completion info
+    return exercise.name && exercise.sets > 0 && exercise.reps;
+  });
+};
 
-/**
- * Normalizes workout plan data to handle both old and new schema formats
- */
-export function normalizeWorkoutPlan(plan: WorkoutPlan): WorkoutPlan {
+// Calculate workout completion percentage
+export const calculateWorkoutCompletion = (
+  plannedExercises: Exercise[],
+  completedExercises: CompletedExercise[]
+): number => {
+  if (plannedExercises.length === 0) return 0;
+  
+  const completedCount = completedExercises.length;
+  return Math.round((completedCount / plannedExercises.length) * 100);
+};
+
+// Format rest time for display
+export const formatRestTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  
+  if (remainingSeconds === 0) {
+    return `${minutes}m`;
+  }
+  
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
+// Generate a workout summary
+export const generateWorkoutSummary = (
+  workoutDay: WorkoutDay,
+  completedExercises: CompletedExercise[]
+): {
+  totalExercises: number;
+  completedExercises: number;
+  totalSets: number;
+  completedSets: number;
+  estimatedDuration: number;
+} => {
+  const totalExercises = workoutDay.exercises.length;
+  const completedExercisesCount = completedExercises.length;
+  
+  const totalSets = workoutDay.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
+  const completedSets = completedExercises.reduce((sum, exercise) => {
+    return sum + (exercise.sets_completed?.length || 0);
+  }, 0);
+  
+  // Estimate duration based on exercises and rest times
+  const estimatedDuration = workoutDay.exercises.reduce((total, exercise) => {
+    const exerciseTime = exercise.sets * 45; // 45 seconds per set average
+    const restTime = (exercise.sets - 1) * (exercise.rest || 60); // Rest between sets
+    return total + exerciseTime + restTime;
+  }, 0);
+  
   return {
-    ...plan,
-    workout_days: Array.isArray(plan.workout_days) ? plan.workout_days.map(normalizeWorkoutDay) : []
+    totalExercises,
+    completedExercises: completedExercisesCount,
+    totalSets,
+    completedSets,
+    estimatedDuration: Math.round(estimatedDuration / 60) // Convert to minutes
   };
-}
+};
 
-/**
- * Counts completed exercises in a workout log
- */
-export function countCompletedExercises(completedExercises: CompletedExercise[]): number {
-  return completedExercises.filter(ex => {
-    if (Array.isArray(ex.sets_completed)) {
-      return ex.sets_completed.length > 0;
+// Create a default exercise template
+export const createDefaultExercise = (name?: string): Exercise => {
+  return {
+    id: `exercise-${Date.now()}`,
+    exercise_id: `exercise-${Date.now()}`,
+    name: name || '',
+    exercise_name: name || '',
+    target_muscle: '',
+    sets: 3,
+    reps: '10-12',
+    weight: 0,
+    rest: 60,
+    rest_time: 60,
+    rest_seconds: 60,
+    notes: ''
+  };
+};
+
+// Validate workout plan
+export const validateWorkoutPlan = (workoutDays: WorkoutDay[]): {
+  isValid: boolean;
+  errors: string[];
+} => {
+  const errors: string[] = [];
+  
+  if (workoutDays.length === 0) {
+    errors.push('At least one workout day is required');
+  }
+  
+  workoutDays.forEach((day, dayIndex) => {
+    if (!day.day_name.trim()) {
+      errors.push(`Day ${dayIndex + 1} needs a name`);
     }
-    return typeof ex.sets_completed === 'number' && ex.sets_completed > 0;
-  }).length;
-}
-
-/**
- * Gets exercise by ID from a list of exercises
- */
-export function getExerciseById(exercises: Exercise[], id: string): Exercise | undefined {
-  return exercises.find(ex => ex.id === id || ex.exercise_id === id);
-}
-
-/**
- * Converts completed exercises to a format compatible with the API
- */
-export function convertCompletedExercises(exercises: any[]): CompletedExercise[] {
-  return exercises.map(ex => ({
-    exercise_id: ex.exercise_id || ex.id,
-    name: ex.name || ex.exercise_name,
-    exercise_name: ex.exercise_name || ex.name,
-    sets_completed: Array.isArray(ex.sets_completed) 
-      ? ex.sets_completed
-      : [],
-    weight_used: Array.isArray(ex.sets_completed) 
-      ? ex.sets_completed.map((set: any) => set.weight)
-      : [],
-    notes: ex.notes
-  }));
-}
-
-/**
- * Converts between WorkoutSet and Exercise types
- */
-export function convertWorkoutSetToExercise(set: any): Exercise {
-  return {
-    id: set.exercise_id || crypto.randomUUID(),
-    exercise_id: set.exercise_id || crypto.randomUUID(),
-    name: set.exercise_name || '',
-    exercise_name: set.exercise_name || '',
-    sets: set.sets || 1,
-    reps: set.reps || "0",
-    weight: set.weight || 0,
-    duration: set.duration || 0,
-    rest: set.rest_time || 0,
-    rest_time: set.rest_time || 0,
-    target_muscle: 'unknown', // Add required field
-    completed: set.completed || false
-  };
-}
-
-/**
- * Converts between Exercise and WorkoutSet types
- */
-export function convertExerciseToWorkoutSet(exercise: Exercise): WorkoutSet & { exercise_id?: string, exercise_name?: string } {
-  return {
-    exercise_id: exercise.exercise_id || exercise.id,
-    exercise_name: exercise.exercise_name || exercise.name,
-    set_number: 1, // Add required field
-    reps: typeof exercise.reps === 'string' ? parseInt(exercise.reps, 10) || 0 : exercise.reps,
-    weight: exercise.weight || 0,
-    completed: exercise.completed || false
-  };
-}
-
-/**
- * Safely handles the CompletedExercise sets_completed property
- */
-export function getSetsFromCompletedExercise(exercise: CompletedExercise) {
-  if (Array.isArray(exercise.sets_completed)) {
-    return exercise.sets_completed;
-  }
+    
+    if (day.exercises.length === 0) {
+      errors.push(`Day ${dayIndex + 1} needs at least one exercise`);
+    }
+    
+    day.exercises.forEach((exercise, exerciseIndex) => {
+      if (!exercise.name.trim()) {
+        errors.push(`Day ${dayIndex + 1}, Exercise ${exerciseIndex + 1} needs a name`);
+      }
+      
+      if (!exercise.target_muscle.trim()) {
+        errors.push(`Day ${dayIndex + 1}, Exercise ${exerciseIndex + 1} needs a target muscle`);
+      }
+      
+      if (exercise.sets <= 0) {
+        errors.push(`Day ${dayIndex + 1}, Exercise ${exerciseIndex + 1} needs valid sets`);
+      }
+    });
+  });
   
-  // Create an array of sets from the numeric value
-  const setCount = typeof exercise.sets_completed === 'number' ? exercise.sets_completed : 0;
-  return Array(setCount).fill(0).map((_, i) => ({
-    set_number: i + 1,
-    weight: exercise.weight_used && Array.isArray(exercise.weight_used) && exercise.weight_used[0] ? exercise.weight_used[0] : 0,
-    reps: 0,
-    completed: false
-  }));
-}
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// Convert completed exercises to exercise sets format
+export const convertToExerciseSets = (completedExercises: CompletedExercise[], userId: string): ExerciseSet[] => {
+  const exerciseSets: ExerciseSet[] = [];
+  
+  completedExercises.forEach(exercise => {
+    exercise.sets_completed?.forEach((set, index) => {
+      exerciseSets.push({
+        id: `set-${Date.now()}-${index}`,
+        user_id: userId,
+        exercise_name: exercise.exercise_name,
+        weight: set.weight,
+        reps: typeof set.reps === 'string' ? parseInt(set.reps) : set.reps,
+        rest_time: set.rest_time,
+        notes: set.notes,
+        completed: set.completed,
+        set_number: index + 1,
+        created_at: new Date().toISOString()
+      });
+    });
+  });
+  
+  return exerciseSets;
+};

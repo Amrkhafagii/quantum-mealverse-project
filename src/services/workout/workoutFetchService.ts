@@ -15,9 +15,10 @@ export const fetchWorkoutPlans = async (userId: string): Promise<WorkoutPlan[]> 
       
     if (error) throw error;
     
-    // Transform workout_days from JSON string to array if needed
+    // Transform workout_days from JSON string to array if needed and ensure proper typing
     return data.map(plan => ({
       ...plan,
+      difficulty: (plan.difficulty as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
       workout_days: typeof plan.workout_days === 'string' 
         ? JSON.parse(plan.workout_days) 
         : plan.workout_days

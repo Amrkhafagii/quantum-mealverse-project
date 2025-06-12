@@ -23,9 +23,10 @@ export const createWorkoutPlan = async (plan: WorkoutPlan): Promise<WorkoutPlan 
 
     if (error) throw error;
 
-    // Transform back to our application format
+    // Transform back to our application format and ensure difficulty is properly typed
     return {
       ...data,
+      difficulty: (data.difficulty as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
       workout_days: Array.isArray(data.workout_days) 
         ? data.workout_days 
         : typeof data.workout_days === 'string' 
