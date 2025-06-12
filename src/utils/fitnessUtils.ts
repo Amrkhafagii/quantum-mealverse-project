@@ -1,4 +1,3 @@
-
 import { Exercise, WorkoutDay, CompletedExercise, ExerciseSet } from '@/types/fitness';
 
 // Calculate total volume for an exercise (sets * reps * weight)
@@ -156,7 +155,6 @@ export const validateWorkoutPlan = (workoutDays: WorkoutDay[]): {
 export const getSetsFromCompletedExercise = (exercise: CompletedExercise): any[] => {
   if (exercise.sets_completed && Array.isArray(exercise.sets_completed)) {
     return exercise.sets_completed.map((set, index) => ({
-      set_number: set.set_number || index + 1,
       reps: set.reps,
       weight: set.weight,
       rest_time: set.rest_time,
@@ -168,7 +166,6 @@ export const getSetsFromCompletedExercise = (exercise: CompletedExercise): any[]
   // Fallback for legacy data structure
   if (exercise.reps_completed && exercise.weight_used) {
     return exercise.reps_completed.map((reps, index) => ({
-      set_number: index + 1,
       reps,
       weight: exercise.weight_used?.[index] || 0,
       rest_time: 60,
@@ -193,7 +190,6 @@ export const convertToExerciseSets = (completedExercises: CompletedExercise[], u
         reps: typeof set.reps === 'string' ? parseInt(set.reps) : set.reps,
         rest_time: set.rest_time,
         notes: set.notes,
-        set_number: index + 1,
         created_at: new Date().toISOString()
       });
     });
