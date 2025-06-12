@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal, GoalStatus } from '@/types/fitness';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,21 +26,21 @@ export const getUserFitnessGoals = async (userId: string): Promise<{
       return {
         id: goal.id,
         user_id: goal.user_id,
-        title: goal.name, // Map name to title for interface compatibility
+        title: goal.name,
         name: goal.name,
         description: goal.description,
         target_value: goal.target_weight || 0,
         current_value: 0,
         start_date: goal.created_at,
         target_date: goal.target_date || '',
-        category: 'weight', // Default category
+        category: 'weight',
         status: validStatus,
         target_weight: goal.target_weight,
         target_body_fat: goal.target_body_fat,
         created_at: goal.created_at,
         updated_at: goal.updated_at,
-        type: 'weight_loss', // Default type
-        is_active: true // Default active state
+        type: 'weight_loss',
+        is_active: true
       };
     });
     
@@ -66,9 +65,9 @@ export const createFitnessGoal = async (
     const newGoal = {
       id: uuidv4(),
       user_id: userId,
-      name: goalData.title || goalData.name, // Use either title or name
+      name: goalData.title || goalData.name,
       description: goalData.description,
-      title: goalData.title || goalData.name, // For interface compatibility
+      title: goalData.title || goalData.name,
       target_weight: goalData.target_weight,
       target_body_fat: goalData.target_body_fat,
       target_date: goalData.target_date,
@@ -92,9 +91,9 @@ export const createFitnessGoal = async (
       current_value: 0,
       start_date: data[0].created_at,
       category: 'weight',
-      status: data[0].status as GoalStatus, // Properly cast to GoalStatus
-      type: 'weight_loss', // Default type
-      is_active: true // Default active state
+      status: data[0].status as GoalStatus,
+      type: 'weight_loss',
+      is_active: true
     };
     
     return { data: mappedGoal, error: null };
@@ -120,7 +119,7 @@ export const addFitnessGoal = async (goalData: FitnessGoal): Promise<{
       .from('fitness_goals')
       .insert([{
         user_id,
-        name: name || goalData.title, // Use either name or title
+        name: name || goalData.title,
         description,
         target_weight,
         target_body_fat,
@@ -133,12 +132,14 @@ export const addFitnessGoal = async (goalData: FitnessGoal): Promise<{
       
     if (error) throw error;
     
-    // Return the data mapped to our interface
+    // Return the data mapped to our interface with required fields
     const mappedGoal: FitnessGoal = {
       ...goalData,
       id: data[0].id,
       created_at: data[0].created_at,
-      updated_at: data[0].updated_at
+      updated_at: data[0].updated_at,
+      type: goalData.type || 'weight_loss',
+      is_active: goalData.is_active !== undefined ? goalData.is_active : true
     };
     
     return { data: mappedGoal, error: null };
@@ -166,7 +167,7 @@ export const updateFitnessGoal = async (
     const { data, error } = await supabase
       .from('fitness_goals')
       .update({
-        name: name || goalData.title, // Use either name or title
+        name: name || goalData.title,
         description,
         target_weight,
         target_body_fat,
@@ -186,7 +187,7 @@ export const updateFitnessGoal = async (
       name: data[0].name,
       title: data[0].name,
       updated_at: data[0].updated_at,
-      status: data[0].status as GoalStatus // Type-cast status to GoalStatus
+      status: data[0].status as GoalStatus
     };
     
     return { data: mappedGoal, error: null };
@@ -320,8 +321,8 @@ export const fetchGoals = async (userId: string): Promise<FitnessGoal[]> => {
         target_body_fat: goal.target_body_fat,
         created_at: goal.created_at,
         updated_at: goal.updated_at,
-        type: 'weight_loss', // Default type
-        is_active: true // Default active state
+        type: 'weight_loss',
+        is_active: true
       };
     }) || [];
     

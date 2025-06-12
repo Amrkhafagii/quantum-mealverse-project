@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -7,7 +6,7 @@ import {
   Achievement,
   Challenge,
   ChallengeParticipant
-} from '@/types/fitness';
+} from '@/types/fitness/achievements';
 
 // Get user streak data
 export async function getUserStreak(userId: string, streakType: 'workout' | 'nutrition' | 'meditation' = 'workout') {

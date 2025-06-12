@@ -4,11 +4,25 @@ export * from './goals';
 export * from './achievements';
 export * from './challenges';
 export * from './nutrition';
-export * from './workouts';
 export * from './logs';
 export * from './analytics';
 export * from './recommendations';
 export * from './scheduling';
+
+// Only export from workouts file, avoiding duplicates
+export {
+  WorkoutPlan,
+  WorkoutDay,
+  Exercise,
+  CompletedExercise,
+  ExerciseSet,
+  WorkoutSet,
+  WorkoutSchedule,
+  WorkoutHistoryItem,
+  WorkoutRecommendation,
+  UserWorkoutStats,
+  WorkoutLog
+} from './workouts';
 
 // Additional types for UI components
 export interface DailyQuest {
