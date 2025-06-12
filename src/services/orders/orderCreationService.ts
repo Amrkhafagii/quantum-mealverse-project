@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CartItem } from '@/types/cart';
 
 export interface OrderData {
-  customer_id: string | null; // This should remain as customer_id (UUID)
+  customer_id: string | null; // UUID from auth.users
   customer_name: string;
   customer_phone: string;
   customer_email: string;
@@ -38,26 +38,32 @@ export const createOrder = async (orderData: OrderData, items: CartItem[]): Prom
     console.log('Creating order with data:', orderData);
     console.log('Order items:', items);
 
-    // Create the main order using customer_id (not user_id)
+    // Ensure customer_id is properly formatted as UUID string
+    const formattedOrderData = {
+      ...orderData,
+      customer_id: orderData.customer_id || null // Keep as UUID string or null
+    };
+
+    // Create the main order using customer_id (UUID)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        customer_id: orderData.customer_id, // This is correct - orders use customer_id
-        customer_name: orderData.customer_name,
-        customer_phone: orderData.customer_phone,
-        customer_email: orderData.customer_email,
-        delivery_address: orderData.delivery_address,
-        city: orderData.city,
-        total: orderData.total,
-        subtotal: orderData.subtotal,
-        status: orderData.status,
-        payment_method: orderData.payment_method,
-        delivery_method: orderData.delivery_method,
-        notes: orderData.special_instructions,
-        latitude: orderData.latitude,
-        longitude: orderData.longitude,
-        assignment_source: orderData.assignment_source,
-        delivery_fee: orderData.total - orderData.subtotal
+        customer_id: formattedOrderData.customer_id,
+        customer_name: formattedOrderData.customer_name,
+        customer_phone: formattedOrderData.customer_phone,
+        customer_email: formattedOrderData.customer_email,
+        delivery_address: formattedOrderData.delivery_address,
+        city: formattedOrderData.city,
+        total: formattedOrderData.total,
+        subtotal: formattedOrderData.subtotal,
+        status: formattedOrderData.status,
+        payment_method: formattedOrderData.payment_method,
+        delivery_method: formattedOrderData.delivery_method,
+        notes: formattedOrderData.special_instructions,
+        latitude: formattedOrderData.latitude,
+        longitude: formattedOrderData.longitude,
+        assignment_source: formattedOrderData.assignment_source,
+        delivery_fee: formattedOrderData.total - formattedOrderData.subtotal
       })
       .select()
       .single();

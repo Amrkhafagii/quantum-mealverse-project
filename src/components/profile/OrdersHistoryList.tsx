@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 interface OrdersHistoryListProps {
-  userId: string;
+  userId: string; // UUID from auth.users
 }
 
 export const OrdersHistoryList: React.FC<OrdersHistoryListProps> = ({ userId }) => {
@@ -30,7 +30,7 @@ export const OrdersHistoryList: React.FC<OrdersHistoryListProps> = ({ userId }) 
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('customer_id', userId)
+        .eq('customer_id', userId) // Use customer_id with UUID from auth
         .order('created_at', { ascending: false });
         
       if (error) throw error;

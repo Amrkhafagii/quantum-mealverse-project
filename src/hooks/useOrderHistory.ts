@@ -13,7 +13,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   formatted_order_id?: string;
-  customer_id: string;
+  customer_id: string; // UUID from auth.users
   restaurant_id: string;
   status: string;
   total: number;
@@ -26,7 +26,7 @@ export interface Order {
   order_items?: OrderItem[];
 }
 
-export function useOrderHistory(userId?: string) {
+export function useOrderHistory(userId?: string) { // userId is UUID string from auth
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -48,7 +48,7 @@ export function useOrderHistory(userId?: string) {
           *,
           order_items (*)
         `)
-        .eq('customer_id', userId)
+        .eq('customer_id', userId) // Use customer_id with UUID from auth
         .order('created_at', { ascending: false });
 
       if (error) {

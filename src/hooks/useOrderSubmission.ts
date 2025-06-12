@@ -5,7 +5,7 @@ import { CartItem } from '@/types/cart';
 import { createOrder, hasMixedOrderTypes } from '@/services/orders/orderCreationService';
 
 export const useOrderSubmission = (
-  userId: string | undefined,
+  userId: string | undefined, // UUID string from auth
   items: CartItem[],
   totalAmount: number,
   hasDeliveryInfo: boolean,
@@ -18,21 +18,21 @@ export const useOrderSubmission = (
     if (isSubmitting) return;
     
     setIsSubmitting(true);
-    console.log('Starting order submission with new service:', data);
+    console.log('Starting order submission with UUID customer_id:', userId);
 
     try {
       // Calculate subtotal (90% of total for example)
       const subtotal = totalAmount * 0.9;
       
-      // Prepare order data
+      // Prepare order data with proper UUID customer_id
       const orderData = {
-        customer_id: userId || null,
+        customer_id: userId || null, // Pass UUID string directly
         customer_name: data.fullName,
         customer_phone: data.phone,
         customer_email: data.email || '',
         delivery_address: data.address,
         city: data.city || '',
-        total: totalAmount, // Add the missing total property
+        total: totalAmount,
         subtotal: subtotal,
         status: 'pending',
         payment_method: data.paymentMethod || 'cash',
@@ -45,9 +45,9 @@ export const useOrderSubmission = (
         deliveryMethod: data.deliveryMethod || 'delivery'
       };
 
-      console.log('Creating order with enhanced service');
+      console.log('Creating order with enhanced service and UUID customer_id');
 
-      // Create order using the new service
+      // Create order using the service
       const result = await createOrder(orderData, items);
 
       if (!result.success) {
