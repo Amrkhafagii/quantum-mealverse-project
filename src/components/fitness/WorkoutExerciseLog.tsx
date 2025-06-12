@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CompletedExercise, Exercise, WorkoutSet } from '@/types/fitness';
+import { CompletedExercise, Exercise } from '@/types/fitness';
 import { CheckCircle } from 'lucide-react';
 import ExerciseLogForm from './ExerciseLogForm';
 
@@ -26,8 +27,18 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
   const [caloriesBurned, setCaloriesBurned] = useState(0);
   const [notes, setNotes] = useState('');
   
-  const handleSetComplete = (updatedExercises: CompletedExercise[]) => {
-    setCompletedExercises(updatedExercises);
+  const handleSetComplete = (updatedExercises: any[]) => {
+    // Transform the data to match CompletedExercise interface
+    const transformedExercises: CompletedExercise[] = updatedExercises.map(exercise => ({
+      exercise_id: exercise.exercise_id,
+      name: exercise.name,
+      exercise_name: exercise.exercise_name,
+      sets_completed: exercise.sets_completed || [],
+      reps_completed: exercise.sets_completed?.map((set: any) => set.reps) || [],
+      weight_used: exercise.sets_completed?.map((set: any) => set.weight) || [],
+      notes: exercise.notes
+    }));
+    setCompletedExercises(transformedExercises);
   };
   
   const handleSubmit = () => {
@@ -48,13 +59,13 @@ const WorkoutExerciseLog: React.FC<WorkoutExerciseLogProps> = ({
   
   // Calculate the total sets completed
   const totalSets = completedExercises.reduce((total, exercise) => {
-    const completedSets = exercise.sets_completed.filter(set => set.completed).length;
+    const completedSets = exercise.sets_completed?.filter((set: any) => set.completed)?.length || 0;
     return total + completedSets;
   }, 0);
   
   // Calculate the total sets
   const allSets = completedExercises.reduce((total, exercise) => {
-    return total + exercise.sets_completed.length;
+    return total + (exercise.sets_completed?.length || 0);
   }, 0);
   
   const completion = allSets > 0 ? Math.round((totalSets / allSets) * 100) : 0;

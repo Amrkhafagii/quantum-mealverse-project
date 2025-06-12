@@ -90,6 +90,8 @@ export interface SavedMealPlan {
 }
 
 export interface WorkoutDay {
+  id?: string;
+  name?: string;
   day_name: string;
   exercises: Exercise[];
 }
@@ -115,9 +117,9 @@ export interface CompletedExercise {
   exercise_id?: string;
   name?: string; // Add this missing property
   exercise_name: string;
-  sets_completed: number;
-  reps_completed: number[];
-  weight_used: number[];
+  sets_completed: ExerciseSet[];
+  reps_completed?: number[];
+  weight_used?: number[];
   notes?: string;
 }
 
@@ -136,6 +138,9 @@ export interface UserProfile {
   display_name?: string; // Add this missing property
   created_at?: string;
   updated_at?: string;
+  date_of_birth?: string;
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
 }
 
 export interface ExerciseProgress {
@@ -230,25 +235,26 @@ export interface DailyQuest {
   deadline?: string;
 }
 
+export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
+
 export interface FitnessGoal {
   id: string;
   user_id: string;
-  type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'endurance' | 'strength';
+  title: string;
+  name: string;
+  description: string;
   target_value: number;
   current_value: number;
+  start_date: string;
   target_date: string;
-  created_at: string;
-  is_active: boolean;
-  // Add missing properties that components expect
-  title?: string;
-  name?: string;
-  description?: string;
-  status?: 'completed' | 'active' | 'not_started' | 'in_progress' | 'failed' | 'abandoned';
+  category: string;
+  status: GoalStatus;
   target_weight?: number;
   target_body_fat?: number;
-  start_date?: string;
-  category?: string;
+  created_at: string;
   updated_at?: string;
+  type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'endurance' | 'strength';
+  is_active: boolean;
 }
 
 // Add missing types for other components
@@ -284,6 +290,9 @@ export interface Team {
   created_by: string;
   created_at: string;
   is_active: boolean;
+  avatar_url?: string;
+  member_count?: number;
+  total_points?: number;
 }
 
 export interface Challenge {
@@ -297,6 +306,8 @@ export interface Challenge {
   created_by: string;
   team_id?: string;
   is_active: boolean;
+  participants_count?: number;
+  reward_points?: number;
 }
 
 export interface TeamMember {
@@ -306,4 +317,19 @@ export interface TeamMember {
   role: 'member' | 'admin' | 'owner';
   joined_date: string;
   is_active: boolean;
+}
+
+export interface WorkoutRecommendation {
+  id: string;
+  title: string;
+  name: string;
+  description: string;
+  type: string;
+  reason: string;
+  confidence_score: number;
+  user_id: string;
+  suggested_at: string;
+  dismissed: boolean;
+  applied: boolean;
+  applied_at?: string;
 }

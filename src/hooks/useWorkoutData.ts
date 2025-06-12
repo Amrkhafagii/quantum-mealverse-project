@@ -20,9 +20,14 @@ export function useWorkoutData() {
   const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [workoutStats, setWorkoutStats] = useState<UserWorkoutStats>({
+    user_id: '',
     streak: 0,
     total_workouts: 0,
-    most_active_day: 'N/A'
+    most_active_day: 'N/A',
+    streak_days: 0,
+    longest_streak: 0,
+    total_calories_burned: 0,
+    total_duration_minutes: 0
   });
   const [history, setHistory] = useState<WorkoutHistoryItem[]>([]);
 
@@ -114,9 +119,14 @@ export function useWorkoutData() {
       });
       
       setWorkoutStats({
+        user_id: userId,
         streak: stats.streak_days || 0,
         total_workouts: stats.total_workouts || 0,
-        most_active_day: mostActiveDay
+        most_active_day: mostActiveDay,
+        streak_days: stats.streak_days || 0,
+        longest_streak: stats.longest_streak || 0,
+        total_calories_burned: stats.total_calories_burned || 0,
+        total_duration_minutes: stats.total_duration_minutes || 0
       });
       
       setHistory(historyData || []);
