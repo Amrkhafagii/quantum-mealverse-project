@@ -26,20 +26,33 @@ export const createNotification = async (
   try {
     const { data, error } = await supabase
       .from('notifications')
-      .insert([{
+      .insert({
         user_id: userId, // Use UUID string directly
         title,
         message,
-        type,
+        notification_type: type, // Map to database column
         link,
-        read: false
-      }])
+        is_read: false // Map to database column
+      })
       .select()
       .single();
       
     if (error) throw error;
     
-    return { success: true, notification: data as Notification };
+    // Transform database response to match our interface
+    const notification: Notification = {
+      id: data.id,
+      user_id: data.user_id,
+      title: data.title,
+      message: data.message,
+      type: data.notification_type as Notification['type'],
+      read: data.is_read,
+      link: data.link,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+    
+    return { success: true, notification };
   } catch (error) {
     console.error('Error creating notification:', error);
     return { success: false, error };
@@ -63,14 +76,25 @@ export const getUserNotifications = async (
       .limit(limit);
       
     if (unreadOnly) {
-      query = query.eq('read', false);
+      query = query.eq('is_read', false);
     }
     
     const { data, error } = await query;
     
     if (error) throw error;
     
-    return (data as Notification[]) || [];
+    // Transform database response to match our interface
+    return (data || []).map(item => ({
+      id: item.id,
+      user_id: item.user_id,
+      title: item.title,
+      message: item.message,
+      type: item.notification_type as Notification['type'],
+      read: item.is_read,
+      link: item.link,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    }));
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return [];
@@ -87,7 +111,7 @@ export const markNotificationAsRead = async (
   try {
     const { error } = await supabase
       .from('notifications')
-      .update({ read: true, updated_at: new Date().toISOString() })
+      .update({ is_read: true, updated_at: new Date().toISOString() })
       .eq('id', notificationId)
       .eq('user_id', userId); // Use UUID string
       
@@ -109,9 +133,9 @@ export const markAllNotificationsAsRead = async (
   try {
     const { error } = await supabase
       .from('notifications')
-      .update({ read: true, updated_at: new Date().toISOString() })
+      .update({ is_read: true, updated_at: new Date().toISOString() })
       .eq('user_id', userId) // Use UUID string
-      .eq('read', false);
+      .eq('is_read', false);
       
     if (error) throw error;
     
@@ -156,7 +180,7 @@ export const getUnreadNotificationCount = async (
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId) // Use UUID string
-      .eq('read', false);
+      .eq('is_read', false);
       
     if (error) throw error;
     
@@ -198,4 +222,24 @@ export const sendGoalAchievementNotification = async (
     'success',
     '/fitness/goals'
   );
+};
+
+// Export notification service object for backward compatibility
+export const notificationService = {
+  createNotification,
+  getUserNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  getUnreadNotificationCount,
+  sendWorkoutReminder,
+  sendGoalAchievementNotification,
+  getRestaurantNotifications: getUserNotifications, // Alias for compatibility
+  getUnreadCount: getUnreadNotificationCount, // Alias for compatibility
+  markAsRead: markNotificationAsRead, // Alias for compatibility
+  markAllAsRead: markAllNotificationsAsRead, // Alias for compatibility
+  subscribeToRestaurantNotifications: (restaurantId: string, callback: (notification: Notification) => void) => {
+    // Simplified subscription - in a real app you'd use Supabase realtime
+    return { unsubscribe: () => {} };
+  }
 };

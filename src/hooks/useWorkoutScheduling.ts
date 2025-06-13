@@ -4,11 +4,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutSchedule } from '@/types/fitness';
+import { CalendarEvent } from '@/types/fitness/scheduling';
 
 export function useWorkoutScheduling() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
 
   const createSchedule = async (scheduleData: Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user?.id) {
@@ -209,12 +212,95 @@ export function useWorkoutScheduling() {
     }
   };
 
+  const fetchSessions = async (startDate: string, endDate: string) => {
+    if (!user?.id) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('workout_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('scheduled_date', startDate)
+        .lte('scheduled_date', endDate);
+
+      if (error) throw error;
+      setSessions(data || []);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    }
+  };
+
+  const getCalendarEvents = (startDate: string, endDate: string): CalendarEvent[] => {
+    return sessions.map(session => ({
+      id: session.id,
+      title: `Workout Session`,
+      date: session.scheduled_date,
+      time: session.scheduled_time,
+      status: session.status,
+      type: 'workout'
+    }));
+  };
+
+  const updateSessionStatus = async (sessionId: string, status: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('workout_sessions')
+        .update({ status })
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setSessions(prev => prev.map(session => 
+        session.id === sessionId ? { ...session, status } : session
+      ));
+    } catch (error) {
+      console.error('Error updating session status:', error);
+    }
+  };
+
+  const generateSessions = async (scheduleId: string, startDate: Date, endDate: Date) => {
+    if (!user?.id) return;
+
+    try {
+      // Call the database function to generate sessions
+      const { error } = await supabase.rpc('generate_workout_sessions', {
+        p_schedule_id: scheduleId,
+        p_start_date: startDate.toISOString().split('T')[0],
+        p_end_date: endDate.toISOString().split('T')[0]
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sessions generated",
+        description: "Workout sessions have been generated for your schedule.",
+      });
+    } catch (error) {
+      console.error('Error generating sessions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate workout sessions.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return {
     createSchedule,
     updateSchedule,
     deleteSchedule,
     getUpcomingWorkouts,
     toggleScheduleActive,
+    fetchSessions,
+    getCalendarEvents,
+    updateSessionStatus,
+    generateSessions,
+    schedules,
+    sessions,
     isLoading
   };
 }

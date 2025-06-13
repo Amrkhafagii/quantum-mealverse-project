@@ -131,3 +131,77 @@ export const getGoalsSummary = async (userId: string): Promise<{
     };
   }
 };
+
+/**
+ * Generate progress insights based on user's fitness data
+ */
+export const generateProgressInsights = async (userId: string): Promise<{
+  insights: string[];
+  trends: {
+    weight: 'improving' | 'declining' | 'maintaining' | 'insufficient_data';
+    bodyFat: 'improving' | 'declining' | 'maintaining' | 'insufficient_data';
+  };
+}> => {
+  try {
+    const { data: goals, error } = await supabase
+      .from('fitness_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    const insights: string[] = [];
+    const trends = {
+      weight: 'insufficient_data' as const,
+      bodyFat: 'insufficient_data' as const
+    };
+
+    if (!goals || goals.length === 0) {
+      insights.push('Start tracking your fitness goals to see progress insights.');
+      return { insights, trends };
+    }
+
+    // Analyze weight goals
+    const weightGoals = goals.filter(g => g.goal_type === 'weight_loss' || g.goal_type === 'weight_gain');
+    if (weightGoals.length > 0) {
+      const recentWeight = weightGoals[0];
+      const completion = calculateGoalCompletion(recentWeight);
+      
+      if (completion > 75) {
+        insights.push(`Great progress on your weight goal! You're ${completion.toFixed(0)}% there.`);
+        trends.weight = 'improving';
+      } else if (completion > 25) {
+        insights.push(`You're making steady progress on your weight goal (${completion.toFixed(0)}% complete).`);
+        trends.weight = 'maintaining';
+      } else {
+        insights.push('Keep pushing towards your weight goal. Every small step counts!');
+        trends.weight = 'declining';
+      }
+    }
+
+    // Analyze overall goal completion
+    const completedGoals = goals.filter(g => g.status === 'completed').length;
+    const completionRate = (completedGoals / goals.length) * 100;
+    
+    if (completionRate > 70) {
+      insights.push('Excellent! You have a high goal completion rate. Keep up the momentum!');
+    } else if (completionRate > 30) {
+      insights.push('You\'re building good habits. Consider breaking larger goals into smaller milestones.');
+    } else {
+      insights.push('Focus on one goal at a time to build consistency and momentum.');
+    }
+
+    return { insights, trends };
+  } catch (error) {
+    console.error('Error generating progress insights:', error);
+    return {
+      insights: ['Unable to generate insights at this time.'],
+      trends: {
+        weight: 'insufficient_data',
+        bodyFat: 'insufficient_data'
+      }
+    };
+  }
+};
