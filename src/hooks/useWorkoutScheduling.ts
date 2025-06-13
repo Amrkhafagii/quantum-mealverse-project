@@ -3,15 +3,14 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutSchedule } from '@/types/fitness';
-import { CalendarEvent } from '@/types/fitness/scheduling';
+import { WorkoutSchedule, CalendarEvent, WorkoutSession } from '@/types/fitness/scheduling';
 
 export function useWorkoutScheduling() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
 
   const createSchedule = async (scheduleData: Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user?.id) {
@@ -213,7 +212,7 @@ export function useWorkoutScheduling() {
   };
 
   const fetchSessions = async (startDate: string, endDate: string) => {
-    if (!user?.id) return [];
+    if (!user?.id) return;
 
     try {
       const { data, error } = await supabase
@@ -237,7 +236,7 @@ export function useWorkoutScheduling() {
       date: session.scheduled_date,
       time: session.scheduled_time,
       status: session.status,
-      type: 'workout'
+      type: 'workout' as const
     }));
   };
 

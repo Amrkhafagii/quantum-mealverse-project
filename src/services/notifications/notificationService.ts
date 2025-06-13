@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Notification {
@@ -31,7 +30,6 @@ export const createNotification = async (
         title,
         message,
         notification_type: type, // Map to database column
-        link,
         is_read: false // Map to database column
       })
       .select()
@@ -47,7 +45,7 @@ export const createNotification = async (
       message: data.message,
       type: data.notification_type as Notification['type'],
       read: data.is_read,
-      link: data.link,
+      link: undefined, // Database doesn't have link column
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -91,7 +89,7 @@ export const getUserNotifications = async (
       message: item.message,
       type: item.notification_type as Notification['type'],
       read: item.is_read,
-      link: item.link,
+      link: undefined, // Database doesn't have link column
       created_at: item.created_at,
       updated_at: item.updated_at
     }));
@@ -203,8 +201,7 @@ export const sendWorkoutReminder = async (
     userId,
     'Workout Reminder',
     `Don't forget about your ${workoutName} workout scheduled for ${scheduledTime}`,
-    'workout_reminder',
-    '/fitness'
+    'workout_reminder'
   );
 };
 
@@ -219,8 +216,7 @@ export const sendGoalAchievementNotification = async (
     userId,
     'Goal Achieved! 🎉',
     `Congratulations! You've successfully completed your goal: ${goalTitle}`,
-    'success',
-    '/fitness/goals'
+    'success'
   );
 };
 

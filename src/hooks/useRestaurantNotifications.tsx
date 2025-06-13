@@ -1,8 +1,21 @@
 
 import { useState, useEffect } from 'react';
-import { notificationService } from '@/services/notifications/notificationService';
+import { notificationService, Notification } from '@/services/notifications/notificationService';
 import type { OrderNotification } from '@/types/notifications';
 import { useRestaurantAuth } from './useRestaurantAuth';
+
+// Helper function to convert Notification to OrderNotification
+const convertToOrderNotification = (notification: Notification): OrderNotification => ({
+  id: notification.id,
+  title: notification.title,
+  message: notification.message,
+  order_id: '', // Default empty since not in Notification type
+  notification_type: notification.type as any, // Type assertion
+  is_read: notification.read,
+  read_at: notification.read ? notification.updated_at : null,
+  created_at: notification.created_at,
+  metadata: null // Default null since not in Notification type
+});
 
 export const useRestaurantNotifications = () => {
   const { restaurant } = useRestaurantAuth();
@@ -20,7 +33,9 @@ export const useRestaurantNotifications = () => {
           notificationService.getUnreadCount(restaurant.id)
         ]);
         
-        setNotifications(notificationsData);
+        // Convert Notification[] to OrderNotification[]
+        const convertedNotifications = notificationsData.map(convertToOrderNotification);
+        setNotifications(convertedNotifications);
         setUnreadCount(unreadCountData);
       } catch (error) {
         console.error('Error loading notifications:', error);
@@ -35,7 +50,8 @@ export const useRestaurantNotifications = () => {
     const subscription = notificationService.subscribeToRestaurantNotifications(
       restaurant.id,
       (newNotification) => {
-        setNotifications(prev => [newNotification, ...prev]);
+        const convertedNotification = convertToOrderNotification(newNotification);
+        setNotifications(prev => [convertedNotification, ...prev]);
         setUnreadCount(prev => prev + 1);
       }
     );
@@ -46,8 +62,10 @@ export const useRestaurantNotifications = () => {
   }, [restaurant?.id]);
 
   const markAsRead = async (notificationId: string) => {
+    if (!restaurant?.id) return;
+    
     try {
-      await notificationService.markAsRead(notificationId);
+      await notificationService.markAsRead(notificationId, restaurant.id);
       setNotifications(prev =>
         prev.map(notification =>
           notification.id === notificationId

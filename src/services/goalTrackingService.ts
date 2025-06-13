@@ -153,7 +153,7 @@ export const generateProgressInsights = async (userId: string): Promise<{
     if (error) throw error;
 
     const insights: string[] = [];
-    const trends = {
+    let trends = {
       weight: 'insufficient_data' as const,
       bodyFat: 'insufficient_data' as const
     };
@@ -163,11 +163,28 @@ export const generateProgressInsights = async (userId: string): Promise<{
       return { insights, trends };
     }
 
-    // Analyze weight goals
-    const weightGoals = goals.filter(g => g.goal_type === 'weight_loss' || g.goal_type === 'weight_gain');
+    // Analyze weight goals - convert database data to FitnessGoal interface
+    const weightGoals = goals.filter(g => g.name?.toLowerCase().includes('weight'));
     if (weightGoals.length > 0) {
       const recentWeight = weightGoals[0];
-      const completion = calculateGoalCompletion(recentWeight);
+      // Create a FitnessGoal-compatible object
+      const goalData: FitnessGoal = {
+        id: recentWeight.id,
+        user_id: recentWeight.user_id,
+        title: recentWeight.name || 'Weight Goal',
+        description: recentWeight.description,
+        target_value: recentWeight.target_weight || 0,
+        current_value: 0, // Default since it's not in the database schema
+        unit: 'lbs',
+        goal_type: 'weight_loss',
+        status: recentWeight.status as 'active' | 'completed' | 'paused',
+        start_date: recentWeight.created_at,
+        target_date: recentWeight.target_date,
+        created_at: recentWeight.created_at,
+        updated_at: recentWeight.updated_at
+      };
+      
+      const completion = calculateGoalCompletion(goalData);
       
       if (completion > 75) {
         insights.push(`Great progress on your weight goal! You're ${completion.toFixed(0)}% there.`);
