@@ -58,7 +58,7 @@ export function useWorkoutScheduling() {
     }
   };
 
-  const updateSchedule = async (scheduleId: string, updates: Partial<WorkoutSchedule>) => {
+  const updateSchedule = async (scheduleId: string, updates: Partial<CreateWorkoutScheduleData>) => {
     if (!user?.id) {
       throw new Error('User must be authenticated to update schedules');
     }
@@ -224,10 +224,20 @@ export function useWorkoutScheduling() {
 
       if (error) throw error;
       
-      // Properly type the database response
       const typedSessions: WorkoutSession[] = (data || []).map(session => ({
-        ...session,
-        status: session.status as WorkoutSession['status']
+        id: session.id,
+        user_id: session.user_id,
+        workout_plan_id: session.workout_plan_id,
+        workout_schedule_id: session.workout_schedule_id,
+        scheduled_date: session.scheduled_date,
+        scheduled_time: session.scheduled_time,
+        started_at: session.started_at,
+        completed_at: session.completed_at,
+        duration: session.duration,
+        status: session.status as WorkoutSession['status'],
+        notes: session.notes,
+        created_at: session.created_at,
+        updated_at: session.updated_at
       }));
       
       setSessions(typedSessions);
@@ -259,7 +269,6 @@ export function useWorkoutScheduling() {
 
       if (error) throw error;
 
-      // Update local state with proper typing
       setSessions(prev => prev.map(session => 
         session.id === sessionId ? { ...session, status } : session
       ));

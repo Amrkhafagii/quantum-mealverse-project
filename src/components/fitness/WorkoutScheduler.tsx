@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { WorkoutScheduler as NewWorkoutScheduler } from './scheduling/WorkoutScheduler';
+import WorkoutScheduler as NewWorkoutScheduler from './scheduling/WorkoutScheduler';
 
 export interface WorkoutSchedulerProps {
   userId?: string;

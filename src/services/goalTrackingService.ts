@@ -17,6 +17,8 @@ interface SimpleFitnessGoal {
   updated_at: string;
 }
 
+type TrendStatus = 'improving' | 'declining' | 'maintaining' | 'insufficient_data';
+
 /**
  * Track progress towards a fitness goal
  */
@@ -153,8 +155,8 @@ export const getGoalsSummary = async (userId: string): Promise<{
 export const generateProgressInsights = async (userId: string): Promise<{
   insights: string[];
   trends: {
-    weight: 'improving' | 'declining' | 'maintaining' | 'insufficient_data';
-    bodyFat: 'improving' | 'declining' | 'maintaining' | 'insufficient_data';
+    weight: TrendStatus;
+    bodyFat: TrendStatus;
   };
 }> => {
   try {
@@ -168,9 +170,12 @@ export const generateProgressInsights = async (userId: string): Promise<{
     if (error) throw error;
 
     const insights: string[] = [];
-    let trends = {
-      weight: 'insufficient_data' as const,
-      bodyFat: 'insufficient_data' as const
+    let trends: {
+      weight: TrendStatus;
+      bodyFat: TrendStatus;
+    } = {
+      weight: 'insufficient_data',
+      bodyFat: 'insufficient_data'
     };
 
     if (!goals || goals.length === 0) {
@@ -191,7 +196,7 @@ export const generateProgressInsights = async (userId: string): Promise<{
         target_value: recentWeight.target_weight || 0,
         current_value: 0, // Default since it's not in the database schema
         goal_type: 'weight_loss',
-        status: (recentWeight.status === 'completed' || recentWeight.status === 'active' || recentWeight.status === 'paused') 
+        status: (recentWeight.status === 'completed' || recentWeight.status === 'active') 
           ? recentWeight.status 
           : 'active',
         start_date: recentWeight.created_at,
