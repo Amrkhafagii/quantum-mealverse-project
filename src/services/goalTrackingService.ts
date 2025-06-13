@@ -1,6 +1,21 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { FitnessGoal } from '@/types/fitness';
+
+// Define a simplified FitnessGoal type that matches what we actually need
+interface SimpleFitnessGoal {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  target_value: number;
+  current_value: number;
+  goal_type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'endurance' | 'strength';
+  status: 'active' | 'completed' | 'paused';
+  start_date: string;
+  target_date?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 /**
  * Track progress towards a fitness goal
@@ -86,7 +101,7 @@ export const getGoalProgressHistory = async (
 /**
  * Calculate goal completion percentage
  */
-export const calculateGoalCompletion = (goal: FitnessGoal): number => {
+export const calculateGoalCompletion = (goal: SimpleFitnessGoal): number => {
   if (!goal.target_value || goal.target_value === 0) return 0;
   
   const progress = (goal.current_value / goal.target_value) * 100;
@@ -163,21 +178,22 @@ export const generateProgressInsights = async (userId: string): Promise<{
       return { insights, trends };
     }
 
-    // Analyze weight goals - convert database data to FitnessGoal interface
+    // Analyze weight goals - convert database data to SimpleFitnessGoal interface
     const weightGoals = goals.filter(g => g.name?.toLowerCase().includes('weight'));
     if (weightGoals.length > 0) {
       const recentWeight = weightGoals[0];
-      // Create a FitnessGoal-compatible object
-      const goalData: FitnessGoal = {
+      // Create a SimpleFitnessGoal-compatible object
+      const goalData: SimpleFitnessGoal = {
         id: recentWeight.id,
         user_id: recentWeight.user_id,
         title: recentWeight.name || 'Weight Goal',
         description: recentWeight.description,
         target_value: recentWeight.target_weight || 0,
         current_value: 0, // Default since it's not in the database schema
-        unit: 'lbs',
         goal_type: 'weight_loss',
-        status: recentWeight.status as 'active' | 'completed',
+        status: (recentWeight.status === 'completed' || recentWeight.status === 'active' || recentWeight.status === 'paused') 
+          ? recentWeight.status 
+          : 'active',
         start_date: recentWeight.created_at,
         target_date: recentWeight.target_date,
         created_at: recentWeight.created_at,

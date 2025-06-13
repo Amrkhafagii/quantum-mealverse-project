@@ -1,283 +1,184 @@
 
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
 import { WorkoutSchedule, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
-import { WorkoutPlan } from '@/types/fitness/workouts';
-
-const scheduleSchema = z.object({
-  name: z.string().min(1, 'Schedule name is required'),
-  workout_plan_id: z.string().min(1, 'Workout plan is required'),
-  days_of_week: z.array(z.number()).min(1, 'Select at least one day'),
-  start_date: z.string().min(1, 'Start date is required'),
-  end_date: z.string().optional(),
-  preferred_time: z.string().optional(),
-  timezone: z.string().default('UTC'),
-  reminder_enabled: z.boolean().default(true),
-  reminder_minutes_before: z.number().min(5).max(1440).default(30),
-  is_active: z.boolean().default(true),
-});
-
-type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 interface ScheduleFormProps {
-  workoutPlans: WorkoutPlan[];
-  onSubmit: (data: CreateWorkoutScheduleData) => void;
-  onCancel: () => void;
-  initialData?: WorkoutSchedule;
-  isLoading?: boolean;
+  workoutPlanId: string;
+  onScheduleCreated?: () => void;
+  existingSchedule?: WorkoutSchedule;
 }
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-];
-
-export const ScheduleForm: React.FC<ScheduleFormProps> = ({
-  workoutPlans,
-  onSubmit,
-  onCancel,
-  initialData,
-  isLoading = false
+const ScheduleForm: React.FC<ScheduleFormProps> = ({
+  workoutPlanId,
+  onScheduleCreated,
+  existingSchedule
 }) => {
-  const [selectedDays, setSelectedDays] = useState<number[]>(initialData?.days_of_week || []);
-
-  const form = useForm<ScheduleFormData>({
-    resolver: zodResolver(scheduleSchema),
-    defaultValues: {
-      name: initialData?.name || '',
-      workout_plan_id: initialData?.workout_plan_id || '',
-      days_of_week: initialData?.days_of_week || [],
-      start_date: initialData?.start_date || new Date().toISOString().split('T')[0],
-      end_date: initialData?.end_date || '',
-      preferred_time: initialData?.preferred_time || '',
-      timezone: initialData?.timezone || 'UTC',
-      reminder_enabled: initialData?.reminder_enabled ?? true,
-      reminder_minutes_before: initialData?.reminder_minutes_before || 30,
-      is_active: initialData?.is_active ?? true,
-    },
+  const { createSchedule, updateSchedule, isLoading } = useWorkoutScheduling();
+  
+  const [formData, setFormData] = useState<CreateWorkoutScheduleData>({
+    workout_plan_id: workoutPlanId,
+    days_of_week: existingSchedule?.days_of_week || [],
+    start_date: existingSchedule?.start_date || new Date().toISOString().split('T')[0],
+    end_date: existingSchedule?.end_date || '',
+    time: existingSchedule?.time || '09:00',
+    reminder: existingSchedule?.reminder || false,
+    active: existingSchedule?.active || true,
+    name: existingSchedule?.name || '',
+    timezone: existingSchedule?.timezone || 'UTC',
+    reminder_enabled: existingSchedule?.reminder_enabled || false,
+    reminder_minutes_before: existingSchedule?.reminder_minutes_before || 15
   });
 
-  const handleDayToggle = (dayValue: number) => {
-    const newSelectedDays = selectedDays.includes(dayValue)
-      ? selectedDays.filter(day => day !== dayValue)
-      : [...selectedDays, dayValue].sort();
-    
-    setSelectedDays(newSelectedDays);
-    form.setValue('days_of_week', newSelectedDays);
+  const daysOfWeek = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' }
+  ];
+
+  const handleDayToggle = (day: number) => {
+    setFormData(prev => ({
+      ...prev,
+      days_of_week: prev.days_of_week.includes(day)
+        ? prev.days_of_week.filter(d => d !== day)
+        : [...prev.days_of_week, day]
+    }));
   };
 
-  const handleFormSubmit = (data: ScheduleFormData) => {
-    // Ensure required fields are present for CreateWorkoutScheduleData
-    const scheduleData: CreateWorkoutScheduleData = {
-      name: data.name,
-      workout_plan_id: data.workout_plan_id,
-      days_of_week: data.days_of_week,
-      start_date: data.start_date,
-      end_date: data.end_date || undefined,
-      preferred_time: data.preferred_time || undefined,
-      timezone: data.timezone,
-      is_active: data.is_active,
-      reminder_enabled: data.reminder_enabled,
-      reminder_minutes_before: data.reminder_minutes_before,
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    onSubmit(scheduleData);
+    try {
+      if (existingSchedule) {
+        await updateSchedule(existingSchedule.id, formData);
+      } else {
+        await createSchedule(formData);
+      }
+      
+      if (onScheduleCreated) {
+        onScheduleCreated();
+      }
+    } catch (error) {
+      console.error('Error saving schedule:', error);
+    }
   };
 
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+    <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>
-            {initialData ? 'Edit Schedule' : 'Create Workout Schedule'}
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <CardTitle>
+          {existingSchedule ? 'Edit Workout Schedule' : 'Create Workout Schedule'}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Schedule Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Morning Workout" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Schedule Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="My workout schedule"
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="workout_plan_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Workout Plan</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a workout plan" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {workoutPlans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div>
+            <Label>Days of Week</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {daysOfWeek.map(day => (
+                <div key={day.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`day-${day.value}`}
+                    checked={formData.days_of_week.includes(day.value)}
+                    onCheckedChange={() => handleDayToggle(day.value)}
+                  />
+                  <Label htmlFor={`day-${day.value}`}>{day.label}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm font-medium">Days of Week</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {DAYS_OF_WEEK.map((day) => (
-                  <div key={day.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`day-${day.value}`}
-                      checked={selectedDays.includes(day.value)}
-                      onCheckedChange={() => handleDayToggle(day.value)}
-                    />
-                    <Label htmlFor={`day-${day.value}`} className="text-sm">
-                      {day.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              {form.formState.errors.days_of_week && (
-                <p className="text-sm text-red-500 mt-1">
-                  {form.formState.errors.days_of_week.message}
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="start_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="end_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Date (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <Label htmlFor="start_date">Start Date</Label>
+              <Input
+                id="start_date"
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
               />
             </div>
+            <div>
+              <Label htmlFor="end_date">End Date (Optional)</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+              />
+            </div>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="preferred_time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preferred Time (Optional)</FormLabel>
-                  <FormControl>
-                    <Input type="time" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div>
+            <Label htmlFor="time">Preferred Time</Label>
+            <Input
+              id="time"
+              type="time"
+              value={formData.time}
+              onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="reminder_enabled"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel>Enable Reminders</FormLabel>
-                    <div className="text-sm text-gray-400">
-                      Get notified before your workouts
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="reminder_enabled"
+              checked={formData.reminder_enabled}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, reminder_enabled: checked }))}
             />
+            <Label htmlFor="reminder_enabled">Enable Reminders</Label>
+          </div>
 
-            {form.watch('reminder_enabled') && (
-              <FormField
-                control={form.control}
-                name="reminder_minutes_before"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reminder Time (minutes before)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="5"
-                        max="1440"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          {formData.reminder_enabled && (
+            <div>
+              <Label htmlFor="reminder_minutes">Reminder Minutes Before</Label>
+              <Input
+                id="reminder_minutes"
+                type="number"
+                value={formData.reminder_minutes_before}
+                onChange={(e) => setFormData(prev => ({ ...prev, reminder_minutes_before: parseInt(e.target.value) }))}
+                min="5"
+                max="60"
               />
-            )}
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-              >
-                {isLoading ? 'Saving...' : initialData ? 'Update Schedule' : 'Create Schedule'}
-              </Button>
             </div>
-          </form>
-        </Form>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="active"
+              checked={formData.active}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
+            />
+            <Label htmlFor="active">Active Schedule</Label>
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="w-full">
+            {isLoading ? 'Saving...' : existingSchedule ? 'Update Schedule' : 'Create Schedule'}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
 };
+
+export default ScheduleForm;

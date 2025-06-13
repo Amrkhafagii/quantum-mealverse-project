@@ -42,6 +42,9 @@ export interface WorkoutSchedule {
   created_at?: string;
   updated_at?: string;
   name?: string;
+  timezone?: string;
+  reminder_enabled?: boolean;
+  reminder_minutes_before?: number;
 }
 
 export interface CreateWorkoutScheduleData {
@@ -55,4 +58,7 @@ export interface CreateWorkoutScheduleData {
   reminder?: boolean;
   active: boolean;
   name?: string;
+  timezone?: string;
+  reminder_enabled?: boolean;
+  reminder_minutes_before?: number;
 }

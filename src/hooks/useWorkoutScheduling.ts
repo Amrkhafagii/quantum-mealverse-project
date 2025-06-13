@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { WorkoutSchedule, CalendarEvent, WorkoutSession } from '@/types/fitness/scheduling';
+import { WorkoutSchedule, CalendarEvent, WorkoutSession, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
 
 export function useWorkoutScheduling() {
   const { user } = useAuth();
@@ -12,7 +12,7 @@ export function useWorkoutScheduling() {
   const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
 
-  const createSchedule = async (scheduleData: Omit<WorkoutSchedule, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const createSchedule = async (scheduleData: CreateWorkoutScheduleData) => {
     if (!user?.id) {
       throw new Error('User must be authenticated to create schedules');
     }
@@ -268,14 +268,12 @@ export function useWorkoutScheduling() {
     }
   };
 
-  const generateSessions = async (scheduleId: string, startDate: Date, endDate: Date) => {
+  const generateSessions = async (scheduleId: string) => {
     if (!user?.id) return;
 
     try {
       const { error } = await supabase.rpc('generate_workout_sessions', {
-        p_schedule_id: scheduleId,
-        p_start_date: startDate.toISOString().split('T')[0],
-        p_end_date: endDate.toISOString().split('T')[0]
+        p_schedule_id: scheduleId
       });
 
       if (error) throw error;

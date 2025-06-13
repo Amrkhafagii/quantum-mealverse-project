@@ -1,281 +1,225 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Settings, Play, Edit, Trash2, MoreVertical } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { WorkoutCalendar } from './WorkoutCalendar';
-import { ScheduleForm } from './ScheduleForm';
+import { Switch } from '@/components/ui/switch';
+import { Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
 import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
-import { useWorkoutData } from '@/hooks/useWorkoutData';
-import { WorkoutSchedule, WorkoutSession, CalendarEvent, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
-import { format } from 'date-fns';
-import { motion } from 'framer-motion';
+import { WorkoutSchedule, CreateWorkoutScheduleData, CalendarEvent } from '@/types/fitness/scheduling';
+import ScheduleForm from './ScheduleForm';
 
-export const WorkoutScheduler: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('calendar');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<WorkoutSchedule | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+interface WorkoutSchedulerProps {
+  userId?: string;
+  workoutPlanId?: string;
+}
 
+const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({ userId, workoutPlanId }) => {
   const {
-    schedules,
-    sessions,
-    isLoading,
     createSchedule,
     updateSchedule,
     deleteSchedule,
+    toggleScheduleActive,
+    fetchSessions,
+    getCalendarEvents,
     updateSessionStatus,
-    generateSessions
+    generateSessions,
+    schedules,
+    sessions,
+    isLoading
   } = useWorkoutScheduling();
 
-  const { workoutPlans } = useWorkoutData();
+  const [showForm, setShowForm] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<WorkoutSchedule | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    const startDate = new Date().toISOString().split('T')[0];
+    const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    fetchSessions(startDate, endDate);
+  }, []);
+
+  useEffect(() => {
+    const startDate = new Date().toISOString().split('T')[0];
+    const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const events = getCalendarEvents(startDate, endDate);
+    setCalendarEvents(events);
+  }, [sessions]);
 
   const handleCreateSchedule = async (scheduleData: CreateWorkoutScheduleData) => {
-    const result = await createSchedule(scheduleData);
-    if (result) {
-      setShowCreateForm(false);
-      setActiveTab('calendar');
+    try {
+      await createSchedule(scheduleData);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error creating schedule:', error);
     }
   };
 
-  const handleEditSchedule = async (scheduleData: CreateWorkoutScheduleData) => {
-    if (!editingSchedule) return;
-    
-    await updateSchedule(editingSchedule.id, scheduleData);
-    setEditingSchedule(null);
-    setActiveTab('calendar');
+  const handleEditSchedule = (schedule: WorkoutSchedule) => {
+    setEditingSchedule(schedule);
+    setShowForm(true);
   };
 
   const handleDeleteSchedule = async (scheduleId: string) => {
-    await deleteSchedule(scheduleId);
+    if (window.confirm('Are you sure you want to delete this schedule?')) {
+      try {
+        await deleteSchedule(scheduleId);
+      } catch (error) {
+        console.error('Error deleting schedule:', error);
+      }
+    }
   };
 
-  const handleEventClick = (event: CalendarEvent) => {
-    // Handle clicking on a calendar event
-    console.log('Event clicked:', event);
+  const handleToggleActive = async (schedule: WorkoutSchedule) => {
+    try {
+      await toggleScheduleActive(schedule.id, !schedule.active);
+    } catch (error) {
+      console.error('Error toggling schedule:', error);
+    }
   };
 
-  const handleStartWorkout = (session: WorkoutSession) => {
-    updateSessionStatus(session.id, 'in_progress');
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingSchedule(null);
   };
 
-  const handleCompleteWorkout = (session: WorkoutSession) => {
-    updateSessionStatus(session.id, 'completed', {
-      completed_at: new Date().toISOString(),
-      duration_minutes: 45 // Default duration
-    });
-  };
-
-  const handleSkipWorkout = (session: WorkoutSession) => {
-    updateSessionStatus(session.id, 'skipped');
-  };
-
-  const getUpcomingSessions = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return sessions
-      .filter(session => session.scheduled_date >= today && session.status === 'scheduled')
-      .slice(0, 5);
-  };
-
-  const getDaysOfWeekText = (daysOfWeek: number[]) => {
+  const getDayNames = (days: number[]) => {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return daysOfWeek.map(day => dayNames[day]).join(', ');
+    return days.map(day => dayNames[day]).join(', ');
   };
 
-  if (showCreateForm || editingSchedule) {
+  if (showForm) {
     return (
-      <ScheduleForm
-        workoutPlans={workoutPlans}
-        onSubmit={editingSchedule ? handleEditSchedule : handleCreateSchedule}
-        onCancel={() => {
-          setShowCreateForm(false);
-          setEditingSchedule(null);
-        }}
-        initialData={editingSchedule || undefined}
-        isLoading={isLoading}
-      />
+      <div className="space-y-4">
+        <Button variant="outline" onClick={handleFormClose}>
+          ← Back to Schedules
+        </Button>
+        <ScheduleForm
+          workoutPlanId={workoutPlanId || ''}
+          existingSchedule={editingSchedule || undefined}
+          onScheduleCreated={handleFormClose}
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-quantum-darkBlue/50">
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="schedules">Schedules</TabsTrigger>
-          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-        </TabsList>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Workout Schedules</h2>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Schedule
+        </Button>
+      </div>
 
-        <TabsContent value="calendar">
-          <WorkoutCalendar
-            onDateSelect={setSelectedDate}
-            onEventClick={handleEventClick}
-            onCreateSchedule={() => setShowCreateForm(true)}
-          />
-        </TabsContent>
-
-        <TabsContent value="schedules">
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      {/* Active Schedules */}
+      <div className="grid gap-4">
+        {schedules.map((schedule) => (
+          <Card key={schedule.id} className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center">
-                  <Settings className="mr-2 h-5 w-5 text-quantum-cyan" />
-                  Workout Schedules
-                </CardTitle>
-                <Button
-                  onClick={() => setShowCreateForm(true)}
-                  className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                >
-                  Create Schedule
-                </Button>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    {schedule.name || 'Workout Schedule'}
+                    <Badge variant={schedule.active ? 'default' : 'secondary'}>
+                      {schedule.active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </CardTitle>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {getDayNames(schedule.days_of_week)}
+                    </span>
+                    {schedule.time && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {schedule.time}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={schedule.active}
+                    onCheckedChange={() => handleToggleActive(schedule)}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditSchedule(schedule)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteSchedule(schedule.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              {schedules.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="mx-auto h-12 w-12 text-quantum-cyan/50 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Schedules Yet</h3>
-                  <p className="text-gray-400 mb-4">
-                    Create your first workout schedule to get started
-                  </p>
-                  <Button
-                    onClick={() => setShowCreateForm(true)}
-                    className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                  >
-                    Create Schedule
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {schedules.map((schedule) => (
-                    <motion.div
-                      key={schedule.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-quantum-black/30 border border-quantum-cyan/10 rounded-lg p-4"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg">{schedule.name}</h3>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                            <span>Days: {getDaysOfWeekText(schedule.days_of_week)}</span>
-                            {schedule.preferred_time && (
-                              <span className="flex items-center">
-                                <Clock className="w-4 h-4 mr-1" />
-                                {schedule.preferred_time}
-                              </span>
-                            )}
-                            <Badge variant={schedule.is_active ? "default" : "secondary"}>
-                              {schedule.is_active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </div>
-                          <div className="mt-2 text-sm">
-                            <span>From {format(new Date(schedule.start_date), 'MMM d, yyyy')}</span>
-                            {schedule.end_date && (
-                              <span> to {format(new Date(schedule.end_date), 'MMM d, yyyy')}</span>
-                            )}
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => setEditingSchedule(schedule)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => generateSessions(schedule.id)}
-                              disabled={!schedule.is_active}
-                            >
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Generate Sessions
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteSchedule(schedule.id)}
-                              className="text-red-500"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+              <div className="text-sm text-gray-300">
+                <p>Start Date: {new Date(schedule.start_date).toLocaleDateString()}</p>
+                {schedule.end_date && (
+                  <p>End Date: {new Date(schedule.end_date).toLocaleDateString()}</p>
+                )}
+                {schedule.reminder_enabled && (
+                  <p>Reminders: {schedule.reminder_minutes_before} minutes before</p>
+                )}
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        ))}
+      </div>
 
-        <TabsContent value="upcoming">
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Clock className="mr-2 h-5 w-5 text-quantum-cyan" />
-                Upcoming Workouts
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {getUpcomingSessions().length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="mx-auto h-12 w-12 text-quantum-cyan/50 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Upcoming Workouts</h3>
-                  <p className="text-gray-400">
-                    Create a schedule to see your upcoming workouts here
-                  </p>
+      {schedules.length === 0 && (
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardContent className="text-center py-8">
+            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-semibold mb-2">No schedules yet</h3>
+            <p className="text-gray-400 mb-4">Create your first workout schedule to get started</p>
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Schedule
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Calendar Events */}
+      {calendarEvents.length > 0 && (
+        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+          <CardHeader>
+            <CardTitle>Upcoming Workouts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {calendarEvents.slice(0, 5).map((event) => (
+                <div key={event.id} className="flex justify-between items-center p-2 bg-quantum-black/20 rounded">
+                  <div>
+                    <span className="font-medium">{event.title}</span>
+                    <span className="text-sm text-gray-400 ml-2">
+                      {new Date(event.date).toLocaleDateString()}
+                      {event.time && ` at ${event.time}`}
+                    </span>
+                  </div>
+                  <Badge variant={event.status === 'completed' ? 'default' : 'secondary'}>
+                    {event.status}
+                  </Badge>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {getUpcomingSessions().map((session) => (
-                    <motion.div
-                      key={session.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="bg-quantum-black/30 border border-quantum-cyan/10 rounded-lg p-4"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold">
-                            {(session as any).workout_plans?.name || 'Workout'}
-                          </h3>
-                          <div className="text-sm text-gray-400 mt-1">
-                            {format(new Date(session.scheduled_date), 'EEEE, MMM d')}
-                            {session.scheduled_time && ` at ${session.scheduled_time}`}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSkipWorkout(session)}
-                          >
-                            Skip
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleStartWorkout(session)}
-                            className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                          >
-                            <Play className="w-4 h-4 mr-1" />
-                            Start
-                          </Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
+
+export default WorkoutScheduler;
