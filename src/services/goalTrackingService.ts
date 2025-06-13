@@ -6,7 +6,7 @@ import { FitnessGoal } from '@/types/fitness';
  * Track progress towards a fitness goal
  */
 export const trackGoalProgress = async (
-  userId: string, // UUID from auth
+  userId: string,
   goalId: string,
   currentValue: number
 ): Promise<{ success: boolean; error?: any }> => {
@@ -19,7 +19,7 @@ export const trackGoalProgress = async (
         updated_at: new Date().toISOString()
       })
       .eq('id', goalId)
-      .eq('user_id', userId); // Use UUID string
+      .eq('user_id', userId);
       
     if (updateError) throw updateError;
     
@@ -28,7 +28,7 @@ export const trackGoalProgress = async (
       .from('fitness_goals')
       .select('target_weight, status')
       .eq('id', goalId)
-      .eq('user_id', userId) // Use UUID string
+      .eq('user_id', userId)
       .single();
       
     if (fetchError) throw fetchError;
@@ -42,7 +42,7 @@ export const trackGoalProgress = async (
           updated_at: new Date().toISOString()
         })
         .eq('id', goalId)
-        .eq('user_id', userId); // Use UUID string
+        .eq('user_id', userId);
         
       if (statusError) throw statusError;
     }
@@ -58,14 +58,14 @@ export const trackGoalProgress = async (
  * Get goal progress history for a user
  */
 export const getGoalProgressHistory = async (
-  userId: string, // UUID from auth
+  userId: string,
   goalId?: string
 ): Promise<any[]> => {
   try {
     let query = supabase
       .from('fitness_goals')
       .select('*')
-      .eq('user_id', userId) // Use UUID string
+      .eq('user_id', userId)
       .order('updated_at', { ascending: false });
       
     if (goalId) {
@@ -106,7 +106,7 @@ export const getGoalsSummary = async (userId: string): Promise<{
     const { data: goals, error } = await supabase
       .from('fitness_goals')
       .select('status')
-      .eq('user_id', userId); // Use UUID string
+      .eq('user_id', userId);
       
     if (error) throw error;
     
@@ -177,7 +177,7 @@ export const generateProgressInsights = async (userId: string): Promise<{
         current_value: 0, // Default since it's not in the database schema
         unit: 'lbs',
         goal_type: 'weight_loss',
-        status: recentWeight.status as 'active' | 'completed' | 'paused',
+        status: recentWeight.status as 'active' | 'completed',
         start_date: recentWeight.created_at,
         target_date: recentWeight.target_date,
         created_at: recentWeight.created_at,

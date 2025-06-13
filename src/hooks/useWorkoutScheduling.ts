@@ -23,7 +23,7 @@ export function useWorkoutScheduling() {
       const { data, error } = await supabase
         .from('workout_schedules')
         .insert([{
-          user_id: user.id, // Use authenticated user's UUID
+          user_id: user.id,
           workout_plan_id: scheduleData.workout_plan_id,
           day_of_week: scheduleData.day_of_week,
           days_of_week: scheduleData.days_of_week,
@@ -73,7 +73,7 @@ export function useWorkoutScheduling() {
           updated_at: new Date().toISOString()
         })
         .eq('id', scheduleId)
-        .eq('user_id', user.id) // Ensure user can only update their own schedules
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -110,7 +110,7 @@ export function useWorkoutScheduling() {
         .from('workout_schedules')
         .delete()
         .eq('id', scheduleId)
-        .eq('user_id', user.id); // Ensure user can only delete their own schedules
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -155,7 +155,7 @@ export function useWorkoutScheduling() {
             workout_days
           )
         `)
-        .eq('user_id', user.id) // Use authenticated user's UUID
+        .eq('user_id', user.id)
         .eq('active', true)
         .gte('start_date', startDate.toISOString().split('T')[0])
         .lte('start_date', endDate.toISOString().split('T')[0]);
@@ -186,7 +186,7 @@ export function useWorkoutScheduling() {
           updated_at: new Date().toISOString()
         })
         .eq('id', scheduleId)
-        .eq('user_id', user.id) // Ensure user can only modify their own schedules
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -223,7 +223,14 @@ export function useWorkoutScheduling() {
         .lte('scheduled_date', endDate);
 
       if (error) throw error;
-      setSessions(data || []);
+      
+      // Properly type the database response
+      const typedSessions: WorkoutSession[] = (data || []).map(session => ({
+        ...session,
+        status: session.status as WorkoutSession['status']
+      }));
+      
+      setSessions(typedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
     }
@@ -240,7 +247,7 @@ export function useWorkoutScheduling() {
     }));
   };
 
-  const updateSessionStatus = async (sessionId: string, status: string) => {
+  const updateSessionStatus = async (sessionId: string, status: WorkoutSession['status']) => {
     if (!user?.id) return;
 
     try {
@@ -252,7 +259,7 @@ export function useWorkoutScheduling() {
 
       if (error) throw error;
 
-      // Update local state
+      // Update local state with proper typing
       setSessions(prev => prev.map(session => 
         session.id === sessionId ? { ...session, status } : session
       ));
@@ -265,7 +272,6 @@ export function useWorkoutScheduling() {
     if (!user?.id) return;
 
     try {
-      // Call the database function to generate sessions
       const { error } = await supabase.rpc('generate_workout_sessions', {
         p_schedule_id: scheduleId,
         p_start_date: startDate.toISOString().split('T')[0],

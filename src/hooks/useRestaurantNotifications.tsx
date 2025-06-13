@@ -14,7 +14,8 @@ const convertToOrderNotification = (notification: Notification): OrderNotificati
   is_read: notification.read,
   read_at: notification.read ? notification.updated_at : null,
   created_at: notification.created_at,
-  metadata: null // Default null since not in Notification type
+  metadata: null, // Default null since not in Notification type
+  user_id: notification.user_id // Add missing user_id property
 });
 
 export const useRestaurantNotifications = () => {

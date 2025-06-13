@@ -41,7 +41,7 @@ export interface WorkoutSchedule {
   active: boolean;
   created_at?: string;
   updated_at?: string;
-  name?: string; // Add optional name property
+  name?: string;
 }
 
 export interface CreateWorkoutScheduleData {
