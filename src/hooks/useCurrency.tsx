@@ -22,11 +22,12 @@ type CurrencyContextType = {
   currentCurrency: Currency;
   formatPrice: (priceInUSD: number) => string;
   convertPrice: (priceInUSD: number) => number;
-} | undefined;
+};
 
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-const CurrencyContext = createContext<CurrencyContextType>(undefined);
+// Use "null" for initial context to avoid deep union issues
+const CurrencyContext = createContext<CurrencyContextType | null>(null);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -83,8 +84,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// Updated to ensure clear error and typing
-export const useCurrency = () => {
+export const useCurrency = (): CurrencyContextType => {
   const context = useContext(CurrencyContext);
   if (!context) {
     throw new Error("useCurrency must be used within a CurrencyProvider");
