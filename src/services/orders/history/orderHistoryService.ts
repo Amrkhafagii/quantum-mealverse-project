@@ -23,7 +23,12 @@ export const recordStatusChange = async (
       metadata
     );
   } catch (error) {
-    logOrderError('recordStatusChange', error, { orderId, newStatus, restaurantId });
+    logOrderError('recordStatusChange', error, { 
+      operation: 'recordStatusChange', 
+      orderId, 
+      newStatus, 
+      restaurantId 
+    });
     throw error;
   }
 };
@@ -46,7 +51,12 @@ export const recordCancellation = async (
       }
     );
   } catch (error) {
-    logOrderError('recordCancellation', error, { orderId, reason, restaurantId });
+    logOrderError('recordCancellation', error, { 
+      operation: 'recordCancellation', 
+      orderId, 
+      reason, 
+      restaurantId 
+    });
     throw error;
   }
 };

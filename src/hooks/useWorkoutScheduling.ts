@@ -233,7 +233,7 @@ export function useWorkoutScheduling() {
         scheduled_time: session.scheduled_time,
         started_at: session.started_at,
         completed_at: session.completed_at,
-        duration: session.duration,
+        duration: session.duration_minutes, // Map duration_minutes to duration
         status: session.status as WorkoutSession['status'],
         notes: session.notes,
         created_at: session.created_at,

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 
@@ -21,7 +22,8 @@ import {
 } from './transformation/orderDataTransformers';
 import { 
   handleOrderError, 
-  createValidationError 
+  createValidationError,
+  handleDatabaseError
 } from './errors/orderErrorHandler';
 import { 
   recordStatusChange, 
@@ -81,10 +83,10 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
 
     const data = await queryUserOrders(userId);
     
-    logOrderSuccess('fetchUserOrders', data, { userId, count: data.length });
+    logOrderSuccess('fetchUserOrders', data, { operation: 'fetchUserOrders', userId, count: data.length });
     return data;
   } catch (error) {
-    logOrderError('fetchUserOrders', error, { userId });
+    logOrderError('fetchUserOrders', error, { operation: 'fetchUserOrders', userId });
     throw error;
   }
 };
@@ -102,10 +104,10 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
 
     const data = await queryOrderItems(orderId);
     
-    logOrderSuccess('fetchOrderItems', data, { orderId, count: data.length });
+    logOrderSuccess('fetchOrderItems', data, { operation: 'fetchOrderItems', orderId, count: data.length });
     return data;
   } catch (error) {
-    logOrderError('fetchOrderItems', error, { orderId });
+    logOrderError('fetchOrderItems', error, { operation: 'fetchOrderItems', orderId });
     throw error;
   }
 };
@@ -136,10 +138,10 @@ export const updateOrderStatus = async (
     // Record the history
     await recordStatusChange(orderId, newStatus, restaurantId, metadata);
 
-    logOrderSuccess('updateOrderStatus', true, { orderId, newStatus });
+    logOrderSuccess('updateOrderStatus', true, { operation: 'updateOrderStatus', orderId, newStatus });
     return true;
   } catch (error) {
-    return handleOrderError(error, 'updateOrderStatus', { orderId, newStatus, restaurantId });
+    return handleOrderError(error, 'updateOrderStatus', { operation: 'updateOrderStatus', orderId, newStatus, restaurantId });
   }
 };
 
@@ -169,10 +171,10 @@ export const cancelOrder = async (
     // Record the cancellation in history
     await recordCancellation(orderId, reason, restaurantId);
 
-    logOrderSuccess('cancelOrder', true, { orderId });
+    logOrderSuccess('cancelOrder', true, { operation: 'cancelOrder', orderId });
     return true;
   } catch (error) {
-    return handleOrderError(error, 'cancelOrder', { orderId, reason, restaurantId });
+    return handleOrderError(error, 'cancelOrder', { operation: 'cancelOrder', orderId, reason, restaurantId });
   }
 };
 
@@ -189,10 +191,10 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
 
     const data = await queryOrderById(orderId);
     
-    logOrderSuccess('getOrderById', !!data, { orderId });
+    logOrderSuccess('getOrderById', !!data, { operation: 'getOrderById', orderId });
     return data;
   } catch (error) {
-    if (handleOrderError(error, 'getOrderById', { orderId })) {
+    if (handleOrderError(error, 'getOrderById', { operation: 'getOrderById', orderId })) {
       return null;
     }
     throw error;
@@ -225,10 +227,10 @@ export const getOrderHistory = async (orderId: string) => {
       handleDatabaseError(error, 'getOrderHistory', { orderId });
     }
 
-    logOrderSuccess('getOrderHistory', data, { orderId, count: data?.length || 0 });
+    logOrderSuccess('getOrderHistory', data, { operation: 'getOrderHistory', orderId, count: data?.length || 0 });
     return data || [];
   } catch (error) {
-    logOrderError('getOrderHistory', error, { orderId });
+    logOrderError('getOrderHistory', error, { operation: 'getOrderHistory', orderId });
     throw error;
   }
 };
