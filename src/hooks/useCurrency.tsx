@@ -44,7 +44,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const { data } = await supabase
           .from('user_preferences')
           .select('currency')
-          .eq('user_id', user.id)
+          .eq('user_preferences_user_id', user.id)
           .single();
 
         if (data?.currency && currencies[data.currency]) {
