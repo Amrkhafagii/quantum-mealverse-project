@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryVehicle } from '@/types/delivery';
 
@@ -8,9 +7,10 @@ export const getVehicleByDeliveryUserId = async (
   deliveryUserId: string
 ): Promise<DeliveryVehicle | null> => {
   try {
+    // Explicit select for all fields
     const { data, error } = await supabase
       .from('delivery_vehicles')
-      .select('*')
+      .select('*, vehicle_type, is_active')
       .eq('delivery_user_id', deliveryUserId)
       .maybeSingle();
 

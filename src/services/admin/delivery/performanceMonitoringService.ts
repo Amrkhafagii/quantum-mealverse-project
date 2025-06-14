@@ -46,7 +46,8 @@ export class PerformanceMonitoringService {
       .from('orders')
       .select('status')
       .eq('delivery_user_id', deliveryUserId)
-      .gte('created_at', thirtyDaysAgo.toISOString());
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .returns<any[]>(); // Enforce the type as any[]
 
     if (orders && orders.length > 0) {
       const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
@@ -82,7 +83,8 @@ export class PerformanceMonitoringService {
       .eq('status', 'delivered')
       .gte('created_at', thirtyDaysAgo.toISOString())
       .not('delivered_at', 'is', null)
-      .not('estimated_delivery_time', 'is', null);
+      .not('estimated_delivery_time', 'is', null)
+      .returns<any[]>(); // Enforce any[]
 
     if (orders && Array.isArray(orders) && orders.length > 0) {
       const lateDeliveries = orders.filter((order: any) => {

@@ -14,8 +14,12 @@ const TARGETS: DeliveryManagementLog['target_type'][] = [
   'driver', 'zone', 'alert', 'system'
 ];
 
+// Fix: Only return correct enum type, never "system" directly unless it's valid in `DeliveryManagementLog`
 function safeActionType(val: any): DeliveryManagementLog['action_type'] {
-  return (ACTIONS as string[]).includes(val) ? val as DeliveryManagementLog['action_type'] : 'system';
+  if (ACTIONS.includes(val)) {
+    return val as DeliveryManagementLog['action_type'];
+  }
+  return 'performance_review'; // default fallback for action_type
 }
 function safeTargetType(val: any): DeliveryManagementLog['target_type'] {
   return (TARGETS as string[]).includes(val) ? val as DeliveryManagementLog['target_type'] : 'system';
