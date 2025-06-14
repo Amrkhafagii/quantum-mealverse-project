@@ -38,7 +38,7 @@ const OnboardingPage: React.FC = () => {
   
   const savePersonalInfo = async (values: any) => {
     updatePersonalInfo(values);
-    // We explicitly assert the type to satisfy the DeliveryUser interface
+    // Explicitly match the DeliveryUser type for all fields and remove latitude/longitude
     const result: import('@/types/delivery').DeliveryUser = {
       id: user?.id || "",
       delivery_users_user_id: user?.id || "",
@@ -49,7 +49,7 @@ const OnboardingPage: React.FC = () => {
       vehicle_type: "",
       license_plate: "",
       driver_license_number: "",
-      status: "inactive" as "inactive", // satisfies the union type
+      status: "inactive" as "inactive",
       rating: 0,
       total_deliveries: 0,
       verification_status: "pending",
@@ -57,8 +57,6 @@ const OnboardingPage: React.FC = () => {
       is_available: false,
       is_approved: false,
       last_active: new Date().toISOString(),
-      latitude: 0,
-      longitude: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
