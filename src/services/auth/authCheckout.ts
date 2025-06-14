@@ -1,6 +1,19 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { AuthFormData, AuthHandlerParams } from '@/types/auth';
+
+// Define types directly in this file for local use
+export type AuthFormData = {
+  email: string;
+  password: string;
+};
+
+export type AuthHandlerParams = {
+  setLoggedInUser: (user: any) => void;
+  setShowLoginPrompt: (show: boolean) => void;
+  setHasDeliveryInfo: (has: boolean) => void;
+  setDefaultValues: (values: any) => void;
+  toast: (args: { title: string; description: string; variant?: string }) => void;
+};
 
 export const handleAuthSubmit = async (
   data: AuthFormData,

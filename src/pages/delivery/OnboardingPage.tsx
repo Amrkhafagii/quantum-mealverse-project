@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useDeliveryOnboarding } from '@/hooks/useDeliveryOnboarding';
 import { OnboardingSidebar } from '@/components/delivery/onboarding/OnboardingSidebar';
@@ -31,7 +30,7 @@ const OnboardingPage: React.FC = () => {
     saveAvailabilitySchedule,
     savePaymentInfo,
   } = useDeliveryOnboarding();
-  
+
   // Redirect if not authenticated
   if (!authLoading && !user) {
     return <Navigate to="/login?redirect=/delivery/onboarding" replace />;

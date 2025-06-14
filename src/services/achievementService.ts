@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Achievement, UserAchievement, WorkoutLog } from '@/types/fitness';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +53,7 @@ export const grantAchievement = async (userId: string, achievementId: string) =>
     const { data: existingAchievement, error: checkError } = await supabase
       .from('user_achievements')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_achievements_user_id', userId)
       .eq('achievement_id', achievementId)
       .maybeSingle();
       
@@ -71,7 +70,7 @@ export const grantAchievement = async (userId: string, achievementId: string) =>
     const { data, error } = await supabase
       .from('user_achievements')
       .insert({
-        user_id: userId,
+        user_achievements_user_id: userId,
         achievement_id: achievementId,
         date_achieved: new Date().toISOString()
       })
@@ -163,7 +162,7 @@ export const updateWorkoutStreak = async (userId: string, workoutDate: string) =
     const { data: streakData, error: streakError } = await supabase
       .from('user_workout_stats')
       .select('streak_days, last_workout_date')
-      .eq('user_id', userId)
+      .eq('user_workout_stats_user_id', userId)
       .single();
 
     if (streakError && streakError.code !== 'PGRST116') {
@@ -194,7 +193,7 @@ export const updateWorkoutStreak = async (userId: string, workoutDate: string) =
     const { data, error } = await supabase
       .from('user_workout_stats')
       .upsert({
-        user_id: userId,
+        user_workout_stats_user_id: userId,
         streak_days: newStreak,
         last_workout_date: currentDate.toISOString()
       })
