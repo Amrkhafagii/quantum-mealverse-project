@@ -1,7 +1,6 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CalendarEvent, WorkoutSession, WorkoutSchedule, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
+import type { WorkoutSchedule, WorkoutSession, CalendarEvent, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
 
 export const useWorkoutScheduling = () => {
   const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
@@ -15,9 +14,9 @@ export const useWorkoutScheduling = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Prepare data with user_id and correct field mapping
+      // Prepare data with workout_schedules_user_id for DB
       const insertData = {
-        user_id: user.id,
+        workout_schedules_user_id: user.id, // use table field
         workout_plan_id: scheduleData.workout_plan_id,
         days_of_week: scheduleData.days_of_week,
         start_date: scheduleData.start_date,
@@ -38,7 +37,11 @@ export const useWorkoutScheduling = () => {
 
       if (error) throw error;
 
-      setSchedules(prev => [...prev, data]);
+      // Map returned DB object to expected local type, filling user_id for local code
+      setSchedules(prev => [...prev, {
+        ...data,
+        user_id: data.user_id ?? data.workout_schedules_user_id // support both
+      }]);
       return data;
     } catch (error) {
       console.error('Error creating schedule:', error);

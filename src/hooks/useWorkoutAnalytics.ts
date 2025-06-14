@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { WorkoutGoal } from '@/types/fitness/analytics';
+import type { WorkoutGoal } from '@/types/fitness/analytics';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PerformanceMetrics {
@@ -27,23 +26,22 @@ export function useWorkoutAnalytics() {
 
   const fetchGoals = async () => {
     if (!user) return;
-    
     try {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('workout_goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('workout_goals_user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Type cast the data to match WorkoutGoal interface
-      const typedGoals = (data || []).map(goal => ({
+
+      // Construct goals with user_id always set for compatibility with WorkoutGoal type
+      const typedGoals: WorkoutGoal[] = (data || []).map(goal => ({
         ...goal,
+        user_id: goal.user_id ?? goal.workout_goals_user_id ?? user.id, // ensure user_id always present
         goal_type: goal.goal_type as WorkoutGoal['goal_type']
       }));
-      
       setGoals(typedGoals);
     } catch (error) {
       console.error('Error fetching goals:', error);
@@ -59,24 +57,26 @@ export function useWorkoutAnalytics() {
 
   const createGoal = async (goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
-
     try {
+      // For DB insert, use workout_goals_user_id for consistency with DB
+      const insertObj = {
+        ...goalData,
+        workout_goals_user_id: user.id,
+      };
       const { data, error } = await supabase
         .from('workout_goals')
-        .insert({
-          ...goalData,
-          user_id: user.id
-        })
+        .insert(insertObj)
         .select()
         .single();
 
       if (error) throw error;
 
-      const typedGoal = {
+      // Add missing fields locally
+      const typedGoal: WorkoutGoal = {
         ...data,
+        user_id: user.id,
         goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
-
       setGoals(prev => [typedGoal, ...prev]);
       toast({
         title: "Success",
@@ -94,24 +94,28 @@ export function useWorkoutAnalytics() {
 
   const updateGoal = async (goalId: string, goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
-
     try {
+      // Update via workout_goals_user_id
+      const updateObj = { ...goalData };
       const { data, error } = await supabase
         .from('workout_goals')
-        .update(goalData)
+        .update(updateObj)
         .eq('id', goalId)
-        .eq('user_id', user.id)
+        .eq('workout_goals_user_id', user.id)
         .select()
         .single();
 
       if (error) throw error;
 
-      const typedGoal = {
+      const typedGoal: WorkoutGoal = {
         ...data,
+        user_id: user.id,
         goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
 
-      setGoals(prev => prev.map(goal => goal.id === goalId ? typedGoal : goal));
+      setGoals(prev => prev.map(goal => 
+        goal.id === goalId ? typedGoal : goal
+      ));
       toast({
         title: "Success",
         description: "Goal updated successfully",
@@ -128,13 +132,12 @@ export function useWorkoutAnalytics() {
 
   const deleteGoal = async (goalId: string) => {
     if (!user) return;
-
     try {
       const { error } = await supabase
         .from('workout_goals')
         .delete()
         .eq('id', goalId)
-        .eq('user_id', user.id);
+        .eq('workout_goals_user_id', user.id);
 
       if (error) throw error;
 
