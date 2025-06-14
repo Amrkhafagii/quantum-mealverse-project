@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryVehicle } from '@/types/delivery';
 
@@ -19,13 +20,13 @@ export const getVehicleByDeliveryUserId = async (
       return null;
     }
     if (!data) return null;
-
+    
     return {
       id: typeof data.id === 'string' ? data.id : '',
       delivery_vehicles_user_id: typeof data.delivery_user_id === 'string' ? data.delivery_user_id : '',
       delivery_user_id: typeof data.delivery_user_id === 'string' ? data.delivery_user_id : undefined,
-      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type as DeliveryVehicle['vehicle_type'] : 'car',
-      type: typeof data.vehicle_type === 'string' ? data.vehicle_type as DeliveryVehicle['vehicle_type'] : 'car',
+      vehicle_type: typeof data.vehicle_type === 'string' ? (data.vehicle_type as DeliveryVehicle['vehicle_type']) : 'car',
+      type: typeof data.vehicle_type === 'string' ? (data.vehicle_type as DeliveryVehicle['vehicle_type']) : 'car',
       make: typeof data.make === 'string' ? data.make : '',
       model: typeof data.model === 'string' ? data.model : '',
       year: typeof data.year === 'number' ? data.year : new Date().getFullYear(),

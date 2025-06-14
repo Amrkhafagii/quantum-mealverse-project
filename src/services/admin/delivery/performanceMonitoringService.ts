@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { performanceAlertsService } from './performanceAlertsService';
 import type { DeliveryPerformanceAlert } from '@/types/admin';
@@ -25,6 +26,7 @@ export class PerformanceMonitoringService {
       .select('average_rating, first_name, last_name')
       .eq('id', deliveryUserId)
       .single();
+      // removed .returns<any[]>()
 
     if (user && user.average_rating !== undefined && user.average_rating < 3.0) {
       await this.createAlert(deliveryUserId, {
@@ -46,8 +48,7 @@ export class PerformanceMonitoringService {
       .from('orders')
       .select('status')
       .eq('delivery_user_id', deliveryUserId)
-      .gte('created_at', thirtyDaysAgo.toISOString())
-      .returns<any[]>(); // Enforce the type as any[]
+      .gte('created_at', thirtyDaysAgo.toISOString());
 
     if (orders && orders.length > 0) {
       const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
@@ -64,7 +65,7 @@ export class PerformanceMonitoringService {
           alert_type: 'high_cancellation',
           severity: cancellationRate > 40 ? 'critical' : 'high',
           title: 'High Cancellation Rate',
-          description: `Driver ${user?.first_name} ${user?.last_name} has a ${cancellationRate.toFixed(1)}% cancellation rate`,
+          description: `Driver ${user?.first_name ?? ''} ${user?.last_name ?? ''} has a ${cancellationRate.toFixed(1)}% cancellation rate`,
           threshold_value: 20,
           actual_value: cancellationRate
         });
@@ -83,8 +84,7 @@ export class PerformanceMonitoringService {
       .eq('status', 'delivered')
       .gte('created_at', thirtyDaysAgo.toISOString())
       .not('delivered_at', 'is', null)
-      .not('estimated_delivery_time', 'is', null)
-      .returns<any[]>(); // Enforce any[]
+      .not('estimated_delivery_time', 'is', null);
 
     if (orders && Array.isArray(orders) && orders.length > 0) {
       const lateDeliveries = orders.filter((order: any) => {
@@ -106,7 +106,7 @@ export class PerformanceMonitoringService {
           alert_type: 'late_delivery',
           severity: lateRate > 30 ? 'critical' : 'high',
           title: 'High Late Delivery Rate',
-          description: `Driver ${user?.first_name} ${user?.last_name} has a ${lateRate.toFixed(1)}% late delivery rate`,
+          description: `Driver ${user?.first_name ?? ''} ${user?.last_name ?? ''} has a ${lateRate.toFixed(1)}% late delivery rate`,
           threshold_value: 15,
           actual_value: lateRate
         });

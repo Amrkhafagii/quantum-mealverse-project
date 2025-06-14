@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryUser } from '@/types/delivery';
 
@@ -63,7 +64,7 @@ export const getDeliveryUserByUserId = async (
       first_name: typeof data.first_name === 'string' ? data.first_name : undefined,
       last_name: typeof data.last_name === 'string' ? data.last_name : undefined,
       phone: typeof data.phone === 'string' ? data.phone : '',
-      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '', // fallback if missing field, TS happy
       license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
       driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
       status,
