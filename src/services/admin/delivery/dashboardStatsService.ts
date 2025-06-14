@@ -10,9 +10,9 @@ export class DashboardStatsService {
         .from('delivery_users')
         .select('*', { count: 'exact', head: true });
 
-      // Get pending approvals count
+      // Get pending approvals count (use correct table!)
       const { count: pendingApprovals } = await supabase
-        .from('driver_approval_workflows')
+        .from('driver_approval_workflow')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
@@ -69,3 +69,4 @@ export class DashboardStatsService {
 }
 
 export const dashboardStatsService = new DashboardStatsService();
+

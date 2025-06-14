@@ -6,7 +6,7 @@ export class DriverApprovalService {
   async getDriverApprovals(status?: string): Promise<DriverApprovalWorkflow[]> {
     try {
       let query = supabase
-        .from('driver_approval_workflows')
+        .from('driver_approval_workflow')
         .select(`
           *,
           delivery_users (
@@ -52,7 +52,7 @@ export class DriverApprovalService {
       }
 
       const { error } = await supabase
-        .from('driver_approval_workflows')
+        .from('driver_approval_workflow')
         .update(updateData)
         .eq('id', id);
 
@@ -61,7 +61,7 @@ export class DriverApprovalService {
       // Update delivery user status if approved
       if (updates.status === 'approved') {
         const { data: workflow } = await supabase
-          .from('driver_approval_workflows')
+          .from('driver_approval_workflow')
           .select('delivery_user_id')
           .eq('id', id)
           .single();
@@ -88,7 +88,7 @@ export class DriverApprovalService {
   async createDriverApproval(deliveryUserId: string): Promise<DriverApprovalWorkflow | null> {
     try {
       const { data, error } = await supabase
-        .from('driver_approval_workflows')
+        .from('driver_approval_workflow')
         .insert({
           delivery_user_id: deliveryUserId,
           status: 'pending',
@@ -108,3 +108,4 @@ export class DriverApprovalService {
 }
 
 export const driverApprovalService = new DriverApprovalService();
+
