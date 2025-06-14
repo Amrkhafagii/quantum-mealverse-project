@@ -31,24 +31,12 @@ export function useExercises() {
           muscleGroups = [];
         }
 
-        // Normalize instructions to a string array
-        let instructions: string[];
+        // Normalize instructions to a single string
+        let instructions: string = "";
         if (Array.isArray(exercise.instructions)) {
-          instructions = exercise.instructions.map((item: any) => String(item));
+          instructions = exercise.instructions.map((item: any) => String(item)).join('\n');
         } else if (typeof exercise.instructions === "string") {
-          // Split on \n or treat as single-line array
-          if (exercise.instructions.includes('\n')) {
-            instructions = exercise.instructions.split('\n').map((g: string) => g.trim()).filter(Boolean);
-          } else if (exercise.instructions.includes(',')) {
-            // fallback for comma-separated instructions
-            instructions = exercise.instructions.split(',').map((g: string) => g.trim()).filter(Boolean);
-          } else if (exercise.instructions.trim() !== '') {
-            instructions = [exercise.instructions.trim()];
-          } else {
-            instructions = [];
-          }
-        } else {
-          instructions = [];
+          instructions = exercise.instructions.trim();
         }
 
         return {
@@ -64,7 +52,7 @@ export function useExercises() {
           rest_time: exercise.rest_time,
           rest: exercise.rest,
           rest_seconds: exercise.rest_seconds,
-          instructions, // always string[]
+          instructions, // always string
           description: exercise.description ?? "",
           muscle_groups: muscleGroups,
           difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced',
