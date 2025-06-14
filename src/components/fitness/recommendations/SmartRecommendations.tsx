@@ -1,285 +1,179 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Brain, 
-  Target, 
-  TrendingUp, 
-  RefreshCw, 
-  ThumbsUp, 
-  ThumbsDown,
-  X,
-  Lightbulb,
-  Activity,
-  Calendar,
-  Zap
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useWorkoutRecommendations } from '@/hooks/useWorkoutRecommendations';
-import type { WorkoutRecommendation } from "@/types/fitness";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import type { WorkoutRecommendation } from '@/types/fitness/workouts';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { Dumbbell, ThumbsUp, X, Star } from 'lucide-react';
 
-export const SmartRecommendations: React.FC = () => {
-  const { 
-    recommendations, 
-    isLoading, 
-    generateRecommendations,
-    applyRecommendation,
-    dismissRecommendation,
-    submitFeedback
-  } = useWorkoutRecommendations();
+interface WorkoutRecommendationsProps {
+  onApplyRecommendation?: (recommendationId: string) => void;
+}
 
-  const [feedbackStates, setFeedbackStates] = useState<Record<string, boolean>>({});
+const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApplyRecommendation }) => {
+  const { user } = useAuth();
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  const getRecommendationIcon = (type: WorkoutRecommendation['type']) => {
-    switch (type) {
-      case 'workout_plan':
-        return <Activity className="w-5 h-5" />;
-      case 'progression':
-        return <TrendingUp className="w-5 h-5" />;
-      case 'recovery':
-        return <Calendar className="w-5 h-5" />;
-      case 'difficulty_adjustment':
-        return <Target className="w-5 h-5" />;
-      case 'exercise_variation':
-        return <Zap className="w-5 h-5" />;
-      default:
-        return <Lightbulb className="w-5 h-5" />;
+  useEffect(() => {
+    fetchRecommendations();
+  }, [user]);
+
+  const fetchRecommendations = async () => {
+    if (!user?.id) return;
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('workout_recommendations')
+        .select('*')
+        .eq('workout_recommendations_user_id', user.id)
+        .eq('dismissed', false)
+        .eq('applied', false)
+        .order('confidence_score', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+
+      setRecommendations(data || []);
+    } catch (error) {
+      console.error('Error fetching workout recommendations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load workout recommendations",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getRecommendationColor = (type: WorkoutRecommendation['type']) => {
-    switch (type) {
-      case 'workout_plan':
-        return 'bg-blue-500';
-      case 'progression':
-        return 'bg-green-500';
-      case 'recovery':
-        return 'bg-yellow-500';
-      case 'difficulty_adjustment':
-        return 'bg-purple-500';
-      case 'exercise_variation':
-        return 'bg-orange-500';
-      default:
-        return 'bg-gray-500';
+  const handleApply = async (rec: any) => {
+    try {
+      const { error } = await supabase
+        .from('workout_recommendations')
+        .update({ 
+          applied: true,
+          applied_at: new Date().toISOString()
+        })
+        .eq('id', rec.id);
+
+      if (error) throw error;
+      toast({
+        title: "Recommendation Applied",
+        description: "We've updated your workout plan accordingly",
+      });
+      setRecommendations(prev => prev.filter(r => r.id !== rec.id));
+      if (onApplyRecommendation) onApplyRecommendation(rec.id);
+    } catch (error) {
+      console.error('Error applying recommendation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to apply recommendation",
+        variant: "destructive"
+      });
     }
   };
 
+  const handleDismiss = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('workout_recommendations')
+        .update({ dismissed: true })
+        .eq('id', id);
+      if (error) throw error;
+      toast({
+        title: "Recommendation Dismissed",
+        description: "We won't show this recommendation again",
+      });
+      setRecommendations(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Error dismissing recommendation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to dismiss recommendation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Helper to get property from rec or rec.metadata (for dynamic flexible fields)
   const getMeta = (rec: any, key: string, fallback: any = undefined) => {
-    if (rec && typeof rec[key] !== 'undefined') return rec[key];
-    if (rec && typeof rec.metadata === 'object' && rec.metadata !== null && !Array.isArray(rec.metadata) && typeof rec.metadata[key] !== 'undefined') {
+    if (rec && key in rec && typeof rec[key] !== 'undefined') {
+      return rec[key];
+    }
+    if (rec && typeof rec.metadata === 'object' && rec.metadata !== null && !Array.isArray(rec.metadata) && key in rec.metadata) {
       return rec.metadata[key];
     }
     return fallback;
   };
 
-  const getRecField = (rec: any, key: string) =>
-    rec[key] ?? rec.metadata?.[key] ?? '';
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-quantum-cyan"></div>
+      </div>
+    );
+  }
 
-  const handleFeedback = async (
-    recommendationId: string, 
-    feedbackType: 'helpful' | 'not_helpful'
-  ) => {
-    await submitFeedback(recommendationId, feedbackType);
-    setFeedbackStates(prev => ({ ...prev, [recommendationId]: true }));
-  };
-
-  const activeRecommendations = recommendations.filter(r => !r.dismissed && !r.applied);
-  const completedRecommendations = recommendations.filter(r => r.applied);
+  if (recommendations.length === 0) return null;
 
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center">
-            <Brain className="mr-2 h-5 w-5 text-quantum-cyan" />
-            Smart Recommendations
-          </CardTitle>
-          <Button
-            onClick={generateRecommendations}
-            disabled={isLoading}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Generate
-          </Button>
-        </div>
-        <p className="text-sm text-gray-400">
-          AI-powered workout suggestions based on your progress and goals
-        </p>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="active" className="w-full">
-          <TabsList className="bg-quantum-black/30 mb-4">
-            <TabsTrigger value="active">
-              Active ({activeRecommendations.length})
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed ({completedRecommendations.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="active">
-            {activeRecommendations.length === 0 ? (
-              <div className="text-center py-8">
-                <Brain className="mx-auto h-12 w-12 text-quantum-cyan/50 mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Active Recommendations</h3>
-                <p className="text-gray-400 mb-4">
-                  Generate personalized workout recommendations based on your data
-                </p>
+    <div className="space-y-4">
+      <h3 className="text-xl font-semibold text-quantum-cyan flex items-center">
+        <Star className="h-5 w-5 mr-2 text-yellow-400" />
+        Recommended for You
+      </h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {recommendations.map((rec) => {
+          const reason = getMeta(rec, 'reason', '');
+          const confidenceScore = getMeta(rec, 'confidence_score', 0);
+          const title = rec.title || getMeta(rec, 'name', 'Recommendation');
+          const description = rec.description || '';
+          return (
+            <Card key={rec.id} className="bg-quantum-black/30 border-quantum-purple/30 overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-medium">{title}</CardTitle>
+                <CardDescription>
+                  {reason && (
+                    <p className="text-gray-400 text-sm">{reason}</p>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm mb-2">{description}</p>
+                <div className="flex items-center gap-1 text-xs text-quantum-cyan">
+                  <Dumbbell className="h-3 w-3" />
+                  <span>Confidence: {Math.round(confidenceScore * 100)}%</span>
+                </div>
+              </CardContent>
+              <CardFooter className="bg-quantum-darkBlue/30 flex justify-between pt-2">
                 <Button
-                  onClick={generateRecommendations}
-                  className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                  disabled={isLoading}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => handleDismiss(rec.id)}
                 >
-                  {isLoading ? 'Generating...' : 'Generate Recommendations'}
+                  <X className="h-3 w-3 mr-1" />
+                  Dismiss
                 </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {activeRecommendations.map((rec) => {
-                  const dismissed = !!getMeta(rec, 'dismissed', false);
-                  const applied = !!getMeta(rec, 'applied', false);
-                  const appliedAt = getMeta(rec, 'applied_at');
-                  const reason = getMeta(rec, 'reason', '');
-                  const confidenceScore = getMeta(rec, 'confidence_score', 0);
-                  const type = getMeta(rec, 'type', '');
-
-                  return (
-                    <motion.div
-                      key={rec.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-quantum-black/30 border border-quantum-cyan/10 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${getRecommendationColor(type)}`}>
-                            {getRecommendationIcon(type)}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg">{rec.title}</h3>
-                            <Badge variant="outline" className="mt-1">
-                              {type.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => dismissRecommendation(rec.id)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {rec.description && (
-                        <p className="text-gray-300 mb-3">{rec.description}</p>
-                      )}
-
-                      {rec.reason && (
-                        <div className="bg-quantum-darkBlue/20 rounded-lg p-3 mb-3">
-                          <p className="text-sm text-gray-400">
-                            <strong>Why this recommendation:</strong> {rec.reason}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-400">
-                            Confidence: {Math.round((rec.confidence_score || 0) * 100)}%
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {!feedbackStates[rec.id] && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleFeedback(rec.id, 'helpful')}
-                              >
-                                <ThumbsUp className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleFeedback(rec.id, 'not_helpful')}
-                              >
-                                <ThumbsDown className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Button
-                            onClick={() => applyRecommendation(rec.id)}
-                            className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                            size="sm"
-                          >
-                            Apply
-                          </Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed">
-            {completedRecommendations.length === 0 ? (
-              <div className="text-center py-8">
-                <Target className="mx-auto h-12 w-12 text-quantum-cyan/50 mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Completed Recommendations</h3>
-                <p className="text-gray-400">
-                  Applied recommendations will appear here
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {completedRecommendations.map((rec) => {
-                  const dismissed = !!getMeta(rec, 'dismissed', false);
-                  const applied = !!getMeta(rec, 'applied', false);
-                  const appliedAt = getMeta(rec, 'applied_at');
-                  const reason = getMeta(rec, 'reason', '');
-                  const confidenceScore = getMeta(rec, 'confidence_score', 0);
-                  const type = getMeta(rec, 'type', '');
-
-                  return (
-                    <div
-                      key={rec.id}
-                      className="bg-quantum-black/20 border border-green-500/20 rounded-lg p-4 opacity-75"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-lg bg-green-500">
-                          {getRecommendationIcon(type)}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{rec.title}</h3>
-                          <p className="text-sm text-gray-400">
-                            Applied {rec.applied_at ? new Date(rec.applied_at).toLocaleDateString() : 'recently'}
-                          </p>
-                        </div>
-                      </div>
-                      {rec.description && (
-                        <p className="text-gray-400 text-sm">{rec.description}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+                <Button 
+                  size="sm"
+                  className="bg-quantum-purple hover:bg-quantum-purple/90 text-xs"
+                  onClick={() => handleApply(rec)}
+                >
+                  <ThumbsUp className="h-3 w-3 mr-1" />
+                  Apply
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
-export default SmartRecommendations;
+export default WorkoutRecommendations;

@@ -147,13 +147,16 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
     }
   };
 
-  const getMeta = (rec: any, key: string, fallback: any = undefined) => {
-    if (rec && typeof rec[key] !== 'undefined') return rec[key];
-    if (rec && typeof rec.metadata === 'object' && rec.metadata !== null && !Array.isArray(rec.metadata) && typeof rec.metadata[key] !== 'undefined') {
+  // Use getMeta as in SmartRecommendations to fetch properties from both top-level or metadata
+  function getMeta<T extends object, K extends keyof any>(rec: T, key: K, fallback?: any) {
+    if (key in rec && typeof (rec as any)[key] !== "undefined") {
+      return (rec as any)[key];
+    }
+    if ('metadata' in rec && rec.metadata && typeof rec.metadata === 'object' && !Array.isArray(rec.metadata) && key in rec.metadata) {
       return rec.metadata[key];
     }
     return fallback;
-  };
+  }
 
   if (isLoading) {
     return (
@@ -176,13 +179,13 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {recommendations.map((rec) => {
-          const difficulty = getMeta(rec, 'difficulty', 'beginner');
-          const duration = getMeta(rec, 'duration_minutes', 0);
-          const targetMuscles = getMeta(rec, 'target_muscle_groups', []);
-          const recommendedFreq = getMeta(rec, 'recommended_frequency', 1);
-          const reason = getMeta(rec, 'reason', '');
-          const confidenceScore = getMeta(rec, 'confidence_score', 0);
-          const type = getMeta(rec, 'type', '');
+          const difficulty = getMeta(rec, "difficulty", 'beginner');
+          const duration = getMeta(rec, "duration_minutes", 0);
+          const targetMuscles = getMeta(rec, "target_muscle_groups", []);
+          const recommendedFreq = getMeta(rec, "recommended_frequency", 1);
+          const reason = getMeta(rec, "reason", "");
+          const confidenceScore = getMeta(rec, "confidence_score", 0);
+          const type = getMeta(rec, "type", "");
           return (
             <Card key={rec.id} className="bg-quantum-black/30 border-quantum-purple/30 overflow-hidden">
               <CardHeader className="pb-2">

@@ -13,7 +13,7 @@ import { CalendarIcon } from "@radix-ui/react-icons"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { DayPicker } from 'react-day-picker';
-import type { WorkoutSchedule } from "@/types/fitness";
+import type { WorkoutSchedule } from "@/types/fitness/scheduling";
 
 const WorkoutScheduler: React.FC = () => {
   const { user } = useAuth();

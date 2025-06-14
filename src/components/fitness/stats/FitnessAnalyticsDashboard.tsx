@@ -10,33 +10,33 @@ interface FitnessAnalyticsDashboardProps {
 const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ userId }) => {
   // Mock data for demonstration
   const workoutData = [
-    { name: "Sun", workouts: 2 },
-    { name: "Mon", workouts: 3 },
-    { name: "Tue", workouts: 1 },
-    { name: "Wed", workouts: 4 },
-    { name: "Thu", workouts: 2 },
-    { name: "Fri", workouts: 5 },
-    { name: "Sat", workouts: 1 },
+    { date: "2023-06-09", value: 2 },
+    { date: "2023-06-10", value: 3 },
+    { date: "2023-06-11", value: 1 },
+    { date: "2023-06-12", value: 4 },
+    { date: "2023-06-13", value: 2 },
+    { date: "2023-06-14", value: 5 },
+    { date: "2023-06-15", value: 1 },
   ];
 
   const stepsData = [
-    { name: "Sun", steps: 5000 },
-    { name: "Mon", steps: 7500 },
-    { name: "Tue", steps: 4000 },
-    { name: "Wed", steps: 9000 },
-    { name: "Thu", steps: 6000 },
-    { name: "Fri", steps: 11000 },
-    { name: "Sat", steps: 3000 },
+    { date: "2023-06-09", value: 5000 },
+    { date: "2023-06-10", value: 7500 },
+    { date: "2023-06-11", value: 4000 },
+    { date: "2023-06-12", value: 9000 },
+    { date: "2023-06-13", value: 6000 },
+    { date: "2023-06-14", value: 11000 },
+    { date: "2023-06-15", value: 3000 },
   ];
 
   const caloriesData = [
-    { name: "Sun", calories: 200 },
-    { name: "Mon", calories: 300 },
-    { name: "Tue", calories: 150 },
-    { name: "Wed", calories: 400 },
-    { name: "Thu", calories: 250 },
-    { name: "Fri", calories: 450 },
-    { name: "Sat", calories: 100 },
+    { date: "2023-06-09", value: 200 },
+    { date: "2023-06-10", value: 300 },
+    { date: "2023-06-11", value: 150 },
+    { date: "2023-06-12", value: 400 },
+    { date: "2023-06-13", value: 250 },
+    { date: "2023-06-14", value: 450 },
+    { date: "2023-06-15", value: 100 },
   ];
 
   return (
@@ -96,7 +96,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
           <CardDescription>Workouts per day of the week</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgressChart data={workoutData} dataKey="workouts" color="#00FFFF" />
+          <ProgressChart data={workoutData} dataKey="value" color="#00FFFF" />
         </CardContent>
       </Card>
 
@@ -110,7 +110,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
           <CardDescription>Steps per day of the week</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgressChart data={stepsData} dataKey="steps" color="#A020F0" />
+          <ProgressChart data={stepsData} dataKey="value" color="#A020F0" />
         </CardContent>
       </Card>
 
@@ -124,7 +124,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
           <CardDescription>Calories burned per day of the week</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgressChart data={caloriesData} dataKey="calories" color="#FF4500" />
+          <ProgressChart data={caloriesData} dataKey="value" color="#FF4500" />
         </CardContent>
       </Card>
     </div>

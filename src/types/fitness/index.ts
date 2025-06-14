@@ -1,6 +1,7 @@
 
-// Re-export ONLY directly from fitness.d.ts (main source of truth).
-// Avoid deep/recursive type re-exports to prevent infinite type instantiation
+// DO NOT re-export types from other index.ts files to avoid infinite recursive instantiation.
+// Only export "root" types directly from fitness.d.ts or single-level interfaces from modular files.
+
 export type {
   UserProfile,
   UserMeasurement,
@@ -23,4 +24,4 @@ export type {
   CalendarEvent,
 } from '../fitness.d.ts';
 
-// Only export concrete non-type values from modular files, not additional types here.
+// Only export concrete non-type values or interfaces directly from files, not via wildcards or other index.ts files.

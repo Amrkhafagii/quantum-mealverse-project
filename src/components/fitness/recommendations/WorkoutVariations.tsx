@@ -14,9 +14,8 @@ import {
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { createPersonalizedVariation } from '@/services/recommendations/recommendationService';
 import { supabase } from '@/integrations/supabase/client';
-import type { WorkoutRecommendation } from "@/types/fitness";
+import type { ExerciseVariation } from "@/types/fitness";
 
 interface ExerciseVariation {
   name: string;
