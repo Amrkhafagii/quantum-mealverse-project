@@ -31,7 +31,7 @@ export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const { toast } = useToast();
-  const { login, register } = useAuth();
+  const { login, register: authRegister } = useAuth();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -72,7 +72,7 @@ export function AuthForm() {
   async function onRegisterSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     try {
-      await register(data.email, data.password);
+      await authRegister(data.email, data.password);
       toast({
         title: "Success",
         description: "Your account has been created.",
