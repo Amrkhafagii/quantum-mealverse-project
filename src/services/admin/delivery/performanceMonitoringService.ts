@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { performanceAlertsService } from './performanceAlertsService';
 import type { DeliveryPerformanceAlert } from '@/types/admin';
@@ -13,7 +14,6 @@ export class PerformanceMonitoringService {
       
       // Check late deliveries
       await this.checkLateDeliveries(deliveryUserId);
-      
     } catch (error) {
       console.error('Error checking driver performance:', error);
     }
@@ -156,3 +156,4 @@ export class PerformanceMonitoringService {
 }
 
 export const performanceMonitoringService = new PerformanceMonitoringService();
+

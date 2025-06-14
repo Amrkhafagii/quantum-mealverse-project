@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryVehicle } from '@/types/delivery';
 
@@ -24,8 +25,8 @@ export const getVehicleByDeliveryUserId = async (
       id: typeof data.id === 'string' ? data.id : '',
       delivery_vehicles_user_id: typeof data.delivery_user_id === 'string' ? data.delivery_user_id : '',
       delivery_user_id: typeof data.delivery_user_id === 'string' ? data.delivery_user_id : undefined,
-      vehicle_type: typeof data.vehicle_type === 'string' ? (data.vehicle_type as DeliveryVehicle['vehicle_type']) : undefined,
-      type: typeof data.vehicle_type === 'string' ? (data.vehicle_type as DeliveryVehicle['vehicle_type']) : undefined,
+      vehicle_type: 'vehicle_type' in data && typeof data.vehicle_type === 'string' ? data.vehicle_type as DeliveryVehicle['vehicle_type'] : undefined,
+      type: 'vehicle_type' in data && typeof data.vehicle_type === 'string' ? data.vehicle_type as DeliveryVehicle['vehicle_type'] : undefined,
       make: typeof data.make === 'string' ? data.make : '',
       model: typeof data.model === 'string' ? data.model : '',
       year: typeof data.year === 'number' ? data.year : new Date().getFullYear(),
@@ -35,7 +36,7 @@ export const getVehicleByDeliveryUserId = async (
       insurance_number: typeof data.insurance_number === 'string' ? data.insurance_number : undefined,
       insurance_expiry: typeof data.insurance_expiry === 'string' ? data.insurance_expiry : undefined,
       registration_number: undefined,
-      is_active: typeof data.is_active === 'boolean' ? data.is_active : undefined,
+      is_active: 'is_active' in data && typeof data.is_active === 'boolean' ? data.is_active : undefined,
       created_at: typeof data.created_at === 'string' ? data.created_at : '',
       updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
     };
@@ -90,3 +91,4 @@ export const saveVehicleInfo = async (
     return false;
   }
 };
+
