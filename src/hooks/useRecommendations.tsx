@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,8 +72,7 @@ export const useRecommendations = (
     fetchUserPreferences();
   }, [user?.id]);
 
-  // Main meal recommendations query - explicitly type the fetcher!
-  // Avoid putting userPreferences (object) into queryKey (TypeScript recursion!)
+  // Main meal recommendations query
   const {
     data: recommendations,
     isLoading,
@@ -83,11 +81,10 @@ export const useRecommendations = (
     queryKey: [
       "meal-recommendations",
       type,
-      user?.id || "",
-      !!userPreferences // Boolean only, don't include the object itself
+      user?.id ?? "", // No crazy recursion in key
+      userPreferences ? 1 : 0 // Only shallowly indicate prefs loaded
     ],
     queryFn: async (): Promise<MealType[]> => {
-      // Use any[] to retrieve, map to MealType below
       const { data: menuItemsRaw, error } = await supabase
         .from("menu_items")
         .select("*")
@@ -115,7 +112,6 @@ export const useRecommendations = (
           fat = Number(nutritionalInfo.fat) || 0;
         }
 
-        // Demo dietary tags (mock logic)
         const mockDietaryTags: string[] = [];
         if (item.id && typeof item.id === "string" && item.id.length > 0) {
           if (item.id.charCodeAt(0) % 2 === 0) mockDietaryTags.push("vegetarian");
@@ -165,7 +161,6 @@ export const useRecommendations = (
         };
       });
 
-      // Recommendation logic (simple demo)
       let recommendedItems: MealType[] = [];
       switch (type) {
         case "dietary":
@@ -199,7 +194,6 @@ export const useRecommendations = (
           recommendedItems = [...allItems].sort(() => 0.5 - Math.random());
           break;
       }
-      // Return top 4 recs
       return recommendedItems.slice(0, 4);
     },
     enabled: !!user?.id,
@@ -211,6 +205,3 @@ export const useRecommendations = (
     error,
   };
 };
-
-// ... End of file
-

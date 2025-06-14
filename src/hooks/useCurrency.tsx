@@ -24,15 +24,22 @@ interface CurrencyContextType {
   convertPrice: (priceInUSD: number) => number;
 }
 
-// Explicit default value
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-// Use a function here to avoid deep type instantiation on default context value
-const CurrencyContext = createContext<CurrencyContextType>({
+// PREVENT infinite type instantiation by pulling out the context default object
+function formatUSD(price: number) {
+  return `$${price.toFixed(2)}`;
+}
+function passthrough(price: number) {
+  return price;
+}
+const defaultCurrencyContext: CurrencyContextType = {
   currentCurrency: defaultCurrency,
-  formatPrice: (price: number) => `$${price.toFixed(2)}`,
-  convertPrice: (price: number) => price,
-});
+  formatPrice: formatUSD,
+  convertPrice: passthrough,
+};
+
+const CurrencyContext = createContext<CurrencyContextType>(defaultCurrencyContext);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -89,6 +96,4 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-// Explicitly type the return of useContext to break inference cycles
 export const useCurrency = (): CurrencyContextType => useContext(CurrencyContext);
-
