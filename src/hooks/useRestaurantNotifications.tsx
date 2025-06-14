@@ -1,25 +1,46 @@
+
 import { useState, useEffect } from 'react';
-import { notificationService, Notification } from '@/services/notifications/notificationService';
-import type { OrderNotification } from '@/types/notifications';
+// Import notificationService as a default import (adjust this if you have named export).
+import notificationService from '@/services/notifications/notificationService';
+// Import Notification type from types/notifications (fall back to local type if necessary)
+import type { Notification } from '@/types/notifications';
+// If Notification type does not exist, define a local fallback. Adjust as needed for your actual Notification structure:
+
+// Fallback interface (delete if correct type exists in @/types/notifications)
+export interface RestaurantNotification {
+  id: string;
+  title: string;
+  message: string;
+  order_id?: string;
+  notification_type?: string;
+  is_read: boolean;
+  read_at?: string | null;
+  created_at: string;
+  metadata?: any;
+  user_id?: string;
+  updated_at?: string;
+}
+
 import { useRestaurantAuth } from './useRestaurantAuth';
 
-// Helper function to convert Notification to OrderNotification
-const convertToOrderNotification = (notification: Notification): OrderNotification => ({
+// Helper function to convert backend notification to local Notification type
+const convertToRestaurantNotification = (notification: any): RestaurantNotification => ({
   id: notification.id,
   title: notification.title,
   message: notification.message,
-  order_id: '', // Default empty since not in Notification type
-  notification_type: notification.type as any, // Type assertion
-  is_read: notification.read,
+  order_id: notification.order_id || '',
+  notification_type: notification.type || '',
+  is_read: !!notification.read,
   read_at: notification.read ? notification.updated_at : null,
   created_at: notification.created_at,
-  metadata: null, // Default null since not in Notification type
-  user_id: notification.user_id // Add missing user_id property
+  metadata: notification.metadata || null,
+  user_id: notification.user_id || '',
+  updated_at: notification.updated_at
 });
 
 export const useRestaurantNotifications = () => {
   const { restaurant } = useRestaurantAuth();
-  const [notifications, setNotifications] = useState<OrderNotification[]>([]);
+  const [notifications, setNotifications] = useState<RestaurantNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -32,7 +53,7 @@ export const useRestaurantNotifications = () => {
           notificationService.getRestaurantNotifications(restaurant.id),
           notificationService.getUnreadCount(restaurant.id)
         ]);
-        const convertedNotifications = notificationsData.map(convertToOrderNotification);
+        const convertedNotifications = notificationsData.map(convertToRestaurantNotification);
         setNotifications(convertedNotifications);
         setUnreadCount(unreadCountData);
       } catch (error) {
@@ -46,15 +67,17 @@ export const useRestaurantNotifications = () => {
 
     const subscription = notificationService.subscribeToRestaurantNotifications(
       restaurant.id,
-      (newNotification) => {
-        const convertedNotification = convertToOrderNotification(newNotification);
+      (newNotification: any) => {
+        const convertedNotification = convertToRestaurantNotification(newNotification);
         setNotifications(prev => [convertedNotification, ...prev]);
         setUnreadCount(prev => prev + 1);
       }
     );
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
   }, [restaurant?.id]);
 
@@ -102,3 +125,4 @@ export const useRestaurantNotifications = () => {
     markAllAsRead
   };
 };
+
