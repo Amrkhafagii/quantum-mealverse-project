@@ -5,7 +5,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { WorkoutGoal } from '@/types/fitness/analytics';
 import { supabase } from '@/integrations/supabase/client';
 
-// Local interface for mapped Supabase workout goal row
 interface WorkoutGoalDBRow {
   created_at: string;
   current_value: number;
@@ -53,15 +52,21 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      // Cast data to the DB row interface and map to WorkoutGoal
+      // Explicitly map DB fields to WorkoutGoal, omitting 'name'
       const typedGoals: WorkoutGoal[] = (data as WorkoutGoalDBRow[] || []).map(goal => ({
-        ...goal,
-        user_id: goal.workout_goals_user_id ?? user.id,
-        name: goal.title, // For compatibility
-        // Avoid mapping goal.name from DB row (doesn't exist)
+        id: goal.id,
+        fitness_goals_user_id: goal.workout_goals_user_id ?? user.id,
+        // user_id: user.id, // Not in WorkoutGoal type, omit
+        description: goal.description,
+        target_value: goal.target_value,
+        current_value: goal.current_value,
+        target_date: goal.target_date,
+        status: (goal.is_active ? "active" : "not_started"),
+        goal_type: goal.goal_type as WorkoutGoal['goal_type'],
+        created_at: goal.created_at,
+        updated_at: goal.updated_at,
         title: goal.title || '',
         unit: goal.unit || '',
-        goal_type: goal.goal_type as WorkoutGoal['goal_type']
       }));
       setGoals(typedGoals);
     } catch (error) {
@@ -77,11 +82,11 @@ export function useWorkoutAnalytics() {
   };
 
   const createGoal = async (
-    goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    goalData: Omit<WorkoutGoal, 'id' | 'fitness_goals_user_id' | 'created_at' | 'updated_at'>
   ) => {
     if (!user) return;
     try {
-      // For DB insert, supply required fields
+      // Define only columns present in the DB
       const insertObj = {
         ...goalData,
         workout_goals_user_id: user.id,
@@ -96,14 +101,20 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      // Map result to WorkoutGoal type
+      // Map result to WorkoutGoal type (with only allowed fields)
       const typedGoal: WorkoutGoal = {
-        ...data,
-        user_id: user.id,
+        id: data.id,
+        fitness_goals_user_id: data.workout_goals_user_id ?? user.id,
+        description: data.description,
+        target_value: data.target_value,
+        current_value: data.current_value,
+        target_date: data.target_date,
+        status: (data.is_active ? "active" : "not_started"),
+        goal_type: data.goal_type,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
         title: data.title || '',
         unit: data.unit || '',
-        name: data.title || '',
-        goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
       setGoals(prev => [typedGoal, ...prev]);
       toast({
@@ -122,7 +133,7 @@ export function useWorkoutAnalytics() {
 
   const updateGoal = async (
     goalId: string,
-    goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    goalData: Omit<WorkoutGoal, 'id' | 'fitness_goals_user_id' | 'created_at' | 'updated_at'>
   ) => {
     if (!user) return;
     try {
@@ -142,12 +153,18 @@ export function useWorkoutAnalytics() {
       if (error) throw error;
 
       const typedGoal: WorkoutGoal = {
-        ...data,
-        user_id: user.id,
+        id: data.id,
+        fitness_goals_user_id: data.workout_goals_user_id ?? user.id,
+        description: data.description,
+        target_value: data.target_value,
+        current_value: data.current_value,
+        target_date: data.target_date,
+        status: (data.is_active ? "active" : "not_started"),
+        goal_type: data.goal_type,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
         title: data.title || '',
         unit: data.unit || '',
-        name: data.title || '',
-        goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
 
       setGoals(prev => prev.map(goal => 
@@ -214,8 +231,7 @@ export function useWorkoutAnalytics() {
     const totalWorkouts = exerciseProgress.length;
     const totalVolume = exerciseProgress.reduce((sum, ep) => sum + (ep.total_volume || 0), 0);
     const averageDuration = 45; // Mock data for now
-    
-    // Find strongest exercise based on max weight
+
     const strongestExercise = exerciseProgress.reduce((strongest, current) => {
       return (current.max_weight || 0) > (strongest?.max_weight || 0) ? current : strongest;
     }, exerciseProgress[0] || {})?.exercise_name || 'None';
@@ -232,26 +248,26 @@ export function useWorkoutAnalytics() {
     // Mock implementation for now
     const mockData: ProgressChartData[] = [];
     const today = new Date();
-    
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      
+
       mockData.push({
         date: date.toISOString(),
         value: Math.floor(Math.random() * 100) + 50
       });
     }
-    
+
     return mockData;
   };
 
   const updateAnalytics = async () => {
     if (!user) return;
-    
+
     try {
       await fetchExerciseProgress();
-      
+
       // Update analytics data
       setAnalytics({
         lastUpdated: new Date().toISOString()
@@ -282,5 +298,5 @@ export function useWorkoutAnalytics() {
     refetch: fetchGoals
   };
 }
-
 // ... End of file
+

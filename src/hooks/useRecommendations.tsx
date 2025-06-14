@@ -8,7 +8,6 @@ import type { MealType } from "@/types/meal";
 // Allowable meal recommendation types
 type RecommendationType = "personalized" | "trending" | "dietary" | "fitness";
 
-// Strong guard for object shape for nutritional info
 type NutritionalInfo = { calories?: number; protein?: number; carbs?: number; fat?: number };
 
 function isNutritionalInfoObject(
@@ -37,7 +36,6 @@ export const useRecommendations = (
   const { user } = useAuth();
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
-  // Fetch user preferences for meal recs
   useEffect(() => {
     const fetchUserPreferences = async () => {
       if (!user?.id) return;
@@ -75,12 +73,12 @@ export const useRecommendations = (
     fetchUserPreferences();
   }, [user?.id]);
 
-  // Main meal recommendations query
+  // Main meal recommendations query (MealType[] generic to prevent deep inference)
   const {
     data: recommendations,
     isLoading,
     error,
-  } = useQuery<MealType[]>({
+  } = useQuery<MealType[], Error>({
     queryKey: [
       "meal-recommendations",
       type,
@@ -88,7 +86,6 @@ export const useRecommendations = (
       userPreferences,
     ],
     queryFn: async (): Promise<MealType[]> => {
-      // Get 'menu_items' sample
       const { data: menuItemsRaw, error } = await supabase
         .from("menu_items")
         .select("*")
@@ -97,17 +94,10 @@ export const useRecommendations = (
 
       if (error || !menuItemsRaw) return [];
 
-      // Map menu items to MealType used in CustomerMealCard
       const allItems: MealType[] = menuItemsRaw.map((item: any) => {
-        // Parse/normalize nutritional info
-        let calories = 0,
-          protein = 0,
-          carbs = 0,
-          fat = 0;
-
+        let calories = 0, protein = 0, carbs = 0, fat = 0;
         let nutritionalInfo = item.nutritional_info;
 
-        // Parse if string from db
         if (typeof nutritionalInfo === "string") {
           try {
             nutritionalInfo = JSON.parse(nutritionalInfo);
@@ -220,3 +210,4 @@ export const useRecommendations = (
   };
 };
 // ... End of file
+

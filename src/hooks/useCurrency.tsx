@@ -9,7 +9,7 @@ interface Currency {
   exchangeRate: number;
 }
 
-const currencies: Record<string, Currency> = {
+const currencies = {
   USD: { code: 'USD', symbol: '$', exchangeRate: 1 },
   EUR: { code: 'EUR', symbol: '€', exchangeRate: 0.92 },
   GBP: { code: 'GBP', symbol: '£', exchangeRate: 0.78 },
@@ -24,7 +24,7 @@ interface CurrencyContextType {
   convertPrice: (priceInUSD: number) => number;
 }
 
-const defaultCurrency = currencies.USD;
+const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
 const CurrencyContext = createContext<CurrencyContextType>({
   currentCurrency: defaultCurrency,
@@ -39,55 +39,46 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const fetchUserCurrency = async () => {
       if (!user) return;
-      
       try {
         const { data } = await supabase
           .from('user_preferences')
           .select('currency')
           .eq('user_id', user.id)
           .single();
-          
-        if (data?.currency && currencies[data.currency]) {
-          setCurrentCurrency(currencies[data.currency]);
+
+        if (data?.currency && (currencies as any)[data.currency]) {
+          setCurrentCurrency((currencies as any)[data.currency]);
         }
       } catch (error) {
         console.error('Error fetching user currency:', error);
       }
     };
-    
+
     fetchUserCurrency();
-    
-    // Listen for currency change events
+
     const handleCurrencyChange = (event: CustomEvent) => {
       const currencyCode = event.detail;
-      if (currencies[currencyCode]) {
-        setCurrentCurrency(currencies[currencyCode]);
+      if ((currencies as any)[currencyCode]) {
+        setCurrentCurrency((currencies as any)[currencyCode]);
       }
     };
-    
+
     window.addEventListener('currency-changed', handleCurrencyChange as EventListener);
-    
+
     return () => {
       window.removeEventListener('currency-changed', handleCurrencyChange as EventListener);
     };
   }, [user]);
 
-  // Format price based on current currency
   const formatPrice = (priceInUSD: number): string => {
     const convertedPrice = priceInUSD * currentCurrency.exchangeRate;
-    
-    // Format differently for JPY (no decimal places)
     if (currentCurrency.code === 'JPY') {
       return `${currentCurrency.symbol}${Math.round(convertedPrice)}`;
     }
-    
     return `${currentCurrency.symbol}${convertedPrice.toFixed(2)}`;
   };
-  
-  // Convert price to current currency (numeric value only)
-  const convertPrice = (priceInUSD: number): number => {
-    return priceInUSD * currentCurrency.exchangeRate;
-  };
+
+  const convertPrice = (priceInUSD: number): number => priceInUSD * currentCurrency.exchangeRate;
 
   return (
     <CurrencyContext.Provider value={{ currentCurrency, formatPrice, convertPrice }}>
@@ -97,3 +88,4 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 };
 
 export const useCurrency = () => useContext(CurrencyContext);
+
