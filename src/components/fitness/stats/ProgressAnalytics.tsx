@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,14 +42,14 @@ const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId }) => {
       setIsLoading(true);
       const start = startOfWeek(new Date());
       const end = endOfWeek(new Date());
-      // Explicitly type the API result as any[]
+      // No generic type arg for .from()
       const { data, error } = await supabase
-        .from<any>('workout_logs')
+        .from('workout_logs')
         .select('calories_burned, duration')
-        .eq('user_id', activeUserId)
+        .eq('workout_logs_user_id', activeUserId) // <-- use correct key
         .gte('date', start.toISOString())
         .lte('date', end.toISOString());
-      const workouts = data as any[];
+      const workouts = (data ?? []) as any[];
 
       if (error) throw error;
       
