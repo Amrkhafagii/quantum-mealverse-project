@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { PreparationStageService } from './preparationStageService';
-import { PreparationTimerService } from './preparationTimerService';
+import { preparationIntegrationHub } from './preparationIntegrationHub';
+import { preparationTimerService } from './preparationTimerService';
 
 export class PreparationIntegrationService {
   /**
@@ -12,7 +11,7 @@ export class PreparationIntegrationService {
       console.log(`Initializing preparation tracking for order ${orderId}`);
       
       // Check if preparation stages already exist
-      const existingStages = await PreparationStageService.getOrderPreparationStages(orderId);
+      const existingStages = await preparationIntegrationHub.getOrderPreparationStages(orderId);
       
       if (existingStages.length > 0) {
         console.log('Preparation stages already exist for this order');
@@ -20,7 +19,7 @@ export class PreparationIntegrationService {
         // Initialize timer for in-progress stage if exists
         const currentStage = existingStages.find(s => s.status === 'in_progress');
         if (currentStage) {
-          PreparationTimerService.initializeExistingTimer(orderId);
+          preparationTimerService.initializeExistingTimer(orderId);
         }
         
         return true;
@@ -51,11 +50,11 @@ export class PreparationIntegrationService {
   static async startPreparation(orderId: string): Promise<boolean> {
     try {
       // Start the ingredients_prep stage (first active stage after received)
-      const success = await PreparationStageService.startStage(orderId, 'ingredients_prep');
+      const success = await preparationIntegrationHub.startStage(orderId, 'ingredients_prep');
       
       if (success) {
         // Start timer for the stage
-        PreparationTimerService.startTimer(orderId, 'ingredients_prep');
+        preparationTimerService.startTimer(orderId, 'ingredients_prep');
         
         // Update order status to 'preparing'
         await supabase
@@ -79,7 +78,7 @@ export class PreparationIntegrationService {
   static async markOrderReady(orderId: string): Promise<boolean> {
     try {
       // Complete the ready stage
-      const result = await PreparationStageService.advanceStage(orderId, 'ready');
+      const result = await preparationIntegrationHub.advanceStage(orderId, 'ready');
       
       if (result.success) {
         // Update order status to 'ready_for_pickup'
@@ -89,7 +88,7 @@ export class PreparationIntegrationService {
           .eq('id', orderId);
         
         // Stop any active timers
-        PreparationTimerService.stopTimer(orderId);
+        preparationTimerService.stopTimer(orderId);
         
         console.log(`Order ${orderId} marked as ready`);
         return true;
@@ -108,7 +107,7 @@ export class PreparationIntegrationService {
   static async handleOrderCancellation(orderId: string): Promise<void> {
     try {
       // Stop any active timers
-      PreparationTimerService.stopTimer(orderId);
+      preparationTimerService.stopTimer(orderId);
       
       // Mark all pending/in-progress stages as cancelled (using skipped status)
       await supabase
@@ -140,7 +139,7 @@ export class PreparationIntegrationService {
 
       if (!order) return;
 
-      const progress = await PreparationStageService.getPreparationProgress(orderId);
+      const progress = await preparationIntegrationHub.getPreparationProgress(orderId);
       const currentStage = progress.find(p => p.status === 'in_progress');
       
       // Sync order status based on preparation progress

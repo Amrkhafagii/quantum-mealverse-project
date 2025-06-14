@@ -6,14 +6,16 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2, Users, CheckCircle } from 'lucide-react';
 import { usePrivacySettings } from '@/hooks/usePrivacySettings';
+import { useAuth } from '@/hooks/useAuth';
 
 export const ThirdPartyDataSharingSettings = () => {
+  const { user } = useAuth();
   const {
     sharingPreferences,
     loading,
     isProcessing,
     updateSharingPreferences
-  } = usePrivacySettings();
+  } = usePrivacySettings(user?.id || '');
 
   const handleToggle = (field: string, value: boolean) => {
     const updates: any = { [field]: value };

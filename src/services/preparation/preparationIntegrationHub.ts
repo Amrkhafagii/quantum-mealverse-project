@@ -74,7 +74,13 @@ export const getRestaurantFromOrder = async (orderId: string) => {
   try {
     const { data, error } = await supabase
       .from('orders')
-      .select('restaurant_id, restaurants(id, name)')
+      .select(`
+        restaurant_id,
+        restaurants!orders_restaurant_id_fkey (
+          id,
+          name
+        )
+      `)
       .eq('id', orderId)
       .single();
 

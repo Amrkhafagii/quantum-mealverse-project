@@ -7,16 +7,18 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2, Clock, Trash2 } from 'lucide-react';
 import { usePrivacySettings } from '@/hooks/usePrivacySettings';
+import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export const LocationRetentionSettings = () => {
+  const { user } = useAuth();
   const {
     retentionPolicy,
     loading,
     isProcessing,
     updateRetentionPolicy,
     deleteLocationHistory
-  } = usePrivacySettings();
+  } = usePrivacySettings(user?.id || '');
 
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [deleteOlderThan, setDeleteOlderThan] = React.useState<number | undefined>(undefined);

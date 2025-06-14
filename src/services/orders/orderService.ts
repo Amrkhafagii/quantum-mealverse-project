@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
+import { Order, OrderItem } from '@/types/order';
 
 // Import refactored utilities
 import { 
@@ -28,46 +29,6 @@ import {
   recordStatusChange, 
   recordCancellation 
 } from './history/orderHistoryService';
-
-// Keep existing interfaces
-export interface Order {
-  id: string;
-  customer_name: string;
-  customer_email?: string;
-  customer_phone?: string;
-  delivery_address: string;
-  city?: string;
-  notes?: string;
-  delivery_method?: string;
-  payment_method?: string;
-  delivery_fee?: number;
-  subtotal?: number;
-  total: number;
-  status: string;
-  latitude?: number;
-  longitude?: number;
-  assignment_source: string;
-  created_at: string;
-  updated_at: string;
-  formatted_order_id?: string;
-  restaurant_id?: string;
-  customer_id?: string;
-}
-
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  meal_id: string;
-  quantity: number;
-  price: number;
-  customizations?: any;
-  special_instructions?: string;
-  meal?: {
-    name: string;
-    description?: string;
-    image_url?: string;
-  };
-}
 
 /**
  * Fetch orders for a specific user - refactored with proper error handling

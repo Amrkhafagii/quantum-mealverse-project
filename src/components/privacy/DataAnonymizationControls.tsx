@@ -7,15 +7,17 @@ import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Loader2, Shield, Eye } from 'lucide-react';
 import { usePrivacySettings } from '@/hooks/usePrivacySettings';
+import { useAuth } from '@/hooks/useAuth';
 
 export const DataAnonymizationControls = () => {
+  const { user } = useAuth();
   const {
     anonymizationSettings,
     loading,
     isProcessing,
     updateAnonymizationSettings,
     anonymizeLocationData
-  } = usePrivacySettings();
+  } = usePrivacySettings(user?.id || '');
 
   const handleToggle = (field: string, value: boolean) => {
     updateAnonymizationSettings({ [field]: value });

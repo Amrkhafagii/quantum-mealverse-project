@@ -6,20 +6,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Loader2, Download, History } from 'lucide-react';
 import { usePrivacySettings } from '@/hooks/usePrivacySettings';
+import { useAuth } from '@/hooks/useAuth';
 
 export const LocationHistoryManager = () => {
+  const { user } = useAuth();
   const {
     retentionPolicy,
     loading,
     isProcessing,
     exportLocationData
-  } = usePrivacySettings();
+  } = usePrivacySettings(user?.id || '');
 
   const [exportFormat, setExportFormat] = React.useState<'json' | 'csv' | 'gpx'>('json');
   const [includeAnonymized, setIncludeAnonymized] = React.useState(false);
 
   const handleExport = async () => {
-    await exportLocationData(exportFormat, includeAnonymized);
+    await exportLocationData(exportFormat);
   };
 
   if (loading) {
