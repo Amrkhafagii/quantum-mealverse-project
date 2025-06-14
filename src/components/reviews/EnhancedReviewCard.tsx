@@ -1,272 +1,132 @@
-import React, { useState, useEffect } from 'react';
-import { formatDistanceToNow, format } from 'date-fns';
-import { BadgeCheck, Flag, CalendarIcon, Clock, ThumbsUp, ThumbsDown, AlertTriangle } from 'lucide-react';
-import { Review } from '@/types/review';
-import { ReviewMetadata } from '@/types/reviewMetadata';
-import { StarRating } from './StarRating';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Alert } from '@/components/ui/alert';
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import React from "react";
+import { Review } from "@/types/review";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Flag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EnhancedReviewCardProps {
   review: Review;
-  onFlag?: (reviewId: string) => void;
-  showActions?: boolean; // Added this prop to fix the TypeScript error
+  onFlag?: (id: string) => void;
 }
 
-export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({ 
+export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({
   review,
   onFlag,
-  showActions = true // Default to true
 }) => {
   const { user } = useAuth();
-  const isAdmin = user?.email === 'admin@example.com'; // Replace with proper admin check
-  const [metadata, setMetadata] = useState<ReviewMetadata | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [helpfulVotes, setHelpfulVotes] = useState<number>(0);
-  const [unhelpfulVotes, setUnhelpfulVotes] = useState<number>(0);
-  const [userVote, setUserVote] = useState<'helpful' | 'unhelpful' | null>(null);
-  
-  // Fetch review metadata
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      if (!review.id) return;
-      
-      setLoading(true);
-      try {
-        // Use the proper table name that exists in our database.ts types
-        const { data, error } = await supabase
-          .from('reviews') // Changed from 'review_metadata'
-          .select('*')
-          .eq('user_id', review.reviews_user_id)
-          .eq('meal_id', review.meal_id)
-          .maybeSingle();
-          
-        if (error) throw error;
-        
-        if (data) {
-          // Since we don't have actual metadata in the reviews table,
-          // we'll create a simplified version from the review data
-          const simplifiedMetadata: ReviewMetadata = {
-            review_user_id: data.user_id,
-            review_meal_id: data.meal_id,
-            verification_hash: "simplified-hash", // placeholder
-            order_id: "order-placeholder", // placeholder
-            order_date: data.created_at,
-            helpful_votes: 0, // placeholder
-            unhelpful_votes: 0 // placeholder
-          };
-          
-          setMetadata(simplifiedMetadata);
-          setHelpfulVotes(0); // Default value since we don't have this data yet
-          setUnhelpfulVotes(0); // Default value since we don't have this data yet
-        }
-        
-        // We'll simulate the vote checking since we don't have the real table yet
-        if (user) {
-          // This is a placeholder and would normally query the real review_votes table
-          setUserVote(null); // Default no vote
-        }
-      } catch (err) {
-        console.error('Error fetching review metadata:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchMetadata();
-  }, [review.id, review.reviews_user_id, review.meal_id, user]);
-  
-  const handleFlag = () => {
-    if (onFlag && review.id) {
-      onFlag(review.id);
-      toast.success('Review has been flagged for moderation');
-    }
-  };
-  
-  const handleVote = async (voteType: 'helpful' | 'unhelpful') => {
-    if (!user || !review.id) {
-      toast.error('You must be logged in to vote on reviews');
+
+  const userInitials = review.user_id?.slice(0, 2)?.toUpperCase() || "??";
+
+  const handleFlag = async () => {
+    if (!user) {
+      toast.error("You must be logged in to flag a review");
       return;
     }
-    
+
     try {
-      // Simulate vote tracking until our tables are properly set up
-      if (userVote === voteType) {
-        // Remove vote if clicking the same button
-        setUserVote(null);
-        if (voteType === 'helpful') {
-          setHelpfulVotes(prev => Math.max(0, prev - 1));
-        } else {
-          setUnhelpfulVotes(prev => Math.max(0, prev - 1));
-        }
-        toast.success(`Vote removed`);
-      } else {
-        // Remove previous vote if any
-        if (userVote === 'helpful') {
-          setHelpfulVotes(prev => Math.max(0, prev - 1));
-        } else if (userVote === 'unhelpful') {
-          setUnhelpfulVotes(prev => Math.max(0, prev - 1));
-        }
-        
-        // Add new vote
-        setUserVote(voteType);
-        if (voteType === 'helpful') {
-          setHelpfulVotes(prev => prev + 1);
-        } else {
-          setUnhelpfulVotes(prev => prev + 1);
-        }
-        
-        toast.success(`You marked this review as ${voteType}`);
-      }
-      
-      // In a real implementation, we would update the database:
-      // await supabase.from('review_votes').upsert({...})
-      // await supabase.from('review_metadata').update({...})
-    } catch (err) {
-      console.error('Error voting on review:', err);
-      toast.error('Failed to register your vote');
+      const { error } = await supabase
+        .from("reviews")
+        .update({ is_flagged: true })
+        .eq("id", review.id);
+
+      if (error) throw error;
+
+      toast.success("Review flagged for moderation");
+    } catch (error) {
+      console.error("Error flagging review:", error);
+      toast.error("Failed to flag review");
     }
   };
-  
-  // For the rushed review detection, let's simplify until we have real data
-  const isRushedReview = false; // Placeholder
-  
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diff / (1000 * 3600 * 24));
+
+    if (diffDays === 0) {
+      return "Today";
+    } else if (diffDays === 1) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+  };
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <span
+        key={i}
+        className={`text-yellow-500 ${i < rating ? "fill-current" : "text-gray-300"
+          }`}
+      >
+        ★
+      </span>
+    ));
+  };
+
   return (
-    <Card className="w-full mb-4">
-      <CardContent className="pt-4">
-        <div className="flex justify-between items-start">
-          <div className="w-full">
-            <div className="flex items-center gap-2 flex-wrap">
-              <StarRating rating={review.rating} size="sm" />
-              <span className="text-sm font-medium">
-                {review.created_at && formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}
-              </span>
-              
-              {loading ? (
-                <Skeleton className="h-4 w-24" />
-              ) : (
-                <>
-                  {review.is_verified_purchase && (
-                    <div className="flex items-center text-green-600 text-xs">
-                      <BadgeCheck className="w-3 h-3 mr-1" />
-                      <span>Verified Purchase</span>
-                    </div>
-                  )}
-                  
-                  {metadata?.order_date && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center text-gray-500 text-xs">
-                            <CalendarIcon className="w-3 h-3 mr-1" />
-                            <span>Order Timeline</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-xs">
-                            <p>Ordered: {format(new Date(metadata.order_date), 'PPP')}</p>
-                            {metadata.delivery_date && (
-                              <p>Delivered: {format(new Date(metadata.delivery_date), 'PPP')}</p>
-                            )}
-                            <p>Reviewed: {format(new Date(review.created_at!), 'PPP')}</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  
-                  {isRushedReview && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center text-amber-500 text-xs">
-                            <Clock className="w-3 h-3 mr-1" />
-                            <span>Quick Review</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">This review was written very quickly</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </>
+    <div className="bg-white rounded-lg shadow-md p-4">
+      <div className="flex items-start space-x-3">
+        <Avatar className="w-8 h-8">
+          <AvatarImage src={`https://avatar.vercel.sh/${review.user_id}.png`} />
+          <AvatarFallback>{userInitials}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <h4 className="text-sm font-semibold">{review.user_id}</h4>
+                <Badge variant="secondary">{review.status}</Badge>
+                {review.is_verified_purchase && (
+                  <Badge variant="outline">Verified Purchase</Badge>
+                )}
+                {review.is_flagged && (
+                  <Badge variant="destructive">Flagged</Badge>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">{formatDate(review.created_at!)}</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {onFlag && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleFlag}
+                  disabled={review.is_flagged}
+                >
+                  <Flag className="w-4 h-4 mr-1" />
+                  Flag
+                </Button>
               )}
             </div>
-            
-            <p className="mt-2 text-sm text-gray-700">{review.comment}</p>
-            
-            {review.images && review.images.length > 0 && (
-              <div className="mt-3 flex gap-2 overflow-x-auto">
-                {review.images.map((img, index) => (
-                  <img 
-                    key={index} 
-                    src={img} 
-                    alt={`Review image ${index + 1}`}
-                    className="w-16 h-16 object-cover rounded-md"
-                  />
-                ))}
-              </div>
-            )}
-            
-            {/* Review helpfulness controls - only show if showActions is true */}
-            {showActions && (
-              <div className="mt-3 flex items-center gap-2">
-                <Button
-                  variant={userVote === 'helpful' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => handleVote('helpful')}
-                  className="h-7 px-2 text-xs"
-                >
-                  <ThumbsUp className="w-3 h-3 mr-1" />
-                  Helpful {helpfulVotes > 0 && `(${helpfulVotes})`}
-                </Button>
-                
-                <Button
-                  variant={userVote === 'unhelpful' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => handleVote('unhelpful')}
-                  className="h-7 px-2 text-xs"
-                >
-                  <ThumbsDown className="w-3 h-3 mr-1" />
-                  Not helpful {unhelpfulVotes > 0 && `(${unhelpfulVotes})`}
-                </Button>
-              </div>
-            )}
           </div>
-          
-          <div>
-            {showActions && !isAdmin && review.reviews_user_id !== user?.id && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleFlag}
-                className="text-gray-500 hover:text-red-500"
-              >
-                <Flag className="w-4 h-4" />
-              </Button>
-            )}
-            
-            {isAdmin && review.is_flagged && (
-              <div className="text-red-500 text-xs flex items-center">
-                <Flag className="w-3 h-3 mr-1" />
-                <span>Flagged</span>
-              </div>
-            )}
+          <div className="mt-2">
+            <div className="flex">{renderStars(review.rating)}</div>
+            <p className="text-sm text-gray-700">{review.comment}</p>
           </div>
+          {review.images && review.images.length > 0 && (
+            <div className="mt-3 flex space-x-2">
+              {review.images.map((image, index) => (
+                <img
+                  key={index}
+                  src={image}
+                  alt={`Review image ${index + 1}`}
+                  className="w-20 h-20 object-cover rounded"
+                />
+              ))}
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

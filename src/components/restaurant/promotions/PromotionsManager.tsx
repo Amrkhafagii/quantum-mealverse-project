@@ -1,228 +1,169 @@
-
 import React, { useState, useEffect } from 'react';
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+// Remove local PromotionType declaration (fix TS2440) and ensure proper import:
+import { PromotionType, RestaurantPromotion } from '@/types/notifications';
 import { promotionService } from '@/services/promotions/promotionService';
-import { RestaurantPromotion, PromotionType } from '@/types/notifications';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Edit, Trash2, Plus, CheckCircle, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from "@/components/ui/switch"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { CreatePromotionDialog } from './CreatePromotionDialog';
+import { UpdatePromotionDialog } from './UpdatePromotionDialog';
 
-// Remove local PromotionType definition -- now using the import only
-
-const PromotionsManager: React.FC = () => {
+export const PromotionsManager: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
-  const { toast } = useToast();
   const [promotions, setPromotions] = useState<RestaurantPromotion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<Omit<RestaurantPromotion, 'id' | 'usage_count' | 'created_at' | 'updated_at'>>({
-    restaurant_id: '',
-    name: '',
-    description: '',
-    promotion_type: 'discount', // default from union
-    discount_value: 0,
-    minimum_order_amount: 0,
-    maximum_discount_amount: 0,
-    start_date: '',
-    end_date: '',
-    usage_limit: 0,
-    applicable_items: [],
-    promo_code: '',
-    terms_conditions: '',
-    is_active: true,
-  });
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [selectedPromotion, setSelectedPromotion] = useState<RestaurantPromotion | null>(null);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
 
   useEffect(() => {
     if (!restaurant?.id) return;
-    setForm((f) => ({ ...f, restaurant_id: restaurant.id }));
-    fetchPromotions();
-    // eslint-disable-next-line
+    setLoading(true);
+    promotionService
+      .getAllPromotions(restaurant.id) // <-- TS2339 FIX: use correct method
+      .then((items) => {
+        setPromotions(items);
+      })
+      .catch((err) => {
+        setLoading(false);
+        toast.error('Failed to load promotions');
+      })
+      .finally(() => setLoading(false));
   }, [restaurant?.id]);
 
-  const fetchPromotions = async () => {
-    setLoading(true);
+  const handlePromotionToggle = async (promotionId: string, isActive: boolean) => {
     try {
-      const data = await promotionService.getPromotionsByRestaurant(restaurant!.id);
-      setPromotions(data);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch promotions',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+      await promotionService.togglePromotionStatus(promotionId, !isActive);
+      setPromotions(promotions.map(promotion =>
+        promotion.id === promotionId ? { ...promotion, is_active: !isActive } : promotion
+      ));
+      toast.success(`Promotion ${isActive ? 'deactivated' : 'activated'} successfully`);
+    } catch (error: any) {
+      toast.error(`Failed to toggle promotion status: ${error.message}`);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleTypeChange = (val: PromotionType) => {
-    setForm((prev) => ({ ...prev, promotion_type: val }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDeletePromotion = async (promotionId: string) => {
     try {
-      await promotionService.createPromotion(form);
-      toast({
-        title: 'Success',
-        description: 'Promotion created successfully',
-      });
-      setShowForm(false);
-      fetchPromotions();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create promotion',
-        variant: 'destructive',
-      });
+      await promotionService.deletePromotion(promotionId);
+      setPromotions(promotions.filter(promotion => promotion.id !== promotionId));
+      toast.success('Promotion deleted successfully');
+    } catch (error: any) {
+      toast.error(`Failed to delete promotion: ${error.message}`);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CardTitle>Promotions</CardTitle>
-              <Badge>{promotions.length}</Badge>
+    <Card>
+      <CardHeader>
+        <CardTitle>Promotions Management</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p>Loading promotions...</p>
+        ) : (
+          <>
+            <div className="mb-4">
+              <Button onClick={() => setOpenCreateDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Promotion
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-        <Button onClick={() => setShowForm((v) => !v)} variant="default">
-          <Plus className="mr-2 w-4 h-4" /> Add Promotion
-        </Button>
-      </div>
 
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Promotion</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" value={form.name} onChange={handleInputChange} required />
+            {promotions.length === 0 ? (
+              <p>No promotions found. Create one to get started!</p>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[200px]">Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Discount</TableHead>
+                      <TableHead>Promo Code</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {promotions.map((promotion) => (
+                      <TableRow key={promotion.id}>
+                        <TableCell className="font-medium">{promotion.name}</TableCell>
+                        <TableCell>{promotion.promotion_type}</TableCell>
+                        <TableCell>
+                          {promotion.promotion_type === 'discount' ? `${promotion.discount_value}%` : 'N/A'}
+                        </TableCell>
+                        <TableCell>{promotion.promo_code}</TableCell>
+                        <TableCell>
+                          <Badge variant={promotion.is_active ? 'default' : 'secondary'}>
+                            {promotion.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Switch
+                            checked={promotion.is_active}
+                            onCheckedChange={() => handlePromotionToggle(promotion.id, promotion.is_active)}
+                            className="mr-2"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPromotion(promotion);
+                              setOpenUpdateDialog(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the promotion and remove its data from our servers.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeletePromotion(promotion.id)}>
+                                  Continue
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input id="description" name="description" value={form.description} onChange={handleInputChange} required />
-              </div>
-              <div>
-                <Label htmlFor="promotion_type">Type</Label>
-                <Select value={form.promotion_type} onValueChange={handleTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="discount">Discount</SelectItem>
-                    <SelectItem value="free_item">Free Item</SelectItem>
-                    <SelectItem value="bogo">BOGO</SelectItem>
-                    <SelectItem value="special">Special</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="discount_value">Discount Value</Label>
-                <Input id="discount_value" name="discount_value" type="number" value={form.discount_value} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="minimum_order_amount">Min Order Amount</Label>
-                <Input id="minimum_order_amount" name="minimum_order_amount" type="number" value={form.minimum_order_amount} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="maximum_discount_amount">Max Discount Amount</Label>
-                <Input id="maximum_discount_amount" name="maximum_discount_amount" type="number" value={form.maximum_discount_amount} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="start_date">Start Date</Label>
-                <Input id="start_date" name="start_date" type="date" value={form.start_date} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="end_date">End Date</Label>
-                <Input id="end_date" name="end_date" type="date" value={form.end_date} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="usage_limit">Usage Limit</Label>
-                <Input id="usage_limit" name="usage_limit" type="number" value={form.usage_limit} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="promo_code">Promo Code</Label>
-                <Input id="promo_code" name="promo_code" value={form.promo_code} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="terms_conditions">Terms</Label>
-                <Textarea id="terms_conditions" name="terms_conditions" value={form.terms_conditions} onChange={handleInputChange} />
-              </div>
-              <div>
-                <Label htmlFor="is_active">Active</Label>
-                <Select value={form.is_active ? "active" : "inactive"} onValueChange={v => setForm(prev => ({ ...prev, is_active: v === "active" }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <Button type="submit" className="w-full">
-                  Create
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* List promotions */}
-      <div className="grid gap-4">
-        {promotions.map((promotion) => (
-          <Card key={promotion.id}>
-            <CardContent className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4">
-              <div>
-                <h4 className="text-lg font-semibold">{promotion.name}</h4>
-                <p className="text-sm text-gray-500 mb-1">{promotion.description}</p>
-                <div className="flex items-center gap-2 text-xs">
-                  <Badge variant="outline">{promotion.promotion_type}</Badge>
-                  {promotion.is_active ? (
-                    <Badge variant="default">Active</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inactive</Badge>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button size="icon" variant="ghost"><Edit className="w-4 h-4" /></Button>
-                <Button size="icon" variant="ghost"><Trash2 className="w-4 h-4" /></Button>
-                {promotion.is_active ? (
-                  <ToggleRight className="w-5 h-5 text-green-400" />
-                ) : (
-                  <ToggleLeft className="w-5 h-5 text-gray-400" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+            )}
+          </>
+        )}
+      </CardContent>
+      <CreatePromotionDialog open={openCreateDialog} setOpen={setOpenCreateDialog} setPromotions={setPromotions} restaurantId={restaurant?.id || ''} />
+      <UpdatePromotionDialog open={openUpdateDialog} setOpen={setOpenUpdateDialog} setPromotions={setPromotions} promotion={selectedPromotion} />
+    </Card>
   );
 };
-
-export default PromotionsManager;
