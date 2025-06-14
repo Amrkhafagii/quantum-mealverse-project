@@ -20,14 +20,15 @@ export const useDeliveryOnboarding = () => {
     }
   }, [user]);
 
+  // When fetching a single delivery user:
   const fetchDeliveryUser = async (id: string) => {
     const { data } = await supabase.from("delivery_users").select("*").eq("delivery_users_user_id", id).single();
     if (data) {
-      // Manually construct DeliveryUser shape
       setDeliveryUser(mapToDeliveryUser(data));
     }
   };
 
+  // When fetching a delivery vehicle:
   const fetchDeliveryVehicle = async (id: string) => {
     const { data } = await supabase.from("delivery_vehicles").select("*").eq("delivery_vehicles_user_id", id).single();
     if (data) {
@@ -35,22 +36,11 @@ export const useDeliveryOnboarding = () => {
     }
   };
 
+  // When fetching delivery documents (usually an array):
   const fetchDeliveryDocuments = async (id: string) => {
     const { data } = await supabase.from("delivery_documents").select("*").eq("delivery_documents_user_id", id);
-    if (data && Array.isArray(data)) {
-      setDocuments(
-        data.map(doc => ({
-          id: doc.id,
-          delivery_documents_user_id: doc.delivery_documents_user_id,
-          document_type: doc.document_type,
-          document_url: doc.document_url, // Adapt field as needed
-          verification_status: doc.verification_status ?? 'pending',
-          expiry_date: doc.expiry_date,
-          notes: doc.notes,
-          created_at: doc.created_at,
-          updated_at: doc.updated_at,
-        })) as DeliveryDocument[]
-      );
+    if (data) {
+      setDocuments(data.map(mapToDeliveryDocument));
     }
   };
 
@@ -262,16 +252,17 @@ export const useDeliveryOnboarding = () => {
   };
 };
 
-// Example mapping functions for response shape correction
+// Mapping functions (should already exist at the bottom; revise for safety):
+
 function mapToDeliveryUser(data: any): import('@/types/delivery').DeliveryUser {
   return {
     id: data.id || '',
     delivery_users_user_id: data.delivery_users_user_id || '',
-    full_name: data.full_name || '', // fallback to concatenate first/last name if needed
+    full_name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
     first_name: data.first_name || '',
     last_name: data.last_name || '',
     phone: data.phone || '',
-    vehicle_type: data.vehicle_type || '', // sometimes called type, or vehicle_type
+    vehicle_type: data.vehicle_type || data.type || '', // fallback if needed
     license_plate: data.license_plate || '',
     driver_license_number: data.driver_license_number || '',
     status: data.status || 'inactive',
@@ -279,8 +270,8 @@ function mapToDeliveryUser(data: any): import('@/types/delivery').DeliveryUser {
     total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
     verification_status: data.verification_status || 'pending',
     background_check_status: data.background_check_status || 'pending',
-    is_available: data.is_available || false,
-    is_approved: data.is_approved,
+    is_available: typeof data.is_available === 'boolean' ? data.is_available : false,
+    is_approved: !!data.is_approved,
     last_active: data.last_active || '',
     created_at: data.created_at || '',
     updated_at: data.updated_at || '',
@@ -314,8 +305,8 @@ function mapToDeliveryDocument(data: any): import('@/types/delivery').DeliveryDo
     id: data.id || '',
     delivery_documents_user_id: data.delivery_documents_user_id || data.delivery_user_id || '',
     document_type: data.document_type || '',
-    document_url: data.document_url || data.file_path || '',
-    verification_status: data.verification_status || (data.verified ? "approved" : "pending"),
+    document_url: data.file_path || '', // Supabase file upload stores in file_path
+    verification_status: data.verification_status || (data.verified === true ? "approved" : "pending"),
     expiry_date: data.expiry_date || '',
     notes: data.notes || '',
     created_at: data.created_at || '',
