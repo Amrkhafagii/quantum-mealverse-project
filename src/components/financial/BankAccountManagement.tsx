@@ -109,8 +109,8 @@ export const BankAccountManagement = () => {
     try {
       await handleAddBankAccount({
         ...formData,
-        restaurant_id: user.restaurantId,
-        delivery_user_id: user.deliveryUserId,
+        restaurant_id: user.id,
+        delivery_user_id: user.id,
       });
       
       setIsAddDialogOpen(false);
