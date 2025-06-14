@@ -54,7 +54,7 @@ async function getRestaurantEarnings(
     return (data as DBRestaurantEarnings[]).map(earning => ({
       ...earning,
       commission_rate: earning.commission_rate ?? 0,
-      status: earning.status as RestaurantEarnings['status']
+      status: earning.status as RestaurantEarnings['status'],
     }));
   } catch (error) {
     console.error('Error in getRestaurantEarnings:', error);
@@ -105,7 +105,7 @@ async function getEarningsSummary(restaurantId: string): Promise<{
   };
 }
 
-async function getTransactions(options: { restaurantId: string, limit?: number }): Promise<FinancialTransaction[]> {
+async function getTransactions(options: { restaurantId: string; limit?: number }): Promise<FinancialTransaction[]> {
   let query = supabase
     .from('financial_transactions')
     .select('*')
@@ -119,7 +119,15 @@ async function getTransactions(options: { restaurantId: string, limit?: number }
     console.error('Error fetching transactions:', error);
     return [];
   }
-  return (data ?? []) as FinancialTransaction[];
+  if (!data) return [];
+
+  // Map each transaction to required FinancialTransaction type,
+  // handling missing or renamed fields
+  return (data as any[]).map(trx => ({
+    ...trx,
+    user_id: trx.user_id ?? trx.financial_transactions_user_id ?? '', // Add fallback from DB if named differently
+    metadata: trx.metadata ?? {},
+  })) as FinancialTransaction[];
 }
 
 async function getPayouts(options: { restaurantId?: string; deliveryUserId?: string; limit?: number }): Promise<Payout[]> {
@@ -176,18 +184,24 @@ async function generateFinancialReport(
   };
 }
 
-// For bank account management
-type BankAccountCreateInput = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
-type SetDefaultBankAccountOptions = { isDefault?: boolean };
-
-// Smarter mapping (we do not try to map status)
-async function getBankAccounts(userId: string): Promise<BankAccount[]> {
-  const { data, error } = await supabase
+// ---- Bank account management ----
+// This function supports both (userId) and (userId, role) signatures for backward compatibility.
+// If a second argument is provided, it can be 'restaurant' or 'delivery_user'.
+async function getBankAccounts(userId: string, role?: 'restaurant'|'delivery_user'): Promise<BankAccount[]> {
+  let query = supabase
     .from('bank_accounts')
     .select('*')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false });
+  // By default, filter on user_id
+  if (role === 'delivery_user') {
+    query = query.eq('delivery_user_id', userId);
+  } else if (role === 'restaurant') {
+    query = query.eq('restaurant_id', userId);
+  } else {
+    query = query.eq('user_id', userId);
+  }
 
+  const { data, error } = await query;
   if (error) {
     console.error('Error fetching bank accounts:', error);
     return [];
@@ -195,18 +209,21 @@ async function getBankAccounts(userId: string): Promise<BankAccount[]> {
   return (data ?? []) as BankAccount[];
 }
 
+type BankAccountCreateInput = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
+
 async function addBankAccount(
   userId: string,
   accountData: BankAccountCreateInput
 ): Promise<boolean> {
+  const toInsert = {
+    ...accountData,
+    user_id: userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
   const { error } = await supabase
     .from('bank_accounts')
-    .insert({
-      user_id: userId,
-      ...accountData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    .insert(toInsert);
 
   if (error) {
     console.error('Error adding bank account:', error);
@@ -215,12 +232,13 @@ async function addBankAccount(
   return true;
 }
 
+// Always three arguments: userId, bankAccountId, isDefault (boolean, default true)
 async function setDefaultBankAccount(
   userId: string,
   bankAccountId: string,
   isDefault: boolean = true
 ): Promise<boolean> {
-  // First, set all to false for user.
+  // First, set all is_default to false for user.
   const { error: clearError } = await supabase
     .from('bank_accounts')
     .update({ is_default: false })
