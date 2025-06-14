@@ -24,51 +24,14 @@ export const useDeliveryOnboarding = () => {
     const { data } = await supabase.from("delivery_users").select("*").eq("delivery_users_user_id", id).single();
     if (data) {
       // Manually construct DeliveryUser shape
-      setDeliveryUser({
-        id: data.id,
-        delivery_users_user_id: data.delivery_users_user_id,
-        full_name: data.full_name,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        phone: data.phone,
-        vehicle_type: data.vehicle_type,
-        license_plate: data.license_plate,
-        driver_license_number: data.driver_license_number,
-        status: data.status,
-        rating: data.rating,
-        total_deliveries: data.total_deliveries,
-        verification_status: data.verification_status,
-        background_check_status: data.background_check_status,
-        is_available: data.is_available,
-        is_approved: data.is_approved,
-        last_active: data.last_active,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-      } as DeliveryUser);
+      setDeliveryUser(mapToDeliveryUser(data));
     }
   };
 
   const fetchDeliveryVehicle = async (id: string) => {
     const { data } = await supabase.from("delivery_vehicles").select("*").eq("delivery_vehicles_user_id", id).single();
     if (data) {
-      setVehicle({
-        id: data.id,
-        delivery_vehicles_user_id: data.delivery_vehicles_user_id,
-        vehicle_type: data.vehicle_type,
-        type: data.type,
-        make: data.make,
-        model: data.model,
-        year: data.year,
-        license_plate: data.license_plate,
-        color: data.color,
-        insurance_policy_number: data.insurance_policy_number,
-        insurance_number: data.insurance_number,
-        insurance_expiry: data.insurance_expiry,
-        registration_number: data.registration_number,
-        is_active: data.is_active,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-      } as DeliveryVehicle);
+      setVehicle(mapToDeliveryVehicle(data));
     }
   };
 
@@ -298,3 +261,64 @@ export const useDeliveryOnboarding = () => {
     savePaymentInfo,
   };
 };
+
+// Example mapping functions for response shape correction
+function mapToDeliveryUser(data: any): import('@/types/delivery').DeliveryUser {
+  return {
+    id: data.id || '',
+    delivery_users_user_id: data.delivery_users_user_id || '',
+    full_name: data.full_name || '', // fallback to concatenate first/last name if needed
+    first_name: data.first_name || '',
+    last_name: data.last_name || '',
+    phone: data.phone || '',
+    vehicle_type: data.vehicle_type || '', // sometimes called type, or vehicle_type
+    license_plate: data.license_plate || '',
+    driver_license_number: data.driver_license_number || '',
+    status: data.status || 'inactive',
+    rating: typeof data.rating === 'number' ? data.rating : 0,
+    total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
+    verification_status: data.verification_status || 'pending',
+    background_check_status: data.background_check_status || 'pending',
+    is_available: data.is_available || false,
+    is_approved: data.is_approved,
+    last_active: data.last_active || '',
+    created_at: data.created_at || '',
+    updated_at: data.updated_at || '',
+  };
+}
+
+function mapToDeliveryVehicle(data: any): import('@/types/delivery').DeliveryVehicle {
+  return {
+    id: data.id || '',
+    delivery_vehicles_user_id: data.delivery_vehicles_user_id || data.delivery_user_id || '',
+    delivery_user_id: data.delivery_user_id || '',
+    vehicle_type: data.vehicle_type || data.type || 'on_foot',
+    type: data.type || data.vehicle_type || 'on_foot',
+    make: data.make || '',
+    model: data.model || '',
+    year: typeof data.year === 'number' ? data.year : new Date().getFullYear(),
+    license_plate: data.license_plate || '',
+    color: data.color || '',
+    insurance_policy_number: data.insurance_policy_number || data.insurance_number || '',
+    insurance_number: data.insurance_number || '',
+    insurance_expiry: data.insurance_expiry || '',
+    registration_number: data.registration_number || '',
+    is_active: typeof data.is_active === 'boolean' ? data.is_active : true,
+    created_at: data.created_at || '',
+    updated_at: data.updated_at || ''
+  };
+}
+
+function mapToDeliveryDocument(data: any): import('@/types/delivery').DeliveryDocument {
+  return {
+    id: data.id || '',
+    delivery_documents_user_id: data.delivery_documents_user_id || data.delivery_user_id || '',
+    document_type: data.document_type || '',
+    document_url: data.document_url || data.file_path || '',
+    verification_status: data.verification_status || (data.verified ? "approved" : "pending"),
+    expiry_date: data.expiry_date || '',
+    notes: data.notes || '',
+    created_at: data.created_at || '',
+    updated_at: data.updated_at || '',
+  };
+}
