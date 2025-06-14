@@ -12,8 +12,8 @@ interface MeasurementFormProps {
 const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurementAdded }) => {
   const { user } = useAuth();
   const activeUserId = userId || user?.id;
-  
-  const [formData, setFormData] = useState({
+
+  const initialFormData = {
     date: new Date().toISOString().split('T')[0],
     weight: '',
     body_fat: '',
@@ -23,7 +23,10 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
     arms: '',
     legs: '',
     notes: '',
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -33,61 +36,49 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
     }));
   };
 
-  const handleSubmit = async (formData: any) => {
-    if (!activeUserId) return;
-    
+  const handleSubmit = async (data: typeof formData) => {
+    if (!activeUserId) {
+      toast.error('User not found.');
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
+      setSubmitting(true);
+      const { data: inserted, error } = await supabase
         .from('user_measurements')
         .insert({
           user_measurements_user_id: activeUserId,
-          date: formData.date,
-          weight: Number(formData.weight),
-          body_fat: formData.body_fat ? Number(formData.body_fat) : undefined,
-          chest: formData.chest ? Number(formData.chest) : undefined,
-          waist: formData.waist ? Number(formData.waist) : undefined,
-          hips: formData.hips ? Number(formData.hips) : undefined,
-          arms: formData.arms ? Number(formData.arms) : undefined,
-          legs: formData.legs ? Number(formData.legs) : undefined,
-          notes: formData.notes,
-        });
+          date: data.date,
+          weight: Number(data.weight),
+          body_fat: data.body_fat ? Number(data.body_fat) : undefined,
+          chest: data.chest ? Number(data.chest) : undefined,
+          waist: data.waist ? Number(data.waist) : undefined,
+          hips: data.hips ? Number(data.hips) : undefined,
+          arms: data.arms ? Number(data.arms) : undefined,
+          legs: data.legs ? Number(data.legs) : undefined,
+          notes: data.notes,
+        })
+        .select();
 
       if (error) throw error;
-      
+
       toast.success('Measurement saved successfully!');
-      return data;
+      setFormData(initialFormData);
+
+      if (typeof onMeasurementAdded === "function") {
+        onMeasurementAdded();
+      }
     } catch (error) {
       console.error('Error saving measurement:', error);
       toast.error('Failed to save measurement');
-      throw error;
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await handleSubmit(formData);
-      
-      // Reset form after successful submission
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        weight: '',
-        body_fat: '',
-        chest: '',
-        waist: '',
-        hips: '',
-        arms: '',
-        legs: '',
-        notes: '',
-      });
-      
-      // Call the callback if provided
-      if (onMeasurementAdded) {
-        onMeasurementAdded();
-      }
-    } catch (err) {
-      // Error is already handled in handleSubmit
-    }
+    handleSubmit(formData);
   };
 
   return (
@@ -115,6 +106,9 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="weight"
           name="weight"
           value={formData.weight}
+          min="0"
+          step="any"
+          required
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -129,6 +123,9 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="body_fat"
           name="body_fat"
           value={formData.body_fat}
+          min="0"
+          max="100"
+          step="any"
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -143,6 +140,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="chest"
           name="chest"
           value={formData.chest}
+          min="0"
+          step="any"
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -157,6 +156,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="waist"
           name="waist"
           value={formData.waist}
+          min="0"
+          step="any"
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -171,6 +172,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="hips"
           name="hips"
           value={formData.hips}
+          min="0"
+          step="any"
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -185,6 +188,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="arms"
           name="arms"
           value={formData.arms}
+          min="0"
+          step="any"
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -199,6 +204,8 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
           id="legs"
           name="legs"
           value={formData.legs}
+          min="0"
+          step="any"
           onChange={handleChange}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
@@ -219,10 +226,11 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
 
       <div className="flex items-center justify-between">
         <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${submitting ? 'opacity-60 cursor-not-allowed' : ''}`}
           type="submit"
+          disabled={submitting}
         >
-          Save Measurement
+          {submitting ? "Saving..." : "Save Measurement"}
         </button>
       </div>
     </form>
@@ -230,3 +238,6 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
 };
 
 export default MeasurementForm;
+
+// NOTE: This file has reached 233+ lines and may be getting too long and difficult to maintain. 
+// Consider asking me to refactor it into smaller components!
