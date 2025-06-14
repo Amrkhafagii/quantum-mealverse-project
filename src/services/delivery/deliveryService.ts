@@ -133,7 +133,7 @@ export const getVehicleByDeliveryUserId = async (deliveryUserId: string): Promis
     const { data, error } = await supabase
       .from('delivery_vehicles')
       .select('*')
-      .eq('delivery_vehicles_user_id', deliveryUserId)
+      .eq('delivery_user_id', deliveryUserId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -189,7 +189,7 @@ export const getDeliveryDocuments = async (userId: string): Promise<DeliveryDocu
     const { data, error } = await supabase
       .from('delivery_documents')
       .select('*')
-      .eq('delivery_documents_user_id', userId)
+      .eq('delivery_user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
