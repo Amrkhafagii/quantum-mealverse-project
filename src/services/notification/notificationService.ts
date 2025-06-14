@@ -17,12 +17,21 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
       return [];
     }
     
-    // Convert data field and map notification_type to expected format
+    // Convert database fields to Notification type with proper mapping
     return (data || []).map(item => ({
-      ...item,
+      id: item.id,
+      user_id: item.notifications_user_id, // Map notifications_user_id to user_id
+      title: item.title,
+      message: item.message,
+      type: item.notification_type, // Map notification_type to type
+      link: item.link,
       data: typeof item.data === 'string' 
         ? JSON.parse(item.data) 
-        : item.data || {}
+        : item.data || {},
+      is_read: item.is_read,
+      read_at: item.read_at,
+      created_at: item.created_at,
+      updated_at: item.updated_at
     })) as Notification[];
   } catch (error) {
     console.error('Error in getNotifications:', error);

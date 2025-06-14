@@ -120,6 +120,9 @@ export const getFitnessGoalsFromDB = async (userId: string): Promise<FitnessGoal
   }
 };
 
+// Add fetchGoals as an alias for getFitnessGoalsFromDB
+export const fetchGoals = getFitnessGoalsFromDB;
+
 /**
  * Update a fitness goal in the database
  */
