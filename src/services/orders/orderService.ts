@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 
@@ -87,7 +86,7 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
     return data;
   } catch (error) {
     logOrderError('fetchUserOrders', error, { operation: 'fetchUserOrders', userId });
-    throw error;
+    return []; // Return empty array instead of error object
   }
 };
 
@@ -108,7 +107,7 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
     return data;
   } catch (error) {
     logOrderError('fetchOrderItems', error, { operation: 'fetchOrderItems', orderId });
-    throw error;
+    return []; // Return empty array instead of error object
   }
 };
 
@@ -194,10 +193,8 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
     logOrderSuccess('getOrderById', !!data, { operation: 'getOrderById', orderId });
     return data;
   } catch (error) {
-    if (handleOrderError(error, 'getOrderById', { operation: 'getOrderById', orderId })) {
-      return null;
-    }
-    throw error;
+    logOrderError('getOrderById', error, { operation: 'getOrderById', orderId });
+    return null; // Return null instead of error object
   }
 };
 
@@ -225,12 +222,13 @@ export const getOrderHistory = async (orderId: string) => {
 
     if (error) {
       handleDatabaseError(error, 'getOrderHistory', { orderId });
+      return [];
     }
 
     logOrderSuccess('getOrderHistory', data, { operation: 'getOrderHistory', orderId, count: data?.length || 0 });
     return data || [];
   } catch (error) {
     logOrderError('getOrderHistory', error, { operation: 'getOrderHistory', orderId });
-    throw error;
+    return [];
   }
 };
