@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Plus, Target, Calendar, TrendingUp, Edit, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useWorkoutAnalytics } from '@/hooks/useWorkoutAnalytics';
+import { useWorkoutAnalytics, WorkoutGoal as AnalyticsWorkoutGoal } from '@/hooks/useWorkoutAnalytics';
 import { WorkoutGoal } from '@/types/fitness/analytics';
 import { GoalForm } from './GoalForm';
 
@@ -38,7 +39,7 @@ export const WorkoutGoalsManager: React.FC = () => {
     if (!user?.id) return;
     await createGoal({
       ...goalData,
-      // remove any user_id/is_active/status, let hook assign status: 'active' automatically
+      status: "active", // explicitly add status,
     });
     setShowCreateForm(false);
   };
