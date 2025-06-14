@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -28,13 +28,12 @@ const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
 const CurrencyContext = createContext<CurrencyContextType>({
   currentCurrency: defaultCurrency,
-  formatPrice: (price) => `${defaultCurrency.symbol}${price.toFixed(2)}`,
-  convertPrice: (price) => price,
+  formatPrice: (price: number) => `${defaultCurrency.symbol}${price.toFixed(2)}`,
+  convertPrice: (price: number) => price,
 });
 
-export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  // EXPLICIT TYPE to prevent inference recursion
   const [currentCurrency, setCurrentCurrency] = useState<Currency>(defaultCurrency);
 
   useEffect(() => {
@@ -89,3 +88,4 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 };
 
 export const useCurrency = (): CurrencyContextType => useContext(CurrencyContext);
+

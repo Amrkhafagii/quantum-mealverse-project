@@ -21,14 +21,14 @@ export function useWorkoutTemplates() {
 
       if (error) throw error;
       
-      // Add a default for duration_minutes if missing
-      const typedTemplates: WorkoutTemplate[] = (data || []).map(template => ({
+      // Just ignore duration_minutes for now if not present in DB
+      const typedTemplates: WorkoutTemplate[] = (data || []).map((template: any) => ({
         ...template,
         difficulty: template.difficulty as 'beginner' | 'intermediate' | 'advanced',
         workout_days: Array.isArray(template.workout_days) 
           ? (template.workout_days as unknown) as WorkoutDay[]
           : JSON.parse(template.workout_days as string) as WorkoutDay[],
-        duration_minutes: template.duration_minutes ?? 0,
+        // duration_minutes: template.duration_minutes ?? 0, // safely omit, not always present
       }));
       
       setTemplates(typedTemplates);
