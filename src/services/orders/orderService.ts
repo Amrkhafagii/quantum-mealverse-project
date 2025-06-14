@@ -87,7 +87,7 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
     return data;
   } catch (error) {
     logOrderError('fetchUserOrders', error, { operation: 'fetchUserOrders', userId });
-    return []; // Return empty array instead of error object
+    return []; // Always return empty array on error
   }
 };
 
@@ -108,7 +108,7 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
     return data;
   } catch (error) {
     logOrderError('fetchOrderItems', error, { operation: 'fetchOrderItems', orderId });
-    return []; // Return empty array instead of error object
+    return []; // Always return empty array on error
   }
 };
 
@@ -141,7 +141,8 @@ export const updateOrderStatus = async (
     logOrderSuccess('updateOrderStatus', true, { operation: 'updateOrderStatus', orderId, newStatus });
     return true;
   } catch (error) {
-    return handleOrderError(error, 'updateOrderStatus', { operation: 'updateOrderStatus', orderId, newStatus, restaurantId });
+    logOrderError('updateOrderStatus', error, { operation: 'updateOrderStatus', orderId, newStatus, restaurantId });
+    return false; // Always return boolean on error
   }
 };
 
@@ -174,7 +175,8 @@ export const cancelOrder = async (
     logOrderSuccess('cancelOrder', true, { operation: 'cancelOrder', orderId });
     return true;
   } catch (error) {
-    return handleOrderError(error, 'cancelOrder', { operation: 'cancelOrder', orderId, reason, restaurantId });
+    logOrderError('cancelOrder', error, { operation: 'cancelOrder', orderId, reason, restaurantId });
+    return false; // Always return boolean on error
   }
 };
 
@@ -195,7 +197,7 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
     return data;
   } catch (error) {
     logOrderError('getOrderById', error, { operation: 'getOrderById', orderId });
-    return null; // Return null instead of error object
+    return null; // Always return null on error
   }
 };
 
