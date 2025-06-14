@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,9 +25,7 @@ const NutritionPage = () => {
       label: 'Calculator',
       icon: Calculator,
       content: (
-        <TDEECalculator 
-          userId={user?.id}
-        />
+        <TDEECalculator />
       )
     },
     // Dashboard tab commented out to prevent type issues

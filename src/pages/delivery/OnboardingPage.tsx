@@ -34,14 +34,51 @@ const OnboardingPage: React.FC = () => {
   // Dummy/placeholder for compatibility. Real logic should be added as needed.
   const completeSteps: any[] = [];
 
-  // Handler shims now return void (and are typed as such for Page-level hooks comparison)
-  // Correct these for TS, but they should really match component's interface (but we only have access to this file)
-  const savePersonalInfo = (values: any): void => {
+  // Handler shims now return dummy results of the correct types
+  
+  const savePersonalInfo = async (values: any) => {
     updatePersonalInfo(values);
+    // Return as DeliveryUser. Fill required properties as placeholders.
+    return {
+      id: user?.id || "",
+      first_name: values.first_name || "",
+      last_name: values.last_name || "",
+      phone: values.phone || "",
+      full_name: `${values.first_name || ""} ${values.last_name || ""}`,
+      vehicle_type: "",
+      license_plate: "",
+      driver_license_number: "",
+      status: "inactive",
+      is_approved: false,
+      total_deliveries: 0,
+      average_rating: 0,
+      latitude: 0,
+      longitude: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
   };
-  const saveVehicleInformation = (values: any): void => {
+
+  const saveVehicleInformation = async (values: any) => {
     updateVehicleInfo(values);
+    // Return as DeliveryVehicle. Fill required fields with dummy data.
+    return {
+      id: "dummy-id",
+      delivery_vehicles_user_id: user?.id || "",
+      vehicle_type: values.type || "",
+      make: values.make || "",
+      model: values.model || "",
+      year: values.year || 2024,
+      color: values.color || "",
+      license_plate: values.license_plate || "",
+      insurance_number: values.insurance_number || "",
+      insurance_expiry: values.insurance_expiry || new Date().toISOString(),
+      is_active: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
   };
+
   const uploadDocument = async (
     file: File,
     documentType:
@@ -71,10 +108,28 @@ const OnboardingPage: React.FC = () => {
     addDocument(doc as any);
     return doc as any;
   };
+
   const completeDocumentsStep = () => true;
-  const saveAvailabilitySchedule = (data: any): void => {};
-  const savePaymentInfo = (data: any): void => {
+
+  const saveAvailabilitySchedule = async (data: any) => {
+    // For compatibility, return empty array as DeliveryAvailability[]
+    return [];
+  };
+
+  const savePaymentInfo = async (data: any) => {
     updatePaymentDetails(data);
+    // Return as DeliveryPaymentDetails
+    return {
+      id: "dummy-id",
+      delivery_payments_user_id: user?.id || "",
+      account_name: data.account_name || "",
+      account_number: data.account_number || "",
+      routing_number: data.routing_number || "",
+      bank_name: data.bank_name || "",
+      has_accepted_terms: !!data.has_accepted_terms,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
   };
 
   // Redirect if not authenticated
