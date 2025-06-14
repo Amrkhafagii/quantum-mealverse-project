@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +35,6 @@ export function useSupabaseChannel({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const { isOnline } = useConnectionStatus();
 
-  // Function to subscribe to a channel
   const subscribe = () => {
     if (!enabled || !isOnline || channelRef.current) {
       return;
@@ -45,10 +43,9 @@ export function useSupabaseChannel({
     try {
       const channel = supabase.channel(channelName);
       
-      // Configure the channel with postgres changes if table is provided
       if (table) {
         channel.on(
-          'postgres_changes' as any, // Type assertion to work around TypeScript error
+          'postgres_changes' as any,
           {
             event,
             schema,
@@ -64,7 +61,6 @@ export function useSupabaseChannel({
         );
       }
 
-      // Subscribe and handle status changes
       channel
         .subscribe((status) => {
           console.log(`Channel ${channelName} status:`, status);
@@ -94,7 +90,6 @@ export function useSupabaseChannel({
     }
   };
 
-  // Function to unsubscribe
   const unsubscribe = () => {
     if (channelRef.current) {
       console.log(`Unsubscribing from channel ${channelName}`);
@@ -105,7 +100,6 @@ export function useSupabaseChannel({
     }
   };
 
-  // Effect to handle subscription based on enabled status
   useEffect(() => {
     if (enabled && isOnline) {
       subscribe();
@@ -118,7 +112,6 @@ export function useSupabaseChannel({
     };
   }, [enabled, isOnline]);
 
-  // Effect to handle reconnection when coming back online
   useEffect(() => {
     if (autoReconnect && isOnline && !channelRef.current && enabled) {
       console.log(`Auto-reconnecting to channel ${channelName}...`);

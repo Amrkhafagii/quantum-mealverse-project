@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -39,7 +38,7 @@ export function useRealtimePresence(options: {
     
     // Create initial presence state
     const initialState: PresenceState = {
-      user_id: user.id,
+      user_id: user.id, // This should always be the 'id' from auth, not any {table}_user_id
       timestamp: Date.now(),
       status: 'online',
       platform: Platform.getPlatformName(),

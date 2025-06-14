@@ -26,31 +26,27 @@ export const useRealtimeLocation = ({
     event: 'INSERT',
     table: 'delivery_locations',
     schema: 'public',
+    // No user id filter but assignment_id filter (column was not renamed): below is correct!
     filter: assignmentId ? `assignment_id=eq.${assignmentId}` : undefined,
     enabled: !!assignmentId && isOnline,
     onMessage: (payload) => {
       console.log('New location update received:', payload);
       const newLocation = payload.new as DeliveryLocation;
       
-      // Update state with latest location
       setLatestLocation(newLocation);
-      
-      // Add to history (keeping most recent locations)
+
       setLocationHistory(prev => {
-        // On mobile devices, keep fewer points to conserve memory
         const maxPoints = isMobile ? 20 : 50;
         const updated = [newLocation, ...prev].slice(0, maxPoints);
         return updated;
       });
-      
-      // Call the callback if provided
+
       if (onLocationUpdate) {
         onLocationUpdate(newLocation);
       }
     },
     onError: (err) => {
       console.error('Error in real-time location subscription:', err);
-      
       toast({
         title: 'Live tracking error',
         description: 'Could not connect to real-time updates',
@@ -59,7 +55,6 @@ export const useRealtimeLocation = ({
     },
   });
 
-  // Show toast when subscription is successful
   useEffect(() => {
     if (isSubscribed && assignmentId) {
       toast({

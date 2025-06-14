@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { realtimeNotificationService, OrderEvent } from '@/services/notifications/realtimeNotificationService';
 
@@ -14,6 +13,7 @@ export function useOrderEvents(orderId?: string) {
     if (!orderId) return;
 
     setIsConnected(true);
+    // No {table}_user_id filter on order_event subscriptions; order_id is correct
     const unsubscribe = realtimeNotificationService.subscribeToOrderEvents(
       orderId,
       handleNewEvent
@@ -34,6 +34,7 @@ export function useOrderEvents(orderId?: string) {
   ) => {
     if (!orderId) return null;
     
+    // Use correct arg names - should already be {table}_user_id for custom columns
     return realtimeNotificationService.createOrderEvent(
       orderId,
       eventType,

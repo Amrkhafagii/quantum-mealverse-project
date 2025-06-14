@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { realtimeNotificationService, Notification, OrderEvent } from '@/services/notifications/realtimeNotificationService';
@@ -9,10 +8,9 @@ export function useRealtimeNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Load initial notifications
+  // Use user.id for the 'user_id' filters, but watch for notifications logic in service hook.
   const loadNotifications = useCallback(async () => {
     if (!user?.id) return;
-
     try {
       const data = await realtimeNotificationService.getUserNotifications(user.id);
       setNotifications(data);
@@ -24,7 +22,6 @@ export function useRealtimeNotifications() {
     }
   }, [user?.id]);
 
-  // Handle new notifications
   const handleNewNotification = useCallback((notification: Notification) => {
     setNotifications(prev => [notification, ...prev]);
     if (!notification.is_read) {
@@ -32,7 +29,6 @@ export function useRealtimeNotifications() {
     }
   }, []);
 
-  // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
     const success = await realtimeNotificationService.markAsRead(notificationId);
     if (success) {
@@ -48,17 +44,15 @@ export function useRealtimeNotifications() {
     return success;
   }, []);
 
-  // Mark all as read
   const markAllAsRead = useCallback(async () => {
     if (!user?.id) return false;
-    
     const success = await realtimeNotificationService.markAllAsRead(user.id);
     if (success) {
       setNotifications(prev => 
-        prev.map(n => ({ 
-          ...n, 
-          is_read: true, 
-          read_at: n.read_at || new Date().toISOString() 
+        prev.map(n => ({
+          ...n,
+          is_read: true,
+          read_at: n.read_at || new Date().toISOString()
         }))
       );
       setUnreadCount(0);
@@ -66,17 +60,15 @@ export function useRealtimeNotifications() {
     return success;
   }, [user?.id]);
 
-  // Subscribe to real-time notifications
   useEffect(() => {
     if (!user?.id) return;
-
     loadNotifications();
 
+    // Pass user id, not {table}_user_id - mapping handled in the service.
     const unsubscribe = realtimeNotificationService.subscribeToNotifications(
       user.id,
       handleNewNotification
     );
-
     return unsubscribe;
   }, [user?.id, loadNotifications, handleNewNotification]);
 

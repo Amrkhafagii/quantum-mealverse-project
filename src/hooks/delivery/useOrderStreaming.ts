@@ -23,14 +23,14 @@ export const useOrderStreaming = (orderId?: string, userId?: string) => {
     let unsubscribe: (() => void) | undefined;
 
     if (orderId) {
-      // Subscribe to specific order events
+      // By order id
       unsubscribe = orderStreamingService.subscribeToOrderEvents(
         orderId,
         handleNewEvent,
         handleError
       );
     } else if (userId) {
-      // Subscribe to all user order events
+      // Use correct column: user_id or related _user_id (see backend, default 'user_id')
       unsubscribe = orderStreamingService.subscribeToUserOrderEvents(
         userId,
         handleNewEvent,
@@ -55,6 +55,7 @@ export const useOrderStreaming = (orderId?: string, userId?: string) => {
     deliveryUserId?: string,
     restaurantId?: string
   ): Promise<string | null> => {
+    // Args are forwarded as before
     return orderStreamingService.createOrderEvent(
       orderIdParam,
       eventType,
@@ -78,3 +79,4 @@ export const useOrderStreaming = (orderId?: string, userId?: string) => {
     loadOrderEvents
   };
 };
+

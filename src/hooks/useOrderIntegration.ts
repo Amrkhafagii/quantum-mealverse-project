@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { orderAssignmentService } from '@/services/orders/orderAssignmentService';
 import { orderNotificationService } from '@/services/notifications/orderNotificationService';
@@ -135,6 +134,7 @@ export const useOrderIntegration = (restaurantId?: string, userId?: string) => {
         }
       );
     } else if (userId) {
+      // Use userId (should correspond to the {table}_user_id column in order_notificationService internally)
       unsubscribe = orderNotificationService.subscribeToUserNotifications(
         userId,
         (notification) => {

@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// Correct user id field for notifications is user_id (not notifications_user_id) for most real-time logic
 export interface Notification {
   id: string;
   user_id: string;
@@ -51,11 +52,10 @@ class RealtimeNotificationService {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${userId}`
+          filter: `user_id=eq.${userId}` // always 'user_id', not notifications_user_id!
         },
         (payload) => {
           const notification = payload.new as any;
-          // Convert data from Json to Record<string, any>
           const convertedNotification: Notification = {
             ...notification,
             data: typeof notification.data === 'string' 
@@ -63,8 +63,7 @@ class RealtimeNotificationService {
               : notification.data || {}
           };
           onNotification(convertedNotification);
-          
-          // Show toast notification
+
           toast({
             title: convertedNotification.title,
             description: convertedNotification.message,
@@ -82,13 +81,11 @@ class RealtimeNotificationService {
     };
   }
 
-  // Subscribe to order events
   subscribeToOrderEvents(
     orderId: string,
     onEvent: (event: OrderEvent) => void
   ): () => void {
     const channelName = `order_events_${orderId}`;
-    
     if (this.channels.has(channelName)) {
       this.channels.get(channelName)?.unsubscribe();
     }
@@ -105,7 +102,6 @@ class RealtimeNotificationService {
         },
         (payload) => {
           const event = payload.new as any;
-          // Convert event_data from Json to Record<string, any>
           const convertedEvent: OrderEvent = {
             ...event,
             event_data: typeof event.event_data === 'string' 
@@ -125,7 +121,6 @@ class RealtimeNotificationService {
     };
   }
 
-  // Get user notifications
   async getUserNotifications(userId: string, limit = 50): Promise<Notification[]> {
     const { data, error } = await supabase
       .from('notifications')
@@ -139,7 +134,6 @@ class RealtimeNotificationService {
       return [];
     }
 
-    // Convert data field from Json to Record<string, any>
     return (data || []).map(item => ({
       ...item,
       data: typeof item.data === 'string' 
@@ -148,7 +142,6 @@ class RealtimeNotificationService {
     })) as Notification[];
   }
 
-  // Mark notification as read
   async markAsRead(notificationId: string): Promise<boolean> {
     const { error } = await supabase
       .from('notifications')
@@ -161,7 +154,6 @@ class RealtimeNotificationService {
     return !error;
   }
 
-  // Mark all notifications as read
   async markAllAsRead(userId: string): Promise<boolean> {
     const { error } = await supabase
       .from('notifications')
@@ -175,7 +167,6 @@ class RealtimeNotificationService {
     return !error;
   }
 
-  // Register push notification token
   async registerPushToken(
     userId: string,
     token: string,
@@ -185,7 +176,7 @@ class RealtimeNotificationService {
     const { error } = await supabase
       .from('push_notification_tokens')
       .upsert({
-        user_id: userId,
+        user_id: userId, // always user_id
         token,
         platform,
         device_id: deviceId,
@@ -195,7 +186,6 @@ class RealtimeNotificationService {
     return !error;
   }
 
-  // Create manual notification (for testing or admin use)
   async createNotification(
     userId: string,
     title: string,
@@ -226,7 +216,6 @@ class RealtimeNotificationService {
     return result;
   }
 
-  // Create order event
   async createOrderEvent(
     orderId: string,
     eventType: string,
@@ -253,7 +242,6 @@ class RealtimeNotificationService {
     return result;
   }
 
-  // Cleanup all subscriptions
   cleanup(): void {
     this.channels.forEach(channel => channel.unsubscribe());
     this.channels.clear();
@@ -261,3 +249,4 @@ class RealtimeNotificationService {
 }
 
 export const realtimeNotificationService = new RealtimeNotificationService();
+
