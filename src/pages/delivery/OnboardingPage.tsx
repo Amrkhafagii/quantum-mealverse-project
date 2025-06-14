@@ -44,16 +44,16 @@ const OnboardingPage: React.FC = () => {
       delivery_users_user_id: user?.id || "",
       first_name: values.first_name || "",
       last_name: values.last_name || "",
-      full_name: `${values.first_name || ""} ${values.last_name || ""}`,
+      full_name: `${values.first_name || ""} ${values.last_name || ""}`.trim(),
       phone: values.phone || "",
       vehicle_type: "",
       license_plate: "",
       driver_license_number: "",
-      status: "inactive", // MUST be the literal value!
+      status: "inactive",  // ← use literal only
       rating: 0,
       total_deliveries: 0,
-      verification_status: "pending",
-      background_check_status: "pending",
+      verification_status: "pending", // ← use literal only
+      background_check_status: "pending", // ← use literal only
       is_available: false,
       is_approved: false,
       last_active: new Date().toISOString(),
@@ -123,7 +123,7 @@ const OnboardingPage: React.FC = () => {
 
   const savePaymentInfo = async (data: any) => {
     updatePaymentDetails(data);
-    // Return as DeliveryPaymentDetails
+    // Return as DeliveryPaymentDetails (see src/types/delivery.ts)
     return {
       id: "dummy-id",
       delivery_payment_details_user_id: user?.id || "",
@@ -131,7 +131,7 @@ const OnboardingPage: React.FC = () => {
       account_number: data.account_number || "",
       routing_number: data.routing_number || "",
       account_holder_name: data.account_holder_name || data.account_name || "",
-      account_type: "checking",
+      account_type: "checking", // ← use literal only ("checking" or "savings")
       is_verified: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
