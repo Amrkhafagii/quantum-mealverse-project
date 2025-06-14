@@ -58,7 +58,7 @@ export const useRestTimer = ({
     
     try {
       await supabase.from('rest_timer_sessions').insert({
-        user_id: user.id,
+        rest_timer_sessions_user_id: user.id,
         workout_log_id: workoutLogId,
         exercise_name: exerciseName,
         set_number: setNumber,
@@ -102,7 +102,7 @@ export const useRestTimer = ({
     if (user && workoutLogId) {
       try {
         await supabase.from('rest_timer_sessions').insert({
-          user_id: user.id,
+          rest_timer_sessions_user_id: user.id,
           workout_log_id: workoutLogId,
           exercise_name: exerciseName,
           set_number: setNumber,
