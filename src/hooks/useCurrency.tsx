@@ -23,9 +23,10 @@ interface CurrencyContextType {
   convertPrice: (priceInUSD: number) => number;
 }
 
+// Explicit default value
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-// -- FIX: move the default context to a named value, not an inline arrow function, to avoid deep type instantiation --
+// Avoid type inference loops by using an explicit object
 const defaultCurrencyContext: CurrencyContextType = {
   currentCurrency: defaultCurrency,
   formatPrice: (price: number) => `$${price.toFixed(2)}`,

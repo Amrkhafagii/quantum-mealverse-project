@@ -1,6 +1,9 @@
 
+// Use the correct hook (MealType recommendations, not WorkoutRecommendation)!
 import React from 'react';
-import { useRecommendations } from '@/hooks/useRecommendations';
+// IMPORTANT: the .tsx file returns MealType[]; the .ts might return WorkoutRecommendation[].
+// To force .tsx, use relative import or extension:
+import { useRecommendations } from '@/hooks/useRecommendations.tsx';
 import { CustomerMealCard } from '@/components/CustomerMealCard';
 import { Loader } from 'lucide-react';
 import {
