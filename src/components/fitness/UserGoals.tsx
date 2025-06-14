@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Target, Calendar, TrendingUp } from 'lucide-react';
-import { FitnessGoal } from '@/types/fitness';
+// FIX: Import from profile submodule
+import { FitnessGoal } from '@/types/fitness/profile';
 import { fetchGoals } from '@/services/fitnessGoalService';
 import { useAuth } from '@/hooks/useAuth';
 
