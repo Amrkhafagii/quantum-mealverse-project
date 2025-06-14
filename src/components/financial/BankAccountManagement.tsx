@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -7,7 +8,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, PencilIcon, TrashIcon } from '@radix-ui/react-icons';
+import { PlusIcon, TrashIcon } from '@radix-ui/react-icons';
+import { pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +31,7 @@ import {
 import { BankAccount } from '@/types/financial';
 import { financialService } from '@/services/financial/financialService';
 import BankAccountForm from '@/components/financial/BankAccountForm';
-import { toast } from 'sonner';
+import { toast } from 'sonner'; // using sonner for toasts
 import { useToast } from '@/components/ui/use-toast';
 import {
   AlertDialog,
@@ -51,7 +53,7 @@ const BankAccountManagement: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
   useEffect(() => {
     loadBankAccounts();
@@ -65,7 +67,7 @@ const BankAccountManagement: React.FC = () => {
     } catch (error: any) {
       toast({
         title: "Error!",
-        description: error.message,
+        description: error.message || "Could not load bank accounts.",
         duration: 3000,
       })
       console.error('Error loading bank accounts:', error);
@@ -74,77 +76,96 @@ const BankAccountManagement: React.FC = () => {
     }
   };
 
+  // These actions are NOT implemented in the service. Show a toast instead.
   const handleAddBankAccount = async (formData: Partial<BankAccount>) => {
-    setIsLoading(true);
-    try {
-      await financialService.createBankAccount(formData);
-      toast({
-        title: "Success!",
-        description: "Bank account created.",
-        duration: 3000,
-      })
-      loadBankAccounts();
-      setIsAddDialogOpen(false);
-    } catch (error: any) {
-      toast({
-        title: "Error!",
-        description: error.message,
-        duration: 3000,
-      })
-      console.error('Error creating bank account:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Not implemented",
+      description: "Adding a bank account is not yet available.",
+      duration: 3000,
+    });
+    setIsAddDialogOpen(false);
+    // setIsLoading(true);
+    // try {
+    //   await financialService.createBankAccount(formData);
+    //   toast({
+    //     title: "Success!",
+    //     description: "Bank account created.",
+    //     duration: 3000,
+    //   })
+    //   loadBankAccounts();
+    //   setIsAddDialogOpen(false);
+    // } catch (error: any) {
+    //   toast({
+    //     title: "Error!",
+    //     description: error.message,
+    //     duration: 3000,
+    //   })
+    //   console.error('Error creating bank account:', error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const handleEditBankAccount = async (formData: Partial<BankAccount>) => {
-    if (!selectedBankAccount) return;
-
-    setIsLoading(true);
-    try {
-      await financialService.updateBankAccount(selectedBankAccount.id, formData);
-      toast({
-        title: "Success!",
-        description: "Bank account updated.",
-        duration: 3000,
-      })
-      loadBankAccounts();
-      setIsEditDialogOpen(false);
-      setSelectedBankAccount(null);
-    } catch (error: any) {
-      toast({
-        title: "Error!",
-        description: error.message,
-        duration: 3000,
-      })
-      console.error('Error updating bank account:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Not implemented",
+      description: "Editing a bank account is not yet available.",
+      duration: 3000,
+    });
+    setIsEditDialogOpen(false);
+    // if (!selectedBankAccount) return;
+    // setIsLoading(true);
+    // try {
+    //   await financialService.updateBankAccount(selectedBankAccount.id, formData);
+    //   toast({
+    //     title: "Success!",
+    //     description: "Bank account updated.",
+    //     duration: 3000,
+    //   })
+    //   loadBankAccounts();
+    //   setIsEditDialogOpen(false);
+    //   setSelectedBankAccount(null);
+    // } catch (error: any) {
+    //   toast({
+    //     title: "Error!",
+    //     description: error.message,
+    //     duration: 3000,
+    //   })
+    //   console.error('Error updating bank account:', error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const handleDeleteBankAccount = async (id: string) => {
-    setIsLoading(true);
-    try {
-      await financialService.deleteBankAccount(id);
-      toast({
-        title: "Success!",
-        description: "Bank account deleted.",
-        duration: 3000,
-      })
-      loadBankAccounts();
-      setIsDeleteDialogOpen(false);
-      setDeleteConfirmationId(null);
-    } catch (error: any) {
-       toast({
-        title: "Error!",
-        description: error.message,
-        duration: 3000,
-      })
-      console.error('Error deleting bank account:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Not implemented",
+      description: "Deleting a bank account is not yet available.",
+      duration: 3000,
+    });
+    setIsDeleteDialogOpen(false);
+    setDeleteConfirmationId(null);
+    // setIsLoading(true);
+    // try {
+    //   await financialService.deleteBankAccount(id);
+    //   toast({
+    //     title: "Success!",
+    //     description: "Bank account deleted.",
+    //     duration: 3000,
+    //   })
+    //   loadBankAccounts();
+    //   setIsDeleteDialogOpen(false);
+    //   setDeleteConfirmationId(null);
+    // } catch (error: any) {
+    //    toast({
+    //     title: "Error!",
+    //     description: error.message,
+    //     duration: 3000,
+    //   })
+    //   console.error('Error deleting bank account:', error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   return (
@@ -173,7 +194,8 @@ const BankAccountManagement: React.FC = () => {
               </DialogHeader>
               <BankAccountForm
                 onSubmit={handleAddBankAccount}
-                // Removed isProcessing and onCancel, which aren't in BankAccountFormProps
+                // isProcessing={isLoading}
+                // onCancel={() => setIsAddDialogOpen(false)}
               />
             </DialogContent>
           </Dialog>
@@ -203,7 +225,10 @@ const BankAccountManagement: React.FC = () => {
                       setIsEditDialogOpen(true);
                     }}
                   >
-                    <PencilIcon className="mr-2 h-4 w-4" />
+                    {/* Use lucide-react's pencil icon */}
+                    <span className="mr-2 h-4 w-4">
+                      {React.createElement(pencil)}
+                    </span>
                     Edit
                   </Button>
                   <AlertDialog>
@@ -249,7 +274,8 @@ const BankAccountManagement: React.FC = () => {
                 <BankAccountForm
                   onSubmit={handleEditBankAccount}
                   initialValues={selectedBankAccount}
-                  // Removed initialData, isProcessing and onCancel
+                  // isProcessing={isLoading}
+                  // onCancel={() => setIsEditDialogOpen(false)}
                 />
               )
             }
