@@ -52,15 +52,6 @@ export interface HydrationData {
   glassSize: number;
 }
 
-// Export ExtendedUserAchievement properly
-export interface ExtendedUserAchievement extends UserAchievement {
-  achievement: Achievement;
-  date_achieved?: string;
-}
-
-// Make sure UserMeasurement is properly exported from profile
-export type { UserMeasurement } from './profile';
-
 // Additional missing types
 export interface Team {
   id: string;
@@ -68,6 +59,8 @@ export interface Team {
   description?: string;
   members: TeamMember[];
   created_at: string;
+  member_count?: number;
+  total_points?: number;
 }
 
 export interface TeamMember {
@@ -84,7 +77,7 @@ export interface StreakReward {
   days_required?: number;
   streak_days?: number;
   streak_length?: number;
-  reward_type: 'points' | 'badge' | 'item';
+  reward_type: 'points' | 'badge' | 'item' | 'feature' | 'discount';
   reward_value: number | string;
   reward_name?: string;
   title?: string;

@@ -5,14 +5,17 @@ export interface WorkoutPlan {
   name: string;
   description?: string;
   difficulty_level: string;
-  difficulty?: string; // For backward compatibility
   duration_minutes: number;
-  duration_weeks?: number; // For backward compatibility
-  frequency?: number; // For backward compatibility
-  goal?: string; // For backward compatibility
   workout_days: WorkoutDay[];
   created_at?: string;
   updated_at?: string;
+  
+  // Backward compatibility fields
+  difficulty?: string;
+  duration_weeks?: number;
+  frequency?: number;
+  goal?: string;
+  is_active?: boolean;
 }
 
 export interface WorkoutDay {
@@ -125,5 +128,13 @@ export interface WorkoutLog {
   calories_burned?: number | null;
   notes?: string | null;
   completed_exercises: CompletedExercise[];
-  exercises_completed?: any[]; // For backward compatibility
+  
+  // Backward compatibility fields
+  duration_minutes?: number;
+  exercises_completed?: any[];
+  total_sets?: number;
+  total_reps?: number;
+  total_volume?: number;
+  average_heart_rate?: number;
+  created_at?: string;
 }

@@ -28,9 +28,16 @@ export interface Achievement {
   points: number;
 }
 
-export interface ExtendedUserAchievement extends UserAchievement {
+export interface ExtendedUserAchievement {
+  id: string;
+  user_achievements_user_id: string;
+  achievement_id: string;
+  unlocked_at: string;
   achievement: Achievement;
   date_achieved?: string;
+  progress?: number;
+  user_id?: string;
+  date_earned?: string;
 }
 
 export interface StreakReward {
