@@ -8,12 +8,14 @@ import type { MealType } from "@/types/meal";
 // Allowable meal recommendation types
 type RecommendationType = "personalized" | "trending" | "dietary" | "fitness";
 
+// Strong guard for object shape for nutritional info
 function isNutritionalInfoObject(
   n: unknown
 ): n is { calories?: any; protein?: any; carbs?: any; fat?: any } {
   return (
     typeof n === "object" &&
     n !== null &&
+    !Array.isArray(n) &&
     "calories" in n &&
     "protein" in n &&
     "carbs" in n &&
@@ -77,7 +79,8 @@ export const useRecommendations = (
       user?.id || "",
       userPreferences,
     ],
-    queryFn: async () => {
+    // Add explicit types and non-recursive return to avoid excessive depth
+    queryFn: async (): Promise<MealType[]> => {
       // Get 'menu_items' sample
       const { data: menuItemsRaw, error } = await supabase
         .from("menu_items")
@@ -106,6 +109,7 @@ export const useRecommendations = (
           }
         }
 
+        // Only pick values if it's a plain object and not an array
         if (isNutritionalInfoObject(nutritionalInfo)) {
           calories = Number(nutritionalInfo.calories) || 0;
           protein = Number(nutritionalInfo.protein) || 0;
@@ -209,3 +213,6 @@ export const useRecommendations = (
     error,
   };
 };
+
+// ... End of file
+

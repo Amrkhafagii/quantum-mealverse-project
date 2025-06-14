@@ -40,6 +40,8 @@ export function useWorkoutAnalytics() {
       const typedGoals: WorkoutGoal[] = (data || []).map(goal => ({
         ...goal,
         user_id: goal.user_id ?? goal.workout_goals_user_id ?? user.id, // ensure user_id always present
+        title: goal.title || goal.name || '', // ensure required
+        unit: goal.unit || '', // default to blank if not provided
         goal_type: goal.goal_type as WorkoutGoal['goal_type']
       }));
       setGoals(typedGoals);
@@ -55,13 +57,18 @@ export function useWorkoutAnalytics() {
     }
   };
 
-  const createGoal = async (goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const createGoal = async (
+    goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  ) => {
     if (!user) return;
     try {
       // For DB insert, use workout_goals_user_id for consistency with DB
+      // Add defaults for title and unit to satisfy DB types
       const insertObj = {
         ...goalData,
         workout_goals_user_id: user.id,
+        title: goalData.title || goalData.name || '',
+        unit: goalData.unit || '',
       };
       const { data, error } = await supabase
         .from('workout_goals')
@@ -75,6 +82,8 @@ export function useWorkoutAnalytics() {
       const typedGoal: WorkoutGoal = {
         ...data,
         user_id: user.id,
+        title: data.title || data.name || '',
+        unit: data.unit || '',
         goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
       setGoals(prev => [typedGoal, ...prev]);
@@ -92,11 +101,19 @@ export function useWorkoutAnalytics() {
     }
   };
 
-  const updateGoal = async (goalId: string, goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const updateGoal = async (
+    goalId: string,
+    goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  ) => {
     if (!user) return;
     try {
       // Update via workout_goals_user_id
-      const updateObj = { ...goalData };
+      // Provide fallback for title and unit
+      const updateObj = {
+        ...goalData,
+        title: goalData.title || goalData.name || '',
+        unit: goalData.unit || '',
+      };
       const { data, error } = await supabase
         .from('workout_goals')
         .update(updateObj)
@@ -110,6 +127,8 @@ export function useWorkoutAnalytics() {
       const typedGoal: WorkoutGoal = {
         ...data,
         user_id: user.id,
+        title: data.title || data.name || '',
+        unit: data.unit || '',
         goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
 
