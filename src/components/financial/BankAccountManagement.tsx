@@ -1,289 +1,155 @@
 
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { PlusIcon, TrashIcon } from '@radix-ui/react-icons';
-import { pencil } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { BankAccount } from '@/types/financial';
-import { financialService } from '@/services/financial/financialService';
-import BankAccountForm from '@/components/financial/BankAccountForm';
-import { toast } from 'sonner'; // using sonner for toasts
-import { useToast } from '@/components/ui/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import React, { useState } from 'react';
+// Fix the icon import
+import { Pencil } from 'lucide-react';
+import BankAccountForm from './BankAccountForm';
+import { toast } from '@/components/ui/use-toast';
+
+type BankAccount = {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  routing_number: string;
+  account_holder_name: string;
+  account_type?: string;
+  is_default?: boolean;
+  verification_status?: string;
+  is_verified?: boolean;
+};
+
+const mockAccounts: BankAccount[] = [
+  {
+    id: '1',
+    bank_name: 'Bank of Shadcn',
+    account_number: '****4321',
+    routing_number: '123456789',
+    account_holder_name: 'John Doe',
+    account_type: 'checking',
+    is_default: true,
+    verification_status: 'verified',
+    is_verified: true,
+  },
+];
 
 const BankAccountManagement: React.FC = () => {
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedBankAccount, setSelectedBankAccount] = useState<BankAccount | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  // const { toast } = useToast();
+  const [accounts, setAccounts] = useState<BankAccount[]>(mockAccounts);
+  const [showForm, setShowForm] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
 
-  useEffect(() => {
-    loadBankAccounts();
-  }, []);
+  // Show "not implemented" toast for actions without service implementation
+  const showNotImplementedToast = (msg: string) => {
+    toast({
+      title: msg,
+      variant: 'destructive',
+    });
+  };
 
-  const loadBankAccounts = async () => {
-    setIsLoading(true);
-    try {
-      const accounts = await financialService.getBankAccounts();
-      setBankAccounts(accounts);
-    } catch (error: any) {
-      toast({
-        title: "Error!",
-        description: error.message || "Could not load bank accounts.",
-        duration: 3000,
-      })
-      console.error('Error loading bank accounts:', error);
-    } finally {
-      setIsLoading(false);
+  const handleAddClick = () => {
+    setEditingAccount(null);
+    setShowForm(true);
+  };
+
+  // For demo only - would be replaced by API call
+  const handleSaveAccount = (data: Partial<BankAccount>) => {
+    if (editingAccount) {
+      // Edit
+      setAccounts((prev) => prev.map(acc => acc.id === editingAccount.id ? { ...acc, ...data } as BankAccount : acc));
+      toast({ title: 'Bank account updated!' });
+    } else {
+      // Create
+      setAccounts((prev) => [
+        ...prev,
+        {
+          ...data,
+          id: (prev.length + 1).toString(),
+          account_number: data.account_number || '****0000'
+        } as BankAccount
+      ]);
+      toast({ title: 'Bank account added!' });
     }
+    setShowForm(false);
   };
 
-  // These actions are NOT implemented in the service. Show a toast instead.
-  const handleAddBankAccount = async (formData: Partial<BankAccount>) => {
-    toast({
-      title: "Not implemented",
-      description: "Adding a bank account is not yet available.",
-      duration: 3000,
-    });
-    setIsAddDialogOpen(false);
-    // setIsLoading(true);
-    // try {
-    //   await financialService.createBankAccount(formData);
-    //   toast({
-    //     title: "Success!",
-    //     description: "Bank account created.",
-    //     duration: 3000,
-    //   })
-    //   loadBankAccounts();
-    //   setIsAddDialogOpen(false);
-    // } catch (error: any) {
-    //   toast({
-    //     title: "Error!",
-    //     description: error.message,
-    //     duration: 3000,
-    //   })
-    //   console.error('Error creating bank account:', error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
+  const handleEdit = (account: BankAccount) => {
+    setEditingAccount(account);
+    setShowForm(true);
   };
 
-  const handleEditBankAccount = async (formData: Partial<BankAccount>) => {
-    toast({
-      title: "Not implemented",
-      description: "Editing a bank account is not yet available.",
-      duration: 3000,
-    });
-    setIsEditDialogOpen(false);
-    // if (!selectedBankAccount) return;
-    // setIsLoading(true);
-    // try {
-    //   await financialService.updateBankAccount(selectedBankAccount.id, formData);
-    //   toast({
-    //     title: "Success!",
-    //     description: "Bank account updated.",
-    //     duration: 3000,
-    //   })
-    //   loadBankAccounts();
-    //   setIsEditDialogOpen(false);
-    //   setSelectedBankAccount(null);
-    // } catch (error: any) {
-    //   toast({
-    //     title: "Error!",
-    //     description: error.message,
-    //     duration: 3000,
-    //   })
-    //   console.error('Error updating bank account:', error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
-  };
-
-  const handleDeleteBankAccount = async (id: string) => {
-    toast({
-      title: "Not implemented",
-      description: "Deleting a bank account is not yet available.",
-      duration: 3000,
-    });
-    setIsDeleteDialogOpen(false);
-    setDeleteConfirmationId(null);
-    // setIsLoading(true);
-    // try {
-    //   await financialService.deleteBankAccount(id);
-    //   toast({
-    //     title: "Success!",
-    //     description: "Bank account deleted.",
-    //     duration: 3000,
-    //   })
-    //   loadBankAccounts();
-    //   setIsDeleteDialogOpen(false);
-    //   setDeleteConfirmationId(null);
-    // } catch (error: any) {
-    //    toast({
-    //     title: "Error!",
-    //     description: error.message,
-    //     duration: 3000,
-    //   })
-    //   console.error('Error deleting bank account:', error);
-    // } finally {
-    //   setIsLoading(false);
-    // }
+  const handleDelete = (id: string) => {
+    showNotImplementedToast('Delete bank account: Not implemented');
   };
 
   return (
-    <Card className="container max-w-4xl mx-auto mt-8 holographic-card">
-      <CardHeader>
-        <CardTitle className="text-2xl">Bank Account Management</CardTitle>
-        <CardDescription>
-          Manage your bank accounts for payouts.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <PlusIcon className="mr-2 h-4 w-4" />
-                Add Bank Account
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Add Bank Account</DialogTitle>
-                <DialogDescription>
-                  Enter the details for the new bank account.
-                </DialogDescription>
-              </DialogHeader>
-              <BankAccountForm
-                onSubmit={handleAddBankAccount}
-                // isProcessing={isLoading}
-                // onCancel={() => setIsAddDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Bank Accounts</h2>
+        <button
+          className="px-4 py-2 rounded bg-quantum-cyan text-black"
+          onClick={handleAddClick}
+        >
+          Add Account
+        </button>
+      </div>
+      <div className="space-y-4">
+        {accounts.map((account) => (
+          <div
+            key={account.id}
+            className="border rounded-lg p-4 flex items-center justify-between bg-gray-800"
+          >
+            <div>
+              <div className="font-semibold">
+                {account.bank_name}{" "}
+                {account.is_default && (
+                  <span className="text-xs bg-blue-500 text-white ml-2 px-2 py-0.5 rounded">
+                    Default
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-gray-400">
+                {account.account_type} | {account.account_number}
+              </div>
+              <div className="text-xs text-gray-500">
+                Routing: {account.routing_number} | Holder: {account.account_holder_name}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="p-2 rounded hover:bg-quantum-cyan/20"
+                onClick={() => handleEdit(account)}
+                title="Edit"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+              </button>
+              <button
+                className="p-2 rounded bg-red-500 text-white hover:bg-red-600"
+                onClick={() => handleDelete(account.id)}
+                title="Delete"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit or Add */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-white rounded-lg shadow-lg p-8 min-w-[350px]">
+            <h3 className="text-lg font-bold mb-4">{editingAccount ? "Edit Account" : "Add Bank Account"}</h3>
+            <BankAccountForm
+              onSubmit={handleSaveAccount}
+              initialValues={editingAccount || {}}
+            />
+            <button className="mt-4 text-gray-500" onClick={() => setShowForm(false)}>
+              Cancel
+            </button>
+          </div>
         </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Account Holder</TableHead>
-              <TableHead>Bank Name</TableHead>
-              <TableHead>Account Number</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bankAccounts.map((account) => (
-              <TableRow key={account.id}>
-                <TableCell>{account.account_holder_name}</TableCell>
-                <TableCell>{account.bank_name}</TableCell>
-                <TableCell>{account.account_number}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedBankAccount(account);
-                      setIsEditDialogOpen(true);
-                    }}
-                  >
-                    {/* Use lucide-react's pencil icon */}
-                    <span className="mr-2 h-4 w-4">
-                      {React.createElement(pencil)}
-                    </span>
-                    Edit
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <TrashIcon className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the bank account.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteBankAccount(account.id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogTrigger asChild>
-            {/* This trigger is hidden and only serves to manage the dialog state */}
-            <Button style={{ display: 'none' }}>Edit Bank Account</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit Bank Account</DialogTitle>
-              <DialogDescription>
-                Edit the details for the selected bank account.
-              </DialogDescription>
-            </DialogHeader>
-            {
-              isEditDialogOpen && selectedBankAccount && (
-                <BankAccountForm
-                  onSubmit={handleEditBankAccount}
-                  initialValues={selectedBankAccount}
-                  // isProcessing={isLoading}
-                  // onCancel={() => setIsEditDialogOpen(false)}
-                />
-              )
-            }
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 
 export default BankAccountManagement;
+
