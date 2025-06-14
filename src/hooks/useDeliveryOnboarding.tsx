@@ -20,7 +20,119 @@ export const useDeliveryOnboarding = () => {
     }
   }, [user]);
 
-  // When fetching a single delivery user:
+  // 👇 Place these type definitions at the top or import them:
+  type RawDeliveryUser = {
+    id: string;
+    delivery_users_user_id: string;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+    phone?: string;
+    vehicle_type?: string;
+    type?: string;
+    license_plate?: string;
+    driver_license_number?: string;
+    status?: string;
+    average_rating?: number;
+    total_deliveries?: number;
+    verification_status?: string;
+    background_check_status?: string;
+    is_available?: boolean;
+    is_approved?: boolean;
+    last_active?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type RawDeliveryDocument = {
+    id: string;
+    delivery_documents_user_id?: string;
+    delivery_user_id?: string;
+    document_type: string;
+    file_path?: string;
+    verified?: boolean;
+    verification_status?: string;
+    expiry_date?: string;
+    notes?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type RawDeliveryVehicle = {
+    id: string;
+    delivery_vehicles_user_id?: string;
+    delivery_user_id?: string;
+    type?: string;
+    vehicle_type?: string;
+    color?: string;
+    license_plate?: string;
+    insurance_number?: string;
+    insurance_expiry?: string;
+    make?: string;
+    model?: string;
+    year?: number;
+    is_active?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  function mapToDeliveryUser(data: RawDeliveryUser): DeliveryUser {
+    return {
+      id: data.id || '',
+      delivery_users_user_id: data.delivery_users_user_id || '',
+      full_name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+      first_name: data.first_name || '',
+      last_name: data.last_name || '',
+      phone: data.phone || '',
+      vehicle_type: data.vehicle_type || data.type || '',
+      license_plate: data.license_plate || '',
+      driver_license_number: data.driver_license_number || '',
+      status: data.status || 'inactive',
+      average_rating: typeof data.average_rating === 'number' ? data.average_rating : 0,
+      total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
+      verification_status: data.verification_status || 'pending',
+      background_check_status: data.background_check_status || 'pending',
+      is_available: !!data.is_available,
+      is_approved: !!data.is_approved,
+      last_active: data.last_active || '',
+      created_at: data.created_at || '',
+      updated_at: data.updated_at || '',
+    };
+  }
+
+  function mapToDeliveryDocument(data: RawDeliveryDocument): DeliveryDocument {
+    return {
+      id: data.id || '',
+      delivery_documents_user_id: data.delivery_documents_user_id || data.delivery_user_id || '',
+      document_type: data.document_type || '',
+      document_url: data.file_path || '', // single field, always mapped from file_path
+      verification_status: data.verification_status || (data.verified === true ? "approved" : "pending"),
+      expiry_date: data.expiry_date || '',
+      notes: data.notes || '',
+      created_at: data.created_at || '',
+      updated_at: data.updated_at || '',
+    };
+  }
+
+  function mapToDeliveryVehicle(data: RawDeliveryVehicle): DeliveryVehicle {
+    return {
+      id: data.id || '',
+      delivery_vehicles_user_id: data.delivery_vehicles_user_id || data.delivery_user_id || '',
+      vehicle_type: data.vehicle_type || data.type || '',
+      color: data.color || '',
+      license_plate: data.license_plate || '',
+      insurance_number: data.insurance_number || '',
+      insurance_expiry: data.insurance_expiry || '',
+      make: data.make || '',
+      model: data.model || '',
+      year: typeof data.year === 'number' ? data.year : undefined,
+      is_active: !!data.is_active,
+      created_at: data.created_at || '',
+      updated_at: data.updated_at || '',
+    };
+  }
+
+  // When fetching a delivery user:
   const fetchDeliveryUser = async (id: string) => {
     const { data } = await supabase.from("delivery_users").select("*").eq("delivery_users_user_id", id).single();
     if (data) {
@@ -36,10 +148,10 @@ export const useDeliveryOnboarding = () => {
     }
   };
 
-  // When fetching delivery documents (usually an array):
+  // When fetching delivery documents (array):
   const fetchDeliveryDocuments = async (id: string) => {
     const { data } = await supabase.from("delivery_documents").select("*").eq("delivery_documents_user_id", id);
-    if (data) {
+    if (Array.isArray(data)) {
       setDocuments(data.map(mapToDeliveryDocument));
     }
   };
@@ -251,65 +363,3 @@ export const useDeliveryOnboarding = () => {
     savePaymentInfo,
   };
 };
-
-// Mapping functions (should already exist at the bottom; revise for safety):
-
-function mapToDeliveryUser(data: any): import('@/types/delivery').DeliveryUser {
-  return {
-    id: data.id || '',
-    delivery_users_user_id: data.delivery_users_user_id || '',
-    full_name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-    first_name: data.first_name || '',
-    last_name: data.last_name || '',
-    phone: data.phone || '',
-    vehicle_type: data.vehicle_type || data.type || '', // fallback if needed
-    license_plate: data.license_plate || '',
-    driver_license_number: data.driver_license_number || '',
-    status: data.status || 'inactive',
-    rating: typeof data.rating === 'number' ? data.rating : 0,
-    total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
-    verification_status: data.verification_status || 'pending',
-    background_check_status: data.background_check_status || 'pending',
-    is_available: typeof data.is_available === 'boolean' ? data.is_available : false,
-    is_approved: !!data.is_approved,
-    last_active: data.last_active || '',
-    created_at: data.created_at || '',
-    updated_at: data.updated_at || '',
-  };
-}
-
-function mapToDeliveryVehicle(data: any): import('@/types/delivery').DeliveryVehicle {
-  return {
-    id: data.id || '',
-    delivery_vehicles_user_id: data.delivery_vehicles_user_id || data.delivery_user_id || '',
-    delivery_user_id: data.delivery_user_id || '',
-    vehicle_type: data.vehicle_type || data.type || 'on_foot',
-    type: data.type || data.vehicle_type || 'on_foot',
-    make: data.make || '',
-    model: data.model || '',
-    year: typeof data.year === 'number' ? data.year : new Date().getFullYear(),
-    license_plate: data.license_plate || '',
-    color: data.color || '',
-    insurance_policy_number: data.insurance_policy_number || data.insurance_number || '',
-    insurance_number: data.insurance_number || '',
-    insurance_expiry: data.insurance_expiry || '',
-    registration_number: data.registration_number || '',
-    is_active: typeof data.is_active === 'boolean' ? data.is_active : true,
-    created_at: data.created_at || '',
-    updated_at: data.updated_at || ''
-  };
-}
-
-function mapToDeliveryDocument(data: any): import('@/types/delivery').DeliveryDocument {
-  return {
-    id: data.id || '',
-    delivery_documents_user_id: data.delivery_documents_user_id || data.delivery_user_id || '',
-    document_type: data.document_type || '',
-    document_url: data.file_path || '', // Supabase file upload stores in file_path
-    verification_status: data.verification_status || (data.verified === true ? "approved" : "pending"),
-    expiry_date: data.expiry_date || '',
-    notes: data.notes || '',
-    created_at: data.created_at || '',
-    updated_at: data.updated_at || '',
-  };
-}
