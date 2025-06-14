@@ -28,12 +28,11 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
     days_of_week: existingSchedule?.days_of_week || [],
     start_date: existingSchedule?.start_date || new Date().toISOString().split('T')[0],
     end_date: existingSchedule?.end_date || '',
-    time: existingSchedule?.time || '09:00',
-    reminder: existingSchedule?.reminder || false,
-    active: existingSchedule?.active || true,
+    preferred_time: existingSchedule?.preferred_time || '09:00',
+    reminder_enabled: existingSchedule?.reminder_enabled || false,
+    is_active: existingSchedule?.is_active || true,
     name: existingSchedule?.name || '',
     timezone: existingSchedule?.timezone || 'UTC',
-    reminder_enabled: existingSchedule?.reminder_enabled || false,
     reminder_minutes_before: existingSchedule?.reminder_minutes_before || 15
   });
 
@@ -131,12 +130,12 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
           </div>
 
           <div>
-            <Label htmlFor="time">Preferred Time</Label>
+            <Label htmlFor="preferred_time">Preferred Time</Label>
             <Input
-              id="time"
+              id="preferred_time"
               type="time"
-              value={formData.time}
-              onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+              value={formData.preferred_time}
+              onChange={(e) => setFormData(prev => ({ ...prev, preferred_time: e.target.value }))}
             />
           </div>
 
@@ -165,11 +164,11 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({
 
           <div className="flex items-center space-x-2">
             <Switch
-              id="active"
-              checked={formData.active}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
+              id="is_active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
             />
-            <Label htmlFor="active">Active Schedule</Label>
+            <Label htmlFor="is_active">Active Schedule</Label>
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">

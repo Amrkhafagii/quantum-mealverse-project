@@ -32,13 +32,10 @@ export interface WorkoutSchedule {
   user_id: string;
   workout_plan_id: string;
   days_of_week: number[];
-  day_of_week?: string;
   start_date: string;
   end_date?: string;
   preferred_time?: string;
-  time?: string;
-  reminder?: boolean;
-  active: boolean;
+  is_active: boolean;
   created_at?: string;
   updated_at?: string;
   name?: string;
@@ -50,15 +47,12 @@ export interface WorkoutSchedule {
 export interface CreateWorkoutScheduleData {
   workout_plan_id: string;
   days_of_week: number[];
-  day_of_week?: string;
   start_date: string;
   end_date?: string;
   preferred_time?: string;
-  time?: string;
-  reminder?: boolean;
-  active: boolean;
+  reminder_enabled?: boolean;
+  is_active: boolean;
   name?: string;
   timezone?: string;
-  reminder_enabled?: boolean;
   reminder_minutes_before?: number;
 }

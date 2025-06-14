@@ -74,7 +74,7 @@ const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({ userId, workoutPlan
 
   const handleToggleActive = async (schedule: WorkoutSchedule) => {
     try {
-      await toggleScheduleActive(schedule.id, !schedule.active);
+      await toggleScheduleActive(schedule.id, !schedule.is_active);
     } catch (error) {
       console.error('Error toggling schedule:', error);
     }
@@ -124,8 +124,8 @@ const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({ userId, workoutPlan
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     {schedule.name || 'Workout Schedule'}
-                    <Badge variant={schedule.active ? 'default' : 'secondary'}>
-                      {schedule.active ? 'Active' : 'Inactive'}
+                    <Badge variant={schedule.is_active ? 'default' : 'secondary'}>
+                      {schedule.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </CardTitle>
                   <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
@@ -133,17 +133,17 @@ const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({ userId, workoutPlan
                       <Calendar className="h-4 w-4" />
                       {getDayNames(schedule.days_of_week)}
                     </span>
-                    {schedule.time && (
+                    {schedule.preferred_time && (
                       <span className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
-                        {schedule.time}
+                        {schedule.preferred_time}
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
-                    checked={schedule.active}
+                    checked={schedule.is_active}
                     onCheckedChange={() => handleToggleActive(schedule)}
                   />
                   <Button

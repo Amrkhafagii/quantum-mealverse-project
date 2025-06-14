@@ -1,38 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CalendarEvent, WorkoutSession } from '@/types/fitness/scheduling';
-
-// Define simplified interfaces for the hook to avoid type conflicts
-export interface CreateWorkoutScheduleData {
-  workout_plan_id: string;
-  days_of_week: number[];
-  start_date: string;
-  end_date?: string;
-  preferred_time?: string;
-  reminder_enabled?: boolean;
-  is_active: boolean;
-  name?: string;
-  timezone?: string;
-  reminder_minutes_before?: number;
-}
-
-export interface WorkoutSchedule {
-  id: string;
-  user_id: string;
-  workout_plan_id: string;
-  days_of_week: number[];
-  start_date: string;
-  end_date?: string;
-  preferred_time?: string;
-  reminder_enabled?: boolean;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-  name?: string;
-  timezone?: string;
-  reminder_minutes_before?: number;
-}
+import { CalendarEvent, WorkoutSession, WorkoutSchedule, CreateWorkoutScheduleData } from '@/types/fitness/scheduling';
 
 export const useWorkoutScheduling = () => {
   const [schedules, setSchedules] = useState<WorkoutSchedule[]>([]);
@@ -69,14 +38,8 @@ export const useWorkoutScheduling = () => {
 
       if (error) throw error;
 
-      // Map database response to our interface
-      const mappedSchedule: WorkoutSchedule = {
-        ...data,
-        is_active: data.is_active
-      };
-
-      setSchedules(prev => [...prev, mappedSchedule]);
-      return mappedSchedule;
+      setSchedules(prev => [...prev, data]);
+      return data;
     } catch (error) {
       console.error('Error creating schedule:', error);
       throw error;
@@ -110,14 +73,8 @@ export const useWorkoutScheduling = () => {
 
       if (error) throw error;
 
-      // Map response to our interface
-      const mappedSchedule: WorkoutSchedule = {
-        ...data,
-        is_active: data.is_active
-      };
-
-      setSchedules(prev => prev.map(s => s.id === scheduleId ? mappedSchedule : s));
-      return mappedSchedule;
+      setSchedules(prev => prev.map(s => s.id === scheduleId ? data : s));
+      return data;
     } catch (error) {
       console.error('Error updating schedule:', error);
       throw error;
