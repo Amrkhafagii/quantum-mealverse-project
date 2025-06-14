@@ -41,9 +41,9 @@ export const validateRestaurantOwnership = async (
   try {
     const { data: restaurant, error } = await supabase
       .from('restaurants')
-      .select('id, restaurants_user_id') // <- FIXED here
+      .select('id, restaurants_user_id') // <- FIXED
       .eq('id', restaurantId)
-      .eq('restaurants_user_id', userId) // <- FIXED here
+      .eq('restaurants_user_id', userId) // <- FIXED
       .single();
 
     if (error || !restaurant) {

@@ -60,54 +60,68 @@ export const getDeliveryUserProfile = async (userId: string): Promise<DeliveryUs
     }
     if (!data) return null;
 
-    // Compose full_name from first/last if missing, ensure "string" types
-    const firstName = typeof data.first_name === 'string' ? data.first_name : '';
-    const lastName = typeof data.last_name === 'string' ? data.last_name : '';
-    const fullName = typeof data.full_name === 'string'
-      ? data.full_name
-      : [firstName, lastName].filter(Boolean).join(' ').trim();
+    // Compose full_name safely
+    const fullName =
+      typeof data.full_name === 'string'
+        ? data.full_name
+        : [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+
+    // Valid status union: ensure fallback
+    let status: DeliveryUser['status'];
+    switch (data.status) {
+      case 'active':
+      case 'inactive':
+      case 'suspended':
+        status = data.status;
+        break;
+      default:
+        status = 'inactive';
+    }
 
     // Strict string fallback
-    const safeStr = (v: any) => typeof v === 'string' ? v : '';
+    const safeStr = (v: any) => (typeof v === 'string' ? v : '');
 
-    // Enforce union types for status fields and verification/background check
-    const status: DeliveryUser['status'] =
-      data.status === "active" || data.status === "inactive" || data.status === "suspended" || data.status === "on_break"
-        ? data.status
-        : "inactive";
+    // Validate status unions
+    let verification_status: DeliveryUser['verification_status'];
+    switch (data.verification_status) {
+      case 'pending':
+      case 'verified':
+      case 'rejected':
+        verification_status = data.verification_status;
+        break;
+      default:
+        verification_status = 'pending';
+    }
+    let background_check_status: DeliveryUser['background_check_status'];
+    switch (data.background_check_status) {
+      case 'pending':
+      case 'approved':
+      case 'rejected':
+        background_check_status = data.background_check_status;
+        break;
+      default:
+        background_check_status = 'pending';
+    }
 
-    const verification_status: DeliveryUser['verification_status'] =
-      data.verification_status === "pending" || data.verification_status === "verified" || data.verification_status === "rejected"
-        ? data.verification_status
-        : "pending";
-
-    const background_check_status: DeliveryUser['background_check_status'] =
-      data.background_check_status === "pending" || data.background_check_status === "approved" || data.background_check_status === "rejected"
-        ? data.background_check_status
-        : "pending";
-
-    // Assemble full DeliveryUser (no extra/unknown keys)
     return {
       id: safeStr(data.id),
       delivery_users_user_id: safeStr(data.delivery_users_user_id),
-      full_name: fullName,
-      first_name: firstName,
-      last_name: lastName,
+      full_name: safeStr(fullName),
       phone: safeStr(data.phone),
       vehicle_type: safeStr(data.vehicle_type),
       license_plate: safeStr(data.license_plate),
       driver_license_number: safeStr(data.driver_license_number),
       status,
-      rating: typeof data.rating === "number"
-        ? data.rating
-        : typeof data.average_rating === "number"
+      rating:
+        typeof data.rating === "number"
+          ? data.rating
+          : typeof data.average_rating === "number"
           ? data.average_rating
           : 0,
       total_deliveries: typeof data.total_deliveries === "number" ? data.total_deliveries : 0,
       verification_status,
       background_check_status,
       is_available: !!data.is_available,
-      is_approved: !!data.is_approved,
       last_active: safeStr(data.last_active),
       created_at: safeStr(data.created_at),
       updated_at: safeStr(data.updated_at),
