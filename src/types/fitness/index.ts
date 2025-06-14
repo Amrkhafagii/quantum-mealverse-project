@@ -1,8 +1,14 @@
 
-// Explicitly export all required types
+/**
+ * Main fitness type entry point.
+ *
+ * Only re-export directly from fitness.d.ts and explicitly from each submodule,
+ * to avoid circular type dependencies that cause deep type instantiation errors!
+ * Do not re-export index from submodules, only explicit interface/type.
+ */
 
 export type {
-  // User/Profile
+  // Profile
   UserProfile,
   UserMeasurement,
   // Workouts
@@ -28,7 +34,10 @@ export type {
   CalendarEvent,
 } from '../fitness.d.ts';
 
-// Also, for types/interfaces only present in submodules, do default/explicit re-exports
+// Additionally, re-export implementations for the modules that have
+// type-implementations (not type-alias) in source, but DO NOT recursively
+// re-export all from index files to prevent infinite recursion.
+
 export * from './profile';
 export * from './workouts';
 export * from './exercises';
@@ -40,13 +49,13 @@ export * from './achievements';
 export * from './challenges';
 export * from './scheduling';
 
-// Sync with 'SmartRecommendations' usage (add missing fields as needed)
+// For backward compatibility with components using "WorkoutRecommendation"
 export interface WorkoutRecommendation {
   id: string;
-  workout_recommendations_user_id: string;
   title: string;
-  name?: string;
   description: string;
+  workout_recommendations_user_id?: string;
+  name?: string;
   type?: string;
   reason?: string;
   confidence_score?: number;

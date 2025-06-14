@@ -15,6 +15,8 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import WorkoutDetail from './WorkoutDetail';
+import type { WorkoutHistoryItem, WorkoutLog } from "@/types/fitness";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface WorkoutHistoryProps {
   userId?: string;
@@ -22,11 +24,8 @@ export interface WorkoutHistoryProps {
   isLoading: boolean;
 }
 
-const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({
-  userId,
-  workoutHistory,
-  isLoading
-}) => {
+const WorkoutHistory = (props) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutHistoryItem | null>(null);
   const [workoutLog, setWorkoutLog] = useState<WorkoutLog | null>(null);

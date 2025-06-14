@@ -1,224 +1,244 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
-import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
-import type { WorkoutSchedule, CreateWorkoutScheduleData, CalendarEvent } from '@/types/fitness';
-import ScheduleForm from './ScheduleForm';
+import { Calendar } from 'lucide-react';
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { format, parseISO } from 'date-fns';
+import { DatePicker } from "@/components/ui/date-picker"
+import { CalendarIcon } from "@radix-ui/react-icons"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { DayPicker } from 'react-day-picker';
+import type { WorkoutSchedule } from "@/types/fitness";
 
-interface WorkoutSchedulerProps {
-  userId?: string;
-  workoutPlanId?: string;
-}
-
-const WorkoutScheduler: React.FC<WorkoutSchedulerProps> = ({ userId, workoutPlanId }) => {
-  const {
-    createSchedule,
-    updateSchedule,
-    deleteSchedule,
-    toggleScheduleActive,
-    fetchSessions,
-    getCalendarEvents,
-    updateSessionStatus,
-    generateSessions,
-    schedules,
-    sessions,
-    isLoading
-  } = useWorkoutScheduling();
-
-  const [showForm, setShowForm] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<WorkoutSchedule | null>(null);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+const WorkoutScheduler: React.FC = () => {
+  const { user } = useAuth();
+  const [workoutPlans, setWorkoutPlans] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [selectedDays, setSelectedDays] = useState<Date[]>([]);
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [preferredTime, setPreferredTime] = useState('');
+  const [active, setActive] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const startDate = new Date().toISOString().split('T')[0];
-    const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    fetchSessions(startDate, endDate);
-  }, []);
-
-  useEffect(() => {
-    const startDate = new Date().toISOString().split('T')[0];
-    const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    const events = getCalendarEvents(startDate, endDate);
-    setCalendarEvents(events);
-  }, [sessions]);
-
-  const handleCreateSchedule = async (scheduleData: CreateWorkoutScheduleData) => {
-    try {
-      await createSchedule(scheduleData);
-      setShowForm(false);
-    } catch (error) {
-      console.error('Error creating schedule:', error);
-    }
-  };
-
-  const handleEditSchedule = (schedule: WorkoutSchedule) => {
-    setEditingSchedule(schedule);
-    setShowForm(true);
-  };
-
-  const handleDeleteSchedule = async (scheduleId: string) => {
-    if (window.confirm('Are you sure you want to delete this schedule?')) {
+    const fetchPlans = async () => {
       try {
-        await deleteSchedule(scheduleId);
+        const { data, error } = await supabase
+          .from('workout_plans')
+          .select('id, name')
+          .eq('workout_plans_user_id', user!.id);
+
+        if (error) {
+          console.error('Error fetching workout plans:', error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch workout plans.",
+            variant: "destructive",
+          });
+        } else {
+          setWorkoutPlans(data);
+        }
       } catch (error) {
-        console.error('Error deleting schedule:', error);
+        console.error('Unexpected error:', error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred.",
+          variant: "destructive",
+        });
       }
-    }
-  };
+    };
 
-  const handleToggleActive = async (schedule: WorkoutSchedule) => {
+    if (user) {
+      fetchPlans();
+    }
+  }, [user, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedPlan) {
+      toast({
+        title: "Error",
+        description: "Please select a workout plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!startDate) {
+      toast({
+        title: "Error",
+        description: "Please select a start date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const daysOfWeek = selectedDays.map(day => day.getDay());
+
     try {
-      await toggleScheduleActive(schedule.id, !schedule.is_active);
+      const { error } = await supabase
+        .from('workout_schedules')
+        .insert({
+          workout_plan_id: selectedPlan,
+          user_id: user!.id,
+          start_date: startDate.toISOString(),
+          end_date: endDate?.toISOString() || null,
+          days_of_week: daysOfWeek,
+          preferred_time: preferredTime || null,
+          active: active,
+        });
+
+      if (error) {
+        console.error('Error creating workout schedule:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create workout schedule.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Workout schedule created successfully!",
+        });
+      }
     } catch (error) {
-      console.error('Error toggling schedule:', error);
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
     }
   };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingSchedule(null);
-  };
-
-  const getDayNames = (days: number[]) => {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return days.map(day => dayNames[day]).join(', ');
-  };
-
-  if (showForm) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" onClick={handleFormClose}>
-          ← Back to Schedules
-        </Button>
-        <ScheduleForm
-          workoutPlanId={workoutPlanId || ''}
-          existingSchedule={editingSchedule || undefined}
-          onScheduleCreated={handleFormClose}
-        />
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Workout Schedules</h2>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Schedule
-        </Button>
-      </div>
-
-      {/* Active Schedules */}
-      <div className="grid gap-4">
-        {schedules.map((schedule) => (
-          <Card key={schedule.id} className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {schedule.name || 'Workout Schedule'}
-                    <Badge variant={schedule.is_active ? 'default' : 'secondary'}>
-                      {schedule.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </CardTitle>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {getDayNames(schedule.days_of_week)}
-                    </span>
-                    {schedule.preferred_time && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {schedule.preferred_time}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={schedule.is_active}
-                    onCheckedChange={() => handleToggleActive(schedule)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditSchedule(schedule)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteSchedule(schedule.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-gray-300">
-                <p>Start Date: {new Date(schedule.start_date).toLocaleDateString()}</p>
-                {schedule.end_date && (
-                  <p>End Date: {new Date(schedule.end_date).toLocaleDateString()}</p>
-                )}
-                {schedule.reminder_enabled && (
-                  <p>Reminders: {schedule.reminder_minutes_before} minutes before</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {schedules.length === 0 && (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="text-center py-8">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">No schedules yet</h3>
-            <p className="text-gray-400 mb-4">Create your first workout schedule to get started</p>
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Schedule
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Calendar Events */}
-      {calendarEvents.length > 0 && (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardHeader>
-            <CardTitle>Upcoming Workouts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {calendarEvents.slice(0, 5).map((event) => (
-                <div key={event.id} className="flex justify-between items-center p-2 bg-quantum-black/20 rounded">
-                  <div>
-                    <span className="font-medium">{event.title}</span>
-                    <span className="text-sm text-gray-400 ml-2">
-                      {new Date(event.date).toLocaleDateString()}
-                      {event.time && ` at ${event.time}`}
-                    </span>
-                  </div>
-                  <Badge variant={event.status === 'completed' ? 'default' : 'secondary'}>
-                    {event.status}
-                  </Badge>
-                </div>
+    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-quantum-cyan" />
+          Workout Scheduler
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="workoutPlan" className="text-quantum-cyan">Workout Plan</Label>
+            <select
+              id="workoutPlan"
+              className="w-full px-3 py-2 bg-quantum-darkBlue border border-quantum-cyan/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-quantum-cyan"
+              value={selectedPlan}
+              onChange={(e) => setSelectedPlan(e.target.value)}
+              required
+            >
+              <option value="">Select a workout plan</option>
+              {workoutPlans.map((plan: any) => (
+                <option key={plan.id} value={plan.id}>{plan.name}</option>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            </select>
+          </div>
+
+          <div>
+            <Label className="text-quantum-cyan">
+              Start Date
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <DayPicker
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  disabled={{ before: new Date() }}
+                  className="border-none shadow-sm"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label className="text-quantum-cyan">
+              End Date (Optional)
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !endDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <DayPicker
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                  disabled={{ before: new Date() }}
+                  className="border-none shadow-sm"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label htmlFor="daysOfWeek" className="text-quantum-cyan">Days of Week</Label>
+            <DayPicker
+              mode="multiple"
+              selected={selectedDays}
+              onSelect={setSelectedDays}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="preferredTime" className="text-quantum-cyan">Preferred Time (Optional)</Label>
+            <Input
+              type="time"
+              id="preferredTime"
+              className="w-full px-3 py-2 bg-quantum-darkBlue border border-quantum-cyan/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-quantum-cyan"
+              value={preferredTime}
+              onChange={(e) => setPreferredTime(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="active" className="text-quantum-cyan">Active</Label>
+            <input
+              type="checkbox"
+              id="active"
+              className="ml-2 h-5 w-5 text-quantum-cyan focus:ring-quantum-cyan"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+            />
+          </div>
+
+          <Button type="submit" className="w-full bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black font-medium">
+            Create Schedule
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

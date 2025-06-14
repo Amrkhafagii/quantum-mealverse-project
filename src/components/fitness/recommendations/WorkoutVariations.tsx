@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { createPersonalizedVariation } from '@/services/recommendations/recommendationService';
 import { supabase } from '@/integrations/supabase/client';
+import type { WorkoutRecommendation } from "@/types/fitness";
 
 interface ExerciseVariation {
   name: string;

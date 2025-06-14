@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -6,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Achievement, UserAchievement } from '@/types/fitness';
+import type { Achievement, UserAchievement } from "@/types/fitness";
 import { Award, Medal, Trophy, Clock, Target, Flame, Star, Calendar, Sunrise, Moon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 

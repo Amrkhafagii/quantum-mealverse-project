@@ -1,5 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import type { CalendarEvent } from '@/types/fitness';
+import React, { useState, useEffect } from "react";
+import type { CalendarEvent } from "@/types/fitness";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  isSameMonth,
+  addMonths,
+  subMonths,
+  format,
+} from "date-fns";
+import { useWorkoutScheduling } from "@/hooks/useWorkoutScheduling";
 
 interface WorkoutCalendarProps {
   onDateSelect?: (date: Date) => void;

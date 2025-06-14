@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useWorkoutRecommendations } from '@/hooks/useWorkoutRecommendations';
-import { WorkoutRecommendation } from '@/types/fitness/recommendations';
+import type { WorkoutRecommendation } from "@/types/fitness";
 
 export const SmartRecommendations: React.FC = () => {
   const { 
