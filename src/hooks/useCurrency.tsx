@@ -26,20 +26,16 @@ interface CurrencyContextType {
 
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-// PREVENT infinite type instantiation by pulling out the context default object
+// Standalone default functions for context to break circular typing
 function formatUSD(price: number) {
   return `$${price.toFixed(2)}`;
 }
 function passthrough(price: number) {
   return price;
 }
-const defaultCurrencyContext: CurrencyContextType = {
-  currentCurrency: defaultCurrency,
-  formatPrice: formatUSD,
-  convertPrice: passthrough,
-};
 
-const CurrencyContext = createContext<CurrencyContextType>(defaultCurrencyContext);
+// Context is initialized as undefined and asserted in hook
+const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -96,4 +92,11 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-export const useCurrency = (): CurrencyContextType => useContext(CurrencyContext);
+export const useCurrency = (): CurrencyContextType => {
+  const context = useContext(CurrencyContext);
+  if (!context) {
+    // You can customize this error for dev/production, or fallback to default
+    throw new Error("useCurrency must be used within a CurrencyProvider");
+  }
+  return context;
+};
