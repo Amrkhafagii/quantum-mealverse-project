@@ -1,4 +1,3 @@
-
 // User profile types
 export interface UserProfile {
   id: string;
@@ -180,3 +179,66 @@ export interface SavedMealPlan {
 export interface SavedMealPlanWithExpiry extends SavedMealPlan {
   // No additional fields needed as is_active is now in the base interface
 }
+
+// These are the types consumed by various components:
+
+export type DailyQuest = {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  type: string;
+  requirements: any;
+  completed: boolean;
+  deadline?: string;
+};
+
+export type FitnessGoal = {
+  id: string;
+  fitness_goals_user_id: string;
+  name: string;
+  description?: string;
+  target_value: number;
+  current_value: number;
+  target_date: string;
+  status: GoalStatus;
+  goal_type: string;
+  created_at?: string;
+  updated_at?: string;
+  // Backward compatibility
+  title?: string;
+  target_weight?: number;
+  target_body_fat?: number;
+  category?: string;
+  type?: string;
+  start_date?: string;
+  is_active?: boolean;
+};
+export type GoalStatus = 'active' | 'completed' | 'not_started' | string;
+
+export type Team = {
+  id: string;
+  name: string;
+  description: string;
+  members: TeamMember[];
+  created_at: string;
+  member_count: number;
+  total_points: number;
+};
+
+export type TeamMember = {
+  id: string;
+  user_id: string;
+  team_id: string;
+  role: 'leader' | 'member';
+  joined_at: string;
+};
+
+// Calendar event type needed for scheduling
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string; // ISO string
+  status: string; // completed, in_progress, etc.
+  time?: string;
+};

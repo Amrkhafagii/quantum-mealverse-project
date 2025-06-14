@@ -1,8 +1,8 @@
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-// FIX: Import from main .d.ts until submodules correctly export
 import type { DailyQuest } from '@/types/fitness.d.ts';
 import { CheckCircle2, Clock, Award, Flag } from 'lucide-react';
 

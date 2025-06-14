@@ -1,5 +1,5 @@
+
 import React from 'react';
-// FIX: Import from main .d.ts
 import type { SavedMealPlan } from '@/types/fitness.d.ts';
 
 interface PlanCardProps {
