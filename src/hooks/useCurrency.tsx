@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -26,14 +27,12 @@ interface CurrencyContextType {
 // Explicit default value
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-// Avoid type inference loops by using an explicit object
-const defaultCurrencyContext: CurrencyContextType = {
+// Use a function here to avoid deep type instantiation on default context value
+const CurrencyContext = createContext<CurrencyContextType>({
   currentCurrency: defaultCurrency,
   formatPrice: (price: number) => `$${price.toFixed(2)}`,
   convertPrice: (price: number) => price,
-};
-
-const CurrencyContext = React.createContext<CurrencyContextType>(defaultCurrencyContext);
+});
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -90,4 +89,6 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-export const useCurrency = (): CurrencyContextType => React.useContext(CurrencyContext);
+// Explicitly type the return of useContext to break inference cycles
+export const useCurrency = (): CurrencyContextType => useContext(CurrencyContext);
+

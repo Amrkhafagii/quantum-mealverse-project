@@ -74,6 +74,7 @@ export const useRecommendations = (
   }, [user?.id]);
 
   // Main meal recommendations query - explicitly type the fetcher!
+  // Avoid putting userPreferences (object) into queryKey (TypeScript recursion!)
   const {
     data: recommendations,
     isLoading,
@@ -83,7 +84,7 @@ export const useRecommendations = (
       "meal-recommendations",
       type,
       user?.id || "",
-      !!userPreferences, // avoid deep nesting in queryKey
+      !!userPreferences // Boolean only, don't include the object itself
     ],
     queryFn: async (): Promise<MealType[]> => {
       // Use any[] to retrieve, map to MealType below
