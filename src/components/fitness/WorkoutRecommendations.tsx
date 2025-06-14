@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Dumbbell, Heart, Target, CheckCircle, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import type { WorkoutRecommendation } from "@/types/fitness";
+import type { WorkoutRecommendation } from "@/types/fitness/recommendations";
 
 interface WorkoutRecommendationsProps {
   userId?: string;
-  onApplied: (userId?: string) => Promise<void>;
+  onApplyRecommendation: (userId?: string) => Promise<void>;
 }
 
 const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
   userId,
-  onApplied
+  onApplyRecommendation
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -32,21 +32,41 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
   }, [currentUserId]);
 
   const fetchRecommendations = async () => {
-    if (!currentUserId) return;
-
+    if (!user?.id) return;
     try {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('workout_recommendations')
         .select('*')
-        .eq('user_id', currentUserId)
+        .eq('workout_recommendations_user_id', user.id)
         .eq('dismissed', false)
         .eq('applied', false)
-        .order('confidence_score', { ascending: false });
+        .order('confidence_score', { ascending: false })
+        .limit(3);
 
       if (error) throw error;
 
-      setRecommendations(data || []);
+      const typedRecommendations: WorkoutRecommendation[] = (data || []).map((rec: any) => ({
+        id: rec.id,
+        title: rec.title,
+        name: rec.title, // For compatibility
+        description: rec.description || '',
+        difficulty: rec.difficulty ?? rec.metadata?.difficulty ?? 'beginner',
+        duration_minutes: rec.duration_minutes ?? rec.metadata?.duration_minutes ?? 0,
+        target_muscle_groups: rec.target_muscle_groups ?? rec.metadata?.target_muscle_groups ?? [],
+        recommended_frequency: rec.recommended_frequency ?? rec.metadata?.recommended_frequency ?? 1,
+        created_at: rec.created_at ?? new Date().toISOString(),
+        workout_recommendations_user_id: rec.workout_recommendations_user_id,
+        type: rec.type ?? rec.metadata?.type ?? '',
+        reason: rec.reason ?? rec.metadata?.reason ?? '',
+        confidence_score: rec.confidence_score ?? rec.metadata?.confidence_score ?? 0,
+        suggested_at: rec.suggested_at,
+        dismissed: rec.dismissed,
+        applied: rec.applied,
+        applied_at: rec.applied_at
+      }));
+
+      setRecommendations(typedRecommendations);
     } catch (error) {
       console.error('Error fetching workout recommendations:', error);
       toast({
@@ -81,8 +101,8 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
         description: "The workout program has been applied to your routine",
       });
 
-      // Call the onApplied callback
-      await onApplied(currentUserId);
+      // Call the onApplyRecommendation callback
+      await onApplyRecommendation(currentUserId);
       
       // Refresh recommendations
       await fetchRecommendations();

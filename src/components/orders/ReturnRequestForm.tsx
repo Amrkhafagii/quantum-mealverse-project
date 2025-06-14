@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +71,7 @@ export const ReturnRequestForm: React.FC<ReturnRequestFormProps> = ({ orderId, o
           reason: data.reason,
           images: imageUrls,
           admin_notes: data.details,
-          user_id: session.user.id // Added the user_id from the session
+          return_requests_user_id: session.user.id // Fix: use correct field
         });
         
       if (error) throw error;

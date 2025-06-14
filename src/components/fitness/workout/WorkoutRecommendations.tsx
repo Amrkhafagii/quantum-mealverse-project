@@ -42,10 +42,10 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
         title: rec.title,
         name: rec.title, // Set both for compatibility
         description: rec.description || '',
-        difficulty: rec.difficulty ?? 'beginner',
-        duration_minutes: rec.duration_minutes ?? 0,
-        target_muscle_groups: rec.target_muscle_groups ?? [],
-        recommended_frequency: rec.recommended_frequency ?? 1,
+        difficulty: rec.difficulty ?? rec.metadata?.difficulty ?? 'beginner',
+        duration_minutes: rec.duration_minutes ?? rec.metadata?.duration_minutes ?? 0,
+        target_muscle_groups: rec.target_muscle_groups ?? rec.metadata?.target_muscle_groups ?? [],
+        recommended_frequency: rec.recommended_frequency ?? rec.metadata?.recommended_frequency ?? 1,
         created_at: rec.created_at ?? new Date().toISOString(),
         workout_recommendations_user_id: rec.workout_recommendations_user_id,
         // Patch extra fields for possible extensions (does not affect type matching)

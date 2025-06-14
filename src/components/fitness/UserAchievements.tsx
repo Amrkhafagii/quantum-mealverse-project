@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,10 +25,7 @@ interface AchievementProgress {
 const UserAchievements = ({ userId }: { userId?: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  // Limit type inference here
-  // @ts-expect-error
   const [achievements, setAchievements] = React.useState<any[]>([]);
-  // @ts-expect-error
   const [userAchievements, setUserAchievements] = React.useState<any[]>([]);
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
   const [loading, setLoading] = useState(true);
