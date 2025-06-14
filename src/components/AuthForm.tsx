@@ -1,279 +1,184 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { LocationPermissionFlow } from '@/components/auth/LocationPermissionFlow';
-import { UserType } from '@/services/locationService';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
-interface AuthFormProps {
-  isRegister?: boolean;
-}
+const loginSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+});
 
-const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
-  // Explicitly type state to plain strings/booleans/any to help TS
-  const [email, setEmail] = React.useState<string>('');
-  const [password, setPassword] = React.useState<string>('');
-  const [userType, setUserType] = React.useState<'customer' | 'restaurant' | 'delivery'>('customer');
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const [showPassword, setShowPassword] = React.useState<boolean>(false);
-  const [showLocationFlow, setShowLocationFlow] = React.useState<boolean>(false);
-  const [userId, setUserId] = React.useState<string>('');
+const registerSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
+export function AuthForm() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const { login, register } = useAuth();
 
-  // Hide location flow if user is already authenticated
-  useEffect(() => {
-    if (user) {
-      setShowLocationFlow(false);
-    }
-  }, [user]);
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const registerForm = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
+  async function onLoginSubmit(data: LoginFormValues) {
+    setIsLoading(true);
     try {
-      if (isRegister) {
-        console.log('AuthForm: Attempting to register user', { email, userType });
-        
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              user_type: userType,
-            },
-          },
-        });
-
-        if (error) {
-          console.error('AuthForm: Registration error', error);
-          throw error;
-        }
-
-        if (data.user) {
-          console.log('AuthForm: Registration successful', data.user.id);
-          setUserId(data.user.id);
-          setShowLocationFlow(true);
-          
-          toast({
-            title: "Account created successfully!",
-            description: "Please check your email to verify your account.",
-          });
-        }
-      } else {
-        console.log('AuthForm: Attempting to sign in user', { email });
-        
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          console.error('AuthForm: Sign in error', error);
-          throw error;
-        }
-
-        if (data.user) {
-          console.log('AuthForm: Sign in successful', data.user.id);
-          
-          // Get user type from metadata or database
-          const userMetadata = data.user.user_metadata;
-          if (userMetadata?.user_type) {
-            setUserType(userMetadata.user_type as UserType);
-            setUserId(data.user.id);
-            setShowLocationFlow(true);
-          } else {
-            // Fallback: try to get from database
-            const { data: userTypeData } = await supabase
-              .from('user_types')
-              .select('type')
-              .eq('user_id', data.user.id)
-              .single();
-
-            if (userTypeData?.type) {
-              setUserType(userTypeData.type as UserType);
-              setUserId(data.user.id);
-              setShowLocationFlow(true);
-            }
-          }
-          
-          toast({
-            title: "Welcome back!",
-            description: "You have been signed in successfully.",
-          });
-        }
-      }
-    } catch (error: any) {
-      console.error('AuthForm: Authentication error', error);
+      await login(data.email, data.password);
       toast({
-        title: "Authentication failed",
-        description: error.message,
+        title: "Success",
+        description: "You have been logged in.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to login. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }
 
-  const handleLocationSuccess = (coordinates: { latitude: number; longitude: number }) => {
-    console.log('AuthForm: Location permission granted:', coordinates);
-    setShowLocationFlow(false);
-    
-    // Navigate based on user type
-    setTimeout(() => {
-      switch (userType) {
-        case 'delivery':
-          navigate('/delivery/dashboard');
-          break;
-        case 'restaurant':
-          navigate('/restaurant/dashboard');
-          break;
-        case 'customer':
-        default:
-          navigate('/customer');
-          break;
-      }
-    }, 1000);
-  };
-
-  const handleLocationError = (error: string) => {
-    console.error('AuthForm: Location permission error:', error);
-    // Continue navigation even if location fails
-    handleLocationSkip();
-  };
-
-  const handleLocationSkip = () => {
-    console.log('AuthForm: Location permission skipped');
-    setShowLocationFlow(false);
-    
-    // Navigate based on user type even without location
-    setTimeout(() => {
-      switch (userType) {
-        case 'delivery':
-          navigate('/delivery/dashboard');
-          break;
-        case 'restaurant':
-          navigate('/restaurant/dashboard');
-          break;
-        case 'customer':
-        default:
-          navigate('/customer');
-          break;
-      }
-    }, 500);
-  };
-
-  const handleToggleAuthMode = () => {
-    if (isRegister) {
-      navigate('/auth', { state: { mode: 'login' } });
-    } else {
-      navigate('/auth', { state: { mode: 'signup' } });
+  async function onRegisterSubmit(data: RegisterFormValues) {
+    setIsLoading(true);
+    try {
+      await register(data.email, data.password);
+      toast({
+        title: "Success",
+        description: "Your account has been created.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  // Show location flow after successful auth
-  if (showLocationFlow && userId) {
-    return (
-      <div className="space-y-6">
-        <LocationPermissionFlow
-          userType={userType}
-          userId={userId}
-          onSuccess={handleLocationSuccess}
-          onError={handleLocationError}
-          onSkip={handleLocationSkip}
-          autoRequest={false}
-        />
-      </div>
-    );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {isRegister && (
-        <div className="space-y-2">
-          <Label htmlFor="userType" className="text-quantum-cyan">Account Type</Label>
-          <select
-            id="userType"
-            value={userType}
-            onChange={(e) => setUserType(e.target.value as 'customer' | 'restaurant' | 'delivery')}
-            className="w-full px-3 py-2 bg-quantum-darkBlue border border-quantum-cyan/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-quantum-cyan"
-            required
-          >
-            <option value="customer">Customer</option>
-            <option value="restaurant">Restaurant Owner</option>
-            <option value="delivery">Delivery Driver</option>
-          </select>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-quantum-cyan">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="bg-quantum-darkBlue border-quantum-cyan/30 text-white placeholder:text-gray-400"
-          placeholder="Enter your email"
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="password" className="text-quantum-cyan">Password</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-quantum-darkBlue border-quantum-cyan/30 text-white placeholder:text-gray-400 pr-10"
-            placeholder="Enter your password"
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-      </div>
-
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-quantum-cyan hover:bg-quantum-cyan/80 text-quantum-black font-medium"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {isRegister ? 'Creating Account...' : 'Signing In...'}
-          </>
-        ) : (
-          isRegister ? 'Create Account' : 'Sign In'
-        )}
-      </Button>
-
-      <div className="text-center">
-        <button
-          type="button"
-          onClick={handleToggleAuthMode}
-          className="text-quantum-cyan hover:text-quantum-cyan/80 text-sm underline"
-        >
-          {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-        </button>
-      </div>
-    </form>
+    <Tabs value={authMode} onValueChange={(value) => setAuthMode(value as 'login' | 'register')}>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="login">Login</TabsTrigger>
+        <TabsTrigger value="register">Register</TabsTrigger>
+      </TabsList>
+      <TabsContent value="login">
+        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              {...loginForm.register('email')}
+            />
+            {loginForm.formState.errors.email && (
+              <p className="text-sm text-red-500">{loginForm.formState.errors.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              {...loginForm.register('password')}
+            />
+            {loginForm.formState.errors.password && (
+              <p className="text-sm text-red-500">{loginForm.formState.errors.password.message}</p>
+            )}
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Logging in...
+              </>
+            ) : (
+              'Login'
+            )}
+          </Button>
+        </form>
+      </TabsContent>
+      <TabsContent value="register">
+        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              {...registerForm.register('email')}
+            />
+            {registerForm.formState.errors.email && (
+              <p className="text-sm text-red-500">{registerForm.formState.errors.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              {...registerForm.register('password')}
+            />
+            {registerForm.formState.errors.password && (
+              <p className="text-sm text-red-500">{registerForm.formState.errors.password.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              {...registerForm.register('confirmPassword')}
+            />
+            {registerForm.formState.errors.confirmPassword && (
+              <p className="text-sm text-red-500">{registerForm.formState.errors.confirmPassword.message}</p>
+            )}
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              'Register'
+            )}
+          </Button>
+        </form>
+      </TabsContent>
+    </Tabs>
   );
-};
-
-export { AuthForm };
+}
