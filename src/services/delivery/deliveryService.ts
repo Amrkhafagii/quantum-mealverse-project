@@ -43,7 +43,6 @@ export const getDeliveryUserByUserId = async (userId: string): Promise<DeliveryU
       case 'inactive':
       case 'suspended':
       case 'on_break':
-        // if you want to support 'on_break', update your DeliveryUser type; for now, default as below
         status = data.status === 'on_break' ? 'inactive' : data.status;
         break;
       default:
@@ -57,9 +56,9 @@ export const getDeliveryUserByUserId = async (userId: string): Promise<DeliveryU
       first_name: typeof data.first_name === 'string' ? data.first_name : undefined,
       last_name: typeof data.last_name === 'string' ? data.last_name : undefined,
       phone: typeof data.phone === 'string' ? data.phone : '',
-      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',
-      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
-      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',    // fallback: ''
+      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '', // fallback: ''
+      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '', // fallback: ''
       status,
       rating: typeof data.rating === 'number'
         ? data.rating
