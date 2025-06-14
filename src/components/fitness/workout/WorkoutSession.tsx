@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { WorkoutPlan, WorkoutDay, WorkoutLog } from '@/types/fitness';
+import { WorkoutPlan, WorkoutDay, WorkoutLog, CompletedExercise } from '@/types/fitness';
 import { useWorkoutData } from '@/hooks/useWorkoutData';
 import { Check, X } from 'lucide-react';
 import ExerciseLogForm from './ExerciseLogForm';
