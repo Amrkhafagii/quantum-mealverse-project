@@ -1,14 +1,5 @@
-
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Search, Filter, Calendar, Clock, Zap, TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React from 'react';
 import { WorkoutHistoryItem } from '@/types/fitness';
-import { format, parseISO, startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 
 interface EnhancedWorkoutHistoryProps {
   workoutHistory: WorkoutHistoryItem[];

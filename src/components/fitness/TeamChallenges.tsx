@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Team, TeamMember } from '@/types/fitness';
 
 interface TeamChallengesProps {

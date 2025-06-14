@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness'; // Corrected import
+import { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness';
 import { CalendarDays, Dumbbell, Trophy, Activity, Target } from 'lucide-react';
 
 interface EnhancedFitnessProfileProps {
