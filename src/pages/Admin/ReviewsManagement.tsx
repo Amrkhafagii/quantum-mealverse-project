@@ -52,7 +52,7 @@ export const ReviewsManagement = () => {
   
   const fetchReviews = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       let query = supabase
@@ -63,23 +63,24 @@ export const ReviewsManagement = () => {
           restaurants (name)
         `)
         .order('created_at', { ascending: false });
-      
+
       if (filter === 'flagged') {
         query = query.eq('is_flagged', true);
       } else if (filter === 'pending') {
         query = query.eq('status', 'pending');
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
-      
-      // Properly cast the status before setting
-      const typedReviews = data?.map(review => ({
+
+      // Properly cast the status before setting and add missing user_id fallback
+      const typedReviews = (data ?? []).map((review: any) => ({
         ...review,
-        status: review.status as 'pending' | 'approved' | 'rejected' // Ensure status is typed correctly
+        status: review.status as 'pending' | 'approved' | 'rejected',
+        user_id: review.user_id ?? 'unknown'
       })) as Review[];
-      
+
       setReviews(typedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);

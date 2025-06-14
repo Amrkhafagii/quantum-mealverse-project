@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -71,7 +70,6 @@ const FitnessPage = () => {
       icon: Target,
       content: (
         <WorkoutRecommendations
-          userId={user?.id}
           onApplied={workoutData.fetchWorkoutPlans}
         />
       )
@@ -86,7 +84,7 @@ const FitnessPage = () => {
       id: 'achievements',
       label: 'Awards',
       icon: Trophy,
-      content: <UserAchievements userId={user?.id} />
+      content: <UserAchievements />
     }
   ];
   
