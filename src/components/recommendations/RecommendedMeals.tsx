@@ -17,8 +17,31 @@ interface RecommendedMealsProps {
 const RecommendedMeals: React.FC<RecommendedMealsProps> = ({ 
   showTitle = true 
 }) => {
+  // Remove type argument for hook (it uses only user context)
+  const { recommendations, isLoading } = useRecommendations();
   const [activeTab, setActiveTab] = React.useState<'personalized' | 'trending' | 'dietary' | 'fitness'>('personalized');
-  const { recommendations, isLoading } = useRecommendations(activeTab);
+
+  // We'll just filter locally for demo (in real app, this should be moved server-side)
+  const getTabRecommendations = () => {
+    switch (activeTab) {
+      case 'dietary':
+        return recommendations.filter(meal =>
+          (meal.dietary_tags || []).some(tag =>
+            ['vegan', 'vegetarian', 'gluten-free', 'dairy-free'].includes(tag)
+          )
+        );
+      case 'fitness':
+        return recommendations.filter(meal => meal.protein > 20 || meal.calories < 500);
+      case 'trending':
+        // For demo, just return shuffled array
+        return [...recommendations].sort(() => 0.5 - Math.random());
+      case 'personalized':
+      default:
+        return recommendations;
+    }
+  };
+
+  const tabRecs = getTabRecommendations();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -68,11 +91,11 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {recommendations?.map(meal => (
+            {tabRecs?.map(meal => (
               <CustomerMealCard key={meal.id} meal={meal} />
             ))}
             
-            {recommendations?.length === 0 && (
+            {(!tabRecs || tabRecs.length === 0) && (
               <div className="col-span-4 text-center py-8">
                 <p className="text-xl text-gray-400">
                   No recommendations available at this time.
@@ -90,3 +113,4 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
 };
 
 export default RecommendedMeals;
+

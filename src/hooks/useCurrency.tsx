@@ -26,13 +26,14 @@ interface CurrencyContextType {
 
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-const CurrencyContext = createContext<CurrencyContextType>({
+// Fix type instantiation: don't call formatPrice in default, inline the arrow function!
+const CurrencyContext = React.createContext<CurrencyContextType>({
   currentCurrency: defaultCurrency,
-  formatPrice: (price: number) => `${defaultCurrency.symbol}${price.toFixed(2)}`,
+  formatPrice: (price: number) => `$${price.toFixed(2)}`,
   convertPrice: (price: number) => price,
 });
 
-export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [currentCurrency, setCurrentCurrency] = useState<Currency>(defaultCurrency);
 
@@ -87,5 +88,5 @@ export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }
   );
 };
 
-export const useCurrency = (): CurrencyContextType => useContext(CurrencyContext);
+export const useCurrency = (): CurrencyContextType => React.useContext(CurrencyContext);
 
