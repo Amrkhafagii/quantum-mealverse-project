@@ -15,6 +15,8 @@ export interface UserAchievement {
   unlocked_at: string;
   date_achieved?: string;
   progress?: number;
+  user_id?: string; // For backward compatibility
+  date_earned?: string; // For backward compatibility
 }
 
 export interface Achievement {

@@ -18,6 +18,7 @@ export interface UserProfile {
   username?: string;
   created_at?: string;
   updated_at?: string;
+  fitness_goal?: string; // For backward compatibility
 }
 
 export interface UserMeasurement {

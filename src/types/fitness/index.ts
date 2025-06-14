@@ -11,7 +11,7 @@ export * from './scheduling';
 export * from './profile';
 export * from './exercises';
 
-// Only export from workouts file, avoiding duplicates
+// Export from workouts file, avoiding duplicates
 export type {
   WorkoutPlan,
   WorkoutDay,
@@ -52,13 +52,13 @@ export interface HydrationData {
   glassSize: number;
 }
 
-// Properly export ExtendedUserAchievement
+// Export ExtendedUserAchievement properly
 export interface ExtendedUserAchievement extends UserAchievement {
   achievement: Achievement;
   date_achieved?: string;
 }
 
-// Make sure UserMeasurement is properly exported
+// Make sure UserMeasurement is properly exported from profile
 export type { UserMeasurement } from './profile';
 
 // Additional missing types

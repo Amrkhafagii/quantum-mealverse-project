@@ -5,7 +5,11 @@ export interface WorkoutPlan {
   name: string;
   description?: string;
   difficulty_level: string;
+  difficulty?: string; // For backward compatibility
   duration_minutes: number;
+  duration_weeks?: number; // For backward compatibility
+  frequency?: number; // For backward compatibility
+  goal?: string; // For backward compatibility
   workout_days: WorkoutDay[];
   created_at?: string;
   updated_at?: string;
