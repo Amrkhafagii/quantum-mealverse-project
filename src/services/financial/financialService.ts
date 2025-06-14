@@ -1,496 +1,664 @@
 import { supabase } from '@/integrations/supabase/client';
-import type {
+import {
   PaymentMethod,
   FinancialTransaction,
   RestaurantEarnings,
   Payout,
-  FinancialReport,
   CommissionStructure,
-  BankAccount,
+  FinancialReport,
+  BankAccount
 } from '@/types/financial';
 
-// --- Minimal interfaces matching Supabase rows --- //
-
-interface DBPaymentMethod {
-  id: string;
-  payment_methods_user_id: string;
-  type: PaymentMethod['type'];
-  provider: string;
-  external_id: string;
-  last_four?: string | null;
-  brand?: string | null;
-  expires_month?: number | null;
-  expires_year?: number | null;
-  is_default: boolean | null;
-  is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface DBFinancialTransaction {
-  id: string;
-  order_id?: string | null;
-  financial_transactions_user_id: string;
-  restaurant_id?: string | null;
-  delivery_user_id?: string | null;
-  transaction_type: FinancialTransaction['transaction_type'];
-  amount: number;
-  currency: string;
-  status: FinancialTransaction['status'];
-  payment_method_id?: string | null;
-  external_transaction_id?: string | null;
-  provider: string;
-  provider_fee: number;
-  platform_commission: number;
-  net_amount?: number | null;
-  description?: string | null;
-  metadata: string | null;
-  processed_at?: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface DBRestaurantEarnings {
-  id: string;
-  restaurant_id: string;
-  order_id?: string | null;
-  transaction_id?: string | null;
-  gross_amount: number;
-  platform_commission: number;
-  payment_processing_fee: number;
-  net_earnings: number;
-  commission_rate: number;
-  status: RestaurantEarnings['status'];
-  payout_id?: string | null;
-  earned_at: string | null;
-  available_at?: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface DBPayout {
-  id: string;
-  restaurant_id?: string | null;
-  delivery_user_id?: string | null;
-  payout_method: Payout['payout_method'];
-  amount: number;
-  currency: string;
-  status: Payout['status'];
-  external_payout_id?: string | null;
-  provider: string;
-  provider_fee: number;
-  net_amount?: number | null;
-  earnings_count: number;
-  period_start: string;
-  period_end: string;
-  scheduled_date?: string | null;
-  processed_at?: string | null;
-  failure_reason?: string | null;
-  metadata: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface DBFinancialReport {
-  id: string;
-  restaurant_id?: string | null;
-  report_type: FinancialReport['report_type'];
-  period_start: string;
-  period_end: string;
-  total_orders: number;
-  gross_revenue: number;
-  net_revenue: number;
-  total_commission: number;
-  total_fees: number;
-  total_refunds: number;
-  average_order_value: number;
-  commission_rate?: number | null;
-  payment_methods_breakdown: string | null;
-  top_selling_items: string | null;
-  generated_at: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface DBCommissionStructure {
-  id: string;
-  restaurant_id?: string | null;
-  name: string;
-  commission_rate: number;
-  payment_processing_rate: number;
-  fixed_fee: number;
-  minimum_order_value: number;
-  is_active: boolean;
-  effective_from: string;
-  effective_until?: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-interface DBBankAccount {
-  id: string;
-  restaurant_id?: string | null;
-  delivery_user_id?: string | null;
-  account_holder_name: string;
-  bank_name: string;
-  account_number: string;
-  routing_number: string;
-  account_type: BankAccount['account_type'];
-  is_verified: boolean;
-  is_default: boolean;
-  external_account_id?: string | null;
-  verification_status: string;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-// --- Service methods --- //
-
-export const financialService = {
-  // Get payment methods for a user
-  async getPaymentMethods(userId: string): Promise<PaymentMethod[]> {
+/**
+ * Get payment methods for a user.
+ */
+export async function getPaymentMethods(userId: string): Promise<PaymentMethod[]> {
+  try {
     const { data, error } = await supabase
       .from('payment_methods')
       .select('*')
-      .eq('payment_methods_user_id', userId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error getting payment methods:', error);
+      console.error('Error fetching payment methods:', error);
       return [];
     }
 
-    // Map DB fields to PaymentMethod
-    return (data as DBPaymentMethod[]).map((pm) => ({
-      id: pm.id,
-      user_id: pm.payment_methods_user_id,
-      type: pm.type,
-      provider: pm.provider,
-      external_id: pm.external_id,
-      last_four: pm.last_four ?? undefined,
-      brand: pm.brand ?? undefined,
-      expires_month: pm.expires_month ?? undefined,
-      expires_year: pm.expires_year ?? undefined,
-      is_default: pm.is_default ?? false,
-      is_active: pm.is_active ?? true,
-      created_at: pm.created_at ?? '',
-      updated_at: pm.updated_at ?? '',
-    }));
-  },
+    return (data as PaymentMethod[]) || [];
+  } catch (error) {
+    console.error('Error in getPaymentMethods:', error);
+    return [];
+  }
+}
 
-  // Add a new payment method for a user
-  async addPaymentMethod(userId: string, method: Omit<PaymentMethod, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<PaymentMethod | null> {
-    const now = new Date().toISOString();
-    const dbInsert: Omit<DBPaymentMethod, 'id'> = {
-      payment_methods_user_id: userId,
-      type: method.type,
-      provider: method.provider,
-      external_id: method.external_id,
-      last_four: method.last_four ?? null,
-      brand: method.brand ?? null,
-      expires_month: method.expires_month ?? null,
-      expires_year: method.expires_year ?? null,
-      is_default: method.is_default ?? false,
-      is_active: method.is_active ?? true,
-      created_at: now,
-      updated_at: now,
-    };
-    const { data, error } = await supabase
-      .from('payment_methods')
-      .insert([dbInsert])
-      .select()
-      .single();
+/**
+ * Add a new payment method for a user.
+ */
+export async function addPaymentMethod(
+  userId: string,
+  method: Omit<PaymentMethod, 'id' | 'created_at' | 'updated_at' | 'user_id'>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('payment_methods').insert([
+      {
+        user_id: userId,
+        ...method,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]);
+
     if (error) {
       console.error('Error adding payment method:', error);
-      return null;
+      return false;
     }
-    const pm = data as DBPaymentMethod;
-    return {
-      id: pm.id,
-      user_id: pm.payment_methods_user_id,
-      type: pm.type,
-      provider: pm.provider,
-      external_id: pm.external_id,
-      last_four: pm.last_four ?? undefined,
-      brand: pm.brand ?? undefined,
-      expires_month: pm.expires_month ?? undefined,
-      expires_year: pm.expires_year ?? undefined,
-      is_default: pm.is_default ?? false,
-      is_active: pm.is_active ?? true,
-      created_at: pm.created_at ?? '',
-      updated_at: pm.updated_at ?? '',
-    };
-  },
 
-  // Get transactions for a restaurant
-  async getTransactions({
-    restaurantId,
-    limit = 20,
-  }: { restaurantId: string; limit?: number }): Promise<FinancialTransaction[]> {
+    return true;
+  } catch (error) {
+    console.error('Error in addPaymentMethod:', error);
+    return false;
+  }
+}
+
+/**
+ * Update an existing payment method for a user.
+ */
+export async function updatePaymentMethod(
+  methodId: string,
+  updates: Partial<Omit<PaymentMethod, 'id' | 'created_at' | 'updated_at' | 'user_id'>>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('payment_methods')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', methodId);
+
+    if (error) {
+      console.error('Error updating payment method:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updatePaymentMethod:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete a payment method for a user.
+ */
+export async function deletePaymentMethod(methodId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('payment_methods').delete().eq('id', methodId);
+
+    if (error) {
+      console.error('Error deleting payment method:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deletePaymentMethod:', error);
+    return false;
+  }
+}
+
+/**
+ * Set a payment method as the default for a user.
+ */
+export async function setDefaultPaymentMethod(userId: string, methodId: string): Promise<boolean> {
+  try {
+    // Unset previous default
+    const { error: unsetError } = await supabase
+      .from('payment_methods')
+      .update({ is_default: false, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    if (unsetError) {
+      console.error('Error unsetting previous default payment method:', unsetError);
+      return false;
+    }
+
+    // Set selected as default
+    const { error: setError } = await supabase
+      .from('payment_methods')
+      .update({ is_default: true, updated_at: new Date().toISOString() })
+      .eq('id', methodId)
+      .eq('user_id', userId);
+
+    if (setError) {
+      console.error('Error setting default payment method:', setError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in setDefaultPaymentMethod:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all financial transactions for a user.
+ */
+export async function getFinancialTransactions(userId: string): Promise<FinancialTransaction[]> {
+  try {
     const { data, error } = await supabase
       .from('financial_transactions')
       .select('*')
-      .eq('restaurant_id', restaurantId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error getting financial transactions:', error);
+      console.error('Error fetching financial transactions:', error);
       return [];
     }
 
-    return (data as DBFinancialTransaction[]).map((ft) => ({
-      id: ft.id,
-      order_id: ft.order_id ?? undefined,
-      user_id: ft.financial_transactions_user_id,
-      restaurant_id: ft.restaurant_id ?? undefined,
-      delivery_user_id: ft.delivery_user_id ?? undefined,
-      transaction_type: ft.transaction_type,
-      amount: ft.amount,
-      currency: ft.currency,
-      status: ft.status,
-      payment_method_id: ft.payment_method_id ?? undefined,
-      external_transaction_id: ft.external_transaction_id ?? undefined,
-      provider: ft.provider,
-      provider_fee: ft.provider_fee,
-      platform_commission: ft.platform_commission,
-      net_amount: ft.net_amount ?? undefined,
-      description: ft.description ?? undefined,
-      metadata: ft.metadata ? JSON.parse(ft.metadata) : {},
-      processed_at: ft.processed_at ?? undefined,
-      created_at: ft.created_at ?? '',
-      updated_at: ft.updated_at ?? '',
-    }));
-  },
+    return (data as FinancialTransaction[]) || [];
+  } catch (error) {
+    console.error('Error in getFinancialTransactions:', error);
+    return [];
+  }
+}
 
-  // Get restaurant earnings
-  async getRestaurantEarnings(restaurantId: string, { limit = 20 }: { limit?: number }): Promise<RestaurantEarnings[]> {
+/**
+ * Record a new financial transaction.
+ */
+export async function recordFinancialTransaction(
+  transaction: Omit<FinancialTransaction, 'id' | 'created_at' | 'updated_at'>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('financial_transactions').insert([
+      {
+        ...transaction,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]);
+
+    if (error) {
+      console.error('Error recording financial transaction:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in recordFinancialTransaction:', error);
+    return false;
+  }
+}
+
+/**
+ * Update the status of a financial transaction.
+ */
+export async function updateFinancialTransactionStatus(
+  transactionId: string,
+  status: FinancialTransaction['status']
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('financial_transactions')
+      .update({ status: status, updated_at: new Date().toISOString() })
+      .eq('id', transactionId);
+
+    if (error) {
+      console.error('Error updating financial transaction status:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateFinancialTransactionStatus:', error);
+    return false;
+  }
+}
+
+/**
+ * Get restaurant earnings.
+ */
+export async function getRestaurantEarnings(restaurantId: string): Promise<RestaurantEarnings[]> {
+  try {
     const { data, error } = await supabase
       .from('restaurant_earnings')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .order('earned_at', { ascending: false })
-      .limit(limit);
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error getting restaurant earnings:', error);
+      console.error('Error fetching restaurant earnings:', error);
       return [];
     }
 
-    return (data as DBRestaurantEarnings[]).map((re) => ({
-      id: re.id,
-      restaurant_id: re.restaurant_id,
-      order_id: re.order_id ?? undefined,
-      transaction_id: re.transaction_id ?? undefined,
-      gross_amount: re.gross_amount,
-      platform_commission: re.platform_commission,
-      payment_processing_fee: re.payment_processing_fee,
-      net_earnings: re.net_earnings,
-      commission_rate: re.commission_rate,
-      status: re.status,
-      payout_id: re.payout_id ?? undefined,
-      earned_at: re.earned_at ?? '',
-      available_at: re.available_at ?? undefined,
-      created_at: re.created_at ?? '',
-      updated_at: re.updated_at ?? '',
-    }));
-  },
+    return (data as RestaurantEarnings[]) || [];
+  } catch (error) {
+    console.error('Error in getRestaurantEarnings:', error);
+    return [];
+  }
+}
 
-  // Get payouts
-  async getPayouts({ restaurantId, limit = 10 }: { restaurantId: string; limit?: number }): Promise<Payout[]> {
-    const { data, error } = await supabase
+/**
+ * Record restaurant earnings.
+ */
+export async function recordRestaurantEarnings(
+  earnings: Omit<RestaurantEarnings, 'id' | 'created_at' | 'updated_at'>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('restaurant_earnings').insert([
+      {
+        ...earnings,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]);
+
+    if (error) {
+      console.error('Error recording restaurant earnings:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in recordRestaurantEarnings:', error);
+    return false;
+  }
+}
+
+/**
+ * Update restaurant earnings status.
+ */
+export async function updateRestaurantEarningsStatus(
+  earningsId: string,
+  status: RestaurantEarnings['status']
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('restaurant_earnings')
+      .update({ status: status, updated_at: new Date().toISOString() })
+      .eq('id', earningsId);
+
+    if (error) {
+      console.error('Error updating restaurant earnings status:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateRestaurantEarningsStatus:', error);
+    return false;
+  }
+}
+
+/**
+ * Get payouts.
+ */
+export async function getPayouts(restaurantId: string, limit?: number): Promise<Payout[]> {
+  try {
+    let query = supabase
       .from('payouts')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .order('scheduled_date', { ascending: false })
-      .limit(limit);
+      .order('created_at', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-      console.error('Error getting payouts:', error);
+      console.error('Error fetching payouts:', error);
       return [];
     }
 
-    return (data as DBPayout[]).map((p) => ({
-      id: p.id,
-      restaurant_id: p.restaurant_id ?? undefined,
-      delivery_user_id: p.delivery_user_id ?? undefined,
-      payout_method: p.payout_method,
-      amount: p.amount,
-      currency: p.currency,
-      status: p.status,
-      external_payout_id: p.external_payout_id ?? undefined,
-      provider: p.provider,
-      provider_fee: p.provider_fee,
-      net_amount: p.net_amount ?? undefined,
-      earnings_count: p.earnings_count,
-      period_start: p.period_start,
-      period_end: p.period_end,
-      scheduled_date: p.scheduled_date ?? undefined,
-      processed_at: p.processed_at ?? undefined,
-      failure_reason: p.failure_reason ?? undefined,
-      metadata: p.metadata ? JSON.parse(p.metadata) : {},
-      created_at: p.created_at ?? '',
-      updated_at: p.updated_at ?? '',
-    }));
-  },
+    return (data as Payout[]) || [];
+  } catch (error) {
+    console.error('Error in getPayouts:', error);
+    return [];
+  }
+}
 
-  // Get financial reports
-  async getFinancialReports(restaurantId: string, limit: number): Promise<FinancialReport[]> {
+/**
+ * Record a payout.
+ */
+export async function recordPayout(payout: Omit<Payout, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('payouts').insert([
+      {
+        ...payout,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]);
+
+    if (error) {
+      console.error('Error recording payout:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in recordPayout:', error);
+    return false;
+  }
+}
+
+/**
+ * Update payout status.
+ */
+export async function updatePayoutStatus(payoutId: string, status: Payout['status']): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('payouts')
+      .update({ status: status, updated_at: new Date().toISOString() })
+      .eq('id', payoutId);
+
+    if (error) {
+      console.error('Error updating payout status:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updatePayoutStatus:', error);
+    return false;
+  }
+}
+
+/**
+ * Get commission structures.
+ */
+export async function getCommissionStructures(restaurantId: string): Promise<CommissionStructure[]> {
+  try {
+    const { data, error } = await supabase
+      .from('commission_structures')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching commission structures:', error);
+      return [];
+    }
+
+    return (data as CommissionStructure[]) || [];
+  } catch (error) {
+    console.error('Error in getCommissionStructures:', error);
+    return [];
+  }
+}
+
+/**
+ * Create a commission structure.
+ */
+export async function createCommissionStructure(
+  structure: Omit<CommissionStructure, 'id' | 'created_at' | 'updated_at'>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('commission_structures').insert([
+      {
+        ...structure,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]);
+
+    if (error) {
+      console.error('Error creating commission structure:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in createCommissionStructure:', error);
+    return false;
+  }
+}
+
+/**
+ * Update a commission structure.
+ */
+export async function updateCommissionStructure(
+  structureId: string,
+  updates: Partial<Omit<CommissionStructure, 'id' | 'created_at' | 'updated_at'>>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('commission_structures')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', structureId);
+
+    if (error) {
+      console.error('Error updating commission structure:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateCommissionStructure:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete a commission structure.
+ */
+export async function deleteCommissionStructure(structureId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('commission_structures').delete().eq('id', structureId);
+
+    if (error) {
+      console.error('Error deleting commission structure:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteCommissionStructure:', error);
+    return false;
+  }
+}
+
+/**
+ * Generate a financial report.
+ */
+export async function generateFinancialReport(
+  restaurantId: string,
+  reportType: FinancialReport['report_type'],
+  startDate: string,
+  endDate: string
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.rpc('generate_financial_report', {
+      p_restaurant_id: restaurantId,
+      p_report_type: reportType,
+      p_period_start: startDate,
+      p_period_end: endDate
+    });
+
+    if (error) {
+      console.error('Error generating financial report:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in generateFinancialReport:', error);
+    return false;
+  }
+}
+
+/**
+ * Get financial reports.
+ */
+export async function getFinancialReports(restaurantId: string): Promise<FinancialReport[]> {
+  try {
     const { data, error } = await supabase
       .from('financial_reports')
       .select('*')
       .eq('restaurant_id', restaurantId)
-      .order('period_end', { ascending: false })
-      .limit(limit);
+      .order('period_start', { ascending: false });
 
     if (error) {
-      console.error('Error getting financial reports:', error);
+      console.error('Error fetching financial reports:', error);
       return [];
     }
 
-    return (data as DBFinancialReport[]).map((fr) => ({
-      id: fr.id,
-      restaurant_id: fr.restaurant_id ?? undefined,
-      report_type: fr.report_type,
-      period_start: fr.period_start,
-      period_end: fr.period_end,
-      total_orders: fr.total_orders,
-      gross_revenue: fr.gross_revenue,
-      net_revenue: fr.net_revenue,
-      total_commission: fr.total_commission,
-      total_fees: fr.total_fees,
-      total_refunds: fr.total_refunds,
-      average_order_value: fr.average_order_value,
-      commission_rate: fr.commission_rate ?? undefined,
-      payment_methods_breakdown: fr.payment_methods_breakdown ? JSON.parse(fr.payment_methods_breakdown) : {},
-      top_selling_items: fr.top_selling_items ? JSON.parse(fr.top_selling_items) : [],
-      generated_at: fr.generated_at ?? '',
-      created_at: fr.created_at ?? '',
-      updated_at: fr.updated_at ?? '',
-    }));
-  },
+    return (data as FinancialReport[]) || [];
+  } catch (error) {
+    console.error('Error in getFinancialReports:', error);
+    return [];
+  }
+}
 
-  async getEarningsSummary(restaurantId: string): Promise<{
-    totalEarnings: number;
-    availableEarnings: number;
-    pendingEarnings: number;
-    paidEarnings: number;
-  }> {
-    try {
-      const { data, error } = await supabase.rpc('get_restaurant_earnings_summary', {
-        p_restaurant_id: restaurantId,
-      });
+/**
+ * Get restaurant earnings summary.
+ */
+export async function getRestaurantEarningsSummary(restaurantId: string): Promise<{
+  total_earnings: number;
+  available_earnings: number;
+  pending_earnings: number;
+  paid_earnings: number;
+} | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_restaurant_earnings_summary', {
+      p_restaurant_id: restaurantId
+    });
 
-      if (error) {
-        console.error('Error getting earnings summary:', error);
-        return {
-          totalEarnings: 0,
-          availableEarnings: 0,
-          pendingEarnings: 0,
-          paidEarnings: 0,
-        };
-      }
-
-      return {
-        totalEarnings: data?.total_earnings || 0,
-        availableEarnings: data?.available_earnings || 0,
-        pendingEarnings: data?.pending_earnings || 0,
-        paidEarnings: data?.paid_earnings || 0,
-      };
-    } catch (error) {
-      console.error('Error getting earnings summary:', error);
-      return {
-        totalEarnings: 0,
-        availableEarnings: 0,
-        pendingEarnings: 0,
-        paidEarnings: 0,
-      };
-    }
-  },
-
-  async requestPayout(restaurantId: string): Promise<Payout | null> {
-    try {
-      const { data, error } = await supabase.rpc('request_restaurant_payout', {
-        p_restaurant_id: restaurantId,
-      }).select().single();
-
-      if (error) {
-        console.error('Error requesting payout:', error);
-        return null;
-      }
-
-      const payout = data as DBPayout;
-      return {
-        id: payout.id,
-        restaurant_id: payout.restaurant_id ?? undefined,
-        delivery_user_id: payout.delivery_user_id ?? undefined,
-        payout_method: payout.payout_method,
-        amount: payout.amount,
-        currency: payout.currency,
-        status: payout.status,
-        external_payout_id: payout.external_payout_id ?? undefined,
-        provider: payout.provider,
-        provider_fee: payout.provider_fee,
-        net_amount: payout.net_amount ?? undefined,
-        earnings_count: payout.earnings_count,
-        period_start: payout.period_start,
-        period_end: payout.period_end,
-        scheduled_date: payout.scheduled_date ?? undefined,
-        processed_at: payout.processed_at ?? undefined,
-        failure_reason: payout.failure_reason ?? undefined,
-        metadata: payout.metadata ? JSON.parse(payout.metadata) : {},
-        created_at: payout.created_at ?? '',
-        updated_at: payout.updated_at ?? '',
-      };
-    } catch (error) {
-      console.error('Error requesting payout:', error);
+    if (error) {
+      console.error('Error fetching restaurant earnings summary:', error);
       return null;
     }
-  },
 
-  async generateFinancialReport(
-    restaurantId: string,
-    reportType: FinancialReport['report_type'],
-    startDate: string,
-    endDate: string
-  ): Promise<FinancialReport | null> {
-    try {
-      const { data, error } = await supabase.rpc('generate_financial_report', {
-        p_restaurant_id: restaurantId,
-        p_report_type: reportType,
-        p_period_start: startDate,
-        p_period_end: endDate,
-      }).select().single();
+    if (!data) return null;
 
-      if (error) {
-        console.error('Error generating financial report:', error);
-        return null;
-      }
+    return {
+      total_earnings: data.total_earnings || 0,
+      available_earnings: data.available_earnings || 0,
+      pending_earnings: data.pending_earnings || 0,
+      paid_earnings: data.paid_earnings || 0
+    };
+  } catch (error) {
+    console.error('Error in getRestaurantEarningsSummary:', error);
+    return null;
+  }
+}
 
-      const report = data as DBFinancialReport;
-      return {
-        id: report.id,
-        restaurant_id: report.restaurant_id ?? undefined,
-        report_type: report.report_type,
-        period_start: report.period_start,
-        period_end: report.period_end,
-        total_orders: report.total_orders,
-        gross_revenue: report.gross_revenue,
-        net_revenue: report.net_revenue,
-        total_commission: report.total_commission,
-        total_fees: report.total_fees,
-        total_refunds: report.total_refunds,
-        average_order_value: report.average_order_value,
-        commission_rate: report.commission_rate ?? undefined,
-        payment_methods_breakdown: report.payment_methods_breakdown ? JSON.parse(report.payment_methods_breakdown) : {},
-        top_selling_items: report.top_selling_items ? JSON.parse(report.top_selling_items) : [],
-        generated_at: report.generated_at ?? '',
-        created_at: report.created_at ?? '',
-        updated_at: report.updated_at ?? '',
-      };
-    } catch (error) {
-      console.error('Error generating financial report:', error);
-      return null;
+/**
+ * Request restaurant payout.
+ */
+export async function requestRestaurantPayout(restaurantId: string, amount: number): Promise<boolean> {
+  try {
+    const { error } = await supabase.rpc('request_restaurant_payout', {
+      p_restaurant_id: restaurantId,
+      p_amount: amount
+    });
+
+    if (error) {
+      console.error('Error requesting restaurant payout:', error);
+      return false;
     }
-  },
-};
+
+    return true;
+  } catch (error) {
+    console.error('Error in requestRestaurantPayout:', error);
+    return false;
+  }
+}
+
+/**
+ * Get bank accounts for a user (restaurant or delivery, depending on use-case)
+ */
+export async function getBankAccounts(userId: string): Promise<BankAccount[]> {
+  try {
+    // By your model, userId may mean restaurant_id OR delivery_user_id depending on context.
+    // We'll assume restaurant_id; adjust if needed.
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('restaurant_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching bank accounts:", error);
+      return [];
+    }
+    if (!data) return [];
+    return data as BankAccount[];
+  } catch (err) {
+    console.error("Error in getBankAccounts:", err);
+    return [];
+  }
+}
+
+/**
+ * Add a new bank account for a user (restaurant or delivery, depending on use-case)
+ */
+export async function addBankAccount(
+  userId: string,
+  account: Omit<BankAccount, "id" | "created_at" | "updated_at" | "restaurant_id" | "delivery_user_id">
+): Promise<boolean> {
+  try {
+    // We'll assume restaurant user by default
+    const { error } = await supabase
+      .from('bank_accounts')
+      .insert([{
+        ...account,
+        restaurant_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }]);
+    if (error) {
+      console.error("Error adding bank account:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Error in addBankAccount:", err);
+    return false;
+  }
+}
+
+/**
+ * Set a bank account as the default for a user.
+ */
+export async function setDefaultBankAccount(
+  userId: string,
+  bankAccountId: string
+): Promise<boolean> {
+  try {
+    // Unset previous default for this restaurant
+    const { error: unsetError } = await supabase
+      .from('bank_accounts')
+      .update({ is_default: false, updated_at: new Date().toISOString() })
+      .eq('restaurant_id', userId);
+
+    if (unsetError) {
+      console.error("Error unsetting previous default bank account:", unsetError);
+      // Continue anyway
+    }
+
+    // Set selected account as default
+    const { error: setError } = await supabase
+      .from('bank_accounts')
+      .update({ is_default: true, updated_at: new Date().toISOString() })
+      .eq('id', bankAccountId)
+      .eq('restaurant_id', userId);
+
+    if (setError) {
+      console.error("Error setting default bank account:", setError);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Error in setDefaultBankAccount:", err);
+    return false;
+  }
+}
