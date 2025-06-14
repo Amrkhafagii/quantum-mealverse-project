@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { performanceAlertsService } from './performanceAlertsService';
 
+// Alert types and severities
 type AlertSeverity = 'critical' | 'high';
 type AlertType = 'low_rating' | 'high_cancellation' | 'late_delivery';
 
@@ -14,54 +15,57 @@ interface DeliveryPerformanceAlertData {
   actual_value: number;
 }
 
+// Main performance monitoring class
 export class PerformanceMonitoringService {
-  // Entry point: run checks for all active delivery drivers
+  // Batch run: check all active drivers
   async runPerformanceChecks(): Promise<void> {
-    // Get all active drivers
     const { data: users, error } = await supabase
       .from('delivery_users')
       .select('id')
       .eq('status', 'active');
+
     if (error) {
       console.error('Failed to fetch active delivery users:', error);
       return;
     }
     if (!users) return;
-    for (const user of users) {
+
+    for (const user of users as { id: string }[]) {
       await this.checkDriverPerformance(user.id);
-      await new Promise((r) => setTimeout(r, 100)); // delay to avoid DB overload
+      await new Promise((resolve) => setTimeout(resolve, 100)); // simple delay
     }
   }
 
-  // Check all metrics for a specific driver
+  // Check all metrics for a driver
   async checkDriverPerformance(deliveryUserId: string): Promise<void> {
     await this.checkLowRating(deliveryUserId);
     await this.checkHighCancellationRate(deliveryUserId);
     await this.checkLateDeliveries(deliveryUserId);
   }
 
-  // 1. Check for low rating
+  // 1. Low Rating
   private async checkLowRating(deliveryUserId: string): Promise<void> {
     const { data: user } = await supabase
       .from('delivery_users')
       .select('average_rating, first_name, last_name')
       .eq('id', deliveryUserId)
-      .single();
+      .maybeSingle();
 
     if (!user || typeof user.average_rating !== 'number') return;
+
     if (user.average_rating < 3.0) {
       await this.createAlert(deliveryUserId, {
         alert_type: 'low_rating',
         severity: user.average_rating < 2.0 ? 'critical' : 'high',
         title: 'Low Driver Rating',
-        description: `Driver ${user.first_name ?? ''} ${user.last_name ?? ''} has a rating of ${user.average_rating.toFixed(2)}`,
+        description: `Driver ${(user.first_name ?? '')} ${(user.last_name ?? '')} has a rating of ${user.average_rating.toFixed(2)}`,
         threshold_value: 3.0,
         actual_value: user.average_rating
       });
     }
   }
 
-  // 2. Check for high cancellation rate in past 30 days
+  // 2. High cancellation rate (30d)
   private async checkHighCancellationRate(deliveryUserId: string): Promise<void> {
     const since = new Date();
     since.setDate(since.getDate() - 30);
@@ -71,7 +75,7 @@ export class PerformanceMonitoringService {
       .eq('delivery_user_id', deliveryUserId)
       .gte('created_at', since.toISOString());
 
-    if (!orders || orders.length === 0) return;
+    if (!orders || !Array.isArray(orders) || orders.length === 0) return;
     const cancelledCount = orders.filter((o: any) => o.status === 'cancelled').length;
     const cancelRate = (cancelledCount / orders.length) * 100;
 
@@ -80,19 +84,19 @@ export class PerformanceMonitoringService {
         .from('delivery_users')
         .select('first_name, last_name')
         .eq('id', deliveryUserId)
-        .single();
+        .maybeSingle();
       await this.createAlert(deliveryUserId, {
         alert_type: 'high_cancellation',
         severity: cancelRate > 40 ? 'critical' : 'high',
         title: 'High Cancellation Rate',
-        description: `Driver ${user?.first_name ?? ''} ${user?.last_name ?? ''} has a ${cancelRate.toFixed(1)}% cancellation rate`,
+        description: `Driver ${(user?.first_name ?? '')} ${(user?.last_name ?? '')} has a ${cancelRate.toFixed(1)}% cancellation rate`,
         threshold_value: 20,
         actual_value: cancelRate
       });
     }
   }
 
-  // 3. Check for late deliveries in past 30 days
+  // 3. Late deliveries (30d)
   private async checkLateDeliveries(deliveryUserId: string): Promise<void> {
     const since = new Date();
     since.setDate(since.getDate() - 30);
@@ -101,11 +105,9 @@ export class PerformanceMonitoringService {
       .select('delivered_at, estimated_delivery_time')
       .eq('delivery_user_id', deliveryUserId)
       .eq('status', 'delivered')
-      .gte('created_at', since.toISOString())
-      .not('delivered_at', 'is', null)
-      .not('estimated_delivery_time', 'is', null);
+      .gte('created_at', since.toISOString());
 
-    if (!orders || orders.length === 0) return;
+    if (!orders || !Array.isArray(orders) || orders.length === 0) return;
     const lateCount = orders.filter((o: any) => {
       const delivered = o.delivered_at ? new Date(o.delivered_at) : null;
       const estimated = o.estimated_delivery_time ? new Date(o.estimated_delivery_time) : null;
@@ -118,19 +120,19 @@ export class PerformanceMonitoringService {
         .from('delivery_users')
         .select('first_name, last_name')
         .eq('id', deliveryUserId)
-        .single();
+        .maybeSingle();
       await this.createAlert(deliveryUserId, {
         alert_type: 'late_delivery',
         severity: lateRate > 30 ? 'critical' : 'high',
         title: 'High Late Delivery Rate',
-        description: `Driver ${user?.first_name ?? ''} ${user?.last_name ?? ''} has a ${lateRate.toFixed(1)}% late delivery rate`,
+        description: `Driver ${(user?.first_name ?? '')} ${(user?.last_name ?? '')} has a ${lateRate.toFixed(1)}% late delivery rate`,
         threshold_value: 15,
         actual_value: lateRate
       });
     }
   }
 
-  // Check for duplicate unresolved alerts before adding
+  // Only create alert if not already present and unresolved
   private async createAlert(
     deliveryUserId: string,
     alertData: DeliveryPerformanceAlertData
@@ -153,5 +155,5 @@ export class PerformanceMonitoringService {
   }
 }
 
-// Export singleton
+// Export a singleton instance
 export const performanceMonitoringService = new PerformanceMonitoringService();
