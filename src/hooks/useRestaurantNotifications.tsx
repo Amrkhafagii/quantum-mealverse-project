@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 // Import notificationService as a default import (adjust this if you have named export).
-import notificationService from '@/services/notifications/notificationService';
+import { notificationService } from '@/services/notifications/notificationService';
 // Import Notification type from types/notifications (fall back to local type if necessary)
 import type { Notification } from '@/types/notifications';
 // If Notification type does not exist, define a local fallback. Adjust as needed for your actual Notification structure:
@@ -125,4 +124,3 @@ export const useRestaurantNotifications = () => {
     markAllAsRead
   };
 };
-
