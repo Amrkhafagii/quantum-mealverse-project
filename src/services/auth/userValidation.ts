@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -42,7 +41,7 @@ export const validateRestaurantOwnership = async (
   try {
     const { data: restaurant, error } = await supabase
       .from('restaurants')
-      .select('id, user_id')
+      .select('id, restaurants_user_id') // <-- FIXED this field name!
       .eq('id', restaurantId)
       .eq('restaurants_user_id', userId) // Now compares UUID strings
       .single();
