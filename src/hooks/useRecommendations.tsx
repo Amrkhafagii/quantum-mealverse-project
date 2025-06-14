@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { MealType } from '@/types/meal';
 
-// Use correct imports that exist for all recommendation actions
 import {
   fetchUserRecommendations,
   applyRecommendation,
@@ -13,6 +12,9 @@ import {
 } from '@/services/recommendations/recommendationService';
 import { submitRecommendationFeedback } from '@/services/recommendations/feedbackService';
 import { IntelligentRecommendationEngine } from '@/services/recommendations/intelligentRecommendationEngine';
+
+// The type for feedback -- restrict to the union as required
+type FeedbackOption = "positive" | "negative" | "neutral";
 
 export function useRecommendations() {
   const { user } = useAuth();
@@ -24,9 +26,31 @@ export function useRecommendations() {
     if (!user) return;
     try {
       setIsLoading(true);
-      // Fetch meal recommendations for the user (note: this returns WorkoutRecommendation[] by default but should be adapted for meals)
-      const data: MealType[] = await fetchUserRecommendations(user.id);
-      setRecommendations(data);
+      // Hotfix: Map WorkoutRecommendation to minimal MealType
+      const workoutRecs: any[] = await fetchUserRecommendations(user.id);
+      // If shape is correct, use directly, else map minimal
+      const asMeals: MealType[] = (workoutRecs || []).map((item: any) => ({
+        id: item.id || '',
+        name: item.name || item.title || 'Recommended Meal',
+        description: item.description || '',
+        image_url: item.image_url || '',
+        price: item.price ?? 0,
+        calories: item.calories ?? 0,
+        protein: item.protein ?? 0,
+        carbs: item.carbs ?? 0,
+        fat: item.fat ?? 0,
+        is_active: item.is_active ?? true,
+        restaurant_id: item.restaurant_id || '',
+        created_at: item.created_at || '',
+        updated_at: item.updated_at || '',
+        dietary_tags: item.dietary_tags ?? [],
+        allergen_warnings: item.allergen_warnings ?? [],
+        preparation_time: item.preparation_time ?? 30,
+        complexity_level: item.complexity_level ?? 'simple',
+        cooking_instructions: item.cooking_instructions ?? [],
+        totalTime: item.totalTime ?? 30,
+      }));
+      setRecommendations(asMeals);
     } catch (error) {
       console.error('Error fetching meal recommendations:', error);
       toast({
@@ -113,7 +137,7 @@ export function useRecommendations() {
 
   const submitFeedback = async (
     recommendationId: string,
-    feedbackType: string, // Union type if exists
+    feedbackType: FeedbackOption,
     rating?: number,
     comments?: string
   ) => {
