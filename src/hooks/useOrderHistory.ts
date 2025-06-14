@@ -48,7 +48,7 @@ export function useOrderHistory(userId?: string) { // userId is UUID string from
           *,
           order_items (*)
         `)
-        .eq('customer_id', userId) // Use customer_id with UUID from auth
+        .eq('customer_id', userId) // correct 'customer_id' is UUID (not 'user_id')
         .order('created_at', { ascending: false });
 
       if (error) {

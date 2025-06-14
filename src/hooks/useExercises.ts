@@ -16,15 +16,18 @@ export function useExercises() {
         .from('exercises')
         .select('*')
         .order('name');
-
       if (error) throw error;
-      
-      // Type cast the difficulty field to ensure it matches our interface
+
+      // Type cast the difficulty and make sure all muscle_groups are string[]
       const typedExercises: Exercise[] = (data || []).map(exercise => ({
         ...exercise,
-        difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced'
+        difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced',
+        muscle_groups: Array.isArray(exercise.muscle_groups)
+          ? exercise.muscle_groups
+          : typeof exercise.muscle_groups === "string"
+            ? exercise.muscle_groups.split(",").map((g: string) => g.trim()) : [],
       }));
-      
+
       setExercises(typedExercises);
     } catch (error) {
       console.error('Error fetching exercises:', error);

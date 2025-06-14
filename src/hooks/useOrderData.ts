@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
@@ -68,6 +67,7 @@ export const useOrderData = (orderId: string) => {
         }
 
         // Fallback to original implementation for backwards compatibility
+        // Ensure all ID queries use "customer_id" not "user_id"
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .select(`
@@ -77,13 +77,9 @@ export const useOrderData = (orderId: string) => {
           `)
           .eq('id', orderId)
           .maybeSingle();
-          
+
         if (orderError) throw orderError;
-        
-        if (!orderData) {
-          throw new Error('Order not found');
-        }
-        
+
         // Check restaurant assignments for unified status handling
         if (['pending', 'awaiting_restaurant', 'restaurant_assigned'].includes(orderData.status)) {
           // Check for any assignment status that should update order status
@@ -136,10 +132,10 @@ export const useOrderData = (orderId: string) => {
             name: '' 
           } : undefined)
         };
-        
+
         // Store for offline access
         storeActiveOrder(formattedData);
-        
+
         return formattedData;
       } catch (error) {
         console.error('Error fetching order data:', error);

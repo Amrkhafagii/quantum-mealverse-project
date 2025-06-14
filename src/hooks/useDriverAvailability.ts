@@ -15,6 +15,7 @@ export function useDriverAvailability(deliveryUserId?: string) {
 
     try {
       setLoading(true);
+      // GET -- should use proper delivery_user_id column
       const data = await restaurantDeliveryHandoffService.getDriverAvailability(deliveryUserId);
       setAvailability(data);
     } catch (err) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DeliveryUser } from '@/types/delivery';
 import { getDeliveryUserByUserId } from '@/services/delivery/deliveryService';
@@ -32,11 +31,9 @@ export const useDeliveryUser = (userId: string | undefined) => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('Fetching delivery user for userId:', userId);
+
+      // DELIVERY USER FETCH: Use correct field ('delivery_users_user_id')
       const userData = await getDeliveryUserByUserId(userId);
-      console.log('Delivery user data received:', userData);
-      
       setDeliveryUser(userData);
       setHasAttempted(true);
     } catch (err) {

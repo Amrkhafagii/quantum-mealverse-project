@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   WorkoutPlan, 
@@ -36,7 +35,7 @@ export function useWorkoutData() {
       setIsLoading(true);
       const authUserId = userId || user?.id;
       if (!authUserId) return;
-      
+
       const data = await workoutService.fetchWorkoutPlans(authUserId);
       setWorkoutPlans(data);
     } catch (error) {
@@ -56,7 +55,7 @@ export function useWorkoutData() {
       setIsLoading(true);
       const authUserId = userId || user?.id;
       if (!authUserId) return;
-      
+
       const data = await workoutService.fetchWorkoutSchedules(authUserId);
       setSchedules(data);
     } catch (error) {
@@ -71,7 +70,7 @@ export function useWorkoutData() {
       setIsLoading(true);
       const authUserId = userId || user?.id;
       if (!authUserId) return;
-      
+
       const data = await workoutService.fetchWorkoutHistory(authUserId);
       setHistory(data || []);
     } catch (error) {
@@ -91,38 +90,33 @@ export function useWorkoutData() {
       setIsLoading(true);
       const authUserId = userId || user?.id;
       if (!authUserId) return;
-      
-      // Get workout stats from the new table using auth UUID
+
       const stats = await getWorkoutStats(authUserId);
-      
-      // Get the most active day from workout history using auth UUID
       const { data: historyData, error: historyError } = await supabase
         .from('workout_history')
         .select('*')
-        .eq('user_id', authUserId)
+        .eq('workout_history_user_id', authUserId)
         .order('date', { ascending: false })
         .limit(30);
-        
+
       if (historyError) throw historyError;
-      
-      // Calculate the most active day
+
+      let mostActiveDay = 'N/A';
+      let maxCount = 0;
+
       const dayCountMap: Record<string, number> = {};
       historyData?.forEach(workout => {
         const day = new Date(workout.date).toLocaleDateString('en-US', { weekday: 'long' });
         dayCountMap[day] = (dayCountMap[day] || 0) + 1;
       });
-      
-      let mostActiveDay = 'N/A';
-      let maxCount = 0;
-      
+
       Object.entries(dayCountMap).forEach(([day, count]) => {
         if (count > maxCount) {
           mostActiveDay = day;
           maxCount = count;
         }
       });
-      
-      // Handle different response formats from getWorkoutStats
+
       const caloriesBurned = (stats && 'calories_burned' in stats) 
         ? stats.calories_burned 
         : (stats && 'total_calories_burned' in stats) 
@@ -162,29 +156,27 @@ export function useWorkoutData() {
   const logWorkout = async (workoutLog: WorkoutLog) => {
     try {
       setIsLoading(true);
-      
-      // Ensure user_id is always the authenticated user's UUID
+
       const logWithAuthUserId = {
         ...workoutLog,
-        user_id: workoutLog.user_id || user?.id
+        workout_logs_user_id: workoutLog.workout_logs_user_id || user?.id
       };
-      
-      if (!logWithAuthUserId.user_id) {
+
+      if (!logWithAuthUserId.workout_logs_user_id) {
         throw new Error("User ID is required for workout logs");
       }
-      
+
       const success = await workoutService.logWorkout(logWithAuthUserId);
-      
+
       if (success) {
-        // Refresh workout stats and history using auth UUID
-        await fetchWorkoutStats(logWithAuthUserId.user_id);
-        await fetchWorkoutHistory(logWithAuthUserId.user_id);
-        
+        await fetchWorkoutStats(logWithAuthUserId.workout_logs_user_id);
+        await fetchWorkoutHistory(logWithAuthUserId.workout_logs_user_id);
+
         toast({
           title: "Success",
           description: "Workout logged successfully! Check your achievements.",
         });
-        
+
         return { success: true, data: logWithAuthUserId };
       } else {
         throw new Error("Failed to log workout");
