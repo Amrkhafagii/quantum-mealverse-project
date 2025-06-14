@@ -33,7 +33,7 @@ function passthrough(price: number) {
   return price;
 }
 
-// Explicitly initialize the context as undefined to fix type recursion
+// Fix: Explicitly set initial context to undefined and check in useCurrency
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
