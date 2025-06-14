@@ -51,7 +51,7 @@ class CustomerCommunicationService {
       const { data: deliveryInfo } = await supabase
         .from('delivery_info')
         .select('phone')
-        .eq('user_id', recipientId)
+        .eq('delivery_info_user_id', recipientId)
         .single();
 
       if (!deliveryInfo?.phone) {
