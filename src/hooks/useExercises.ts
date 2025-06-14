@@ -18,15 +18,29 @@ export function useExercises() {
         .order('name');
       if (error) throw error;
 
-      // Type cast the difficulty and make sure all muscle_groups are string[]
-      const typedExercises: Exercise[] = (data || []).map(exercise => ({
-        ...exercise,
-        difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced',
-        muscle_groups: Array.isArray(exercise.muscle_groups)
-          ? exercise.muscle_groups
-          : typeof exercise.muscle_groups === "string"
-            ? exercise.muscle_groups.split(",").map((g: string) => g.trim()) : [],
-      }));
+      // Type cast and fill in all required Exercise fields
+      const typedExercises: Exercise[] = (data || []).map(exercise => {
+        // Defensive conversion of muscle_groups
+        const rawMuscleGroups = exercise.muscle_groups;
+        let muscleGroups: string[];
+        if (Array.isArray(rawMuscleGroups)) {
+          muscleGroups = rawMuscleGroups.map(String);
+        } else if (typeof rawMuscleGroups === "string") {
+          muscleGroups = rawMuscleGroups.split(",").map((g: string) => g.trim());
+        } else {
+          muscleGroups = [];
+        }
+
+        return {
+          ...exercise,
+          difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced',
+          muscle_groups: muscleGroups,
+          // Ensure required fields exist, else fallback/default
+          target_muscle: exercise.target_muscle || muscleGroups[0] || "",
+          sets: typeof exercise.sets === "number" ? exercise.sets : 3, // default 3
+          reps: typeof exercise.reps === "number" ? exercise.reps : 10, // default 10
+        };
+      });
 
       setExercises(typedExercises);
     } catch (error) {
@@ -46,7 +60,7 @@ export function useExercises() {
   }, []);
 
   const getExercisesByMuscleGroup = (muscleGroup: string) => {
-    return exercises.filter(exercise => 
+    return exercises.filter(exercise =>
       exercise.muscle_groups.includes(muscleGroup.toLowerCase())
     );
   };
@@ -58,7 +72,7 @@ export function useExercises() {
   const searchExercises = (query: string) => {
     return exercises.filter(exercise =>
       exercise.name.toLowerCase().includes(query.toLowerCase()) ||
-      exercise.muscle_groups.some(group => 
+      exercise.muscle_groups.some(group =>
         group.toLowerCase().includes(query.toLowerCase())
       )
     );
