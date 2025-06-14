@@ -2,33 +2,36 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { WorkoutRecommendation, RecommendationFeedback } from '@/types/fitness/recommendations';
+// Correct MealType imports:
+import type { MealType } from '@/types/meal';
+// Use your actual meal recommendation service import (adjust as needed)
 import { 
-  fetchUserRecommendations, 
-  applyRecommendation as applyRecommendationService, 
-  dismissRecommendation as dismissRecommendationService,
-  generateRecommendations as generateRecommendationsService
+  fetchUserMealRecommendations, 
+  applyMealRecommendation as applyRecommendationService, 
+  dismissMealRecommendation as dismissRecommendationService,
+  generateMealRecommendations as generateRecommendationsService
 } from '@/services/recommendations/recommendationService';
-import { submitRecommendationFeedback } from '@/services/recommendations/feedbackService';
+import { submitMealRecommendationFeedback } from '@/services/recommendations/feedbackService';
 import { IntelligentRecommendationEngine } from '@/services/recommendations/intelligentRecommendationEngine';
 
 export function useRecommendations() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [recommendations, setRecommendations] = useState<WorkoutRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<MealType[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const fetchRecommendations = async (): Promise<void> => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const data: WorkoutRecommendation[] = await fetchUserRecommendations(user.id);
+      // Fetch meal recommendations for the user
+      const data: MealType[] = await fetchUserMealRecommendations(user.id);
       setRecommendations(data);
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
+      console.error('Error fetching meal recommendations:', error);
       toast({
         title: "Error",
-        description: "Failed to load recommendations",
+        description: "Failed to load meal recommendations",
         variant: "destructive"
       });
     } finally {
@@ -43,7 +46,7 @@ export function useRecommendations() {
 
       toast({
         title: "Success",
-        description: "New personalized recommendations generated!",
+        description: "New personalized meal recommendations generated!",
       });
 
       fetchRecommendations();
@@ -73,7 +76,7 @@ export function useRecommendations() {
 
       toast({
         title: "Recommendation Applied",
-        description: "We've updated your workout plan accordingly",
+        description: "We've updated your meal plan accordingly",
       });
 
       fetchRecommendations();
@@ -94,7 +97,7 @@ export function useRecommendations() {
 
       toast({
         title: "Recommendation Dismissed",
-        description: "We won't show this recommendation again",
+        description: "We won't show this meal again",
       });
 
       fetchRecommendations();
@@ -110,17 +113,17 @@ export function useRecommendations() {
 
   const submitFeedback = async (
     recommendationId: string,
-    feedbackType: RecommendationFeedback['feedback_type'],
+    feedbackType: string, // If you have a feedback type union, use it
     rating?: number,
     comments?: string
   ) => {
     if (!user) return;
     try {
-      await submitRecommendationFeedback(user.id, recommendationId, feedbackType, rating, comments);
+      await submitMealRecommendationFeedback(user.id, recommendationId, feedbackType, rating, comments);
 
       toast({
         title: "Feedback Submitted",
-        description: "Thank you for helping us improve our recommendations!",
+        description: "Thank you for helping us improve your meal recommendations!",
       });
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -132,12 +135,11 @@ export function useRecommendations() {
     }
   };
 
-  // Resolve infinite type instantiation by NOT using objects or hooks in dependencies!
   useEffect(() => {
     if (user) {
       fetchRecommendations();
     }
-    // Only depend on user?.id as a primitive
+    // Depend only on user?.id for stability
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -151,3 +153,4 @@ export function useRecommendations() {
     submitFeedback
   };
 }
+
