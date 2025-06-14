@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,12 +47,12 @@ const NotificationItem: React.FC<{
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-3">
-          {getNotificationIcon(notification.notification_type)}
+          {getNotificationIcon(notification.type)}
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-1">
               <h4 className="font-medium text-gray-900">{notification.title}</h4>
-              <Badge className={getNotificationColor(notification.notification_type)}>
-                {notification.notification_type.replace('_', ' ')}
+              <Badge className={getNotificationColor(notification.type)}>
+                {notification.type?.replace('_', ' ')}
               </Badge>
             </div>
             <p className="text-sm text-gray-600">{notification.message}</p>
