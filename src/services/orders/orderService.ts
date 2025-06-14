@@ -1,7 +1,34 @@
 import { supabase } from '@/integrations/supabase/client';
-import { recordOrderHistory } from './webhook/orderHistoryService';
 import { OrderStatus } from '@/types/webhook';
 
+// Import refactored utilities
+import { 
+  queryOrderById, 
+  queryUserOrders, 
+  queryOrderItems, 
+  performOrderUpdate 
+} from './database/orderQueries';
+import { 
+  logOrderOperation, 
+  logOrderError, 
+  logOrderSuccess, 
+  logOrderQuery 
+} from './logging/orderLogger';
+import { 
+  buildOrderUpdateData, 
+  buildCancellationMetadata, 
+  validateOrderUpdateParams 
+} from './transformation/orderDataTransformers';
+import { 
+  handleOrderError, 
+  createValidationError 
+} from './errors/orderErrorHandler';
+import { 
+  recordStatusChange, 
+  recordCancellation 
+} from './history/orderHistoryService';
+
+// Keep existing interfaces
 export interface Order {
   id: string;
   customer_name: string;
@@ -42,71 +69,49 @@ export interface OrderItem {
 }
 
 /**
- * Fetch orders for a specific user
+ * Fetch orders for a specific user - refactored with single responsibility
  */
 export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
   try {
-    console.log('Fetching orders for user:', userId);
+    logOrderQuery('fetchUserOrders', { userId });
     
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        restaurant:restaurants!orders_restaurant_id_fkey (
-          name,
-          address,
-          phone
-        )
-      `)
-      .eq('customer_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching user orders:', error);
-      throw error;
+    if (!userId) {
+      throw createValidationError('User ID is required');
     }
 
-    console.log('Successfully fetched orders:', data?.length || 0);
-    return data || [];
+    const data = await queryUserOrders(userId);
+    
+    logOrderSuccess('fetchUserOrders', data, { userId, count: data.length });
+    return data;
   } catch (error) {
-    console.error('Error in fetchUserOrders:', error);
+    logOrderError('fetchUserOrders', error, { userId });
     throw error;
   }
 };
 
 /**
- * Fetch order items for a specific order
+ * Fetch order items for a specific order - refactored with single responsibility
  */
 export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => {
   try {
-    console.log('Fetching order items for order:', orderId);
+    logOrderQuery('fetchOrderItems', { orderId });
     
-    const { data, error } = await supabase
-      .from('order_items')
-      .select(`
-        id,
-        order_id,
-        meal_id,
-        quantity,
-        price
-      `)
-      .eq('order_id', orderId);
-
-    if (error) {
-      console.error('Error fetching order items:', error);
-      throw error;
+    if (!orderId) {
+      throw createValidationError('Order ID is required');
     }
 
-    console.log('Successfully fetched order items:', data?.length || 0);
-    return data || [];
+    const data = await queryOrderItems(orderId);
+    
+    logOrderSuccess('fetchOrderItems', data, { orderId, count: data.length });
+    return data;
   } catch (error) {
-    console.error('Error in fetchOrderItems:', error);
+    logOrderError('fetchOrderItems', error, { orderId });
     throw error;
   }
 };
 
 /**
- * Update order status
+ * Update order status - refactored with single responsibility functions
  */
 export const updateOrderStatus = async (
   orderId: string,
@@ -115,46 +120,31 @@ export const updateOrderStatus = async (
   metadata?: Record<string, any>
 ): Promise<boolean> => {
   try {
-    console.log('Updating order status:', { orderId, newStatus, restaurantId });
+    logOrderOperation('updateOrderStatus', { orderId, newStatus, restaurantId });
 
-    // Update the order status
-    const updateData: any = {
-      status: newStatus,
-      updated_at: new Date().toISOString()
-    };
-
-    if (restaurantId) {
-      updateData.restaurant_id = restaurantId;
+    // Validate input parameters
+    if (!validateOrderUpdateParams(orderId, newStatus, restaurantId)) {
+      throw createValidationError('Invalid parameters for order status update');
     }
 
-    const { error: orderError } = await supabase
-      .from('orders')
-      .update(updateData)
-      .eq('id', orderId);
+    // Build update data
+    const updateData = buildOrderUpdateData(newStatus, restaurantId, metadata);
 
-    if (orderError) {
-      console.error('Error updating order status:', orderError);
-      throw orderError;
-    }
+    // Perform database update
+    await performOrderUpdate(orderId, updateData);
 
     // Record the history
-    await recordOrderHistory(
-      orderId,
-      newStatus,
-      restaurantId,
-      metadata
-    );
+    await recordStatusChange(orderId, newStatus, restaurantId, metadata);
 
-    console.log('Successfully updated order status');
+    logOrderSuccess('updateOrderStatus', true, { orderId, newStatus });
     return true;
   } catch (error) {
-    console.error('Error in updateOrderStatus:', error);
-    return false;
+    return handleOrderError(error, 'updateOrderStatus', { orderId, newStatus, restaurantId });
   }
 };
 
 /**
- * Cancel an order
+ * Cancel an order - refactored with single responsibility functions
  */
 export const cancelOrder = async (
   orderId: string,
@@ -162,84 +152,64 @@ export const cancelOrder = async (
   restaurantId?: string
 ): Promise<boolean> => {
   try {
-    console.log('Cancelling order:', { orderId, reason });
+    logOrderOperation('cancelOrder', { orderId, reason });
 
-    const { error } = await supabase
-      .from('orders')
-      .update({
-        status: OrderStatus.CANCELLED,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', orderId);
-
-    if (error) {
-      console.error('Error cancelling order:', error);
-      throw error;
+    // Validate input
+    if (!orderId) {
+      throw createValidationError('Order ID is required for cancellation');
     }
 
-    // Record the cancellation in history
-    await recordOrderHistory(
-      orderId,
-      OrderStatus.CANCELLED,
-      restaurantId,
-      { 
-        cancellation_reason: reason || 'Order cancelled',
-        cancelled_at: new Date().toISOString()
-      }
-    );
+    // Build cancellation data
+    const updateData = buildOrderUpdateData(OrderStatus.CANCELLED);
+    const cancellationMetadata = buildCancellationMetadata(reason);
 
-    console.log('Successfully cancelled order');
+    // Perform database update
+    await performOrderUpdate(orderId, updateData);
+
+    // Record the cancellation in history
+    await recordCancellation(orderId, reason, restaurantId);
+
+    logOrderSuccess('cancelOrder', true, { orderId });
     return true;
   } catch (error) {
-    console.error('Error in cancelOrder:', error);
-    return false;
+    return handleOrderError(error, 'cancelOrder', { orderId, reason, restaurantId });
   }
 };
 
 /**
- * Get order by ID with full details
+ * Get order by ID with full details - refactored with single responsibility
  */
 export const getOrderById = async (orderId: string): Promise<Order | null> => {
   try {
-    console.log('Fetching order by ID:', orderId);
+    logOrderQuery('getOrderById', { orderId });
     
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        restaurant:restaurants!orders_restaurant_id_fkey (
-          name,
-          address,
-          phone,
-          latitude,
-          longitude
-        )
-      `)
-      .eq('id', orderId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.warn('Order not found:', orderId);
-        return null;
-      }
-      console.error('Error fetching order:', error);
-      throw error;
+    if (!orderId) {
+      throw createValidationError('Order ID is required');
     }
 
-    console.log('Successfully fetched order');
+    const data = await queryOrderById(orderId);
+    
+    logOrderSuccess('getOrderById', !!data, { orderId });
     return data;
   } catch (error) {
-    console.error('Error in getOrderById:', error);
+    if (handleOrderError(error, 'getOrderById', { orderId })) {
+      return null;
+    }
     throw error;
   }
 };
 
 /**
- * Get order history for an order
+ * Get order history for an order - simplified with extracted utilities
  */
 export const getOrderHistory = async (orderId: string) => {
   try {
+    logOrderQuery('getOrderHistory', { orderId });
+    
+    if (!orderId) {
+      throw createValidationError('Order ID is required');
+    }
+
     const { data, error } = await supabase
       .from('order_history')
       .select(`
@@ -252,13 +222,13 @@ export const getOrderHistory = async (orderId: string) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching order history:', error);
-      throw error;
+      handleDatabaseError(error, 'getOrderHistory', { orderId });
     }
 
+    logOrderSuccess('getOrderHistory', data, { orderId, count: data?.length || 0 });
     return data || [];
   } catch (error) {
-    console.error('Error in getOrderHistory:', error);
+    logOrderError('getOrderHistory', error, { orderId });
     throw error;
   }
 };
