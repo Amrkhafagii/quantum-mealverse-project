@@ -39,11 +39,12 @@ export class DashboardStatsService {
       // Get average rating
       const { data: avgRatingData } = await supabase
         .from('delivery_users')
-        .select('rating')
-        .not('rating', 'is', null);
+        .select('average_rating')
+        .not('average_rating', 'is', null);
 
-      const avgRating = avgRatingData?.length 
-        ? avgRatingData.reduce((sum, user) => sum + (user.rating || 0), 0) / avgRatingData.length
+      const ratings = avgRatingData?.map((user: { average_rating?: number }) => user.average_rating || 0) || [];
+      const avgRating = ratings.length
+        ? ratings.reduce((sum, val) => sum + val, 0) / ratings.length
         : 0;
 
       return {

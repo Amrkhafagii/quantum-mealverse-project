@@ -1,6 +1,25 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { DeliveryManagementLog } from '@/types/admin';
+
+const ACTIONS: DeliveryManagementLog['action_type'][] = [
+  'driver_approved',
+  'driver_rejected',
+  'driver_suspended',
+  'zone_created',
+  'zone_updated',
+  'alert_resolved',
+  'performance_review'
+];
+const TARGETS: DeliveryManagementLog['target_type'][] = [
+  'driver', 'zone', 'alert', 'system'
+];
+
+function safeActionType(val: any): DeliveryManagementLog['action_type'] {
+  return (ACTIONS as string[]).includes(val) ? val as DeliveryManagementLog['action_type'] : 'system';
+}
+function safeTargetType(val: any): DeliveryManagementLog['target_type'] {
+  return (TARGETS as string[]).includes(val) ? val as DeliveryManagementLog['target_type'] : 'system';
+}
 
 export class ManagementLogsService {
   async createLog(
@@ -59,10 +78,18 @@ export class ManagementLogsService {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-
-      return data || [];
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        admin_user_id: row.admin_user_id,
+        action_type: safeActionType(row.action_type),
+        target_type: safeTargetType(row.target_type),
+        target_id: row.target_id,
+        details: row.details,
+        ip_address: row.ip_address,
+        user_agent: row.user_agent,
+        created_at: row.created_at
+      }));
     } catch (error) {
       console.error('Error fetching management logs:', error);
       return [];
@@ -87,10 +114,18 @@ export class ManagementLogsService {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-
-      return data || [];
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        admin_user_id: row.admin_user_id,
+        action_type: safeActionType(row.action_type),
+        target_type: safeTargetType(row.target_type),
+        target_id: row.target_id,
+        details: row.details,
+        ip_address: row.ip_address,
+        user_agent: row.user_agent,
+        created_at: row.created_at
+      }));
     } catch (error) {
       console.error('Error fetching logs by date range:', error);
       return [];

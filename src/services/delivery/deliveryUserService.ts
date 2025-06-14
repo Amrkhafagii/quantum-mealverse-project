@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryUser } from '@/types/delivery';
 
@@ -66,9 +65,7 @@ export const getDeliveryUserByUserId = async (
       driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
       status,
       rating:
-        typeof data.rating === 'number'
-          ? data.rating
-          : typeof data.average_rating === 'number'
+        typeof data.average_rating === 'number'
           ? data.average_rating
           : 0,
       total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,

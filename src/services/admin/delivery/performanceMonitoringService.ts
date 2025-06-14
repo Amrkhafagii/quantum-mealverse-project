@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { performanceAlertsService } from './performanceAlertsService';
 import type { DeliveryPerformanceAlert } from '@/types/admin';
@@ -23,18 +22,18 @@ export class PerformanceMonitoringService {
   private async checkLowRating(deliveryUserId: string): Promise<void> {
     const { data: user } = await supabase
       .from('delivery_users')
-      .select('rating, first_name, last_name')
+      .select('average_rating, first_name, last_name')
       .eq('id', deliveryUserId)
       .single();
 
-    if (user && user.rating < 3.0) {
+    if (user && user.average_rating !== undefined && user.average_rating < 3.0) {
       await this.createAlert(deliveryUserId, {
         alert_type: 'low_rating',
-        severity: user.rating < 2.0 ? 'critical' : 'high',
+        severity: user.average_rating < 2.0 ? 'critical' : 'high',
         title: 'Low Driver Rating',
-        description: `Driver ${user.first_name} ${user.last_name} has a rating of ${user.rating}`,
+        description: `Driver ${user.first_name} ${user.last_name} has a rating of ${user.average_rating}`,
         threshold_value: 3.0,
-        actual_value: user.rating
+        actual_value: user.average_rating
       });
     }
   }
@@ -85,8 +84,8 @@ export class PerformanceMonitoringService {
       .not('delivered_at', 'is', null)
       .not('estimated_delivery_time', 'is', null);
 
-    if (orders && orders.length > 0) {
-      const lateDeliveries = orders.filter(order => {
+    if (orders && Array.isArray(orders) && orders.length > 0) {
+      const lateDeliveries = orders.filter((order: any) => {
         const deliveredAt = new Date(order.delivered_at!);
         const estimatedTime = new Date(order.estimated_delivery_time!);
         return deliveredAt > estimatedTime;
