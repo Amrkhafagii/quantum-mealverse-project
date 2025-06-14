@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { userTypeService } from '@/services/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
+// Prefer metadata, fallback to user_types table with new column
 export function useUserTypeWithFallback() {
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,24 +18,21 @@ export function useUserTypeWithFallback() {
       }
 
       try {
-        // First check user metadata (from auth.users)
         const userMetadata = user?.user_metadata as { user_type?: string } | undefined;
-        console.log('useUserTypeWithFallback - User metadata:', userMetadata);
-        
         if (userMetadata?.user_type) {
-          console.log('useUserTypeWithFallback - Found user type in metadata:', userMetadata.user_type);
           setUserType(userMetadata.user_type);
           setLoading(false);
           return;
         }
 
-        // If not in metadata, check our user_types table
-        console.log('useUserTypeWithFallback - Checking user_types table for user:', user.id);
-        const type = await userTypeService.getUserType(user.id);
-        console.log('useUserTypeWithFallback - Found user type in database:', type);
-        setUserType(type);
+        const { data, error } = await supabase
+          .from('user_types')
+          .select('type')
+          .eq('user_types_user_id', user.id)
+          .single();
+
+        setUserType(data?.type || null);
       } catch (error) {
-        console.error('useUserTypeWithFallback - Error fetching user type:', error);
         setUserType(null);
       } finally {
         setLoading(false);

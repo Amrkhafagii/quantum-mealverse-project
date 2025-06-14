@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { userTypeService } from '@/services/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
+// userType must be loaded from user_types table using new column
 export function useUserType() {
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +18,6 @@ export function useUserType() {
       }
 
       try {
-        // First check user metadata (from auth.users)
         const userMetadata = user?.user_metadata as { user_type?: string } | undefined;
         if (userMetadata?.user_type) {
           setUserType(userMetadata.user_type);
@@ -25,11 +25,14 @@ export function useUserType() {
           return;
         }
 
-        // If not in metadata, check our user_types table
-        const type = await userTypeService.getUserType(user.id);
-        setUserType(type);
+        const { data, error } = await supabase
+          .from('user_types')
+          .select('type')
+          .eq('user_types_user_id', user.id)
+          .single();
+
+        setUserType(data?.type || null);
       } catch (error) {
-        console.error('Error fetching user type:', error);
         setUserType(null);
       } finally {
         setLoading(false);

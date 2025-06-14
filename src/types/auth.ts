@@ -1,4 +1,3 @@
-
 // Authentication-related types with updated user ID naming
 
 export interface UserType {
@@ -88,3 +87,4 @@ export interface ValidationResult {
   message?: string;
   user?: any;
 }
+// All user references in hooks should use the correct user id column mapping e.g. user_types_user_id, etc.

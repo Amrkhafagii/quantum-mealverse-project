@@ -1,4 +1,3 @@
-
 // Core user types with updated naming convention
 
 export interface BaseUser {
@@ -17,7 +16,7 @@ export interface UserProfile extends BaseUser {
 // User type mapping interfaces
 export interface UserType {
   id: string;
-  user_types_user_id: string; // Updated to match new naming convention
+  user_types_user_id: string; // Used in all hooks, replaces old `user_id`
   type: 'customer' | 'restaurant' | 'delivery' | 'admin';
   created_at: string;
   updated_at: string;

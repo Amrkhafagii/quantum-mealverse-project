@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { userTypeService } from '@/services/supabaseClient';
@@ -30,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Updated: fetchUserType grabs from user_types with correct column
   const fetchUserType = async (currentUser: User | null) => {
     if (!currentUser) {
       setUserType(null);
@@ -37,21 +37,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // First check user metadata
       const userMetadata = currentUser?.user_metadata as { user_type?: string } | undefined;
-      console.log('AuthContext - User metadata:', userMetadata);
-      
       if (userMetadata?.user_type) {
-        console.log('AuthContext - Found user type in metadata:', userMetadata.user_type);
         setUserType(userMetadata.user_type);
         return;
       }
+      // Query user_types using user_types_user_id
+      const { data, error } = await supabase
+        .from('user_types')
+        .select('type')
+        .eq('user_types_user_id', currentUser.id)
+        .single();
 
-      // If not in metadata, check database
-      console.log('AuthContext - Checking database for user type:', currentUser.id);
-      const type = await userTypeService.getUserType(currentUser.id);
-      console.log('AuthContext - Found user type in database:', type);
-      setUserType(type);
+      setUserType(data?.type ?? null);
     } catch (error) {
       console.error('AuthContext - Error fetching user type:', error);
       setUserType(null);
@@ -63,24 +61,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!mounted) return;
-        
-        console.log('AuthContext - Initial session:', session);
+
         setSession(session);
         setUser(session?.user as UserWithMetadata ?? null);
-        
-        // Fetch user type
+
         await fetchUserType(session?.user ?? null);
-        
+
         if (mounted) {
           setIsInitialized(true);
           setLoading(false);
         }
       } catch (error) {
-        console.error('AuthContext - Error initializing auth:', error);
         if (mounted) {
           setIsInitialized(true);
           setLoading(false);
@@ -90,28 +83,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      
-      console.log('AuthContext - Auth state changed:', event);
-      
-      // Batch state updates to prevent multiple renders
+
       setSession(session);
       setUser(session?.user as UserWithMetadata ?? null);
-      
-      // Only fetch user type if we have a session and we're initialized
+
       if (session?.user && isInitialized) {
         await fetchUserType(session.user);
       } else if (!session) {
         setUserType(null);
       }
-      
-      if (mounted && isInitialized) {
-        setLoading(false);
-      }
+
+      if (mounted && isInitialized) setLoading(false);
     });
 
     return () => {
@@ -133,7 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.auth.signOut();
       return true;
     } catch (error) {
-      console.error('Logout error:', error);
       return false;
     }
   };

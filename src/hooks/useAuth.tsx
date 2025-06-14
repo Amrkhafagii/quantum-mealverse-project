@@ -2,6 +2,7 @@
 import { useContext } from 'react';
 import { AuthContext } from '@/contexts/AuthContext';
 
+// Alias for direct use
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

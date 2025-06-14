@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -13,12 +12,12 @@ export function useUser() {
     const getCurrentUser = async () => {
       try {
         setLoading(true);
+        // The Supabase user column is still id, but our type links must be updated everywhere else
         const { data: { user }, error } = await supabase.auth.getUser();
 
         if (error) {
           throw error;
         }
-
         if (user) {
           setUser(user);
         }
