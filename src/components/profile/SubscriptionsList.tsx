@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,15 +27,17 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
     queryKey: ['subscriptions', userId],
     queryFn: async () => {
       if (!userId) return [];
-      
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-        
       if (error) throw error;
-      return data as Subscription[] || [];
+      // Patch DB type to our Subscription type
+      return (data as any[] || []).map((rec) => ({
+        ...rec,
+        user_id: rec.user_id || rec.subscriptions_user_id,
+      }));
     },
     enabled: !!userId,
   });

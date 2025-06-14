@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CalendarDays, Dumbbell, Flame, Steps } from 'lucide-react';
-import { ProgressChart } from './ProgressChart';
+import { CalendarDays, Dumbbell, Flame } from 'lucide-react';
+import ProgressChart from './ProgressChart';
 
 interface FitnessAnalyticsDashboardProps {
   userId?: string;
@@ -60,7 +60,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Steps className="h-5 w-5 text-quantum-cyan" />
+            <Dumbbell className="h-5 w-5 text-quantum-cyan" />
             Steps Taken
           </CardTitle>
           <CardDescription>Total steps this week</CardDescription>
@@ -104,7 +104,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
       <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Steps className="h-5 w-5 text-quantum-cyan" />
+            <Dumbbell className="h-5 w-5 text-quantum-cyan" />
             Daily Steps
           </CardTitle>
           <CardDescription>Steps per day of the week</CardDescription>

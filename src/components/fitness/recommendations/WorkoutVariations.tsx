@@ -31,7 +31,7 @@ interface ExerciseVariation {
   alternatives?: string[];
 }
 
-export const WorkoutVariations: React.FC = () => {
+export const WorkoutVariations = ({ workoutId }: any) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -536,3 +536,5 @@ export const WorkoutVariations: React.FC = () => {
     </Card>
   );
 };
+
+export default WorkoutVariations;

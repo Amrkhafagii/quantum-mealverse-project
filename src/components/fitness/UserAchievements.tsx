@@ -22,17 +22,18 @@ interface AchievementProgress {
   achievement: Achievement;
 }
 
-const UserAchievements = ({ userId }: { userId?: string }) => {
+const UserAchievements = (props: any) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [achievements, setAchievements] = React.useState<any[]>([]);
-  const [userAchievements, setUserAchievements] = React.useState<any[]>([]);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [userAchievements, setUserAchievements] = useState<any[]>([]);
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const currentUserId = userId || user?.id;
+  const currentUserId = props.userId || user?.id;
 
   useEffect(() => {
+    setLoading(true);
     if (currentUserId) {
       loadAchievements();
     }

@@ -66,6 +66,14 @@ export const SmartRecommendations: React.FC = () => {
     }
   };
 
+  const getMeta = (rec: any, key: string, fallback: any = undefined) => {
+    if (rec && typeof rec[key] !== 'undefined') return rec[key];
+    if (rec && typeof rec.metadata === 'object' && rec.metadata !== null && !Array.isArray(rec.metadata) && typeof rec.metadata[key] !== 'undefined') {
+      return rec.metadata[key];
+    }
+    return fallback;
+  };
+
   const getRecField = (rec: any, key: string) =>
     rec[key] ?? rec.metadata?.[key] ?? '';
 
@@ -131,17 +139,17 @@ export const SmartRecommendations: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeRecommendations.map((recommendation, index) => {
-                  const dismissed = getRecField(recommendation, 'dismissed');
-                  const applied = getRecField(recommendation, 'applied');
-                  const appliedAt = getRecField(recommendation, 'applied_at');
-                  const type = getRecField(recommendation, 'type');
-                  const reason = getRecField(recommendation, 'reason');
-                  const confidenceScore = getRecField(recommendation, 'confidence_score');
+                {activeRecommendations.map((rec) => {
+                  const dismissed = !!getMeta(rec, 'dismissed', false);
+                  const applied = !!getMeta(rec, 'applied', false);
+                  const appliedAt = getMeta(rec, 'applied_at');
+                  const reason = getMeta(rec, 'reason', '');
+                  const confidenceScore = getMeta(rec, 'confidence_score', 0);
+                  const type = getMeta(rec, 'type', '');
 
                   return (
                     <motion.div
-                      key={recommendation.id}
+                      key={rec.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
@@ -153,7 +161,7 @@ export const SmartRecommendations: React.FC = () => {
                             {getRecommendationIcon(type)}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-lg">{recommendation.title}</h3>
+                            <h3 className="font-semibold text-lg">{rec.title}</h3>
                             <Badge variant="outline" className="mt-1">
                               {type.replace('_', ' ')}
                             </Badge>
@@ -163,21 +171,21 @@ export const SmartRecommendations: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => dismissRecommendation(recommendation.id)}
+                            onClick={() => dismissRecommendation(rec.id)}
                           >
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
 
-                      {recommendation.description && (
-                        <p className="text-gray-300 mb-3">{recommendation.description}</p>
+                      {rec.description && (
+                        <p className="text-gray-300 mb-3">{rec.description}</p>
                       )}
 
-                      {recommendation.reason && (
+                      {rec.reason && (
                         <div className="bg-quantum-darkBlue/20 rounded-lg p-3 mb-3">
                           <p className="text-sm text-gray-400">
-                            <strong>Why this recommendation:</strong> {recommendation.reason}
+                            <strong>Why this recommendation:</strong> {rec.reason}
                           </p>
                         </div>
                       )}
@@ -185,31 +193,31 @@ export const SmartRecommendations: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-400">
-                            Confidence: {Math.round((recommendation.confidence_score || 0) * 100)}%
+                            Confidence: {Math.round((rec.confidence_score || 0) * 100)}%
                           </span>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          {!feedbackStates[recommendation.id] && (
+                          {!feedbackStates[rec.id] && (
                             <>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleFeedback(recommendation.id, 'helpful')}
+                                onClick={() => handleFeedback(rec.id, 'helpful')}
                               >
                                 <ThumbsUp className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleFeedback(recommendation.id, 'not_helpful')}
+                                onClick={() => handleFeedback(rec.id, 'not_helpful')}
                               >
                                 <ThumbsDown className="w-4 h-4" />
                               </Button>
                             </>
                           )}
                           <Button
-                            onClick={() => applyRecommendation(recommendation.id)}
+                            onClick={() => applyRecommendation(rec.id)}
                             className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
                             size="sm"
                           >
@@ -235,17 +243,17 @@ export const SmartRecommendations: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {completedRecommendations.map((recommendation) => {
-                  const dismissed = getRecField(recommendation, 'dismissed');
-                  const applied = getRecField(recommendation, 'applied');
-                  const appliedAt = getRecField(recommendation, 'applied_at');
-                  const type = getRecField(recommendation, 'type');
-                  const reason = getRecField(recommendation, 'reason');
-                  const confidenceScore = getRecField(recommendation, 'confidence_score');
+                {completedRecommendations.map((rec) => {
+                  const dismissed = !!getMeta(rec, 'dismissed', false);
+                  const applied = !!getMeta(rec, 'applied', false);
+                  const appliedAt = getMeta(rec, 'applied_at');
+                  const reason = getMeta(rec, 'reason', '');
+                  const confidenceScore = getMeta(rec, 'confidence_score', 0);
+                  const type = getMeta(rec, 'type', '');
 
                   return (
                     <div
-                      key={recommendation.id}
+                      key={rec.id}
                       className="bg-quantum-black/20 border border-green-500/20 rounded-lg p-4 opacity-75"
                     >
                       <div className="flex items-center gap-3 mb-2">
@@ -253,14 +261,14 @@ export const SmartRecommendations: React.FC = () => {
                           {getRecommendationIcon(type)}
                         </div>
                         <div>
-                          <h3 className="font-semibold">{recommendation.title}</h3>
+                          <h3 className="font-semibold">{rec.title}</h3>
                           <p className="text-sm text-gray-400">
-                            Applied {recommendation.applied_at ? new Date(recommendation.applied_at).toLocaleDateString() : 'recently'}
+                            Applied {rec.applied_at ? new Date(rec.applied_at).toLocaleDateString() : 'recently'}
                           </p>
                         </div>
                       </div>
-                      {recommendation.description && (
-                        <p className="text-gray-400 text-sm">{recommendation.description}</p>
+                      {rec.description && (
+                        <p className="text-gray-400 text-sm">{rec.description}</p>
                       )}
                     </div>
                   );
@@ -273,3 +281,5 @@ export const SmartRecommendations: React.FC = () => {
     </Card>
   );
 };
+
+export default SmartRecommendations;
