@@ -31,6 +31,8 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutHistoryItem | null>(null);
   const [workoutLog, setWorkoutLog] = useState<WorkoutLog | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [history, setHistory] = useState<WorkoutHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchWorkoutLog = async (workoutLogId: string) => {
     try {
@@ -88,6 +90,28 @@ const WorkoutHistory: React.FC<WorkoutHistoryProps> = ({
     if (percentage >= 75) return 'text-yellow-500';
     return 'text-red-500';
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const { data: workoutHistory, error } = await supabase
+          .from('workout_history')
+          .select('*')
+          .eq('workout_history_user_id', user?.id) // <-- Corrected column name
+          .order('date', { ascending: false });
+        if (error) throw error;
+        setHistory(workoutHistory || []);
+      } catch (error) {
+        console.error('Failed to fetch workout history', error);
+        setHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   if (selectedWorkout && workoutLog) {
     return (

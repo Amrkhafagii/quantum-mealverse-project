@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutPlan, WorkoutSchedule, WorkoutHistoryItem } from '@/types/fitness';
 import { formatScheduleData } from './workoutUtils';
@@ -11,7 +10,7 @@ export const fetchWorkoutPlans = async (userId: string): Promise<WorkoutPlan[]> 
     const { data, error } = await supabase
       .from('workout_plans')
       .select('*')
-      .eq('user_id', userId); // Now expects UUID string
+      .eq('workout_plans_user_id', userId); // <-- Updated to new convention
       
     if (error) throw error;
     
@@ -37,7 +36,7 @@ export const fetchWorkoutSchedules = async (userId: string): Promise<WorkoutSche
     const { data, error } = await supabase
       .from('workout_schedules')
       .select('*')
-      .eq('user_id', userId); // Now expects UUID string
+      .eq('workout_schedules_user_id', userId); // <-- Updated to new convention
       
     if (error) throw error;
     
@@ -57,7 +56,7 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
     const { data, error } = await supabase
       .from('workout_history')
       .select('*')
-      .eq('user_id', userId) // Now expects UUID string
+      .eq('workout_history_user_id', userId) // <-- Updated to new convention
       .order('date', { ascending: false });
       
     if (error) throw error;

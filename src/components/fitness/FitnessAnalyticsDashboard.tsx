@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +20,7 @@ const FitnessAnalyticsDashboard = () => {
       const { data, error } = await supabase
         .from('workout_history')
         .select('*')
-        .eq('workout_history_user_id', user.id) // Updated field name
+        .eq('workout_history_user_id', user.id) // <-- Corrected column name
         .order('date', { ascending: false });
 
       if (error) throw error;
