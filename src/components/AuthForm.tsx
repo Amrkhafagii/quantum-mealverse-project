@@ -1,184 +1,144 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
+import { SignupFormData } from '@/types/auth';
 
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-});
+interface AuthFormProps {
+  type: 'login' | 'signup';
+}
 
-const registerSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
+  const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>();
+  const { user, loading, signIn, signUp, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
-
-export function AuthForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const { toast } = useToast();
-  const { login, register: authRegister } = useAuth();
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
-    },
-  });
-
-  async function onLoginSubmit(data: LoginFormValues) {
-    setIsLoading(true);
-    try {
-      await login(data.email, data.password);
+  const onSubmit = async (data: SignupFormData) => {
+    if (type === 'signup' && data.password !== data.confirmPassword) {
       toast({
-        title: "Success",
-        description: "You have been logged in.",
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
       });
+      return;
+    }
+
+    try {
+      if (type === 'login') {
+        await signIn(data.email, data.password);
+        toast({
+          title: 'Success',
+          description: 'Logged in successfully!',
+        });
+        navigate('/dashboard');
+      } else {
+        await signUp(data.email, data.password, 'customer', {
+          fullName: data.fullName,
+          phone: data.phone,
+        });
+        toast({
+          title: 'Success',
+          description: 'Signed up successfully!',
+        });
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to login. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'An error occurred',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
-  }
-
-  async function onRegisterSubmit(data: RegisterFormValues) {
-    setIsLoading(true);
-    try {
-      await authRegister(data.email, data.password);
-      toast({
-        title: "Success",
-        description: "Your account has been created.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  };
 
   return (
-    <Tabs value={authMode} onValueChange={(value) => setAuthMode(value as 'login' | 'register')}>
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="login">Login</TabsTrigger>
-        <TabsTrigger value="register">Register</TabsTrigger>
-      </TabsList>
-      <TabsContent value="login">
-        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle>{type === 'login' ? 'Login' : 'Sign Up'}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
-              {...loginForm.register('email')}
+              placeholder="Enter your email"
+              {...register('email', { required: 'Email is required' })}
+              className="w-full"
             />
-            {loginForm.formState.errors.email && (
-              <p className="text-sm text-red-500">{loginForm.formState.errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
-              type="password"
-              {...loginForm.register('password')}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
+              {...register('password', { required: 'Password is required' })}
+              className="w-full"
             />
-            {loginForm.formState.errors.password && (
-              <p className="text-sm text-red-500">{loginForm.formState.errors.password.message}</p>
-            )}
+            {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+            <Button variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? 'Hide' : 'Show'} Password
+            </Button>
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Logging in...
-              </>
-            ) : (
-              'Login'
-            )}
+          {type === 'signup' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  {...register('confirmPassword', { required: 'Confirm Password is required' })}
+                  className="w-full"
+                />
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  {showConfirmPassword ? 'Hide' : 'Show'} Confirm Password
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  {...register('fullName', { required: 'Full Name is required' })}
+                  className="w-full"
+                />
+                {errors.fullName && <p className="text-sm text-red-500">{errors.fullName.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  {...register('phone', { required: 'Phone Number is required' })}
+                  className="w-full"
+                />
+                {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
+              </div>
+            </>
+          )}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Loading...' : type === 'login' ? 'Login' : 'Sign Up'}
           </Button>
         </form>
-      </TabsContent>
-      <TabsContent value="register">
-        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              {...registerForm.register('email')}
-            />
-            {registerForm.formState.errors.email && (
-              <p className="text-sm text-red-500">{registerForm.formState.errors.email.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              {...registerForm.register('password')}
-            />
-            {registerForm.formState.errors.password && (
-              <p className="text-sm text-red-500">{registerForm.formState.errors.password.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              {...registerForm.register('confirmPassword')}
-            />
-            {registerForm.formState.errors.confirmPassword && (
-              <p className="text-sm text-red-500">{registerForm.formState.errors.confirmPassword.message}</p>
-            )}
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
-              </>
-            ) : (
-              'Register'
-            )}
-          </Button>
-        </form>
-      </TabsContent>
-    </Tabs>
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default AuthForm;

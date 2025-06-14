@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,8 +63,8 @@ export const useCurrencyPreferences = () => {
       const { error } = await supabase
         .from('user_preferences')
         .upsert(
-          { user_id: user.id, currency: currencyCode },
-          { onConflict: 'user_id' }
+          { user_preferences_user_id: user.id, currency: currencyCode },
+          { onConflict: 'user_preferences_user_id' }
         );
 
       if (error) throw error;

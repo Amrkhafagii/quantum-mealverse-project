@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Review } from '@/types/review';
 import { EnhancedReviewCard } from './EnhancedReviewCard';
@@ -51,7 +50,13 @@ export const ReviewList: React.FC<ReviewListProps> = ({
         
       if (error) throw error;
       
-      setReviews(data as Review[]);
+      // When mapping or setting reviews:
+      const mappedReviews = data.map((r) => ({
+        ...r,
+        user_id: r.reviews_user_id,
+      }));
+      
+      setReviews(mappedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);
       toast.error('Failed to load reviews');

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryFormValues } from '@/hooks/useDeliveryForm';
@@ -46,14 +45,14 @@ export const useCheckoutAuth = () => {
             const { data: deliveryInfo } = await supabase
               .from('delivery_info')
               .select('*')
-              .eq('user_id', session.user.id)
+              .eq('delivery_info_user_id', session.user.id)
               .maybeSingle();
 
             // Get user location data
             const { data: locationData } = await supabase
               .from('user_locations')
               .select('*')
-              .eq('user_id', session.user.id)
+              .eq('user_locations_user_id', session.user.id)
               .order('timestamp', { ascending: false })
               .limit(1)
               .maybeSingle();
@@ -85,10 +84,10 @@ export const useCheckoutAuth = () => {
               
               setDefaultValues({
                 email: session.user.email || "",
-                fullName: (deliveryInfo as DeliveryInfoDB).full_name,
-                phone: (deliveryInfo as DeliveryInfoDB).phone,
-                address: (deliveryInfo as DeliveryInfoDB).address,
-                city: (deliveryInfo as DeliveryInfoDB).city,
+                fullName: (deliveryInfo as any).full_name,
+                phone: (deliveryInfo as any).phone,
+                address: (deliveryInfo as any).address,
+                city: (deliveryInfo as any).city,
                 latitude: latitude,
                 longitude: longitude,
                 deliveryMethod: deliveryMethodCast,

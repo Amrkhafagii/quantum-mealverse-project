@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { BadgeCheck, Flag, CalendarIcon, Clock, ThumbsUp, ThumbsDown, AlertTriangle } from 'lucide-react';
@@ -49,7 +48,7 @@ export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({
         const { data, error } = await supabase
           .from('reviews') // Changed from 'review_metadata'
           .select('*')
-          .eq('user_id', review.user_id)
+          .eq('user_id', review.reviews_user_id)
           .eq('meal_id', review.meal_id)
           .maybeSingle();
           
@@ -86,7 +85,7 @@ export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({
     };
     
     fetchMetadata();
-  }, [review.id, review.user_id, review.meal_id, user]);
+  }, [review.id, review.reviews_user_id, review.meal_id, user]);
   
   const handleFlag = () => {
     if (onFlag && review.id) {
@@ -248,7 +247,7 @@ export const EnhancedReviewCard: React.FC<EnhancedReviewCardProps> = ({
           </div>
           
           <div>
-            {showActions && !isAdmin && review.user_id !== user?.id && (
+            {showActions && !isAdmin && review.reviews_user_id !== user?.id && (
               <Button 
                 variant="ghost" 
                 size="sm" 

@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, Star, Clock, Target } from 'lucide-react';
 import { performanceService } from '@/services/performance/performanceService';
 import type { RestaurantPerformanceMetrics } from '@/types/notifications';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
+
+type RestaurantPerformanceMetrics = any; // TODO: Define properly
 
 export const PerformanceDashboard: React.FC = () => {
   const { restaurant } = useRestaurantAuth();

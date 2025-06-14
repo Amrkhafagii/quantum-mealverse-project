@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Award, X, Trophy, TrendingUp, Bell, Calendar, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -114,7 +113,7 @@ export const FitnessNotifications: React.FC<FitnessNotificationsProps> = ({
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userId)
+        .eq('notifications_user_id', userId)
         .order('created_at', { ascending: false })
         .limit(showAll ? 20 : limit);
         
@@ -200,9 +199,9 @@ export const FitnessNotifications: React.FC<FitnessNotificationsProps> = ({
 
 // Add a function to push a notification to the database
 export const createNotification = async (
-  userId: string, 
-  title: string, 
-  message: string, 
+  userId: string,
+  title: string,
+  message: string,
   notification_type: FitnessNotification['notification_type'] = 'reminder',
   link?: string
 ) => {
@@ -210,7 +209,7 @@ export const createNotification = async (
     const { error } = await supabase
       .from('notifications')
       .insert({
-        user_id: userId,
+        notifications_user_id: userId,
         title,
         message,
         notification_type,
@@ -218,7 +217,6 @@ export const createNotification = async (
         is_read: false,
         created_at: new Date().toISOString()
       });
-      
     if (error) throw error;
     return true;
   } catch (error) {

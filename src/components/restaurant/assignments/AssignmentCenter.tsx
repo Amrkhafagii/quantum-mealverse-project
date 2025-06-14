@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,8 @@ import { Clock, MapPin, Phone, User, CheckCircle, XCircle, Utensils } from 'luci
 import { useRestaurantAssignments } from '@/hooks/useRestaurantAssignments';
 import { useToast } from '@/components/ui/use-toast';
 import type { RestaurantAssignment } from '@/types/notifications';
+
+type RestaurantAssignment = any; // TODO: Define this type properly
 
 const AssignmentItem: React.FC<{
   assignment: RestaurantAssignment;

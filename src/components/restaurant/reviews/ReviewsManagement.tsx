@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,8 @@ import { reviewService } from '@/services/reviews/reviewService';
 import type { RestaurantReview } from '@/types/notifications';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { useToast } from '@/components/ui/use-toast';
+
+type RestaurantReview = any; // TODO: Define properly
 
 export const ReviewsManagement: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
