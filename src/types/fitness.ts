@@ -1,6 +1,26 @@
 
-// Fitness and workout related types with updated user ID naming
-// This file is being deprecated in favor of the modular approach in src/types/fitness/
+// Remove blanket export to break cyclic import/export chain.
+// Instead, explicitly export just the types from the modular files you use across the app.
 
-// Re-export everything from the modular fitness types
-export * from './fitness/index';
+// Profile types
+export * from './fitness.d.ts';
+
+// Goals
+export * from './fitness/goals';
+
+// Recommendations
+export * from './fitness/recommendations';
+
+// Workouts
+export * from './fitness/workouts';
+
+// Analytics
+export * from './fitness/analytics';
+
+// Scheduling
+export * from './fitness/scheduling';
+
+// Schedules (for backwards compat)
+export * from './fitness/schedules';
+
+// Any other modular type files can be added here as needed.
