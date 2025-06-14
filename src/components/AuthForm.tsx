@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -33,6 +34,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
 
     try {
       if (type === 'login') {
+        // FIX: Ensure calling signIn (lowercase i), not signIn (uppercase I)
         await auth.signIn(data.email, data.password);
         toast({
           title: 'Success',
