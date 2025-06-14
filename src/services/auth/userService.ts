@@ -60,71 +60,59 @@ export const getDeliveryUserProfile = async (userId: string): Promise<DeliveryUs
     }
     if (!data) return null;
 
-    // Compose full_name safely
-    const fullName =
-      typeof data.full_name === 'string'
-        ? data.full_name
-        : [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+    // Compose full_name from existing fields
+    const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
 
-    // Valid status union: ensure fallback
+    // Correct status options; default to 'inactive' if not recognized
     let status: DeliveryUser['status'];
     switch (data.status) {
       case 'active':
       case 'inactive':
       case 'suspended':
-        status = data.status;
+      case 'on_break': // If present, use it, else fallback
+        status = (data.status === 'on_break') ? 'inactive' : data.status;
         break;
       default:
         status = 'inactive';
     }
 
-    // Strict string fallback
-    const safeStr = (v: any) => (typeof v === 'string' ? v : '');
-
-    // Validate status unions
-    let verification_status: DeliveryUser['verification_status'];
-    switch (data.verification_status) {
-      case 'pending':
-      case 'verified':
-      case 'rejected':
-        verification_status = data.verification_status;
-        break;
-      default:
-        verification_status = 'pending';
-    }
-    let background_check_status: DeliveryUser['background_check_status'];
-    switch (data.background_check_status) {
-      case 'pending':
-      case 'approved':
-      case 'rejected':
-        background_check_status = data.background_check_status;
-        break;
-      default:
-        background_check_status = 'pending';
+    // Compose verification_status and background_check_status with fallbacks
+    let verification_status: DeliveryUser['verification_status'] = 'pending';
+    if ('verification_status' in data && typeof data.verification_status === 'string') {
+      // Accept only known values
+      if (['pending', 'verified', 'rejected'].includes(data.verification_status)) {
+        verification_status = data.verification_status as DeliveryUser['verification_status'];
+      }
     }
 
+    let background_check_status: DeliveryUser['background_check_status'] = 'pending';
+    if ('background_check_status' in data && typeof data.background_check_status === 'string') {
+      if (['pending', 'approved', 'rejected'].includes(data.background_check_status)) {
+        background_check_status = data.background_check_status as DeliveryUser['background_check_status'];
+      }
+    }
+
+    // Compose the "is_available", "last_active", etc. Provide safe defaults.
     return {
-      id: safeStr(data.id),
-      delivery_users_user_id: safeStr(data.delivery_users_user_id),
-      full_name: safeStr(fullName),
-      phone: safeStr(data.phone),
-      vehicle_type: safeStr(data.vehicle_type),
-      license_plate: safeStr(data.license_plate),
-      driver_license_number: safeStr(data.driver_license_number),
+      id: typeof data.id === 'string' ? data.id : '',
+      delivery_users_user_id: typeof data.delivery_users_user_id === 'string' ? data.delivery_users_user_id : '',
+      full_name: fullName,
+      first_name: typeof data.first_name === 'string' ? data.first_name : undefined,
+      last_name: typeof data.last_name === 'string' ? data.last_name : undefined,
+      phone: typeof data.phone === 'string' ? data.phone : '',
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',
+      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
+      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
       status,
-      rating:
-        typeof data.rating === "number"
-          ? data.rating
-          : typeof data.average_rating === "number"
-          ? data.average_rating
-          : 0,
-      total_deliveries: typeof data.total_deliveries === "number" ? data.total_deliveries : 0,
+      rating: typeof data.rating === 'number' ? data.rating
+        : typeof data.average_rating === 'number' ? data.average_rating : 0,
+      total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
       verification_status,
       background_check_status,
-      is_available: !!data.is_available,
-      last_active: safeStr(data.last_active),
-      created_at: safeStr(data.created_at),
-      updated_at: safeStr(data.updated_at),
+      is_available: typeof data.is_available === 'boolean' ? data.is_available : false,
+      last_active: typeof data.last_active === 'string' ? data.last_active : '',
+      created_at: typeof data.created_at === 'string' ? data.created_at : '',
+      updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
     };
   } catch (error) {
     console.error('Error in getDeliveryUserProfile:', error);
