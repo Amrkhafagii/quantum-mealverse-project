@@ -37,9 +37,15 @@ export const WorkoutGoalsManager: React.FC = () => {
     goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_active'>
   ) => {
     if (!user?.id) return;
+    // Make sure we always provide required fields (esp. title)
+    if (!goalData.title || goalData.title.trim() === "") {
+      // Optionally: add a toast or alert here
+      return;
+    }
     await createGoal({
       ...goalData,
-      status: "active", // explicitly add status,
+      // status explicitly required by the type
+      status: "active",
     });
     setShowCreateForm(false);
   };
