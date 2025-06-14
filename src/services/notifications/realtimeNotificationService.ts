@@ -1,6 +1,21 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Notification } from '@/types/notifications';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  notifications_user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  notification_type: string;
+  link?: string | null;
+  data: Record<string, any>;
+  is_read: boolean;
+  read_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface OrderEvent {
   id: string;
@@ -29,8 +44,8 @@ export const subscribeToUserNotifications = (userId: string, callback: (notifica
         
         const notification: Notification = {
           id: payload.new.id,
-          user_id: payload.new.notifications_user_id,
           notifications_user_id: payload.new.notifications_user_id,
+          user_id: payload.new.notifications_user_id,
           title: payload.new.title,
           message: payload.new.message,
           type: payload.new.notification_type,
@@ -51,6 +66,83 @@ export const subscribeToUserNotifications = (userId: string, callback: (notifica
   return () => {
     subscription.unsubscribe();
   };
+};
+
+export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('notifications_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user notifications:', error);
+      return [];
+    }
+
+    return (data || []).map(item => ({
+      id: item.id,
+      user_id: item.notifications_user_id,
+      notifications_user_id: item.notifications_user_id,
+      title: item.title,
+      message: item.message,
+      type: item.notification_type,
+      notification_type: item.notification_type,
+      link: item.order_id ? `/orders/${item.order_id}` : null,
+      data: item.data || {},
+      is_read: item.is_read,
+      read_at: item.read_at,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    })) as Notification[];
+  } catch (error) {
+    console.error('Error in getUserNotifications:', error);
+    return [];
+  }
+};
+
+export const markAsRead = async (notificationId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+
+    if (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in markAsRead:', error);
+    return false;
+  }
+};
+
+export const markAllAsRead = async (userId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('notifications_user_id', userId)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Error marking all notifications as read:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in markAllAsRead:', error);
+    return false;
+  }
+};
+
+export const subscribeToNotifications = (userId: string, callback: (notification: Notification) => void) => {
+  return subscribeToUserNotifications(userId, callback);
 };
 
 export const subscribeToOrderStatusUpdates = (orderId: string, callback: (notification: any) => void) => {
@@ -136,6 +228,44 @@ export const createOrderEvent = async (
   } catch (error) {
     console.error('Error creating order event:', error);
     return { success: false, error: 'Failed to create order event' };
+  }
+};
+
+export const createNotification = async (
+  userId: string,
+  title: string,
+  message: string,
+  notificationType: string,
+  orderId?: string,
+  restaurantId?: string,
+  deliveryUserId?: string,
+  data: Record<string, any> = {}
+): Promise<string | null> => {
+  try {
+    const { data: result, error } = await supabase
+      .from('notifications')
+      .insert({
+        notifications_user_id: userId,
+        title,
+        message,
+        notification_type: notificationType,
+        order_id: orderId,
+        restaurant_id: restaurantId,
+        delivery_user_id: deliveryUserId,
+        data
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating notification:', error);
+      return null;
+    }
+
+    return result?.id || null;
+  } catch (error) {
+    console.error('Error in createNotification:', error);
+    return null;
   }
 };
 
@@ -233,10 +363,15 @@ export const realtimeNotificationService = {
   subscribeToOrderEvents,
   subscribeToDeliveryUpdates,
   createOrderEvent,
+  createNotification,
   sendPushNotification,
   getAllUnreadNotifications,
   registerPushToken,
-  unregisterPushToken
+  unregisterPushToken,
+  getUserNotifications,
+  markAsRead,
+  markAllAsRead,
+  subscribeToNotifications
 };
 
 export const notificationService = realtimeNotificationService;

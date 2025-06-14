@@ -171,7 +171,7 @@ export const requestRefund = async (
       .from('refund_requests')
       .insert({
         order_id: orderId,
-        user_id: userId,
+        refund_requests_user_id: userId,
         reason: reason.trim(),
         requested_amount: finalRefundAmount,
         notes: notes?.trim() || null,

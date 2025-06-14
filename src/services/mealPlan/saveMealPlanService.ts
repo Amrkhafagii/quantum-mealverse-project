@@ -1,5 +1,12 @@
 
-// Re-export all meal plan management functions from their focused modules
-export * from './mealPlanApi';
-export * from './mealPlanCrud';
-export * from './expirationService';
+// Re-export from mealPlanApi with renamed exports to avoid conflicts
+export { 
+  saveMealPlan, 
+  getUserMealPlans, 
+  getUserSavedMealPlans 
+} from './mealPlanApi';
+
+export { 
+  deleteMealPlan as deleteSavedMealPlanService, 
+  renewMealPlan as renewMealPlanService 
+} from './mealPlanApi';

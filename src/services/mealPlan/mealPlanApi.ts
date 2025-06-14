@@ -45,10 +45,10 @@ export const getUserMealPlans = async (userId: string) => {
 
     if (error) {
       console.error('Error fetching meal plans:', error);
-      return [];
+      return { data: [], error: error.message };
     }
 
-    return (data || []).map(plan => ({
+    const plans = (data || []).map(plan => ({
       id: plan.id,
       user_id: plan.saved_meal_plans_user_id,
       name: plan.name,
@@ -57,15 +57,16 @@ export const getUserMealPlans = async (userId: string) => {
       date_created: plan.date_created,
       is_active: true
     }));
+
+    return { data: plans, error: null };
   } catch (error) {
     console.error('Error in getUserMealPlans:', error);
-    return [];
+    return { data: [], error: 'Failed to fetch meal plans' };
   }
 };
 
 export const getUserSavedMealPlans = async (userId: string) => {
-  const plans = await getUserMealPlans(userId);
-  return { data: plans, error: null };
+  return await getUserMealPlans(userId);
 };
 
 export const deleteMealPlan = async (planId: string) => {

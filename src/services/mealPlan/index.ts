@@ -1,7 +1,12 @@
 
-// Export all meal plan related services from this index file
-export * from './mealPlanApi';
-export * from './mealPlanCrud';
-export * from './expirationService';
-export * from './mealGenerationService';
-export * from './types';
+// Re-export from mealPlanApi with renamed exports to avoid conflicts
+export { 
+  saveMealPlan, 
+  getUserMealPlans, 
+  getUserSavedMealPlans 
+} from './mealPlanApi';
+
+export { 
+  deleteMealPlan as deleteSavedMealPlanFromApi, 
+  renewMealPlan as renewMealPlanFromApi 
+} from './mealPlanApi';

@@ -1,4 +1,5 @@
-import { realtimeNotificationService } from './realtimeNotificationService';
+
+import { notificationService } from './realtimeNotificationService';
 
 export interface PushNotificationPermissionStatus {
   permission: NotificationPermission;
@@ -95,7 +96,8 @@ class PushNotificationService {
       if (existingSubscription) {
         console.log('Already subscribed to push notifications');
         const token = JSON.stringify(existingSubscription);
-        return await realtimeNotificationService.registerPushToken(userId, token, 'web');
+        const result = await notificationService.registerPushToken(userId, token, 'web');
+        return result.success;
       }
       
       // Create new subscription
@@ -107,15 +109,15 @@ class PushNotificationService {
       const token = JSON.stringify(subscription);
       
       // Register the token with our backend
-      const success = await realtimeNotificationService.registerPushToken(userId, token, 'web');
+      const result = await notificationService.registerPushToken(userId, token, 'web');
       
-      if (success) {
+      if (result.success) {
         console.log('Successfully subscribed to push notifications');
       } else {
         console.error('Failed to register push token with backend');
       }
       
-      return success;
+      return result.success;
     } catch (error) {
       console.error('Failed to subscribe to push notifications:', error);
       
@@ -146,7 +148,8 @@ class PushNotificationService {
     }
 
     try {
-      return await realtimeNotificationService.registerPushToken(userId, token, platform);
+      const result = await notificationService.registerPushToken(userId, token, platform);
+      return result.success;
     } catch (error) {
       console.error('Error registering push token:', error);
       return false;
@@ -167,7 +170,7 @@ class PushNotificationService {
     }
 
     try {
-      return await realtimeNotificationService.createNotification(
+      return await notificationService.createNotification(
         userId,
         title,
         body,
