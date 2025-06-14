@@ -73,7 +73,7 @@ export const useRecommendations = (
     fetchUserPreferences();
   }, [user?.id]);
 
-  // Main meal recommendations query (MealType[] generic to prevent deep inference)
+  // Main meal recommendations query
   const {
     data: recommendations,
     isLoading,
@@ -83,7 +83,7 @@ export const useRecommendations = (
       "meal-recommendations",
       type,
       user?.id || "",
-      userPreferences,
+      !!userPreferences, // avoid deep nesting in queryKey
     ],
     queryFn: async (): Promise<MealType[]> => {
       const { data: menuItemsRaw, error } = await supabase

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +17,7 @@ interface WorkoutGoalDBRow {
   unit: string;
   updated_at: string;
   workout_goals_user_id: string;
+  user_id?: string; // Add user_id optional field, but always inject below!
 }
 
 interface PerformanceMetrics {
@@ -31,6 +31,11 @@ interface ProgressChartData {
   date: string;
   value: number;
 }
+
+// Allowed goal_type values for WorkoutGoal
+const allowedGoalTypes: WorkoutGoal['goal_type'][] = [
+  "weight_loss", "weight_gain", "muscle_gain", "endurance", "strength", "general_fitness"
+];
 
 export function useWorkoutAnalytics() {
   const { user } = useAuth();
@@ -52,17 +57,19 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      // Explicitly map DB fields to WorkoutGoal, omitting 'name'
+      // Explicitly map DB fields to WorkoutGoal, with required user_id and valid goal_type
       const typedGoals: WorkoutGoal[] = (data as WorkoutGoalDBRow[] || []).map(goal => ({
         id: goal.id,
         fitness_goals_user_id: goal.workout_goals_user_id ?? user.id,
-        // user_id: user.id, // Not in WorkoutGoal type, omit
+        user_id: user.id, // ensure user_id is present
         description: goal.description,
         target_value: goal.target_value,
         current_value: goal.current_value,
         target_date: goal.target_date,
         status: (goal.is_active ? "active" : "not_started"),
-        goal_type: goal.goal_type as WorkoutGoal['goal_type'],
+        goal_type: allowedGoalTypes.includes(goal.goal_type as WorkoutGoal['goal_type'])
+          ? (goal.goal_type as WorkoutGoal['goal_type'])
+          : "general_fitness",
         created_at: goal.created_at,
         updated_at: goal.updated_at,
         title: goal.title || '',
@@ -101,16 +108,21 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      // Map result to WorkoutGoal type (with only allowed fields)
+      const newGoalType = allowedGoalTypes.includes(data.goal_type as WorkoutGoal['goal_type'])
+        ? (data.goal_type as WorkoutGoal['goal_type'])
+        : "general_fitness";
+
+      // Map result to WorkoutGoal type (with required user_id and allowed goal_type)
       const typedGoal: WorkoutGoal = {
         id: data.id,
         fitness_goals_user_id: data.workout_goals_user_id ?? user.id,
+        user_id: user.id, // ensure user_id is present
         description: data.description,
         target_value: data.target_value,
         current_value: data.current_value,
         target_date: data.target_date,
         status: (data.is_active ? "active" : "not_started"),
-        goal_type: data.goal_type,
+        goal_type: newGoalType,
         created_at: data.created_at,
         updated_at: data.updated_at,
         title: data.title || '',
@@ -152,15 +164,20 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
+      const newGoalType = allowedGoalTypes.includes(data.goal_type as WorkoutGoal['goal_type'])
+        ? (data.goal_type as WorkoutGoal['goal_type'])
+        : "general_fitness";
+
       const typedGoal: WorkoutGoal = {
         id: data.id,
         fitness_goals_user_id: data.workout_goals_user_id ?? user.id,
+        user_id: user.id, // ensure user_id is present
         description: data.description,
         target_value: data.target_value,
         current_value: data.current_value,
         target_date: data.target_date,
         status: (data.is_active ? "active" : "not_started"),
-        goal_type: data.goal_type,
+        goal_type: newGoalType,
         created_at: data.created_at,
         updated_at: data.updated_at,
         title: data.title || '',
@@ -298,5 +315,3 @@ export function useWorkoutAnalytics() {
     refetch: fetchGoals
   };
 }
-// ... End of file
-

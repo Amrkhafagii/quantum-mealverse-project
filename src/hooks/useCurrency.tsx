@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +8,7 @@ interface Currency {
   exchangeRate: number;
 }
 
-const currencies = {
+const currencies: Record<string, Currency> = {
   USD: { code: 'USD', symbol: '$', exchangeRate: 1 },
   EUR: { code: 'EUR', symbol: '€', exchangeRate: 0.92 },
   GBP: { code: 'GBP', symbol: '£', exchangeRate: 0.78 },
@@ -46,8 +45,8 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           .eq('user_id', user.id)
           .single();
 
-        if (data?.currency && (currencies as any)[data.currency]) {
-          setCurrentCurrency((currencies as any)[data.currency]);
+        if (data?.currency && currencies[data.currency]) {
+          setCurrentCurrency(currencies[data.currency]);
         }
       } catch (error) {
         console.error('Error fetching user currency:', error);
@@ -58,8 +57,8 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const handleCurrencyChange = (event: CustomEvent) => {
       const currencyCode = event.detail;
-      if ((currencies as any)[currencyCode]) {
-        setCurrentCurrency((currencies as any)[currencyCode]);
+      if (currencies[currencyCode]) {
+        setCurrentCurrency(currencies[currencyCode]);
       }
     };
 
@@ -87,5 +86,4 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-export const useCurrency = () => useContext(CurrencyContext);
-
+export const useCurrency = (): CurrencyContextType => useContext(CurrencyContext);
