@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness';
+import type { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness'; // <-- ADD THIS
 import { CalendarDays, Dumbbell, Trophy, Activity, Target, Check, ArrowUp, TrendingUp } from 'lucide-react';
 
 interface EnhancedFitnessProfileProps {

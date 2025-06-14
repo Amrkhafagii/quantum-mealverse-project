@@ -181,6 +181,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
   if (showLocationFlow && userId) {
     return (
       <div className="space-y-6">
+        {/* @ts-expect-error: Temporary workaround for TS2589 deep type instantiation error */}
         <LocationPermissionFlow
           userType={userType}
           userId={userId}
