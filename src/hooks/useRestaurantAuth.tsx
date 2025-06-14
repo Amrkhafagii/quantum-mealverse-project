@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define a local Restaurant type to avoid import cycles and type recursion
 export type Restaurant = {
   id: string;
   user_id: string;
@@ -36,7 +37,6 @@ export type Restaurant = {
   onboarding_completed_at?: string;
   created_at: string;
   updated_at: string;
-  // Add status property for dashboard compatibility
   status?: string;
 };
 
@@ -91,7 +91,7 @@ export const useRestaurantAuth = () => {
         const { data, error } = await supabase
           .from('restaurants')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('restaurants_user_id', user.id)
           .maybeSingle();
         
         if (error) {
@@ -104,7 +104,7 @@ export const useRestaurantAuth = () => {
           // Transform database response to match Restaurant interface with proper defaults
           const restaurantData: Restaurant = {
             id: data.id,
-            user_id: data.user_id,
+            user_id: data.restaurants_user_id, // fix: use the correct db field
             name: data.name,
             email: data.email,
             phone: data.phone,
@@ -129,6 +129,9 @@ export const useRestaurantAuth = () => {
             minimum_order_amount: data.minimum_order_amount,
             delivery_fee: data.delivery_fee,
             estimated_delivery_time: data.estimated_delivery_time || 45,
+            onboarding_status: data.onboarding_status,
+            onboarding_step: data.onboarding_step,
+            onboarding_completed_at: data.onboarding_completed_at,
             created_at: data.created_at,
             updated_at: data.updated_at,
             status: data.is_active ? 'active' : 'inactive'
