@@ -60,7 +60,31 @@ export const getDeliveryUserProfile = async (userId: string): Promise<DeliveryUs
       return null;
     }
 
-    return data || null;
+    // Ensure all required fields are present
+    if (!data) return null;
+
+    // Patch to always match DeliveryUser type (with union-consistent values)
+    return {
+      id: data.id,
+      delivery_users_user_id: data.delivery_users_user_id,
+      first_name: data.first_name ?? "",
+      last_name: data.last_name ?? "",
+      full_name: data.full_name ?? `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim(),
+      phone: data.phone ?? "",
+      vehicle_type: data.vehicle_type ?? "",
+      license_plate: data.license_plate ?? "",
+      driver_license_number: data.driver_license_number ?? "",
+      status: (data.status ?? "inactive") as "active" | "inactive" | "suspended" | "on_break",
+      rating: typeof data.rating === "number" ? data.rating : 0,
+      total_deliveries: typeof data.total_deliveries === "number" ? data.total_deliveries : 0,
+      verification_status: (data.verification_status ?? "pending") as "pending" | "verified" | "rejected",
+      background_check_status: (data.background_check_status ?? "pending") as "pending" | "approved" | "rejected",
+      is_available: !!data.is_available,
+      is_approved: !!data.is_approved,
+      last_active: data.last_active ?? "",
+      created_at: data.created_at ?? "",
+      updated_at: data.updated_at ?? "",
+    };
   } catch (error) {
     console.error('Error in getDeliveryUserProfile:', error);
     return null;
@@ -80,7 +104,24 @@ export const getRestaurantUserProfile = async (userId: string): Promise<Restaura
       return null;
     }
 
-    return data || null;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      restaurants_user_id: data.restaurants_user_id,
+      name: data.name ?? "",
+      address: data.address ?? "",
+      phone: data.phone ?? "",
+      email: data.email ?? "",
+      description: data.description,
+      cuisine_type: data.cuisine_type,
+      is_active: !!data.is_active,
+      verification_status: (data.verification_status ?? "pending") as "pending" | "verified" | "rejected",
+      latitude: typeof data.latitude === "number" ? data.latitude : undefined,
+      longitude: typeof data.longitude === "number" ? data.longitude : undefined,
+      created_at: data.created_at ?? "",
+      updated_at: data.updated_at ?? "",
+    };
   } catch (error) {
     console.error('Error in getRestaurantUserProfile:', error);
     return null;
@@ -100,7 +141,22 @@ export const getCustomerProfile = async (userId: string): Promise<CustomerProfil
       return null;
     }
 
-    return data || null;
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      customer_profiles_user_id: data.customer_profiles_user_id,
+      email: data.email ?? undefined,
+      full_name: data.full_name ?? undefined,
+      phone: data.phone ?? undefined,
+      date_of_birth: data.date_of_birth ?? undefined,
+      dietary_preferences: Array.isArray(data.dietary_preferences) ? data.dietary_preferences : undefined,
+      allergies: Array.isArray(data.allergies) ? data.allergies : undefined,
+      default_delivery_address: data.default_delivery_address ?? undefined,
+      loyalty_points: typeof data.loyalty_points === "number" ? data.loyalty_points : undefined,
+      created_at: data.created_at ?? undefined,
+      updated_at: data.updated_at ?? undefined,
+    };
   } catch (error) {
     console.error('Error in getCustomerProfile:', error);
     return null;
