@@ -38,19 +38,25 @@ const OnboardingPage: React.FC = () => {
   
   const savePersonalInfo = async (values: any) => {
     updatePersonalInfo(values);
-    // Return as DeliveryUser. Fill required properties as placeholders.
+    // Return as DeliveryUser. All required fields must match src/types/user.ts
     return {
       id: user?.id || "",
+      delivery_users_user_id: user?.id || "",
       first_name: values.first_name || "",
       last_name: values.last_name || "",
-      phone: values.phone || "",
       full_name: `${values.first_name || ""} ${values.last_name || ""}`,
+      phone: values.phone || "",
       vehicle_type: "",
       license_plate: "",
       driver_license_number: "",
       status: "inactive",
-      is_approved: false,
+      rating: 0,
       total_deliveries: 0,
+      verification_status: "pending",
+      background_check_status: "pending",
+      is_available: false,
+      last_active: new Date().toISOString(),
+      is_approved: false,
       average_rating: 0,
       latitude: 0,
       longitude: 0,
@@ -122,11 +128,15 @@ const OnboardingPage: React.FC = () => {
     return {
       id: "dummy-id",
       delivery_payments_user_id: user?.id || "",
+      delivery_payment_details_user_id: user?.id || "",
       account_name: data.account_name || "",
+      account_holder_name: data.account_holder_name || data.account_name || "",
       account_number: data.account_number || "",
       routing_number: data.routing_number || "",
       bank_name: data.bank_name || "",
       has_accepted_terms: !!data.has_accepted_terms,
+      account_type: "checking",
+      is_verified: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
