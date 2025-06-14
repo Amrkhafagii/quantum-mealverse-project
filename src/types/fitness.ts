@@ -1,26 +1,42 @@
 
-// Remove blanket export to break cyclic import/export chain.
-// Instead, explicitly export just the types from the modular files you use across the app.
+// Rebarrel all fitness types: named-export all major types from fitness.d.ts, then export modulars
 
-// Profile types
-export * from './fitness.d.ts';
+// --- Named type exports for all common interfaces (so e.g. import { UserProfile } from '@/types/fitness' works) ---
+export type {
+  // Profiles
+  UserProfile,
+  UserMeasurement,
+  // Workouts & exercise/group types
+  WorkoutPlan,
+  WorkoutDay,
+  Exercise,
+  WorkoutSet,
+  CompletedExercise,
+  WorkoutLog,
+  WorkoutHistoryItem,
+  WorkoutSchedule,
+  // Achievements
+  Achievement,
+  UserAchievement,
+  UserWorkoutStats,
+  // Meal plans/nutrition
+  SavedMealPlan,
+  SavedMealPlanWithExpiry,
+  DailyQuest,
+  // Analytics/goals/teams/calendar
+  FitnessGoal,
+  GoalStatus,
+  Team,
+  TeamMember,
+  CalendarEvent,
+} from './fitness.d.ts';
 
-// Goals
+// --- Group / modular exports (export everything for compatibility) ---
 export * from './fitness/goals';
-
-// Recommendations
 export * from './fitness/recommendations';
-
-// Workouts
 export * from './fitness/workouts';
-
-// Analytics
 export * from './fitness/analytics';
-
-// Scheduling
 export * from './fitness/scheduling';
-
-// Schedules (for backwards compat)
 export * from './fitness/schedules';
 
-// Any other modular type files can be added here as needed.
+// Add other modular types as needed...
