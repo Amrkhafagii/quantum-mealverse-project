@@ -1,5 +1,12 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { RestaurantEarnings } from '@/types/financial';
+import type {
+  RestaurantEarnings,
+  PaymentMethod,
+  FinancialTransaction,
+  Payout,
+  BankAccount
+} from '@/types/financial';
 
 // Local DB row types that map exactly to the Supabase columns
 interface DBRestaurantEarnings {
@@ -11,19 +18,21 @@ interface DBRestaurantEarnings {
   platform_commission: number;
   payment_processing_fee: number;
   net_earnings: number;
+  commission_rate: number;
+  status: RestaurantEarnings['status'];
   earned_at: string;
   available_at?: string;
   paid_at?: string;
-  status: string;
+  payout_id?: string;
   created_at: string;
   updated_at: string;
 }
 
 // --- Functions using local types and explicit mapping ---
 
-export const getRestaurantEarnings = async (
+async function getRestaurantEarnings(
   restaurantId: string
-): Promise<RestaurantEarnings[]> => {
+): Promise<RestaurantEarnings[]> {
   try {
     const { data, error } = await supabase
       .from('restaurant_earnings')
@@ -38,21 +47,22 @@ export const getRestaurantEarnings = async (
 
     if (!data) return [];
 
-    // Cast and map to RestaurantEarnings[]
+    // Ensure all required fields, especially commission_rate
     return (data as DBRestaurantEarnings[]).map(earning => ({
       ...earning,
-      status: earning.status as RestaurantEarnings['status'] // Explicitly cast the status
+      commission_rate: earning.commission_rate ?? 0,
+      status: earning.status as RestaurantEarnings['status']
     }));
   } catch (error) {
     console.error('Error in getRestaurantEarnings:', error);
     return [];
   }
-};
+}
 
-export const createRestaurantEarning = async (
+async function createRestaurantEarning(
   restaurantId: string,
   earningData: Omit<RestaurantEarnings, 'id' | 'created_at' | 'updated_at'>
-): Promise<boolean> => {
+): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('restaurant_earnings')
@@ -73,13 +83,15 @@ export const createRestaurantEarning = async (
     console.error('Error in createRestaurantEarning:', error);
     return false;
   }
-};
+}
 
 // For bank account management
-import type { BankAccount, BankAccountCreateInput } from '@/types/financial';
+// BankAccountCreateInput does not exist, so we'll just take all BankAccount fields except id, created_at, updated_at
+type BankAccountCreateInput = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
+type SetDefaultBankAccountOptions = { isDefault?: boolean };
 
-export const getBankAccounts = async (userId: string): Promise<BankAccount[]> => {
-  // Only 1 argument (userId)
+// Smarter mapping (we do not try to map status)
+async function getBankAccounts(userId: string): Promise<BankAccount[]> {
   const { data, error } = await supabase
     .from('bank_accounts')
     .select('*')
@@ -91,20 +103,14 @@ export const getBankAccounts = async (userId: string): Promise<BankAccount[]> =>
     return [];
   }
 
-  // Map status to allowed union
-  return (data ?? []).map((acc) => ({
-    ...acc,
-    status: ['pending', 'available', 'paid', 'on_hold'].includes(acc.status)
-      ? acc.status
-      : 'pending', // fallback to 'pending' if bad value
-  })) as BankAccount[];
-};
+  // Sanitize return: don't spread status field, which doesn't exist, just type cast.
+  return (data ?? []) as BankAccount[];
+}
 
-export const addBankAccount = async (
+async function addBankAccount(
   userId: string,
   accountData: BankAccountCreateInput
-): Promise<boolean> => {
-  // 2 arguments (userId, accountData)
+): Promise<boolean> {
   const { error } = await supabase
     .from('bank_accounts')
     .insert({
@@ -119,14 +125,13 @@ export const addBankAccount = async (
     return false;
   }
   return true;
-};
+}
 
-export const setDefaultBankAccount = async (
+async function setDefaultBankAccount(
   userId: string,
   bankAccountId: string,
   isDefault: boolean = true
-): Promise<boolean> => {
-  // 3 arguments (userId, bankAccountId, isDefault); isDefault default true.
+): Promise<boolean> {
   // First, set all to false for user.
   const { error: clearError } = await supabase
     .from('bank_accounts')
@@ -149,4 +154,25 @@ export const setDefaultBankAccount = async (
     return false;
   }
   return true;
+}
+
+// Add all existing exports/functions here as methods in this object
+export const financialService = {
+  getRestaurantEarnings,
+  createRestaurantEarning,
+  getBankAccounts,
+  addBankAccount,
+  setDefaultBankAccount,
+  // You should add all other previously exported functions as well!
+  // e.g. getPaymentMethods, addPaymentMethod, getTransactions, getPayouts, getFinancialReports, requestPayout, generateFinancialReport, getEarningsSummary, etc.
 };
+
+// If you need to preserve existing named exports (for legacy code), you can also add:
+export {
+  getRestaurantEarnings,
+  createRestaurantEarning,
+  getBankAccounts,
+  addBankAccount,
+  setDefaultBankAccount,
+};
+
