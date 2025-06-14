@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucid
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
-import { CalendarEvent } from '@/types/fitness/scheduling';
+import type { CalendarEvent } from '@/types/fitness.d.ts';
 
 interface WorkoutCalendarProps {
   onDateSelect?: (date: Date) => void;

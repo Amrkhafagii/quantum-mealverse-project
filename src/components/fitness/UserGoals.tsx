@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Target, Calendar, TrendingUp } from 'lucide-react';
 // FIX: Import from profile submodule
-import { FitnessGoal } from '@/types/fitness/profile';
+import { FitnessGoal } from '@/types/fitness.d.ts';
 import { fetchGoals } from '@/services/fitnessGoalService';
 import { useAuth } from '@/hooks/useAuth';
 

@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-// FIX: Import from achievements submodule
-import { Team, TeamMember } from '@/types/fitness/achievements';
+// FIX: Import from main .d.ts
+import type { Team, TeamMember } from '@/types/fitness.d.ts';
 import { useAuth } from '@/hooks/useAuth';
 
 const TeamChallenges: React.FC = () => {
