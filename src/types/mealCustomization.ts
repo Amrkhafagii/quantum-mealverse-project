@@ -61,9 +61,6 @@ export interface CustomizedMeal {
 
 export interface MealCustomizationSummary {
   base_price: number;
-  portion_adjustment: number;
-  substitution_cost: number;
-  option_cost: number;
   total_cost: number;
   nutritional_changes: {
     calories: number;

@@ -2,10 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem } from '../orderService';
 
-/**
- * Raw database query functions - single responsibility for data access
- */
-
 export const queryOrderById = async (
   orderId: string, 
   selectFields: string = `
@@ -53,7 +49,7 @@ export const queryUserOrders = async (
     const { data, error } = await supabase
       .from('orders')
       .select(selectFields)
-      .eq('customer_id', userId) // Keep as customer_id - this is the UUID from auth.users
+      .eq('customer_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {

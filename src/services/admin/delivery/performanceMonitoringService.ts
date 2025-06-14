@@ -88,7 +88,6 @@ export const runPerformanceChecks = async () => {
   }
 };
 
-// Export service object for backwards compatibility
 export const performanceMonitoringService = {
   getDeliveryPerformanceMetrics,
   getOrdersWithEstimatedDeliveryTime,

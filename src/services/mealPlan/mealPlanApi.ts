@@ -48,7 +48,6 @@ export const getUserMealPlans = async (userId: string) => {
       return [];
     }
 
-    // Map database fields to application format
     return (data || []).map(plan => ({
       id: plan.id,
       user_id: plan.saved_meal_plans_user_id,
@@ -64,7 +63,6 @@ export const getUserMealPlans = async (userId: string) => {
   }
 };
 
-// Add alias for backwards compatibility
 export const getUserSavedMealPlans = async (userId: string) => {
   const plans = await getUserMealPlans(userId);
   return { data: plans, error: null };
