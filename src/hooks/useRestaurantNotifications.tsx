@@ -1,45 +1,27 @@
+
 import { useState, useEffect } from 'react';
-// Import notificationService as a default import (adjust this if you have named export).
 import { notificationService } from '@/services/notifications/notificationService';
-// Import Notification type from types/notifications (fall back to local type if necessary)
 import type { Notification } from '@/types/notifications';
-// If Notification type does not exist, define a local fallback. Adjust as needed for your actual Notification structure:
-
-// Fallback interface (delete if correct type exists in @/types/notifications)
-export interface RestaurantNotification {
-  id: string;
-  title: string;
-  message: string;
-  order_id?: string;
-  notification_type?: string;
-  is_read: boolean;
-  read_at?: string | null;
-  created_at: string;
-  metadata?: any;
-  user_id?: string;
-  updated_at?: string;
-}
-
 import { useRestaurantAuth } from './useRestaurantAuth';
 
-// Helper function to convert backend notification to local Notification type
-const convertToRestaurantNotification = (notification: any): RestaurantNotification => ({
+// Helper: convert backend to app Notification interface
+const convertToNotification = (notification: any, restaurantId: string): Notification => ({
   id: notification.id,
+  notifications_user_id: restaurantId,     // Restaurant user ID as per Notification type
   title: notification.title,
   message: notification.message,
-  order_id: notification.order_id || '',
-  notification_type: notification.type || '',
-  is_read: !!notification.read,
-  read_at: notification.read ? notification.updated_at : null,
+  type: notification.type || notification.notification_type || '', // Must exist for UI
+  link: notification.link,
+  data: notification.metadata || notification.data || null,
+  is_read: !!notification.read || notification.is_read,
+  read_at: notification.read ? (notification.updated_at || notification.read_at) : null,
   created_at: notification.created_at,
-  metadata: notification.metadata || null,
-  user_id: notification.user_id || '',
-  updated_at: notification.updated_at
+  updated_at: notification.updated_at,
 });
 
 export const useRestaurantNotifications = () => {
   const { restaurant } = useRestaurantAuth();
-  const [notifications, setNotifications] = useState<RestaurantNotification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +34,9 @@ export const useRestaurantNotifications = () => {
           notificationService.getRestaurantNotifications(restaurant.id),
           notificationService.getUnreadCount(restaurant.id)
         ]);
-        const convertedNotifications = notificationsData.map(convertToRestaurantNotification);
+        const convertedNotifications = notificationsData.map((n: any) =>
+          convertToNotification(n, restaurant.id)
+        );
         setNotifications(convertedNotifications);
         setUnreadCount(unreadCountData);
       } catch (error) {
@@ -67,7 +51,7 @@ export const useRestaurantNotifications = () => {
     const subscription = notificationService.subscribeToRestaurantNotifications(
       restaurant.id,
       (newNotification: any) => {
-        const convertedNotification = convertToRestaurantNotification(newNotification);
+        const convertedNotification = convertToNotification(newNotification, restaurant.id);
         setNotifications(prev => [convertedNotification, ...prev]);
         setUnreadCount(prev => prev + 1);
       }
@@ -82,7 +66,7 @@ export const useRestaurantNotifications = () => {
 
   const markAsRead = async (notificationId: string) => {
     if (!restaurant?.id) return;
-    
+
     try {
       await notificationService.markAsRead(notificationId, restaurant.id);
       setNotifications(prev =>
@@ -100,14 +84,14 @@ export const useRestaurantNotifications = () => {
 
   const markAllAsRead = async () => {
     if (!restaurant?.id) return;
-    
+
     try {
       await notificationService.markAllAsRead(restaurant.id);
       setNotifications(prev =>
-        prev.map(notification => ({ 
-          ...notification, 
-          is_read: true, 
-          read_at: new Date().toISOString() 
+        prev.map(notification => ({
+          ...notification,
+          is_read: true,
+          read_at: new Date().toISOString()
         }))
       );
       setUnreadCount(0);
