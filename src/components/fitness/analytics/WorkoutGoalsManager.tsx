@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,8 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { Plus, Target, Calendar, TrendingUp, Edit, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useWorkoutAnalytics, WorkoutGoal as AnalyticsWorkoutGoal } from '@/hooks/useWorkoutAnalytics';
-import { WorkoutGoal } from '@/types/fitness/analytics';
+// Only import WorkoutGoal from the hook because its type matches the mutation
+import { useWorkoutAnalytics, WorkoutGoal } from '@/hooks/useWorkoutAnalytics';
 import { GoalForm } from './GoalForm';
 
 export const WorkoutGoalsManager: React.FC = () => {
@@ -40,10 +41,10 @@ export const WorkoutGoalsManager: React.FC = () => {
       // Optionally: add a toast or alert here
       return;
     }
+    // Remove 'status': backend sets it to 'active'.
     const payload: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_active'> = {
       ...goalData,
-      title: goalData.title, // Now title is required by construction
-      status: "active",
+      title: goalData.title,
     };
     await createGoal(payload);
     setShowCreateForm(false);
