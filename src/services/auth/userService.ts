@@ -46,8 +46,6 @@ export const createUserType = async (userId: string, type: string): Promise<bool
   }
 };
 
-
-
 export const getRestaurantUserProfile = async (userId: string): Promise<RestaurantUser | null> => {
   try {
     const { data, error } = await supabase
@@ -85,6 +83,87 @@ export const getRestaurantUserProfile = async (userId: string): Promise<Restaura
     };
   } catch (error) {
     console.error('Error in getRestaurantUserProfile:', error);
+    return null;
+  }
+};
+
+export const getDeliveryUserByUserId = async (userId: string): Promise<DeliveryUser | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('delivery_users')
+      .select('*')
+      .eq('delivery_users_user_id', userId)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching delivery user:', error);
+      return null;
+    }
+    if (!data) return null;
+
+    // Compose full_name from first_name/last_name or fallback
+    const fullName = [
+      typeof data.first_name === 'string' ? data.first_name : '',
+      typeof data.last_name === 'string' ? data.last_name : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    let verification_status: DeliveryUser['verification_status'] = 'pending';
+    if ('verification_status' in data && typeof data.verification_status === 'string') {
+      if (['pending', 'verified', 'rejected'].includes(data.verification_status)) {
+        verification_status = data.verification_status as DeliveryUser['verification_status'];
+      }
+    }
+
+    let background_check_status: DeliveryUser['background_check_status'] = 'pending';
+    if ('background_check_status' in data && typeof data.background_check_status === 'string') {
+      if (['pending', 'approved', 'rejected'].includes(data.background_check_status)) {
+        background_check_status = data.background_check_status as DeliveryUser['background_check_status'];
+      }
+    }
+
+    let status: DeliveryUser['status'];
+    switch (data.status) {
+      case 'active':
+      case 'inactive':
+      case 'suspended':
+      case 'on_break':
+        // For the union type, coerce 'on_break' to 'inactive' to satisfy TS type, or change type to allow on_break if you want
+        status = data.status === 'on_break' ? 'inactive' : data.status;
+        break;
+      default:
+        status = 'inactive';
+    }
+
+    return {
+      id: typeof data.id === 'string' ? data.id : '',
+      delivery_users_user_id: typeof data.delivery_users_user_id === 'string' ? data.delivery_users_user_id : '',
+      full_name: fullName,
+      first_name: typeof data.first_name === 'string' ? data.first_name : undefined,
+      last_name: typeof data.last_name === 'string' ? data.last_name : undefined,
+      phone: typeof data.phone === 'string' ? data.phone : '',
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',
+      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
+      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
+      status,
+      rating: typeof data.rating === 'number'
+        ? data.rating
+        : typeof data.average_rating === 'number'
+        ? data.average_rating
+        : 0,
+      total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
+      verification_status,
+      background_check_status,
+      is_available: typeof data.is_available === 'boolean' ? data.is_available : false,
+      is_approved: typeof data.is_approved === 'boolean' ? data.is_approved : undefined,
+      last_active: typeof data.last_active === 'string' ? data.last_active : '',
+      created_at: typeof data.created_at === 'string' ? data.created_at : '',
+      updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
+    };
+  } catch (error) {
+    console.error('Error in getDeliveryUserByUserId:', error);
     return null;
   }
 };
