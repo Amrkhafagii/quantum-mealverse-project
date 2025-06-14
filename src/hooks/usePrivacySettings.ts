@@ -1,265 +1,151 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { privacyDataService } from '@/services/privacy/privacyDataService';
-import { toast } from '@/components/ui/use-toast';
-import type { 
-  LocationDataRetentionPolicy, 
-  DataAnonymizationSettings, 
-  ThirdPartySharePreferences 
-} from '@/types/privacy';
 
-export function usePrivacySettings() {
-  const { user } = useAuth();
-  const [retentionPolicy, setRetentionPolicy] = useState<LocationDataRetentionPolicy | null>(null);
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { privacyDataService } from '@/services/privacy/privacyDataService';
+import type { LocationDataRetentionPolicy, DataAnonymizationSettings, ThirdPartySharePreferences } from '@/types/privacy';
+
+export const usePrivacySettings = (userId: string) => {
+  const [locationRetentionPolicy, setLocationRetentionPolicy] = useState<LocationDataRetentionPolicy | null>(null);
   const [anonymizationSettings, setAnonymizationSettings] = useState<DataAnonymizationSettings | null>(null);
   const [sharingPreferences, setSharingPreferences] = useState<ThirdPartySharePreferences | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadPrivacySettings();
-    }
-  }, [user?.id]);
-
-  const loadPrivacySettings = async () => {
-    if (!user?.id) return;
-
+  const loadSettings = async () => {
+    if (!userId) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      // All privacy service calls should use new id field names if applicable
-      const [retention, anonymization, sharing] = await Promise.all([
-        privacyDataService.getLocationRetentionPolicy(user.id),
-        privacyDataService.getAnonymizationSettings(user.id),
-        privacyDataService.getSharingPreferences(user.id)
+      const [locationPolicy, anonymization, sharing] = await Promise.all([
+        privacyDataService.getLocationDataRetentionPolicy(userId),
+        privacyDataService.getDataAnonymizationSettings(userId),
+        privacyDataService.getThirdPartySharePreferences(userId)
       ]);
 
-      setRetentionPolicy(retention);
+      setLocationRetentionPolicy(locationPolicy);
       setAnonymizationSettings(anonymization);
       setSharingPreferences(sharing);
     } catch (error) {
       console.error('Error loading privacy settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load privacy settings',
-        variant: 'destructive'
-      });
+      toast.error('Failed to load privacy settings');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateRetentionPolicy = async (updates: Partial<LocationDataRetentionPolicy>) => {
-    if (!user?.id) return;
+  useEffect(() => {
+    loadSettings();
+  }, [userId]);
 
+  const updateLocationRetention = async (policy: Partial<LocationDataRetentionPolicy>) => {
+    if (!userId) return;
+    
     try {
-      setIsProcessing(true);
-      const updated = await privacyDataService.updateLocationRetentionPolicy(user.id, updates);
-      if (updated) {
-        setRetentionPolicy(updated);
-        toast({
-          title: 'Success',
-          description: 'Retention policy updated successfully'
-        });
+      const result = await privacyDataService.updateLocationDataRetentionPolicy(userId, policy);
+      if (result.success) {
+        setLocationRetentionPolicy(prev => prev ? { ...prev, ...policy } : null);
+        toast.success('Location retention policy updated');
+      } else {
+        toast.error('Failed to update location retention policy');
       }
     } catch (error) {
-      console.error('Error updating retention policy:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update retention policy',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsProcessing(false);
+      console.error('Error updating location retention:', error);
+      toast.error('Failed to update location retention policy');
     }
   };
 
-  const updateAnonymizationSettings = async (updates: Partial<DataAnonymizationSettings>) => {
-    if (!user?.id) return;
-
+  const updateAnonymization = async (settings: Partial<DataAnonymizationSettings>) => {
+    if (!userId) return;
+    
     try {
-      setIsProcessing(true);
-      const updated = await privacyDataService.updateAnonymizationSettings(user.id, updates);
-      if (updated) {
-        setAnonymizationSettings(updated);
-        toast({
-          title: 'Success',
-          description: 'Anonymization settings updated successfully'
-        });
+      const result = await privacyDataService.updateDataAnonymizationSettings(userId, settings);
+      if (result.success) {
+        setAnonymizationSettings(prev => prev ? { ...prev, ...settings } : null);
+        toast.success('Anonymization settings updated');
+      } else {
+        toast.error('Failed to update anonymization settings');
       }
     } catch (error) {
-      console.error('Error updating anonymization settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update anonymization settings',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsProcessing(false);
+      console.error('Error updating anonymization:', error);
+      toast.error('Failed to update anonymization settings');
     }
   };
 
-  const updateSharingPreferences = async (updates: Partial<ThirdPartySharePreferences>) => {
-    if (!user?.id) return;
-
+  const updateSharing = async (preferences: Partial<ThirdPartySharePreferences>) => {
+    if (!userId) return;
+    
     try {
-      setIsProcessing(true);
-      const updated = await privacyDataService.updateSharingPreferences(user.id, updates);
-      if (updated) {
-        setSharingPreferences(updated);
-        toast({
-          title: 'Success',
-          description: 'Sharing preferences updated successfully'
-        });
+      const result = await privacyDataService.updateThirdPartySharePreferences(userId, preferences);
+      if (result.success) {
+        setSharingPreferences(prev => prev ? { ...prev, ...preferences } : null);
+        toast.success('Sharing preferences updated');
+      } else {
+        toast.error('Failed to update sharing preferences');
       }
     } catch (error) {
       console.error('Error updating sharing preferences:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update sharing preferences',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsProcessing(false);
+      toast.error('Failed to update sharing preferences');
     }
   };
 
-  const deleteLocationHistory = async (olderThanDays?: number) => {
-    if (!user?.id) return;
-
+  const deleteLocationHistory = async () => {
+    if (!userId) return;
+    
     try {
-      setIsProcessing(true);
-      const deletedCount = await privacyDataService.deleteLocationHistory(user.id, olderThanDays);
-      toast({
-        title: 'Success',
-        description: `Deleted ${deletedCount} location records`
-      });
-      return deletedCount;
+      const result = await privacyDataService.deleteLocationHistory(userId);
+      if (result.success) {
+        toast.success('Location history deleted');
+      } else {
+        toast.error('Failed to delete location history');
+      }
     } catch (error) {
       console.error('Error deleting location history:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete location history',
-        variant: 'destructive'
-      });
-      return 0;
-    } finally {
-      setIsProcessing(false);
+      toast.error('Failed to delete location history');
     }
   };
 
-  const anonymizeLocationData = async (precisionLevel: number = 3) => {
-    if (!user?.id) return;
-
+  const anonymizeLocationData = async (settings: DataAnonymizationSettings) => {
+    if (!userId) return;
+    
     try {
-      setIsProcessing(true);
-      const anonymizedCount = await privacyDataService.anonymizeLocationData(user.id, precisionLevel);
-      toast({
-        title: 'Success',
-        description: `Anonymized ${anonymizedCount} location records`
-      });
-      return anonymizedCount;
+      const result = await privacyDataService.anonymizeLocationData(userId, settings);
+      if (result.success) {
+        toast.success('Location data anonymized');
+      } else {
+        toast.error('Failed to anonymize location data');
+      }
     } catch (error) {
       console.error('Error anonymizing location data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to anonymize location data',
-        variant: 'destructive'
-      });
-      return 0;
-    } finally {
-      setIsProcessing(false);
+      toast.error('Failed to anonymize location data');
     }
   };
 
-  const exportLocationData = async (format: 'json' | 'csv' | 'gpx' = 'json', includeAnonymized: boolean = false) => {
-    if (!user?.id) return null;
-
+  const exportLocationData = async (format: string = 'json') => {
+    if (!userId) return;
+    
     try {
-      setIsProcessing(true);
-      const exportData = await privacyDataService.exportLocationData(user.id, format, includeAnonymized);
-      
-      if (exportData) {
-        // Create and download the file
-        const fileName = `location-data-${exportData.export_date.split('T')[0]}.${format}`;
-        let fileContent: string;
-        let mimeType: string;
-
-        switch (format) {
-          case 'json':
-            fileContent = JSON.stringify(exportData, null, 2);
-            mimeType = 'application/json';
-            break;
-          case 'csv':
-            const headers = 'ID,Latitude,Longitude,Accuracy,Timestamp,Location Type,Is Anonymized\n';
-            const rows = exportData.data.map(item => 
-              `${item.id},${item.latitude},${item.longitude},${item.accuracy || ''},${item.timestamp},${item.location_type},${item.is_anonymized}`
-            ).join('\n');
-            fileContent = headers + rows;
-            mimeType = 'text/csv';
-            break;
-          case 'gpx':
-            fileContent = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Privacy Export">
-  <trk>
-    <name>Location History</name>
-    <trkseg>
-      ${exportData.data.map(item => 
-        `<trkpt lat="${item.latitude}" lon="${item.longitude}">
-          <time>${item.timestamp}</time>
-        </trkpt>`
-      ).join('\n      ')}
-    </trkseg>
-  </trk>
-</gpx>`;
-            mimeType = 'application/gpx+xml';
-            break;
-          default:
-            throw new Error(`Unsupported format: ${format}`);
-        }
-
-        const blob = new Blob([fileContent], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        toast({
-          title: 'Success',
-          description: `Location data exported as ${format.toUpperCase()}`
-        });
+      const result = await privacyDataService.exportLocationData(userId, format);
+      if (result.success) {
+        toast.success('Data export initiated');
+      } else {
+        toast.error('Failed to export data');
       }
-
-      return exportData;
     } catch (error) {
       console.error('Error exporting location data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to export location data',
-        variant: 'destructive'
-      });
-      return null;
-    } finally {
-      setIsProcessing(false);
+      toast.error('Failed to export data');
     }
   };
 
   return {
-    retentionPolicy,
+    locationRetentionPolicy,
     anonymizationSettings,
     sharingPreferences,
     loading,
-    isProcessing,
-    updateRetentionPolicy,
-    updateAnonymizationSettings,
-    updateSharingPreferences,
+    updateLocationRetention,
+    updateAnonymization,
+    updateSharing,
     deleteLocationHistory,
     anonymizeLocationData,
     exportLocationData,
-    refreshSettings: loadPrivacySettings
+    refreshSettings: loadSettings
   };
-}
+};

@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { deliveryManagementService } from '@/services/admin/deliveryManagementService';
 import type { 
   DeliveryZone, 
@@ -87,7 +88,7 @@ export const useDeliveryManagement = () => {
 
   const approveDriver = async (id: string, notes?: string) => {
     try {
-      const { data: { user } } = await deliveryManagementService.supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
       await deliveryManagementService.updateDriverApproval(
@@ -114,7 +115,7 @@ export const useDeliveryManagement = () => {
 
   const rejectDriver = async (id: string, reason: string) => {
     try {
-      const { data: { user } } = await deliveryManagementService.supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
       await deliveryManagementService.updateDriverApproval(
@@ -141,7 +142,7 @@ export const useDeliveryManagement = () => {
 
   const resolveAlert = async (id: string, notes: string) => {
     try {
-      const { data: { user } } = await deliveryManagementService.supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
       await deliveryManagementService.resolveAlert(id, notes, user.id);

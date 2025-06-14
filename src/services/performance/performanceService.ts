@@ -8,6 +8,7 @@ export interface RestaurantPerformanceMetrics {
   order_fulfillment_time: number;
   customer_satisfaction: number;
   menu_item_popularity: any[];
+  average_preparation_time: number;
 }
 
 export const getRestaurantPerformanceMetrics = async (restaurantId: string): Promise<RestaurantPerformanceMetrics | null> => {
@@ -21,7 +22,8 @@ export const getRestaurantPerformanceMetrics = async (restaurantId: string): Pro
       total_revenue: 0,
       order_fulfillment_time: 0,
       customer_satisfaction: 0,
-      menu_item_popularity: []
+      menu_item_popularity: [],
+      average_preparation_time: 0
     };
   } catch (error) {
     console.error('Error fetching restaurant performance metrics:', error);
@@ -40,7 +42,8 @@ export const getTodayMetrics = async (restaurantId: string): Promise<RestaurantP
       total_revenue: 850,
       order_fulfillment_time: 25,
       customer_satisfaction: 92,
-      menu_item_popularity: []
+      menu_item_popularity: [],
+      average_preparation_time: 22
     };
   } catch (error) {
     console.error('Error fetching today metrics:', error);
@@ -59,7 +62,8 @@ export const getWeeklySummary = async (restaurantId: string): Promise<Restaurant
       total_revenue: 5200,
       order_fulfillment_time: 28,
       customer_satisfaction: 89,
-      menu_item_popularity: []
+      menu_item_popularity: [],
+      average_preparation_time: 26
     };
   } catch (error) {
     console.error('Error fetching weekly summary:', error);
