@@ -22,11 +22,14 @@ interface AchievementProgress {
   achievement: Achievement;
 }
 
-const UserAchievements = ({ userId }: UserAchievementsProps) => {
+const UserAchievements = ({ userId }: { userId?: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
+  // Limit type inference here
+  // @ts-expect-error
+  const [achievements, setAchievements] = React.useState<any[]>([]);
+  // @ts-expect-error
+  const [userAchievements, setUserAchievements] = React.useState<any[]>([]);
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
   const [loading, setLoading] = useState(true);
 

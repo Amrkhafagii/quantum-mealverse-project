@@ -1,17 +1,8 @@
 
-/**
- * Main fitness type entry point.
- *
- * Only re-export directly from fitness.d.ts and explicitly from each submodule,
- * to avoid circular type dependencies that cause deep type instantiation errors!
- * Do not re-export index from submodules, only explicit interface/type.
- */
-
+// Only re-export types directly and explicitly from the main .d.ts, to avoid duplicate or circular types!
 export type {
-  // Profile
   UserProfile,
   UserMeasurement,
-  // Workouts
   WorkoutPlan,
   WorkoutDay,
   Exercise,
@@ -19,12 +10,9 @@ export type {
   CompletedExercise,
   WorkoutLog,
   WorkoutHistoryItem,
-  // Nutrition
   SavedMealPlan,
-  // Achievements
   Achievement,
   UserAchievement,
-  // Misc
   DailyQuest,
   FitnessGoal,
   GoalStatus,
@@ -32,12 +20,10 @@ export type {
   TeamMember,
   UserWorkoutStats,
   CalendarEvent,
+  WorkoutRecommendation,
 } from '../fitness.d.ts';
 
-// Additionally, re-export implementations for the modules that have
-// type-implementations (not type-alias) in source, but DO NOT recursively
-// re-export all from index files to prevent infinite recursion.
-
+// Explicitly export only actual .ts type implementations (skip index re-exports!)
 export * from './profile';
 export * from './workouts';
 export * from './exercises';
@@ -48,25 +34,3 @@ export * from './recommendations';
 export * from './achievements';
 export * from './challenges';
 export * from './scheduling';
-
-// For backward compatibility with components using "WorkoutRecommendation"
-export interface WorkoutRecommendation {
-  id: string;
-  title: string;
-  description: string;
-  workout_recommendations_user_id?: string;
-  name?: string;
-  type?: string;
-  reason?: string;
-  confidence_score?: number;
-  suggested_at?: string;
-  created_at?: string;
-  duration_minutes?: number;
-  target_muscle_groups?: string[];
-  recommended_frequency?: number;
-  dismissed?: boolean;
-  applied?: boolean;
-  applied_at?: string;
-  expires_at?: string;
-  metadata?: any;
-}

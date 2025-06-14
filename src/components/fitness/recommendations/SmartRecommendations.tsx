@@ -128,86 +128,95 @@ export const SmartRecommendations: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeRecommendations.map((recommendation, index) => (
-                  <motion.div
-                    key={recommendation.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-quantum-black/30 border border-quantum-cyan/10 rounded-lg p-4"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getRecommendationColor(recommendation.type)}`}>
-                          {getRecommendationIcon(recommendation.type)}
+                {activeRecommendations.map((recommendation, index) => {
+                  const label = recommendation.type ? recommendation.type : '';
+                  const dismissed = recommendation.dismissed ?? false;
+                  const applied = recommendation.applied ?? false;
+                  const appliedAt = recommendation.applied_at ?? '';
+                  const reason = recommendation.reason ?? '';
+                  const confidenceScore = recommendation.confidence_score ?? 0;
+
+                  return (
+                    <motion.div
+                      key={recommendation.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-quantum-black/30 border border-quantum-cyan/10 rounded-lg p-4"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getRecommendationColor(recommendation.type)}`}>
+                            {getRecommendationIcon(recommendation.type)}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg">{recommendation.title}</h3>
+                            <Badge variant="outline" className="mt-1">
+                              {recommendation.type.replace('_', ' ')}
+                            </Badge>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-lg">{recommendation.title}</h3>
-                          <Badge variant="outline" className="mt-1">
-                            {recommendation.type.replace('_', ' ')}
-                          </Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => dismissRecommendation(recommendation.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => dismissRecommendation(recommendation.id)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
 
-                    {recommendation.description && (
-                      <p className="text-gray-300 mb-3">{recommendation.description}</p>
-                    )}
+                      {recommendation.description && (
+                        <p className="text-gray-300 mb-3">{recommendation.description}</p>
+                      )}
 
-                    {recommendation.reason && (
-                      <div className="bg-quantum-darkBlue/20 rounded-lg p-3 mb-3">
-                        <p className="text-sm text-gray-400">
-                          <strong>Why this recommendation:</strong> {recommendation.reason}
-                        </p>
-                      </div>
-                    )}
+                      {recommendation.reason && (
+                        <div className="bg-quantum-darkBlue/20 rounded-lg p-3 mb-3">
+                          <p className="text-sm text-gray-400">
+                            <strong>Why this recommendation:</strong> {recommendation.reason}
+                          </p>
+                        </div>
+                      )}
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-400">
-                          Confidence: {Math.round((recommendation.confidence_score || 0) * 100)}%
-                        </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-400">
+                            Confidence: {Math.round((recommendation.confidence_score || 0) * 100)}%
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {!feedbackStates[recommendation.id] && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFeedback(recommendation.id, 'helpful')}
+                              >
+                                <ThumbsUp className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFeedback(recommendation.id, 'not_helpful')}
+                              >
+                                <ThumbsDown className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            onClick={() => applyRecommendation(recommendation.id)}
+                            className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
+                            size="sm"
+                          >
+                            Apply
+                          </Button>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {!feedbackStates[recommendation.id] && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleFeedback(recommendation.id, 'helpful')}
-                            >
-                              <ThumbsUp className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleFeedback(recommendation.id, 'not_helpful')}
-                            >
-                              <ThumbsDown className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          onClick={() => applyRecommendation(recommendation.id)}
-                          className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-                          size="sm"
-                        >
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -223,27 +232,36 @@ export const SmartRecommendations: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {completedRecommendations.map((recommendation) => (
-                  <div
-                    key={recommendation.id}
-                    className="bg-quantum-black/20 border border-green-500/20 rounded-lg p-4 opacity-75"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-green-500">
-                        {getRecommendationIcon(recommendation.type)}
+                {completedRecommendations.map((recommendation) => {
+                  const label = recommendation.type ? recommendation.type : '';
+                  const dismissed = recommendation.dismissed ?? false;
+                  const applied = recommendation.applied ?? false;
+                  const appliedAt = recommendation.applied_at ?? '';
+                  const reason = recommendation.reason ?? '';
+                  const confidenceScore = recommendation.confidence_score ?? 0;
+
+                  return (
+                    <div
+                      key={recommendation.id}
+                      className="bg-quantum-black/20 border border-green-500/20 rounded-lg p-4 opacity-75"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-green-500">
+                          {getRecommendationIcon(recommendation.type)}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{recommendation.title}</h3>
+                          <p className="text-sm text-gray-400">
+                            Applied {recommendation.applied_at ? new Date(recommendation.applied_at).toLocaleDateString() : 'recently'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{recommendation.title}</h3>
-                        <p className="text-sm text-gray-400">
-                          Applied {recommendation.applied_at ? new Date(recommendation.applied_at).toLocaleDateString() : 'recently'}
-                        </p>
-                      </div>
+                      {recommendation.description && (
+                        <p className="text-gray-400 text-sm">{recommendation.description}</p>
+                      )}
                     </div>
-                    {recommendation.description && (
-                      <p className="text-gray-400 text-sm">{recommendation.description}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </TabsContent>

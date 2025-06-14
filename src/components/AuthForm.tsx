@@ -15,13 +15,14 @@ interface AuthFormProps {
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ isRegister = false }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState<'customer' | 'restaurant' | 'delivery'>('customer');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showLocationFlow, setShowLocationFlow] = useState(false);
-  const [userId, setUserId] = useState<string>('');
+  // Explicitly type state to plain strings/booleans/any to help TS
+  const [email, setEmail] = React.useState<string>('');
+  const [password, setPassword] = React.useState<string>('');
+  const [userType, setUserType] = React.useState<'customer' | 'restaurant' | 'delivery'>('customer');
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [showPassword, setShowPassword] = React.useState<boolean>(false);
+  const [showLocationFlow, setShowLocationFlow] = React.useState<boolean>(false);
+  const [userId, setUserId] = React.useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();

@@ -8,17 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkoutRecommendation } from "@/types/fitness";
 
-interface WorkoutRecommendation {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  reason: string;
-  confidence_score: number;
-  dismissed: boolean;
-  applied: boolean;
-}
-
 interface WorkoutRecommendationsProps {
   userId?: string;
   onApplied: (userId?: string) => Promise<void>;

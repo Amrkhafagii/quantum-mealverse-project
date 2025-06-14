@@ -1,251 +1,252 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  Calendar, 
-  Clock, 
-  CheckSquare, 
-  Flame,
-  ChevronRight,
-  Activity
-} from 'lucide-react';
-import { WorkoutHistoryItem, WorkoutLog } from '@/types/fitness';
-import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import WorkoutDetail from './WorkoutDetail';
+import React, { useState, useEffect } from "react";
+// Only import types once!
 import type { WorkoutHistoryItem, WorkoutLog } from "@/types/fitness";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Clock, Dumbbell, BarChart3, History } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
-export interface WorkoutHistoryProps {
-  userId?: string;
-  workoutHistory: WorkoutHistoryItem[];
-  isLoading: boolean;
+interface WorkoutDetailProps {
+  workout: WorkoutHistoryItem;
+  log: WorkoutLog;
 }
 
-const WorkoutHistory = (props) => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutHistoryItem | null>(null);
-  const [workoutLog, setWorkoutLog] = useState<WorkoutLog | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [history, setHistory] = useState<WorkoutHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+const WorkoutHistoryDetail = ({ workout, log }: WorkoutDetailProps) => {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+        <div>
+          <h3 className="text-lg font-medium">{workout.workout_plan_name}</h3>
+          <p className="text-sm text-gray-400">{workout.workout_day_name}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {format(parseISO(workout.date), "MMM d, yyyy")}
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {workout.duration} min
+          </Badge>
+        </div>
+      </div>
 
-  const fetchWorkoutLog = async (workoutLogId: string) => {
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium text-quantum-cyan">Exercises Completed</h4>
+        <div className="grid gap-2">
+          {log.completed_exercises.map((exercise, index) => (
+            <div key={index} className="bg-quantum-black/30 p-3 rounded-md">
+              <div className="flex justify-between items-center">
+                <div className="font-medium">{exercise.name || exercise.exercise_name}</div>
+                <Badge>{exercise.sets_completed.length} sets</Badge>
+              </div>
+              <div className="mt-2 space-y-1">
+                {exercise.sets_completed.map((set, setIndex) => (
+                  <div key={setIndex} className="text-sm flex justify-between">
+                    <span>Set {set.set_number}</span>
+                    <span className="text-gray-400">
+                      {set.weight} kg × {set.reps} reps
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {exercise.notes && (
+                <div className="mt-2 text-sm text-gray-400">
+                  <span className="font-medium">Notes:</span> {exercise.notes}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {log.notes && (
+        <div className="bg-quantum-black/30 p-3 rounded-md">
+          <h4 className="text-sm font-medium text-quantum-cyan mb-1">Workout Notes</h4>
+          <p className="text-sm">{log.notes}</p>
+        </div>
+      )}
+
+      <div className="flex justify-between items-center">
+        <div className="text-sm">
+          <span className="text-gray-400">Calories burned:</span>{" "}
+          <span className="font-medium">{workout.calories_burned || "N/A"}</span>
+        </div>
+        <div className="text-sm">
+          <span className="text-gray-400">Completion:</span>{" "}
+          <span className="font-medium">
+            {workout.exercises_completed} / {workout.total_exercises} exercises
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WorkoutHistory = (props: { userId?: string, workoutHistory?: WorkoutHistoryItem[], isLoading?: boolean }) => {
+  const { userId, workoutHistory, isLoading } = props;
+  const { user } = useAuth();
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutHistoryItem | null>(null);
+  const [selectedWorkoutLog, setSelectedWorkoutLog] = useState<WorkoutLog | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const [loading, setLoading] = useState(false);
+
+  const fetchWorkoutLog = async (workoutId: string) => {
+    if (!userId) return;
+    
+    setLoading(true);
     try {
-      setLoadingDetail(true);
       const { data, error } = await supabase
-        .from('workout_logs')
-        .select('*')
-        .eq('id', workoutLogId)
+        .from("workout_logs")
+        .select("*")
+        .eq("id", workoutId)
         .single();
 
-      if (error) throw error;
-      
-      // Transform the data to match our WorkoutLog type
-      const transformedData: WorkoutLog = {
-        ...data,
-        completed_exercises: Array.isArray(data.completed_exercises) 
-          ? data.completed_exercises 
-          : typeof data.completed_exercises === 'string' 
-            ? JSON.parse(data.completed_exercises) 
-            : []
-      };
-      
-      setWorkoutLog(transformedData);
+      if (error) {
+        console.error("Error fetching workout log:", error);
+        return;
+      }
+
+      setSelectedWorkoutLog(data);
     } catch (error) {
-      console.error('Error fetching workout log:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load workout details",
-        variant: "destructive"
-      });
+      console.error("Unexpected error:", error);
     } finally {
-      setLoadingDetail(false);
+      setLoading(false);
     }
   };
 
-  const handleWorkoutSelect = async (workout: WorkoutHistoryItem) => {
+  const handleWorkoutClick = async (workout: WorkoutHistoryItem) => {
     setSelectedWorkout(workout);
     await fetchWorkoutLog(workout.workout_log_id);
+    setIsDialogOpen(true);
   };
 
-  const handleBackToList = () => {
-    setSelectedWorkout(null);
-    setWorkoutLog(null);
-  };
-
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
-
-  const getCompletionColor = (completed: number, total: number) => {
-    const percentage = (completed / total) * 100;
-    if (percentage === 100) return 'text-green-500';
-    if (percentage >= 75) return 'text-yellow-500';
-    return 'text-red-500';
-  };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const { data: workoutHistory, error } = await supabase
-          .from('workout_history')
-          .select('*')
-          .eq('workout_history_user_id', user?.id) // <-- Corrected column name
-          .order('date', { ascending: false });
-        if (error) throw error;
-        setHistory(workoutHistory || []);
-      } catch (error) {
-        console.error('Failed to fetch workout history', error);
-        setHistory([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (selectedWorkout && workoutLog) {
+  if (!userId) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            onClick={handleBackToList}
-            className="border-quantum-cyan/20 text-quantum-cyan hover:bg-quantum-cyan/10"
-          >
-            ← Back to History
-          </Button>
-          <h2 className="text-2xl font-bold text-quantum-cyan">Workout Details</h2>
-        </div>
-        
-        {loadingDetail ? (
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="p-8 text-center">
-              <div className="text-gray-400">Loading workout details...</div>
-            </CardContent>
-          </Card>
-        ) : (
-          <WorkoutDetail workout={selectedWorkout} workoutLog={workoutLog} />
-        )}
-      </div>
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="pt-6">
+          <p className="text-center text-gray-400">Sign in to view workout history</p>
+        </CardContent>
+      </Card>
     );
   }
 
+  if (isLoading) {
+    return (
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="pt-6">
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const filteredWorkouts = activeTab === "all"
+    ? workoutHistory
+    : workoutHistory?.filter(workout => {
+        const workoutDate = new Date(workout.date);
+        const now = new Date();
+        
+        if (activeTab === "week") {
+          const weekAgo = new Date();
+          weekAgo.setDate(now.getDate() - 7);
+          return workoutDate >= weekAgo;
+        } else if (activeTab === "month") {
+          const monthAgo = new Date();
+          monthAgo.setMonth(now.getMonth() - 1);
+          return workoutDate >= monthAgo;
+        }
+        return true;
+      });
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Activity className="h-8 w-8 text-quantum-cyan" />
-        <h2 className="text-3xl font-bold text-quantum-cyan">Workout History</h2>
-      </div>
-
-      {isLoading ? (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="p-8 text-center">
-            <div className="text-gray-400">Loading workout history...</div>
-          </CardContent>
-        </Card>
-      ) : workoutHistory.length === 0 ? (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="p-8 text-center">
-            <div className="space-y-4">
-              <Activity className="h-16 w-16 text-gray-500 mx-auto" />
-              <div>
-                <h3 className="text-lg font-medium text-white mb-2">No Workout History</h3>
-                <p className="text-gray-400">
-                  Complete your first workout to see your history here.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {workoutHistory.map((workout) => {
-            const completionPercentage = Math.round((workout.exercises_completed / workout.total_exercises) * 100);
-            
-            return (
-              <Card 
-                key={workout.id} 
-                className="bg-quantum-darkBlue/30 border-quantum-cyan/20 hover:border-quantum-cyan/40 transition-colors cursor-pointer"
-                onClick={() => handleWorkoutSelect(workout)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-white text-lg">{workout.workout_plan_name}</CardTitle>
-                      <Badge variant="outline" className="border-quantum-purple/50 text-quantum-purple">
-                        {workout.workout_day_name}
-                      </Badge>
+    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <History className="h-5 w-5 text-quantum-cyan" />
+          Workout History
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-3 mb-4">
+            <TabsTrigger value="all">All Time</TabsTrigger>
+            <TabsTrigger value="month">Last Month</TabsTrigger>
+            <TabsTrigger value="week">Last Week</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={activeTab} className="space-y-4">
+            {filteredWorkouts && filteredWorkouts.length > 0 ? (
+              filteredWorkouts.map((workout) => (
+                <div
+                  key={workout.id}
+                  className="bg-quantum-black/30 p-4 rounded-lg border border-quantum-cyan/10 hover:border-quantum-cyan/30 cursor-pointer transition-colors"
+                  onClick={() => handleWorkoutClick(workout)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium">{workout.workout_plan_name}</h3>
+                      <p className="text-sm text-gray-400">{workout.workout_day_name}</p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <Calendar className="h-4 w-4" />
-                      {format(new Date(workout.date), 'MMM dd, yyyy')}
-                    </div>
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(parseISO(workout.date), "MMM d, yyyy")}
+                    </Badge>
                   </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-xs text-gray-400">Duration</p>
-                        <p className="text-sm font-medium text-white">{formatDuration(workout.duration)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <CheckSquare className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-xs text-gray-400">Completion</p>
-                        <p className={`text-sm font-medium ${getCompletionColor(workout.exercises_completed, workout.total_exercises)}`}>
-                          {completionPercentage}%
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-gray-400" />
-                      <div>
-                        <p className="text-xs text-gray-400">Exercises</p>
-                        <p className="text-sm font-medium text-white">
-                          {workout.exercises_completed}/{workout.total_exercises}
-                        </p>
-                      </div>
-                    </div>
-
+                  
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Dumbbell className="h-3 w-3" />
+                      {workout.exercises_completed}/{workout.total_exercises} exercises
+                    </Badge>
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {workout.duration} min
+                    </Badge>
                     {workout.calories_burned && (
-                      <div className="flex items-center gap-2">
-                        <Flame className="h-4 w-4 text-orange-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Calories</p>
-                          <p className="text-sm font-medium text-white">{workout.calories_burned}</p>
-                        </div>
-                      </div>
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <BarChart3 className="h-3 w-3" />
+                        {workout.calories_burned} cal
+                      </Badge>
                     )}
                   </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-400">No workout history found</p>
+                <Button variant="outline" className="mt-4">
+                  Start a Workout
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-quantum-cyan/20">
-                    <div className="text-sm text-gray-400">
-                      Workout completed on {format(new Date(workout.date), 'EEEE, MMMM do')}
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-quantum-cyan" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Workout Details</DialogTitle>
+          </DialogHeader>
+          {selectedWorkout && selectedWorkoutLog ? (
+            <WorkoutHistoryDetail workout={selectedWorkout} log={selectedWorkoutLog} />
+          ) : (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-quantum-cyan"></div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 };
 

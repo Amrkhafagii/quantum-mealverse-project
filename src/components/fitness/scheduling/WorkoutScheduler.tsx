@@ -3,12 +3,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+// REMOVED: import { DatePicker } from "@/components/ui/date-picker"
 import { Calendar } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, parseISO } from 'date-fns';
-import { DatePicker } from "@/components/ui/date-picker"
 import { CalendarIcon } from "@radix-ui/react-icons"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -83,16 +83,17 @@ const WorkoutScheduler: React.FC = () => {
     const daysOfWeek = selectedDays.map(day => day.getDay());
 
     try {
+      // Use correct fields for table!
       const { error } = await supabase
         .from('workout_schedules')
         .insert({
           workout_plan_id: selectedPlan,
-          user_id: user!.id,
+          workout_schedules_user_id: user!.id, // match db schema
           start_date: startDate.toISOString(),
           end_date: endDate?.toISOString() || null,
           days_of_week: daysOfWeek,
           preferred_time: preferredTime || null,
-          active: active,
+          is_active: active,
         });
 
       if (error) {
@@ -145,63 +146,23 @@ const WorkoutScheduler: React.FC = () => {
           </div>
 
           <div>
-            <Label className="text-quantum-cyan">
-              Start Date
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <DayPicker
-                  mode="single"
-                  selected={startDate}
-                  onSelect={setStartDate}
-                  disabled={{ before: new Date() }}
-                  className="border-none shadow-sm"
-                />
-              </PopoverContent>
-            </Popover>
+            <Label className="text-quantum-cyan">Start Date</Label>
+            {/* Fallback to native date input */}
+            <Input
+              type="date"
+              value={startDate ? startDate.toISOString().substring(0, 10) : ''}
+              onChange={e => setStartDate(e.target.value ? new Date(e.target.value) : undefined)}
+              required
+            />
           </div>
-
           <div>
-            <Label className="text-quantum-cyan">
-              End Date (Optional)
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !endDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <DayPicker
-                  mode="single"
-                  selected={endDate}
-                  onSelect={setEndDate}
-                  disabled={{ before: new Date() }}
-                  className="border-none shadow-sm"
-                />
-              </PopoverContent>
-            </Popover>
+            <Label className="text-quantum-cyan">End Date (Optional)</Label>
+            <Input
+              type="date"
+              value={endDate ? endDate.toISOString().substring(0, 10) : ''}
+              onChange={e => setEndDate(e.target.value ? new Date(e.target.value) : undefined)}
+            />
           </div>
-
           <div>
             <Label htmlFor="daysOfWeek" className="text-quantum-cyan">Days of Week</Label>
             <DayPicker
@@ -241,5 +202,4 @@ const WorkoutScheduler: React.FC = () => {
     </Card>
   );
 };
-
 export default WorkoutScheduler;
