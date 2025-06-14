@@ -6,8 +6,8 @@ export interface FitnessGoal {
   fitness_goals_user_id: string; // Updated to match new naming convention
   name: string;
   description: string;
-  target_value: number;
-  current_value: number;
+  target_value?: number; // Made optional for backward compatibility
+  current_value?: number; // Made optional for backward compatibility
   target_date: string;
   status: GoalStatus;
   goal_type?: string; // For database compatibility

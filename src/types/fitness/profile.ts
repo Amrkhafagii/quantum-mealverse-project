@@ -2,11 +2,11 @@
 export interface UserProfile {
   id: string;
   user_profiles_user_id: string; // Updated to match new naming convention
-  display_name: string;
-  weight: number;
-  height: number;
+  display_name?: string;
+  weight?: number; // Made optional for backward compatibility
+  height?: number;
   age?: number;
-  gender: string;
+  gender?: string;
   goal_weight?: number;
   fitness_level?: string;
   fitness_goals?: string[];
@@ -18,7 +18,11 @@ export interface UserProfile {
   username?: string;
   created_at?: string;
   updated_at?: string;
-  fitness_goal?: string; // For backward compatibility
+  
+  // Backward compatibility fields
+  fitness_goal?: string;
+  user_id?: string;
+  fitness_profiles_user_id?: string; // Added for database compatibility
 }
 
 export interface UserMeasurement {

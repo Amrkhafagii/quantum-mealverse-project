@@ -52,7 +52,7 @@ export interface HydrationData {
   glassSize: number;
 }
 
-// Additional missing types
+// Team and challenge types
 export interface Team {
   id: string;
   name: string;
@@ -61,6 +61,7 @@ export interface Team {
   created_at: string;
   member_count?: number;
   total_points?: number;
+  created_by?: string; // Added for backward compatibility
 }
 
 export interface TeamMember {
@@ -69,41 +70,21 @@ export interface TeamMember {
   team_id: string;
   role: 'leader' | 'member';
   joined_at: string;
+  joined_date?: string; // Added for backward compatibility
 }
 
-export interface StreakReward {
-  id: string;
-  days: number;
-  days_required?: number;
-  streak_days?: number;
-  streak_length?: number;
-  reward_type: 'points' | 'badge' | 'item' | 'feature' | 'discount';
-  reward_value: number | string;
-  reward_name?: string;
-  title?: string;
-  reward_description?: string;
-  description?: string;
-  icon?: string;
-  points?: number;
-  is_claimed?: boolean;
-}
-
-export interface StreakRewardsProps {
-  currentStreak: number;
-  rewards: StreakReward[];
-  userId?: string;
-  longestStreak?: number;
-  onClaimReward?: (rewardId: string) => void;
-}
-
-// Updated SavedMealPlan to match database schema
+// Updated SavedMealPlan to match database schema and include backward compatibility
 export interface SavedMealPlan {
   id: string;
   saved_meal_plans_user_id: string;
   name: string;
   meal_plan: any; // JSON data containing the meal plan
-  tdee_id: string;
-  date_created: string;
+  tdee_id?: string;
+  date_created?: string;
   expires_at?: string;
   is_active?: boolean;
+  
+  // Backward compatibility fields
+  meals?: any;
+  created_at?: string;
 }

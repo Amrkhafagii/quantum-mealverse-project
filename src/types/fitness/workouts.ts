@@ -4,9 +4,9 @@ export interface WorkoutPlan {
   workout_plans_user_id: string; // Updated to match new naming convention
   name: string;
   description?: string;
-  difficulty_level: string;
-  duration_minutes: number;
-  workout_days: WorkoutDay[];
+  difficulty_level?: string;
+  duration_minutes?: number; // Made optional for backward compatibility
+  workout_days?: WorkoutDay[]; // Made optional for backward compatibility
   created_at?: string;
   updated_at?: string;
   
@@ -16,6 +16,7 @@ export interface WorkoutPlan {
   frequency?: number;
   goal?: string;
   is_active?: boolean;
+  user_id?: string; // For backward compatibility
 }
 
 export interface WorkoutDay {
@@ -24,7 +25,7 @@ export interface WorkoutDay {
   day_name: string;
   day_number: number;
   exercises: Exercise[];
-  estimated_duration: number;
+  estimated_duration?: number;
 }
 
 export interface Exercise {
@@ -127,9 +128,10 @@ export interface WorkoutLog {
   duration: number;
   calories_burned?: number | null;
   notes?: string | null;
-  completed_exercises: CompletedExercise[];
+  completed_exercises?: CompletedExercise[]; // Made optional for backward compatibility
   
   // Backward compatibility fields
+  user_id?: string;
   duration_minutes?: number;
   exercises_completed?: any[];
   total_sets?: number;

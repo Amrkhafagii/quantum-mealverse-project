@@ -30,31 +30,32 @@ export interface Achievement {
 
 export interface ExtendedUserAchievement {
   id: string;
-  user_achievements_user_id: string;
+  user_achievements_user_id: string; // Required field for database
   achievement_id: string;
   unlocked_at: string;
   achievement: Achievement;
   date_achieved?: string;
   progress?: number;
-  user_id?: string;
-  date_earned?: string;
+  user_id?: string; // For backward compatibility
+  date_earned?: string; // For backward compatibility
 }
 
 export interface StreakReward {
   id: string;
-  days_required: number;
+  days_required?: number;
   streak_days?: number;
   days?: number;
   streak_length?: number;
-  reward_name: string;
+  reward_name?: string;
   title?: string;
-  reward_description: string;
+  reward_description?: string;
   reward_value: number | string;
-  reward_type?: string;
+  reward_type: 'points' | 'badge' | 'item' | 'feature' | 'discount';
   reward_image?: string;
   icon?: string;
   points?: number;
   is_claimed?: boolean;
+  description?: string;
 }
 
 export interface StreakRewardsProps {
