@@ -1,268 +1,197 @@
-
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
-import HolographicCard from './HolographicCard';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { CurrencyDisplay } from './common/CurrencyDisplay';
+import { toast } from 'sonner';
 
-interface PlanFeature {
-  text: string;
-  included: boolean;
-}
-
-interface SubscriptionPlanProps {
-  title: string;
-  price: number;
-  period: string;
-  description: string;
-  features: PlanFeature[];
-  highlighted?: boolean;
-  className?: string;
-  ctaText?: string;
-  onSubscribe?: () => void;
-  priceDisplay?: string; // Optional formatted price string
-  mealsPerWeek?: number;
-  trialAvailable?: boolean;
-}
-
-const SubscriptionPlan: React.FC<SubscriptionPlanProps> = ({
-  title,
-  price,
-  period,
-  description,
-  features,
-  highlighted = false,
-  className,
-  ctaText = 'Subscribe Now',
-  onSubscribe,
-  priceDisplay,
-  mealsPerWeek = 5, // Default to 5 meals per week if not specified
-  trialAvailable = true,
-}) => {
+const SubscriptionPlan = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
+  const [plans, setPlans] = React.useState([]);
+  const [userSubscription, setUserSubscription] = React.useState(null);
 
-  const handleClick = async (withTrial = false) => {
-    // Direct logging test
-    console.log('Testing direct log from SubscriptionPlan component');
-    try {
-      const { error } = await supabase.from('customer_logs').insert({
-        type: 'click',
-        element_id: 'subscription_button',
-        element_type: 'button',
-        element_class: 'subscription-cta',
-        page_url: window.location.href,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (error) {
-        console.error('Direct logging test failed:', error);
-      } else {
-        console.log('Direct logging test succeeded');
-      }
-    } catch (err) {
-      console.error('Direct logging test error:', err);
+  React.useEffect(() => {
+    fetchPlans();
+    if (user) {
+      fetchUserSubscription();
     }
-    
-    // If user is not logged in, redirect to login page
-    if (!user) {
-      toast.info('Please log in to subscribe to a meal plan');
-      navigate('/login', { state: { from: '/subscription' } });
-      return;
-    }
+  }, [user]);
 
+  const fetchPlans = async () => {
     try {
-      // Check if user already has an active subscription
-      const { data: existingSubscription, error: fetchError } = await supabase
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .order('price');
+
+      if (error) throw error;
+      setPlans(data || []);
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+      toast.error('Failed to load subscription plans');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserSubscription = async () => {
+    try {
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
+        .eq('subscriptions_user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
-      }
-
-      if (existingSubscription) {
-        // User already has an active subscription
-        toast.info('You already have an active subscription. Please manage it from your profile.');
-        navigate('/profile');
-        return;
-      }
-
-      const now = new Date();
-      let subscriptionData = {
-        user_id: user.id,
-        plan_name: title,
-        price: withTrial ? 0 : price,
-        status: 'active',
-        meals_per_week: mealsPerWeek,
-        start_date: now.toISOString(),
-        is_trial: withTrial,
-        trial_ends_at: withTrial ? new Date(now.setMonth(now.getMonth() + 3)).toISOString() : null
-      };
-
-      // Create new subscription
-      const { error: insertError } = await supabase
-        .from('subscriptions')
-        .insert(subscriptionData);
-
-      if (insertError) throw insertError;
-
-      if (withTrial) {
-        toast.success(`You've successfully started a 3-month free trial of the ${title} plan!`);
-      } else {
-        toast.success(`You've successfully subscribed to the ${title} plan!`);
-      }
-      
-      // Redirect to profile page to see subscription
-      navigate('/profile');
+      if (error && error.code !== 'PGRST116') throw error;
+      setUserSubscription(data);
     } catch (error) {
-      console.error('Error handling subscription:', error);
-      toast.error('There was an error processing your subscription. Please try again.');
-    }
-    
-    // Call the provided onSubscribe handler
-    if (onSubscribe) {
-      onSubscribe();
+      console.error('Error fetching subscription:', error);
     }
   };
 
-  const getGlowColor = () => {
-    if (highlighted) {
-      return 'rgba(108, 92, 231, 0.5)'; // Purple glow for highlighted
-    } else if (title.includes('Basic')) {
-      return 'rgba(0, 245, 212, 0.5)'; // Cyan glow for Basic
-    } else {
-      return 'rgba(0, 245, 212, 0.5)'; // Cyan glow for Ultimate
+  const createSubscription = async (planData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .insert({
+          subscriptions_user_id: user.id, // Updated field name
+          plan_name: planData.plan_name,
+          price: planData.price,
+          status: planData.status,
+          meals_per_week: planData.meals_per_week,
+          start_date: planData.start_date,
+          is_trial: planData.is_trial,
+          trial_ends_at: planData.trial_ends_at,
+        });
+
+      if (error) throw error;
+      
+      toast.success('Subscription created successfully!');
+      return data;
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      toast.error('Failed to create subscription');
+      throw error;
     }
   };
 
-  const getTitleColor = () => {
-    if (highlighted) {
-      return "text-quantum-purple";
-    } else if (title.includes('Basic')) {
-      return "text-quantum-cyan";
-    } else {
-      return "text-quantum-cyan";
+  const handleSubscribe = async (plan) => {
+    try {
+      setLoading(true);
+      
+      // In a real app, you would integrate with a payment processor here
+      const subscriptionData = {
+        plan_name: plan.name,
+        price: plan.price,
+        status: 'active',
+        meals_per_week: plan.meals_per_week,
+        start_date: new Date().toISOString(),
+        is_trial: plan.has_trial || false,
+        trial_ends_at: plan.has_trial 
+          ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
+          : null,
+      };
+      
+      await createSubscription(subscriptionData);
+      await fetchUserSubscription();
+      
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      toast.error('Failed to process subscription');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getPriceColor = () => {
-    if (highlighted) {
-      return "text-quantum-purple";
-    } else if (title.includes('Basic')) {
-      return "text-quantum-cyan";
-    } else {
-      return "text-quantum-cyan";
+  const cancelSubscription = async () => {
+    try {
+      setLoading(true);
+      
+      if (!userSubscription) return;
+      
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ status: 'cancelled' })
+        .eq('id', userSubscription.id);
+        
+      if (error) throw error;
+      
+      toast.success('Subscription cancelled successfully');
+      await fetchUserSubscription();
+      
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      toast.error('Failed to cancel subscription');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getButtonStyle = () => {
-    if (highlighted) {
-      return "bg-quantum-purple text-white hover:bg-quantum-darkPurple";
-    } else if (title.includes('Basic')) {
-      return "bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10";
-    } else {
-      return "bg-transparent border border-quantum-cyan text-quantum-cyan hover:bg-quantum-cyan/10";
-    }
-  };
+  if (loading && !plans.length) {
+    return <div className="text-center py-8">Loading subscription plans...</div>;
+  }
 
   return (
-    <HolographicCard
-      className={cn(
-        'h-full flex flex-col relative overflow-hidden',
-        highlighted ? 'border-2 border-quantum-purple' : 'border border-quantum-cyan/30',
-        className
-      )}
-      glowColor={getGlowColor()}
-    >
-      {highlighted && (
-        <div className="absolute top-0 left-0 right-0 bg-quantum-purple text-center py-1 px-4 text-sm font-bold" aria-label="Most Popular Plan">
-          MOST Popular
-        </div>
-      )}
-
-      <div className="flex flex-col h-full pt-8 p-6">
-        <div className="mb-4" role="heading" aria-level={3}>
-          <h3 className={cn(
-            "text-3xl font-bold mb-2",
-            getTitleColor()
-          )}>
-            {title}
-          </h3>
-          <div className="flex items-baseline mb-2">
-            <span className={cn(
-              "text-5xl font-bold",
-              getPriceColor()
-            )}
-              aria-label={`${priceDisplay || `$${price}`} per ${period}`}
-            >
-              {priceDisplay || `$${price}`}
-            </span>
-            <span className="text-sm ml-1 text-gray-400">/{period}</span>
-          </div>
-          <p className="text-gray-400 mb-6 h-12">{description}</p>
-        </div>
-
-        <div className="space-y-4 mb-8 flex-grow">
-          <ul aria-label={`Features of ${title} plan`}>
-            {features.map((feature, index) => (
-              <li
-                key={index}
-                className={cn(
-                  "flex items-start mb-4",
-                  !feature.included && "opacity-50"
-                )}
-              >
-                <Check
-                  className={cn(
-                    "h-5 w-5 mr-3 flex-shrink-0",
-                    feature.included
-                      ? highlighted
-                        ? "text-quantum-purple"
-                        : "text-quantum-cyan"
-                      : "text-gray-500"
-                  )}
-                  aria-hidden="true"
-                />
-                <span className={feature.included ? "" : "line-through"}>
-                  {feature.text} {!feature.included && <span className="sr-only">(not included)</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-auto space-y-2">
-          {trialAvailable && (
-            <button
-              onClick={() => handleClick(true)}
-              className="w-full py-3 px-6 rounded-md transition-all duration-300 text-center bg-quantum-darkBlue/30 border border-quantum-purple text-quantum-purple hover:bg-quantum-purple/10"
-              aria-label={`Start 3-month free trial for ${title} plan`}
-            >
-              Start 3-Month Free Trial
-            </button>
-          )}
-          
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <h1 className="text-2xl font-bold mb-6">Subscription Plans</h1>
+      
+      {userSubscription && userSubscription.status === 'active' && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+          <h2 className="text-lg font-semibold text-green-800">Current Subscription</h2>
+          <p className="text-green-700">
+            You are currently subscribed to the {userSubscription.plan_name} plan.
+          </p>
+          <p className="text-sm text-green-600 mt-2">
+            ${userSubscription.price} per month • {userSubscription.meals_per_week} meals per week
+          </p>
           <button
-            onClick={() => handleClick(false)}
-            className={cn(
-              "w-full py-3 px-6 rounded-md transition-all duration-300 text-center subscription-cta",
-              getButtonStyle()
-            )}
-            aria-label={`${ctaText} for ${title} plan at ${priceDisplay || `$${price}`} per ${period}`}
+            onClick={cancelSubscription}
+            className="mt-3 px-4 py-2 bg-white text-red-600 border border-red-300 rounded-md hover:bg-red-50"
+            disabled={loading}
           >
-            {ctaText}
+            Cancel Subscription
           </button>
         </div>
+      )}
+      
+      <div className="grid md:grid-cols-3 gap-6">
+        {plans.map((plan) => (
+          <div key={plan.id} className="border rounded-lg overflow-hidden shadow-sm">
+            <div className="bg-gray-50 p-4 border-b">
+              <h3 className="text-xl font-bold">{plan.name}</h3>
+              <p className="text-2xl font-semibold mt-2">${plan.price}<span className="text-sm text-gray-500">/month</span></p>
+            </div>
+            <div className="p-4">
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-center">
+                  <span className="mr-2">✓</span>
+                  {plan.meals_per_week} meals per week
+                </li>
+                {plan.features && plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-center">
+                    <span className="mr-2">✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => handleSubscribe(plan)}
+                disabled={loading || (userSubscription?.status === 'active')}
+                className={`w-full py-2 px-4 rounded-md ${
+                  userSubscription?.status === 'active'
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {userSubscription?.status === 'active' ? 'Current Plan' : 'Subscribe'}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
-    </HolographicCard>
+    </div>
   );
 };
 

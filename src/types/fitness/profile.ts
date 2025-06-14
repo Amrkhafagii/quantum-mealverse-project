@@ -1,7 +1,7 @@
 
 export interface UserProfile {
   id: string;
-  user_id: string;
+  user_profiles_user_id: string; // Updated to match new naming convention
   display_name: string;
   weight: number;
   height: number;
@@ -22,7 +22,7 @@ export interface UserProfile {
 
 export interface UserMeasurement {
   id: string;
-  user_id: string;
+  user_measurements_user_id: string; // Updated to match new naming convention
   date: string;
   weight: number;
   body_fat?: number;
@@ -59,7 +59,7 @@ export interface WorkoutRecommendation {
   type: string;
   reason?: string;
   confidence_score?: number;
-  user_id: string;
+  workout_recommendations_user_id: string; // Updated to match new naming convention
   suggested_at?: string;
   dismissed?: boolean;
   applied?: boolean;

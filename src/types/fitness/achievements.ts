@@ -1,7 +1,7 @@
 
 export interface UserStreak {
   id: string;
-  user_id: string;
+  user_streaks_user_id: string; // Updated to match new naming convention
   currentstreak: number;
   longeststreak: number;
   last_activity_date: string;
@@ -10,7 +10,7 @@ export interface UserStreak {
 
 export interface UserAchievement {
   id: string;
-  user_id: string;
+  user_achievements_user_id: string; // Updated to match new naming convention
   achievement_id: string;
   unlocked_at: string;
   date_achieved?: string;

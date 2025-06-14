@@ -1,7 +1,7 @@
 
 export interface WorkoutLog {
   id?: string;
-  user_id: string;
+  workout_logs_user_id: string; // Updated to match new naming convention
   workout_plan_id: string;
   date: string;
   duration: number;
@@ -23,7 +23,7 @@ export interface CompletedExercise {
 
 export interface WorkoutHistoryItem {
   id: string;
-  user_id: string;
+  workout_history_user_id: string; // Updated to match new naming convention
   workout_log_id: string;
   date: string;
   workout_plan_name: string;

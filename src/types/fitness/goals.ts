@@ -3,7 +3,7 @@ export type GoalStatus = 'completed' | 'active' | 'not_started' | 'in_progress' 
 
 export interface FitnessGoal {
   id: string;
-  user_id: string;
+  fitness_goals_user_id: string; // Updated to match new naming convention
   title: string;
   name: string;
   description: string;

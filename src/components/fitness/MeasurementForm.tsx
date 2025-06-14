@@ -1,230 +1,216 @@
-
 import React, { useState } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { UserMeasurement } from '@/types/fitness';
+import { toast } from 'sonner';
 
-const measurementFormSchema = z.object({
-  weight: z.coerce.number().min(20, 'Weight must be at least 20').max(500, 'Weight must be less than 500'),
-  body_fat: z.coerce.number().min(1, 'Body fat must be at least 1%').max(80, 'Body fat must be less than 80%').optional(),
-  chest: z.coerce.number().min(30, 'Chest must be at least 30cm').max(200, 'Chest must be less than 200cm').optional(),
-  waist: z.coerce.number().min(30, 'Waist must be at least 30cm').max(200, 'Waist must be less than 200cm').optional(),
-  hips: z.coerce.number().min(30, 'Hips must be at least 30cm').max(200, 'Hips must be less than 200cm').optional(),
-  arms: z.coerce.number().min(10, 'Arms must be at least 10cm').max(100, 'Arms must be less than 100cm').optional(),
-  legs: z.coerce.number().min(20, 'Legs must be at least 20cm').max(150, 'Legs must be less than 150cm').optional(),
-  notes: z.string().optional(),
-});
-
-type MeasurementFormValues = z.infer<typeof measurementFormSchema>;
-
-interface MeasurementFormProps {
-  userId?: string;
-  onMeasurementAdded?: () => void;
-}
-
-const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurementAdded }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-
-  const form = useForm<MeasurementFormValues>({
-    resolver: zodResolver(measurementFormSchema),
-    defaultValues: {
-      weight: undefined,
-      body_fat: undefined,
-      chest: undefined,
-      waist: undefined,
-      hips: undefined,
-      arms: undefined,
-      legs: undefined,
-      notes: '',
-    },
+const MeasurementForm = () => {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    weight: '',
+    body_fat: '',
+    chest: '',
+    waist: '',
+    hips: '',
+    arms: '',
+    legs: '',
+    notes: '',
   });
 
-  const onSubmit = async (data: MeasurementFormValues) => {
-    if (!userId) {
-      toast({
-        title: 'Error',
-        description: 'User ID is required to add measurements',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
-    setIsSubmitting(true);
+  const handleSubmit = async (formData: any) => {
     try {
-      // Create a measurement object with required fields
-      const newMeasurement = {
-        user_id: userId,
-        date: new Date().toISOString(),
-        weight: data.weight, // Ensure weight is explicitly included as required
-        body_fat: data.body_fat,
-        chest: data.chest,
-        waist: data.waist,
-        hips: data.hips,
-        arms: data.arms,
-        legs: data.legs,
-        notes: data.notes,
-      };
+      const { data, error } = await supabase
+        .from('user_measurements')
+        .insert({
+          user_measurements_user_id: user.id, // Updated field name
+          date: formData.date,
+          weight: formData.weight,
+          body_fat: formData.body_fat,
+          chest: formData.chest,
+          waist: formData.waist,
+          hips: formData.hips,
+          arms: formData.arms,
+          legs: formData.legs,
+          notes: formData.notes,
+        });
 
-      const { error } = await supabase.from('user_measurements').insert(newMeasurement);
-      
       if (error) throw error;
       
-      toast({
-        title: 'Success',
-        description: 'Measurement added successfully',
-      });
-      
-      form.reset();
-      
-      if (onMeasurementAdded) {
-        onMeasurementAdded();
-      }
+      toast.success('Measurement saved successfully!');
+      return data;
     } catch (error) {
-      console.error('Error adding measurement:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add measurement',
-        variant: 'destructive',
+      console.error('Error saving measurement:', error);
+      toast.error('Failed to save measurement');
+      throw error;
+    }
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await handleSubmit(formData);
+      // Optionally reset the form after successful submission
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        weight: '',
+        body_fat: '',
+        chest: '',
+        waist: '',
+        hips: '',
+        arms: '',
+        legs: '',
+        notes: '',
       });
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      // Error is already handled in handleSubmit
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="weight"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Weight (kg) *</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="70.5" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="body_fat"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Body Fat (%)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="15.0" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="chest"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Chest (cm)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="90" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="waist"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Waist (cm)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="80" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="hips"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Hips (cm)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="95" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="arms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Arms (cm)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="35" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="legs"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Legs (cm)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="55" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Add any additional notes about this measurement..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={onSubmit} className="max-w-md mx-auto mt-8">
+      <div className="mb-4">
+        <label htmlFor="date" className="block text-gray-700 text-sm font-bold mb-2">
+          Date:
+        </label>
+        <input
+          type="date"
+          id="date"
+          name="date"
+          value={formData.date}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
         />
-        
-        <Button 
-          type="submit" 
-          className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
-          disabled={isSubmitting}
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="weight" className="block text-gray-700 text-sm font-bold mb-2">
+          Weight (kg):
+        </label>
+        <input
+          type="number"
+          id="weight"
+          name="weight"
+          value={formData.weight}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="body_fat" className="block text-gray-700 text-sm font-bold mb-2">
+          Body Fat (%):
+        </label>
+        <input
+          type="number"
+          id="body_fat"
+          name="body_fat"
+          value={formData.body_fat}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="chest" className="block text-gray-700 text-sm font-bold mb-2">
+          Chest (cm):
+        </label>
+        <input
+          type="number"
+          id="chest"
+          name="chest"
+          value={formData.chest}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="waist" className="block text-gray-700 text-sm font-bold mb-2">
+          Waist (cm):
+        </label>
+        <input
+          type="number"
+          id="waist"
+          name="waist"
+          value={formData.waist}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="hips" className="block text-gray-700 text-sm font-bold mb-2">
+          Hips (cm):
+        </label>
+        <input
+          type="number"
+          id="hips"
+          name="hips"
+          value={formData.hips}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="arms" className="block text-gray-700 text-sm font-bold mb-2">
+          Arms (cm):
+        </label>
+        <input
+          type="number"
+          id="arms"
+          name="arms"
+          value={formData.arms}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="legs" className="block text-gray-700 text-sm font-bold mb-2">
+          Legs (cm):
+        </label>
+        <input
+          type="number"
+          id="legs"
+          name="legs"
+          value={formData.legs}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="mb-6">
+        <label htmlFor="notes" className="block text-gray-700 text-sm font-bold mb-2">
+          Notes:
+        </label>
+        <textarea
+          id="notes"
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="submit"
         >
-          {isSubmitting ? 'Adding...' : 'Add Measurement'}
-        </Button>
-      </form>
-    </Form>
+          Save Measurement
+        </button>
+      </div>
+    </form>
   );
 };
 

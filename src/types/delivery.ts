@@ -75,6 +75,9 @@ export interface DeliveryEarnings {
   updated_at: string;
 }
 
+// Legacy type alias for backward compatibility
+export type DeliveryEarning = DeliveryEarnings;
+
 export interface DeliveryAvailability {
   id: string;
   delivery_user_id: string;
@@ -177,6 +180,67 @@ export interface DeliveryLocationSettings {
   geofence_exit_notifications?: boolean;
   location_sharing_duration?: number;
   auto_stop_sharing_after_delivery?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Types for components that were missing
+export interface DeliveryUser {
+  id: string;
+  delivery_users_user_id: string; // Updated to match new naming convention
+  full_name: string;
+  phone: string;
+  vehicle_type: string;
+  license_plate: string;
+  driver_license_number: string;
+  status: 'active' | 'inactive' | 'suspended';
+  rating: number;
+  total_deliveries: number;
+  verification_status: 'pending' | 'verified' | 'rejected';
+  background_check_status: 'pending' | 'approved' | 'rejected';
+  is_available: boolean;
+  last_active: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeliveryVehicle {
+  id: string;
+  delivery_vehicles_user_id: string; // Updated to match new naming convention
+  vehicle_type: string;
+  make: string;
+  model: string;
+  year: number;
+  license_plate: string;
+  color: string;
+  insurance_policy_number?: string;
+  registration_number?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeliveryDocument {
+  id: string;
+  delivery_documents_user_id: string; // Updated to match new naming convention
+  document_type: 'license' | 'insurance' | 'registration' | 'background_check';
+  document_url: string;
+  verification_status: 'pending' | 'approved' | 'rejected';
+  expiry_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeliveryPaymentDetails {
+  id: string;
+  delivery_payment_details_user_id: string; // Updated to match new naming convention
+  bank_name: string;
+  account_number: string;
+  routing_number: string;
+  account_holder_name: string;
+  account_type: 'checking' | 'savings';
+  is_verified: boolean;
   created_at: string;
   updated_at: string;
 }
