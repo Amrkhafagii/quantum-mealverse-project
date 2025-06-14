@@ -96,13 +96,14 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
     // Create workout log
     const workoutLog: WorkoutLog = {
       id: crypto.randomUUID(),
+      workout_logs_user_id: plan.user_id, // MUST be set for type compatibility
       user_id: plan.user_id,
       workout_plan_id: plan.id,
       date: new Date().toISOString(),
       duration: Math.round(duration / 60), // Convert to minutes
       calories_burned: caloriesBurned || null,
       notes: notes || null,
-      completed_exercises: filteredExercises // satisfy required type
+      completed_exercises: filteredExercises,
     };
 
     try {

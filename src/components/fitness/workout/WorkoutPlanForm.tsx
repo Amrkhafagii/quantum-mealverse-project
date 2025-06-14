@@ -39,30 +39,17 @@ const WorkoutPlanForm: React.FC = () => {
     setWorkoutDays(workoutDays.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to create a workout plan.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const submitPlan = async (planData: any) => {
+    // Only known props per DB
+    const formattedData = {
+      ...planData,
+      workout_days: JSON.stringify(planData.workout_days), // Store as Json, format as array in db
+      workout_plans_user_id: planData.user_id || planData.workout_plans_user_id,
+    };
     try {
       const { data: workoutPlan, error: workoutPlanError } = await supabase
         .from('workout_plans')
-        .insert({
-          name,
-          description,
-          goal,
-          difficulty,
-          frequency,
-          duration_weeks: durationWeeks,
-          workout_plans_user_id: user.id, // TODO: DB mapping
-        })
+        .insert(formattedData)
         .select()
         .single();
 
@@ -106,7 +93,7 @@ const WorkoutPlanForm: React.FC = () => {
         <CardTitle className="text-quantum-cyan">Create Workout Plan</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={(e) => submitPlan({ name, description, goal, difficulty, frequency, durationWeeks, workout_days: workoutDays, user_id: user?.id })} className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
             <Input

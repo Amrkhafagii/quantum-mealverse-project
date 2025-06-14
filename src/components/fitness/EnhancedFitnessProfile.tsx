@@ -1,9 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import type { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness/profile'; // <-- ADD THIS
-import type { UserWorkoutStats } from '@/types/fitness/workouts';
+import type { UserProfile, UserMeasurement, UserWorkoutStats } from '@/types/fitness'; // FIXED imports
 import { CalendarDays, Dumbbell, Trophy, Activity, Target, Check, ArrowUp, TrendingUp } from 'lucide-react';
 
 interface EnhancedFitnessProfileProps {

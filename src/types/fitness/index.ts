@@ -1,18 +1,17 @@
 
-// Explicitly export all major fitness types from modular files for safer module usage.
-// This fixes module import errors for re-used types everywhere in the codebase.
-export * from './profile';
-export * from './workouts';
-export * from './exercises';
-export * from './goals';
-export * from './analytics';
-export * from './logs';
-export * from './nutrition';
-export * from './schedules';
-export * from './scheduling';
-export * from './achievements';
-export * from './challenges';
-export * from './recommendations';
+// Explicitly export all fitness types needed in components.
 
-// DO NOT import from '../fitness.d.ts' to avoid recursion.
-// Only export from modular files as above.
+export * from './profile';            // UserProfile, UserMeasurement, DailyQuest, SavedMealPlan, Team, TeamMember
+export * from './workouts';           // WorkoutPlan, WorkoutDay, WorkoutLog, UserWorkoutStats
+export * from './exercises';          // Exercise, WorkoutTemplate, etc.
+export * from './goals';              // FitnessGoal, GoalStatus
+export * from './analytics';          // Analytics types (if any)
+export * from './logs';               // Log types (if any)
+export * from './nutrition';          // Nutrition types (if any)
+export * from './schedules';          // CalendarEvent, etc.
+export * from './scheduling';
+export * from './achievements';       // Achievement, UserAchievement, etc.
+export * from './challenges';         // Challenge, Team, TeamMember, etc.
+export * from './recommendations';    // Recommendation, etc.
+
+// DO NOT import/re-export from '../fitness.d.ts' (avoids recursion).
