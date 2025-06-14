@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SavedMealPlan } from '@/types/fitness';
+import { SavedMealPlan } from '@/types/fitness';
 
 interface PlanCardProps {
   plan: SavedMealPlan;

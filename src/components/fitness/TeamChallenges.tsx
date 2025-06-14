@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Team, TeamMember } from '@/types/fitness';
+import { Team, TeamMember } from '@/types/fitness';
 
 interface TeamChallengesProps {
   userId?: string;

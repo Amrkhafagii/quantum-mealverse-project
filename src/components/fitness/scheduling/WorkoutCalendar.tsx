@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { CalendarEvent } from '@/types/fitness';
+import { CalendarEvent } from '@/types/fitness';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from "lucide-react";
