@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryUser, DeliveryVehicle, DeliveryDocument } from '@/types/delivery';
 
@@ -143,4 +142,62 @@ export const getDeliveryDocuments = async (userId: string): Promise<DeliveryDocu
     console.error('Error in getDeliveryDocuments:', error);
     return [];
   }
+};
+
+// ----------------- Delivery Onboarding Onboarding Service Placeholders -----------------
+
+/** 
+ * Creates a delivery user in the database.
+ * TODO: Implement the actual logic.
+ */
+export const createDeliveryUser = async (...args: any[]): Promise<any> => {
+  throw new Error("createDeliveryUser not implemented");
+};
+
+/** 
+ * Uploads a delivery document for a user.
+ * TODO: Implement the actual logic.
+ */
+export const uploadDeliveryDocument = async (...args: any[]): Promise<any> => {
+  throw new Error("uploadDeliveryDocument not implemented");
+};
+
+/** 
+ * Gets all documents by delivery user ID.
+ * TODO: Implement the actual logic.
+ */
+export const getDocumentsByDeliveryUserId = async (...args: any[]): Promise<any> => {
+  throw new Error("getDocumentsByDeliveryUserId not implemented");
+};
+
+/** 
+ * Saves a delivery user's availability schedule.
+ * TODO: Implement the actual logic.
+ */
+export const saveAvailability = async (...args: any[]): Promise<any> => {
+  throw new Error("saveAvailability not implemented");
+};
+
+/**
+ * Gets availability schedule for a delivery user.
+ * TODO: Implement the actual logic.
+ */
+export const getAvailabilityByDeliveryUserId = async (...args: any[]): Promise<any> => {
+  throw new Error("getAvailabilityByDeliveryUserId not implemented");
+};
+
+/**
+ * Saves payment details for a delivery user.
+ * TODO: Implement the actual logic.
+ */
+export const savePaymentDetails = async (...args: any[]): Promise<any> => {
+  throw new Error("savePaymentDetails not implemented");
+};
+
+/**
+ * Gets payment details for a delivery user.
+ * TODO: Implement the actual logic.
+ */
+export const getPaymentDetailsByDeliveryUserId = async (...args: any[]): Promise<any> => {
+  throw new Error("getPaymentDetailsByDeliveryUserId not implemented");
 };
