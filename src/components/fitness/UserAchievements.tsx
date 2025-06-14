@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Achievement, UserAchievement } from '@/types/fitness/achievements';
 import { Award, Medal, Trophy, Clock, Target, Flame, Star, Calendar, Sunrise, Moon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useForm, SubmitHandler } from 'react-hook-form';
 
 interface UserAchievementsProps {
   userId?: string;
@@ -21,6 +22,13 @@ interface AchievementProgress {
   completed: boolean;
   achievement: Achievement;
 }
+
+type AchievementFormValues = {
+  achievementId: string;
+  evidence?: string;
+};
+
+const defaultValues: AchievementFormValues = { achievementId: '', evidence: '' };
 
 const UserAchievements = (props: any) => {
   const { user } = useAuth();
