@@ -29,6 +29,7 @@ export const queryOrderById = async (
 
     if (error) {
       handleDatabaseError(error, 'queryOrderById', { orderId });
+      return null;
     }
 
     return data || null;
@@ -58,6 +59,7 @@ export const queryUserOrders = async (
 
     if (error) {
       handleDatabaseError(error, 'queryUserOrders', { userId });
+      return [];
     }
 
     return data || [];
@@ -85,6 +87,7 @@ export const queryOrderItems = async (
 
     if (error) {
       handleDatabaseError(error, 'queryOrderItems', { orderId });
+      return [];
     }
 
     return data || [];
@@ -103,6 +106,7 @@ export const performOrderUpdate = async (orderId: string, updateData: any): Prom
 
     if (error) {
       handleDatabaseError(error, 'performOrderUpdate', { orderId });
+      return false;
     }
 
     return true;

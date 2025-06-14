@@ -9,16 +9,18 @@ export interface OrderError extends Error {
   operation?: string;
 }
 
-export const handleDatabaseError = (error: any, operation: string, context: Record<string, any>): never => {
-  const orderError: OrderError = new Error(`Database error in ${operation}: ${error.message || error}`);
-  orderError.code = error.code;
-  orderError.details = error.details;
-  orderError.operation = operation;
-  
-  // Add context for debugging
+export const handleDatabaseError = (error: any, operation: string, context: Record<string, any>): void => {
+  // Log the error instead of throwing it
   console.error('Database error context:', { operation, context, error });
   
-  throw orderError;
+  // Additional error logging can be added here for monitoring
+  if (error.code) {
+    console.error(`Database error code: ${error.code}`);
+  }
+  
+  if (error.details) {
+    console.error(`Database error details:`, error.details);
+  }
 };
 
 export const isOrderNotFoundError = (error: any): boolean => {

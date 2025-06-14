@@ -18,8 +18,8 @@ export const recordStatusChange = async (
       .insert({
         order_id: orderId,
         status: newStatus,
-        restaurant_id: restaurantId,
-        metadata,
+        restaurant_id: restaurantId || '',
+        details: metadata || {},
         created_at: new Date().toISOString()
       });
 
@@ -46,8 +46,8 @@ export const recordCancellation = async (
       .insert({
         order_id: orderId,
         status: OrderStatus.CANCELLED,
-        restaurant_id: restaurantId,
-        metadata: {
+        restaurant_id: restaurantId || '',
+        details: {
           cancellation_reason: reason || 'No reason provided',
           cancelled_at: new Date().toISOString()
         },
