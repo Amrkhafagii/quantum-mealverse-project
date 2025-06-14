@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Target, Calendar, TrendingUp } from 'lucide-react';
-import type { FitnessGoal } from '@/types/fitness';
+import type { FitnessGoal } from '@/types/fitness/goals';
 import { fetchGoals } from '@/services/fitnessGoalService';
 import { useAuth } from '@/hooks/useAuth';
 

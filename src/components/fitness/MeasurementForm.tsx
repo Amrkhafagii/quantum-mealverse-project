@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { UserMeasurement } from '@/types/fitness';
 import { toast } from 'sonner';
 
 interface MeasurementFormProps {

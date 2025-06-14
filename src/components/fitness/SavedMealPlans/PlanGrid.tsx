@@ -1,6 +1,5 @@
-
 import React from 'react';
-import type { SavedMealPlan } from '@/types/fitness';
+import type { SavedMealPlan } from '@/types/fitness/profile';
 import PlanCard from './PlanCard';
 
 interface PlanGridProps {

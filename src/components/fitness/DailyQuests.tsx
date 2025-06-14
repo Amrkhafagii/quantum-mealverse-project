@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { DailyQuest } from '@/types/fitness'; // changed import
+import type { DailyQuest } from '@/types/fitness/profile'; // changed import
 import { CheckCircle2, Clock, Award, Flag } from 'lucide-react';
 
 interface DailyQuestsProps {

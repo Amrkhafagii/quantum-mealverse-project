@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import type { Achievement, UserAchievement } from "@/types/fitness";
+import type { Achievement, UserAchievement } from '@/types/fitness/achievements';
 import { Award, Medal, Trophy, Clock, Target, Flame, Star, Calendar, Sunrise, Moon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 

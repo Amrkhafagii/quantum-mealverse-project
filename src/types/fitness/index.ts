@@ -1,6 +1,18 @@
 
-// NOTE: Only export named top-level types from modular files here to avoid recursive instantiation and infinite depth errors.
-
+// Explicitly export all major fitness types from modular files for safer module usage.
+// This fixes module import errors for re-used types everywhere in the codebase.
+export * from './profile';
 export * from './workouts';
 export * from './exercises';
-// Explicitly avoid importing from '../fitness.d.ts' to prevent recursion. Only export from modular files.
+export * from './goals';
+export * from './analytics';
+export * from './logs';
+export * from './nutrition';
+export * from './schedules';
+export * from './scheduling';
+export * from './achievements';
+export * from './challenges';
+export * from './recommendations';
+
+// DO NOT import from '../fitness.d.ts' to avoid recursion.
+// Only export from modular files as above.

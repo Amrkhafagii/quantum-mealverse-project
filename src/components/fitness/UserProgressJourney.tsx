@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Star, Award, Medal, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Achievement, UserAchievement } from '@/types/fitness';
+import type { Achievement, UserAchievement } from '@/types/fitness/achievements';
 
 interface UserProgressJourneyProps {
   userId?: string;

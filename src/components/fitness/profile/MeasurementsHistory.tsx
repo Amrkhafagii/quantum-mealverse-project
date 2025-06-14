@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { UserMeasurement } from '@/types/fitness';
+import { UserMeasurement } from '@/types/fitness/profile';
 import { LineChart, Scale, Trash } from 'lucide-react';
 import ProgressChart from '../stats/ProgressChart';
 

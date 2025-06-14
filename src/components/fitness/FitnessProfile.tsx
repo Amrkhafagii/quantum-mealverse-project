@@ -2,9 +2,9 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import type { UserProfile, UserMeasurement } from '@/types/fitness'; // <-- ADD THIS
+import type { UserProfile, UserMeasurement } from "@/types/fitness/profile"; // <-- ADD THIS
+import type { UserWorkoutStats } from "@/types/fitness/workouts";
 import { CalendarDays, Dumbbell, Trophy, Activity, Target, Check, ArrowUp, TrendingUp } from 'lucide-react';
-import type { UserWorkoutStats } from "@/types/fitness";
 
 interface EnhancedFitnessProfileProps {
   userId?: string;
