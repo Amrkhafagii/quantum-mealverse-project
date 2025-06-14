@@ -48,7 +48,7 @@ class PreparationTimerService {
     }
   }
 
-  async completePreparationTimer(timerId: string, actualDurationMinutes: number): Promise<boolean> => {
+  async completePreparationTimer(timerId: string, actualDurationMinutes: number): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('order_preparation_stages')
@@ -66,7 +66,7 @@ class PreparationTimerService {
     }
   }
 
-  async getActiveTimers(restaurantId: string): Promise<PreparationTimer[]> => {
+  async getActiveTimers(restaurantId: string): Promise<PreparationTimer[]> {
     try {
       const { data, error } = await supabase
         .from('order_preparation_stages')
@@ -91,7 +91,7 @@ class PreparationTimerService {
     }
   }
 
-  async checkOverdueTimers(restaurantId: string): Promise<PreparationTimer[]> => {
+  async checkOverdueTimers(restaurantId: string): Promise<PreparationTimer[]> {
     try {
       const cutoffTime = new Date();
       cutoffTime.setMinutes(cutoffTime.getMinutes() - 30); // 30 minutes overdue
