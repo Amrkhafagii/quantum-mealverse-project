@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Exercise } from '@/types/fitness/exercises';
@@ -31,12 +30,16 @@ export function useExercises() {
           muscleGroups = [];
         }
 
-        // Normalize instructions to a single string
-        let instructions: string = "";
+        // --- Fix: instructions should always be a string ---
+        let instructions = "";
         if (Array.isArray(exercise.instructions)) {
           instructions = exercise.instructions.map((item: any) => String(item)).join('\n');
         } else if (typeof exercise.instructions === "string") {
           instructions = exercise.instructions.trim();
+        }
+        // Fallback: if instructions is not provided or not a string, keep as ""
+        if (!instructions) {
+          instructions = "";
         }
 
         return {
