@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AuthForm } from '@/components/AuthForm';
+import AuthForm from '@/components/AuthForm'; // Fixed import
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Signup = () => {
