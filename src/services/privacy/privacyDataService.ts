@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   LocationDataRetentionPolicy, 
@@ -12,11 +13,22 @@ export const getLocationDataRetentionPolicy = async (userId: string): Promise<Lo
     const { data, error } = await supabase
       .from('location_data_retention_policies')
       .select('*')
-      .eq('user_id', userId)
+      .eq('location_data_retention_policies_user_id', userId)
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Map database fields to expected interface
+    return {
+      id: data.id,
+      user_id: data.location_data_retention_policies_user_id,
+      retention_period_days: data.retention_period_days,
+      auto_anonymize_after_days: data.auto_anonymize_after_days,
+      auto_delete_after_days: data.auto_delete_after_days,
+      export_format: data.export_format as "json" | "csv" | "gpx",
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Error fetching location retention policy:', error);
     throw error;
@@ -31,7 +43,7 @@ export const updateLocationDataRetentionPolicy = async (
     const { data, error } = await supabase
       .from('location_data_retention_policies')
       .upsert({ 
-        user_id: userId, 
+        location_data_retention_policies_user_id: userId, 
         ...policy,
         updated_at: new Date().toISOString()
       })
@@ -39,7 +51,18 @@ export const updateLocationDataRetentionPolicy = async (
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Map database fields to expected interface
+    return {
+      id: data.id,
+      user_id: data.location_data_retention_policies_user_id,
+      retention_period_days: data.retention_period_days,
+      auto_anonymize_after_days: data.auto_anonymize_after_days,
+      auto_delete_after_days: data.auto_delete_after_days,
+      export_format: data.export_format as "json" | "csv" | "gpx",
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Error updating location retention policy:', error);
     throw error;
@@ -55,7 +78,18 @@ export const getDataAnonymizationSettings = async (userId: string): Promise<Data
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Map database fields to expected interface
+    return {
+      id: data.id,
+      user_id: data.data_anonymization_settings_user_id,
+      anonymize_location_data: data.anonymize_location_data,
+      anonymize_device_info: data.anonymize_device_info,
+      anonymize_usage_patterns: data.anonymize_usage_patterns,
+      precision_reduction_level: data.precision_reduction_level,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Error fetching anonymization settings:', error);
     throw error;
@@ -78,7 +112,18 @@ export const updateDataAnonymizationSettings = async (
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Map database fields to expected interface
+    return {
+      id: data.id,
+      user_id: data.data_anonymization_settings_user_id,
+      anonymize_location_data: data.anonymize_location_data,
+      anonymize_device_info: data.anonymize_device_info,
+      anonymize_usage_patterns: data.anonymize_usage_patterns,
+      precision_reduction_level: data.precision_reduction_level,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Error updating anonymization settings:', error);
     throw error;

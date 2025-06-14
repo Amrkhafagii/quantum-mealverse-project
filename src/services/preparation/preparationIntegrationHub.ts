@@ -84,14 +84,14 @@ export const getRestaurantFromOrder = async (orderId: string) => {
       .eq('id', orderId)
       .single();
 
-    if (error || !data) {
+    if (error || !data || !data.restaurants) {
       console.error('Error fetching restaurant from order:', error);
       return null;
     }
 
     return {
       id: data.restaurant_id,
-      name: data.restaurants?.name || 'Unknown Restaurant'
+      name: data.restaurants.name || 'Unknown Restaurant'
     };
   } catch (error) {
     console.error('Error in getRestaurantFromOrder:', error);
@@ -152,11 +152,102 @@ export const optimizeWorkflow = async (restaurantId: string) => {
   }
 };
 
+// Add missing methods for preparation integration service
+export const getOrderPreparationStages = async (orderId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('order_preparation_stages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('stage_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching preparation stages:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getOrderPreparationStages:', error);
+    return [];
+  }
+};
+
+export const startStage = async (orderId: string, stageName: string) => {
+  try {
+    const { error } = await supabase
+      .from('order_preparation_stages')
+      .update({ 
+        status: 'in_progress',
+        started_at: new Date().toISOString()
+      })
+      .eq('order_id', orderId)
+      .eq('stage_name', stageName);
+
+    if (error) {
+      console.error('Error starting stage:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in startStage:', error);
+    return false;
+  }
+};
+
+export const advanceStage = async (orderId: string, stageName: string) => {
+  try {
+    const { error } = await supabase
+      .from('order_preparation_stages')
+      .update({ 
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('order_id', orderId)
+      .eq('stage_name', stageName);
+
+    if (error) {
+      console.error('Error advancing stage:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in advanceStage:', error);
+    return { success: false, error: 'Failed to advance stage' };
+  }
+};
+
+export const getPreparationProgress = async (orderId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('order_preparation_stages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('stage_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching preparation progress:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getPreparationProgress:', error);
+    return [];
+  }
+};
+
 export const preparationIntegrationHub = {
   notifyStageCompletion,
   updateOrderStatus,
   getRestaurantFromOrder,
   sendCustomerNotification,
   getPreparationAnalytics,
-  optimizeWorkflow
+  optimizeWorkflow,
+  getOrderPreparationStages,
+  startStage,
+  advanceStage,
+  getPreparationProgress
 };

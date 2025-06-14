@@ -168,14 +168,18 @@ export const performOrderUpdate = async (orderId: string, updateData: any): Prom
 
 export const createOrder = async (orderData: Partial<Order>): Promise<Order | null> => {
   try {
-    // Ensure required fields have default values that match database schema
+    // Ensure all required fields have values that match database schema
     const completeOrderData = {
       city: orderData.city || 'Unknown',
       customer_email: orderData.customer_email || 'unknown@example.com',
       customer_id: orderData.customer_id || 'unknown',
       customer_name: orderData.customer_name || 'Unknown Customer',
-      customer_phone: orderData.customer_phone || '000-000-0000', // Provide required field
+      customer_phone: orderData.customer_phone || '000-000-0000',
       delivery_address: orderData.delivery_address || 'Unknown Address',
+      delivery_method: orderData.delivery_method || 'delivery',
+      payment_method: orderData.payment_method || 'cash',
+      delivery_fee: orderData.delivery_fee || 0,
+      subtotal: orderData.subtotal || 0,
       total: orderData.total || 0,
       status: orderData.status || 'pending',
       assignment_source: orderData.assignment_source || 'manual',
