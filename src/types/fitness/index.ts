@@ -1,7 +1,10 @@
 
-// DO NOT re-export types from other index.ts files to avoid infinite recursive instantiation.
-// Only export "root" types directly from fitness.d.ts or single-level interfaces from modular files.
+// NOTE: Only export named top-level types from modular files here to avoid recursive instantiation and infinite depth errors.
 
+export * from './workouts';
+export * from './exercises';
+
+// Direct export of types not imported from other index.ts
 export type {
   UserProfile,
   UserMeasurement,
@@ -24,4 +27,3 @@ export type {
   CalendarEvent,
 } from '../fitness.d.ts';
 
-// Only export concrete non-type values or interfaces directly from files, not via wildcards or other index.ts files.

@@ -33,7 +33,7 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      // Patch DB type to our Subscription type
+      // Make sure each subscription includes user_id, regardless of backend column name
       return (data as any[] || []).map((rec) => ({
         ...rec,
         user_id: rec.user_id || rec.subscriptions_user_id,

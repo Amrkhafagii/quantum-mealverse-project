@@ -23,7 +23,7 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
 
   const fetchRecommendations = async () => {
     if (!user?.id) return;
-    
+
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -34,44 +34,21 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
         .eq('applied', false)
         .order('confidence_score', { ascending: false })
         .limit(3);
-        
+
       if (error) throw error;
-      
-      const typedRecommendations: WorkoutRecommendation[] = (data || []).map(rec => ({
-        id: rec.id,
-        title: rec.title,
-        name: rec.title, // Set both for compatibility
-        description: rec.description || '',
-        difficulty:
-          rec.difficulty ??
-          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.difficulty : undefined) ??
-          'beginner',
-        duration_minutes:
-          rec.duration_minutes ??
-          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.duration_minutes : undefined) ??
-          0,
-        target_muscle_groups:
-          rec.target_muscle_groups ??
-          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.target_muscle_groups : undefined) ??
-          [],
-        recommended_frequency:
-          rec.recommended_frequency ??
-          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.recommended_frequency : undefined) ??
-          1,
-        created_at: rec.created_at ?? new Date().toISOString(),
-        workout_recommendations_user_id: rec.workout_recommendations_user_id,
-        type: rec.type ?? (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.type : undefined) ?? '',
-        reason: rec.reason ?? (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.reason : undefined) ?? '',
-        confidence_score:
-          rec.confidence_score ??
-          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.confidence_score : undefined) ??
-          0,
-        suggested_at: rec.suggested_at,
-        dismissed: rec.dismissed,
-        applied: rec.applied,
-        applied_at: rec.applied_at
+
+      // Safely extract properties, fallback to metadata when not directly available
+      const typedRecommendations = (data || []).map(rec => ({
+        ...rec,
+        difficulty: rec.difficulty ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.difficulty : undefined),
+        duration_minutes: rec.duration_minutes ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.duration_minutes : undefined),
+        target_muscle_groups: rec.target_muscle_groups ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.target_muscle_groups : undefined),
+        recommended_frequency: rec.recommended_frequency ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.recommended_frequency : undefined),
+        type: rec.type ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.type : undefined),
+        reason: rec.reason ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.reason : undefined),
+        confidence_score: rec.confidence_score ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.confidence_score : undefined),
       }));
-      
+
       setRecommendations(typedRecommendations);
     } catch (error) {
       console.error('Error fetching workout recommendations:', error);

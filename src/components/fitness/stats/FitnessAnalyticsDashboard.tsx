@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CalendarDays, Dumbbell, Flame } from 'lucide-react';
@@ -96,7 +97,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
           <CardDescription>Workouts per day of the week</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgressChart data={workoutData} dataKey="value" color="#00FFFF" />
+          <ProgressChart data={workoutData} dataKey="value" color="#00FFFF" title="Workout Frequency" />
         </CardContent>
       </Card>
 
@@ -110,7 +111,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
           <CardDescription>Steps per day of the week</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgressChart data={stepsData} dataKey="value" color="#A020F0" />
+          <ProgressChart data={stepsData} dataKey="value" color="#A020F0" title="Daily Steps" />
         </CardContent>
       </Card>
 
@@ -124,7 +125,7 @@ const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ u
           <CardDescription>Calories burned per day of the week</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgressChart data={caloriesData} dataKey="value" color="#FF4500" />
+          <ProgressChart data={caloriesData} dataKey="value" color="#FF4500" title="Calories Burned" />
         </CardContent>
       </Card>
     </div>
