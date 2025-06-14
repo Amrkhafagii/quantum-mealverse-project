@@ -4,11 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, Flag, Reply } from 'lucide-react';
 import { reviewService } from '@/services/reviews/reviewService';
-import type { RestaurantReview } from '@/types/notifications';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { useToast } from '@/components/ui/use-toast';
-
-type RestaurantReview = any; // TODO: Define properly
 
 export const ReviewsManagement: React.FC = () => {
   const { restaurant } = useRestaurantAuth();

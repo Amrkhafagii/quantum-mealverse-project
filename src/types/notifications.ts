@@ -1,8 +1,9 @@
+
 // Notification-related types with updated user ID naming
 
 export interface Notification {
   id: string;
-  notifications_user_id: string; // Updated to match new naming convention
+  notifications_user_id: string;
   title: string;
   message: string;
   type: 'order_status' | 'delivery_update' | 'promotion' | 'system' | 'achievement' | 'reminder';
@@ -16,7 +17,7 @@ export interface Notification {
 
 export interface CustomerNotification {
   id: string;
-  customer_id?: string; // This might be customer_notifications_user_id in the database
+  customer_id?: string;
   order_id?: string;
   notification_type: string;
   title: string;
@@ -44,7 +45,7 @@ export interface CustomerCommunication {
 
 export interface NotificationPreferences {
   id: string;
-  notification_preferences_user_id: string; // Updated to match new naming convention
+  notification_preferences_user_id: string;
   email_notifications: boolean;
   push_notifications: boolean;
   sms_notifications: boolean;
@@ -60,7 +61,7 @@ export interface NotificationPreferences {
 
 export interface PushNotificationToken {
   id: string;
-  push_notification_tokens_user_id: string; // Updated to match new naming convention
+  push_notification_tokens_user_id: string;
   token: string;
   platform: 'ios' | 'android' | 'web';
   is_active: boolean;
@@ -68,10 +69,54 @@ export interface PushNotificationToken {
   updated_at: string;
 }
 
-// --- Add placeholder/exported types to fix missing exports ---
+// --- FIX: Extended types for restaurant/assignment/promotions/reviews features ---
+
 export interface RestaurantAssignment {
   id: string;
-  // Add fields as needed for build fixes
+  order_id: string;
+  restaurant_id: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  assigned_at: string;
+  responded_at?: string;
+  created_at: string;
+  details?: any;
+}
+
+export type PromotionType = 'discount' | 'free_item' | 'bogo' | 'special';
+
+export interface RestaurantPromotion {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  description: string;
+  promotion_type: PromotionType;
+  discount_value: number;
+  minimum_order_amount: number;
+  maximum_discount_amount: number;
+  start_date: string;
+  end_date: string;
+  usage_limit: number;
+  usage_count: number;
+  applicable_items: any[];
+  promo_code: string;
+  terms_conditions: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RestaurantReview {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  rating: number;
+  comment: string;
+  images: string[];
+  is_verified_purchase: boolean;
+  is_flagged: boolean;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface RestaurantPerformanceMetrics {
@@ -81,12 +126,3 @@ export interface RestaurantPerformanceMetrics {
   average_preparation_time: number;
 }
 
-export interface RestaurantPromotion {
-  id: string;
-  // ...
-}
-
-export interface RestaurantReview {
-  id: string;
-  // ...
-}

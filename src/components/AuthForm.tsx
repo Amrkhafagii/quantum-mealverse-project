@@ -10,12 +10,12 @@ import { toast } from '@/components/ui/use-toast';
 import { SignupFormData } from '@/types/auth';
 
 interface AuthFormProps {
-  type: 'login' | 'signup';
+  type?: 'login' | 'signup'; // allow undefined for fallback
 }
 
-const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
+const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>();
-  const auth = useAuth();
+  const auth = useAuth(); // Let TS infer .signIn/.signUp/.signOut
   const { user, loading } = auth;
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
