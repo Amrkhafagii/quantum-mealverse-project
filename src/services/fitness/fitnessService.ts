@@ -1,9 +1,8 @@
 
-// Refactored: Use local interfaces and explicit mapping to avoid "Type instantiation is excessively deep" error.
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal, UserProfile, WorkoutLog, UserMeasurement } from '@/types/fitness';
 
-// Minimal interface definitions matching DB fields for Supabase mapping
+// Local DB row types that map exactly to the Supabase columns
 interface DBUserProfile {
   id: string;
   user_id: string;
@@ -24,7 +23,7 @@ interface DBUserProfile {
 interface DBFitnessGoal {
   id: string;
   fitness_goals_user_id: string;
-  user_id?: string;
+  user_id?: string; // not in DB, but possible
   name: string;
   description?: string;
   target_value: number;
@@ -45,7 +44,8 @@ interface DBFitnessGoal {
 
 interface DBWorkoutLog {
   id?: string;
-  user_id: string;
+  workout_logs_user_id?: string;
+  user_id?: string; // We map everything to user_id for the app
   workout_plan_id: string;
   date: string;
   duration: number;
@@ -56,7 +56,8 @@ interface DBWorkoutLog {
 
 interface DBUserMeasurement {
   id: string;
-  user_id: string;
+  user_measurements_user_id?: string;
+  user_id?: string;
   date: string;
   weight: number;
   body_fat?: number;
@@ -70,25 +71,27 @@ interface DBUserMeasurement {
 
 // --- Functions using local types and explicit mapping ---
 
-// Get user profile for given userId
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
+    // Use the .from('user_profiles') format (assuming table exists)
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      // Return null only if not found or any real error
       if (error.code !== 'PGRST116') {
         console.error('Error fetching user profile:', error);
       }
       return null;
     }
-    // Map to app type
+
+    if (!data) return null;
+
+    // Map DB fields to UserProfile
     const profile: UserProfile = {
-      ...data as DBUserProfile
+      ...(data as DBUserProfile)
     };
     return profile;
   } catch (error) {
@@ -97,7 +100,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
-// Get fitness goals for the given userId
 export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> => {
   try {
     const { data, error } = await supabase
@@ -111,15 +113,18 @@ export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> =>
       return [];
     }
 
+    if (!data) return [];
+
     // Cast and map to FitnessGoal[]
-    return (data as DBFitnessGoal[] || []).map((goal) => ({ ...goal }));
+    return (data as DBFitnessGoal[] || []).map(goal => ({
+      ...goal
+    }));
   } catch (error) {
     console.error('Error in getFitnessGoals:', error);
     return [];
   }
 };
 
-// Create a new fitness goal
 export const createFitnessGoal = async (
   userId: string,
   goalData: Partial<FitnessGoal>
@@ -146,13 +151,12 @@ export const createFitnessGoal = async (
   }
 };
 
-// Get workout logs for the given userId
 export const getWorkoutLogs = async (userId: string): Promise<WorkoutLog[]> => {
   try {
     const { data, error } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', userId)
+      .eq('workout_logs_user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -160,20 +164,25 @@ export const getWorkoutLogs = async (userId: string): Promise<WorkoutLog[]> => {
       return [];
     }
 
-    return (data as DBWorkoutLog[] || []).map((log) => ({ ...log }));
+    if (!data) return [];
+
+    // Map workout_logs_user_id to user_id
+    return (data as DBWorkoutLog[]).map(log => ({
+      ...log,
+      user_id: log.user_id ?? log.workout_logs_user_id
+    })) as WorkoutLog[];
   } catch (error) {
     console.error('Error in getWorkoutLogs:', error);
     return [];
   }
 };
 
-// Get user measurements for the given userId
 export const getUserMeasurements = async (userId: string): Promise<UserMeasurement[]> => {
   try {
     const { data, error } = await supabase
       .from('user_measurements')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_measurements_user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -181,7 +190,13 @@ export const getUserMeasurements = async (userId: string): Promise<UserMeasureme
       return [];
     }
 
-    return (data as DBUserMeasurement[] || []).map((m) => ({ ...m }));
+    if (!data) return [];
+
+    // Map user_measurements_user_id to user_id
+    return (data as DBUserMeasurement[]).map(m => ({
+      ...m,
+      user_id: m.user_id ?? m.user_measurements_user_id
+    })) as UserMeasurement[];
   } catch (error) {
     console.error('Error in getUserMeasurements:', error);
     return [];
