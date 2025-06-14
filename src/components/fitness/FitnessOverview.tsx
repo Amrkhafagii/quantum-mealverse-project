@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,7 +11,7 @@ import UserProgressJourney from './UserProgressJourney';
 import { WorkoutGoalsManager } from './analytics/WorkoutGoalsManager';
 import { ProgressCharts } from './analytics/ProgressCharts';
 import { EnhancedWorkoutHistory } from './analytics/EnhancedWorkoutHistory';
-import { SmartRecommendations } from './recommendations/SmartRecommendations';
+import SmartRecommendations from './recommendations/SmartRecommendations';
 import { AdaptiveDifficulty } from './recommendations/AdaptiveDifficulty';
 import { WorkoutVariations } from './recommendations/WorkoutVariations';
 import CrossPlatformTester from './CrossPlatformTester';
