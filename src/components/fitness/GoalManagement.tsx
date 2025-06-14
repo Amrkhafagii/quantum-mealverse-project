@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { FitnessGoal, GoalStatus } from '@/types/fitness.d.ts';
+import type { FitnessGoal, GoalStatus } from '@/types/fitness';
 
 const GoalManagement: React.FC = () => {
   const { user } = useAuth();

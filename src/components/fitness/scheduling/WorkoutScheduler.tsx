@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
 import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
-import type { WorkoutSchedule, CreateWorkoutScheduleData, CalendarEvent } from '@/types/fitness.d.ts';
+import type { WorkoutSchedule, CreateWorkoutScheduleData, CalendarEvent } from '@/types/fitness';
 import ScheduleForm from './ScheduleForm';
 
 interface WorkoutSchedulerProps {

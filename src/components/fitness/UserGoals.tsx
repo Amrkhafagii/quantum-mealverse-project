@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Target, Calendar, TrendingUp } from 'lucide-react';
-import type { FitnessGoal } from '@/types/fitness.d.ts';
+import type { FitnessGoal } from '@/types/fitness';
 import { fetchGoals } from '@/services/fitnessGoalService';
 import { useAuth } from '@/hooks/useAuth';
 

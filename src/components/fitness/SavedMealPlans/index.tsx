@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getUserSavedMealPlans, renewMealPlan, deleteSavedMealPlan } from '@/services/mealPlan';
-import type { SavedMealPlan } from '@/types/fitness.d.ts';
+import type { SavedMealPlan } from '@/types/fitness';
 import PlanGrid from './PlanGrid';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
