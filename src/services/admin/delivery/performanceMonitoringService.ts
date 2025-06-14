@@ -8,10 +8,10 @@ export class PerformanceMonitoringService {
     try {
       // Check low rating
       await this.checkLowRating(deliveryUserId);
-      
+
       // Check high cancellation rate
       await this.checkHighCancellationRate(deliveryUserId);
-      
+
       // Check late deliveries
       await this.checkLateDeliveries(deliveryUserId);
     } catch (error) {
@@ -20,6 +20,7 @@ export class PerformanceMonitoringService {
   }
 
   private async checkLowRating(deliveryUserId: string): Promise<void> {
+    // Use plain 'any' typing to avoid deep instantiations
     const { data: user } = await supabase
       .from('delivery_users')
       .select('average_rating, first_name, last_name')
@@ -42,6 +43,7 @@ export class PerformanceMonitoringService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Use plain 'any' typing to avoid type recursion
     const { data: orders } = await supabase
       .from('orders')
       .select('status')
@@ -49,7 +51,7 @@ export class PerformanceMonitoringService {
       .gte('created_at', thirtyDaysAgo.toISOString());
 
     if (orders && orders.length > 0) {
-      const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
+      const cancelledOrders = orders.filter((order: any) => order.status === 'cancelled').length;
       const cancellationRate = (cancelledOrders / orders.length) * 100;
 
       if (cancellationRate > 20) {
@@ -75,6 +77,7 @@ export class PerformanceMonitoringService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Use 'any' typing for orders
     const { data: orders } = await supabase
       .from('orders')
       .select('delivered_at, estimated_delivery_time')
@@ -116,7 +119,7 @@ export class PerformanceMonitoringService {
     deliveryUserId: string,
     alertData: Omit<DeliveryPerformanceAlert, 'id' | 'delivery_user_id' | 'is_resolved' | 'created_at' | 'updated_at'>
   ): Promise<void> {
-    // Check if similar alert already exists
+    // Use 'any' in 'select' to avoid depth issues
     const { data: existingAlert } = await supabase
       .from('delivery_performance_alerts')
       .select('id')
@@ -136,14 +139,14 @@ export class PerformanceMonitoringService {
 
   async runPerformanceChecks(): Promise<void> {
     try {
-      // Get all active delivery users
+      // Get all active delivery users, use 'any'
       const { data: activeUsers } = await supabase
         .from('delivery_users')
         .select('id')
         .eq('status', 'active');
 
       if (activeUsers) {
-        for (const user of activeUsers) {
+        for (const user of activeUsers as any[]) {
           await this.checkDriverPerformance(user.id);
           // Add small delay to avoid overwhelming the database
           await new Promise(resolve => setTimeout(resolve, 100));

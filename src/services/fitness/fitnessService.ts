@@ -2,12 +2,15 @@
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal, UserProfile, WorkoutLog, UserMeasurement } from '@/types/fitness';
 
+// Note: The table 'user_profiles' is referenced in allowed tables.
+// Use plain object shape/any for Supabase result typing throughout to avoid type recursion issues.
+
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('user_profiles_user_id', userId) // Updated field name
+      .eq('user_profiles_user_id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -15,7 +18,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       return null;
     }
 
-    return data || null;
+    return data as UserProfile || null;
   } catch (error) {
     console.error('Error in getUserProfile:', error);
     return null;
@@ -27,7 +30,7 @@ export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> =>
     const { data, error } = await supabase
       .from('fitness_goals')
       .select('*')
-      .eq('fitness_goals_user_id', userId) // Updated field name
+      .eq('fitness_goals_user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -35,7 +38,7 @@ export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> =>
       return [];
     }
 
-    return data || [];
+    return (data as FitnessGoal[]) || [];
   } catch (error) {
     console.error('Error in getFitnessGoals:', error);
     return [];
@@ -47,7 +50,7 @@ export const createFitnessGoal = async (userId: string, goalData: Partial<Fitnes
     const { error } = await supabase
       .from('fitness_goals')
       .insert({
-        fitness_goals_user_id: userId, // Updated field name
+        fitness_goals_user_id: userId,
         ...goalData,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -70,7 +73,7 @@ export const getWorkoutLogs = async (userId: string): Promise<WorkoutLog[]> => {
     const { data, error } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('workout_logs_user_id', userId) // Updated field name
+      .eq('workout_logs_user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -78,7 +81,7 @@ export const getWorkoutLogs = async (userId: string): Promise<WorkoutLog[]> => {
       return [];
     }
 
-    return data || [];
+    return (data as WorkoutLog[]) || [];
   } catch (error) {
     console.error('Error in getWorkoutLogs:', error);
     return [];
@@ -90,7 +93,7 @@ export const getUserMeasurements = async (userId: string): Promise<UserMeasureme
     const { data, error } = await supabase
       .from('user_measurements')
       .select('*')
-      .eq('user_measurements_user_id', userId) // Updated field name
+      .eq('user_measurements_user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -98,9 +101,10 @@ export const getUserMeasurements = async (userId: string): Promise<UserMeasureme
       return [];
     }
 
-    return data || [];
+    return (data as UserMeasurement[]) || [];
   } catch (error) {
     console.error('Error in getUserMeasurements:', error);
     return [];
   }
 };
+
