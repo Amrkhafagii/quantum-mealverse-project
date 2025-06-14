@@ -35,6 +35,9 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
   }
 };
 
+// Export alias for orderService compatibility
+export const queryOrderById = getOrderById;
+
 export const getOrdersByRestaurant = async (restaurantId: string): Promise<Order[]> => {
   try {
     const { data, error } = await supabase
@@ -64,6 +67,38 @@ export const getOrdersByRestaurant = async (restaurantId: string): Promise<Order
   }
 };
 
+export const getUserOrders = async (userId: string): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        customer_name,
+        delivery_address,
+        total,
+        status,
+        created_at,
+        restaurant_id,
+        customer_id
+      `)
+      .eq('customer_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user orders:', error);
+      return [];
+    }
+
+    return (data || []) as Order[];
+  } catch (error) {
+    console.error('Error in getUserOrders:', error);
+    return [];
+  }
+};
+
+// Export alias for orderService compatibility
+export const queryUserOrders = getUserOrders;
+
 export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
   try {
     const { data, error } = await supabase
@@ -73,7 +108,12 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
         order_id,
         meal_id,
         quantity,
-        price
+        price,
+        meals (
+          name,
+          description,
+          image_url
+        )
       `)
       .eq('order_id', orderId);
 
@@ -82,12 +122,19 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
       return [];
     }
 
-    return (data || []) as OrderItem[];
+    return (data || []).map(item => ({
+      ...item,
+      name: item.meals?.name || '',
+      meal: item.meals
+    })) as OrderItem[];
   } catch (error) {
     console.error('Error in getOrderItems:', error);
     return [];
   }
 };
+
+// Export alias for orderService compatibility
+export const queryOrderItems = getOrderItems;
 
 export const updateOrderStatus = async (orderId: string, status: string): Promise<boolean> => {
   try {
@@ -108,11 +155,43 @@ export const updateOrderStatus = async (orderId: string, status: string): Promis
   }
 };
 
+export const performOrderUpdate = async (orderId: string, updateData: any): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('Error performing order update:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in performOrderUpdate:', error);
+    return false;
+  }
+};
+
 export const createOrder = async (orderData: Partial<Order>): Promise<Order | null> => {
   try {
+    // Ensure required fields have default values
+    const completeOrderData = {
+      city: 'Unknown',
+      customer_email: 'unknown@example.com',
+      customer_id: 'unknown',
+      customer_name: 'Unknown Customer',
+      delivery_address: 'Unknown Address',
+      total: 0,
+      status: 'pending',
+      assignment_source: 'manual',
+      ...orderData
+    };
+
     const { data, error } = await supabase
       .from('orders')
-      .insert(orderData)
+      .insert(completeOrderData)
       .select()
       .single();
 
