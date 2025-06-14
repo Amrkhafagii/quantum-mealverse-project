@@ -38,7 +38,7 @@ const Nutrition = () => {
       supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('notifications_user_id', user.id)
         .eq('notification_type', 'reminder')
         .ilike('title', '%Meal Plan%')
         .eq('is_read', false)
