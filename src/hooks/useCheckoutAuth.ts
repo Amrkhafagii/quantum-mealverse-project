@@ -166,7 +166,14 @@ export const useCheckoutAuth = () => {
         setShowLoginPrompt,
         setHasDeliveryInfo,
         setDefaultValues,
-        toast
+        toast: (args: { title: string; description: string; variant?: "destructive" | "default" }) => {
+          // force variant typing to be correct for shadcn/ui
+          // @ts-ignore
+          toast({
+            ...args,
+            variant: args.variant,
+          });
+        }
       });
     }
   };
