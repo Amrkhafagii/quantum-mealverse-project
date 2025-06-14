@@ -1,325 +1,261 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  getBankAccounts, 
-  setDefaultBankAccount
-  // NOTE: createBankAccount, updateBankAccount, deleteBankAccount do NOT exist in the service,
-  // if you have similarly named functions like addBankAccount/editBankAccount/removeBankAccount, import them instead.
-  // Otherwise, comment out relevant code below if needed.
-} from '@/services/financial/financialService';
-import { BankAccount } from '@/types/financial';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Check, Trash2, Edit, CreditCard } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import BankAccountForm from './BankAccountForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { PlusIcon, PencilIcon, TrashIcon } from '@radix-ui/react-icons';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { BankAccount } from '@/types/financial';
+import { financialService } from '@/services/financial/financialService';
+import BankAccountForm from '@/components/financial/BankAccountForm';
+import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-export const BankAccountManagement = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
+const BankAccountManagement: React.FC = () => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<BankAccount | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchBankAccounts();
+    loadBankAccounts();
   }, []);
 
-  const fetchBankAccounts = async () => {
-    if (!user) return;
-    
-    setLoading(true);
+  const loadBankAccounts = async () => {
+    setIsLoading(true);
     try {
-      const accounts = await getBankAccounts(user.id);
+      const accounts = await financialService.getBankAccounts();
       setBankAccounts(accounts);
-    } catch (error) {
-      console.error('Error fetching bank accounts:', error);
+    } catch (error: any) {
       toast({
-        title: 'Error',
-        description: 'Failed to load bank accounts',
-        variant: 'destructive',
-      });
+        title: "Error!",
+        description: error.message,
+        duration: 3000,
+      })
+      console.error('Error loading bank accounts:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleAddBankAccount = async (bankAccount: any) => {
-    // TODO: Replace with service implementation, e.g., addBankAccount(bankAccount)
-    console.warn("Add bank account not implemented – missing service function.");
-  };
-
-  const handleUpdateBankAccount = async (bankAccount: any) => {
-    // TODO: Replace with service implementation, e.g., editBankAccount(bankAccount)
-    console.warn("Update bank account not implemented – missing service function.");
-  };
-
-  const handleDeleteBankAccount = async (accountId: string) => {
-    // TODO: Replace with service implementation, e.g., removeBankAccount(accountId)
-    console.warn("Delete bank account not implemented – missing service function.");
-  };
-
-  const handleSetDefault = async (accountId: string) => {
-    if (!user) return;
-    
-    setIsProcessing(true);
+  const handleAddBankAccount = async (formData: Partial<BankAccount>) => {
+    setIsLoading(true);
     try {
-      await setDefaultBankAccount(accountId, user.id);
+      await financialService.createBankAccount(formData);
       toast({
-        title: 'Success',
-        description: 'Default bank account updated',
-      });
-      fetchBankAccounts();
-    } catch (error) {
-      console.error('Error setting default bank account:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update default bank account',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const openAddDialog = () => {
-    setIsAddDialogOpen(true);
-  };
-
-  const openEditDialog = (account: BankAccount) => {
-    setSelectedAccount(account);
-    setIsEditDialogOpen(true);
-  };
-
-  const openDeleteDialog = (account: BankAccount) => {
-    setSelectedAccount(account);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleAddSubmit = async (formData: Partial<BankAccount>) => {
-    if (!user) return;
-    
-    setIsProcessing(true);
-    try {
-      await handleAddBankAccount({
-        ...formData,
-        restaurant_id: user.id,
-        delivery_user_id: user.id,
-      });
-      
+        title: "Success!",
+        description: "Bank account created.",
+        duration: 3000,
+      })
+      loadBankAccounts();
       setIsAddDialogOpen(false);
+    } catch (error: any) {
       toast({
-        title: 'Success',
-        description: 'Bank account added successfully',
-      });
-      fetchBankAccounts();
-    } catch (error) {
-      console.error('Error adding bank account:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add bank account',
-        variant: 'destructive',
-      });
+        title: "Error!",
+        description: error.message,
+        duration: 3000,
+      })
+      console.error('Error creating bank account:', error);
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  const handleEditSubmit = async (formData: Partial<BankAccount>) => {
-    if (!selectedAccount) return;
-    
-    setIsProcessing(true);
+  const handleEditBankAccount = async (formData: Partial<BankAccount>) => {
+    if (!selectedBankAccount) return;
+
+    setIsLoading(true);
     try {
-      await handleUpdateBankAccount({
-        ...selectedAccount,
-        ...formData,
-      });
-      
+      await financialService.updateBankAccount(selectedBankAccount.id, formData);
+      toast({
+        title: "Success!",
+        description: "Bank account updated.",
+        duration: 3000,
+      })
+      loadBankAccounts();
       setIsEditDialogOpen(false);
+      setSelectedBankAccount(null);
+    } catch (error: any) {
       toast({
-        title: 'Success',
-        description: 'Bank account updated successfully',
-      });
-      fetchBankAccounts();
-    } catch (error) {
+        title: "Error!",
+        description: error.message,
+        duration: 3000,
+      })
       console.error('Error updating bank account:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update bank account',
-        variant: 'destructive',
-      });
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!selectedAccount) return;
-    
-    setIsProcessing(true);
+  const handleDeleteBankAccount = async (id: string) => {
+    setIsLoading(true);
     try {
-      await handleDeleteBankAccount(selectedAccount.id);
-      
+      await financialService.deleteBankAccount(id);
+      toast({
+        title: "Success!",
+        description: "Bank account deleted.",
+        duration: 3000,
+      })
+      loadBankAccounts();
       setIsDeleteDialogOpen(false);
-      toast({
-        title: 'Success',
-        description: 'Bank account deleted successfully',
-      });
-      fetchBankAccounts();
-    } catch (error) {
+      setDeleteConfirmationId(null);
+    } catch (error: any) {
+       toast({
+        title: "Error!",
+        description: error.message,
+        duration: 3000,
+      })
       console.error('Error deleting bank account:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete bank account',
-        variant: 'destructive',
-      });
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Bank Accounts</CardTitle>
-        <Button onClick={openAddDialog} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Account
-        </Button>
+    <Card className="container max-w-4xl mx-auto mt-8 holographic-card">
+      <CardHeader>
+        <CardTitle className="text-2xl">Bank Account Management</CardTitle>
+        <CardDescription>
+          Manage your bank accounts for payouts.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : bankAccounts.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-20" />
-            <p>No bank accounts found</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={openAddDialog}>
-              Add your first bank account
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
+        <div className="mb-4">
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <PlusIcon className="mr-2 h-4 w-4" />
+                Add Bank Account
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add Bank Account</DialogTitle>
+                <DialogDescription>
+                  Enter the details for the new bank account.
+                </DialogDescription>
+              </DialogHeader>
+              <BankAccountForm
+                onSubmit={handleAddBankAccount}
+                // Removed isProcessing and onCancel, which aren't in BankAccountFormProps
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Account Holder</TableHead>
+              <TableHead>Bank Name</TableHead>
+              <TableHead>Account Number</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {bankAccounts.map((account) => (
-              <div
-                key={account.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex-1">
-                  <div className="font-medium flex items-center">
-                    {account.account_holder_name}
-                    {account.is_default && (
-                      <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {account.bank_name} •••• {account.account_number.slice(-4)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!account.is_default && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSetDefault(account.id)}
-                      disabled={isProcessing}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Set Default
-                    </Button>
-                  )}
+              <TableRow key={account.id}>
+                <TableCell>{account.account_holder_name}</TableCell>
+                <TableCell>{account.bank_name}</TableCell>
+                <TableCell>{account.account_number}</TableCell>
+                <TableCell>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(account)}
+                    size="sm"
+                    onClick={() => {
+                      setSelectedBankAccount(account);
+                      setIsEditDialogOpen(true);
+                    }}
                   >
-                    <Edit className="h-4 w-4" />
+                    <PencilIcon className="mr-2 h-4 w-4" />
+                    Edit
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openDeleteDialog(account)}
-                    disabled={account.is_default}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <TrashIcon className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the bank account.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteBankAccount(account.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
+              </TableRow>
             ))}
-          </div>
-        )}
+          </TableBody>
+        </Table>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogTrigger asChild>
+            {/* This trigger is hidden and only serves to manage the dialog state */}
+            <Button style={{ display: 'none' }}>Edit Bank Account</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Bank Account</DialogTitle>
+              <DialogDescription>
+                Edit the details for the selected bank account.
+              </DialogDescription>
+            </DialogHeader>
+            {
+              isEditDialogOpen && selectedBankAccount && (
+                <BankAccountForm
+                  onSubmit={handleEditBankAccount}
+                  initialValues={selectedBankAccount}
+                  // Removed initialData, isProcessing and onCancel
+                />
+              )
+            }
+          </DialogContent>
+        </Dialog>
       </CardContent>
-
-      {/* Add Bank Account Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Bank Account</DialogTitle>
-          </DialogHeader>
-          <BankAccountForm
-            onSubmit={handleAddSubmit}
-            isProcessing={isProcessing}
-            onCancel={() => setIsAddDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Bank Account Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Bank Account</DialogTitle>
-          </DialogHeader>
-          <BankAccountForm
-            initialData={selectedAccount}
-            onSubmit={handleEditSubmit}
-            isProcessing={isProcessing}
-            onCancel={() => setIsEditDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this bank account? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={isProcessing}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Account'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   );
 };
