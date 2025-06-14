@@ -9,12 +9,11 @@ export interface CreateWorkoutScheduleData {
   days_of_week: number[];
   start_date: string;
   end_date?: string;
-  time?: string;
-  reminder?: boolean;
-  active: boolean;
+  preferred_time?: string;
+  reminder_enabled?: boolean;
+  is_active: boolean;
   name?: string;
   timezone?: string;
-  reminder_enabled?: boolean;
   reminder_minutes_before?: number;
 }
 
@@ -25,14 +24,13 @@ export interface WorkoutSchedule {
   days_of_week: number[];
   start_date: string;
   end_date?: string;
-  time?: string;
-  reminder?: boolean;
-  active: boolean;
+  preferred_time?: string;
+  reminder_enabled?: boolean;
+  is_active: boolean;
   created_at?: string;
   updated_at?: string;
   name?: string;
   timezone?: string;
-  reminder_enabled?: boolean;
   reminder_minutes_before?: number;
 }
 
@@ -44,16 +42,41 @@ export const useWorkoutScheduling = () => {
   const createSchedule = useCallback(async (scheduleData: CreateWorkoutScheduleData) => {
     setIsLoading(true);
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Prepare data with user_id and correct field mapping
+      const insertData = {
+        user_id: user.id,
+        workout_plan_id: scheduleData.workout_plan_id,
+        days_of_week: scheduleData.days_of_week,
+        start_date: scheduleData.start_date,
+        end_date: scheduleData.end_date || null,
+        preferred_time: scheduleData.preferred_time || null,
+        reminder_enabled: scheduleData.reminder_enabled || false,
+        is_active: scheduleData.is_active,
+        name: scheduleData.name || null,
+        timezone: scheduleData.timezone || 'UTC',
+        reminder_minutes_before: scheduleData.reminder_minutes_before || 15
+      };
+
       const { data, error } = await supabase
         .from('workout_schedules')
-        .insert(scheduleData)
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
 
-      setSchedules(prev => [...prev, data]);
-      return data;
+      // Map database response to our interface
+      const mappedSchedule: WorkoutSchedule = {
+        ...data,
+        is_active: data.is_active
+      };
+
+      setSchedules(prev => [...prev, mappedSchedule]);
+      return mappedSchedule;
     } catch (error) {
       console.error('Error creating schedule:', error);
       throw error;
@@ -65,17 +88,36 @@ export const useWorkoutScheduling = () => {
   const updateSchedule = useCallback(async (scheduleId: string, updates: Partial<CreateWorkoutScheduleData>) => {
     setIsLoading(true);
     try {
+      // Map updates to database fields
+      const updateData: any = {};
+      if (updates.workout_plan_id) updateData.workout_plan_id = updates.workout_plan_id;
+      if (updates.days_of_week) updateData.days_of_week = updates.days_of_week;
+      if (updates.start_date) updateData.start_date = updates.start_date;
+      if (updates.end_date !== undefined) updateData.end_date = updates.end_date;
+      if (updates.preferred_time !== undefined) updateData.preferred_time = updates.preferred_time;
+      if (updates.reminder_enabled !== undefined) updateData.reminder_enabled = updates.reminder_enabled;
+      if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.timezone) updateData.timezone = updates.timezone;
+      if (updates.reminder_minutes_before !== undefined) updateData.reminder_minutes_before = updates.reminder_minutes_before;
+
       const { data, error } = await supabase
         .from('workout_schedules')
-        .update(updates)
+        .update(updateData)
         .eq('id', scheduleId)
         .select()
         .single();
 
       if (error) throw error;
 
-      setSchedules(prev => prev.map(s => s.id === scheduleId ? data : s));
-      return data;
+      // Map response to our interface
+      const mappedSchedule: WorkoutSchedule = {
+        ...data,
+        is_active: data.is_active
+      };
+
+      setSchedules(prev => prev.map(s => s.id === scheduleId ? mappedSchedule : s));
+      return mappedSchedule;
     } catch (error) {
       console.error('Error updating schedule:', error);
       throw error;
@@ -104,7 +146,7 @@ export const useWorkoutScheduling = () => {
   }, []);
 
   const toggleScheduleActive = useCallback(async (scheduleId: string, active: boolean) => {
-    return updateSchedule(scheduleId, { active });
+    return updateSchedule(scheduleId, { is_active: active });
   }, [updateSchedule]);
 
   const fetchSessions = useCallback(async (startDate: string, endDate: string) => {
@@ -118,7 +160,26 @@ export const useWorkoutScheduling = () => {
 
       if (error) throw error;
 
-      setSessions(data || []);
+      // Map and validate session data
+      const mappedSessions: WorkoutSession[] = (data || []).map(session => ({
+        id: session.id,
+        user_id: session.user_id,
+        workout_plan_id: session.workout_plan_id,
+        workout_schedule_id: session.workout_schedule_id,
+        scheduled_date: session.scheduled_date,
+        scheduled_time: session.scheduled_time,
+        started_at: session.started_at,
+        completed_at: session.completed_at,
+        duration: session.duration_minutes,
+        status: ['scheduled', 'in_progress', 'completed', 'skipped', 'cancelled'].includes(session.status) 
+          ? session.status as 'scheduled' | 'in_progress' | 'completed' | 'skipped' | 'cancelled'
+          : 'scheduled',
+        notes: session.notes,
+        created_at: session.created_at,
+        updated_at: session.updated_at
+      }));
+
+      setSessions(mappedSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
     } finally {
@@ -142,17 +203,37 @@ export const useWorkoutScheduling = () => {
   const updateSessionStatus = useCallback(async (sessionId: string, status: string) => {
     setIsLoading(true);
     try {
+      const validStatus = ['scheduled', 'in_progress', 'completed', 'skipped', 'cancelled'].includes(status) 
+        ? status : 'scheduled';
+
       const { data, error } = await supabase
         .from('workout_sessions')
-        .update({ status })
+        .update({ status: validStatus })
         .eq('id', sessionId)
         .select()
         .single();
 
       if (error) throw error;
 
-      setSessions(prev => prev.map(s => s.id === sessionId ? data : s));
-      return data;
+      // Map response and update sessions
+      const mappedSession: WorkoutSession = {
+        id: data.id,
+        user_id: data.user_id,
+        workout_plan_id: data.workout_plan_id,
+        workout_schedule_id: data.workout_schedule_id,
+        scheduled_date: data.scheduled_date,
+        scheduled_time: data.scheduled_time,
+        started_at: data.started_at,
+        completed_at: data.completed_at,
+        duration: data.duration_minutes,
+        status: validStatus as 'scheduled' | 'in_progress' | 'completed' | 'skipped' | 'cancelled',
+        notes: data.notes,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+
+      setSessions(prev => prev.map(s => s.id === sessionId ? mappedSession : s));
+      return mappedSession;
     } catch (error) {
       console.error('Error updating session status:', error);
       throw error;
