@@ -40,23 +40,22 @@ const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId }) => {
   const fetchWeeklyProgress = async () => {
     try {
       setIsLoading(true);
-      
       const start = startOfWeek(new Date());
       const end = endOfWeek(new Date());
-      
-      // Explicit 'any[]' to break recursion bug in TS
-      const { data: workouts, error } = await supabase
+      // --- CRUCIAL CHANGE: provide explicit any[] type to data to prevent recursion ---
+      const { data, error } = await supabase
         .from('workout_logs')
         .select('calories_burned, duration')
         .eq('user_id', activeUserId)
         .gte('date', start.toISOString())
         .lte('date', end.toISOString());
+      const workouts = data as any[]; // <- break TypeScript recursion depth
 
       if (error) throw error;
       
       if (workouts && Array.isArray(workouts)) {
-        const totalCalories = (workouts as any[]).reduce((sum, workout) => sum + (workout.calories_burned || 0), 0);
-        const totalDuration = (workouts as any[]).reduce((sum, workout) => sum + (workout.duration || 0), 0);
+        const totalCalories = workouts.reduce((sum, workout) => sum + (workout.calories_burned || 0), 0);
+        const totalDuration = workouts.reduce((sum, workout) => sum + (workout.duration || 0), 0);
         
         setWeeklyProgress({
           workouts: workouts.length,
