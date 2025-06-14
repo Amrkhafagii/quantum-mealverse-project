@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Timer, Info, Share2, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { RestTimer } from '../RestTimer';
+import RestTimer from '../RestTimer';
 import { ExerciseInstructions } from '../ExerciseInstructions';
 import { WorkoutSharing } from '../social/WorkoutSharing';
 import WorkoutSession from '../workout/WorkoutSession';
@@ -97,15 +98,6 @@ export const EnhancedWorkoutSession: React.FC<EnhancedWorkoutSessionProps> = ({
 
         {/* Enhanced Features Sidebar */}
         <div className="space-y-4">
-          {/* Exercise Instructions */}
-          {currentExercise && (
-            <ExerciseInstructions
-              exercise={currentExercise}
-              isExpanded={showInstructions}
-              onToggleExpanded={() => setShowInstructions(!showInstructions)}
-            />
-          )}
-
           {/* Rest Timer */}
           {showTimer && currentExercise && (
             <motion.div

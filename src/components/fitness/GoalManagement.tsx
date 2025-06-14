@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,14 +23,28 @@ const GoalManagement: React.FC = () => {
 
       if (error) throw error;
       
-      // Type cast the status field to GoalStatus
+      // Type cast the status field to GoalStatus and map database fields to FitnessGoal
       const typedGoals = (data || []).map(goal => ({
-        ...goal,
+        id: goal.id,
+        fitness_goals_user_id: goal.fitness_goals_user_id,
+        name: goal.name,
+        description: goal.description,
+        target_value: goal.target_weight || goal.target_body_fat || 0,
+        current_value: 0,
+        target_date: goal.target_date,
         status: goal.status as GoalStatus,
-        target_value: goal.target_value || goal.target_weight || 0,
-        current_value: goal.current_value || 0,
-        goal_type: goal.goal_type || 'weight_loss'
-      }));
+        goal_type: 'weight_loss' as const,
+        created_at: goal.created_at,
+        updated_at: goal.updated_at,
+        // Backward compatibility fields
+        title: goal.name,
+        target_weight: goal.target_weight,
+        target_body_fat: goal.target_body_fat,
+        category: undefined,
+        type: undefined,
+        start_date: undefined,
+        is_active: true
+      } as FitnessGoal));
       
       setGoals(typedGoals);
     } catch (error) {
@@ -47,7 +62,7 @@ const GoalManagement: React.FC = () => {
           {goals.map((goal) => (
             <div key={goal.id} className="p-4 border border-quantum-cyan/20 rounded-lg">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-white">{goal.name || goal.title}</h3>
+                <h3 className="font-semibold text-white">{goal.name}</h3>
                 <Badge variant={goal.status === 'completed' ? 'default' : 'secondary'}>
                   {goal.status}
                 </Badge>
@@ -59,21 +74,9 @@ const GoalManagement: React.FC = () => {
                 <p className="text-sm text-gray-300">Target Body Fat: {goal.target_body_fat}%</p>
               )}
               <p className="text-sm text-gray-400 mt-2">{goal.description}</p>
-              {goal.category && (
-                <p className="text-xs text-quantum-cyan mt-1">Category: {goal.category}</p>
-              )}
-              {goal.type && (
-                <p className="text-xs text-quantum-purple mt-1">Type: {goal.type}</p>
-              )}
               <p className="text-xs text-gray-500 mt-2">
                 Target Date: {new Date(goal.target_date).toLocaleDateString()}
               </p>
-              {goal.start_date && (
-                <p className="text-xs text-gray-500">Started: {new Date(goal.start_date).toLocaleDateString()}</p>
-              )}
-              {typeof goal.is_active !== 'undefined' && (
-                <p className="text-xs text-gray-500">Status: {goal.is_active ? 'Active' : 'Inactive'}</p>
-              )}
             </div>
           ))}
         </div>

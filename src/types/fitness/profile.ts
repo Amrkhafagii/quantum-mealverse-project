@@ -1,72 +1,41 @@
 
 export interface UserProfile {
   id: string;
-  user_profiles_user_id: string; // Updated to match new naming convention
+  fitness_profiles_user_id: string; // Updated to match database naming convention
   display_name?: string;
-  weight?: number; // Made optional for backward compatibility
   height?: number;
-  age?: number;
-  gender?: string;
+  weight: number; // Required field
   goal_weight?: number;
+  date_of_birth?: string | null; // Changed from Date to string | null to match database
+  gender?: string;
   fitness_level?: string;
   fitness_goals?: string[];
-  profile_image?: string;
-  date_of_birth?: string | null;
-  dietary_preferences?: string[] | null;
-  dietary_restrictions?: string[] | null;
-  avatar_url?: string;
-  username?: string;
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
   created_at?: string;
   updated_at?: string;
+  activity_level?: string; // Added missing field
   
   // Backward compatibility fields
-  fitness_goal?: string;
   user_id?: string;
-  fitness_profiles_user_id?: string; // Added for database compatibility
+  user_profiles_user_id?: string;
+  age?: number;
+  fitness_goal?: string;
 }
 
 export interface UserMeasurement {
   id: string;
-  user_measurements_user_id: string; // Updated to match new naming convention
+  user_measurements_user_id: string; // Updated to match database naming convention
   date: string;
   weight: number;
   body_fat?: number;
-  body_fat_percentage?: number;
   chest?: number;
   waist?: number;
   hips?: number;
   arms?: number;
-  thighs?: number;
   legs?: number;
   notes?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface UserWorkoutStats {
-  total_workouts: number;
-  streak_days?: number;
-  streak?: number;
-  most_active_day?: string;
-  recent_workouts?: any[];
-  achievements?: number;
-  calories_burned?: number;
-  calories_burned_total?: number;
-  workout_time_total?: number;
-  favorite_workout_type?: string;
-}
-
-export interface WorkoutRecommendation {
-  id: string;
-  title: string;
-  name: string;
-  description: string;
-  type: string;
-  reason?: string;
-  confidence_score?: number;
-  workout_recommendations_user_id: string; // Updated to match new naming convention
-  suggested_at?: string;
-  dismissed?: boolean;
-  applied?: boolean;
-  applied_at?: string;
+  
+  // Backward compatibility
+  user_id?: string;
 }

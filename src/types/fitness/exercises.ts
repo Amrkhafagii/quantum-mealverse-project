@@ -25,6 +25,11 @@ export interface Exercise {
   rest?: number;
   rest_seconds?: number;
   instructions?: string;
+  description?: string;
+  muscle_groups?: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  video_url?: string;
+  equipment_needed?: string[];
 }
 
 export interface ExerciseLibraryItem {
