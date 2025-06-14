@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,14 +43,14 @@ const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId }) => {
       setIsLoading(true);
       const start = startOfWeek(new Date());
       const end = endOfWeek(new Date());
-      // --- CRUCIAL CHANGE: provide explicit any[] type to data to prevent recursion ---
+      // Explicitly type the API result as any[]
       const { data, error } = await supabase
-        .from('workout_logs')
+        .from<any>('workout_logs')
         .select('calories_burned, duration')
         .eq('user_id', activeUserId)
         .gte('date', start.toISOString())
         .lte('date', end.toISOString());
-      const workouts = data as any[]; // <- break TypeScript recursion depth
+      const workouts = data as any[];
 
       if (error) throw error;
       
