@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
@@ -117,9 +116,6 @@ const Dashboard = () => {
               <TabsTrigger value="orders" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
                 Recent Orders
               </TabsTrigger>
-              <TabsTrigger value="subscriptions" className="data-[state=active]:bg-quantum-cyan data-[state=active]:text-quantum-black">
-                Subscriptions
-              </TabsTrigger>
             </TabsList>
             <TabsContent value="recommendations">
               <RecommendedMeals showTitle={false} />
@@ -136,23 +132,6 @@ const Dashboard = () => {
                     >
                       <Utensils className="h-4 w-4 mr-2" />
                       Order Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="subscriptions">
-              <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-                <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <p className="text-xl">No active subscriptions</p>
-                    <p className="text-gray-400 mt-2">Subscribe to meal plans for regular deliveries</p>
-                    <Button 
-                      className="mt-4 bg-quantum-cyan text-quantum-black hover:bg-quantum-cyan/90"
-                      onClick={() => navigate('/subscription')}
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      View Plans
                     </Button>
                   </div>
                 </CardContent>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -53,18 +52,6 @@ export const DesktopNavigation = ({ isCustomerView, isAuthenticated }: DesktopNa
             <Link to="/nutrition" className="flex items-center gap-2">
               <Salad className="h-4 w-4" />
               <span>Nutrition</span>
-            </Link>
-          </Button>
-
-          <Button 
-            asChild 
-            variant={isActive('/subscription') ? "default" : "ghost"} 
-            size="sm" 
-            className={isActive('/subscription') ? "bg-quantum-cyan text-quantum-black" : "text-gray-300 hover:text-white"}
-          >
-            <Link to="/subscription" className="flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4" />
-              <span>Meal Plans</span>
             </Link>
           </Button>
         </>

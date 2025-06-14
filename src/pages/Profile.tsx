@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -6,7 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from "@/components/ui/card";
 import { OrdersHistoryList } from '@/components/profile/OrdersHistoryList';
-import { ManageSubscription } from '@/components/profile/ManageSubscription';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import KeyboardNavigation from '@/components/a11y/KeyboardNavigation';
@@ -42,9 +40,8 @@ const Profile = () => {
         <h1 className="text-3xl font-bold mb-6">My Profile</h1>
         
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid grid-cols-4 w-full max-w-md mb-8">
+          <TabsList className="grid grid-cols-3 w-full max-w-md mb-8">
             <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
           </TabsList>
@@ -52,10 +49,6 @@ const Profile = () => {
           <TabsContent value="orders" className="space-y-4">
             <h2 className="text-2xl font-bold mb-4">My Orders</h2>
             <OrdersHistoryList userId={user.id} />
-          </TabsContent>
-          
-          <TabsContent value="subscription" className="space-y-4">
-            <ManageSubscription userId={user.id} />
           </TabsContent>
           
           <TabsContent value="security" className="space-y-4">
