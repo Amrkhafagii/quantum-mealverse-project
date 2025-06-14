@@ -60,59 +60,57 @@ export const getDeliveryUserProfile = async (userId: string): Promise<DeliveryUs
     }
     if (!data) return null;
 
-    // Compose full_name if not present
-    let fullName: string = '';
-    if (typeof data.full_name === 'string') {
-      fullName = data.full_name;
-    } else {
-      fullName = [data.first_name ?? '', data.last_name ?? ''].filter(Boolean).join(' ').trim();
-    }
+    // Compose full_name from first/last if missing, ensure "string" types
+    const firstName = typeof data.first_name === 'string' ? data.first_name : '';
+    const lastName = typeof data.last_name === 'string' ? data.last_name : '';
+    const fullName = typeof data.full_name === 'string'
+      ? data.full_name
+      : [firstName, lastName].filter(Boolean).join(' ').trim();
 
-    // Safely cast unknowns to string (for vehicle fields)
-    const safeStr = (v: unknown): string => typeof v === 'string' ? v : '';
+    // Strict string fallback
+    const safeStr = (v: any) => typeof v === 'string' ? v : '';
 
-    // Enforce only allowed status
-    const status =
-      data.status === "active" || data.status === "inactive" || data.status === "suspended"
+    // Enforce union types for status fields and verification/background check
+    const status: DeliveryUser['status'] =
+      data.status === "active" || data.status === "inactive" || data.status === "suspended" || data.status === "on_break"
         ? data.status
         : "inactive";
 
-    // Assign union values for verification and background check
-    const verification_status =
+    const verification_status: DeliveryUser['verification_status'] =
       data.verification_status === "pending" || data.verification_status === "verified" || data.verification_status === "rejected"
         ? data.verification_status
         : "pending";
 
-    const background_check_status =
+    const background_check_status: DeliveryUser['background_check_status'] =
       data.background_check_status === "pending" || data.background_check_status === "approved" || data.background_check_status === "rejected"
         ? data.background_check_status
         : "pending";
 
+    // Assemble full DeliveryUser (no extra/unknown keys)
     return {
-      id: typeof data.id === 'string' ? data.id : "",
-      delivery_users_user_id: typeof data.delivery_users_user_id === 'string' ? data.delivery_users_user_id : "",
-      first_name: safeStr(data.first_name),
-      last_name: safeStr(data.last_name),
+      id: safeStr(data.id),
+      delivery_users_user_id: safeStr(data.delivery_users_user_id),
       full_name: fullName,
+      first_name: firstName,
+      last_name: lastName,
       phone: safeStr(data.phone),
       vehicle_type: safeStr(data.vehicle_type),
       license_plate: safeStr(data.license_plate),
       driver_license_number: safeStr(data.driver_license_number),
       status,
-      rating:
-        typeof data.rating === "number"
-          ? data.rating
-          : typeof data.average_rating === "number"
-            ? data.average_rating
-            : 0,
+      rating: typeof data.rating === "number"
+        ? data.rating
+        : typeof data.average_rating === "number"
+          ? data.average_rating
+          : 0,
       total_deliveries: typeof data.total_deliveries === "number" ? data.total_deliveries : 0,
       verification_status,
       background_check_status,
       is_available: !!data.is_available,
       is_approved: !!data.is_approved,
-      last_active: typeof data.last_active === "string" ? data.last_active : "",
-      created_at: typeof data.created_at === "string" ? data.created_at : "",
-      updated_at: typeof data.updated_at === "string" ? data.updated_at : "",
+      last_active: safeStr(data.last_active),
+      created_at: safeStr(data.created_at),
+      updated_at: safeStr(data.updated_at),
     };
   } catch (error) {
     console.error('Error in getDeliveryUserProfile:', error);
@@ -134,8 +132,7 @@ export const getRestaurantUserProfile = async (userId: string): Promise<Restaura
     }
     if (!data) return null;
 
-    // Enforce only allowed verification status
-    const verification_status =
+    const verification_status: RestaurantUser['verification_status'] =
       data.verification_status === "pending" || data.verification_status === "verified" || data.verification_status === "rejected"
         ? data.verification_status
         : "pending";

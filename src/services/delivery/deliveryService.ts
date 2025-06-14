@@ -6,15 +6,66 @@ export const getDeliveryUserByUserId = async (userId: string): Promise<DeliveryU
     const { data, error } = await supabase
       .from('delivery_users')
       .select('*')
-      .eq('delivery_users_user_id', userId) // Updated field name
-      .single();
+      .eq('delivery_users_user_id', userId)
+      .maybeSingle();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching delivery user:', error);
       return null;
     }
 
-    return data;
+    if (!data) return null;
+
+    // Strict string fallback
+    const safeStr = (v: any) => typeof v === 'string' ? v : '';
+
+    // Compose as in userService
+    const firstName = typeof data.first_name === 'string' ? data.first_name : '';
+    const lastName = typeof data.last_name === 'string' ? data.last_name : '';
+    const fullName = typeof data.full_name === 'string'
+      ? data.full_name
+      : [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    const status: DeliveryUser['status'] =
+      data.status === "active" || data.status === "inactive" || data.status === "suspended" || data.status === "on_break"
+        ? data.status
+        : "inactive";
+
+    const verification_status: DeliveryUser['verification_status'] =
+      data.verification_status === "pending" || data.verification_status === "verified" || data.verification_status === "rejected"
+        ? data.verification_status
+        : "pending";
+
+    const background_check_status: DeliveryUser['background_check_status'] =
+      data.background_check_status === "pending" || data.background_check_status === "approved" || data.background_check_status === "rejected"
+        ? data.background_check_status
+        : "pending";
+
+    return {
+      id: safeStr(data.id),
+      delivery_users_user_id: safeStr(data.delivery_users_user_id),
+      full_name: fullName,
+      first_name: firstName,
+      last_name: lastName,
+      phone: safeStr(data.phone),
+      vehicle_type: safeStr(data.vehicle_type),
+      license_plate: safeStr(data.license_plate),
+      driver_license_number: safeStr(data.driver_license_number),
+      status,
+      rating: typeof data.rating === "number"
+        ? data.rating
+        : typeof data.average_rating === "number"
+          ? data.average_rating
+          : 0,
+      total_deliveries: typeof data.total_deliveries === "number" ? data.total_deliveries : 0,
+      verification_status,
+      background_check_status,
+      is_available: !!data.is_available,
+      is_approved: !!data.is_approved,
+      last_active: safeStr(data.last_active),
+      created_at: safeStr(data.created_at),
+      updated_at: safeStr(data.updated_at),
+    };
   } catch (error) {
     console.error('Error in getDeliveryUserByUserId:', error);
     return null;
@@ -29,7 +80,7 @@ export const updateDeliveryUserStatus = async (
     const { error } = await supabase
       .from('delivery_users')
       .update({ status, updated_at: new Date().toISOString() })
-      .eq('delivery_users_user_id', userId); // Updated field name
+      .eq('delivery_users_user_id', userId);
 
     if (error) {
       console.error('Error updating delivery user status:', error);
@@ -73,7 +124,7 @@ export const getVehicleByDeliveryUserId = async (deliveryUserId: string): Promis
     const { data, error } = await supabase
       .from('delivery_vehicles')
       .select('*')
-      .eq('delivery_vehicles_user_id', deliveryUserId) // Updated field name
+      .eq('delivery_vehicles_user_id', deliveryUserId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -94,7 +145,7 @@ export const saveVehicleInfo = async (vehicleData: Partial<DeliveryVehicle>): Pr
     
     // Convert the data to match database schema
     const dbData = {
-      delivery_vehicles_user_id: delivery_user_id, // Updated field name
+      delivery_vehicles_user_id: delivery_user_id,
       vehicle_type: updateData.type || updateData.vehicle_type,
       make: updateData.make || '',
       model: updateData.model || '',
@@ -108,7 +159,7 @@ export const saveVehicleInfo = async (vehicleData: Partial<DeliveryVehicle>): Pr
     const { error } = await supabase
       .from('delivery_vehicles')
       .upsert(dbData, {
-        onConflict: 'delivery_vehicles_user_id', // Updated field name
+        onConflict: 'delivery_vehicles_user_id',
         ignoreDuplicates: false
       });
 
@@ -129,7 +180,7 @@ export const getDeliveryDocuments = async (userId: string): Promise<DeliveryDocu
     const { data, error } = await supabase
       .from('delivery_documents')
       .select('*')
-      .eq('delivery_documents_user_id', userId) // Updated field name
+      .eq('delivery_documents_user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
