@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserType, DeliveryUser, RestaurantUser, CustomerProfile } from '@/types/user';
 
@@ -60,10 +59,10 @@ export const getDeliveryUserProfile = async (userId: string): Promise<DeliveryUs
       return null;
     }
 
-    // Ensure all required fields are present
     if (!data) return null;
 
-    // Patch to always match DeliveryUser type (with union-consistent values)
+    // Defensive: only pick properties that exist in `data`
+    // Some property names may not exist if the db table differs; assign with reasonable fallbacks
     return {
       id: data.id,
       delivery_users_user_id: data.delivery_users_user_id,
@@ -74,11 +73,18 @@ export const getDeliveryUserProfile = async (userId: string): Promise<DeliveryUs
       vehicle_type: data.vehicle_type ?? "",
       license_plate: data.license_plate ?? "",
       driver_license_number: data.driver_license_number ?? "",
-      status: (data.status ?? "inactive") as "active" | "inactive" | "suspended" | "on_break",
-      rating: typeof data.rating === "number" ? data.rating : 0,
+      // Type constraint: only values matching DeliveryUser.status allowed
+      status: (["active", "inactive", "suspended"].includes(data.status)) 
+        ? data.status 
+        : "inactive",
+      rating: typeof data.rating === "number" ? data.rating : (typeof data.average_rating === "number" ? data.average_rating : 0),
       total_deliveries: typeof data.total_deliveries === "number" ? data.total_deliveries : 0,
-      verification_status: (data.verification_status ?? "pending") as "pending" | "verified" | "rejected",
-      background_check_status: (data.background_check_status ?? "pending") as "pending" | "approved" | "rejected",
+      verification_status: (["pending", "verified", "rejected"].includes(data.verification_status) 
+        ? data.verification_status
+        : "pending"),
+      background_check_status: (["pending", "approved", "rejected"].includes(data.background_check_status)
+        ? data.background_check_status
+        : "pending"),
       is_available: !!data.is_available,
       is_approved: !!data.is_approved,
       last_active: data.last_active ?? "",
@@ -116,7 +122,11 @@ export const getRestaurantUserProfile = async (userId: string): Promise<Restaura
       description: data.description,
       cuisine_type: data.cuisine_type,
       is_active: !!data.is_active,
-      verification_status: (data.verification_status ?? "pending") as "pending" | "verified" | "rejected",
+      // Only allow three verification_status values
+      verification_status:
+        ["pending", "verified", "rejected"].includes(data.verification_status)
+          ? data.verification_status
+          : "pending",
       latitude: typeof data.latitude === "number" ? data.latitude : undefined,
       longitude: typeof data.longitude === "number" ? data.longitude : undefined,
       created_at: data.created_at ?? "",
