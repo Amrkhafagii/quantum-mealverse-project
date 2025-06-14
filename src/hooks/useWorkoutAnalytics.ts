@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+// Map only allowed types for goal_type in the UI/app layer
+export type AllowedGoalType = 
+  | 'weight_loss'
+  | 'weight_gain'
+  | 'muscle_gain'
+  | 'endurance'
+  | 'strength'
+  | 'general_fitness';
+
 export interface WorkoutGoal {
   id: string;
   user_id: string;
@@ -12,10 +21,11 @@ export interface WorkoutGoal {
   current_value: number;
   target_date: string;
   status: 'active' | 'completed' | 'failed';
-  goal_type: 'calories' | 'duration' | 'frequency';
+  goal_type: AllowedGoalType;
   created_at: string;
   updated_at: string;
   unit?: string;
+  is_active: boolean;
 }
 
 export interface WorkoutStats {
@@ -31,12 +41,29 @@ export interface WorkoutStats {
   updated_at: string;
 }
 
+const allowedGoalTypeFallback: AllowedGoalType = 'general_fitness';
+
+// Util to validate/convert database goal_type field to app type
+const mapGoalType = (goal_type: any): AllowedGoalType => {
+  if (
+    goal_type === 'weight_loss' ||
+    goal_type === 'weight_gain' ||
+    goal_type === 'muscle_gain' ||
+    goal_type === 'endurance' ||
+    goal_type === 'strength' ||
+    goal_type === 'general_fitness'
+  ) {
+    return goal_type;
+  }
+  return allowedGoalTypeFallback;
+};
+
 export const useWorkoutAnalytics = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [goals, setGoals] = useState<WorkoutGoal[]>([]);
   const [stats, setStats] = useState<WorkoutStats | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const fetchWorkoutGoals = async () => {
     if (!user) return;
@@ -53,20 +80,21 @@ export const useWorkoutAnalytics = () => {
         throw error;
       }
 
-      // When mapping DB object to WorkoutGoal, remove fitness_goals_user_id:
-      const mappedGoals = (dataFromDB as any[]).map(item => ({
+      // Map DB result -> WorkoutGoal
+      const mappedGoals: WorkoutGoal[] = (dataFromDB as any[]).map((item) => ({
         id: item.id,
-        user_id: item.user_id, // Map database field to app model if needed, or set directly.
-        description: item.description,
-        target_value: item.target_value,
-        current_value: item.current_value,
-        target_date: item.target_date,
-        status: item.status,
-        goal_type: item.goal_type,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        title: item.title,
+        user_id: item.user_id,
+        title: item.title ?? item.name ?? '', // tolerate db 'name'
+        description: item.description ?? '',
+        target_value: item.target_value ?? 0,
+        current_value: item.current_value ?? 0,
+        target_date: item.target_date ?? '',
+        status: item.status as 'active' | 'completed' | 'failed',
+        goal_type: mapGoalType(item.goal_type),
+        created_at: item.created_at ?? '',
+        updated_at: item.updated_at ?? '',
         unit: item.unit,
+        is_active: (item.status === 'active') // can be improved, but fits filter logic
       }));
 
       setGoals(mappedGoals);
@@ -82,17 +110,22 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  const addWorkoutGoal = async (newGoal: Omit<WorkoutGoal, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+  // Renamed to createGoal (not addWorkoutGoal), and adapted for new strict shape.
+  const createGoal = async (
+    newGoal: Omit<WorkoutGoal, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'is_active'>
+  ) => {
     if (!user) return;
 
     try {
       setIsLoading(true);
+      // Only insert allowed fields
       const { error } = await supabase
         .from('fitness_goals')
         .insert([
           {
             ...newGoal,
             user_id: user.id,
+            status: 'active',
           },
         ]);
 
@@ -117,7 +150,11 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  const updateWorkoutGoal = async (goalId: string, updates: Partial<Omit<WorkoutGoal, 'id' | 'created_at' | 'updated_at' | 'user_id'>>) => {
+  // Renamed to updateGoal, check for allowed updates
+  const updateGoal = async (
+    goalId: string,
+    updates: Partial<Omit<WorkoutGoal, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'is_active'>>
+  ) => {
     if (!user) return;
 
     try {
@@ -149,7 +186,8 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  const deleteWorkoutGoal = async (goalId: string) => {
+  // Renamed to deleteGoal
+  const deleteGoal = async (goalId: string) => {
     if (!user) return;
 
     try {
@@ -181,6 +219,7 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
+  // Stats -- leave unchanged except for typing result (fix recursion)
   const fetchWorkoutStats = async () => {
     if (!user) return;
 
@@ -196,7 +235,22 @@ export const useWorkoutAnalytics = () => {
         throw error;
       }
 
-      setStats(data || null);
+      if (data) {
+        setStats({
+          id: data.id,
+          user_id: data.user_id,
+          total_workouts: data.total_workouts,
+          total_time: data.total_time,
+          calories_burned: data.calories_burned,
+          last_workout_date: data.last_workout_date,
+          most_active_day: data.most_active_day,
+          streak_days: data.streak_days,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        });
+      } else {
+        setStats(null);
+      }
     } catch (error) {
       console.error('Error fetching workout stats:', error);
       toast({
@@ -214,16 +268,18 @@ export const useWorkoutAnalytics = () => {
       fetchWorkoutGoals();
       fetchWorkoutStats();
     }
+    // eslint-disable-next-line
   }, [user]);
 
+  // EXPLICITLY export only what clients/components are *expecting*:
   return {
     goals,
     stats,
     isLoading,
     fetchWorkoutGoals,
-    addWorkoutGoal,
-    updateWorkoutGoal,
-    deleteWorkoutGoal,
+    createGoal,
+    updateGoal,
+    deleteGoal,
     fetchWorkoutStats,
   };
 };
