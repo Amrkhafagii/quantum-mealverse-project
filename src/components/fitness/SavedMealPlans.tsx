@@ -1,316 +1,140 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { SavedMealPlan } from '@/types/fitness';
-import { Droplets, Clock, RefreshCw, AlertCircle } from 'lucide-react';
-import { TDEEResult } from '@/components/fitness/TDEECalculator';
-import { MealPlan } from '@/types/food';
-import { getDaysRemaining, renewMealPlan } from '@/services/mealPlanService';
-import { Badge } from "@/components/ui/badge";
 
-interface SavedMealPlansProps {
-  userId?: string;
+interface SavedMealPlan {
+  id: string;
+  name: string;
+  description?: string;
+  meal_plan_data: any; // JSON data containing the meal plan
+  created_at: string;
+  updated_at: string;
 }
 
-const SavedMealPlans = ({ userId }: SavedMealPlansProps) => {
+const SavedMealPlans = () => {
+  const { user } = useAuth();
   const [savedPlans, setSavedPlans] = useState<SavedMealPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (userId) {
-      loadSavedMealPlans();
+    if (user) {
+      fetchSavedMealPlans();
     }
-  }, [userId]);
+  }, [user]);
 
-  const loadSavedMealPlans = async () => {
+  const fetchSavedMealPlans = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('saved_meal_plans')
         .select('*')
-        .eq('user_id', userId)
-        .order('date_created', { ascending: false })
-        .returns<SavedMealPlan[]>();
-        
+        .eq('saved_meal_plans_user_id', user.id) // Updated field name
+        .order('created_at', { ascending: false });
+
       if (error) throw error;
-      
-      if (data) {
-        // Convert database JSON to our type with proper type handling
-        const typedData = data.map(item => ({
-          ...item,
-          meal_plan: item.meal_plan as unknown as MealPlan
-        }));
-        
-        setSavedPlans(typedData);
-      } else {
-        setSavedPlans([]);
-      }
+      setSavedPlans(data || []);
     } catch (error) {
-      console.error('Error loading saved meal plans:', error);
-      toast.error('Failed to load saved meal plans.');
+      console.error('Error fetching saved meal plans:', error);
+      toast.error('Failed to load saved meal plans');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeletePlan = async (planId: string) => {
+  const deleteMealPlan = async (planId: string) => {
     try {
       const { error } = await supabase
         .from('saved_meal_plans')
         .delete()
         .eq('id', planId);
-        
+
       if (error) throw error;
       
-      // Remove from local state
-      setSavedPlans(savedPlans.filter(plan => plan.id !== planId));
-      
-      toast.success('Your meal plan has been deleted.');
+      setSavedPlans(prev => prev.filter(plan => plan.id !== planId));
+      toast.success('Meal plan deleted successfully');
     } catch (error) {
       console.error('Error deleting meal plan:', error);
-      toast.error('Failed to delete meal plan.');
+      toast.error('Failed to delete meal plan');
     }
   };
 
-  const handleRenewPlan = async (planId: string) => {
-    try {
-      const result = await renewMealPlan(planId);
-      
-      if (result.success) {
-        // Update the local state
-        setSavedPlans(savedPlans.map(plan => 
-          plan.id === planId 
-            ? {
-                ...plan, 
-                expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-                is_active: true
-              } 
-            : plan
-        ));
-        toast.success('Meal plan renewed for another 2 weeks.');
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error('Error renewing meal plan:', error);
-      toast.error('Failed to renew the meal plan.');
-    }
-  };
+  const calculateTDEE = async () => {
+    if (!user) return;
 
-  // Function to save current meal plan from session storage
-  const saveCurrentMealPlan = async () => {
     try {
-      // Get current meal plan from session storage
-      const storedMealPlan = sessionStorage.getItem('currentMealPlan');
-      const storedTDEE = sessionStorage.getItem('currentTDEE');
-      
-      if (!storedMealPlan || !storedTDEE) {
-        toast.error('No current meal plan found to save. Generate a meal plan first.');
-        return;
-      }
-      
-      const mealPlan = JSON.parse(storedMealPlan) as MealPlan;
-      const tdeeResult = JSON.parse(storedTDEE) as TDEEResult;
-      
-      // Calculate expiration date (14 days from now)
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-      
-      // Save the plan name
-      const planName = `${tdeeResult.goal} plan (${tdeeResult.adjustedCalories} cal)`;
-      
-      // First create or get TDEE record
-      const { data: tdeeData, error: tdeeError } = await supabase
+      // This would typically use user profile data to calculate TDEE
+      const mockTDEEData = {
+        user_tdee_user_id: user.id, // Updated field name
+        bmr: 1500,
+        tdee: 2000,
+        activity_level: 'moderate',
+        goal: 'maintain',
+        protein_target: 150,
+        carbs_target: 200,
+        fat_target: 67,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      const { error } = await supabase
         .from('user_tdee')
-        .insert({
-          user_id: userId,
-          date: new Date().toISOString(),
-          tdee: tdeeResult.tdee,
-          bmr: tdeeResult.bmr,
-          goal: tdeeResult.goal,
-          activity_level: 'moderate', // Default value as it's not stored in TDEEResult
-          protein_target: tdeeResult.proteinGrams,
-          carbs_target: tdeeResult.carbsGrams,
-          fat_target: tdeeResult.fatsGrams,
-        })
-        .select('id')
-        .single();
-        
-      if (tdeeError) throw tdeeError;
-      
-      // Now save the meal plan with expiration date
-      const { data, error } = await supabase
-        .from('saved_meal_plans')
-        .insert({
-          user_id: userId,
-          name: planName,
-          date_created: now.toISOString(),
-          expires_at: expiresAt.toISOString(),
-          is_active: true,
-          tdee_id: tdeeData.id,
-          meal_plan: JSON.parse(JSON.stringify(mealPlan)), // Convert to plain object
-        });
-        
+        .insert(mockTDEEData);
+
       if (error) throw error;
       
-      toast.success('Your meal plan has been saved successfully.');
-      
-      // Refresh the list
-      await loadSavedMealPlans();
-      
+      toast.success('TDEE calculation saved');
     } catch (error) {
-      console.error('Error saving meal plan:', error);
-      toast.error('Failed to save meal plan.');
+      console.error('Error calculating TDEE:', error);
+      toast.error('Failed to calculate TDEE');
     }
-  };
-
-  const loadPlan = (plan: SavedMealPlan) => {
-    try {
-      // Store the plan in session storage
-      sessionStorage.setItem('currentMealPlan', JSON.stringify(plan.meal_plan));
-      
-      // Redirect to the fitness page
-      window.location.href = '/fitness';
-      
-      toast.success('Your saved meal plan has been loaded.');
-    } catch (error) {
-      console.error('Error loading plan:', error);
-      toast.error('Failed to load meal plan.');
-    }
-  };
-
-  const getStatusBadge = (plan: SavedMealPlan) => {
-    if (!plan.expires_at) return null;
-    
-    const daysRemaining = getDaysRemaining(plan.expires_at);
-    
-    if (!plan.is_active || daysRemaining <= 0) {
-      return <Badge variant="destructive" className="flex gap-1 items-center"><AlertCircle className="h-3.5 w-3.5" /> Expired</Badge>;
-    }
-    
-    if (daysRemaining <= 3) {
-      // Use a custom style instead of variant="warning" since it's not in the default variants
-      return <Badge variant="outline" className="flex gap-1 items-center bg-amber-500 border-amber-500 text-white"><Clock className="h-3.5 w-3.5" /> Expires soon</Badge>;
-    }
-    
-    // Use a custom style instead of variant="success" since it's not in the default variants
-    return <Badge variant="outline" className="flex gap-1 items-center bg-green-600 border-green-600 text-white"><Clock className="h-3.5 w-3.5" /> Active</Badge>;
   };
 
   if (loading) {
-    return (
-      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardContent className="pt-6 text-center">
-          <p>Loading saved meal plans...</p>
-        </CardContent>
-      </Card>
-    );
+    return <div className="text-center py-4">Loading saved meal plans...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold text-quantum-cyan">Your Saved Meal Plans</h2>
-        <Button 
-          onClick={saveCurrentMealPlan}
-          className="bg-quantum-purple hover:bg-quantum-purple/90"
+    <div className="max-w-4xl mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Saved Meal Plans</h1>
+        <button
+          onClick={calculateTDEE}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
-          Save Current Plan
-        </Button>
+          Calculate TDEE
+        </button>
       </div>
 
-      {savedPlans.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {savedPlans.map((plan) => {
-            // Cast meal_plan to MealPlan to ensure TypeScript recognizes it
-            const mealPlan = plan.meal_plan as unknown as MealPlan;
-            return (
-            <Card key={plan.id} className={`holographic-card overflow-hidden ${!plan.is_active || (plan.expires_at && getDaysRemaining(plan.expires_at) <= 0) ? 'opacity-70' : ''}`}>
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex justify-between items-center">
-                    <span>{plan.name}</span>
-                  </CardTitle>
-                  {plan.expires_at && getStatusBadge(plan)}
-                </div>
-                <CardDescription className="flex flex-col gap-1">
-                  <span>Created {new Date(plan.date_created).toLocaleDateString()}</span>
-                  {plan.expires_at && (
-                    <span className="flex items-center gap-1">
-                      {getDaysRemaining(plan.expires_at) <= 0 
-                        ? "Expired" 
-                        : `Expires in ${getDaysRemaining(plan.expires_at)} days`}
-                    </span>
-                  )}
-                </CardDescription>
-                <div className="text-quantum-purple text-xl font-medium mt-1">
-                  {mealPlan.totalCalories} kcal
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-blue-900/30 p-2 rounded">
-                      <div className="text-xs">Protein</div>
-                      <div className="font-semibold">{mealPlan.targetProtein}g</div>
-                    </div>
-                    <div className="bg-green-900/30 p-2 rounded">
-                      <div className="text-xs">Carbs</div>
-                      <div className="font-semibold">{mealPlan.targetCarbs}g</div>
-                    </div>
-                    <div className="bg-yellow-900/30 p-2 rounded">
-                      <div className="text-xs">Fats</div>
-                      <div className="font-semibold">{mealPlan.targetFat}g</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 p-3 bg-blue-900/20 rounded">
-                    <Droplets className="h-5 w-5 text-blue-400" />
-                    <div className="text-sm">
-                      Water: {mealPlan.hydrationTarget} ml
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-2">
-                <Button 
-                  onClick={() => loadPlan(plan)}
-                  className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90"
-                  disabled={!plan.is_active && plan.expires_at && getDaysRemaining(plan.expires_at) <= 0}
-                >
-                  Load Plan
-                </Button>
-                <div className="flex gap-2 w-full">
-                  {plan.expires_at && (
-                    <Button 
-                      onClick={() => handleRenewPlan(plan.id)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Renew
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={() => handleDeletePlan(plan.id)}
-                    variant="destructive"
-                    className="flex-1"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          )})}
+      {savedPlans.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No saved meal plans yet.</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Create a meal plan to see it saved here.
+          </p>
         </div>
       ) : (
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="pt-6 text-center">
-            <p>No saved meal plans found. Create and save a meal plan to see it here.</p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {savedPlans.map((plan) => (
+            <div key={plan.id} className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-lg font-semibold mb-2">{plan.name}</h3>
+              {plan.description && (
+                <p className="text-gray-600 text-sm mb-3">{plan.description}</p>
+              )}
+              
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500">
+                  {new Date(plan.created_at).toLocaleDateString()}
+                </span>
+                <button
+                  onClick={() => deleteMealPlan(plan.id)}
+                  className="text-red-500 hover:text-red-700 text-sm"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

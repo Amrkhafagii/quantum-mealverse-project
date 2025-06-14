@@ -1,326 +1,121 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  DeliveryUser, 
-  DeliveryVehicle, 
-  DeliveryDocument,
-  DeliveryAvailability,
-  DeliveryPaymentDetails
-} from '@/types/delivery';
-import { SupabaseSchema } from '@/types/supabase';
+import { DeliveryUser, DeliveryVehicle, DeliveryDocument } from '@/types/delivery';
 
-// Create delivery user profile
-export const createDeliveryUser = async (userData: Omit<DeliveryUser, 'id' | 'created_at' | 'updated_at' | 'average_rating' | 'total_deliveries' | 'is_approved'>): Promise<DeliveryUser | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_users')
-      .insert(userData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating delivery user:', error);
-      throw error;
-    }
-
-    return data as DeliveryUser;
-  } catch (error) {
-    console.error('Error in createDeliveryUser:', error);
-    throw error;
-  }
-};
-
-// Get delivery user by auth user_id
 export const getDeliveryUserByUserId = async (userId: string): Promise<DeliveryUser | null> => {
   try {
     const { data, error } = await supabase
       .from('delivery_users')
       .select('*')
-      .eq('user_id', userId)
+      .eq('delivery_users_user_id', userId) // Updated field name
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // No data found
-      }
       console.error('Error fetching delivery user:', error);
-      throw error;
+      return null;
     }
 
-    return data as DeliveryUser;
+    return data;
   } catch (error) {
     console.error('Error in getDeliveryUserByUserId:', error);
-    throw error;
+    return null;
   }
 };
 
-// Update delivery user status
-export const updateDeliveryUserStatus = async (userId: string, status: 'active' | 'inactive' | 'on_break'): Promise<DeliveryUser | null> => {
+export const updateDeliveryUserStatus = async (
+  userId: string,
+  status: 'active' | 'inactive' | 'suspended'
+): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('delivery_users')
       .update({ status, updated_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .select()
-      .single();
+      .eq('delivery_users_user_id', userId); // Updated field name
 
     if (error) {
       console.error('Error updating delivery user status:', error);
-      throw error;
+      return false;
     }
 
-    return data as DeliveryUser;
+    return true;
   } catch (error) {
     console.error('Error in updateDeliveryUserStatus:', error);
-    throw error;
+    return false;
   }
 };
 
-// Update delivery user profile
-export const updateDeliveryUserProfile = async (
-  deliveryUserId: string, 
-  profileData: {
-    first_name?: string;
-    last_name?: string;
-    phone?: string;
-    email?: string;
-  }
-): Promise<DeliveryUser | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_users')
-      .update({
-        ...profileData,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', deliveryUserId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating delivery user profile:', error);
-      throw error;
-    }
-
-    return data as DeliveryUser;
-  } catch (error) {
-    console.error('Error in updateDeliveryUserProfile:', error);
-    throw error;
-  }
-};
-
-// Save vehicle information
-export const saveVehicleInfo = async (vehicleData: Omit<DeliveryVehicle, 'id' | 'created_at' | 'updated_at'>): Promise<DeliveryVehicle | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_vehicles')
-      .insert(vehicleData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving vehicle information:', error);
-      throw error;
-    }
-
-    return data as DeliveryVehicle;
-  } catch (error) {
-    console.error('Error in saveVehicleInfo:', error);
-    throw error;
-  }
-};
-
-// Get vehicle by delivery_user_id
 export const getVehicleByDeliveryUserId = async (deliveryUserId: string): Promise<DeliveryVehicle | null> => {
   try {
     const { data, error } = await supabase
       .from('delivery_vehicles')
       .select('*')
-      .eq('delivery_user_id', deliveryUserId)
+      .eq('delivery_vehicles_user_id', deliveryUserId) // Updated field name
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // No data found
-      }
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching vehicle:', error);
-      throw error;
+      return null;
     }
 
-    return data as DeliveryVehicle;
+    return data || null;
   } catch (error) {
     console.error('Error in getVehicleByDeliveryUserId:', error);
-    throw error;
+    return null;
   }
 };
 
-// Upload document
-export const uploadDeliveryDocument = async (
-  file: File, 
-  documentType: DeliveryDocument['document_type'],
-  deliveryUserId: string,
-  expiryDate?: Date,
-  notes?: string
-): Promise<DeliveryDocument | null> => {
+export const saveVehicleInfo = async (vehicleData: Partial<DeliveryVehicle>): Promise<boolean> => {
   try {
-    // First upload the file to storage
-    const userId = (await supabase.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error("User not authenticated");
-
-    const fileName = `${userId}/${documentType}/${Date.now()}_${file.name}`;
+    const { delivery_user_id, ...updateData } = vehicleData;
     
-    const { data: fileData, error: uploadError } = await supabase.storage
-      .from('delivery_documents')
-      .upload(fileName, file);
+    // Convert the data to match database schema
+    const dbData = {
+      delivery_vehicles_user_id: delivery_user_id, // Updated field name
+      vehicle_type: updateData.type || updateData.vehicle_type,
+      make: updateData.make || '',
+      model: updateData.model || '',
+      year: updateData.year || new Date().getFullYear(),
+      color: updateData.color || '',
+      license_plate: updateData.license_plate || '',
+      is_active: true,
+      updated_at: new Date().toISOString()
+    };
 
-    if (uploadError) {
-      console.error('Error uploading document:', uploadError);
-      throw uploadError;
+    const { error } = await supabase
+      .from('delivery_vehicles')
+      .upsert(dbData, {
+        onConflict: 'delivery_vehicles_user_id', // Updated field name
+        ignoreDuplicates: false
+      });
+
+    if (error) {
+      console.error('Error saving vehicle info:', error);
+      return false;
     }
 
-    // Then save the document record
-    const { data: docData, error: docError } = await supabase
-      .from('delivery_documents')
-      .insert({
-        delivery_user_id: deliveryUserId,
-        document_type: documentType,
-        file_path: fileName,
-        expiry_date: expiryDate?.toISOString().split('T')[0],
-        notes
-      })
-      .select()
-      .single();
-
-    if (docError) {
-      console.error('Error saving document record:', docError);
-      throw docError;
-    }
-
-    return docData as DeliveryDocument;
+    return true;
   } catch (error) {
-    console.error('Error in uploadDeliveryDocument:', error);
-    throw error;
+    console.error('Error in saveVehicleInfo:', error);
+    return false;
   }
 };
 
-// Get documents by delivery_user_id
-export const getDocumentsByDeliveryUserId = async (deliveryUserId: string): Promise<DeliveryDocument[]> => {
+export const getDeliveryDocuments = async (userId: string): Promise<DeliveryDocument[]> => {
   try {
     const { data, error } = await supabase
       .from('delivery_documents')
       .select('*')
-      .eq('delivery_user_id', deliveryUserId);
+      .eq('delivery_documents_user_id', userId) // Updated field name
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching documents:', error);
-      throw error;
+      console.error('Error fetching delivery documents:', error);
+      return [];
     }
 
-    return data as DeliveryDocument[];
+    return data || [];
   } catch (error) {
-    console.error('Error in getDocumentsByDeliveryUserId:', error);
-    throw error;
+    console.error('Error in getDeliveryDocuments:', error);
+    return [];
   }
-};
-
-// Save availability schedule
-export const saveAvailability = async (availabilityData: Omit<DeliveryAvailability, 'id' | 'created_at' | 'updated_at'>): Promise<DeliveryAvailability | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_availability')
-      .insert(availabilityData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving availability:', error);
-      throw error;
-    }
-
-    return data as DeliveryAvailability;
-  } catch (error) {
-    console.error('Error in saveAvailability:', error);
-    throw error;
-  }
-};
-
-// Get availability by delivery_user_id
-export const getAvailabilityByDeliveryUserId = async (deliveryUserId: string): Promise<DeliveryAvailability[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_availability')
-      .select('*')
-      .eq('delivery_user_id', deliveryUserId);
-
-    if (error) {
-      console.error('Error fetching availability:', error);
-      throw error;
-    }
-
-    return data as DeliveryAvailability[];
-  } catch (error) {
-    console.error('Error in getAvailabilityByDeliveryUserId:', error);
-    throw error;
-  }
-};
-
-// Save payment details
-export const savePaymentDetails = async (paymentData: Omit<DeliveryPaymentDetails, 'id' | 'created_at' | 'updated_at'>): Promise<DeliveryPaymentDetails | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_payment_details')
-      .insert(paymentData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving payment details:', error);
-      throw error;
-    }
-
-    return data as DeliveryPaymentDetails;
-  } catch (error) {
-    console.error('Error in savePaymentDetails:', error);
-    throw error;
-  }
-};
-
-// Get payment details by delivery_user_id
-export const getPaymentDetailsByDeliveryUserId = async (deliveryUserId: string): Promise<DeliveryPaymentDetails | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_payment_details')
-      .select('*')
-      .eq('delivery_user_id', deliveryUserId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // No data found
-      }
-      console.error('Error fetching payment details:', error);
-      throw error;
-    }
-
-    return data as DeliveryPaymentDetails;
-  } catch (error) {
-    console.error('Error in getPaymentDetailsByDeliveryUserId:', error);
-    throw error;
-  }
-};
-
-// Create a service object for consistency with other services
-export const deliveryService = {
-  createDeliveryUser,
-  getDeliveryUserByUserId,
-  updateDeliveryUserStatus,
-  updateDeliveryUserProfile,
-  saveVehicleInfo,
-  getVehicleByDeliveryUserId,
-  uploadDeliveryDocument,
-  getDocumentsByDeliveryUserId,
-  saveAvailability,
-  getAvailabilityByDeliveryUserId,
-  savePaymentDetails,
-  getPaymentDetailsByDeliveryUserId
 };

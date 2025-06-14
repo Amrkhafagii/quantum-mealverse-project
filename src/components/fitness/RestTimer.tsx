@@ -1,112 +1,50 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Play, Pause, RotateCcw, Plus, Minus, Volume2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface RestTimerProps {
-  workoutLogId?: string;
   exerciseName: string;
   setNumber: number;
-  defaultRestTime?: number;
+  plannedRestSeconds: number;
+  workoutLogId?: string;
   onTimerComplete?: () => void;
 }
 
-export const RestTimer: React.FC<RestTimerProps> = ({
-  workoutLogId,
+const RestTimer: React.FC<RestTimerProps> = ({
   exerciseName,
   setNumber,
-  defaultRestTime = 60,
+  plannedRestSeconds,
+  workoutLogId,
   onTimerComplete
 }) => {
   const { user } = useAuth();
-  const [timeLeft, setTimeLeft] = useState(defaultRestTime);
-  const [plannedTime] = useState(defaultRestTime);
+  const [timeLeft, setTimeLeft] = useState(plannedRestSeconds);
   const [isRunning, setIsRunning] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Create audio element for timer completion sound
-    audioRef.current = new Audio('/timer-complete.mp3');
-    audioRef.current.preload = 'auto';
+    let interval: NodeJS.Timeout | null = null;
     
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     if (isRunning && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRunning(false);
-            setIsComplete(true);
-            playCompletionSound();
-            logRestSession();
-            onTimerComplete?.();
-            return 0;
-          }
-          return prev - 1;
-        });
+      interval = setInterval(() => {
+        setTimeLeft(timeLeft - 1);
       }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+    } else if (timeLeft === 0 && isRunning) {
+      setIsRunning(false);
+      onTimerComplete?.();
+      toast.success('Rest time complete!');
     }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning, timeLeft]);
-
-  const playCompletionSound = () => {
-    if (audioRef.current) {
-      audioRef.current.play().catch(console.error);
-    }
-  };
-
-  const logRestSession = async () => {
-    if (!user || !workoutLogId) return;
-
-    const actualRestTime = plannedTime - timeLeft;
     
-    try {
-      await supabase.from('rest_timer_sessions').insert({
-        user_id: user.id,
-        workout_log_id: workoutLogId,
-        exercise_name: exerciseName,
-        set_number: setNumber,
-        planned_rest_seconds: plannedTime,
-        actual_rest_seconds: actualRestTime,
-        started_at: startTime?.toISOString(),
-        completed_at: new Date().toISOString(),
-        was_skipped: false
-      });
-    } catch (error) {
-      console.error('Error logging rest session:', error);
-    }
-  };
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRunning, timeLeft, onTimerComplete]);
 
   const startTimer = () => {
-    if (!startTime) {
-      setStartTime(new Date());
-    }
     setIsRunning(true);
-    setIsComplete(false);
+    setStartTime(new Date());
   };
 
   const pauseTimer = () => {
@@ -115,22 +53,50 @@ export const RestTimer: React.FC<RestTimerProps> = ({
 
   const resetTimer = () => {
     setIsRunning(false);
-    setTimeLeft(plannedTime);
-    setIsComplete(false);
+    setTimeLeft(plannedRestSeconds);
     setStartTime(null);
   };
 
-  const adjustTime = (seconds: number) => {
-    if (!isRunning) {
-      setTimeLeft(prev => Math.max(0, prev + seconds));
-    }
+  const skipTimer = async () => {
+    const actualRestSeconds = plannedRestSeconds - timeLeft;
+    await saveRestSession(true, actualRestSeconds);
+    setIsRunning(false);
+    onTimerComplete?.();
   };
 
-  const skipRest = () => {
+  const completeTimer = async () => {
+    const actualRestSeconds = startTime ? 
+      Math.floor((new Date().getTime() - startTime.getTime()) / 1000) : 
+      plannedRestSeconds;
+    await saveRestSession(false, actualRestSeconds);
     setIsRunning(false);
-    setTimeLeft(0);
-    setIsComplete(true);
     onTimerComplete?.();
+  };
+
+  const saveRestSession = async (wasSkipped: boolean, actualRestSeconds: number) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('rest_timer_sessions')
+        .insert({
+          rest_timer_sessions_user_id: user.id, // Updated field name
+          exercise_name: exerciseName,
+          set_number: setNumber,
+          planned_rest_seconds: plannedRestSeconds,
+          actual_rest_seconds: actualRestSeconds,
+          was_skipped: wasSkipped,
+          workout_log_id: workoutLogId,
+          started_at: startTime?.toISOString(),
+          completed_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error saving rest session:', error);
+      }
+    } catch (error) {
+      console.error('Error in saveRestSession:', error);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -139,111 +105,61 @@ export const RestTimer: React.FC<RestTimerProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const progress = ((plannedTime - timeLeft) / plannedTime) * 100;
-
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20 w-full max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <CardTitle className="text-quantum-cyan">Rest Timer</CardTitle>
-        <p className="text-sm text-gray-400">
-          {exerciseName} - Set {setNumber}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={timeLeft}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.2, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`text-6xl font-bold font-mono ${
-                isComplete ? 'text-green-400' : timeLeft <= 10 ? 'text-red-400' : 'text-quantum-cyan'
-              }`}
-            >
-              {formatTime(timeLeft)}
-            </motion.div>
-          </AnimatePresence>
+    <div className="bg-white rounded-lg shadow p-4">
+      <h3 className="text-lg font-semibold mb-2">Rest Timer</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        {exerciseName} - Set {setNumber}
+      </p>
+      
+      <div className="text-center">
+        <div className="text-4xl font-bold mb-4 text-blue-600">
+          {formatTime(timeLeft)}
         </div>
-
-        <Progress 
-          value={progress} 
-          className="h-3" 
-        />
-
-        {!isRunning && !isComplete && (
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => adjustTime(-15)}
-              disabled={timeLeft <= 15}
+        
+        <div className="flex gap-2 justify-center">
+          {!isRunning ? (
+            <button
+              onClick={startTimer}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              <Minus className="w-4 h-4" />
-              15s
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => adjustTime(15)}
-            >
-              <Plus className="w-4 h-4" />
-              15s
-            </Button>
-          </div>
-        )}
-
-        <div className="flex justify-center gap-2">
-          {!isComplete ? (
-            <>
-              <Button
-                onClick={isRunning ? pauseTimer : startTimer}
-                className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-              >
-                {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={resetTimer}
-              >
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={skipRest}
-                className="text-orange-400 border-orange-400 hover:bg-orange-400/10"
-              >
-                Skip
-              </Button>
-            </>
+              Start
+            </button>
           ) : (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="text-center"
+            <button
+              onClick={pauseTimer}
+              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
             >
-              <div className="text-green-400 font-semibold mb-2">Rest Complete!</div>
-              <Button
-                onClick={resetTimer}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                Start Next Set
-              </Button>
-            </motion.div>
+              Pause
+            </button>
+          )}
+          
+          <button
+            onClick={resetTimer}
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Reset
+          </button>
+          
+          <button
+            onClick={skipTimer}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Skip
+          </button>
+          
+          {timeLeft === 0 && (
+            <button
+              onClick={completeTimer}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Done
+            </button>
           )}
         </div>
-
-        {isComplete && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center text-sm text-gray-400"
-          >
-            Actual rest time: {formatTime(plannedTime - timeLeft)}
-          </motion.div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
+
+export default RestTimer;

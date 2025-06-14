@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +28,7 @@ const DeliveryAccountSettings: React.FC<DeliveryAccountSettingsProps> = ({
     try {
       setUpdatingStatus(true);
       await updateDeliveryUserStatus(
-        deliveryUser.user_id,
+        deliveryUser.delivery_users_user_id, // Updated field name
         checked ? "active" : "inactive"
       );
       setAvailableForDelivery(checked);
@@ -47,7 +46,7 @@ const DeliveryAccountSettings: React.FC<DeliveryAccountSettingsProps> = ({
   const handleResetPassword = async () => {
     try {
       const { data, error } = await supabase.auth.resetPasswordForEmail(
-        deliveryUser.user_id,
+        deliveryUser.delivery_users_user_id, // Updated field name
         { redirectTo: window.location.origin + "/auth" }
       );
       
@@ -112,7 +111,7 @@ const DeliveryAccountSettings: React.FC<DeliveryAccountSettingsProps> = ({
           <div className="space-y-2">
             <div className="grid grid-cols-3 items-center">
               <Label className="col-span-1 text-muted-foreground">User ID:</Label>
-              <span className="col-span-2 truncate text-sm">{deliveryUser.user_id}</span>
+              <span className="col-span-2 truncate text-sm">{deliveryUser.delivery_users_user_id}</span>
             </div>
             <div className="grid grid-cols-3 items-center">
               <Label className="col-span-1 text-muted-foreground">Status:</Label>
@@ -123,7 +122,7 @@ const DeliveryAccountSettings: React.FC<DeliveryAccountSettingsProps> = ({
               }`}>
                 {deliveryUser.status === "active" ? "Active" : 
                  deliveryUser.status === "on_break" ? "On Break" : 
-                 "Inactive"}
+                 deliveryUser.status === "inactive" ? "Inactive" : "Suspended"}
               </span>
             </div>
             <div className="grid grid-cols-3 items-center">

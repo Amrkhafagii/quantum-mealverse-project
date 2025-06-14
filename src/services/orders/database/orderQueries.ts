@@ -54,7 +54,7 @@ export const queryUserOrders = async (
     const { data, error } = await supabase
       .from('orders')
       .select(selectFields)
-      .eq('customer_id', userId)
+      .eq('customer_id', userId) // Keep as customer_id - this is the UUID from auth.users
       .order('created_at', { ascending: false });
 
     if (error) {

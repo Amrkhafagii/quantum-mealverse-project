@@ -1,4 +1,3 @@
-
 // Delivery-related types with updated user ID naming
 
 export interface DeliveryAssignment {
@@ -184,7 +183,7 @@ export interface DeliveryLocationSettings {
   updated_at: string;
 }
 
-// Updated DeliveryUser with proper fields
+// Updated DeliveryUser with proper fields and status options
 export interface DeliveryUser {
   id: string;
   delivery_users_user_id: string; // Updated to match new naming convention
@@ -195,7 +194,7 @@ export interface DeliveryUser {
   vehicle_type: string;
   license_plate: string;
   driver_license_number: string;
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'on_break'; // Added on_break status
   rating: number;
   total_deliveries: number;
   verification_status: 'pending' | 'verified' | 'rejected';
@@ -212,8 +211,8 @@ export interface DeliveryVehicle {
   id: string;
   delivery_vehicles_user_id: string; // Updated to match new naming convention
   delivery_user_id?: string; // For backward compatibility
-  vehicle_type: string;
-  type?: string; // For form compatibility
+  vehicle_type: 'bicycle' | 'car' | 'motorcycle' | 'scooter' | 'on_foot';
+  type?: 'bicycle' | 'car' | 'motorcycle' | 'scooter' | 'on_foot'; // For form compatibility
   make: string;
   model: string;
   year: number;
