@@ -1,7 +1,13 @@
-import React from 'react';
-import { RestaurantPromotion } from '@/types/notifications';
-import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
-import { useToast } from '@/components/ui/use-toast';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Plus } from 'lucide-react';
+import { promotionService } from '@/services/promotions/promotionService';
+import { RestaurantPromotion, PromotionType } from '@/types/notifications';
 
 type PromotionType = 'percentage_discount' | 'fixed_discount' | 'buy_one_get_one' | 'free_delivery' | 'combo_deal';
 

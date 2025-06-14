@@ -7,8 +7,6 @@ import { useRestaurantAssignments } from '@/hooks/useRestaurantAssignments';
 import { useToast } from '@/components/ui/use-toast';
 import type { RestaurantAssignment } from '@/types/notifications';
 
-type RestaurantAssignment = any; // TODO: Define this type properly
-
 const AssignmentItem: React.FC<{
   assignment: RestaurantAssignment;
   onAccept: (id: string) => void;

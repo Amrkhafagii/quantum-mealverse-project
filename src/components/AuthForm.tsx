@@ -15,7 +15,7 @@ interface AuthFormProps {
 
 const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>();
-  const auth = useAuth(); // Let TS infer .signIn/.signUp/.signOut
+  const auth = useAuth() as any; // Allow all expected functions for now
   const { user, loading } = auth;
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -87,7 +87,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
               className="w-full"
             />
             {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-            <Button variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)}>
+            <Button variant="ghost" size="sm" type="button" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? 'Hide' : 'Show'} Password
             </Button>
           </div>
@@ -105,7 +105,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type = 'login' }) => {
                 {errors.confirmPassword && (
                   <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Button variant="ghost" size="sm" type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                   {showConfirmPassword ? 'Hide' : 'Show'} Confirm Password
                 </Button>
               </div>
