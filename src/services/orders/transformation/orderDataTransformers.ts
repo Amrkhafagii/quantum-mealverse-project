@@ -2,22 +2,16 @@
 import { OrderStatus } from '@/types/webhook';
 
 /**
- * Data transformation utilities for orders
+ * Data transformation utilities for order operations
  */
 
-export interface OrderUpdateData {
-  status: OrderStatus;
-  updated_at: string;
-  restaurant_id?: string;
-}
-
 export const buildOrderUpdateData = (
-  newStatus: OrderStatus,
+  status: OrderStatus,
   restaurantId?: string,
   metadata?: Record<string, any>
-): OrderUpdateData => {
-  const updateData: OrderUpdateData = {
-    status: newStatus,
+) => {
+  const updateData: any = {
+    status,
     updated_at: new Date().toISOString()
   };
 
@@ -25,28 +19,34 @@ export const buildOrderUpdateData = (
     updateData.restaurant_id = restaurantId;
   }
 
+  if (metadata) {
+    updateData.metadata = metadata;
+  }
+
   return updateData;
 };
 
 export const buildCancellationMetadata = (reason?: string) => {
   return {
-    cancellation_reason: reason || 'Order cancelled',
-    cancelled_at: new Date().toISOString()
+    cancelled_at: new Date().toISOString(),
+    cancellation_reason: reason || 'No reason provided'
   };
-};
-
-export const formatOrderResponse = (rawData: any) => {
-  // Format dates, normalize data structure if needed
-  return rawData;
 };
 
 export const validateOrderUpdateParams = (
   orderId: string,
-  newStatus: OrderStatus,
+  status: OrderStatus,
   restaurantId?: string
 ): boolean => {
-  if (!orderId || typeof orderId !== 'string') return false;
-  if (!newStatus || typeof newStatus !== 'string') return false;
-  if (restaurantId && typeof restaurantId !== 'string') return false;
+  if (!orderId || !status) {
+    return false;
+  }
+
+  // Validate status is a valid OrderStatus
+  const validStatuses = Object.values(OrderStatus);
+  if (!validStatuses.includes(status)) {
+    return false;
+  }
+
   return true;
 };

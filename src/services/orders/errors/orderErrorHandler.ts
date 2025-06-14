@@ -32,11 +32,17 @@ export const createValidationError = (message: string, field?: string): OrderErr
   return error;
 };
 
-export const handleOrderError = (error: any, operation: string, context: Record<string, any>): boolean => {
+export const logAndReturnDefault = <T>(
+  error: any, 
+  operation: string, 
+  context: Record<string, any>, 
+  defaultValue: T
+): T => {
   if (isOrderNotFoundError(error)) {
     console.warn(`Order not found in operation: ${operation}`, context);
-    return false;
+  } else {
+    console.error(`Error in operation: ${operation}`, { error: error.message || error, context });
   }
   
-  handleDatabaseError(error, operation, context);
+  return defaultValue;
 };

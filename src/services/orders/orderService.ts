@@ -21,9 +21,8 @@ import {
   validateOrderUpdateParams 
 } from './transformation/orderDataTransformers';
 import { 
-  handleOrderError, 
   createValidationError,
-  handleDatabaseError
+  logAndReturnDefault
 } from './errors/orderErrorHandler';
 import { 
   recordStatusChange, 
@@ -71,7 +70,7 @@ export interface OrderItem {
 }
 
 /**
- * Fetch orders for a specific user - refactored with single responsibility
+ * Fetch orders for a specific user - refactored with proper error handling
  */
 export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
   try {
@@ -86,13 +85,12 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
     logOrderSuccess('fetchUserOrders', data, { operation: 'fetchUserOrders', userId, count: data.length });
     return data;
   } catch (error) {
-    logOrderError('fetchUserOrders', error, { operation: 'fetchUserOrders', userId });
-    return []; // Always return empty array on error
+    return logAndReturnDefault(error, 'fetchUserOrders', { userId }, []);
   }
 };
 
 /**
- * Fetch order items for a specific order - refactored with single responsibility
+ * Fetch order items for a specific order - refactored with proper error handling
  */
 export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => {
   try {
@@ -107,13 +105,12 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
     logOrderSuccess('fetchOrderItems', data, { operation: 'fetchOrderItems', orderId, count: data.length });
     return data;
   } catch (error) {
-    logOrderError('fetchOrderItems', error, { operation: 'fetchOrderItems', orderId });
-    return []; // Always return empty array on error
+    return logAndReturnDefault(error, 'fetchOrderItems', { orderId }, []);
   }
 };
 
 /**
- * Update order status - refactored with single responsibility functions
+ * Update order status - refactored with proper error handling
  */
 export const updateOrderStatus = async (
   orderId: string,
@@ -133,7 +130,11 @@ export const updateOrderStatus = async (
     const updateData = buildOrderUpdateData(newStatus, restaurantId, metadata);
 
     // Perform database update
-    await performOrderUpdate(orderId, updateData);
+    const success = await performOrderUpdate(orderId, updateData);
+    
+    if (!success) {
+      return false;
+    }
 
     // Record the history
     await recordStatusChange(orderId, newStatus, restaurantId, metadata);
@@ -141,13 +142,12 @@ export const updateOrderStatus = async (
     logOrderSuccess('updateOrderStatus', true, { operation: 'updateOrderStatus', orderId, newStatus });
     return true;
   } catch (error) {
-    logOrderError('updateOrderStatus', error, { operation: 'updateOrderStatus', orderId, newStatus, restaurantId });
-    return false; // Always return boolean on error
+    return logAndReturnDefault(error, 'updateOrderStatus', { orderId, newStatus, restaurantId }, false);
   }
 };
 
 /**
- * Cancel an order - refactored with single responsibility functions
+ * Cancel an order - refactored with proper error handling
  */
 export const cancelOrder = async (
   orderId: string,
@@ -167,7 +167,11 @@ export const cancelOrder = async (
     const cancellationMetadata = buildCancellationMetadata(reason);
 
     // Perform database update
-    await performOrderUpdate(orderId, updateData);
+    const success = await performOrderUpdate(orderId, updateData);
+    
+    if (!success) {
+      return false;
+    }
 
     // Record the cancellation in history
     await recordCancellation(orderId, reason, restaurantId);
@@ -175,13 +179,12 @@ export const cancelOrder = async (
     logOrderSuccess('cancelOrder', true, { operation: 'cancelOrder', orderId });
     return true;
   } catch (error) {
-    logOrderError('cancelOrder', error, { operation: 'cancelOrder', orderId, reason, restaurantId });
-    return false; // Always return boolean on error
+    return logAndReturnDefault(error, 'cancelOrder', { orderId, reason, restaurantId }, false);
   }
 };
 
 /**
- * Get order by ID with full details - refactored with single responsibility
+ * Get order by ID with full details - refactored with proper error handling
  */
 export const getOrderById = async (orderId: string): Promise<Order | null> => {
   try {
@@ -196,13 +199,12 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
     logOrderSuccess('getOrderById', !!data, { operation: 'getOrderById', orderId });
     return data;
   } catch (error) {
-    logOrderError('getOrderById', error, { operation: 'getOrderById', orderId });
-    return null; // Always return null on error
+    return logAndReturnDefault(error, 'getOrderById', { orderId }, null);
   }
 };
 
 /**
- * Get order history for an order - simplified with extracted utilities
+ * Get order history for an order - simplified with proper error handling
  */
 export const getOrderHistory = async (orderId: string) => {
   try {
@@ -224,14 +226,12 @@ export const getOrderHistory = async (orderId: string) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      handleDatabaseError(error, 'getOrderHistory', { orderId });
-      return [];
+      throw error;
     }
 
     logOrderSuccess('getOrderHistory', data, { operation: 'getOrderHistory', orderId, count: data?.length || 0 });
     return data || [];
   } catch (error) {
-    logOrderError('getOrderHistory', error, { operation: 'getOrderHistory', orderId });
-    return [];
+    return logAndReturnDefault(error, 'getOrderHistory', { orderId }, []);
   }
 };

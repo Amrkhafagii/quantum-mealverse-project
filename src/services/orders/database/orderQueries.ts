@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem } from '../orderService';
+import { handleDatabaseError } from '../errors/orderErrorHandler';
 
 /**
  * Raw database query functions - single responsibility for data access
@@ -18,15 +19,23 @@ export const queryOrderById = async (
       longitude
     )
   `
-) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(selectFields)
-    .eq('id', orderId)
-    .single();
+): Promise<Order | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(selectFields)
+      .eq('id', orderId)
+      .single();
 
-  if (error) throw error;
-  return data;
+    if (error) {
+      handleDatabaseError(error, 'queryOrderById', { orderId });
+    }
+
+    return data || null;
+  } catch (error) {
+    console.error('Error in queryOrderById:', error);
+    return null;
+  }
 };
 
 export const queryUserOrders = async (
@@ -39,15 +48,23 @@ export const queryUserOrders = async (
       phone
     )
   `
-) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(selectFields)
-    .eq('customer_id', userId)
-    .order('created_at', { ascending: false });
+): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(selectFields)
+      .eq('customer_id', userId)
+      .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  return data || [];
+    if (error) {
+      handleDatabaseError(error, 'queryUserOrders', { userId });
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in queryUserOrders:', error);
+    return [];
+  }
 };
 
 export const queryOrderItems = async (
@@ -59,22 +76,38 @@ export const queryOrderItems = async (
     quantity,
     price
   `
-) => {
-  const { data, error } = await supabase
-    .from('order_items')
-    .select(selectFields)
-    .eq('order_id', orderId);
+): Promise<OrderItem[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('order_items')
+      .select(selectFields)
+      .eq('order_id', orderId);
 
-  if (error) throw error;
-  return data || [];
+    if (error) {
+      handleDatabaseError(error, 'queryOrderItems', { orderId });
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in queryOrderItems:', error);
+    return [];
+  }
 };
 
-export const performOrderUpdate = async (orderId: string, updateData: any) => {
-  const { error } = await supabase
-    .from('orders')
-    .update(updateData)
-    .eq('id', orderId);
+export const performOrderUpdate = async (orderId: string, updateData: any): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId);
 
-  if (error) throw error;
-  return true;
+    if (error) {
+      handleDatabaseError(error, 'performOrderUpdate', { orderId });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in performOrderUpdate:', error);
+    return false;
+  }
 };

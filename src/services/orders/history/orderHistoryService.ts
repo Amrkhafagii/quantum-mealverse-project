@@ -1,10 +1,9 @@
 
-import { recordOrderHistory } from '../webhook/orderHistoryService';
+import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
-import { logOrderOperation, logOrderError } from '../logging/orderLogger';
 
 /**
- * History recording utilities for orders
+ * Order history tracking utilities
  */
 
 export const recordStatusChange = async (
@@ -12,24 +11,27 @@ export const recordStatusChange = async (
   newStatus: OrderStatus,
   restaurantId?: string,
   metadata?: Record<string, any>
-): Promise<void> => {
+): Promise<boolean> => {
   try {
-    logOrderOperation('recordStatusChange', { orderId, newStatus, restaurantId });
-    
-    await recordOrderHistory(
-      orderId,
-      newStatus,
-      restaurantId,
-      metadata
-    );
+    const { error } = await supabase
+      .from('order_history')
+      .insert({
+        order_id: orderId,
+        status: newStatus,
+        restaurant_id: restaurantId,
+        metadata,
+        created_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Error recording status change:', error);
+      return false;
+    }
+
+    return true;
   } catch (error) {
-    logOrderError('recordStatusChange', error, { 
-      operation: 'recordStatusChange', 
-      orderId, 
-      newStatus, 
-      restaurantId 
-    });
-    throw error;
+    console.error('Error in recordStatusChange:', error);
+    return false;
   }
 };
 
@@ -37,26 +39,29 @@ export const recordCancellation = async (
   orderId: string,
   reason?: string,
   restaurantId?: string
-): Promise<void> => {
+): Promise<boolean> => {
   try {
-    logOrderOperation('recordCancellation', { orderId, reason, restaurantId });
-    
-    await recordOrderHistory(
-      orderId,
-      OrderStatus.CANCELLED,
-      restaurantId,
-      { 
-        cancellation_reason: reason || 'Order cancelled',
-        cancelled_at: new Date().toISOString()
-      }
-    );
+    const { error } = await supabase
+      .from('order_history')
+      .insert({
+        order_id: orderId,
+        status: OrderStatus.CANCELLED,
+        restaurant_id: restaurantId,
+        metadata: {
+          cancellation_reason: reason || 'No reason provided',
+          cancelled_at: new Date().toISOString()
+        },
+        created_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Error recording cancellation:', error);
+      return false;
+    }
+
+    return true;
   } catch (error) {
-    logOrderError('recordCancellation', error, { 
-      operation: 'recordCancellation', 
-      orderId, 
-      reason, 
-      restaurantId 
-    });
-    throw error;
+    console.error('Error in recordCancellation:', error);
+    return false;
   }
 };
