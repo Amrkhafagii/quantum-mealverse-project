@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Notification } from '@/types/notification';
@@ -37,6 +38,7 @@ export const useNotifications = () => {
 
       const typedNotifications: Notification[] = (data || []).map(item => ({
         ...item,
+        user_id: item.notifications_user_id, // <-- ADD THIS LINE
         data: typeof item.data === 'string' 
           ? JSON.parse(item.data) 
           : item.data || {}
