@@ -41,25 +41,27 @@ export const getDeliveryUserByUserId = async (
       }
     }
 
-    let status: DeliveryUser['status'];
-    switch (data.status) {
-      case 'active':
-      case 'inactive':
-      case 'suspended':
-      case 'on_break':
-        status = data.status as DeliveryUser['status'];
-        break;
-      default:
-        status = 'inactive';
+    let status: DeliveryUser['status'] = 'inactive';
+    if ('status' in data && typeof data.status === 'string') {
+      switch (data.status) {
+        case 'active':
+        case 'inactive':
+        case 'suspended':
+        case 'on_break':
+          status = data.status as DeliveryUser['status'];
+          break;
+        default:
+          status = 'inactive';
+      }
     }
 
-    // Defensive: provide empty string if not available
+    // Defensive: provide field only if present in the data
     const user: DeliveryUser = {
       id: typeof data.id === 'string' ? data.id : '',
       delivery_users_user_id: typeof data.delivery_users_user_id === 'string' ? data.delivery_users_user_id : '',
       full_name: fullName,
-      first_name: typeof data.first_name === 'string' ? data.first_name : '',
-      last_name: typeof data.last_name === 'string' ? data.last_name : '',
+      first_name: typeof data.first_name === 'string' ? data.first_name : undefined,
+      last_name: typeof data.last_name === 'string' ? data.last_name : undefined,
       phone: typeof data.phone === 'string' ? data.phone : '',
       vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',
       license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',

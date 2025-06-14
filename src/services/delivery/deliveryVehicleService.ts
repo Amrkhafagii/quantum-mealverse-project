@@ -21,23 +21,23 @@ export const getVehicleByDeliveryUserId = async (
     if (!data) return null;
 
     return {
-      id: data.id,
-      delivery_vehicles_user_id: data.delivery_user_id || '',
-      delivery_user_id: data.delivery_user_id || undefined,
-      vehicle_type: (data.vehicle_type as DeliveryVehicle['vehicle_type']) || 'car',
-      type: (data.vehicle_type as DeliveryVehicle['vehicle_type']) || 'car',
-      make: data.make || '',
-      model: data.model || '',
+      id: typeof data.id === 'string' ? data.id : '',
+      delivery_vehicles_user_id: typeof data.delivery_user_id === 'string' ? data.delivery_user_id : '',
+      delivery_user_id: typeof data.delivery_user_id === 'string' ? data.delivery_user_id : undefined,
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type as DeliveryVehicle['vehicle_type'] : 'car',
+      type: typeof data.vehicle_type === 'string' ? data.vehicle_type as DeliveryVehicle['vehicle_type'] : 'car',
+      make: typeof data.make === 'string' ? data.make : '',
+      model: typeof data.model === 'string' ? data.model : '',
       year: typeof data.year === 'number' ? data.year : new Date().getFullYear(),
-      color: data.color || '',
-      license_plate: data.license_plate || '',
-      insurance_policy_number: data.insurance_number || undefined,
-      insurance_number: data.insurance_number || undefined,
-      insurance_expiry: data.insurance_expiry || undefined,
+      color: typeof data.color === 'string' ? data.color : '',
+      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
+      insurance_policy_number: typeof data.insurance_number === 'string' ? data.insurance_number : undefined,
+      insurance_number: typeof data.insurance_number === 'string' ? data.insurance_number : undefined,
+      insurance_expiry: typeof data.insurance_expiry === 'string' ? data.insurance_expiry : undefined,
       registration_number: undefined,
       is_active: typeof data.is_active === 'boolean' ? data.is_active : true,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
+      created_at: typeof data.created_at === 'string' ? data.created_at : '',
+      updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
     };
   } catch (error) {
     console.error('Error in getVehicleByDeliveryUserId:', error);

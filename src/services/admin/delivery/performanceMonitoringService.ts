@@ -24,7 +24,6 @@ export class PerformanceMonitoringService {
       .from('delivery_users')
       .select('average_rating, first_name, last_name')
       .eq('id', deliveryUserId)
-      .returns<any[]>()
       .single();
 
     if (user && user.average_rating !== undefined && user.average_rating < 3.0) {
@@ -32,7 +31,7 @@ export class PerformanceMonitoringService {
         alert_type: 'low_rating',
         severity: user.average_rating < 2.0 ? 'critical' : 'high',
         title: 'Low Driver Rating',
-        description: `Driver ${user.first_name} ${user.last_name} has a rating of ${user.average_rating}`,
+        description: `Driver ${user.first_name ?? ''} ${user.last_name ?? ''} has a rating of ${user.average_rating}`,
         threshold_value: 3.0,
         actual_value: user.average_rating
       });
