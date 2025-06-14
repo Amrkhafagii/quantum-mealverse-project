@@ -36,7 +36,7 @@ export const useReviewSubmission = () => {
       const isVerifiedPurchase = await checkVerifiedPurchase(user.id, data.mealId);
 
       const review: Omit<Review, 'id' | 'created_at' | 'updated_at'> = {
-        reviews_user_id: user.id, // use reviews_user_id not user_id
+        user_id: user.id, // changed from reviews_user_id to user_id
         meal_id: data.mealId,
         restaurant_id: data.restaurantId,
         rating: data.rating,
