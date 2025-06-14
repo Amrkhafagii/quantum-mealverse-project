@@ -15,7 +15,8 @@ interface AuthFormProps {
 
 const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>();
-  const { user, loading, signIn, signUp, signOut } = useAuth();
+  const auth = useAuth();
+  const { user, loading } = auth;
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -32,14 +33,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
 
     try {
       if (type === 'login') {
-        await signIn(data.email, data.password);
+        await auth.signIn(data.email, data.password);
         toast({
           title: 'Success',
           description: 'Logged in successfully!',
         });
         navigate('/dashboard');
       } else {
-        await signUp(data.email, data.password, 'customer', {
+        await auth.signUp(data.email, data.password, 'customer', {
           fullName: data.fullName,
           phone: data.phone,
         });

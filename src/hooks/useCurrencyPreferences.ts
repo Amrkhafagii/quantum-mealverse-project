@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +31,7 @@ export const useCurrencyPreferences = () => {
         const { data, error } = await supabase
           .from('user_preferences')
           .select('currency')
-          .eq('user_id', user.id)
+          .eq('user_preferences_user_id', user.id)
           .maybeSingle();
 
         if (error) throw error;
@@ -59,7 +60,7 @@ export const useCurrencyPreferences = () => {
     try {
       const symbol = getCurrencySymbol(currencyCode);
 
-      // Update in database
+      // Update in database; use only user_preferences_user_id, not 'user_id'
       const { error } = await supabase
         .from('user_preferences')
         .upsert(
@@ -69,7 +70,6 @@ export const useCurrencyPreferences = () => {
 
       if (error) throw error;
 
-      // Update local state
       setCurrencyPreference({ code: currencyCode, symbol });
       return true;
     } catch (error) {

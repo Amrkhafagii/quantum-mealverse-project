@@ -1,4 +1,3 @@
-
 // Notification-related types with updated user ID naming
 
 export interface Notification {
@@ -67,4 +66,27 @@ export interface PushNotificationToken {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// --- Add placeholder/exported types to fix missing exports ---
+export interface RestaurantAssignment {
+  id: string;
+  // Add fields as needed for build fixes
+}
+
+export interface RestaurantPerformanceMetrics {
+  total_orders: number;
+  total_revenue: number;
+  average_rating: number;
+  average_preparation_time: number;
+}
+
+export interface RestaurantPromotion {
+  id: string;
+  // ...
+}
+
+export interface RestaurantReview {
+  id: string;
+  // ...
 }

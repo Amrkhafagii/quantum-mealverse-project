@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { Review } from '@/types/review';
+import { Review, ReviewStatus } from '@/types/review';
 import { EnhancedReviewCard } from './EnhancedReviewCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,7 +23,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
-  
+
   const fetchReviews = async () => {
     setLoading(true);
     try {
@@ -33,11 +34,11 @@ export const ReviewList: React.FC<ReviewListProps> = ({
         .eq('meal_id', mealId)
         .eq('restaurant_id', restaurantId)
         .eq('status', 'approved');
-        
+
       if (countError) throw countError;
-      
+
       setTotalCount(count || 0);
-      
+
       // Get paginated reviews
       const { data, error } = await supabase
         .from('reviews')
@@ -47,15 +48,18 @@ export const ReviewList: React.FC<ReviewListProps> = ({
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
-        
+
       if (error) throw error;
-      
-      // When mapping or setting reviews:
-      const mappedReviews = data.map((r) => ({
+
+      // Map to Review interface, translate "reviews_user_id" to "user_id" and status to ReviewStatus
+      const mappedReviews: Review[] = (data || []).map((r) => ({
         ...r,
         user_id: r.reviews_user_id,
+        images: r.images ?? [],
+        comment: r.comment ?? "",
+        status: (r.status as ReviewStatus),
       }));
-      
+
       setReviews(mappedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -64,27 +68,26 @@ export const ReviewList: React.FC<ReviewListProps> = ({
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchReviews();
   }, [mealId, restaurantId, page, limit]);
-  
+
   const handleFlag = async (reviewId: string) => {
     if (!user) {
       toast.error('You must be logged in to flag a review');
       return;
     }
-    
+
     try {
       const { error } = await supabase
         .from('reviews')
         .update({ is_flagged: true })
         .eq('id', reviewId);
-        
+
       if (error) throw error;
-      
-      // Update local state
-      setReviews(reviews.map(review => 
+
+      setReviews(reviews.map(review =>
         review.id === reviewId ? { ...review, is_flagged: true } : review
       ));
     } catch (error) {
@@ -92,7 +95,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
       toast.error('Failed to flag review');
     }
   };
-  
+
   if (loading && page === 1) {
     return (
       <div className="space-y-4">
@@ -109,7 +112,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({
       </div>
     );
   }
-  
+
   if (reviews.length === 0 && !loading) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -117,19 +120,18 @@ export const ReviewList: React.FC<ReviewListProps> = ({
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="space-y-4">
         {reviews.map((review) => (
-          <EnhancedReviewCard 
-            key={review.id} 
-            review={review} 
+          <EnhancedReviewCard
+            key={review.id}
+            review={review}
             onFlag={handleFlag}
           />
         ))}
       </div>
-      
       {totalCount > limit && (
         <div className="flex justify-center mt-6">
           <div className="flex space-x-2">
