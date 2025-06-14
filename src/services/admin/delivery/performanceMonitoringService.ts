@@ -69,3 +69,11 @@ export const updateDeliveryMetrics = async (deliveryUserId: string, metrics: Par
     return { success: false, error: 'Failed to update metrics' };
   }
 };
+
+// Export service object for backwards compatibility
+export const performanceMonitoringService = {
+  getDeliveryPerformanceMetrics,
+  getOrdersWithEstimatedDeliveryTime,
+  getPerformanceAlerts,
+  updateDeliveryMetrics
+};

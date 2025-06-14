@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 // Simple financial service with type safety workarounds
 export const getDeliveryEarnings = async (deliveryUserId: string) => {
   try {
-    // @ts-expect-error - Working around deep type instantiation issue
     const { data, error } = await supabase
       .from('delivery_earnings')
       .select('*')
@@ -25,7 +24,6 @@ export const getDeliveryEarnings = async (deliveryUserId: string) => {
 
 export const getTotalEarnings = async (deliveryUserId: string) => {
   try {
-    // @ts-expect-error - Working around deep type instantiation issue
     const { data, error } = await supabase
       .from('delivery_earnings')
       .select('total_amount')
@@ -66,7 +64,6 @@ export const getEarningsAnalytics = async (deliveryUserId: string, period: 'week
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    // @ts-expect-error - Working around deep type instantiation issue
     const { data, error } = await supabase
       .from('delivery_earnings')
       .select('*')
@@ -88,5 +85,53 @@ export const getEarningsAnalytics = async (deliveryUserId: string, period: 'week
   } catch (error) {
     console.error('Error in getEarningsAnalytics:', error);
     return { total: 0, count: 0, average: 0 };
+  }
+};
+
+// Create and export financialService object
+export const financialService = {
+  getDeliveryEarnings,
+  getTotalEarnings,
+  getEarningsAnalytics,
+  
+  // Mock implementations for missing methods
+  getRestaurantEarnings: async (restaurantId: string, options?: any) => {
+    console.log('Mock getRestaurantEarnings called for:', restaurantId);
+    return [];
+  },
+  
+  getTransactions: async (options?: any) => {
+    console.log('Mock getTransactions called');
+    return [];
+  },
+  
+  getPayouts: async (options?: any) => {
+    console.log('Mock getPayouts called');
+    return [];
+  },
+  
+  getFinancialReports: async (restaurantId: string, limit?: number) => {
+    console.log('Mock getFinancialReports called for:', restaurantId);
+    return [];
+  },
+  
+  getEarningsSummary: async (restaurantId: string) => {
+    console.log('Mock getEarningsSummary called for:', restaurantId);
+    return {
+      totalEarnings: 0,
+      availableEarnings: 0,
+      pendingEarnings: 0,
+      paidEarnings: 0
+    };
+  },
+  
+  requestPayout: async (restaurantId: string) => {
+    console.log('Mock requestPayout called for:', restaurantId);
+    return { id: 'mock', status: 'pending' };
+  },
+  
+  generateFinancialReport: async (restaurantId: string, reportType: string, startDate: string, endDate: string) => {
+    console.log('Mock generateFinancialReport called');
+    return { id: 'mock', type: reportType };
   }
 };

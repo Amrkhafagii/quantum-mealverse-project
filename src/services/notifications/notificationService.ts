@@ -21,8 +21,8 @@ export const getUserNotifications = async (userId: string): Promise<Notification
       notifications_user_id: item.notifications_user_id,
       title: item.title,
       message: item.message,
-      type: item.notification_type as any, // Map notification_type to type
-      link: item.link,
+      type: item.notification_type as any,
+      link: item.order_id ? `/orders/${item.order_id}` : null,
       data: typeof item.data === 'string' ? JSON.parse(item.data) : item.data || {},
       is_read: item.is_read,
       read_at: item.read_at,

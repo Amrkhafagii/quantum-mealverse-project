@@ -1,186 +1,113 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { pushNotificationService } from './pushNotificationService';
 
 interface PreparationNotification {
-  userId: string;
-  orderId: string;
-  stageName: string;
-  stageStatus: string;
-  estimatedTime?: number;
+  id?: string;
+  user_id: string;
+  order_id: string;
+  restaurant_id?: string;
+  title: string;
+  message: string;
+  stage?: string;
+  estimated_completion?: string;
+  data?: any;
 }
 
-class PreparationNotificationService {
-  async sendStageUpdateNotification({
-    userId,
-    orderId,
-    stageName,
-    stageStatus,
-    estimatedTime
-  }: PreparationNotification): Promise<void> {
-    try {
-      let title = 'Order Update';
-      let body = '';
-      let notificationType = 'preparation_update';
+export const sendStageUpdateNotification = async (notification: PreparationNotification) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        notifications_user_id: notification.user_id,
+        title: notification.title,
+        message: notification.message,
+        notification_type: 'preparation_update',
+        order_id: notification.order_id,
+        restaurant_id: notification.restaurant_id,
+        data: notification.data || {}
+      });
 
-      // Customize notification based on stage and status
-      if (stageStatus === 'in_progress') {
-        switch (stageName) {
-          case 'ingredients_prep':
-            title = '👨‍🍳 Preparation Started';
-            body = 'Our chefs are preparing your ingredients';
-            break;
-          case 'cooking':
-            title = '🍳 Cooking Started';
-            body = 'Your meal is now being cooked!';
-            break;
-          case 'plating':
-            title = '🎨 Final Touches';
-            body = 'Adding the finishing touches to your meal';
-            break;
-          case 'quality_check':
-            title = '✅ Quality Check';
-            body = 'Ensuring your order meets our standards';
-            break;
-        }
-      } else if (stageStatus === 'completed') {
-        switch (stageName) {
-          case 'cooking':
-            title = '🎉 Cooking Complete';
-            body = 'Your meal has been cooked to perfection!';
-            notificationType = 'cooking_complete';
-            break;
-          case 'ready':
-            title = '✅ Order Ready!';
-            body = 'Your order is ready for pickup/delivery';
-            notificationType = 'order_ready';
-            break;
-          default:
-            title = '✓ Stage Complete';
-            body = `${stageName.replace('_', ' ')} completed`;
-        }
-      }
-
-      // Send push notification
-      await pushNotificationService.sendNotification(
-        userId,
-        title,
-        body,
-        {
-          orderId,
-          stageName,
-          stageStatus,
-          estimatedTime
-        },
-        notificationType
-      );
-
-      // Create database notification record
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title,
-          message: body,
-          notification_type: notificationType,
-          data: {
-            orderId,
-            stageName,
-            stageStatus,
-            estimatedTime
-          },
-          order_id: orderId
-        });
-
-    } catch (error) {
-      console.error('Error sending preparation notification:', error);
+    if (error) {
+      console.error('Error sending stage update notification:', error);
+      return { success: false, error: error.message };
     }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in sendStageUpdateNotification:', error);
+    return { success: false, error: 'Failed to send notification' };
   }
+};
 
-  async sendDelayNotification({
-    userId,
-    orderId,
-    stageName,
-    delayMinutes
-  }: {
-    userId: string;
-    orderId: string;
-    stageName: string;
-    delayMinutes: number;
-  }): Promise<void> {
-    try {
-      const title = '⏰ Preparation Delay';
-      const body = `Your order is running ${delayMinutes} minutes behind schedule during ${stageName.replace('_', ' ')}`;
+export const sendDelayNotification = async (notification: PreparationNotification) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        notifications_user_id: notification.user_id,
+        title: notification.title,
+        message: notification.message,
+        notification_type: 'preparation_delay',
+        order_id: notification.order_id,
+        restaurant_id: notification.restaurant_id,
+        data: notification.data || {}
+      });
 
-      await pushNotificationService.sendNotification(
-        userId,
-        title,
-        body,
-        {
-          orderId,
-          stageName,
-          delayMinutes
-        },
-        'preparation_delay'
-      );
-
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title,
-          message: body,
-          notification_type: 'preparation_delay',
-          data: {
-            orderId,
-            stageName,
-            delayMinutes
-          },
-          order_id: orderId
-        });
-
-    } catch (error) {
+    if (error) {
       console.error('Error sending delay notification:', error);
+      return { success: false, error: error.message };
     }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in sendDelayNotification:', error);
+    return { success: false, error: 'Failed to send notification' };
   }
+};
 
-  async sendEstimatedTimeUpdate(
-    userId: string,
-    orderId: string,
-    newEstimatedTime: number
-  ): Promise<void> {
-    try {
-      const title = '⏱️ Time Update';
-      const body = `Your order will be ready in approximately ${newEstimatedTime} minutes`;
+export const sendCompletionNotification = async (notification: PreparationNotification) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        notifications_user_id: notification.user_id,
+        title: notification.title,
+        message: notification.message,
+        notification_type: 'preparation_complete',
+        order_id: notification.order_id,
+        restaurant_id: notification.restaurant_id,
+        data: notification.data || {}
+      });
 
-      await pushNotificationService.sendNotification(
-        userId,
-        title,
-        body,
-        {
-          orderId,
-          estimatedTime: newEstimatedTime
-        },
-        'time_update'
-      );
-
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title,
-          message: body,
-          notification_type: 'time_update',
-          data: {
-            orderId,
-            estimatedTime: newEstimatedTime
-          },
-          order_id: orderId
-        });
-
-    } catch (error) {
-      console.error('Error sending time update notification:', error);
+    if (error) {
+      console.error('Error sending completion notification:', error);
+      return { success: false, error: error.message };
     }
-  }
-}
 
-export const preparationNotificationService = new PreparationNotificationService();
+    return { success: true };
+  } catch (error) {
+    console.error('Error in sendCompletionNotification:', error);
+    return { success: false, error: 'Failed to send notification' };
+  }
+};
+
+export const getPreparationNotifications = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('notifications_user_id', userId)
+      .in('notification_type', ['preparation_update', 'preparation_delay', 'preparation_complete'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching preparation notifications:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getPreparationNotifications:', error);
+    return [];
+  }
+};

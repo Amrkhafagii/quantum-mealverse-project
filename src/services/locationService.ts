@@ -1,6 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+export type UserType = 'customer' | 'restaurant' | 'delivery';
+
 interface LocationData {
   latitude: number;
   longitude: number;
@@ -13,7 +15,7 @@ export const saveUserLocation = async (userId: string, locationData: LocationDat
     const { error } = await supabase
       .from('user_locations')
       .insert({
-        user_locations_user_id: userId, // Use the correct DB field name
+        user_locations_user_id: userId,
         latitude: locationData.latitude,
         longitude: locationData.longitude,
         timestamp: locationData.timestamp || new Date().toISOString(),
@@ -66,4 +68,21 @@ export const getCurrentLocation = (): Promise<GeolocationPosition> => {
       maximumAge: 60000
     });
   });
+};
+
+export const LocationService = {
+  async requestLocationAndUpdate(userType: UserType, userId: string) {
+    const position = await getCurrentLocation();
+    const locationData = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      source: 'gps' as const
+    };
+    
+    await saveUserLocation(userId, locationData);
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude
+    };
+  }
 };

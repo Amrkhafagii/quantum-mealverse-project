@@ -16,7 +16,7 @@ export const saveMealPlan = async (mealPlan: SavedMealPlan) => {
     const { error } = await supabase
       .from('saved_meal_plans')
       .insert({
-        saved_meal_plans_user_id: mealPlan.user_id, // Use correct DB field name
+        saved_meal_plans_user_id: mealPlan.user_id,
         name: mealPlan.name,
         meal_plan: mealPlan.meal_plan,
         tdee_id: mealPlan.tdee_id,
@@ -51,18 +51,21 @@ export const getUserMealPlans = async (userId: string) => {
     // Map database fields to application format
     return (data || []).map(plan => ({
       id: plan.id,
-      user_id: plan.saved_meal_plans_user_id, // Map back to user_id for app use
+      user_id: plan.saved_meal_plans_user_id,
       name: plan.name,
       meal_plan: plan.meal_plan,
       tdee_id: plan.tdee_id,
       date_created: plan.date_created,
-      is_active: true // Default value since not in DB
+      is_active: true
     }));
   } catch (error) {
     console.error('Error in getUserMealPlans:', error);
     return [];
   }
 };
+
+// Add alias for backwards compatibility
+export const getUserSavedMealPlans = getUserMealPlans;
 
 export const deleteMealPlan = async (planId: string) => {
   try {

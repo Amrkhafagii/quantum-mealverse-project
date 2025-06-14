@@ -21,7 +21,7 @@ export const saveMealCustomization = async (customization: MealPlanCustomization
     const { error } = await supabase
       .from('meal_plan_customizations')
       .insert({
-        meal_plan_customizations_user_id: customization.user_id, // Use correct DB field name
+        meal_plan_customizations_user_id: customization.user_id,
         meal_id: customization.meal_id,
         meal_plan_id: customization.meal_plan_id,
         dietary_preferences: customization.dietary_preferences || [],
@@ -62,7 +62,7 @@ export const getUserMealCustomizations = async (userId: string): Promise<MealPla
     // Map database fields to application format
     return (data || []).map(item => ({
       id: item.id,
-      user_id: item.meal_plan_customizations_user_id, // Map back to user_id
+      user_id: item.meal_plan_customizations_user_id,
       meal_id: item.meal_id,
       meal_plan_id: item.meal_plan_id,
       dietary_preferences: item.dietary_preferences,
@@ -98,7 +98,7 @@ export const getMealCustomizationById = async (customizationId: string): Promise
     // Map database fields to application format
     return {
       id: data.id,
-      user_id: data.meal_plan_customizations_user_id, // Map back to user_id
+      user_id: data.meal_plan_customizations_user_id,
       meal_id: data.meal_id,
       meal_plan_id: data.meal_plan_id,
       dietary_preferences: data.dietary_preferences,
@@ -166,4 +166,13 @@ export const deleteMealCustomization = async (customizationId: string) => {
     console.error('Error in deleteMealCustomization:', error);
     return { success: false, error: 'Failed to delete customization' };
   }
+};
+
+// Export service object for backwards compatibility
+export const MealCustomizationService = {
+  saveMealCustomization,
+  getUserMealCustomizations,
+  getMealCustomizationById,
+  updateMealCustomization,
+  deleteMealCustomization
 };

@@ -31,7 +31,7 @@ export const getGoalProgress = async (userId: string) => {
     // Convert to FitnessGoal format
     return (data || []).map((dbGoal: DBFitnessGoal) => ({
       id: dbGoal.id,
-      fitness_goals_user_id: dbGoal.fitness_goals_user_id, // Use the correct DB field name
+      fitness_goals_user_id: dbGoal.fitness_goals_user_id,
       name: dbGoal.name,
       description: dbGoal.description,
       target_value: dbGoal.target_weight || 0,
@@ -56,5 +56,27 @@ export const updateGoalProgress = async (goalId: string, progress: number) => {
   } catch (error) {
     console.error('Error updating goal progress:', error);
     return { success: false, error: 'Failed to update progress' };
+  }
+};
+
+export const generateProgressInsights = async (userId: string) => {
+  try {
+    console.log('Generating progress insights for user:', userId);
+    
+    // Mock implementation since complex analytics aren't in the database
+    return {
+      weeklyProgress: 0,
+      monthlyProgress: 0,
+      trends: [],
+      recommendations: ['Keep up the good work!']
+    };
+  } catch (error) {
+    console.error('Error generating progress insights:', error);
+    return {
+      weeklyProgress: 0,
+      monthlyProgress: 0,
+      trends: [],
+      recommendations: []
+    };
   }
 };

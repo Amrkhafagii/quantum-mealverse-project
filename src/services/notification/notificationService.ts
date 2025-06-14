@@ -20,11 +20,12 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
     // Convert database fields to Notification type with proper mapping
     return (data || []).map(item => ({
       id: item.id,
-      user_id: item.notifications_user_id, // Map notifications_user_id to user_id
+      user_id: item.notifications_user_id,
       title: item.title,
       message: item.message,
-      type: item.notification_type, // Map notification_type to type
-      link: item.link,
+      type: item.notification_type,
+      notification_type: item.notification_type,
+      link: item.order_id ? `/orders/${item.order_id}` : null,
       data: typeof item.data === 'string' 
         ? JSON.parse(item.data) 
         : item.data || {},
