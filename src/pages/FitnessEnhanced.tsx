@@ -91,10 +91,7 @@ const FitnessEnhancedPage = () => {
             </TabsContent>
             
             <TabsContent value="recommendations" className="mt-2">
-              <WorkoutRecommendations
-                userId={user?.id}
-                onApplied={workoutData.fetchWorkoutPlans}
-              />
+              <WorkoutRecommendations />
             </TabsContent>
             
             <TabsContent value="challenges" className="mt-2">

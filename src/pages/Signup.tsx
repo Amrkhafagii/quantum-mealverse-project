@@ -1,6 +1,6 @@
 
 import React from 'react';
-import AuthForm from '@/components/AuthForm'; // Fixed import
+import AuthForm from '@/components/AuthForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Signup = () => {
@@ -14,7 +14,7 @@ const Signup = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AuthForm />
+          <AuthForm type="signup" />
         </CardContent>
       </Card>
     </div>

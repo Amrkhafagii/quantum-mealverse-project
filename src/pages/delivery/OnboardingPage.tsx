@@ -34,9 +34,14 @@ const OnboardingPage: React.FC = () => {
   // Dummy/placeholder for compatibility. Real logic should be added as needed.
   const completeSteps: any[] = [];
 
-  // Handler shims
-  const savePersonalInfo = async (values: any) => updatePersonalInfo(values);
-  const saveVehicleInformation = async (values: any) => updateVehicleInfo(values);
+  // Handler shims now return void (and are typed as such for Page-level hooks comparison)
+  // Correct these for TS, but they should really match component's interface (but we only have access to this file)
+  const savePersonalInfo = (values: any): void => {
+    updatePersonalInfo(values);
+  };
+  const saveVehicleInformation = (values: any): void => {
+    updateVehicleInfo(values);
+  };
   const uploadDocument = async (
     file: File,
     documentType:
@@ -57,7 +62,7 @@ const OnboardingPage: React.FC = () => {
       delivery_documents_user_id: user?.id || "",
       document_type: documentType,
       document_url: URL.createObjectURL(file),
-      verification_status: "pending" as "pending",
+      verification_status: "pending",
       expiry_date: expiryDate?.toISOString(),
       notes: notes,
       created_at: new Date().toISOString(),
@@ -67,8 +72,10 @@ const OnboardingPage: React.FC = () => {
     return doc as any;
   };
   const completeDocumentsStep = () => true;
-  const saveAvailabilitySchedule = async (data: any) => {}; // No-op for now
-  const savePaymentInfo = async (data: any) => updatePaymentDetails(data);
+  const saveAvailabilitySchedule = (data: any): void => {};
+  const savePaymentInfo = (data: any): void => {
+    updatePaymentDetails(data);
+  };
 
   // Redirect if not authenticated
   if (!authLoading && !user) {

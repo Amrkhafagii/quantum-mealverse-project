@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,7 +12,7 @@ import WorkoutPlanner from '@/components/fitness/WorkoutPlanner';
 import WorkoutScheduler from '@/components/fitness/WorkoutScheduler';
 import WorkoutHistory from '@/components/fitness/WorkoutHistory';
 import WorkoutRecommendations from '@/components/fitness/WorkoutRecommendations';
-import UserAchievements from '@/components/fitness/UserAchievements';
+import { UserAchievements } from '@/components/fitness/UserAchievements';
 import { ExerciseLibrary } from '@/components/fitness/ExerciseLibrary';
 import { 
   Activity, 
@@ -69,9 +70,7 @@ const FitnessPage = () => {
       label: 'Suggestions',
       icon: Target,
       content: (
-        <WorkoutRecommendations
-          onApplied={workoutData.fetchWorkoutPlans}
-        />
+        <WorkoutRecommendations />
       )
     },
     {

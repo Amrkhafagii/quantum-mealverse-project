@@ -90,7 +90,7 @@ const Auth: React.FC<AuthProps> = ({ mode: propMode }) => {
             <h1 className="text-4xl font-bold text-quantum-cyan mb-8 text-center neon-text">
               {mode === 'signup' ? 'Create Account' : 'HealthAndFix'}
             </h1>
-            <AuthForm mode={mode === 'signup' ? 'signup' : 'login'} />
+            <AuthForm type={mode === 'signup' ? 'signup' : 'login'} />
           </Card>
         </div>
       </div>
