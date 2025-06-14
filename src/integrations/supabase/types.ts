@@ -12,33 +12,33 @@ export type Database = {
       achievement_progress: {
         Row: {
           achievement_id: string | null
+          achievement_progress_user_id: string | null
           completed: boolean | null
           created_at: string | null
           current_progress: number | null
           id: string
           target_progress: number
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
           achievement_id?: string | null
+          achievement_progress_user_id?: string | null
           completed?: boolean | null
           created_at?: string | null
           current_progress?: number | null
           id?: string
           target_progress: number
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
           achievement_id?: string | null
+          achievement_progress_user_id?: string | null
           completed?: boolean | null
           created_at?: string | null
           current_progress?: number | null
           id?: string
           target_progress?: number
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -79,16 +79,16 @@ export type Database = {
       }
       admin_users: {
         Row: {
+          admin_users_user_id: string
           created_at: string
-          user_id: string
         }
         Insert: {
+          admin_users_user_id: string
           created_at?: string
-          user_id: string
         }
         Update: {
+          admin_users_user_id?: string
           created_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -310,33 +310,33 @@ export type Database = {
       challenge_participants: {
         Row: {
           challenge_id: string
+          challenge_participants_user_id: string
           completed: boolean
           completion_date: string | null
           id: string
           joined_date: string
           progress: number
           team_id: string | null
-          user_id: string
         }
         Insert: {
           challenge_id: string
+          challenge_participants_user_id: string
           completed?: boolean
           completion_date?: string | null
           id?: string
           joined_date?: string
           progress?: number
           team_id?: string | null
-          user_id: string
         }
         Update: {
           challenge_id?: string
+          challenge_participants_user_id?: string
           completed?: boolean
           completion_date?: string | null
           id?: string
           joined_date?: string
           progress?: number
           team_id?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -529,6 +529,7 @@ export type Database = {
           after_state: Json | null
           before_state: Json | null
           created_at: string
+          customer_logs_user_id: string | null
           element_class: string | null
           element_id: string | null
           element_type: string | null
@@ -547,13 +548,13 @@ export type Database = {
           status_code: number | null
           timestamp: string
           type: Database["public"]["Enums"]["log_type"]
-          user_id: string | null
         }
         Insert: {
           affected_rows?: number | null
           after_state?: Json | null
           before_state?: Json | null
           created_at?: string
+          customer_logs_user_id?: string | null
           element_class?: string | null
           element_id?: string | null
           element_type?: string | null
@@ -572,13 +573,13 @@ export type Database = {
           status_code?: number | null
           timestamp?: string
           type: Database["public"]["Enums"]["log_type"]
-          user_id?: string | null
         }
         Update: {
           affected_rows?: number | null
           after_state?: Json | null
           before_state?: Json | null
           created_at?: string
+          customer_logs_user_id?: string | null
           element_class?: string | null
           element_id?: string | null
           element_type?: string | null
@@ -597,7 +598,6 @@ export type Database = {
           status_code?: number | null
           timestamp?: string
           type?: Database["public"]["Enums"]["log_type"]
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -660,30 +660,30 @@ export type Database = {
           anonymize_location_data: boolean | null
           anonymize_usage_patterns: boolean | null
           created_at: string | null
+          data_anonymization_settings_user_id: string | null
           id: string
           precision_reduction_level: number | null
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
           anonymize_device_info?: boolean | null
           anonymize_location_data?: boolean | null
           anonymize_usage_patterns?: boolean | null
           created_at?: string | null
+          data_anonymization_settings_user_id?: string | null
           id?: string
           precision_reduction_level?: number | null
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
           anonymize_device_info?: boolean | null
           anonymize_location_data?: boolean | null
           anonymize_usage_patterns?: boolean | null
           created_at?: string | null
+          data_anonymization_settings_user_id?: string | null
           id?: string
           precision_reduction_level?: number | null
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -691,35 +691,35 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string | null
+          data_export_requests_user_id: string | null
           expires_at: string | null
           export_format: string
           file_url: string | null
           id: string
           request_type: string
           status: string | null
-          user_id: string | null
         }
         Insert: {
           completed_at?: string | null
           created_at?: string | null
+          data_export_requests_user_id?: string | null
           expires_at?: string | null
           export_format: string
           file_url?: string | null
           id?: string
           request_type: string
           status?: string | null
-          user_id?: string | null
         }
         Update: {
           completed_at?: string | null
           created_at?: string | null
+          data_export_requests_user_id?: string | null
           expires_at?: string | null
           export_format?: string
           file_url?: string | null
           id?: string
           request_type?: string
           status?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -749,6 +749,7 @@ export type Database = {
           address: string
           city: string
           created_at: string | null
+          delivery_addresses_user_id: string
           email: string | null
           full_name: string
           id: string
@@ -757,12 +758,12 @@ export type Database = {
           longitude: number | null
           phone: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           address: string
           city: string
           created_at?: string | null
+          delivery_addresses_user_id: string
           email?: string | null
           full_name: string
           id?: string
@@ -771,12 +772,12 @@ export type Database = {
           longitude?: number | null
           phone: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           address?: string
           city?: string
           created_at?: string | null
+          delivery_addresses_user_id?: string
           email?: string | null
           full_name?: string
           id?: string
@@ -785,7 +786,6 @@ export type Database = {
           longitude?: number | null
           phone?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -1890,31 +1890,31 @@ export type Database = {
           address: string
           city: string
           created_at: string
+          delivery_info_user_id: string
           full_name: string
           id: string
           phone: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           address: string
           city: string
           created_at?: string
+          delivery_info_user_id: string
           full_name: string
           id?: string
           phone: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           address?: string
           city?: string
           created_at?: string
+          delivery_info_user_id?: string
           full_name?: string
           id?: string
           phone?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -2876,6 +2876,7 @@ export type Database = {
         Row: {
           average_rating: number | null
           created_at: string
+          delivery_users_user_id: string
           first_name: string
           id: string
           is_approved: boolean | null
@@ -2886,11 +2887,11 @@ export type Database = {
           status: string
           total_deliveries: number | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           average_rating?: number | null
           created_at?: string
+          delivery_users_user_id: string
           first_name: string
           id?: string
           is_approved?: boolean | null
@@ -2901,11 +2902,11 @@ export type Database = {
           status?: string
           total_deliveries?: number | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           average_rating?: number | null
           created_at?: string
+          delivery_users_user_id?: string
           first_name?: string
           id?: string
           is_approved?: boolean | null
@@ -2916,7 +2917,6 @@ export type Database = {
           status?: string
           total_deliveries?: number | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -3300,37 +3300,37 @@ export type Database = {
         Row: {
           created_at: string | null
           exercise_name: string
+          exercise_progress_user_id: string
           id: string
           max_reps: number | null
           max_weight: number | null
           one_rep_max: number | null
           recorded_date: string
           total_volume: number | null
-          user_id: string
           workout_log_id: string | null
         }
         Insert: {
           created_at?: string | null
           exercise_name: string
+          exercise_progress_user_id: string
           id?: string
           max_reps?: number | null
           max_weight?: number | null
           one_rep_max?: number | null
           recorded_date: string
           total_volume?: number | null
-          user_id: string
           workout_log_id?: string | null
         }
         Update: {
           created_at?: string | null
           exercise_name?: string
+          exercise_progress_user_id?: string
           id?: string
           max_reps?: number | null
           max_weight?: number | null
           one_rep_max?: number | null
           recorded_date?: string
           total_volume?: number | null
-          user_id?: string
           workout_log_id?: string | null
         }
         Relationships: []
@@ -3537,6 +3537,7 @@ export type Database = {
           delivery_user_id: string | null
           description: string | null
           external_transaction_id: string | null
+          financial_transactions_user_id: string
           id: string
           metadata: Json | null
           net_amount: number | null
@@ -3550,7 +3551,6 @@ export type Database = {
           status: string
           transaction_type: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           amount: number
@@ -3559,6 +3559,7 @@ export type Database = {
           delivery_user_id?: string | null
           description?: string | null
           external_transaction_id?: string | null
+          financial_transactions_user_id: string
           id?: string
           metadata?: Json | null
           net_amount?: number | null
@@ -3572,7 +3573,6 @@ export type Database = {
           status?: string
           transaction_type: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           amount?: number
@@ -3581,6 +3581,7 @@ export type Database = {
           delivery_user_id?: string | null
           description?: string | null
           external_transaction_id?: string | null
+          financial_transactions_user_id?: string
           id?: string
           metadata?: Json | null
           net_amount?: number | null
@@ -3594,7 +3595,6 @@ export type Database = {
           status?: string
           transaction_type?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -3632,28 +3632,28 @@ export type Database = {
           challenge_id: string | null
           completed_at: string | null
           current_progress: number | null
+          fitness_challenge_participants_user_id: string
           id: string
           is_completed: boolean | null
           joined_at: string | null
-          user_id: string
         }
         Insert: {
           challenge_id?: string | null
           completed_at?: string | null
           current_progress?: number | null
+          fitness_challenge_participants_user_id: string
           id?: string
           is_completed?: boolean | null
           joined_at?: string | null
-          user_id: string
         }
         Update: {
           challenge_id?: string | null
           completed_at?: string | null
           current_progress?: number | null
+          fitness_challenge_participants_user_id?: string
           id?: string
           is_completed?: boolean | null
           joined_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -3726,6 +3726,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          fitness_goals_user_id: string
           id: string
           name: string
           status: string
@@ -3733,11 +3734,11 @@ export type Database = {
           target_date: string | null
           target_weight: number | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           created_at?: string
           description: string
+          fitness_goals_user_id: string
           id?: string
           name: string
           status?: string
@@ -3745,11 +3746,11 @@ export type Database = {
           target_date?: string | null
           target_weight?: number | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           created_at?: string
           description?: string
+          fitness_goals_user_id?: string
           id?: string
           name?: string
           status?: string
@@ -3757,7 +3758,6 @@ export type Database = {
           target_date?: string | null
           target_weight?: number | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -3767,6 +3767,7 @@ export type Database = {
           created_at: string | null
           current_value: number | null
           description: string | null
+          fitness_goals_enhanced_user_id: string
           goal_type: string
           id: string
           priority_level: string | null
@@ -3778,13 +3779,13 @@ export type Database = {
           title: string
           unit: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           completed_at?: string | null
           created_at?: string | null
           current_value?: number | null
           description?: string | null
+          fitness_goals_enhanced_user_id: string
           goal_type: string
           id?: string
           priority_level?: string | null
@@ -3796,13 +3797,13 @@ export type Database = {
           title: string
           unit: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           completed_at?: string | null
           created_at?: string | null
           current_value?: number | null
           description?: string | null
+          fitness_goals_enhanced_user_id?: string
           goal_type?: string
           id?: string
           priority_level?: string | null
@@ -3814,7 +3815,6 @@ export type Database = {
           title?: string
           unit?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -3880,12 +3880,12 @@ export type Database = {
           display_name: string | null
           fitness_goals: string[] | null
           fitness_level: string | null
+          fitness_profiles_user_id: string
           gender: string | null
           goal_weight: number | null
           height: number | null
           id: string
           updated_at: string
-          user_id: string
           weight: number | null
         }
         Insert: {
@@ -3896,12 +3896,12 @@ export type Database = {
           display_name?: string | null
           fitness_goals?: string[] | null
           fitness_level?: string | null
+          fitness_profiles_user_id: string
           gender?: string | null
           goal_weight?: number | null
           height?: number | null
           id?: string
           updated_at?: string
-          user_id: string
           weight?: number | null
         }
         Update: {
@@ -3912,12 +3912,12 @@ export type Database = {
           display_name?: string | null
           fitness_goals?: string[] | null
           fitness_level?: string | null
+          fitness_profiles_user_id?: string
           gender?: string | null
           goal_weight?: number | null
           height?: number | null
           id?: string
           updated_at?: string
-          user_id?: string
           weight?: number | null
         }
         Relationships: []
@@ -4252,28 +4252,28 @@ export type Database = {
           anonymization_method: string | null
           anonymized_location_count: number | null
           id: string
+          location_anonymization_log_user_id: string | null
           original_location_count: number | null
           precision_level: number | null
           processed_at: string | null
-          user_id: string | null
         }
         Insert: {
           anonymization_method?: string | null
           anonymized_location_count?: number | null
           id?: string
+          location_anonymization_log_user_id?: string | null
           original_location_count?: number | null
           precision_level?: number | null
           processed_at?: string | null
-          user_id?: string | null
         }
         Update: {
           anonymization_method?: string | null
           anonymized_location_count?: number | null
           id?: string
+          location_anonymization_log_user_id?: string | null
           original_location_count?: number | null
           precision_level?: number | null
           processed_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -4284,9 +4284,9 @@ export type Database = {
           created_at: string | null
           export_format: string | null
           id: string
+          location_data_retention_policies_user_id: string | null
           retention_period_days: number
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
           auto_anonymize_after_days?: number
@@ -4294,9 +4294,9 @@ export type Database = {
           created_at?: string | null
           export_format?: string | null
           id?: string
+          location_data_retention_policies_user_id?: string | null
           retention_period_days?: number
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
           auto_anonymize_after_days?: number
@@ -4304,9 +4304,9 @@ export type Database = {
           created_at?: string | null
           export_format?: string | null
           id?: string
+          location_data_retention_policies_user_id?: string | null
           retention_period_days?: number
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -4551,28 +4551,28 @@ export type Database = {
           created_at: string | null
           expires_at: string | null
           id: string
+          meal_plan_cart_items_user_id: string | null
           meal_plan_data: Json
           restaurant_id: string | null
           total_price: number
-          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           expires_at?: string | null
           id?: string
+          meal_plan_cart_items_user_id?: string | null
           meal_plan_data: Json
           restaurant_id?: string | null
           total_price: number
-          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           expires_at?: string | null
           id?: string
+          meal_plan_cart_items_user_id?: string | null
           meal_plan_data?: Json
           restaurant_id?: string | null
           total_price?: number
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -4591,13 +4591,13 @@ export type Database = {
           id: string
           ingredient_substitutions: Json | null
           meal_id: string | null
+          meal_plan_customizations_user_id: string | null
           meal_plan_id: string
           portion_size_multiplier: number
           servings_count: number
           special_instructions: string | null
           total_price_adjustment: number
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -4605,13 +4605,13 @@ export type Database = {
           id?: string
           ingredient_substitutions?: Json | null
           meal_id?: string | null
+          meal_plan_customizations_user_id?: string | null
           meal_plan_id: string
           portion_size_multiplier?: number
           servings_count?: number
           special_instructions?: string | null
           total_price_adjustment?: number
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -4619,13 +4619,13 @@ export type Database = {
           id?: string
           ingredient_substitutions?: Json | null
           meal_id?: string | null
+          meal_plan_customizations_user_id?: string | null
           meal_plan_id?: string
           portion_size_multiplier?: number
           servings_count?: number
           special_instructions?: string | null
           total_price_adjustment?: number
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -4743,6 +4743,7 @@ export type Database = {
           estimated_delivery_time: string | null
           id: string
           meal_plan_id: string
+          meal_plan_orders_user_id: string
           notes: string | null
           order_id: string
           status: string
@@ -4754,7 +4755,6 @@ export type Database = {
           total_sodium: number | null
           total_sugar: number | null
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           actual_delivery_time?: string | null
@@ -4763,6 +4763,7 @@ export type Database = {
           estimated_delivery_time?: string | null
           id?: string
           meal_plan_id: string
+          meal_plan_orders_user_id: string
           notes?: string | null
           order_id: string
           status?: string
@@ -4774,7 +4775,6 @@ export type Database = {
           total_sodium?: number | null
           total_sugar?: number | null
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           actual_delivery_time?: string | null
@@ -4783,6 +4783,7 @@ export type Database = {
           estimated_delivery_time?: string | null
           id?: string
           meal_plan_id?: string
+          meal_plan_orders_user_id?: string
           notes?: string | null
           order_id?: string
           status?: string
@@ -4794,7 +4795,6 @@ export type Database = {
           total_sodium?: number | null
           total_sugar?: number | null
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -4871,6 +4871,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          meal_plans_user_id: string | null
           meals_data: Json
           name: string
           total_calories: number | null
@@ -4881,12 +4882,12 @@ export type Database = {
           total_sodium: number | null
           total_sugar: number | null
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           id?: string
+          meal_plans_user_id?: string | null
           meals_data?: Json
           name: string
           total_calories?: number | null
@@ -4897,12 +4898,12 @@ export type Database = {
           total_sodium?: number | null
           total_sugar?: number | null
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           id?: string
+          meal_plans_user_id?: string | null
           meals_data?: Json
           name?: string
           total_calories?: number | null
@@ -4913,7 +4914,6 @@ export type Database = {
           total_sodium?: number | null
           total_sugar?: number | null
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -5346,12 +5346,12 @@ export type Database = {
           is_read: boolean | null
           message: string
           notification_type: string
+          notifications_user_id: string
           order_id: string | null
           read_at: string | null
           restaurant_id: string | null
           title: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -5361,12 +5361,12 @@ export type Database = {
           is_read?: boolean | null
           message: string
           notification_type: string
+          notifications_user_id: string
           order_id?: string | null
           read_at?: string | null
           restaurant_id?: string | null
           title: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -5376,12 +5376,12 @@ export type Database = {
           is_read?: boolean | null
           message?: string
           notification_type?: string
+          notifications_user_id?: string
           order_id?: string | null
           read_at?: string | null
           restaurant_id?: string | null
           title?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -5417,13 +5417,13 @@ export type Database = {
           id: string
           meal_type: string
           name: string
+          nutrition_cart_items_user_id: string | null
           portion_size: number
           protein: number
           quantity: number
           session_id: string | null
           updated_at: string | null
           usda_food_id: string | null
-          user_id: string | null
         }
         Insert: {
           calories?: number
@@ -5434,13 +5434,13 @@ export type Database = {
           id?: string
           meal_type: string
           name: string
+          nutrition_cart_items_user_id?: string | null
           portion_size?: number
           protein?: number
           quantity?: number
           session_id?: string | null
           updated_at?: string | null
           usda_food_id?: string | null
-          user_id?: string | null
         }
         Update: {
           calories?: number
@@ -5451,13 +5451,13 @@ export type Database = {
           id?: string
           meal_type?: string
           name?: string
+          nutrition_cart_items_user_id?: string | null
           portion_size?: number
           protein?: number
           quantity?: number
           session_id?: string | null
           updated_at?: string | null
           usda_food_id?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -5560,9 +5560,9 @@ export type Database = {
           event_data: Json | null
           event_type: string
           id: string
+          order_events_user_id: string | null
           order_id: string
           restaurant_id: string | null
-          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -5570,9 +5570,9 @@ export type Database = {
           event_data?: Json | null
           event_type: string
           id?: string
+          order_events_user_id?: string | null
           order_id: string
           restaurant_id?: string | null
-          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -5580,9 +5580,9 @@ export type Database = {
           event_data?: Json | null
           event_type?: string
           id?: string
+          order_events_user_id?: string | null
           order_id?: string
           restaurant_id?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -5852,10 +5852,10 @@ export type Database = {
           message: string
           notification_type: string
           order_id: string
+          order_notifications_user_id: string | null
           read_at: string | null
           restaurant_id: string | null
           title: string
-          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -5864,10 +5864,10 @@ export type Database = {
           message: string
           notification_type: string
           order_id: string
+          order_notifications_user_id?: string | null
           read_at?: string | null
           restaurant_id?: string | null
           title: string
-          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -5876,10 +5876,10 @@ export type Database = {
           message?: string
           notification_type?: string
           order_id?: string
+          order_notifications_user_id?: string | null
           read_at?: string | null
           restaurant_id?: string | null
           title?: string
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -6314,10 +6314,10 @@ export type Database = {
           is_active: boolean | null
           is_default: boolean | null
           last_four: string | null
+          payment_methods_user_id: string
           provider: string
           type: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           brand?: string | null
@@ -6329,10 +6329,10 @@ export type Database = {
           is_active?: boolean | null
           is_default?: boolean | null
           last_four?: string | null
+          payment_methods_user_id: string
           provider: string
           type: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           brand?: string | null
@@ -6344,10 +6344,10 @@ export type Database = {
           is_active?: boolean | null
           is_default?: boolean | null
           last_four?: string | null
+          payment_methods_user_id?: string
           provider?: string
           type?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -6630,9 +6630,9 @@ export type Database = {
           exercise_id: string
           id: string
           notes: string | null
+          personal_records_user_id: string
           record_type: string
           unit: string
-          user_id: string
           value: number
           video_url: string | null
           workout_log_id: string | null
@@ -6643,9 +6643,9 @@ export type Database = {
           exercise_id: string
           id?: string
           notes?: string | null
+          personal_records_user_id: string
           record_type: string
           unit: string
-          user_id: string
           value: number
           video_url?: string | null
           workout_log_id?: string | null
@@ -6656,9 +6656,9 @@ export type Database = {
           exercise_id?: string
           id?: string
           notes?: string | null
+          personal_records_user_id?: string
           record_type?: string
           unit?: string
-          user_id?: string
           value?: number
           video_url?: string | null
           workout_log_id?: string | null
@@ -6686,24 +6686,24 @@ export type Database = {
           id: string
           order_id: string
           promotion_id: string
+          promotion_usage_user_id: string
           used_at: string | null
-          user_id: string
         }
         Insert: {
           discount_applied: number
           id?: string
           order_id: string
           promotion_id: string
+          promotion_usage_user_id: string
           used_at?: string | null
-          user_id: string
         }
         Update: {
           discount_applied?: number
           id?: string
           order_id?: string
           promotion_id?: string
+          promotion_usage_user_id?: string
           used_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -6729,9 +6729,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           platform: string
+          push_notification_tokens_user_id: string
           token: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -6739,9 +6739,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           platform: string
+          push_notification_tokens_user_id: string
           token: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -6749,9 +6749,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           platform?: string
+          push_notification_tokens_user_id?: string
           token?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -6763,10 +6763,10 @@ export type Database = {
           delivered_at: string | null
           id: string
           notification_type: string
+          push_notifications_user_id: string
           sent_at: string | null
           status: string | null
           title: string
-          user_id: string
         }
         Insert: {
           body: string
@@ -6775,10 +6775,10 @@ export type Database = {
           delivered_at?: string | null
           id?: string
           notification_type: string
+          push_notifications_user_id: string
           sent_at?: string | null
           status?: string | null
           title: string
-          user_id: string
         }
         Update: {
           body?: string
@@ -6787,10 +6787,10 @@ export type Database = {
           delivered_at?: string | null
           id?: string
           notification_type?: string
+          push_notifications_user_id?: string
           sent_at?: string | null
           status?: string | null
           title?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -6801,8 +6801,8 @@ export type Database = {
           feedback_type: string
           id: string
           rating: number | null
+          recommendation_feedback_user_id: string
           recommendation_id: string
-          user_id: string
         }
         Insert: {
           comments?: string | null
@@ -6810,8 +6810,8 @@ export type Database = {
           feedback_type: string
           id?: string
           rating?: number | null
+          recommendation_feedback_user_id: string
           recommendation_id: string
-          user_id: string
         }
         Update: {
           comments?: string | null
@@ -6819,8 +6819,8 @@ export type Database = {
           feedback_type?: string
           id?: string
           rating?: number | null
+          recommendation_feedback_user_id?: string
           recommendation_id?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -6834,10 +6834,10 @@ export type Database = {
           processed_at: string | null
           processed_by: string | null
           reason: string
+          refund_requests_user_id: string
           requested_amount: number
           status: string | null
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           admin_notes?: string | null
@@ -6848,10 +6848,10 @@ export type Database = {
           processed_at?: string | null
           processed_by?: string | null
           reason: string
+          refund_requests_user_id: string
           requested_amount: number
           status?: string | null
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           admin_notes?: string | null
@@ -6862,10 +6862,10 @@ export type Database = {
           processed_at?: string | null
           processed_by?: string | null
           reason?: string
+          refund_requests_user_id?: string
           requested_amount?: number
           status?: string | null
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -6884,9 +6884,9 @@ export type Database = {
           exercise_name: string
           id: string
           planned_rest_seconds: number
+          rest_timer_sessions_user_id: string
           set_number: number
           started_at: string | null
-          user_id: string
           was_skipped: boolean | null
           workout_log_id: string | null
         }
@@ -6896,9 +6896,9 @@ export type Database = {
           exercise_name: string
           id?: string
           planned_rest_seconds: number
+          rest_timer_sessions_user_id: string
           set_number: number
           started_at?: string | null
-          user_id: string
           was_skipped?: boolean | null
           workout_log_id?: string | null
         }
@@ -6908,9 +6908,9 @@ export type Database = {
           exercise_name?: string
           id?: string
           planned_rest_seconds?: number
+          rest_timer_sessions_user_id?: string
           set_number?: number
           started_at?: string | null
-          user_id?: string
           was_skipped?: boolean | null
           workout_log_id?: string | null
         }
@@ -7385,11 +7385,11 @@ export type Database = {
           request_headers: Json | null
           response_body: Json | null
           response_headers: Json | null
+          restaurant_logs_user_id: string | null
           session_id: string | null
           status_code: number | null
           timestamp: string | null
           type: string
-          user_id: string | null
         }
         Insert: {
           affected_rows?: number | null
@@ -7408,11 +7408,11 @@ export type Database = {
           request_headers?: Json | null
           response_body?: Json | null
           response_headers?: Json | null
+          restaurant_logs_user_id?: string | null
           session_id?: string | null
           status_code?: number | null
           timestamp?: string | null
           type: string
-          user_id?: string | null
         }
         Update: {
           affected_rows?: number | null
@@ -7431,11 +7431,11 @@ export type Database = {
           request_headers?: Json | null
           response_body?: Json | null
           response_headers?: Json | null
+          restaurant_logs_user_id?: string | null
           session_id?: string | null
           status_code?: number | null
           timestamp?: string | null
           type?: string
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -7851,9 +7851,9 @@ export type Database = {
           phone: string
           postal_code: string | null
           restaurant_id: string
+          restaurants_user_id: string
           tax_number: string | null
           updated_at: string | null
-          user_id: string
           verification_notes: string | null
           verification_status: string | null
         }
@@ -7885,9 +7885,9 @@ export type Database = {
           phone: string
           postal_code?: string | null
           restaurant_id?: string
+          restaurants_user_id: string
           tax_number?: string | null
           updated_at?: string | null
-          user_id: string
           verification_notes?: string | null
           verification_status?: string | null
         }
@@ -7919,9 +7919,9 @@ export type Database = {
           phone?: string
           postal_code?: string | null
           restaurant_id?: string
+          restaurants_user_id?: string
           tax_number?: string | null
           updated_at?: string | null
-          user_id?: string
           verification_notes?: string | null
           verification_status?: string | null
         }
@@ -7936,9 +7936,9 @@ export type Database = {
           order_id: string
           reason: string
           refund_amount: number | null
+          return_requests_user_id: string
           status: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           admin_notes?: string | null
@@ -7948,9 +7948,9 @@ export type Database = {
           order_id: string
           reason: string
           refund_amount?: number | null
+          return_requests_user_id: string
           status?: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           admin_notes?: string | null
@@ -7960,9 +7960,9 @@ export type Database = {
           order_id?: string
           reason?: string
           refund_amount?: number | null
+          return_requests_user_id?: string
           status?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: [
           {
@@ -7985,9 +7985,9 @@ export type Database = {
           meal_id: string
           rating: number
           restaurant_id: string
+          reviews_user_id: string
           status: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           comment?: string | null
@@ -7999,9 +7999,9 @@ export type Database = {
           meal_id: string
           rating: number
           restaurant_id: string
+          reviews_user_id: string
           status?: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           comment?: string | null
@@ -8013,9 +8013,9 @@ export type Database = {
           meal_id?: string
           rating?: number
           restaurant_id?: string
+          reviews_user_id?: string
           status?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: [
           {
@@ -8160,24 +8160,24 @@ export type Database = {
           id: string
           meal_plan: Json
           name: string
+          saved_meal_plans_user_id: string
           tdee_id: string | null
-          user_id: string
         }
         Insert: {
           date_created?: string
           id?: string
           meal_plan: Json
           name: string
+          saved_meal_plans_user_id: string
           tdee_id?: string | null
-          user_id: string
         }
         Update: {
           date_created?: string
           id?: string
           meal_plan?: Json
           name?: string
+          saved_meal_plans_user_id?: string
           tdee_id?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -8253,9 +8253,9 @@ export type Database = {
           price: number
           start_date: string
           status: string
+          subscriptions_user_id: string
           trial_ends_at: string | null
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -8267,9 +8267,9 @@ export type Database = {
           price: number
           start_date: string
           status?: string
+          subscriptions_user_id: string
           trial_ends_at?: string | null
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -8281,9 +8281,9 @@ export type Database = {
           price?: number
           start_date?: string
           status?: string
+          subscriptions_user_id?: string
           trial_ends_at?: string | null
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -8339,9 +8339,9 @@ export type Database = {
           resolved_at: string | null
           status: string | null
           subject: string
+          support_tickets_user_id: string
           ticket_number: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           assigned_to?: string | null
@@ -8356,9 +8356,9 @@ export type Database = {
           resolved_at?: string | null
           status?: string | null
           subject: string
+          support_tickets_user_id: string
           ticket_number: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           assigned_to?: string | null
@@ -8373,9 +8373,9 @@ export type Database = {
           resolved_at?: string | null
           status?: string | null
           subject?: string
+          support_tickets_user_id?: string
           ticket_number?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
@@ -8403,7 +8403,7 @@ export type Database = {
           points_contributed: number | null
           role: string
           team_id: string
-          user_id: string
+          team_members_user_id: string
         }
         Insert: {
           contribution_points?: number | null
@@ -8413,7 +8413,7 @@ export type Database = {
           points_contributed?: number | null
           role?: string
           team_id: string
-          user_id: string
+          team_members_user_id: string
         }
         Update: {
           contribution_points?: number | null
@@ -8423,7 +8423,7 @@ export type Database = {
           points_contributed?: number | null
           role?: string
           team_id?: string
-          user_id?: string
+          team_members_user_id?: string
         }
         Relationships: [
           {
@@ -8484,8 +8484,8 @@ export type Database = {
           location_sharing_partners: Json | null
           marketing_sharing: boolean | null
           research_sharing: boolean | null
+          third_party_sharing_preferences_user_id: string | null
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
           analytics_sharing?: boolean | null
@@ -8496,8 +8496,8 @@ export type Database = {
           location_sharing_partners?: Json | null
           marketing_sharing?: boolean | null
           research_sharing?: boolean | null
+          third_party_sharing_preferences_user_id?: string | null
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
           analytics_sharing?: boolean | null
@@ -8508,8 +8508,8 @@ export type Database = {
           location_sharing_partners?: Json | null
           marketing_sharing?: boolean | null
           research_sharing?: boolean | null
+          third_party_sharing_preferences_user_id?: string | null
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -8654,8 +8654,8 @@ export type Database = {
           source: string
           speed: number | null
           timestamp: string
+          unified_locations_user_id: string | null
           user_consent: boolean | null
-          user_id: string | null
         }
         Insert: {
           accuracy?: number | null
@@ -8679,8 +8679,8 @@ export type Database = {
           source: string
           speed?: number | null
           timestamp?: string
+          unified_locations_user_id?: string | null
           user_consent?: boolean | null
-          user_id?: string | null
         }
         Update: {
           accuracy?: number | null
@@ -8704,8 +8704,8 @@ export type Database = {
           source?: string
           speed?: number | null
           timestamp?: string
+          unified_locations_user_id?: string | null
           user_consent?: boolean | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -8753,19 +8753,19 @@ export type Database = {
           achievement_id: string
           date_achieved: string
           id: string
-          user_id: string
+          user_achievements_user_id: string
         }
         Insert: {
           achievement_id: string
           date_achieved?: string
           id?: string
-          user_id: string
+          user_achievements_user_id: string
         }
         Update: {
           achievement_id?: string
           date_achieved?: string
           id?: string
-          user_id?: string
+          user_achievements_user_id?: string
         }
         Relationships: [
           {
@@ -8784,7 +8784,7 @@ export type Database = {
           longitude: number
           source: string | null
           timestamp: string
-          user_id: string
+          user_locations_user_id: string
         }
         Insert: {
           id?: string
@@ -8792,7 +8792,7 @@ export type Database = {
           longitude: number
           source?: string | null
           timestamp?: string
-          user_id: string
+          user_locations_user_id: string
         }
         Update: {
           id?: string
@@ -8800,7 +8800,7 @@ export type Database = {
           longitude?: number
           source?: string | null
           timestamp?: string
-          user_id?: string
+          user_locations_user_id?: string
         }
         Relationships: []
       }
@@ -8814,7 +8814,7 @@ export type Database = {
           id: string
           legs: number | null
           notes: string | null
-          user_id: string
+          user_measurements_user_id: string
           waist: number | null
           weight: number
         }
@@ -8827,7 +8827,7 @@ export type Database = {
           id?: string
           legs?: number | null
           notes?: string | null
-          user_id: string
+          user_measurements_user_id: string
           waist?: number | null
           weight: number
         }
@@ -8840,7 +8840,7 @@ export type Database = {
           id?: string
           legs?: number | null
           notes?: string | null
-          user_id?: string
+          user_measurements_user_id?: string
           waist?: number | null
           weight?: number
         }
@@ -8859,7 +8859,7 @@ export type Database = {
           location_tracking_enabled: boolean | null
           protein_target: number | null
           updated_at: string | null
-          user_id: string
+          user_preferences_user_id: string
         }
         Insert: {
           allergies?: string[] | null
@@ -8873,7 +8873,7 @@ export type Database = {
           location_tracking_enabled?: boolean | null
           protein_target?: number | null
           updated_at?: string | null
-          user_id: string
+          user_preferences_user_id: string
         }
         Update: {
           allergies?: string[] | null
@@ -8887,7 +8887,7 @@ export type Database = {
           location_tracking_enabled?: boolean | null
           protein_target?: number | null
           updated_at?: string | null
-          user_id?: string
+          user_preferences_user_id?: string
         }
         Relationships: []
       }
@@ -8898,7 +8898,7 @@ export type Database = {
           last_activity_date: string
           longeststreak: number
           streak_type: string
-          user_id: string
+          user_streaks_user_id: string
         }
         Insert: {
           currentstreak?: number
@@ -8906,7 +8906,7 @@ export type Database = {
           last_activity_date: string
           longeststreak?: number
           streak_type: string
-          user_id: string
+          user_streaks_user_id: string
         }
         Update: {
           currentstreak?: number
@@ -8914,7 +8914,7 @@ export type Database = {
           last_activity_date?: string
           longeststreak?: number
           streak_type?: string
-          user_id?: string
+          user_streaks_user_id?: string
         }
         Relationships: []
       }
@@ -8930,7 +8930,7 @@ export type Database = {
           notes: string | null
           protein_target: number
           tdee: number
-          user_id: string
+          user_tdee_user_id: string
         }
         Insert: {
           activity_level: string
@@ -8943,7 +8943,7 @@ export type Database = {
           notes?: string | null
           protein_target: number
           tdee: number
-          user_id: string
+          user_tdee_user_id: string
         }
         Update: {
           activity_level?: string
@@ -8956,7 +8956,7 @@ export type Database = {
           notes?: string | null
           protein_target?: number
           tdee?: number
-          user_id?: string
+          user_tdee_user_id?: string
         }
         Relationships: []
       }
@@ -8965,19 +8965,19 @@ export type Database = {
           created_at: string
           id: string
           type: string
-          user_id: string
+          user_types_user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           type: string
-          user_id: string
+          user_types_user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           type?: string
-          user_id?: string
+          user_types_user_id?: string
         }
         Relationships: []
       }
@@ -8995,7 +8995,7 @@ export type Database = {
           preferred_workout_types: string[] | null
           time_constraints: Json | null
           updated_at: string | null
-          user_id: string
+          user_workout_preferences_user_id: string
         }
         Insert: {
           auto_progression?: boolean | null
@@ -9010,7 +9010,7 @@ export type Database = {
           preferred_workout_types?: string[] | null
           time_constraints?: Json | null
           updated_at?: string | null
-          user_id: string
+          user_workout_preferences_user_id: string
         }
         Update: {
           auto_progression?: boolean | null
@@ -9025,7 +9025,7 @@ export type Database = {
           preferred_workout_types?: string[] | null
           time_constraints?: Json | null
           updated_at?: string | null
-          user_id?: string
+          user_workout_preferences_user_id?: string
         }
         Relationships: []
       }
@@ -9040,7 +9040,7 @@ export type Database = {
           total_time: number | null
           total_workouts: number | null
           updated_at: string | null
-          user_id: string
+          user_workout_stats_user_id: string
         }
         Insert: {
           calories_burned?: number | null
@@ -9052,7 +9052,7 @@ export type Database = {
           total_time?: number | null
           total_workouts?: number | null
           updated_at?: string | null
-          user_id: string
+          user_workout_stats_user_id: string
         }
         Update: {
           calories_burned?: number | null
@@ -9064,7 +9064,7 @@ export type Database = {
           total_time?: number | null
           total_workouts?: number | null
           updated_at?: string | null
-          user_id?: string
+          user_workout_stats_user_id?: string
         }
         Relationships: []
       }
@@ -9125,7 +9125,7 @@ export type Database = {
           new_value: Json | null
           old_value: Json | null
           reason: string | null
-          user_id: string
+          workout_adaptations_user_id: string
           workout_plan_id: string | null
         }
         Insert: {
@@ -9137,7 +9137,7 @@ export type Database = {
           new_value?: Json | null
           old_value?: Json | null
           reason?: string | null
-          user_id: string
+          workout_adaptations_user_id: string
           workout_plan_id?: string | null
         }
         Update: {
@@ -9149,7 +9149,7 @@ export type Database = {
           new_value?: Json | null
           old_value?: Json | null
           reason?: string | null
-          user_id?: string
+          workout_adaptations_user_id?: string
           workout_plan_id?: string | null
         }
         Relationships: []
@@ -9162,7 +9162,7 @@ export type Database = {
           metric_date: string
           metric_type: string
           metric_value: number
-          user_id: string
+          workout_analytics_user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -9171,7 +9171,7 @@ export type Database = {
           metric_date: string
           metric_type: string
           metric_value: number
-          user_id: string
+          workout_analytics_user_id: string
         }
         Update: {
           created_at?: string | null
@@ -9180,7 +9180,7 @@ export type Database = {
           metric_date?: string
           metric_type?: string
           metric_value?: number
-          user_id?: string
+          workout_analytics_user_id?: string
         }
         Relationships: []
       }
@@ -9196,7 +9196,7 @@ export type Database = {
           file_path: string | null
           id: string
           status: string
-          user_id: string
+          workout_data_exports_user_id: string
         }
         Insert: {
           completed_at?: string | null
@@ -9209,7 +9209,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           status?: string
-          user_id: string
+          workout_data_exports_user_id: string
         }
         Update: {
           completed_at?: string | null
@@ -9222,7 +9222,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           status?: string
-          user_id?: string
+          workout_data_exports_user_id?: string
         }
         Relationships: []
       }
@@ -9239,7 +9239,7 @@ export type Database = {
           title: string
           unit: string | null
           updated_at: string | null
-          user_id: string
+          workout_goals_user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -9253,7 +9253,7 @@ export type Database = {
           title: string
           unit?: string | null
           updated_at?: string | null
-          user_id: string
+          workout_goals_user_id: string
         }
         Update: {
           created_at?: string | null
@@ -9267,7 +9267,7 @@ export type Database = {
           title?: string
           unit?: string | null
           updated_at?: string | null
-          user_id?: string
+          workout_goals_user_id?: string
         }
         Relationships: []
       }
@@ -9279,8 +9279,8 @@ export type Database = {
           exercises_completed: number
           id: string
           total_exercises: number
-          user_id: string
           workout_day_name: string
+          workout_history_user_id: string
           workout_log_id: string
           workout_plan_name: string
         }
@@ -9291,8 +9291,8 @@ export type Database = {
           exercises_completed: number
           id?: string
           total_exercises: number
-          user_id: string
           workout_day_name: string
+          workout_history_user_id: string
           workout_log_id: string
           workout_plan_name: string
         }
@@ -9303,8 +9303,8 @@ export type Database = {
           exercises_completed?: number
           id?: string
           total_exercises?: number
-          user_id?: string
           workout_day_name?: string
+          workout_history_user_id?: string
           workout_log_id?: string
           workout_plan_name?: string
         }
@@ -9330,7 +9330,7 @@ export type Database = {
           notes: string | null
           perceived_exertion: number | null
           total_volume: number | null
-          user_id: string
+          workout_logs_user_id: string
           workout_plan_id: string
         }
         Insert: {
@@ -9344,7 +9344,7 @@ export type Database = {
           notes?: string | null
           perceived_exertion?: number | null
           total_volume?: number | null
-          user_id: string
+          workout_logs_user_id: string
           workout_plan_id: string
         }
         Update: {
@@ -9358,7 +9358,7 @@ export type Database = {
           notes?: string | null
           perceived_exertion?: number | null
           total_volume?: number | null
-          user_id?: string
+          workout_logs_user_id?: string
           workout_plan_id?: string
         }
         Relationships: [
@@ -9385,8 +9385,8 @@ export type Database = {
           total_calories_burned: number | null
           total_duration_minutes: number | null
           updated_at: string | null
-          user_id: string
           weather_conditions: string | null
+          workout_logs_enhanced_user_id: string
           workout_name: string
           workout_rating: number | null
           workout_template_id: string | null
@@ -9404,8 +9404,8 @@ export type Database = {
           total_calories_burned?: number | null
           total_duration_minutes?: number | null
           updated_at?: string | null
-          user_id: string
           weather_conditions?: string | null
+          workout_logs_enhanced_user_id: string
           workout_name: string
           workout_rating?: number | null
           workout_template_id?: string | null
@@ -9423,8 +9423,8 @@ export type Database = {
           total_calories_burned?: number | null
           total_duration_minutes?: number | null
           updated_at?: string | null
-          user_id?: string
           weather_conditions?: string | null
+          workout_logs_enhanced_user_id?: string
           workout_name?: string
           workout_rating?: number | null
           workout_template_id?: string | null
@@ -9518,8 +9518,8 @@ export type Database = {
           name: string
           template_id: string | null
           updated_at: string | null
-          user_id: string
           workout_days: Json
+          workout_plans_user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -9533,8 +9533,8 @@ export type Database = {
           name: string
           template_id?: string | null
           updated_at?: string | null
-          user_id: string
           workout_days: Json
+          workout_plans_user_id: string
         }
         Update: {
           created_at?: string | null
@@ -9548,8 +9548,8 @@ export type Database = {
           name?: string
           template_id?: string | null
           updated_at?: string | null
-          user_id?: string
           workout_days?: Json
+          workout_plans_user_id?: string
         }
         Relationships: [
           {
@@ -9578,7 +9578,7 @@ export type Database = {
           title: string | null
           type: string | null
           updated_at: string | null
-          user_id: string | null
+          workout_recommendations_user_id: string | null
         }
         Insert: {
           applied?: boolean | null
@@ -9596,7 +9596,7 @@ export type Database = {
           title?: string | null
           type?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          workout_recommendations_user_id?: string | null
         }
         Update: {
           applied?: boolean | null
@@ -9614,7 +9614,7 @@ export type Database = {
           title?: string | null
           type?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          workout_recommendations_user_id?: string | null
         }
         Relationships: []
       }
@@ -9625,7 +9625,7 @@ export type Database = {
           reminder_time: string
           sent_at: string | null
           status: string
-          user_id: string
+          workout_reminders_user_id: string
           workout_session_id: string
         }
         Insert: {
@@ -9634,7 +9634,7 @@ export type Database = {
           reminder_time: string
           sent_at?: string | null
           status?: string
-          user_id: string
+          workout_reminders_user_id: string
           workout_session_id: string
         }
         Update: {
@@ -9643,7 +9643,7 @@ export type Database = {
           reminder_time?: string
           sent_at?: string | null
           status?: string
-          user_id?: string
+          workout_reminders_user_id?: string
           workout_session_id?: string
         }
         Relationships: [
@@ -9670,8 +9670,8 @@ export type Database = {
           start_date: string
           timezone: string
           updated_at: string | null
-          user_id: string
           workout_plan_id: string
+          workout_schedules_user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -9686,8 +9686,8 @@ export type Database = {
           start_date: string
           timezone?: string
           updated_at?: string | null
-          user_id: string
           workout_plan_id: string
+          workout_schedules_user_id: string
         }
         Update: {
           created_at?: string | null
@@ -9702,8 +9702,8 @@ export type Database = {
           start_date?: string
           timezone?: string
           updated_at?: string | null
-          user_id?: string
           workout_plan_id?: string
+          workout_schedules_user_id?: string
         }
         Relationships: [
           {
@@ -9728,10 +9728,10 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string | null
-          user_id: string
           workout_data: Json | null
           workout_plan_id: string
           workout_schedule_id: string | null
+          workout_sessions_user_id: string
         }
         Insert: {
           calories_burned?: number | null
@@ -9745,10 +9745,10 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string | null
-          user_id: string
           workout_data?: Json | null
           workout_plan_id: string
           workout_schedule_id?: string | null
+          workout_sessions_user_id: string
         }
         Update: {
           calories_burned?: number | null
@@ -9762,10 +9762,10 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string | null
-          user_id?: string
           workout_data?: Json | null
           workout_plan_id?: string
           workout_schedule_id?: string | null
+          workout_sessions_user_id?: string
         }
         Relationships: [
           {
@@ -9791,7 +9791,7 @@ export type Database = {
           id: string
           share_id: string | null
           updated_at: string | null
-          user_id: string
+          workout_share_comments_user_id: string
         }
         Insert: {
           content: string
@@ -9799,7 +9799,7 @@ export type Database = {
           id?: string
           share_id?: string | null
           updated_at?: string | null
-          user_id: string
+          workout_share_comments_user_id: string
         }
         Update: {
           content?: string
@@ -9807,7 +9807,7 @@ export type Database = {
           id?: string
           share_id?: string | null
           updated_at?: string | null
-          user_id?: string
+          workout_share_comments_user_id?: string
         }
         Relationships: [
           {
@@ -9824,19 +9824,19 @@ export type Database = {
           created_at: string | null
           id: string
           share_id: string | null
-          user_id: string
+          workout_share_likes_user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           share_id?: string | null
-          user_id: string
+          workout_share_likes_user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
           share_id?: string | null
-          user_id?: string
+          workout_share_likes_user_id?: string
         }
         Relationships: [
           {
@@ -9859,9 +9859,9 @@ export type Database = {
           share_type: string
           title: string
           updated_at: string | null
-          user_id: string
           workout_log_id: string | null
           workout_plan_id: string | null
+          workout_shares_user_id: string
         }
         Insert: {
           comments_count?: number | null
@@ -9873,9 +9873,9 @@ export type Database = {
           share_type: string
           title: string
           updated_at?: string | null
-          user_id: string
           workout_log_id?: string | null
           workout_plan_id?: string | null
+          workout_shares_user_id: string
         }
         Update: {
           comments_count?: number | null
@@ -9887,9 +9887,9 @@ export type Database = {
           share_type?: string
           title?: string
           updated_at?: string | null
-          user_id?: string
           workout_log_id?: string | null
           workout_plan_id?: string | null
+          workout_shares_user_id?: string
         }
         Relationships: [
           {
@@ -10615,8 +10615,8 @@ export type Database = {
           source: string
           speed: number | null
           timestamp: string
+          unified_locations_user_id: string | null
           user_consent: boolean | null
-          user_id: string | null
         }[]
       }
       find_nearest_restaurant: {
@@ -10978,10 +10978,10 @@ export type Database = {
           anonymize_location_data: boolean | null
           anonymize_usage_patterns: boolean | null
           created_at: string | null
+          data_anonymization_settings_user_id: string | null
           id: string
           precision_reduction_level: number | null
           updated_at: string | null
-          user_id: string | null
         }
       }
       get_or_create_delivery_location_settings: {
@@ -11017,9 +11017,9 @@ export type Database = {
           created_at: string | null
           export_format: string | null
           id: string
+          location_data_retention_policies_user_id: string | null
           retention_period_days: number
           updated_at: string | null
-          user_id: string | null
         }
       }
       get_or_create_sharing_preferences: {
@@ -11033,8 +11033,8 @@ export type Database = {
           location_sharing_partners: Json | null
           marketing_sharing: boolean | null
           research_sharing: boolean | null
+          third_party_sharing_preferences_user_id: string | null
           updated_at: string | null
-          user_id: string | null
         }
       }
       get_order_preparation_progress: {
