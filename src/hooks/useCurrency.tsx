@@ -3,12 +3,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
+// Define a simple Currency type
 interface Currency {
   code: string;
   symbol: string;
   exchangeRate: number;
 }
 
+// Currency list
 const currencies: Record<string, Currency> = {
   USD: { code: 'USD', symbol: '$', exchangeRate: 1 },
   EUR: { code: 'EUR', symbol: '€', exchangeRate: 0.92 },
@@ -24,11 +26,13 @@ type CurrencyContextType = {
   convertPrice: (priceInUSD: number) => number;
 };
 
+// Default currency
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-// Use "null" for initial context to avoid deep union issues
+// Set explicit type parameter and default value for context
 const CurrencyContext = createContext<CurrencyContextType | null>(null);
 
+// Provider implementation
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [currentCurrency, setCurrentCurrency] = useState<Currency>(defaultCurrency);
@@ -53,17 +57,18 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     fetchUserCurrency();
 
-    const handleCurrencyChange = (event: CustomEvent) => {
-      const currencyCode = event.detail;
+    // Listen for "currency-changed" event
+    const handleCurrencyChange = (event: Event) => {
+      const currencyCode = (event as CustomEvent).detail;
       if (currencies[currencyCode]) {
         setCurrentCurrency(currencies[currencyCode]);
       }
     };
 
-    window.addEventListener('currency-changed', handleCurrencyChange as EventListener);
+    window.addEventListener('currency-changed', handleCurrencyChange);
 
     return () => {
-      window.removeEventListener('currency-changed', handleCurrencyChange as EventListener);
+      window.removeEventListener('currency-changed', handleCurrencyChange);
     };
   }, [user]);
 
@@ -77,13 +82,20 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const convertPrice = (priceInUSD: number): number => priceInUSD * currentCurrency.exchangeRate;
 
+  const value: CurrencyContextType = {
+    currentCurrency,
+    formatPrice,
+    convertPrice,
+  };
+
   return (
-    <CurrencyContext.Provider value={{ currentCurrency, formatPrice, convertPrice }}>
+    <CurrencyContext.Provider value={value}>
       {children}
     </CurrencyContext.Provider>
   );
 };
 
+// Custom hook to consume context
 export const useCurrency = (): CurrencyContextType => {
   const context = useContext(CurrencyContext);
   if (!context) {
