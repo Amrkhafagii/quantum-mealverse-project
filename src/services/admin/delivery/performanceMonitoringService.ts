@@ -24,6 +24,7 @@ export class PerformanceMonitoringService {
       .from('delivery_users')
       .select('average_rating, first_name, last_name')
       .eq('id', deliveryUserId)
+      .returns<any[]>()
       .single();
 
     if (user && user.average_rating !== undefined && user.average_rating < 3.0) {

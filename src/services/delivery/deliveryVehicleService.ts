@@ -7,10 +7,10 @@ export const getVehicleByDeliveryUserId = async (
   deliveryUserId: string
 ): Promise<DeliveryVehicle | null> => {
   try {
-    // Explicit select for all fields
+    // Use .select('*') for correct Supabase typing
     const { data, error } = await supabase
       .from('delivery_vehicles')
-      .select('*, vehicle_type, is_active')
+      .select('*')
       .eq('delivery_user_id', deliveryUserId)
       .maybeSingle();
 
