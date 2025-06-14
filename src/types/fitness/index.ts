@@ -9,7 +9,33 @@ export * from './workouts';
 export * from './achievements';
 export * from './nutrition';
 
-// Note: Do not re-define or duplicate interfaces here.
-// All types should be imported from their native module. 
-// This avoids type recursion/instantiation errors.
+// Direct type exports for types used across various modules:
+export type {
+  // Core data types
+  SavedMealPlan,
+  SavedMealPlanWithExpiry,
+  WorkoutPlan,
+  WorkoutDay,
+  WorkoutLog,
+  WorkoutHistoryItem,
+  WorkoutSet,
+  Exercise,
+  CompletedExercise,
+  UserMeasurement,
+  UserProfile,
+  WorkoutSchedule,
+  Achievement,
+  UserAchievement,
+  UserWorkoutStats,
+  // Achievements
+  Team,
+  TeamMember,
+  // Recommendations + Quests + Goals
+  WorkoutRecommendation,
+  DailyQuest,
+  FitnessGoal,
+  GoalStatus,
+  // Scheduling/calendar types
+  CalendarEvent
+} from '../fitness.d.ts';
 
