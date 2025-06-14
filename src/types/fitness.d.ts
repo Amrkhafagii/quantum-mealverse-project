@@ -152,6 +152,7 @@ export interface UserAchievement {
 
 // UserWorkoutStats interface
 export interface UserWorkoutStats {
+  user_id?: string; // ADDED: for v2 compatibility
   total_workouts?: number;
   streak?: number;
   achievements?: number;
@@ -196,6 +197,7 @@ export type DailyQuest = {
 export type FitnessGoal = {
   id: string;
   fitness_goals_user_id: string;
+  user_id?: string; // ADDED for v2/x-compatibility in analytics
   name: string;
   description?: string;
   target_value: number;

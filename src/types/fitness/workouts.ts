@@ -1,4 +1,3 @@
-
 export interface WorkoutPlan {
   id: string;
   workout_plans_user_id: string; // Updated to match new naming convention
@@ -129,7 +128,6 @@ export interface WorkoutLog {
   calories_burned?: number | null;
   notes?: string | null;
   completed_exercises?: CompletedExercise[]; // Made optional for backward compatibility
-  
   // Backward compatibility fields
   user_id?: string;
   duration_minutes?: number;
