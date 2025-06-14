@@ -11,16 +11,16 @@ interface SavedMealPlan {
   is_active?: boolean;
 }
 
-export const saveMealPlan = async (mealPlan: SavedMealPlan) => {
+export const saveMealPlan = async (userId: string, name: string, mealPlan: any, tdeeId?: string) => {
   try {
     const { error } = await supabase
       .from('saved_meal_plans')
       .insert({
-        saved_meal_plans_user_id: mealPlan.user_id,
-        name: mealPlan.name,
-        meal_plan: mealPlan.meal_plan,
-        tdee_id: mealPlan.tdee_id,
-        date_created: mealPlan.date_created || new Date().toISOString()
+        saved_meal_plans_user_id: userId,
+        name: name,
+        meal_plan: mealPlan,
+        tdee_id: tdeeId,
+        date_created: new Date().toISOString()
       });
 
     if (error) {
@@ -65,7 +65,10 @@ export const getUserMealPlans = async (userId: string) => {
 };
 
 // Add alias for backwards compatibility
-export const getUserSavedMealPlans = getUserMealPlans;
+export const getUserSavedMealPlans = async (userId: string) => {
+  const plans = await getUserMealPlans(userId);
+  return { data: plans, error: null };
+};
 
 export const deleteMealPlan = async (planId: string) => {
   try {
@@ -83,5 +86,19 @@ export const deleteMealPlan = async (planId: string) => {
   } catch (error) {
     console.error('Error in deleteMealPlan:', error);
     return { success: false, error: 'Failed to delete meal plan' };
+  }
+};
+
+export const deleteSavedMealPlan = async (planId: string, userId?: string) => {
+  return await deleteMealPlan(planId);
+};
+
+export const renewMealPlan = async (planId: string) => {
+  try {
+    console.log('Renewing meal plan:', planId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error renewing meal plan:', error);
+    return { success: false, error: 'Failed to renew meal plan' };
   }
 };

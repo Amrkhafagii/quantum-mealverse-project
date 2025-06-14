@@ -67,15 +67,23 @@ export const generateProgressInsights = async (userId: string) => {
     return {
       weeklyProgress: 0,
       monthlyProgress: 0,
-      trends: [],
-      recommendations: ['Keep up the good work!']
+      trends: {
+        weight: 'insufficient_data' as const,
+        bodyFat: 'insufficient_data' as const
+      },
+      insights: ['Keep up the good work!'],
+      recommendations: ['Stay consistent with your routine']
     };
   } catch (error) {
     console.error('Error generating progress insights:', error);
     return {
       weeklyProgress: 0,
       monthlyProgress: 0,
-      trends: [],
+      trends: {
+        weight: 'insufficient_data' as const,
+        bodyFat: 'insufficient_data' as const
+      },
+      insights: [],
       recommendations: []
     };
   }

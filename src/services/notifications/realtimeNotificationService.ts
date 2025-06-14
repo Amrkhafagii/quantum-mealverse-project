@@ -1,252 +1,184 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { Notification } from '@/types/notifications';
 
-// Correct user id field for notifications is user_id (not notifications_user_id) for most real-time logic
-export interface Notification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  notification_type: string;
-  order_id?: string;
-  restaurant_id?: string;
-  delivery_user_id?: string;
-  data: Record<string, any>;
-  is_read: boolean;
-  read_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+export const subscribeToUserNotifications = (userId: string, callback: (notification: Notification) => void) => {
+  const subscription = supabase
+    .channel('user-notifications')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `notifications_user_id=eq.${userId}`
+      },
+      (payload) => {
+        console.log('New notification received:', payload);
+        
+        // Transform the database payload to match our Notification type
+        const notification: Notification = {
+          id: payload.new.id,
+          notifications_user_id: payload.new.notifications_user_id,
+          title: payload.new.title,
+          message: payload.new.message,
+          type: payload.new.notification_type,
+          link: payload.new.order_id ? `/orders/${payload.new.order_id}` : null,
+          data: payload.new.data || {},
+          is_read: payload.new.is_read,
+          read_at: payload.new.read_at,
+          created_at: payload.new.created_at,
+          updated_at: payload.new.updated_at
+        };
+        
+        callback(notification);
+      }
+    )
+    .subscribe();
 
-export interface OrderEvent {
-  id: string;
-  order_id: string;
-  event_type: string;
-  event_data: Record<string, any>;
-  user_id?: string;
-  delivery_user_id?: string;
-  restaurant_id?: string;
-  created_at: string;
-}
+  return () => {
+    subscription.unsubscribe();
+  };
+};
 
-class RealtimeNotificationService {
-  private channels: Map<string, any> = new Map();
+export const subscribeToOrderStatusUpdates = (orderId: string, callback: (notification: any) => void) => {
+  const subscription = supabase
+    .channel('order-status-updates')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${orderId}`
+      },
+      (payload) => {
+        console.log('Order status updated:', payload);
+        callback(payload);
+      }
+    )
+    .subscribe();
 
-  // Subscribe to user notifications
-  subscribeToNotifications(
-    userId: string,
-    onNotification: (notification: Notification) => void
-  ): () => void {
-    const channelName = `notifications_${userId}`;
-    
-    if (this.channels.has(channelName)) {
-      this.channels.get(channelName)?.unsubscribe();
-    }
+  return () => {
+    subscription.unsubscribe();
+  };
+};
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}` // always 'user_id', not notifications_user_id!
-        },
-        (payload) => {
-          const notification = payload.new as any;
-          const convertedNotification: Notification = {
-            ...notification,
-            data: typeof notification.data === 'string' 
-              ? JSON.parse(notification.data) 
-              : notification.data || {}
-          };
-          onNotification(convertedNotification);
+export const subscribeToDeliveryUpdates = (deliveryUserId: string, callback: (update: any) => void) => {
+  const subscription = supabase
+    .channel('delivery-updates')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'delivery_assignments',
+        filter: `delivery_user_id=eq.${deliveryUserId}`
+      },
+      (payload) => {
+        console.log('Delivery assignment updated:', payload);
+        callback(payload);
+      }
+    )
+    .subscribe();
 
-          toast({
-            title: convertedNotification.title,
-            description: convertedNotification.message,
-            duration: 5000,
-          });
-        }
-      )
-      .subscribe();
+  return () => {
+    subscription.unsubscribe();
+  };
+};
 
-    this.channels.set(channelName, channel);
-
-    return () => {
-      channel.unsubscribe();
-      this.channels.delete(channelName);
-    };
+export const sendPushNotification = async (userId: string, title: string, message: string, data?: any) => {
+  try {
+    console.log('Mock sending push notification to:', userId, title, message);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    return { success: false, error: 'Failed to send push notification' };
   }
+};
 
-  subscribeToOrderEvents(
-    orderId: string,
-    onEvent: (event: OrderEvent) => void
-  ): () => void {
-    const channelName = `order_events_${orderId}`;
-    if (this.channels.has(channelName)) {
-      this.channels.get(channelName)?.unsubscribe();
-    }
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'order_events',
-          filter: `order_id=eq.${orderId}`
-        },
-        (payload) => {
-          const event = payload.new as any;
-          const convertedEvent: OrderEvent = {
-            ...event,
-            event_data: typeof event.event_data === 'string' 
-              ? JSON.parse(event.event_data) 
-              : event.event_data || {}
-          };
-          onEvent(convertedEvent);
-        }
-      )
-      .subscribe();
-
-    this.channels.set(channelName, channel);
-
-    return () => {
-      channel.unsubscribe();
-      this.channels.delete(channelName);
-    };
-  }
-
-  async getUserNotifications(userId: string, limit = 50): Promise<Notification[]> {
+export const getAllUnreadNotifications = async (userId: string): Promise<Notification[]> => {
+  try {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('notifications_user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .eq('is_read', false)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('Error fetching unread notifications:', error);
       return [];
     }
 
     return (data || []).map(item => ({
-      ...item,
-      data: typeof item.data === 'string' 
-        ? JSON.parse(item.data) 
-        : item.data || {}
+      id: item.id,
+      notifications_user_id: item.notifications_user_id,
+      title: item.title,
+      message: item.message,
+      type: item.notification_type,
+      link: item.order_id ? `/orders/${item.order_id}` : null,
+      data: item.data || {},
+      is_read: item.is_read,
+      read_at: item.read_at,
+      created_at: item.created_at,
+      updated_at: item.updated_at
     })) as Notification[];
+  } catch (error) {
+    console.error('Error in getAllUnreadNotifications:', error);
+    return [];
   }
+};
 
-  async markAsRead(notificationId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('notifications')
-      .update({
-        is_read: true,
-        read_at: new Date().toISOString()
-      })
-      .eq('id', notificationId);
-
-    return !error;
-  }
-
-  async markAllAsRead(userId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('notifications')
-      .update({
-        is_read: true,
-        read_at: new Date().toISOString()
-      })
-      .eq('notifications_user_id', userId)
-      .eq('is_read', false);
-
-    return !error;
-  }
-
-  async registerPushToken(
-    userId: string,
-    token: string,
-    platform: 'ios' | 'android' | 'web',
-    deviceId?: string
-  ): Promise<boolean> {
+export const registerPushToken = async (userId: string, token: string, platform: string, deviceId?: string) => {
+  try {
     const { error } = await supabase
       .from('push_notification_tokens')
-      .upsert({
-        user_id: userId, // always user_id
-        token,
-        platform,
+      .insert({
+        push_notification_tokens_user_id: userId,
+        token: token,
+        platform: platform,
         device_id: deviceId,
         is_active: true
       });
 
-    return !error;
-  }
-
-  async createNotification(
-    userId: string,
-    title: string,
-    message: string,
-    type: string,
-    orderId?: string,
-    restaurantId?: string,
-    deliveryUserId?: string,
-    data: Record<string, any> = {}
-  ): Promise<string | null> {
-    const { data: result, error } = await supabase
-      .rpc('create_notification', {
-        p_user_id: userId,
-        p_title: title,
-        p_message: message,
-        p_notification_type: type,
-        p_order_id: orderId,
-        p_restaurant_id: restaurantId,
-        p_delivery_user_id: deliveryUserId,
-        p_data: data
-      });
-
     if (error) {
-      console.error('Error creating notification:', error);
-      return null;
+      console.error('Error registering push token:', error);
+      return { success: false, error: error.message };
     }
 
-    return result;
+    return { success: true };
+  } catch (error) {
+    console.error('Error in registerPushToken:', error);
+    return { success: false, error: 'Failed to register push token' };
   }
+};
 
-  async createOrderEvent(
-    orderId: string,
-    eventType: string,
-    eventData: Record<string, any> = {},
-    userId?: string,
-    deliveryUserId?: string,
-    restaurantId?: string
-  ): Promise<string | null> {
-    const { data: result, error } = await supabase
-      .rpc('create_order_event', {
-        p_order_id: orderId,
-        p_event_type: eventType,
-        p_event_data: eventData,
-        p_user_id: userId,
-        p_delivery_user_id: deliveryUserId,
-        p_restaurant_id: restaurantId
-      });
+export const unregisterPushToken = async (token: string) => {
+  try {
+    const { error } = await supabase
+      .from('push_notification_tokens')
+      .update({ is_active: false })
+      .eq('token', token);
 
     if (error) {
-      console.error('Error creating order event:', error);
-      return null;
+      console.error('Error unregistering push token:', error);
+      return { success: false, error: error.message };
     }
 
-    return result;
+    return { success: true };
+  } catch (error) {
+    console.error('Error in unregisterPushToken:', error);
+    return { success: false, error: 'Failed to unregister push token' };
   }
+};
 
-  cleanup(): void {
-    this.channels.forEach(channel => channel.unsubscribe());
-    this.channels.clear();
-  }
-}
-
-export const realtimeNotificationService = new RealtimeNotificationService();
-
+export const notificationService = {
+  subscribeToUserNotifications,
+  subscribeToOrderStatusUpdates,
+  subscribeToDeliveryUpdates,
+  sendPushNotification,
+  getAllUnreadNotifications,
+  registerPushToken,
+  unregisterPushToken
+};

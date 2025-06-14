@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem } from '../orderService';
-import { handleDatabaseError } from '../errors/orderErrorHandler';
 
 /**
  * Raw database query functions - single responsibility for data access
@@ -28,7 +27,7 @@ export const queryOrderById = async (
       .single();
 
     if (error) {
-      handleDatabaseError(error, 'queryOrderById', { orderId });
+      console.error('Error in queryOrderById:', error);
       return null;
     }
 
@@ -58,7 +57,7 @@ export const queryUserOrders = async (
       .order('created_at', { ascending: false });
 
     if (error) {
-      handleDatabaseError(error, 'queryUserOrders', { userId });
+      console.error('Error in queryUserOrders:', error);
       return [];
     }
 
@@ -86,7 +85,7 @@ export const queryOrderItems = async (
       .eq('order_id', orderId);
 
     if (error) {
-      handleDatabaseError(error, 'queryOrderItems', { orderId });
+      console.error('Error in queryOrderItems:', error);
       return [];
     }
 
@@ -105,7 +104,7 @@ export const performOrderUpdate = async (orderId: string, updateData: any): Prom
       .eq('id', orderId);
 
     if (error) {
-      handleDatabaseError(error, 'performOrderUpdate', { orderId });
+      console.error('Error in performOrderUpdate:', error);
       return false;
     }
 

@@ -1,139 +1,160 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-interface DeliveryInfo {
+export interface DeliveryAddress {
+  id?: string;
   user_id: string;
   full_name: string;
-  email: string;
   phone: string;
+  email?: string;
   address: string;
   city: string;
   latitude?: number;
   longitude?: number;
+  is_default?: boolean;
 }
 
-/**
- * Saves or updates delivery information in the database
- * @param deliveryInfo - The delivery information to save
- * @returns Promise with success status and optional error message
- */
-export const saveDeliveryInfo = async (deliveryInfo: DeliveryInfo): Promise<{ success: boolean; error?: string }> => {
+export const saveDeliveryAddress = async (address: DeliveryAddress) => {
   try {
-    console.log(`Saving delivery info for user ${deliveryInfo.user_id}`);
-    
-    // Check if user already has a delivery address
-    const { data: existingAddress, error: fetchError } = await supabase
+    const { data, error } = await supabase
       .from('delivery_addresses')
-      .select('*')
-      .eq('user_id', deliveryInfo.user_id)
-      .eq('is_default', true)
-      .single();
-
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error('Error checking existing delivery address:', fetchError);
-      return { 
-        success: false, 
-        error: 'Failed to check existing delivery information' 
-      };
-    }
-
-    let result;
-    if (existingAddress) {
-      // Update existing address
-      result = await supabase
-        .from('delivery_addresses')
-        .update({
-          full_name: deliveryInfo.full_name,
-          email: deliveryInfo.email,
-          phone: deliveryInfo.phone,
-          address: deliveryInfo.address,
-          city: deliveryInfo.city,
-          latitude: deliveryInfo.latitude,
-          longitude: deliveryInfo.longitude,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingAddress.id);
-    } else {
-      // Create new address
-      result = await supabase
-        .from('delivery_addresses')
-        .insert({
-          user_id: deliveryInfo.user_id,
-          full_name: deliveryInfo.full_name,
-          email: deliveryInfo.email,
-          phone: deliveryInfo.phone,
-          address: deliveryInfo.address,
-          city: deliveryInfo.city,
-          latitude: deliveryInfo.latitude,
-          longitude: deliveryInfo.longitude,
-          is_default: true
-        });
-    }
-
-    if (result.error) {
-      console.error('Error saving delivery info:', result.error);
-      return { 
-        success: false, 
-        error: 'Failed to save delivery information' 
-      };
-    }
-
-    console.log(`Successfully saved delivery info for user ${deliveryInfo.user_id}`);
-    return { success: true };
-
-  } catch (error) {
-    console.error('Critical error in saveDeliveryInfo:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error occurred' 
-    };
-  }
-};
-
-/**
- * Retrieves delivery information for a user from the database
- * @param userId - The user ID
- * @returns Promise with delivery info or null if not found
- */
-export const getDeliveryInfo = async (userId: string): Promise<DeliveryInfo | null> => {
-  try {
-    console.log(`Fetching delivery info for user ${userId}`);
-    
-    const { data: deliveryAddress, error } = await supabase
-      .from('delivery_addresses')
-      .select('*')
-      .eq('delivery_addresses_user_id', userId)
-      .eq('is_default', true)
+      .insert({
+        delivery_addresses_user_id: address.user_id,
+        full_name: address.full_name,
+        phone: address.phone,
+        email: address.email,
+        address: address.address,
+        city: address.city,
+        latitude: address.latitude,
+        longitude: address.longitude,
+        is_default: address.is_default || false
+      })
+      .select()
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') { // No rows found
-        console.log(`No delivery info found for user ${userId}`);
-        return null;
-      }
-      console.error('Error fetching delivery info:', error);
-      return null;
+      console.error('Error saving delivery address:', error);
+      return { success: false, error: error.message };
     }
 
-    if (!deliveryAddress) {
-      console.log(`No delivery info found for user ${userId}`);
-      return null;
-    }
-
-    console.log(`Successfully retrieved delivery info for user ${userId}`);
-    
-    return {
-      user_id: deliveryAddress.user_id,
-      full_name: deliveryAddress.full_name,
-      email: deliveryAddress.email || '',
-      phone: deliveryAddress.phone,
-      address: deliveryAddress.address,
-      city: deliveryAddress.city,
-      latitude: deliveryAddress.latitude,
-      longitude: deliveryAddress.longitude
-    };
+    return { success: true, data };
   } catch (error) {
-    console.error('Error getting delivery info:', error);
-    return null;
+    console.error('Error in saveDeliveryAddress:', error);
+    return { success: false, error: 'Failed to save delivery address' };
   }
+};
+
+export const getUserDeliveryAddresses = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('delivery_addresses')
+      .select('*')
+      .eq('delivery_addresses_user_id', userId)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching delivery addresses:', error);
+      return [];
+    }
+
+    // Map to our interface format
+    return (data || []).map(item => ({
+      id: item.id,
+      user_id: item.delivery_addresses_user_id,
+      full_name: item.full_name,
+      phone: item.phone,
+      email: item.email,
+      address: item.address,
+      city: item.city,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      is_default: item.is_default
+    }));
+  } catch (error) {
+    console.error('Error in getUserDeliveryAddresses:', error);
+    return [];
+  }
+};
+
+export const updateDeliveryAddress = async (addressId: string, updates: Partial<DeliveryAddress>) => {
+  try {
+    const { error } = await supabase
+      .from('delivery_addresses')
+      .update({
+        full_name: updates.full_name,
+        phone: updates.phone,
+        email: updates.email,
+        address: updates.address,
+        city: updates.city,
+        latitude: updates.latitude,
+        longitude: updates.longitude,
+        is_default: updates.is_default,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', addressId);
+
+    if (error) {
+      console.error('Error updating delivery address:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in updateDeliveryAddress:', error);
+    return { success: false, error: 'Failed to update delivery address' };
+  }
+};
+
+export const deleteDeliveryAddress = async (addressId: string) => {
+  try {
+    const { error } = await supabase
+      .from('delivery_addresses')
+      .delete()
+      .eq('id', addressId);
+
+    if (error) {
+      console.error('Error deleting delivery address:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in deleteDeliveryAddress:', error);
+    return { success: false, error: 'Failed to delete delivery address' };
+  }
+};
+
+export const setDefaultDeliveryAddress = async (addressId: string, userId: string) => {
+  try {
+    // First, unset all default addresses for this user
+    await supabase
+      .from('delivery_addresses')
+      .update({ is_default: false })
+      .eq('delivery_addresses_user_id', userId);
+
+    // Then set the specified address as default
+    const { error } = await supabase
+      .from('delivery_addresses')
+      .update({ is_default: true })
+      .eq('id', addressId);
+
+    if (error) {
+      console.error('Error setting default delivery address:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in setDefaultDeliveryAddress:', error);
+    return { success: false, error: 'Failed to set default delivery address' };
+  }
+};
+
+export const deliveryService = {
+  saveDeliveryAddress,
+  getUserDeliveryAddresses,
+  updateDeliveryAddress,
+  deleteDeliveryAddress,
+  setDefaultDeliveryAddress
 };

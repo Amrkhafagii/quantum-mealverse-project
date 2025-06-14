@@ -1,20 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-interface MealPlanCustomization {
-  id?: string;
-  user_id: string;
-  meal_id?: string;
-  meal_plan_id?: string;
-  dietary_preferences?: string[];
-  ingredient_substitutions?: any;
-  portion_size_multiplier?: number;
-  servings_count?: number;
-  special_instructions?: string;
-  total_price_adjustment?: number;
-  created_at?: string;
-  updated_at?: string;
-}
+import { 
+  MealCustomizationOption, 
+  IngredientSubstitution, 
+  MealPlanCustomization,
+  MealCustomizationSummary 
+} from '@/types/mealCustomization';
 
 export const saveMealCustomization = async (customization: MealPlanCustomization) => {
   try {
@@ -22,16 +13,14 @@ export const saveMealCustomization = async (customization: MealPlanCustomization
       .from('meal_plan_customizations')
       .insert({
         meal_plan_customizations_user_id: customization.user_id,
-        meal_id: customization.meal_id,
         meal_plan_id: customization.meal_plan_id,
-        dietary_preferences: customization.dietary_preferences || [],
-        ingredient_substitutions: customization.ingredient_substitutions || {},
-        portion_size_multiplier: customization.portion_size_multiplier || 1,
-        servings_count: customization.servings_count || 1,
-        special_instructions: customization.special_instructions || '',
-        total_price_adjustment: customization.total_price_adjustment || 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        meal_id: customization.meal_id,
+        servings_count: customization.servings_count,
+        portion_size_multiplier: customization.portion_size_multiplier,
+        dietary_preferences: customization.dietary_preferences,
+        ingredient_substitutions: customization.ingredient_substitutions,
+        special_instructions: customization.special_instructions,
+        total_price_adjustment: customization.total_price_adjustment
       });
 
     if (error) {
@@ -51,26 +40,24 @@ export const getUserMealCustomizations = async (userId: string): Promise<MealPla
     const { data, error } = await supabase
       .from('meal_plan_customizations')
       .select('*')
-      .eq('meal_plan_customizations_user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq('meal_plan_customizations_user_id', userId);
 
     if (error) {
       console.error('Error fetching meal customizations:', error);
       return [];
     }
 
-    // Map database fields to application format
     return (data || []).map(item => ({
       id: item.id,
       user_id: item.meal_plan_customizations_user_id,
-      meal_id: item.meal_id,
       meal_plan_id: item.meal_plan_id,
-      dietary_preferences: item.dietary_preferences,
-      ingredient_substitutions: item.ingredient_substitutions,
-      portion_size_multiplier: item.portion_size_multiplier,
+      meal_id: item.meal_id,
       servings_count: item.servings_count,
-      special_instructions: item.special_instructions,
-      total_price_adjustment: item.total_price_adjustment,
+      portion_size_multiplier: item.portion_size_multiplier,
+      dietary_preferences: item.dietary_preferences || [],
+      ingredient_substitutions: item.ingredient_substitutions || {},
+      special_instructions: item.special_instructions || '',
+      total_price_adjustment: item.total_price_adjustment || 0,
       created_at: item.created_at,
       updated_at: item.updated_at
     })) as MealPlanCustomization[];
@@ -95,18 +82,17 @@ export const getMealCustomizationById = async (customizationId: string): Promise
 
     if (!data) return null;
 
-    // Map database fields to application format
     return {
       id: data.id,
       user_id: data.meal_plan_customizations_user_id,
-      meal_id: data.meal_id,
       meal_plan_id: data.meal_plan_id,
-      dietary_preferences: data.dietary_preferences,
-      ingredient_substitutions: data.ingredient_substitutions,
-      portion_size_multiplier: data.portion_size_multiplier,
+      meal_id: data.meal_id,
       servings_count: data.servings_count,
-      special_instructions: data.special_instructions,
-      total_price_adjustment: data.total_price_adjustment,
+      portion_size_multiplier: data.portion_size_multiplier,
+      dietary_preferences: data.dietary_preferences || [],
+      ingredient_substitutions: data.ingredient_substitutions || {},
+      special_instructions: data.special_instructions || '',
+      total_price_adjustment: data.total_price_adjustment || 0,
       created_at: data.created_at,
       updated_at: data.updated_at
     } as MealPlanCustomization;
@@ -118,23 +104,17 @@ export const getMealCustomizationById = async (customizationId: string): Promise
 
 export const updateMealCustomization = async (customizationId: string, updates: Partial<MealPlanCustomization>) => {
   try {
-    const dbUpdates: any = {
-      updated_at: new Date().toISOString()
-    };
-
-    // Only include fields that exist in the database
-    if (updates.meal_id !== undefined) dbUpdates.meal_id = updates.meal_id;
-    if (updates.meal_plan_id !== undefined) dbUpdates.meal_plan_id = updates.meal_plan_id;
-    if (updates.dietary_preferences !== undefined) dbUpdates.dietary_preferences = updates.dietary_preferences;
-    if (updates.ingredient_substitutions !== undefined) dbUpdates.ingredient_substitutions = updates.ingredient_substitutions;
-    if (updates.portion_size_multiplier !== undefined) dbUpdates.portion_size_multiplier = updates.portion_size_multiplier;
-    if (updates.servings_count !== undefined) dbUpdates.servings_count = updates.servings_count;
-    if (updates.special_instructions !== undefined) dbUpdates.special_instructions = updates.special_instructions;
-    if (updates.total_price_adjustment !== undefined) dbUpdates.total_price_adjustment = updates.total_price_adjustment;
-
     const { error } = await supabase
       .from('meal_plan_customizations')
-      .update(dbUpdates)
+      .update({
+        servings_count: updates.servings_count,
+        portion_size_multiplier: updates.portion_size_multiplier,
+        dietary_preferences: updates.dietary_preferences,
+        ingredient_substitutions: updates.ingredient_substitutions,
+        special_instructions: updates.special_instructions,
+        total_price_adjustment: updates.total_price_adjustment,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', customizationId);
 
     if (error) {
@@ -168,11 +148,54 @@ export const deleteMealCustomization = async (customizationId: string) => {
   }
 };
 
-// Export service object for backwards compatibility
+// Mock implementations for missing methods
+export const getMealCustomizationOptions = async (mealId: string): Promise<MealCustomizationOption[]> => {
+  console.log('Mock getMealCustomizationOptions for meal:', mealId);
+  return [];
+};
+
+export const getIngredientSubstitutions = async (): Promise<IngredientSubstitution[]> => {
+  console.log('Mock getIngredientSubstitutions');
+  return [];
+};
+
+export const getDietaryPreferences = async (): Promise<string[]> => {
+  console.log('Mock getDietaryPreferences');
+  return ['vegetarian', 'vegan', 'gluten-free', 'dairy-free'];
+};
+
+export const calculateCustomizationSummary = async (
+  mealId: string,
+  servingsCount: number,
+  portionMultiplier: number,
+  selectedSubstitutions: IngredientSubstitution[],
+  selectedOptions: MealCustomizationOption[]
+): Promise<MealCustomizationSummary> => {
+  console.log('Mock calculateCustomizationSummary');
+  return {
+    base_price: 10.99,
+    total_cost: 10.99 * servingsCount * portionMultiplier,
+    adjusted_calories: 500 * servingsCount * portionMultiplier,
+    adjusted_protein: 25 * servingsCount * portionMultiplier,
+    adjusted_carbs: 45 * servingsCount * portionMultiplier,
+    adjusted_fat: 15 * servingsCount * portionMultiplier
+  };
+};
+
+export const saveMealPlanCustomization = async (customization: MealPlanCustomization) => {
+  return await saveMealCustomization(customization);
+};
+
+// Create service object for compatibility
 export const MealCustomizationService = {
   saveMealCustomization,
   getUserMealCustomizations,
   getMealCustomizationById,
   updateMealCustomization,
-  deleteMealCustomization
+  deleteMealCustomization,
+  getMealCustomizationOptions,
+  getIngredientSubstitutions,
+  getDietaryPreferences,
+  calculateCustomizationSummary,
+  saveMealPlanCustomization
 };
