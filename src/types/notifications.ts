@@ -1,4 +1,3 @@
-
 // Notification-related types with updated user ID naming
 
 export interface Notification {
@@ -71,6 +70,7 @@ export interface PushNotificationToken {
 
 // --- FIX: Extended types for restaurant/assignment/promotions/reviews features ---
 
+// RestaurantAssignment type with all expected fields
 export interface RestaurantAssignment {
   id: string;
   order_id: string;
@@ -80,8 +80,11 @@ export interface RestaurantAssignment {
   responded_at?: string;
   created_at: string;
   details?: any;
+  expires_at?: string; // <-- add this field
+  distance_km?: number; // <-- add this field
 }
 
+// PromotionType and RestaurantPromotion
 export type PromotionType = 'discount' | 'free_item' | 'bogo' | 'special';
 
 export interface RestaurantPromotion {
@@ -125,4 +128,3 @@ export interface RestaurantPerformanceMetrics {
   average_rating: number;
   average_preparation_time: number;
 }
-

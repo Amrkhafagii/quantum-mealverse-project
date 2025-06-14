@@ -6,6 +6,7 @@ import { Star, Flag, Reply } from 'lucide-react';
 import { reviewService } from '@/services/reviews/reviewService';
 import { useRestaurantAuth } from '@/hooks/useRestaurantAuth';
 import { useToast } from '@/components/ui/use-toast';
+import { RestaurantReview } from '@/types/notifications';
 
 export const ReviewsManagement: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
