@@ -2,7 +2,22 @@
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryDocument } from '@/types/delivery';
 
-// Supabase DB returns fields such as "delivery_user_id", "file_path", "document_type", "verified", etc.
+// Only allow these for the typescript DeliveryDocument type
+const allowedDocTypes = [
+  "license",
+  "insurance",
+  "registration",
+  "background_check",
+  "profile_photo",
+  "drivers_license",
+  "vehicle_registration",
+  "identity",
+] as const;
+
+function isValidDocumentType(type: string): type is DeliveryDocument["document_type"] {
+  return allowedDocTypes.includes(type as DeliveryDocument["document_type"]);
+}
+
 export const getDeliveryDocuments = async (
   userId: string
 ): Promise<DeliveryDocument[]> => {
@@ -18,21 +33,31 @@ export const getDeliveryDocuments = async (
       return [];
     }
 
-    // Map DB fields to DeliveryDocument fields
+    // Map DB fields to DeliveryDocument fields and filter for allowed document_type only
     return (
-      data?.map((doc) => ({
-        id: doc.id,
-        delivery_documents_user_id: doc.delivery_user_id ?? "", // Map to new naming convention
-        document_type: doc.document_type,
-        document_url: doc.file_path, // file_path is the URL
-        verification_status: doc.verified
-          ? 'approved'
-          : 'pending', // You can improve this if you have actual status (else fallback)
-        expiry_date: doc.expiry_date ?? undefined,
-        notes: doc.notes ?? undefined,
-        created_at: doc.created_at,
-        updated_at: doc.updated_at,
-      })) ?? []
+      data
+        ? data
+            .filter(
+              (doc) =>
+                !!doc.document_type &&
+                isValidDocumentType(doc.document_type)
+            )
+            .map(
+              (doc): DeliveryDocument => ({
+                id: String(doc.id),
+                delivery_documents_user_id: String(doc.delivery_user_id) ?? "",
+                document_type: doc.document_type as DeliveryDocument["document_type"],
+                document_url: String(doc.file_path),
+                verification_status: doc.verified
+                  ? "approved"
+                  : "pending", // No rejected in DB model here
+                expiry_date: doc.expiry_date || undefined,
+                notes: doc.notes || undefined,
+                created_at: doc.created_at,
+                updated_at: doc.updated_at,
+              })
+            )
+        : []
     );
   } catch (error) {
     console.error('Error in getDeliveryDocuments:', error);

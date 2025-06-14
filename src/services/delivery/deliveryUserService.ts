@@ -47,21 +47,23 @@ export const getDeliveryUserByUserId = async (
       case 'inactive':
       case 'suspended':
       case 'on_break':
-        status = data.status === 'on_break' ? 'inactive' : data.status;
+        status = data.status as DeliveryUser['status'];
         break;
       default:
         status = 'inactive';
     }
 
-    // Only pick existing DB keys
+    // Defensive: provide empty string if not available
     const user: DeliveryUser = {
       id: typeof data.id === 'string' ? data.id : '',
       delivery_users_user_id: typeof data.delivery_users_user_id === 'string' ? data.delivery_users_user_id : '',
       full_name: fullName,
+      first_name: typeof data.first_name === 'string' ? data.first_name : '',
+      last_name: typeof data.last_name === 'string' ? data.last_name : '',
       phone: typeof data.phone === 'string' ? data.phone : '',
-      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '', // fallback empty string
-      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '', // fallback empty string
-      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '', // fallback empty string
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '',
+      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
+      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
       status,
       rating:
         typeof data.rating === 'number'
@@ -73,6 +75,7 @@ export const getDeliveryUserByUserId = async (
       verification_status,
       background_check_status,
       is_available: typeof data.is_available === 'boolean' ? data.is_available : false,
+      is_approved: typeof data.is_approved === 'boolean' ? data.is_approved : undefined,
       last_active: typeof data.last_active === 'string' ? data.last_active : '',
       created_at: typeof data.created_at === 'string' ? data.created_at : '',
       updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
