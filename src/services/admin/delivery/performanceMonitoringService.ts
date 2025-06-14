@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { performanceAlertsService } from './performanceAlertsService';
 import type { DeliveryPerformanceAlert } from '@/types/admin';
@@ -26,7 +25,6 @@ export class PerformanceMonitoringService {
       .select('average_rating, first_name, last_name')
       .eq('id', deliveryUserId)
       .single();
-      // removed .returns<any[]>()
 
     if (user && user.average_rating !== undefined && user.average_rating < 3.0) {
       await this.createAlert(deliveryUserId, {

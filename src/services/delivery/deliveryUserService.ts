@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryUser } from '@/types/delivery';
 
@@ -64,9 +63,9 @@ export const getDeliveryUserByUserId = async (
       first_name: typeof data.first_name === 'string' ? data.first_name : undefined,
       last_name: typeof data.last_name === 'string' ? data.last_name : undefined,
       phone: typeof data.phone === 'string' ? data.phone : '',
-      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : '', // fallback if missing field, TS happy
-      license_plate: typeof data.license_plate === 'string' ? data.license_plate : '',
-      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : '',
+      vehicle_type: typeof data.vehicle_type === 'string' ? data.vehicle_type : undefined,
+      license_plate: typeof data.license_plate === 'string' ? data.license_plate : undefined,
+      driver_license_number: typeof data.driver_license_number === 'string' ? data.driver_license_number : undefined,
       status,
       rating:
         typeof data.average_rating === 'number'
@@ -75,9 +74,9 @@ export const getDeliveryUserByUserId = async (
       total_deliveries: typeof data.total_deliveries === 'number' ? data.total_deliveries : 0,
       verification_status,
       background_check_status,
-      is_available: typeof data.is_available === 'boolean' ? data.is_available : false,
+      is_available: typeof data.is_available === 'boolean' ? data.is_available : undefined,
       is_approved: typeof data.is_approved === 'boolean' ? data.is_approved : undefined,
-      last_active: typeof data.last_active === 'string' ? data.last_active : '',
+      last_active: typeof data.last_active === 'string' ? data.last_active : undefined,
       created_at: typeof data.created_at === 'string' ? data.created_at : '',
       updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
     };
