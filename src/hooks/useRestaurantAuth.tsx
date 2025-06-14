@@ -129,7 +129,15 @@ export const useRestaurantAuth = () => {
             minimum_order_amount: data.minimum_order_amount,
             delivery_fee: data.delivery_fee,
             estimated_delivery_time: data.estimated_delivery_time || 45,
-            onboarding_status: data.onboarding_status,
+            onboarding_status: (
+              data.onboarding_status === "not_started" ||
+              data.onboarding_status === "in_progress" ||
+              data.onboarding_status === "pending_review" ||
+              data.onboarding_status === "completed" ||
+              data.onboarding_status === "rejected"
+            )
+              ? data.onboarding_status
+              : "not_started",
             onboarding_step: data.onboarding_step,
             onboarding_completed_at: data.onboarding_completed_at,
             created_at: data.created_at,
