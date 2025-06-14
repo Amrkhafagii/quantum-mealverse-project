@@ -9,6 +9,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
+import type { MealType } from '@/types/meal';
 
 interface RecommendedMealsProps {
   showTitle?: boolean;
@@ -17,23 +18,27 @@ interface RecommendedMealsProps {
 const RecommendedMeals: React.FC<RecommendedMealsProps> = ({ 
   showTitle = true 
 }) => {
-  // Remove type argument for hook (it uses only user context)
+  // This hook gives you MealType[]
   const { recommendations, isLoading } = useRecommendations();
   const [activeTab, setActiveTab] = React.useState<'personalized' | 'trending' | 'dietary' | 'fitness'>('personalized');
 
-  // We'll just filter locally for demo (in real app, this should be moved server-side)
-  const getTabRecommendations = () => {
+  // All filtering logic expects MealType
+  const getTabRecommendations = (): MealType[] => {
     switch (activeTab) {
       case 'dietary':
-        return recommendations.filter(meal =>
-          (meal.dietary_tags || []).some(tag =>
+        // Safely handle missing dietary_tags
+        return recommendations.filter((meal: MealType) =>
+          Array.isArray(meal.dietary_tags) && 
+          meal.dietary_tags.some(tag =>
             ['vegan', 'vegetarian', 'gluten-free', 'dairy-free'].includes(tag)
           )
         );
       case 'fitness':
-        return recommendations.filter(meal => meal.protein > 20 || meal.calories < 500);
+        return recommendations.filter(
+          (meal: MealType) => (meal.protein ?? 0) > 20 || (meal.calories ?? 0) < 500
+        );
       case 'trending':
-        // For demo, just return shuffled array
+        // Shuffle for demo only
         return [...recommendations].sort(() => 0.5 - Math.random());
       case 'personalized':
       default:
@@ -50,11 +55,10 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
           Recommendations For You
         </h2>
       )}
-      
       <Tabs 
         defaultValue="personalized" 
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as any)}
+        onValueChange={value => setActiveTab(value as any)}
         className="w-full"
       >
         <TabsList className="grid grid-cols-4 mb-8 bg-quantum-darkBlue/30">
@@ -83,7 +87,6 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
             Fitness
           </TabsTrigger>
         </TabsList>
-        
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader className="h-8 w-8 text-quantum-cyan animate-spin" />
@@ -91,11 +94,9 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {tabRecs?.map(meal => (
+            {tabRecs && tabRecs.length > 0 ? tabRecs.map((meal: MealType) => (
               <CustomerMealCard key={meal.id} meal={meal} />
-            ))}
-            
-            {(!tabRecs || tabRecs.length === 0) && (
+            )) : (
               <div className="col-span-4 text-center py-8">
                 <p className="text-xl text-gray-400">
                   No recommendations available at this time.
@@ -113,4 +114,3 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
 };
 
 export default RecommendedMeals;
-
