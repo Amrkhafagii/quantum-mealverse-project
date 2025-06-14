@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { ActiveDeliveries } from '@/components/delivery/dashboard/ActiveDeliveri
 import { DeliveryHistory } from '@/components/delivery/dashboard/DeliveryHistory';
 import { DriverAvailabilityPanel } from '@/components/delivery/DriverAvailabilityPanel';
 import { DeliveryDashboardErrorBoundary } from '@/components/delivery/DeliveryDashboardErrorBoundary';
-import { deliveryService } from '@/services/delivery/deliveryService';
+import { getDeliveryUserByUserId } from '@/services/delivery/deliveryService';
 import DeliveryLayout from '@/components/delivery/DeliveryLayout';
 import { Loader2 } from 'lucide-react';
 
@@ -25,7 +24,7 @@ const DeliveryDashboard = () => {
       
       try {
         setLoading(true);
-        const userData = await deliveryService.getDeliveryUserByUserId(user.id);
+        const userData = await getDeliveryUserByUserId(user.id);
         setDeliveryUser(userData);
       } catch (error) {
         console.error('Error loading delivery user:', error);

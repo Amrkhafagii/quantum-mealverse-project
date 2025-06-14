@@ -39,7 +39,15 @@ const OnboardingPage: React.FC = () => {
   const saveVehicleInformation = async (values: any) => updateVehicleInfo(values);
   const uploadDocument = async (
     file: File,
-    documentType: "license" | "insurance" | "registration" | "background_check" | "profile_photo" | "drivers_license" | "vehicle_registration" | "identity",
+    documentType:
+      | "license"
+      | "insurance"
+      | "registration"
+      | "background_check"
+      | "profile_photo"
+      | "drivers_license"
+      | "vehicle_registration"
+      | "identity",
     expiryDate?: Date,
     notes?: string
   ) => {
@@ -49,14 +57,14 @@ const OnboardingPage: React.FC = () => {
       delivery_documents_user_id: user?.id || "",
       document_type: documentType,
       document_url: URL.createObjectURL(file),
-      verification_status: "pending",
+      verification_status: "pending" as "pending",
       expiry_date: expiryDate?.toISOString(),
       notes: notes,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    addDocument(doc);
-    return doc;
+    addDocument(doc as any);
+    return doc as any;
   };
   const completeDocumentsStep = () => true;
   const saveAvailabilitySchedule = async (data: any) => {}; // No-op for now

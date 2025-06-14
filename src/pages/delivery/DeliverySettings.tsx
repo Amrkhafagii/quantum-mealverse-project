@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useDeliveryLocationService } from '@/hooks/useDeliveryLocationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +13,7 @@ import { LocationAccuracySettings } from '@/components/delivery/settings/Locatio
 import { DataSynchronizationSettings } from '@/components/delivery/settings/DataSynchronizationSettings';
 import DataRetentionSettings from '@/components/privacy/DataRetentionSettings';
 import { useAuth } from '@/hooks/useAuth';
-import { deliveryService } from '@/services/delivery/deliveryService';
+import { getDeliveryUserByUserId } from '@/services/delivery/deliveryService';
 
 const DeliverySettings = () => {
   const { user } = useAuth();
@@ -40,7 +39,7 @@ const DeliverySettings = () => {
       
       try {
         setLoading(true);
-        const userData = await deliveryService.getDeliveryUserByUserId(user.id);
+        const userData = await getDeliveryUserByUserId(user.id);
         setDeliveryUser(userData);
       } catch (error) {
         console.error('Error loading delivery user:', error);
