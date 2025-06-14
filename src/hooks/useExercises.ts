@@ -18,8 +18,8 @@ export function useExercises() {
         .order('name');
       if (error) throw error;
 
-      // Type cast and fill in all required Exercise fields
-      const typedExercises: Exercise[] = (data || []).map(exercise => {
+      // Type cast and fill in all required Exercise fields, defaulting/null-checking as needed
+      const typedExercises: Exercise[] = (data || []).map((exercise: any) => {
         // Defensive conversion of muscle_groups
         const rawMuscleGroups = exercise.muscle_groups;
         let muscleGroups: string[];
@@ -31,14 +31,39 @@ export function useExercises() {
           muscleGroups = [];
         }
 
+        // Normalize instructions to string
+        let instructions: string = "";
+        if (Array.isArray(exercise.instructions)) {
+          instructions = exercise.instructions.join('\n');
+        } else if (typeof exercise.instructions === "string") {
+          instructions = exercise.instructions;
+        } else {
+          instructions = "";
+        }
+
         return {
-          ...exercise,
-          difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced',
+          id: exercise.id,
+          exercise_id: exercise.exercise_id,
+          name: exercise.name ?? "",
+          exercise_name: exercise.exercise_name,
+          target_muscle: exercise.target_muscle ?? (muscleGroups[0] ?? ""),
+          sets: typeof exercise.sets === "number" ? exercise.sets : 3,
+          reps: typeof exercise.reps === "number" || typeof exercise.reps === "string" ? exercise.reps : 10,
+          weight: exercise.weight,
+          duration: exercise.duration,
+          rest_time: exercise.rest_time,
+          rest: exercise.rest,
+          rest_seconds: exercise.rest_seconds,
+          instructions, // always string
+          description: exercise.description ?? "",
           muscle_groups: muscleGroups,
-          // Ensure required fields exist, else fallback/default
-          target_muscle: exercise.target_muscle || muscleGroups[0] || "",
-          sets: typeof exercise.sets === "number" ? exercise.sets : 3, // default 3
-          reps: typeof exercise.reps === "number" ? exercise.reps : 10, // default 10
+          difficulty: exercise.difficulty as 'beginner' | 'intermediate' | 'advanced',
+          video_url: exercise.video_url ?? "",
+          equipment_needed: Array.isArray(exercise.equipment_needed)
+            ? exercise.equipment_needed.map(String)
+            : typeof exercise.equipment_needed === "string"
+              ? exercise.equipment_needed.split(",").map((g: string) => g.trim())
+              : [],
         };
       });
 
@@ -61,7 +86,7 @@ export function useExercises() {
 
   const getExercisesByMuscleGroup = (muscleGroup: string) => {
     return exercises.filter(exercise =>
-      exercise.muscle_groups.includes(muscleGroup.toLowerCase())
+      exercise.muscle_groups?.includes(muscleGroup.toLowerCase())
     );
   };
 
@@ -72,7 +97,7 @@ export function useExercises() {
   const searchExercises = (query: string) => {
     return exercises.filter(exercise =>
       exercise.name.toLowerCase().includes(query.toLowerCase()) ||
-      exercise.muscle_groups.some(group =>
+      (exercise.muscle_groups ?? []).some(group =>
         group.toLowerCase().includes(query.toLowerCase())
       )
     );
@@ -87,3 +112,4 @@ export function useExercises() {
     searchExercises
   };
 }
+
