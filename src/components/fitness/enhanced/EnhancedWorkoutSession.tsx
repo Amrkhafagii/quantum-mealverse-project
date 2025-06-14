@@ -109,7 +109,7 @@ export const EnhancedWorkoutSession: React.FC<EnhancedWorkoutSessionProps> = ({
                 workoutLogId={workoutLog?.id}
                 exerciseName={currentExercise.name}
                 setNumber={currentSetIndex + 1}
-                restTime={currentExercise.rest_time || 60}
+                plannedRestSeconds={currentExercise.rest_time || 60}
                 onTimerComplete={handleTimerComplete}
               />
             </motion.div>

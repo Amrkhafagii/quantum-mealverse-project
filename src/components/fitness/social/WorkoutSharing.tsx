@@ -70,32 +70,37 @@ export const WorkoutSharing: React.FC<WorkoutSharingProps> = ({
     
     try {
       const shareData = {
-        user_id: user.id,
+        workout_shares_user_id: user.id,
         workout_plan_id: workoutPlan?.id || null,
         workout_log_id: workoutLog?.id || null,
         share_type: type,
-        title: title || getDefaultTitle(),
-        description: description || getDefaultDescription(),
+        title: title,
+        description: description,
         is_public: isPublic
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('workout_shares')
-        .insert(shareData);
+        .insert(shareData)
+        .select()
+        .single();
 
       if (error) throw error;
 
       toast({
-        title: "Workout shared successfully!",
-        description: isPublic ? "Your workout is now visible to the community" : "Your workout has been saved as private",
+        title: "Shared successfully!",
+        description: isPublic ? "Your workout has been shared publicly" : "Your workout has been shared with your followers",
       });
 
-      onShareComplete?.();
+      if (onShareComplete) {
+        onShareComplete();
+      }
+
     } catch (error) {
       console.error('Error sharing workout:', error);
       toast({
-        title: "Error sharing workout",
-        description: "Please try again later",
+        title: "Sharing failed",
+        description: "There was an error sharing your workout. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -103,71 +108,59 @@ export const WorkoutSharing: React.FC<WorkoutSharingProps> = ({
     }
   };
 
-  const getShareIcon = () => {
+  const getTypeIcon = () => {
     switch (type) {
-      case 'achievement':
-        return <Trophy className="w-5 h-5 text-yellow-400" />;
-      case 'plan':
-        return <Users className="w-5 h-5 text-blue-400" />;
-      default:
-        return <Share2 className="w-5 h-5 text-quantum-cyan" />;
+      case 'plan': return <Share2 className="w-5 h-5" />;
+      case 'completed_workout': return <Trophy className="w-5 h-5" />;
+      case 'achievement': return <Trophy className="w-5 h-5" />;
+      default: return <Share2 className="w-5 h-5" />;
     }
   };
 
-  const getShareColor = () => {
+  const getTypeLabel = () => {
     switch (type) {
-      case 'achievement':
-        return 'border-yellow-400/30 bg-yellow-400/10';
-      case 'plan':
-        return 'border-blue-400/30 bg-blue-400/10';
-      default:
-        return 'border-quantum-cyan/30 bg-quantum-cyan/10';
+      case 'plan': return 'Share Workout Plan';
+      case 'completed_workout': return 'Share Completed Workout';
+      case 'achievement': return 'Share Achievement';
+      default: return 'Share Workout';
     }
   };
 
   return (
-    <Card className={`${getShareColor()} border`}>
+    <Card className="bg-quantum-darkBlue border-quantum-cyan/30 text-white max-w-md">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {getShareIcon()}
-          Share Your {type === 'completed_workout' ? 'Workout' : type === 'plan' ? 'Plan' : 'Achievement'}
+        <CardTitle className="flex items-center gap-2 text-quantum-cyan">
+          {getTypeIcon()}
+          {getTypeLabel()}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="text-sm font-medium text-gray-300 mb-2 block">
-            Title
-          </label>
+          <label className="block text-sm font-medium mb-2">Title</label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={getDefaultTitle()}
-            className="bg-quantum-black/40"
+            placeholder="Add a title..."
+            className="bg-quantum-black/50 border-quantum-cyan/30"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-300 mb-2 block">
-            Description
-          </label>
+          <label className="block text-sm font-medium mb-2">Description</label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder={getDefaultDescription()}
+            placeholder="Share your thoughts..."
             rows={4}
-            className="bg-quantum-black/40"
+            className="bg-quantum-black/50 border-quantum-cyan/30"
           />
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {isPublic ? (
-              <Globe className="w-4 h-4 text-green-400" />
-            ) : (
-              <Lock className="w-4 h-4 text-gray-400" />
-            )}
-            <span className="text-sm font-medium">
-              {isPublic ? 'Public' : 'Private'}
+            {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            <span className="text-sm">
+              {isPublic ? 'Public' : 'Followers only'}
             </span>
           </div>
           <Switch
@@ -176,45 +169,22 @@ export const WorkoutSharing: React.FC<WorkoutSharingProps> = ({
           />
         </div>
 
-        <div className="text-xs text-gray-400">
-          {isPublic 
-            ? "Your workout will be visible to all community members"
-            : "Only you will be able to see this share"
-          }
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={onShareComplete}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={shareWorkout}
+            disabled={isSharing || !title.trim()}
+            className="flex-1 bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
+          >
+            {isSharing ? 'Sharing...' : 'Share'}
+          </Button>
         </div>
-
-        {type === 'completed_workout' && workoutLog && (
-          <div className="grid grid-cols-2 gap-4 p-3 bg-quantum-black/40 rounded-lg">
-            <div className="text-center">
-              <div className="text-lg font-bold text-quantum-cyan">
-                {workoutLog.duration || 0}
-              </div>
-              <div className="text-xs text-gray-400">Minutes</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-400">
-                {workoutLog.calories_burned || 0}
-              </div>
-              <div className="text-xs text-gray-400">Calories</div>
-            </div>
-          </div>
-        )}
-
-        {type === 'plan' && workoutPlan && (
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{workoutPlan.goal}</Badge>
-            <Badge variant="outline">{workoutPlan.difficulty}</Badge>
-            <Badge variant="outline">{workoutPlan.frequency}x/week</Badge>
-          </div>
-        )}
-
-        <Button
-          onClick={shareWorkout}
-          disabled={isSharing || !title.trim()}
-          className="w-full bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
-        >
-          {isSharing ? 'Sharing...' : 'Share Workout'}
-        </Button>
       </CardContent>
     </Card>
   );

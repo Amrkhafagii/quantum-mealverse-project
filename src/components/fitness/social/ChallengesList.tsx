@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Trophy, Users, Calendar, Target, Plus, Crown } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Users, Trophy, Calendar, Target } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,334 +13,205 @@ interface Challenge {
   id: string;
   title: string;
   description: string;
-  challenge_type: string;
+  type: string;
   target_value: number;
-  target_unit: string;
   start_date: string;
   end_date: string;
   participants_count: number;
-  max_participants?: number;
-  prize_description?: string;
-  created_by: string;
-  is_public: boolean;
-  user_progress?: number;
-  is_participant?: boolean;
-  is_completed?: boolean;
+  is_active: boolean;
+}
+
+interface ChallengeParticipant {
+  id: string;
+  challenge_id: string;
+  fitness_challenge_participants_user_id: string;
+  current_progress: number;
+  is_completed: boolean;
+  joined_at: string;
 }
 
 export const ChallengesList: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'joined' | 'available'>('all');
+  const [userParticipations, setUserParticipations] = useState<ChallengeParticipant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchChallenges();
-  }, [user, filter]);
+    if (user?.id) {
+      fetchChallenges();
+      fetchUserParticipations();
+    }
+  }, [user?.id]);
 
   const fetchChallenges = async () => {
-    if (!user) return;
-
     try {
-      setLoading(true);
-      
-      let query = supabase
-        .from('fitness_challenges')
-        .select(`
-          *,
-          fitness_challenge_participants!inner (
-            current_progress,
-            is_completed,
-            user_id
-          )
-        `)
-        .eq('is_public', true)
-        .gte('end_date', new Date().toISOString().split('T')[0]);
-
-      if (filter === 'joined') {
-        query = query.eq('fitness_challenge_participants.user_id', user.id);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('is_active', true)
+        .order('start_date', { ascending: false });
 
       if (error) throw error;
-
-      const formattedChallenges = data?.map(challenge => ({
-        ...challenge,
-        user_progress: challenge.fitness_challenge_participants?.find(
-          (p: any) => p.user_id === user.id
-        )?.current_progress || 0,
-        is_participant: challenge.fitness_challenge_participants?.some(
-          (p: any) => p.user_id === user.id
-        ) || false,
-        is_completed: challenge.fitness_challenge_participants?.find(
-          (p: any) => p.user_id === user.id
-        )?.is_completed || false
-      })) || [];
-
-      if (filter === 'available') {
-        setChallenges(formattedChallenges.filter(c => !c.is_participant));
-      } else {
-        setChallenges(formattedChallenges);
-      }
+      setChallenges(data || []);
     } catch (error) {
       console.error('Error fetching challenges:', error);
       toast({
-        title: "Error loading challenges",
-        description: "Please try again later",
+        title: "Error",
+        description: "Failed to load challenges",
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  const fetchUserParticipations = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('fitness_challenge_participants')
+        .select('*')
+        .eq('fitness_challenge_participants_user_id', user.id);
+
+      if (error) throw error;
+      setUserParticipations(data || []);
+    } catch (error) {
+      console.error('Error fetching user participations:', error);
+    }
+  };
+
+  const getUserParticipation = (challengeId: string) => {
+    return userParticipations.find(p => p.challenge_id === challengeId);
+  };
+
   const joinChallenge = async (challengeId: string) => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
       const { error } = await supabase
         .from('fitness_challenge_participants')
         .insert({
-          user_id: user.id,
           challenge_id: challengeId,
-          current_progress: 0
+          fitness_challenge_participants_user_id: user.id,
+          current_progress: 0,
+          is_completed: false
         });
 
       if (error) throw error;
 
-      // Update participants count by fetching current count and incrementing
-      const { data: currentChallenge } = await supabase
-        .from('fitness_challenges')
-        .select('participants_count')
-        .eq('id', challengeId)
-        .single();
-
-      if (currentChallenge) {
-        const { error: updateError } = await supabase
-          .from('fitness_challenges')
-          .update({
-            participants_count: (currentChallenge.participants_count || 0) + 1
-          })
-          .eq('id', challengeId);
-
-        if (updateError) {
-          console.error('Error updating participants count:', updateError);
-        }
-      }
-
       toast({
-        title: "Challenge joined!",
-        description: "Good luck achieving your goal!",
+        title: "Success",
+        description: "Successfully joined the challenge!",
       });
 
-      fetchChallenges();
+      fetchUserParticipations();
     } catch (error) {
       console.error('Error joining challenge:', error);
       toast({
-        title: "Error joining challenge",
-        description: "Please try again later",
+        title: "Error",
+        description: "Failed to join challenge",
         variant: "destructive"
       });
     }
   };
 
-  const getChallengeTypeIcon = (type: string) => {
-    switch (type) {
-      case 'distance':
-        return '🏃';
-      case 'duration':
-        return '⏱️';
-      case 'frequency':
-        return '📅';
-      case 'weight':
-        return '🏋️';
-      default:
-        return '🎯';
-    }
+  const getProgressPercentage = (participation: ChallengeParticipant, challenge: Challenge) => {
+    if (!participation || !challenge.target_value) return 0;
+    return Math.min((participation.current_progress / challenge.target_value) * 100, 100);
   };
 
-  const getChallengeTypeColor = (type: string) => {
-    switch (type) {
-      case 'distance':
-        return 'bg-blue-500/20 text-blue-400';
-      case 'duration':
-        return 'bg-green-500/20 text-green-400';
-      case 'frequency':
-        return 'bg-purple-500/20 text-purple-400';
-      case 'weight':
-        return 'bg-red-500/20 text-red-400';
-      default:
-        return 'bg-gray-500/20 text-gray-400';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const getDaysRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diffTime = end.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i} className="bg-quantum-darkBlue/30 border-quantum-cyan/20 animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-gray-600 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-600 rounded w-1/2"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-quantum-cyan mx-auto"></div>
+          <p className="mt-4 text-gray-400">Loading challenges...</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-2">
-        {(['all', 'joined', 'available'] as const).map((filterType) => (
-          <Button
-            key={filterType}
-            variant={filter === filterType ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter(filterType)}
-            className={filter === filterType ? 'bg-quantum-cyan text-quantum-black' : ''}
-          >
-            {filterType === 'all' && 'All Challenges'}
-            {filterType === 'joined' && 'My Challenges'}
-            {filterType === 'available' && 'Available'}
-          </Button>
-        ))}
-      </div>
-
-      <div className="space-y-4">
+    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Trophy className="mr-2 h-5 w-5 text-quantum-cyan" />
+          Fitness Challenges
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         {challenges.length === 0 ? (
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="text-center py-8">
-              <Trophy className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Challenges Found</h3>
-              <p className="text-gray-400">
-                {filter === 'joined' 
-                  ? "You haven't joined any challenges yet"
-                  : "No challenges available at the moment"
-                }
-              </p>
-            </CardContent>
-          </Card>
+          <div className="text-center py-8">
+            <Target className="mx-auto h-12 w-12 text-quantum-cyan/50 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Active Challenges</h3>
+            <p className="text-gray-400">
+              Check back later for new fitness challenges!
+            </p>
+          </div>
         ) : (
-          challenges.map((challenge, index) => (
-            <motion.div
-              key={challenge.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className={`bg-quantum-darkBlue/30 border-quantum-cyan/20 hover:border-quantum-cyan/40 transition-colors ${
-                challenge.is_completed ? 'border-green-400/30 bg-green-400/10' : ''
-              }`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
+          <div className="space-y-4">
+            {challenges.map((challenge) => {
+              const participation = getUserParticipation(challenge.id);
+              const isParticipating = !!participation;
+              const progressPercentage = participation ? getProgressPercentage(participation, challenge) : 0;
+
+              return (
+                <div
+                  key={challenge.id}
+                  className="bg-quantum-black/30 border border-quantum-cyan/10 rounded-lg p-4"
+                >
+                  <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">{getChallengeTypeIcon(challenge.challenge_type)}</span>
-                        <CardTitle className="text-lg">{challenge.title}</CardTitle>
-                        {challenge.is_completed && (
-                          <Crown className="w-5 h-5 text-yellow-400" />
-                        )}
+                        <h3 className="font-semibold text-lg">{challenge.title}</h3>
+                        <Badge variant={isParticipating ? "default" : "outline"}>
+                          {isParticipating ? "Joined" : "Available"}
+                        </Badge>
                       </div>
-                      <p className="text-gray-400 text-sm">{challenge.description}</p>
-                    </div>
-                    <Badge className={getChallengeTypeColor(challenge.challenge_type)}>
-                      {challenge.challenge_type}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-gray-400">Target</div>
-                      <div className="font-semibold text-quantum-cyan">
-                        {challenge.target_value} {challenge.target_unit}
+                      <p className="text-gray-400 text-sm mb-2">{challenge.description}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <span className="flex items-center">
+                          <Users className="w-4 h-4 mr-1" />
+                          {challenge.participants_count} participants
+                        </span>
+                        <span className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          {new Date(challenge.end_date).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-400">Duration</div>
-                      <div className="font-semibold">
-                        {formatDate(challenge.start_date)} - {formatDate(challenge.end_date)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {challenge.is_participant && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>Your Progress</span>
-                        <span>{challenge.user_progress}/{challenge.target_value} {challenge.target_unit}</span>
-                      </div>
-                      <Progress 
-                        value={(challenge.user_progress || 0) / challenge.target_value * 100} 
-                        className="h-2"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {challenge.participants_count}
-                        {challenge.max_participants && ` / ${challenge.max_participants}`}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {getDaysRemaining(challenge.end_date)} days left
-                      </div>
-                    </div>
-
-                    {!challenge.is_participant && (
+                    {!isParticipating && (
                       <Button
                         onClick={() => joinChallenge(challenge.id)}
-                        size="sm"
                         className="bg-quantum-cyan hover:bg-quantum-cyan/90 text-quantum-black"
                       >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Join
+                        Join Challenge
                       </Button>
                     )}
-
-                    {challenge.is_completed && (
-                      <Badge className="bg-green-500/20 text-green-400 border-green-400/30">
-                        Completed!
-                      </Badge>
-                    )}
                   </div>
-
-                  {challenge.prize_description && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
-                      <div className="flex items-center gap-2 text-yellow-400 font-semibold text-sm">
-                        <Trophy className="w-4 h-4" />
-                        Prize
+                  
+                  {isParticipating && participation && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Your Progress</span>
+                        <span>
+                          {participation.current_progress} / {challenge.target_value}
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-300 mt-1">{challenge.prize_description}</p>
+                      <Progress value={progressPercentage} className="h-2" />
+                      <div className="text-xs text-gray-400">
+                        {progressPercentage.toFixed(1)}% complete
+                      </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))
+                </div>
+              );
+            })}
+          </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

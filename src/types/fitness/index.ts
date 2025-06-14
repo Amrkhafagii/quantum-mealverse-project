@@ -1,90 +1,128 @@
-
-// Re-export all fitness types from their specific files
-export * from './goals';
-export * from './achievements';
-export * from './challenges';
-export * from './nutrition';
-export * from './logs';
+// Re-export all fitness types from their respective modules
 export * from './analytics';
+export * from './exercises';
+export * from './profile';
 export * from './recommendations';
 export * from './scheduling';
-export * from './profile';
-export * from './exercises';
 
-// Export from workouts file, avoiding duplicates
-export type {
-  WorkoutPlan,
-  WorkoutDay,
-  Exercise,
-  CompletedExercise,
-  ExerciseSet,
-  WorkoutSet,
-  WorkoutSchedule,
-  WorkoutHistoryItem,
-  WorkoutRecommendation,
-  UserWorkoutStats,
-  WorkoutLog
-} from './workouts';
-
-// Additional types for UI components
-export interface DailyQuest {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  type: 'tracking' | 'workout' | 'nutrition' | 'activity';
-  requirements: {
-    action?: string;
-    min_duration?: number;
-    macro?: string;
-    target?: number;
-    steps?: number;
-  };
-  completed: boolean;
-  deadline?: string;
-}
-
-// Additional types related to hydration tracking
-export interface HydrationData {
-  targetIntake: number;
-  currentIntake: number;
-  lastUpdated: string;
-  glassSize: number;
-}
-
-// Team and challenge types
-export interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  members: TeamMember[];
-  created_at: string;
-  member_count?: number;
-  total_points?: number;
-  created_by?: string; // Added for backward compatibility
-}
-
-export interface TeamMember {
+// Keep some legacy exports for backward compatibility
+export interface WorkoutPlan {
   id: string;
   user_id: string;
-  team_id: string;
-  role: 'leader' | 'member';
-  joined_at: string;
-  joined_date?: string; // Added for backward compatibility
+  name: string;
+  description?: string;
+  goal: string;
+  difficulty: string;
+  frequency: number;
+  duration_weeks: number;
+  workout_days: WorkoutDay[];
+  created_at?: string;
+  updated_at?: string;
 }
 
-// Updated SavedMealPlan to match database schema and include backward compatibility
-export interface SavedMealPlan {
-  id: string;
-  saved_meal_plans_user_id: string;
+export interface WorkoutDay {
+  day_name: string;
+  exercises: import('./exercises').Exercise[];
+  id?: string;
+  name?: string;
+  day_number?: number;
+  target_muscle_groups?: string[];
+  completed?: boolean;
+}
+
+export interface WorkoutLog {
+  id?: string;
+  user_id: string;
+  workout_logs_user_id?: string;
+  workout_plan_id: string;
+  date: string;
+  duration: number;
+  calories_burned?: number | null;
+  notes?: string | null;
+  completed_exercises: CompletedExercise[];
+  exercises_completed?: any[];
+}
+
+export interface CompletedExercise {
+  exercise_id: string;
   name: string;
-  meal_plan: any; // JSON data containing the meal plan
-  tdee_id?: string;
-  date_created?: string;
-  expires_at?: string;
+  exercise_name: string;
+  sets_completed: WorkoutSet[];
+  notes?: string;
+  sets?: number;
+  reps?: number | string;
+  weight?: number;
+  weight_used?: number[];
+  reps_completed?: number[];
+}
+
+export interface WorkoutSet {
+  set_number: number;
+  weight: number;
+  reps: number | string;
+  completed: boolean;
+  notes?: string;
+  exercise_id?: string;
+  exercise_name?: string;
+}
+
+export interface FitnessGoal {
+  id: string;
+  fitness_goals_user_id: string;
+  name: string;
+  description?: string;
+  target_value?: number;
+  current_value?: number;
+  target_date: string;
+  status: GoalStatus;
+  goal_type: string;
+  created_at: string;
+  updated_at: string;
+  title?: string;
+  target_weight?: number;
+  target_body_fat?: number;
+  category?: string;
+  type?: string;
+  start_date?: string;
   is_active?: boolean;
-  
-  // Backward compatibility fields
-  meals?: any;
-  created_at?: string;
+}
+
+export type GoalStatus = 'active' | 'completed' | 'paused' | 'cancelled';
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  points: number;
+  criteria: string;
+  icon: string;
+}
+
+export interface UserAchievement {
+  id: string;
+  user_achievements_user_id: string;
+  achievement_id: string;
+  date_earned: string;
+  progress?: number;
+  user_id?: string;
+  unlocked_at?: string;
+  date_achieved?: string;
+}
+
+export interface ExtendedUserAchievement extends UserAchievement {
+  achievement: Achievement;
+}
+
+export interface UserWorkoutStats {
+  total_workouts?: number;
+  streak?: number;
+  streak_days?: number;
+  achievements?: number;
+  most_active_day?: string;
+  calories_burned?: number;
+  recent_workouts?: Array<{
+    name: string;
+    date: string;
+    duration: number;
+  }>;
 }

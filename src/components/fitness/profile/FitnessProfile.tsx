@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,16 +6,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/types/fitness/profile';
+
+interface UserProfileData {
+  display_name?: string;
+  height?: number;
+  weight?: number;
+  goal_weight?: number;
+  date_of_birth?: string;
+  gender?: string;
+  fitness_level?: string;
+  fitness_goals?: string[];
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
+  activity_level?: string;
+}
 
 export const FitnessProfile: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [profileData, setProfileData] = useState<Partial<UserProfile>>({
+  const [profileData, setProfileData] = useState<UserProfileData>({
     display_name: '',
     height: undefined,
-    weight: 0,
+    weight: undefined,
     goal_weight: undefined,
     date_of_birth: '',
     gender: '',
@@ -85,7 +97,7 @@ export const FitnessProfile: React.FC = () => {
     }
   };
 
-  const handleInputChange = (field: keyof UserProfile, value: any) => {
+  const handleInputChange = (field: keyof UserProfileData, value: any) => {
     setProfileData(prev => ({
       ...prev,
       [field]: value
@@ -207,3 +219,5 @@ export const FitnessProfile: React.FC = () => {
     </Card>
   );
 };
+
+export default FitnessProfile;

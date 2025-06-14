@@ -10,12 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { X } from 'lucide-react';
-import { WorkoutGoal } from '@/types/fitness/analytics';
 
 const goalSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  goal_type: z.enum(['weight_loss', 'muscle_gain', 'strength', 'endurance', 'general_fitness']),
+  goal_type: z.enum(['weight_loss', 'weight_gain', 'muscle_gain', 'strength', 'endurance', 'general_fitness']),
   target_value: z.number().positive().optional(),
   current_value: z.number().min(0).default(0),
   unit: z.string().optional(),
@@ -28,12 +27,13 @@ type GoalFormData = z.infer<typeof goalSchema>;
 interface GoalFormProps {
   onSubmit: (data: GoalFormData) => void;
   onCancel: () => void;
-  initialData?: WorkoutGoal;
+  initialData?: any;
   isLoading?: boolean;
 }
 
 const GOAL_TYPES = [
   { value: 'weight_loss', label: 'Weight Loss' },
+  { value: 'weight_gain', label: 'Weight Gain' },
   { value: 'muscle_gain', label: 'Muscle Gain' },
   { value: 'strength', label: 'Strength' },
   { value: 'endurance', label: 'Endurance' },

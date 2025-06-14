@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,7 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({
       setIsLoading(true);
       
       const measurementData = {
-        user_id: userId,
+        user_measurements_user_id: userId,
         date: date.toISOString(),
         weight: parseFloat(measurements.weight),
         body_fat: measurements.bodyFat ? parseFloat(measurements.bodyFat) : null,

@@ -4,7 +4,7 @@ export { default as PointsDisplay } from './common/PointsDisplay';
 export { default as MacroProgressBar } from './common/MacroProgressBar';
 
 // Profile components
-export { default as FitnessProfile } from './profile/FitnessProfile';
+export { FitnessProfile } from './profile/FitnessProfile';
 export { default as MeasurementForm } from './profile/MeasurementForm';
 export { default as MeasurementsHistory } from './profile/MeasurementsHistory';
 
