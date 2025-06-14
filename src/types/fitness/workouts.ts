@@ -1,25 +1,23 @@
 
 export interface WorkoutPlan {
   id: string;
-  user_id: string;
+  workout_plans_user_id: string; // Updated to match new naming convention
   name: string;
   description?: string;
-  goal: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  frequency: number;
-  duration_weeks: number;
+  difficulty_level: string;
+  duration_minutes: number;
   workout_days: WorkoutDay[];
   created_at?: string;
   updated_at?: string;
-  is_active?: boolean;
 }
 
 export interface WorkoutDay {
-  id?: string;
-  name?: string;
+  id: string;
+  workout_plan_id: string;
   day_name: string;
-  day_number?: number;
+  day_number: number;
   exercises: Exercise[];
+  estimated_duration: number;
 }
 
 export interface Exercise {
@@ -31,88 +29,59 @@ export interface Exercise {
   sets: number;
   reps: number | string;
   weight?: number;
-  rest: number;
+  duration?: number;
   rest_time?: number;
+  rest?: number;
   rest_seconds?: number;
-  notes?: string;
-  preparation_time?: number;
-  duration?: number;
-  completed?: boolean;
-}
-
-export interface WorkoutLog {
-  id?: string;
-  user_id: string;
-  workout_plan_id?: string;
-  date: string;
-  duration?: number;
-  calories_burned?: number;
-  notes?: string;
-  completed_exercises: CompletedExercise[];
-  exercises_completed?: CompletedExercise[];
-  created_at?: string;
+  instructions?: string;
 }
 
 export interface CompletedExercise {
   exercise_id?: string;
-  name?: string;
-  exercise_name: string;
-  sets_completed: ExerciseSet[];
-  reps_completed?: number[];
-  weight_used?: number[];
+  name: string;
+  sets_completed?: WorkoutSet[];
   notes?: string;
+  exercise_name?: string;
+  weight_used?: number[];
+  reps_completed?: number[];
 }
 
 export interface ExerciseSet {
-  id?: string;
-  user_id: string;
-  exercise_name: string;
+  set_number: number;
   weight: number;
-  reps: number;
-  rest_time?: number;
+  reps: number | string;
+  completed: boolean;
   notes?: string;
-  workout_log_id?: string;
-  created_at?: string;
-  completed?: boolean;
-  set_number?: number;
 }
 
 export interface WorkoutSet {
-  id?: string;
-  exercise_id: string;
   set_number: number;
   weight: number;
-  reps: number;
-  rest_time?: number;
-  completed?: boolean;
+  reps: number | string;
+  completed: boolean;
+  notes?: string;
 }
 
 export interface WorkoutSchedule {
-  id?: string;
-  user_id: string;
-  workout_plan_id?: string;
-  day_of_week?: number;
-  days_of_week: number[];
-  time?: string;
-  preferred_time?: string;
-  reminder?: boolean;
-  start_date?: string;
-  end_date?: string;
-  active?: boolean;
+  id: string;
+  workout_schedules_user_id: string; // Updated to match new naming convention
+  workout_plan_id: string;
+  scheduled_date: string;
+  completed: boolean;
+  completed_at?: string;
 }
 
 export interface WorkoutHistoryItem {
   id: string;
-  user_id: string;
-  workout_log_id?: string;
+  workout_history_user_id: string; // Updated to match new naming convention
+  workout_log_id: string;
   date: string;
   workout_plan_name: string;
   workout_day_name: string;
-  duration: number;
   exercises_completed: number;
   total_exercises: number;
+  duration: number;
   calories_burned?: number;
-  created_at?: string;
 }
 
 export interface WorkoutRecommendation {
@@ -121,24 +90,36 @@ export interface WorkoutRecommendation {
   name: string;
   description: string;
   type: string;
-  reason: string;
-  confidence_score: number;
-  user_id: string;
-  suggested_at: string;
-  dismissed: boolean;
-  applied: boolean;
+  reason?: string;
+  confidence_score?: number;
+  workout_recommendations_user_id: string; // Updated to match new naming convention
+  suggested_at?: string;
+  dismissed?: boolean;
+  applied?: boolean;
   applied_at?: string;
 }
 
 export interface UserWorkoutStats {
-  user_id: string;
-  streak: number;
   total_workouts: number;
-  most_active_day: string;
-  streak_days: number;
-  longest_streak: number;
-  total_calories_burned: number;
-  total_duration_minutes: number;
-  calories_burned?: number;
+  streak_days?: number;
+  streak?: number;
+  most_active_day?: string;
+  recent_workouts?: any[];
   achievements?: number;
+  calories_burned?: number;
+  calories_burned_total?: number;
+  workout_time_total?: number;
+  favorite_workout_type?: string;
+}
+
+export interface WorkoutLog {
+  id?: string;
+  workout_logs_user_id: string; // Updated to match new naming convention
+  workout_plan_id: string;
+  date: string;
+  duration: number;
+  calories_burned?: number | null;
+  notes?: string | null;
+  completed_exercises: CompletedExercise[];
+  exercises_completed?: any[]; // For backward compatibility
 }

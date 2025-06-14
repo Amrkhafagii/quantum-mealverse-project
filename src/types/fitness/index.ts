@@ -51,3 +51,12 @@ export interface HydrationData {
   lastUpdated: string;
   glassSize: number;
 }
+
+// Fix missing exports
+export interface ExtendedUserAchievement extends UserAchievement {
+  achievement: Achievement;
+  date_achieved?: string;
+}
+
+// Re-export UserMeasurement as UserMeasurement (not UserMeasurements)
+export type { UserMeasurement } from './profile';

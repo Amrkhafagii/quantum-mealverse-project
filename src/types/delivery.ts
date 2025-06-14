@@ -184,11 +184,13 @@ export interface DeliveryLocationSettings {
   updated_at: string;
 }
 
-// Types for components that were missing
+// Updated DeliveryUser with proper fields
 export interface DeliveryUser {
   id: string;
   delivery_users_user_id: string; // Updated to match new naming convention
   full_name: string;
+  first_name?: string;
+  last_name?: string;
   phone: string;
   vehicle_type: string;
   license_plate: string;
@@ -199,21 +201,27 @@ export interface DeliveryUser {
   verification_status: 'pending' | 'verified' | 'rejected';
   background_check_status: 'pending' | 'approved' | 'rejected';
   is_available: boolean;
+  is_approved?: boolean;
   last_active: string;
   created_at: string;
   updated_at: string;
 }
 
+// Updated DeliveryVehicle with proper fields
 export interface DeliveryVehicle {
   id: string;
   delivery_vehicles_user_id: string; // Updated to match new naming convention
+  delivery_user_id?: string; // For backward compatibility
   vehicle_type: string;
+  type?: string; // For form compatibility
   make: string;
   model: string;
   year: number;
   license_plate: string;
   color: string;
   insurance_policy_number?: string;
+  insurance_number?: string;
+  insurance_expiry?: string;
   registration_number?: string;
   is_active: boolean;
   created_at: string;
@@ -223,7 +231,7 @@ export interface DeliveryVehicle {
 export interface DeliveryDocument {
   id: string;
   delivery_documents_user_id: string; // Updated to match new naming convention
-  document_type: 'license' | 'insurance' | 'registration' | 'background_check';
+  document_type: 'license' | 'insurance' | 'registration' | 'background_check' | 'profile_photo' | 'drivers_license' | 'vehicle_registration' | 'identity';
   document_url: string;
   verification_status: 'pending' | 'approved' | 'rejected';
   expiry_date?: string;
