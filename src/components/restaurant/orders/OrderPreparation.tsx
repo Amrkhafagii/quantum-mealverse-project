@@ -45,7 +45,7 @@ export const OrderPreparation: React.FC<OrderPreparationProps> = ({
       case OrderStatus.PREPARING:
         return 'default';
       case OrderStatus.READY_FOR_PICKUP:
-        return 'success';
+        return 'default'; // Changed from 'success' to 'default' since 'success' is not a valid variant
       default:
         return 'outline';
     }

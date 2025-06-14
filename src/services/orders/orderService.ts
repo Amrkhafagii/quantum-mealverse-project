@@ -87,7 +87,7 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
     return data;
   } catch (error) {
     logOrderError('fetchUserOrders', error, { operation: 'fetchUserOrders', userId });
-    return []; // Return empty array on error
+    return []; // Return empty array instead of error object
   }
 };
 
@@ -108,7 +108,7 @@ export const fetchOrderItems = async (orderId: string): Promise<OrderItem[]> => 
     return data;
   } catch (error) {
     logOrderError('fetchOrderItems', error, { operation: 'fetchOrderItems', orderId });
-    return []; // Return empty array on error
+    return []; // Return empty array instead of error object
   }
 };
 
@@ -195,7 +195,7 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
     return data;
   } catch (error) {
     logOrderError('getOrderById', error, { operation: 'getOrderById', orderId });
-    return null; // Return null on error
+    return null; // Return null instead of error object
   }
 };
 
