@@ -51,7 +51,7 @@ export const handleAuthSubmit = async (
         const { data: deliveryInfo } = await supabase
           .from('delivery_info')
           .select('*')
-          .eq('user_id', signInData.user.id)
+          .eq('delivery_info_user_id', signInData.user.id)
           .maybeSingle();
           
         if (deliveryInfo) {
