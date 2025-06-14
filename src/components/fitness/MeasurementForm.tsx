@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,15 +40,15 @@ const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurement
       const { data, error } = await supabase
         .from('user_measurements')
         .insert({
-          user_measurements_user_id: activeUserId, // Updated field name
+          user_measurements_user_id: activeUserId,
           date: formData.date,
-          weight: formData.weight,
-          body_fat: formData.body_fat,
-          chest: formData.chest,
-          waist: formData.waist,
-          hips: formData.hips,
-          arms: formData.arms,
-          legs: formData.legs,
+          weight: Number(formData.weight),
+          body_fat: formData.body_fat ? Number(formData.body_fat) : undefined,
+          chest: formData.chest ? Number(formData.chest) : undefined,
+          waist: formData.waist ? Number(formData.waist) : undefined,
+          hips: formData.hips ? Number(formData.hips) : undefined,
+          arms: formData.arms ? Number(formData.arms) : undefined,
+          legs: formData.legs ? Number(formData.legs) : undefined,
           notes: formData.notes,
         });
 

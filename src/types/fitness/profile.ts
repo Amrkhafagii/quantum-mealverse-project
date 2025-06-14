@@ -1,12 +1,12 @@
 
 export interface UserProfile {
   id: string;
-  fitness_profiles_user_id: string; // Updated to match database naming convention
+  fitness_profiles_user_id: string;
   display_name?: string;
   height?: number;
-  weight: number; // Required field
+  weight: number;
   goal_weight?: number;
-  date_of_birth?: string | null; // Changed from Date to string | null to match database
+  date_of_birth?: string | null;
   gender?: string;
   fitness_level?: string;
   fitness_goals?: string[];
@@ -14,7 +14,7 @@ export interface UserProfile {
   dietary_restrictions?: string[];
   created_at?: string;
   updated_at?: string;
-  activity_level?: string; // Added missing field
+  activity_level?: string;
   
   // Backward compatibility fields
   user_id?: string;
@@ -25,7 +25,7 @@ export interface UserProfile {
 
 export interface UserMeasurement {
   id: string;
-  user_measurements_user_id: string; // Updated to match database naming convention
+  user_measurements_user_id: string;
   date: string;
   weight: number;
   body_fat?: number;
