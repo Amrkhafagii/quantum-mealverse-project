@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -108,7 +107,7 @@ export const MenuItemReviews: React.FC<MenuItemReviewsProps> = ({
                         },
                         created_at: format(new Date(review.created_at), 'PPP'),
                       }}
-                      showActions={false}
+                      
                     />
                   ))}
                 </div>

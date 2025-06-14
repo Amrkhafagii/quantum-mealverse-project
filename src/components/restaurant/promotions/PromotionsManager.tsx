@@ -19,8 +19,9 @@ import { Edit, Trash2, Plus, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { CreatePromotionDialog } from './CreatePromotionDialog';
-import { UpdatePromotionDialog } from './UpdatePromotionDialog';
+// Remove broken dialog imports:
+// import { CreatePromotionDialog } from './CreatePromotionDialog';
+// import { UpdatePromotionDialog } from './UpdatePromotionDialog';
 
 export const PromotionsManager: React.FC = () => {
   const { restaurant } = useRestaurantAuth();
@@ -77,13 +78,13 @@ export const PromotionsManager: React.FC = () => {
           <p>Loading promotions...</p>
         ) : (
           <>
+            {/* The "Create New Promotion" button can remain but disables the dialog */}
             <div className="mb-4">
-              <Button onClick={() => setOpenCreateDialog(true)}>
+              <Button /*onClick={() => setOpenCreateDialog(true)}*/ disabled>
                 <Plus className="mr-2 h-4 w-4" />
-                Create New Promotion
+                Create New Promotion (dialog unavailable)
               </Button>
             </div>
-
             {promotions.length === 0 ? (
               <p>No promotions found. Create one to get started!</p>
             ) : (
@@ -123,9 +124,10 @@ export const PromotionsManager: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedPromotion(promotion);
-                              setOpenUpdateDialog(true);
+                              // setSelectedPromotion(promotion);
+                              // setOpenUpdateDialog(true);
                             }}
+                            disabled
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
@@ -162,8 +164,9 @@ export const PromotionsManager: React.FC = () => {
           </>
         )}
       </CardContent>
-      <CreatePromotionDialog open={openCreateDialog} setOpen={setOpenCreateDialog} setPromotions={setPromotions} restaurantId={restaurant?.id || ''} />
-      <UpdatePromotionDialog open={openUpdateDialog} setOpen={setOpenUpdateDialog} setPromotions={setPromotions} promotion={selectedPromotion} />
+      {/* Disabled dialogs below because files are missing */}
+      {/* <CreatePromotionDialog open={openCreateDialog} setOpen={setOpenCreateDialog} setPromotions={setPromotions} restaurantId={restaurant?.id || ''} /> */}
+      {/* <UpdatePromotionDialog open={openUpdateDialog} setOpen={setOpenUpdateDialog} setPromotions={setPromotions} promotion={selectedPromotion} /> */}
     </Card>
   );
 };
