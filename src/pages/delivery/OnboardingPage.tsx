@@ -38,8 +38,8 @@ const OnboardingPage: React.FC = () => {
   
   const savePersonalInfo = async (values: any) => {
     updatePersonalInfo(values);
-    // Return as DeliveryUser. All required fields must match src/types/delivery.ts
-    return {
+    // We explicitly assert the type to satisfy the DeliveryUser interface
+    const result: import('@/types/delivery').DeliveryUser = {
       id: user?.id || "",
       delivery_users_user_id: user?.id || "",
       first_name: values.first_name || "",
@@ -49,11 +49,11 @@ const OnboardingPage: React.FC = () => {
       vehicle_type: "",
       license_plate: "",
       driver_license_number: "",
-      status: "inactive",  // ← use literal only
+      status: "inactive" as "inactive", // satisfies the union type
       rating: 0,
       total_deliveries: 0,
-      verification_status: "pending", // ← use literal only
-      background_check_status: "pending", // ← use literal only
+      verification_status: "pending",
+      background_check_status: "pending",
       is_available: false,
       is_approved: false,
       last_active: new Date().toISOString(),
@@ -62,6 +62,7 @@ const OnboardingPage: React.FC = () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    return result;
   };
 
   const saveVehicleInformation = async (values: any) => {
@@ -123,19 +124,19 @@ const OnboardingPage: React.FC = () => {
 
   const savePaymentInfo = async (data: any) => {
     updatePaymentDetails(data);
-    // Return as DeliveryPaymentDetails (see src/types/delivery.ts)
-    return {
+    const result: import('@/types/delivery').DeliveryPaymentDetails = {
       id: "dummy-id",
       delivery_payment_details_user_id: user?.id || "",
       bank_name: data.bank_name || "",
       account_number: data.account_number || "",
       routing_number: data.routing_number || "",
       account_holder_name: data.account_holder_name || data.account_name || "",
-      account_type: "checking", // ← use literal only ("checking" or "savings")
+      account_type: "checking" as "checking", // satisfies the union type, you may modify to "savings" as needed
       is_verified: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    return result;
   };
 
   // Redirect if not authenticated
