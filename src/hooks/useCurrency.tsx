@@ -34,7 +34,7 @@ function passthrough(price: number) {
   return price;
 }
 
-// Context is initialized as undefined and asserted in hook
+// Explicitly initialize as undefined to avoid TypeScript deep type instantiation bug
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -95,7 +95,6 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 export const useCurrency = (): CurrencyContextType => {
   const context = useContext(CurrencyContext);
   if (!context) {
-    // You can customize this error for dev/production, or fallback to default
     throw new Error("useCurrency must be used within a CurrencyProvider");
   }
   return context;

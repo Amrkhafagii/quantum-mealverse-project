@@ -14,7 +14,7 @@ const Signup = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AuthForm isRegister={true} />
+          <AuthForm isSignUp={true} />
         </CardContent>
       </Card>
     </div>
