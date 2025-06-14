@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -14,8 +15,8 @@ export type AllowedGoalType =
 
 export interface WorkoutGoal {
   id: string;
-  user_id: string;
-  title: string;
+  user_id: string; // app-level, mapped from fitness_goals_user_id
+  title: string; // app-level, mapped from name
   description: string;
   target_value: number;
   current_value: number;
@@ -30,7 +31,7 @@ export interface WorkoutGoal {
 
 export interface WorkoutStats {
   id: string;
-  user_id: string;
+  user_id: string; // app-level, mapped from user_workout_stats_user_id
   total_workouts: number;
   total_time: number;
   calories_burned: number;
@@ -65,26 +66,24 @@ export const useWorkoutAnalytics = () => {
   const [stats, setStats] = useState<WorkoutStats | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // --- GET ---
   const fetchWorkoutGoals = async () => {
     if (!user) return;
-
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const { data: dataFromDB, error } = await supabase
         .from('fitness_goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('fitness_goals_user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // Map DB result -> WorkoutGoal
+      // Map DB fields -> WorkoutGoal
       const mappedGoals: WorkoutGoal[] = (dataFromDB as any[]).map((item) => ({
         id: item.id,
-        user_id: item.user_id,
-        title: item.title ?? item.name ?? '', // tolerate db 'name'
+        user_id: item.fitness_goals_user_id,
+        title: item.name ?? '', // from 'name' not 'title'
         description: item.description ?? '',
         target_value: item.target_value ?? 0,
         current_value: item.current_value ?? 0,
@@ -94,7 +93,7 @@ export const useWorkoutAnalytics = () => {
         created_at: item.created_at ?? '',
         updated_at: item.updated_at ?? '',
         unit: item.unit,
-        is_active: (item.status === 'active') // can be improved, but fits filter logic
+        is_active: (item.status === 'active'),
       }));
 
       setGoals(mappedGoals);
@@ -110,30 +109,33 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  // Renamed to createGoal (not addWorkoutGoal), and adapted for new strict shape.
+  // --- CREATE ---
   const createGoal = async (
     newGoal: Omit<WorkoutGoal, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'is_active'>
   ) => {
     if (!user) return;
-
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      // Only insert allowed fields
+      // Database expects fitness_goals_user_id, name, NOT user_id, title.
+      const toInsert = {
+        fitness_goals_user_id: user.id,
+        name: newGoal.title,
+        description: newGoal.description,
+        target_value: newGoal.target_value,
+        current_value: newGoal.current_value,
+        target_date: newGoal.target_date,
+        status: 'active',
+        goal_type: newGoal.goal_type,
+        unit: newGoal.unit,
+      };
+
       const { error } = await supabase
         .from('fitness_goals')
-        .insert([
-          {
-            ...newGoal,
-            user_id: user.id,
-            status: 'active',
-          },
-        ]);
+        .insert([toInsert]);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      await fetchWorkoutGoals(); // Refresh goals after adding
+      await fetchWorkoutGoals();
       toast({
         title: "Success",
         description: "Workout goal added successfully!",
@@ -150,26 +152,34 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  // Renamed to updateGoal, check for allowed updates
+  // --- UPDATE ---
   const updateGoal = async (
     goalId: string,
     updates: Partial<Omit<WorkoutGoal, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'is_active'>>
   ) => {
     if (!user) return;
-
+    setIsLoading(true);
     try {
-      setIsLoading(true);
+      // Remap property keys for Supabase; update only present values.
+      const dbUpdates: Record<string, any> = {};
+      if ('title' in updates) dbUpdates.name = updates.title;
+      if ('description' in updates) dbUpdates.description = updates.description;
+      if ('target_value' in updates) dbUpdates.target_value = updates.target_value;
+      if ('current_value' in updates) dbUpdates.current_value = updates.current_value;
+      if ('target_date' in updates) dbUpdates.target_date = updates.target_date;
+      if ('status' in updates) dbUpdates.status = updates.status;
+      if ('goal_type' in updates) dbUpdates.goal_type = updates.goal_type;
+      if ('unit' in updates) dbUpdates.unit = updates.unit;
+
       const { error } = await supabase
         .from('fitness_goals')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', goalId)
-        .eq('user_id', user.id);
+        .eq('fitness_goals_user_id', user.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      await fetchWorkoutGoals(); // Refresh goals after updating
+      await fetchWorkoutGoals();
       toast({
         title: "Success",
         description: "Workout goal updated successfully!",
@@ -186,23 +196,20 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  // Renamed to deleteGoal
+  // --- DELETE ---
   const deleteGoal = async (goalId: string) => {
     if (!user) return;
-
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const { error } = await supabase
         .from('fitness_goals')
         .delete()
         .eq('id', goalId)
-        .eq('user_id', user.id);
+        .eq('fitness_goals_user_id', user.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      await fetchWorkoutGoals(); // Refresh goals after deleting
+      await fetchWorkoutGoals();
       toast({
         title: "Success",
         description: "Workout goal deleted successfully!",
@@ -219,26 +226,23 @@ export const useWorkoutAnalytics = () => {
     }
   };
 
-  // Stats -- leave unchanged except for typing result (fix recursion)
+  // --- GET STATS ---
   const fetchWorkoutStats = async () => {
     if (!user) return;
-
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const { data, error } = await supabase
         .from('user_workout_stats')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_workout_stats_user_id', user.id)
+        .maybeSingle();
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setStats({
           id: data.id,
-          user_id: data.user_id,
+          user_id: data.user_workout_stats_user_id, // <- fix property name
           total_workouts: data.total_workouts,
           total_time: data.total_time,
           calories_burned: data.calories_burned,
@@ -271,7 +275,6 @@ export const useWorkoutAnalytics = () => {
     // eslint-disable-next-line
   }, [user]);
 
-  // EXPLICITLY export only what clients/components are *expecting*:
   return {
     goals,
     stats,
