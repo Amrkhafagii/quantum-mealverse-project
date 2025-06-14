@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,16 +36,16 @@ export const WorkoutGoalsManager: React.FC = () => {
     goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_active'>
   ) => {
     if (!user?.id) return;
-    // Make sure we always provide required fields (esp. title)
     if (!goalData.title || goalData.title.trim() === "") {
       // Optionally: add a toast or alert here
       return;
     }
-    await createGoal({
+    const payload: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_active'> = {
       ...goalData,
-      // status explicitly required by the type
+      title: goalData.title, // Now title is required by construction
       status: "active",
-    });
+    };
+    await createGoal(payload);
     setShowCreateForm(false);
   };
 
