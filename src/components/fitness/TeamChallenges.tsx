@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Team, TeamMember } from '@/types/fitness/achievements'; // If needed, or from correct location
+import { Team, TeamMember } from '@/types/fitness';
 import { useAuth } from '@/hooks/useAuth';
 
 const TeamChallenges: React.FC = () => {

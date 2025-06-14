@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
 import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
-import { WorkoutSchedule, CreateWorkoutScheduleData, CalendarEvent } from '@/types/fitness/scheduling';
+import { WorkoutSchedule, CreateWorkoutScheduleData, CalendarEvent } from '@/types/fitness';
 import ScheduleForm from './ScheduleForm';
 
 interface WorkoutSchedulerProps {

@@ -9,33 +9,5 @@ export * from './workouts';
 export * from './achievements';
 export * from './nutrition';
 
-// Direct type exports for types used across various modules:
-export type {
-  // Core data types
-  SavedMealPlan,
-  SavedMealPlanWithExpiry,
-  WorkoutPlan,
-  WorkoutDay,
-  WorkoutLog,
-  WorkoutHistoryItem,
-  WorkoutSet,
-  Exercise,
-  CompletedExercise,
-  UserMeasurement,
-  UserProfile,
-  WorkoutSchedule,
-  Achievement,
-  UserAchievement,
-  UserWorkoutStats,
-  // Achievements
-  Team,
-  TeamMember,
-  // Recommendations + Quests + Goals
-  WorkoutRecommendation,
-  DailyQuest,
-  FitnessGoal,
-  GoalStatus,
-  // Scheduling/calendar types
-  CalendarEvent
-} from '../fitness.d.ts';
-
+// Only use the submodule exports above.
+// Do NOT re-export types from '../fitness.d.ts' (causes deep infinite recursion issues).

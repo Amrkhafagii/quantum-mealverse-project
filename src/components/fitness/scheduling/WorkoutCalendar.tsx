@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucid
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useWorkoutScheduling } from '@/hooks/useWorkoutScheduling';
-import { CalendarEvent } from '@/types/fitness/scheduling';
+import { CalendarEvent } from '@/types/fitness';
 
 interface WorkoutCalendarProps {
   onDateSelect?: (date: Date) => void;
