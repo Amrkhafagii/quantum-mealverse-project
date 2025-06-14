@@ -1,9 +1,9 @@
-
 // Use the correct hook (MealType recommendations, not WorkoutRecommendation)!
 import React from 'react';
 // IMPORTANT: the .tsx file returns MealType[]; the .ts might return WorkoutRecommendation[].
-// To force .tsx, use relative import or extension:
-import { useRecommendations } from '@/hooks/useRecommendations.tsx';
+// Make sure we import without ".tsx" — Vite and TS will prefer the index.tsx when present.
+// This ensures we get the hook for meals, not for workouts!
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { CustomerMealCard } from '@/components/CustomerMealCard';
 import { Loader } from 'lucide-react';
 import {
@@ -21,7 +21,7 @@ interface RecommendedMealsProps {
 const RecommendedMeals: React.FC<RecommendedMealsProps> = ({ 
   showTitle = true 
 }) => {
-  // This hook gives you MealType[]
+  // This hook now gives you MealType[]
   const { recommendations, isLoading } = useRecommendations();
   const [activeTab, setActiveTab] = React.useState<'personalized' | 'trending' | 'dietary' | 'fitness'>('personalized');
 
@@ -116,4 +116,3 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
 };
 
 export default RecommendedMeals;
-
