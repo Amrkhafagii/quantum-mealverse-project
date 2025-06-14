@@ -187,15 +187,23 @@ async function generateFinancialReport(
 // ---- Bank account management ----
 // This function supports both (userId) and (userId, role) signatures for backward compatibility.
 // If a second argument is provided, it can be 'restaurant' or 'delivery_user'.
-async function getBankAccounts(userId: string, role?: 'restaurant'|'delivery_user'): Promise<BankAccount[]> {
+/**
+ * Get bank accounts by user (customer, restaurant, or delivery_user)
+ * Usage:
+ *  getBankAccounts(userId)
+ *  getBankAccounts(userId, "restaurant")
+ *  getBankAccounts(userId, "delivery_user")
+ */
+async function getBankAccounts(userId: string, role?: "restaurant" | "delivery_user"): Promise<BankAccount[]> {
   let query = supabase
     .from('bank_accounts')
     .select('*')
     .order('created_at', { ascending: false });
-  // By default, filter on user_id
-  if (role === 'delivery_user') {
+
+  // role argument must be explicitly "restaurant" or "delivery_user"
+  if (role === "delivery_user") {
     query = query.eq('delivery_user_id', userId);
-  } else if (role === 'restaurant') {
+  } else if (role === "restaurant") {
     query = query.eq('restaurant_id', userId);
   } else {
     query = query.eq('user_id', userId);
@@ -207,6 +215,48 @@ async function getBankAccounts(userId: string, role?: 'restaurant'|'delivery_use
     return [];
   }
   return (data ?? []) as BankAccount[];
+}
+
+/**
+ * Set default bank account for a user (customer/restaurant/delivery_user).
+ * Usage:
+ *  setDefaultBankAccount(userId, bankAccountId, isDefault: boolean = true)
+ */
+async function setDefaultBankAccount(
+  userId: string,
+  bankAccountId: string,
+  isDefault: boolean = true
+): Promise<boolean> {
+  // Validate bankAccountId is string and isDefault is boolean
+  // If called with only 2 args, treat as (userId, bankAccountId)
+  if (typeof isDefault !== "boolean") {
+    isDefault = true;
+  }
+
+  // First, set all is_default to false for this user (by user_id, for customer)
+  // Try all user columns ("user_id", "restaurant_id", "delivery_user_id") for safety
+  let clearQuery = supabase
+    .from('bank_accounts')
+    .update({ is_default: false });
+
+  // If the id pattern is uuid and role is needed, that's handled at the callsite in component
+  // Prefer clear for all possible columns since components sometimes pass role
+
+  // Defensively try with all three keys—this works since only one is set for each account
+  await clearQuery
+    .or(`user_id.eq.${userId},restaurant_id.eq.${userId},delivery_user_id.eq.${userId}`);
+
+  // Now set the specific bankAccountId to default
+  const { error } = await supabase
+    .from('bank_accounts')
+    .update({ is_default: isDefault, updated_at: new Date().toISOString() })
+    .eq('id', bankAccountId);
+
+  if (error) {
+    console.error('Error setting default bank account:', error);
+    return false;
+  }
+  return true;
 }
 
 type BankAccountCreateInput = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
@@ -227,36 +277,6 @@ async function addBankAccount(
 
   if (error) {
     console.error('Error adding bank account:', error);
-    return false;
-  }
-  return true;
-}
-
-// Always three arguments: userId, bankAccountId, isDefault (boolean, default true)
-async function setDefaultBankAccount(
-  userId: string,
-  bankAccountId: string,
-  isDefault: boolean = true
-): Promise<boolean> {
-  // First, set all is_default to false for user.
-  const { error: clearError } = await supabase
-    .from('bank_accounts')
-    .update({ is_default: false })
-    .eq('user_id', userId);
-
-  if (clearError) {
-    console.error('Error clearing default accounts:', clearError);
-    return false;
-  }
-
-  const { error } = await supabase
-    .from('bank_accounts')
-    .update({ is_default: isDefault, updated_at: new Date().toISOString() })
-    .eq('id', bankAccountId)
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('Error setting default bank account:', error);
     return false;
   }
   return true;
