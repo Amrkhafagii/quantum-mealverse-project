@@ -42,16 +42,30 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
         title: rec.title,
         name: rec.title, // Set both for compatibility
         description: rec.description || '',
-        difficulty: rec.difficulty ?? rec.metadata?.difficulty ?? 'beginner',
-        duration_minutes: rec.duration_minutes ?? rec.metadata?.duration_minutes ?? 0,
-        target_muscle_groups: rec.target_muscle_groups ?? rec.metadata?.target_muscle_groups ?? [],
-        recommended_frequency: rec.recommended_frequency ?? rec.metadata?.recommended_frequency ?? 1,
+        difficulty:
+          rec.difficulty ??
+          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.difficulty : undefined) ??
+          'beginner',
+        duration_minutes:
+          rec.duration_minutes ??
+          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.duration_minutes : undefined) ??
+          0,
+        target_muscle_groups:
+          rec.target_muscle_groups ??
+          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.target_muscle_groups : undefined) ??
+          [],
+        recommended_frequency:
+          rec.recommended_frequency ??
+          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.recommended_frequency : undefined) ??
+          1,
         created_at: rec.created_at ?? new Date().toISOString(),
         workout_recommendations_user_id: rec.workout_recommendations_user_id,
-        // Patch extra fields for possible extensions (does not affect type matching)
-        type: rec.type ?? '',
-        reason: rec.reason ?? '',
-        confidence_score: rec.confidence_score ?? 0,
+        type: rec.type ?? (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.type : undefined) ?? '',
+        reason: rec.reason ?? (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.reason : undefined) ?? '',
+        confidence_score:
+          rec.confidence_score ??
+          (rec.metadata && typeof rec.metadata === 'object' ? rec.metadata.confidence_score : undefined) ??
+          0,
         suggested_at: rec.suggested_at,
         dismissed: rec.dismissed,
         applied: rec.applied,

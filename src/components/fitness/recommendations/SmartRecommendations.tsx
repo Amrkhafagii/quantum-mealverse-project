@@ -66,6 +66,9 @@ export const SmartRecommendations: React.FC = () => {
     }
   };
 
+  const getRecField = (rec: any, key: string) =>
+    rec[key] ?? rec.metadata?.[key] ?? '';
+
   const handleFeedback = async (
     recommendationId: string, 
     feedbackType: 'helpful' | 'not_helpful'
@@ -129,12 +132,12 @@ export const SmartRecommendations: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {activeRecommendations.map((recommendation, index) => {
-                  const label = recommendation.type ? recommendation.type : '';
-                  const dismissed = recommendation.dismissed ?? false;
-                  const applied = recommendation.applied ?? false;
-                  const appliedAt = recommendation.applied_at ?? '';
-                  const reason = recommendation.reason ?? '';
-                  const confidenceScore = recommendation.confidence_score ?? 0;
+                  const dismissed = getRecField(recommendation, 'dismissed');
+                  const applied = getRecField(recommendation, 'applied');
+                  const appliedAt = getRecField(recommendation, 'applied_at');
+                  const type = getRecField(recommendation, 'type');
+                  const reason = getRecField(recommendation, 'reason');
+                  const confidenceScore = getRecField(recommendation, 'confidence_score');
 
                   return (
                     <motion.div
@@ -146,13 +149,13 @@ export const SmartRecommendations: React.FC = () => {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${getRecommendationColor(recommendation.type)}`}>
-                            {getRecommendationIcon(recommendation.type)}
+                          <div className={`p-2 rounded-lg ${getRecommendationColor(type)}`}>
+                            {getRecommendationIcon(type)}
                           </div>
                           <div>
                             <h3 className="font-semibold text-lg">{recommendation.title}</h3>
                             <Badge variant="outline" className="mt-1">
-                              {recommendation.type.replace('_', ' ')}
+                              {type.replace('_', ' ')}
                             </Badge>
                           </div>
                         </div>
@@ -233,12 +236,12 @@ export const SmartRecommendations: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {completedRecommendations.map((recommendation) => {
-                  const label = recommendation.type ? recommendation.type : '';
-                  const dismissed = recommendation.dismissed ?? false;
-                  const applied = recommendation.applied ?? false;
-                  const appliedAt = recommendation.applied_at ?? '';
-                  const reason = recommendation.reason ?? '';
-                  const confidenceScore = recommendation.confidence_score ?? 0;
+                  const dismissed = getRecField(recommendation, 'dismissed');
+                  const applied = getRecField(recommendation, 'applied');
+                  const appliedAt = getRecField(recommendation, 'applied_at');
+                  const type = getRecField(recommendation, 'type');
+                  const reason = getRecField(recommendation, 'reason');
+                  const confidenceScore = getRecField(recommendation, 'confidence_score');
 
                   return (
                     <div
@@ -247,7 +250,7 @@ export const SmartRecommendations: React.FC = () => {
                     >
                       <div className="flex items-center gap-3 mb-2">
                         <div className="p-2 rounded-lg bg-green-500">
-                          {getRecommendationIcon(recommendation.type)}
+                          {getRecommendationIcon(type)}
                         </div>
                         <div>
                           <h3 className="font-semibold">{recommendation.title}</h3>

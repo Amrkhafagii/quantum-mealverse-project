@@ -1,38 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Star, Dumbbell, Heart, Target, CheckCircle, X } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { WorkoutRecommendation } from '@/types/fitness/recommendations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import type { WorkoutRecommendation } from "@/types/fitness/recommendations";
+import { Dumbbell, ThumbsUp, X, ArrowRight, Star } from 'lucide-react';
 
 interface WorkoutRecommendationsProps {
-  userId?: string;
-  onApplyRecommendation: (userId?: string) => Promise<void>;
+  onApplyRecommendation?: (recommendationId: string) => void;
 }
 
-const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
-  userId,
-  onApplyRecommendation
-}) => {
+const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApplyRecommendation }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [recommendations, setRecommendations] = useState<WorkoutRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  const currentUserId = userId || user?.id;
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (currentUserId) {
-      fetchRecommendations();
-    }
-  }, [currentUserId]);
+    fetchRecommendations();
+  }, [user]);
 
   const fetchRecommendations = async () => {
     if (!user?.id) return;
+    
     try {
       setIsLoading(true);
       const { data, error } = await supabase
@@ -43,13 +34,13 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
         .eq('applied', false)
         .order('confidence_score', { ascending: false })
         .limit(3);
-
+        
       if (error) throw error;
-
-      const typedRecommendations: WorkoutRecommendation[] = (data || []).map((rec: any) => ({
+      
+      const typedRecommendations: WorkoutRecommendation[] = (data || []).map(rec => ({
         id: rec.id,
         title: rec.title,
-        name: rec.title, // For compatibility
+        name: rec.title, // Set both for compatibility
         description: rec.description || '',
         difficulty: rec.difficulty ?? rec.metadata?.difficulty ?? 'beginner',
         duration_minutes: rec.duration_minutes ?? rec.metadata?.duration_minutes ?? 0,
@@ -57,15 +48,16 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
         recommended_frequency: rec.recommended_frequency ?? rec.metadata?.recommended_frequency ?? 1,
         created_at: rec.created_at ?? new Date().toISOString(),
         workout_recommendations_user_id: rec.workout_recommendations_user_id,
-        type: rec.type ?? rec.metadata?.type ?? '',
-        reason: rec.reason ?? rec.metadata?.reason ?? '',
-        confidence_score: rec.confidence_score ?? rec.metadata?.confidence_score ?? 0,
+        // Patch extra fields for possible extensions (does not affect type matching)
+        type: rec.type ?? '',
+        reason: rec.reason ?? '',
+        confidence_score: rec.confidence_score ?? 0,
         suggested_at: rec.suggested_at,
         dismissed: rec.dismissed,
         applied: rec.applied,
         applied_at: rec.applied_at
       }));
-
+      
       setRecommendations(typedRecommendations);
     } catch (error) {
       console.error('Error fetching workout recommendations:', error);
@@ -79,66 +71,58 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
     }
   };
 
-  const handleApplyRecommendation = async (recommendationId: string) => {
-    if (!currentUserId) return;
-
+  const handleApply = async (recommendation: WorkoutRecommendation) => {
     try {
-      setActionLoading(recommendationId);
-      
+      // Update the recommendation status
       const { error } = await supabase
         .from('workout_recommendations')
         .update({ 
-          applied: true, 
-          applied_at: new Date().toISOString() 
+          applied: true,
+          applied_at: new Date().toISOString()
         })
-        .eq('id', recommendationId)
-        .eq('user_id', currentUserId);
-
+        .eq('id', recommendation.id);
+        
       if (error) throw error;
-
-      toast({
-        title: "Program Applied",
-        description: "The workout program has been applied to your routine",
-      });
-
-      // Call the onApplyRecommendation callback
-      await onApplyRecommendation(currentUserId);
       
-      // Refresh recommendations
-      await fetchRecommendations();
+      toast({
+        title: "Recommendation Applied",
+        description: "We've updated your workout plan accordingly",
+      });
+      
+      // Update local state
+      setRecommendations(prev => prev.filter(r => r.id !== recommendation.id));
+      
+      // Call parent callback if provided
+      if (onApplyRecommendation) {
+        onApplyRecommendation(recommendation.id);
+      }
     } catch (error) {
       console.error('Error applying recommendation:', error);
       toast({
         title: "Error",
-        description: "Failed to apply workout program",
+        description: "Failed to apply recommendation",
         variant: "destructive"
       });
-    } finally {
-      setActionLoading(null);
     }
   };
 
-  const handleDismissRecommendation = async (recommendationId: string) => {
-    if (!currentUserId) return;
-
+  const handleDismiss = async (recommendationId: string) => {
     try {
-      setActionLoading(recommendationId);
-      
+      // Update the recommendation status
       const { error } = await supabase
         .from('workout_recommendations')
         .update({ dismissed: true })
-        .eq('id', recommendationId)
-        .eq('user_id', currentUserId);
-
+        .eq('id', recommendationId);
+        
       if (error) throw error;
-
+      
       toast({
         title: "Recommendation Dismissed",
-        description: "This program won't be shown again",
+        description: "We won't show this recommendation again",
       });
       
-      // Refresh recommendations
-      await fetchRecommendations();
+      // Update local state
+      setRecommendations(prev => prev.filter(r => r.id !== recommendationId));
     } catch (error) {
       console.error('Error dismissing recommendation:', error);
       toast({
@@ -146,145 +130,74 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({
         description: "Failed to dismiss recommendation",
         variant: "destructive"
       });
-    } finally {
-      setActionLoading(null);
     }
-  };
-
-  const getRecommendationIcon = (type: string) => {
-    switch (type) {
-      case 'fat_loss':
-        return <Heart className="h-6 w-6 text-red-500" />;
-      case 'muscle_building':
-        return <Dumbbell className="h-6 w-6 text-blue-500" />;
-      default:
-        return <Target className="h-6 w-6 text-quantum-cyan" />;
-    }
-  };
-
-  const getConfidenceBadgeColor = (score: number) => {
-    if (score >= 0.9) return 'bg-green-500';
-    if (score >= 0.8) return 'bg-yellow-500';
-    return 'bg-gray-500';
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Star className="h-8 w-8 text-quantum-cyan" />
-          <h2 className="text-3xl font-bold text-quantum-cyan">Workout Recommendations</h2>
-        </div>
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="p-8 text-center">
-            <div className="text-gray-400">Loading recommendations...</div>
-          </CardContent>
-        </Card>
+      <div className="flex justify-center p-8">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-quantum-cyan"></div>
       </div>
     );
   }
 
   if (recommendations.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Star className="h-8 w-8 text-quantum-cyan" />
-          <h2 className="text-3xl font-bold text-quantum-cyan">Workout Recommendations</h2>
-        </div>
-        <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-          <CardContent className="p-8 text-center">
-            <div className="space-y-4">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-              <div>
-                <h3 className="text-lg font-medium text-white mb-2">All Caught Up!</h3>
-                <p className="text-gray-400">
-                  No new workout recommendations at this time. Keep up the great work!
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return null; // Don't show anything if no recommendations
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Star className="h-8 w-8 text-quantum-cyan" />
-        <h2 className="text-3xl font-bold text-quantum-cyan">Workout Recommendations</h2>
-      </div>
+    <div className="space-y-4">
+      <h3 className="text-xl font-semibold text-quantum-cyan flex items-center">
+        <Star className="h-5 w-5 mr-2 text-yellow-400" />
+        Recommended for You
+      </h3>
       
-      <p className="text-gray-300">
-        Based on your profile and goals, here are some recommended workout programs.
-      </p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {recommendations.map((recommendation) => (
-          <Card 
-            key={recommendation.id} 
-            className="bg-quantum-darkBlue/30 border-quantum-cyan/20 hover:border-quantum-cyan/40 transition-colors"
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  {getRecommendationIcon(recommendation.type)}
-                  <div>
-                    <CardTitle className="text-quantum-cyan text-xl">
-                      {recommendation.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge 
-                        variant="outline" 
-                        className={`${getConfidenceBadgeColor(recommendation.confidence_score)} text-white border-none`}
-                      >
-                        {Math.round(recommendation.confidence_score * 100)}% Match
-                      </Badge>
-                    </div>
-                  </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {recommendations.map((recommendation) => {
+          // Safely pull extended fields from top-level or metadata
+          const type = (recommendation as any).type ?? (recommendation as any).metadata?.type ?? '';
+          const confidenceScore = (recommendation as any).confidence_score ?? (recommendation as any).metadata?.confidence_score ?? 0;
+          const reason = (recommendation as any).reason ?? (recommendation as any).metadata?.reason ?? '';
+          
+          return (
+            <Card key={recommendation.id} className="bg-quantum-black/30 border-quantum-purple/30 overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-medium">{recommendation.title || recommendation.name}</CardTitle>
+                <CardDescription>
+                  {reason && (
+                    <p className="text-gray-400 text-sm">{reason}</p>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm mb-2">{recommendation.description}</p>
+                <div className="flex items-center gap-1 text-xs text-quantum-cyan">
+                  <Dumbbell className="h-3 w-3" />
+                  <span>Confidence: {Math.round(confidenceScore * 100)}%</span>
                 </div>
+              </CardContent>
+              <CardFooter className="bg-quantum-darkBlue/30 flex justify-between pt-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => handleDismissRecommendation(recommendation.id)}
-                  disabled={actionLoading === recommendation.id}
-                  className="text-gray-400 hover:text-white"
+                  className="text-xs"
+                  onClick={() => handleDismiss(recommendation.id)}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 mr-1" />
+                  Dismiss
                 </Button>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                {recommendation.description}
-              </p>
-              
-              {recommendation.reason && (
-                <div className="bg-quantum-black/30 rounded-lg p-3">
-                  <p className="text-sm text-quantum-cyan">
-                    <strong>Why this program:</strong> {recommendation.reason}
-                  </p>
-                </div>
-              )}
-              
-              <Button 
-                className="w-full bg-quantum-purple hover:bg-quantum-purple/90 text-white"
-                onClick={() => handleApplyRecommendation(recommendation.id)}
-                disabled={actionLoading === recommendation.id}
-              >
-                {actionLoading === recommendation.id ? (
-                  "Applying..."
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Apply Program
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                <Button 
+                  size="sm"
+                  className="bg-quantum-purple hover:bg-quantum-purple/90 text-xs"
+                  onClick={() => handleApply(recommendation)}
+                >
+                  <ThumbsUp className="h-3 w-3 mr-1" />
+                  Apply
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

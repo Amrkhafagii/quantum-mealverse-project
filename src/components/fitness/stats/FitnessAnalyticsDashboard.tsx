@@ -1,147 +1,133 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import ProgressChart from './ProgressChart';
-import { BarChart, CheckCircle, LineChart, TrendingUp, Users } from 'lucide-react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { CalendarDays, Dumbbell, Flame, Steps } from 'lucide-react';
+import { ProgressChart } from './ProgressChart';
 
 interface FitnessAnalyticsDashboardProps {
   userId?: string;
 }
 
 const FitnessAnalyticsDashboard: React.FC<FitnessAnalyticsDashboardProps> = ({ userId }) => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('weight');
-  const [weightData, setWeightData] = useState<any[]>([]);
-  const [workoutData, setWorkoutData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    if (userId || user?.id) {
-      fetchData();
-    }
-  }, [userId, user]);
-  
-  const fetchData = async () => {
-    setIsLoading(true);
-    const id = userId || user?.id;
-    if (!id) return;
-    
-    try {
-      // Fetch weight measurements
-      const { data: measurements } = await supabase
-        .from('user_measurements')
-        .select('date, weight, body_fat, chest, waist, arms, legs')
-        .eq('user_id', id)
-        .order('date', { ascending: true });
-        
-      if (measurements) {
-        setWeightData(measurements.map((m: any) => ({
-          date: m.date,
-          value: m.weight,
-          bodyFat: m.body_fat,
-          chest: m.chest,
-          waist: m.waist,
-          arms: m.arms,
-          legs: m.legs
-        })));
-      }
-      
-      // Fetch workout data
-      const { data: workouts } = await supabase
-        .from('workout_logs')
-        .select('date, duration, calories_burned')
-        .eq('user_id', id)
-        .order('date', { ascending: true });
-        
-      if (workouts) {
-        setWorkoutData(workouts.map((w: any) => ({
-          date: w.date,
-          value: w.duration,
-          calories: w.calories_burned
-        })));
-      }
-    } catch (error) {
-      console.error('Error fetching fitness data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
+  // Mock data for demonstration
+  const workoutData = [
+    { name: "Sun", workouts: 2 },
+    { name: "Mon", workouts: 3 },
+    { name: "Tue", workouts: 1 },
+    { name: "Wed", workouts: 4 },
+    { name: "Thu", workouts: 2 },
+    { name: "Fri", workouts: 5 },
+    { name: "Sat", workouts: 1 },
+  ];
+
+  const stepsData = [
+    { name: "Sun", steps: 5000 },
+    { name: "Mon", steps: 7500 },
+    { name: "Tue", steps: 4000 },
+    { name: "Wed", steps: 9000 },
+    { name: "Thu", steps: 6000 },
+    { name: "Fri", steps: 11000 },
+    { name: "Sat", steps: 3000 },
+  ];
+
+  const caloriesData = [
+    { name: "Sun", calories: 200 },
+    { name: "Mon", calories: 300 },
+    { name: "Tue", calories: 150 },
+    { name: "Wed", calories: 400 },
+    { name: "Thu", calories: 250 },
+    { name: "Fri", calories: 450 },
+    { name: "Sat", calories: 100 },
+  ];
+
   return (
-    <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <TrendingUp className="mr-2 h-5 w-5 text-quantum-cyan" />
-          Fitness Analytics
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 mb-6">
-            <TabsTrigger value="weight" className="flex items-center">
-              <BarChart className="h-4 w-4 mr-2" /> Weight Tracking
-            </TabsTrigger>
-            <TabsTrigger value="workouts" className="flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2" /> Workout Analysis
-            </TabsTrigger>
-            <TabsTrigger value="comparison" className="flex items-center">
-              <Users className="h-4 w-4 mr-2" /> Community Comparison
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="weight" className="space-y-4">
-            {isLoading ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-quantum-cyan"></div>
-              </div>
-            ) : weightData.length === 0 ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <p className="text-gray-400">No weight data available. Add measurements to see your progress.</p>
-              </div>
-            ) : (
-              <ProgressChart
-                title="Weight Tracking"
-                data={weightData}
-                dataKey="value"
-                unit="kg"
-                color="#9b87f5"
-                showSelect={true}
-              />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="workouts" className="space-y-4">
-            {isLoading ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-quantum-cyan"></div>
-              </div>
-            ) : workoutData.length === 0 ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <p className="text-gray-400">No workout data available. Complete workouts to see your statistics.</p>
-              </div>
-            ) : (
-              <ProgressChart
-                title="Workout Duration"
-                data={workoutData}
-                dataKey="value"
-                unit="min"
-                color="#33C3F0"
-                showSelect={true}
-              />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="comparison">
-            <div className="h-[300px] flex items-center justify-center">
-              <p className="text-gray-400">Community comparison features coming soon.</p>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {/* Total Workouts Card */}
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Dumbbell className="h-5 w-5 text-quantum-cyan" />
+            Total Workouts
+          </CardTitle>
+          <CardDescription>Lifetime workout count</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">150</div>
+          <p className="text-sm text-gray-400">+12 this month</p>
+        </CardContent>
+      </Card>
+
+      {/* Steps Taken Card */}
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Steps className="h-5 w-5 text-quantum-cyan" />
+            Steps Taken
+          </CardTitle>
+          <CardDescription>Total steps this week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">42,500</div>
+          <p className="text-sm text-gray-400">+5,000 from last week</p>
+        </CardContent>
+      </Card>
+
+      {/* Calories Burned Card */}
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-quantum-cyan" />
+            Calories Burned
+          </CardTitle>
+          <CardDescription>Total calories burned this week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold">1,450</div>
+          <p className="text-sm text-gray-400">+200 from last week</p>
+        </CardContent>
+      </Card>
+
+      {/* Workout Frequency Chart */}
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-quantum-cyan" />
+            Workout Frequency
+          </CardTitle>
+          <CardDescription>Workouts per day of the week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProgressChart data={workoutData} dataKey="workouts" color="#00FFFF" />
+        </CardContent>
+      </Card>
+
+      {/* Steps Chart */}
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Steps className="h-5 w-5 text-quantum-cyan" />
+            Daily Steps
+          </CardTitle>
+          <CardDescription>Steps per day of the week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProgressChart data={stepsData} dataKey="steps" color="#A020F0" />
+        </CardContent>
+      </Card>
+
+      {/* Calories Chart */}
+      <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Flame className="h-5 w-5 text-quantum-cyan" />
+            Calories Burned
+          </CardTitle>
+          <CardDescription>Calories burned per day of the week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProgressChart data={caloriesData} dataKey="calories" color="#FF4500" />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

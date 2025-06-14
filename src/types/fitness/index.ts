@@ -1,5 +1,5 @@
 
-// Only re-export types directly and explicitly from the main .d.ts, to avoid duplicate or circular types!
+// Re-export ONLY directly from fitness.d.ts (main source of truth).
 export type {
   UserProfile,
   UserMeasurement,
@@ -22,9 +22,8 @@ export type {
   CalendarEvent,
 } from '../fitness.d.ts';
 
-// Only export actual type implementations, skip index re-exports to avoid recursive expansion!
-// DO NOT re-export WorkoutRecommendation here; import from recommendations.ts or .d.ts directly if needed.
-export * from './profile';
+// Export only type implementations (NOT types, just values) from modular files.
+export * from './profile';      // Contains interfaces, not re-exports.
 export * from './workouts';
 export * from './exercises';
 export * from './analytics';
@@ -33,4 +32,4 @@ export * from './nutrition';
 export * from './achievements';
 export * from './challenges';
 export * from './scheduling';
-// export * from './recommendations'; <-- DO NOT do this, direct import required for metadata-based fields.
+// Do NOT re-export recommendations here; import from recommendations.ts or .d.ts directly if needed.
