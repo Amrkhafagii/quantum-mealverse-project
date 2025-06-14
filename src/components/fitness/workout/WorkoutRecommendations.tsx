@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { WorkoutRecommendation } from '@/types/fitness';
+import { WorkoutRecommendation } from '@/types/fitness/workouts';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +29,7 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
       const { data, error } = await supabase
         .from('workout_recommendations')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('workout_recommendations_user_id', user.id)
         .eq('dismissed', false)
         .eq('applied', false)
         .order('confidence_score', { ascending: false })
@@ -38,16 +37,21 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
         
       if (error) throw error;
       
-      // Cast data to our WorkoutRecommendation type
       const typedRecommendations: WorkoutRecommendation[] = (data || []).map(rec => ({
         id: rec.id,
         title: rec.title,
         name: rec.title, // Set both for compatibility
         description: rec.description || '',
-        type: rec.type,
-        reason: rec.reason,
-        confidence_score: rec.confidence_score,
-        user_id: rec.user_id,
+        difficulty: rec.difficulty ?? 'beginner',
+        duration_minutes: rec.duration_minutes ?? 0,
+        target_muscle_groups: rec.target_muscle_groups ?? [],
+        recommended_frequency: rec.recommended_frequency ?? 1,
+        created_at: rec.created_at ?? new Date().toISOString(),
+        workout_recommendations_user_id: rec.workout_recommendations_user_id,
+        // Patch extra fields for possible extensions (does not affect type matching)
+        type: rec.type ?? '',
+        reason: rec.reason ?? '',
+        confidence_score: rec.confidence_score ?? 0,
         suggested_at: rec.suggested_at,
         dismissed: rec.dismissed,
         applied: rec.applied,

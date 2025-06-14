@@ -4,6 +4,9 @@ export * from './exercises';
 export * from './profile';
 export * from './recommendations';
 export * from './scheduling';
+export * from './workouts';
+export * from './achievements';
+export * from './nutrition';
 
 // Keep some legacy exports for backward compatibility
 export interface WorkoutPlan {

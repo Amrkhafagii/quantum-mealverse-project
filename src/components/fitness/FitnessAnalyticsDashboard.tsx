@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { WorkoutHistoryItem } from '@/types/fitness';
+import { WorkoutHistoryItem } from '@/types/fitness/workouts';
 
 const FitnessAnalyticsDashboard = () => {
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);

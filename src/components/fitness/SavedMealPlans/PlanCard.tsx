@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
 import { Droplets, Clock, RefreshCw, AlertCircle } from 'lucide-react';
-import { SavedMealPlan } from '@/types/fitness';
+import { SavedMealPlan } from '@/types/fitness/nutrition';
 import { MealPlan } from '@/types/food';
 import { getDaysRemaining } from '@/services/mealPlan';
 

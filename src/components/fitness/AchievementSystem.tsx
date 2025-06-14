@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Star, Target } from 'lucide-react';
-import { ExtendedUserAchievement, Achievement } from '@/types/fitness';
+import { ExtendedUserAchievement, Achievement } from '@/types/fitness/achievements';
 import { getUserAchievements } from '@/services/gamificationService';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -32,6 +31,7 @@ const AchievementSystem: React.FC = () => {
     }
   };
 
+  // Mock achievements: include all required props!
   const mockAchievements: ExtendedUserAchievement[] = [
     {
       id: '1',
@@ -39,6 +39,7 @@ const AchievementSystem: React.FC = () => {
       achievement_id: 'first-workout',
       unlocked_at: new Date().toISOString(),
       date_achieved: new Date().toISOString(),
+      date_earned: new Date().toISOString(),
       achievement: {
         id: 'first-workout',
         name: 'First Steps',
@@ -54,6 +55,7 @@ const AchievementSystem: React.FC = () => {
       achievement_id: 'week-streak',
       unlocked_at: new Date().toISOString(),
       date_achieved: new Date().toISOString(),
+      date_earned: new Date().toISOString(),
       achievement: {
         id: 'week-streak',
         name: 'Week Warrior',
