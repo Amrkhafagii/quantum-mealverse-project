@@ -1,30 +1,103 @@
 
+// Refactored: Use local interfaces and explicit mapping to avoid "Type instantiation is excessively deep" error.
 import { supabase } from '@/integrations/supabase/client';
 import { FitnessGoal, UserProfile, WorkoutLog, UserMeasurement } from '@/types/fitness';
 
-// Note: The table 'user_profiles' is referenced in allowed tables.
-// Use plain object shape/any for Supabase result typing throughout to avoid type recursion issues.
+// Minimal interface definitions matching DB fields for Supabase mapping
+interface DBUserProfile {
+  id: string;
+  user_id: string;
+  display_name?: string;
+  height?: number;
+  weight: number;
+  goal_weight?: number;
+  date_of_birth?: string | null;
+  gender?: string;
+  fitness_level?: string;
+  fitness_goals?: string[];
+  dietary_preferences?: string[];
+  dietary_restrictions?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
 
+interface DBFitnessGoal {
+  id: string;
+  fitness_goals_user_id: string;
+  user_id?: string;
+  name: string;
+  description?: string;
+  target_value: number;
+  current_value: number;
+  target_date: string;
+  status: string;
+  goal_type: string;
+  created_at?: string;
+  updated_at?: string;
+  title?: string;
+  target_weight?: number;
+  target_body_fat?: number;
+  category?: string;
+  type?: string;
+  start_date?: string;
+  is_active?: boolean;
+}
+
+interface DBWorkoutLog {
+  id?: string;
+  user_id: string;
+  workout_plan_id: string;
+  date: string;
+  duration: number;
+  calories_burned?: number | null;
+  notes?: string | null;
+  completed_exercises: any[];
+}
+
+interface DBUserMeasurement {
+  id: string;
+  user_id: string;
+  date: string;
+  weight: number;
+  body_fat?: number;
+  chest?: number;
+  waist?: number;
+  hips?: number;
+  arms?: number;
+  legs?: number;
+  notes?: string;
+}
+
+// --- Functions using local types and explicit mapping ---
+
+// Get user profile for given userId
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('user_profiles_user_id', userId)
+      .eq('user_id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching user profile:', error);
+    if (error) {
+      // Return null only if not found or any real error
+      if (error.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', error);
+      }
       return null;
     }
-
-    return data as UserProfile || null;
+    // Map to app type
+    const profile: UserProfile = {
+      ...data as DBUserProfile
+    };
+    return profile;
   } catch (error) {
     console.error('Error in getUserProfile:', error);
     return null;
   }
 };
 
+// Get fitness goals for the given userId
 export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> => {
   try {
     const { data, error } = await supabase
@@ -38,14 +111,19 @@ export const getFitnessGoals = async (userId: string): Promise<FitnessGoal[]> =>
       return [];
     }
 
-    return (data as FitnessGoal[]) || [];
+    // Cast and map to FitnessGoal[]
+    return (data as DBFitnessGoal[] || []).map((goal) => ({ ...goal }));
   } catch (error) {
     console.error('Error in getFitnessGoals:', error);
     return [];
   }
 };
 
-export const createFitnessGoal = async (userId: string, goalData: Partial<FitnessGoal>): Promise<boolean> => {
+// Create a new fitness goal
+export const createFitnessGoal = async (
+  userId: string,
+  goalData: Partial<FitnessGoal>
+): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('fitness_goals')
@@ -68,12 +146,13 @@ export const createFitnessGoal = async (userId: string, goalData: Partial<Fitnes
   }
 };
 
+// Get workout logs for the given userId
 export const getWorkoutLogs = async (userId: string): Promise<WorkoutLog[]> => {
   try {
     const { data, error } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('workout_logs_user_id', userId)
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -81,19 +160,20 @@ export const getWorkoutLogs = async (userId: string): Promise<WorkoutLog[]> => {
       return [];
     }
 
-    return (data as WorkoutLog[]) || [];
+    return (data as DBWorkoutLog[] || []).map((log) => ({ ...log }));
   } catch (error) {
     console.error('Error in getWorkoutLogs:', error);
     return [];
   }
 };
 
+// Get user measurements for the given userId
 export const getUserMeasurements = async (userId: string): Promise<UserMeasurement[]> => {
   try {
     const { data, error } = await supabase
       .from('user_measurements')
       .select('*')
-      .eq('user_measurements_user_id', userId)
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
     if (error) {
@@ -101,7 +181,7 @@ export const getUserMeasurements = async (userId: string): Promise<UserMeasureme
       return [];
     }
 
-    return (data as UserMeasurement[]) || [];
+    return (data as DBUserMeasurement[] || []).map((m) => ({ ...m }));
   } catch (error) {
     console.error('Error in getUserMeasurements:', error);
     return [];
