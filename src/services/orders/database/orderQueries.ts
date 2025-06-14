@@ -140,7 +140,6 @@ export const getOrderItems = async (orderId: string): Promise<OrderItem[]> => {
         name,
         price,
         quantity,
-        preparation_time,
         created_at,
         source_type
       `)

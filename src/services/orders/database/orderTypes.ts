@@ -21,7 +21,6 @@ export interface OrderDB {
   restaurant_id?: string;
   created_at?: string;
   updated_at?: string;
-  // Add/remove fields as needed to match DB schema
 }
 
 export interface OrderItemDB {
@@ -33,12 +32,11 @@ export interface OrderItemDB {
   price: number;
   quantity: number;
   created_at?: string;
-  preparation_time?: number;
   source_type?: string;
 }
 
 export function orderRowToOrder(row: OrderDB): Order {
-  return row; // Direct assign for now, expand if transformation needed
+  return row as Order;
 }
 
 export function orderItemRowToOrderItem(row: OrderItemDB): OrderItem {
