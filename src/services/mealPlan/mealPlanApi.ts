@@ -45,7 +45,7 @@ export const getUserMealPlans = async (userId: string) => {
 
     if (error) {
       console.error('Error fetching meal plans:', error);
-      return { data: [], error: error.message };
+      return [];
     }
 
     const plans = (data || []).map(plan => ({
@@ -58,10 +58,10 @@ export const getUserMealPlans = async (userId: string) => {
       is_active: true
     }));
 
-    return { data: plans, error: null };
+    return plans;
   } catch (error) {
     console.error('Error in getUserMealPlans:', error);
-    return { data: [], error: 'Failed to fetch meal plans' };
+    return [];
   }
 };
 

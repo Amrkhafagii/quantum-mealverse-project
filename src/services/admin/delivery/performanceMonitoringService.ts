@@ -17,6 +17,16 @@ interface DeliveryMetrics {
   onTimeRate: number;
 }
 
+interface PerformanceResult {
+  performance: string;
+  issues: string[];
+}
+
+interface CheckResult {
+  checksCompleted: number;
+  issuesFound: number;
+}
+
 export const getDeliveryPerformanceMetrics = async (deliveryUserId: string): Promise<DeliveryMetrics> => {
   try {
     console.log('Getting delivery performance metrics for:', deliveryUserId);
@@ -68,7 +78,7 @@ export const updateDeliveryMetrics = async (deliveryUserId: string, metrics: Par
   }
 };
 
-export const checkDriverPerformance = async (deliveryUserId: string) => {
+export const checkDriverPerformance = async (deliveryUserId: string): Promise<PerformanceResult> => {
   try {
     console.log('Checking driver performance for:', deliveryUserId);
     return { performance: 'good', issues: [] };
@@ -78,7 +88,7 @@ export const checkDriverPerformance = async (deliveryUserId: string) => {
   }
 };
 
-export const runPerformanceChecks = async () => {
+export const runPerformanceChecks = async (): Promise<CheckResult> => {
   try {
     console.log('Running performance checks');
     return { checksCompleted: 0, issuesFound: 0 };
