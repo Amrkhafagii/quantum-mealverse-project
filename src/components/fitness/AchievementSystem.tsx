@@ -35,7 +35,7 @@ const AchievementSystem: React.FC = () => {
   const mockAchievements: ExtendedUserAchievement[] = [
     {
       id: '1',
-      user_id: user?.id || '',
+      user_achievements_user_id: user?.id || '',
       achievement_id: 'first-workout',
       unlocked_at: new Date().toISOString(),
       date_achieved: new Date().toISOString(),
@@ -50,7 +50,7 @@ const AchievementSystem: React.FC = () => {
     },
     {
       id: '2',
-      user_id: user?.id || '',
+      user_achievements_user_id: user?.id || '',
       achievement_id: 'week-streak',
       unlocked_at: new Date().toISOString(),
       date_achieved: new Date().toISOString(),

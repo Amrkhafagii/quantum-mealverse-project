@@ -8,6 +8,12 @@ export interface WorkoutGoal {
   target_date: string;
   created_at: string;
   updated_at: string;
+  
+  // Additional properties for compatibility
+  title?: string;
+  description?: string;
+  unit?: string;
+  is_active?: boolean;
 }
 
 export interface AnalyticsData {

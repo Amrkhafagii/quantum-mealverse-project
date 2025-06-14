@@ -11,6 +11,22 @@ export interface WorkoutTemplate {
   updated_at: string;
 }
 
+export interface Exercise {
+  id?: string;
+  exercise_id?: string;
+  name: string;
+  exercise_name?: string;
+  target_muscle: string;
+  sets: number;
+  reps: number | string;
+  weight?: number;
+  duration?: number;
+  rest_time?: number;
+  rest?: number;
+  rest_seconds?: number;
+  instructions?: string;
+}
+
 export interface ExerciseLibraryItem {
   id: string;
   name: string;
