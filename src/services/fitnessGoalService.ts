@@ -1,334 +1,260 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { FitnessGoal, GoalStatus } from '@/types/fitness';
-import { v4 as uuidv4 } from 'uuid';
+import { FitnessGoal } from '@/types/fitness/goals';
+
+// Database row type that matches exactly to the Supabase columns
+interface DBFitnessGoal {
+  id: string;
+  fitness_goals_user_id: string;
+  name: string;
+  description: string;
+  target_weight?: number;
+  target_body_fat?: number;
+  target_date: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
 /**
- * Get all fitness goals for a user
+ * Creates a new fitness goal for a user
  */
-export const getUserFitnessGoals = async (userId: string): Promise<{
-  data: FitnessGoal[] | null;
-  error: any;
-}> => {
+export const createFitnessGoal = async (userId: string, goal: Partial<FitnessGoal>): Promise<{ success: boolean; goal?: FitnessGoal; error?: string }> => {
   try {
-    const { data, error } = await supabase
-      .from('fitness_goals')
-      .select('*')
-      .eq('fitness_goals_user_id', userId)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
+    console.log('Creating fitness goal for user:', userId, goal);
     
-    // Map database fields to FitnessGoal interface
-    const mappedGoals: FitnessGoal[] = (data || []).map(goal => {
-      // Cast status to GoalStatus type to ensure type safety
-      const validStatus: GoalStatus = (goal.status as GoalStatus) || 'not_started';
-      
-      return {
-        id: goal.id,
-        user_id: goal.user_id,
-        title: goal.name,
-        name: goal.name,
-        description: goal.description,
-        target_value: goal.target_weight || 0,
-        current_value: 0,
-        start_date: goal.created_at,
-        target_date: goal.target_date || '',
-        category: 'weight',
-        status: validStatus,
-        target_weight: goal.target_weight,
-        target_body_fat: goal.target_body_fat,
-        created_at: goal.created_at,
-        updated_at: goal.updated_at,
-        type: 'weight_loss',
-        is_active: true
-      };
-    });
-    
-    return { data: mappedGoals, error: null };
-  } catch (error) {
-    console.error('Error fetching fitness goals:', error);
-    return { data: null, error };
-  }
-};
-
-/**
- * Create a new fitness goal
- */
-export const createFitnessGoal = async (
-  userId: string,
-  goalData: Omit<FitnessGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>
-): Promise<{
-  data: FitnessGoal | null;
-  error: any;
-}> => {
-  try {
-    const newGoal = {
-      id: uuidv4(),
-      user_id: userId,
-      name: goalData.title || goalData.name,
-      description: goalData.description,
-      title: goalData.title || goalData.name,
-      target_weight: goalData.target_weight,
-      target_body_fat: goalData.target_body_fat,
-      target_date: goalData.target_date,
-      status: goalData.status,
+    // Convert the FitnessGoal to DB format
+    const dbGoal = {
+      fitness_goals_user_id: userId,
+      name: goal.name || goal.title || 'Untitled Goal',
+      description: goal.description || '',
+      target_weight: goal.target_weight || goal.target_value,
+      target_body_fat: goal.target_body_fat,
+      target_date: goal.target_date,
+      status: goal.status || 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     
     const { data, error } = await supabase
       .from('fitness_goals')
-      .insert([newGoal])
-      .select();
-      
-    if (error) throw error;
+      .insert(dbGoal)
+      .select()
+      .single();
     
-    // Map the response to match our interface
-    const mappedGoal: FitnessGoal = {
-      ...data[0],
-      title: data[0].name,
-      target_value: data[0].target_weight || 0,
+    if (error) {
+      console.error('Error creating fitness goal:', error);
+      return { success: false, error: error.message };
+    }
+    
+    if (!data) {
+      return { success: false, error: 'No data returned' };
+    }
+    
+    // Convert DB result back to FitnessGoal
+    const resultGoal: FitnessGoal = {
+      id: data.id,
+      fitness_goals_user_id: data.fitness_goals_user_id,
+      name: data.name,
+      description: data.description,
+      target_value: data.target_weight || 0,
       current_value: 0,
-      start_date: data[0].created_at,
-      category: 'weight',
-      status: data[0].status as GoalStatus,
-      type: 'weight_loss',
-      is_active: true
+      target_date: data.target_date,
+      status: data.status as any,
+      goal_type: 'weight_loss',
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
     
-    return { data: mappedGoal, error: null };
+    console.log('Fitness goal created successfully:', resultGoal);
+    return { success: true, goal: resultGoal };
   } catch (error) {
-    console.error('Error creating fitness goal:', error);
-    return { data: null, error };
+    console.error('Error in createFitnessGoal:', error);
+    return { success: false, error: 'Failed to create fitness goal' };
   }
 };
 
 /**
- * Create a new fitness goal (alias for GoalManagement.tsx compatibility)
+ * Get fitness goals for a user from the database
  */
-export const addFitnessGoal = async (goalData: FitnessGoal): Promise<{
-  data: FitnessGoal | null;
-  error: any;
-}> => {
+export const getFitnessGoalsFromDB = async (userId: string): Promise<FitnessGoal[]> => {
   try {
-    // Extract fields for database insert
-    const { name, description, target_weight, target_body_fat, target_date, status, user_id } = goalData;
+    console.log('Fetching fitness goals for user:', userId);
     
-    // Insert into database
     const { data, error } = await supabase
       .from('fitness_goals')
-      .insert([{
-        user_id,
-        name: name || goalData.title,
-        description,
-        target_weight,
-        target_body_fat,
-        target_date,
-        status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select();
-      
-    if (error) throw error;
+      .select('*')
+      .eq('fitness_goals_user_id', userId)
+      .order('created_at', { ascending: false });
     
-    // Return the data mapped to our interface with required fields
-    const mappedGoal: FitnessGoal = {
-      ...goalData,
-      id: data[0].id,
-      created_at: data[0].created_at,
-      updated_at: data[0].updated_at,
-      type: goalData.type || 'weight_loss',
-      is_active: goalData.is_active !== undefined ? goalData.is_active : true
-    };
+    if (error) {
+      console.error('Error fetching fitness goals:', error);
+      return [];
+    }
     
-    return { data: mappedGoal, error: null };
+    if (!data || data.length === 0) {
+      console.log('No fitness goals found for user:', userId);
+      return [];
+    }
+    
+    // Convert DB results to FitnessGoal format
+    const goals: FitnessGoal[] = data.map((dbGoal: DBFitnessGoal) => ({
+      id: dbGoal.id,
+      fitness_goals_user_id: dbGoal.fitness_goals_user_id,
+      name: dbGoal.name,
+      description: dbGoal.description,
+      target_value: dbGoal.target_weight || 0,
+      current_value: 0, // This would need to be calculated or stored separately
+      target_date: dbGoal.target_date,
+      status: dbGoal.status as any,
+      goal_type: 'weight_loss', // Default since it's not in the DB schema
+      created_at: dbGoal.created_at,
+      updated_at: dbGoal.updated_at
+    }));
+    
+    console.log('Retrieved fitness goals:', goals);
+    return goals;
   } catch (error) {
-    console.error('Error adding fitness goal:', error);
-    return { data: null, error };
+    console.error('Error in getFitnessGoalsFromDB:', error);
+    return [];
   }
 };
 
 /**
- * Update an existing fitness goal
+ * Update a fitness goal in the database
  */
-export const updateFitnessGoal = async (
-  goalId: string,
-  goalData: FitnessGoal
-): Promise<{
-  data: FitnessGoal | null;
-  error: any;
-}> => {
+export const updateFitnessGoal = async (goalId: string, updates: Partial<FitnessGoal>): Promise<{ success: boolean; goal?: FitnessGoal; error?: string }> => {
   try {
-    // Extract fields for database update
-    const { name, description, target_weight, target_body_fat, target_date, status } = goalData;
+    console.log('Updating fitness goal:', goalId, updates);
     
-    // Update in database
+    // Convert updates to DB format
+    const dbUpdates: Partial<DBFitnessGoal> = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.name || updates.title) {
+      dbUpdates.name = updates.name || updates.title;
+    }
+    if (updates.description) {
+      dbUpdates.description = updates.description;
+    }
+    if (updates.target_weight || updates.target_value) {
+      dbUpdates.target_weight = updates.target_weight || updates.target_value;
+    }
+    if (updates.target_body_fat) {
+      dbUpdates.target_body_fat = updates.target_body_fat;
+    }
+    if (updates.target_date) {
+      dbUpdates.target_date = updates.target_date;
+    }
+    if (updates.status) {
+      dbUpdates.status = updates.status;
+    }
+    
     const { data, error } = await supabase
       .from('fitness_goals')
-      .update({
-        name: name || goalData.title,
-        description,
-        target_weight,
-        target_body_fat,
-        target_date,
-        status,
-        updated_at: new Date().toISOString()
-      })
+      .update(dbUpdates)
       .eq('id', goalId)
-      .select();
-      
-    if (error) throw error;
+      .select()
+      .single();
     
-    // Return the data mapped to our interface
-    const mappedGoal: FitnessGoal = {
-      ...goalData,
-      id: data[0].id,
-      name: data[0].name,
-      title: data[0].name,
-      updated_at: data[0].updated_at,
-      status: data[0].status as GoalStatus
+    if (error) {
+      console.error('Error updating fitness goal:', error);
+      return { success: false, error: error.message };
+    }
+    
+    if (!data) {
+      return { success: false, error: 'No data returned' };
+    }
+    
+    // Convert DB result back to FitnessGoal
+    const resultGoal: FitnessGoal = {
+      id: data.id,
+      fitness_goals_user_id: data.fitness_goals_user_id,
+      name: data.name,
+      description: data.description,
+      target_value: data.target_weight || 0,
+      current_value: 0,
+      target_date: data.target_date,
+      status: data.status as any,
+      goal_type: 'weight_loss',
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
     
-    return { data: mappedGoal, error: null };
+    console.log('Fitness goal updated successfully:', resultGoal);
+    return { success: true, goal: resultGoal };
   } catch (error) {
-    console.error('Error updating fitness goal:', error);
-    return { data: null, error };
+    console.error('Error in updateFitnessGoal:', error);
+    return { success: false, error: 'Failed to update fitness goal' };
   }
 };
 
 /**
- * Delete a fitness goal
+ * Delete a fitness goal from the database
  */
-export const deleteGoal = async (goalId: string): Promise<{
-  success: boolean;
-  error: any;
-}> => {
+export const deleteFitnessGoal = async (goalId: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log('Deleting fitness goal:', goalId);
+    
     const { error } = await supabase
       .from('fitness_goals')
       .delete()
       .eq('id', goalId);
-      
-    if (error) throw error;
     
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('Error deleting fitness goal:', error);
-    return { success: false, error };
-  }
-};
-
-/**
- * Delete a fitness goal (alias for GoalManagement.tsx compatibility)
- */
-export const deleteFitnessGoal = async (goalId: string): Promise<{
-  success: boolean;
-  error: any;
-}> => {
-  return deleteGoal(goalId);
-};
-
-/**
- * Update goal status based on progress
- */
-export const updateGoalStatusBasedOnProgress = async (
-  userId: string,
-  goalId: string,
-  currentValue: number,
-  targetValue: number
-): Promise<{
-  success: boolean;
-  error: any;
-}> => {
-  try {
-    let newStatus: GoalStatus = 'active';
-    
-    if (currentValue >= targetValue) {
-      newStatus = 'completed';
+    if (error) {
+      console.error('Error deleting fitness goal:', error);
+      return { success: false, error: error.message };
     }
     
-    const { error } = await supabase
-      .from('fitness_goals')
-      .update({ status: newStatus })
-      .eq('id', goalId)
-      .eq('fitness_goals_user_id', userId);
-      
-    if (error) throw error;
-    
-    return { success: true, error: null };
+    console.log('Fitness goal deleted successfully');
+    return { success: true };
   } catch (error) {
-    console.error('Error updating goal status:', error);
-    return { success: false, error };
+    console.error('Error in deleteFitnessGoal:', error);
+    return { success: false, error: 'Failed to delete fitness goal' };
   }
 };
 
 /**
- * Update a goal's status (alias for GoalManagement.tsx compatibility)
+ * Get a single fitness goal by ID
  */
-export const updateGoalStatus = async (
-  goalId: string,
-  status: GoalStatus
-): Promise<{
-  error: any;
-}> => {
+export const getFitnessGoalById = async (goalId: string): Promise<FitnessGoal | null> => {
   try {
-    const { error } = await supabase
-      .from('fitness_goals')
-      .update({ status })
-      .eq('id', goalId);
-      
-    if (error) throw error;
+    console.log('Fetching fitness goal by ID:', goalId);
     
-    return { error: null };
-  } catch (error) {
-    console.error('Error updating goal status:', error);
-    return { error };
-  }
-};
-
-/**
- * Fetch goals for a user
- */
-export const fetchGoals = async (userId: string): Promise<FitnessGoal[]> => {
-  try {
     const { data, error } = await supabase
       .from('fitness_goals')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
+      .eq('id', goalId)
+      .single();
     
-    // Transform the data to ensure proper typing
-    const typedGoals: FitnessGoal[] = data?.map(goal => {
-      // Cast status to GoalStatus type to ensure type safety
-      const validStatus: GoalStatus = (goal.status as GoalStatus) || 'not_started';
-      
-      return {
-        id: goal.id,
-        user_id: goal.user_id,
-        title: goal.name,
-        name: goal.name,
-        description: goal.description,
-        target_value: goal.target_weight || 0,
-        current_value: 0,
-        start_date: goal.created_at,
-        target_date: goal.target_date || '',
-        category: 'weight',
-        status: validStatus,
-        target_weight: goal.target_weight,
-        target_body_fat: goal.target_body_fat,
-        created_at: goal.created_at,
-        updated_at: goal.updated_at,
-        type: 'weight_loss',
-        is_active: true
-      };
-    }) || [];
+    if (error) {
+      console.error('Error fetching fitness goal:', error);
+      return null;
+    }
     
-    return typedGoals;
+    if (!data) {
+      return null;
+    }
+    
+    // Convert DB result to FitnessGoal
+    const goal: FitnessGoal = {
+      id: data.id,
+      fitness_goals_user_id: data.fitness_goals_user_id,
+      name: data.name,
+      description: data.description,
+      target_value: data.target_weight || 0,
+      current_value: 0,
+      target_date: data.target_date,
+      status: data.status as any,
+      goal_type: 'weight_loss',
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+    
+    return goal;
   } catch (error) {
-    console.error('Error fetching goals:', error);
-    return [];
+    console.error('Error in getFitnessGoalById:', error);
+    return null;
   }
 };

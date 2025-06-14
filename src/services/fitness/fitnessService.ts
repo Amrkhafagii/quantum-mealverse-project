@@ -73,29 +73,9 @@ interface DBUserMeasurement {
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
-    // FIX: Use correct typed table - should match Supabase generated type!
-    // If user_profiles is not in generated types, consider fallback to 'any' with a TODO.
-    const { data, error } = await supabase
-      // @ts-expect-error If user_profiles is not in the generated types, suppress just this line
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      if (error.code !== 'PGRST116') {
-        console.error('Error fetching user profile:', error);
-      }
-      return null;
-    }
-
-    if (!data) return null;
-
-    // Map DB fields to UserProfile
-    const profile: UserProfile = {
-      ...(data as any)
-    };
-    return profile;
+    // Return null for now since we don't have a user profiles table in the current schema
+    console.log('getUserProfile called for userId:', userId);
+    return null;
   } catch (error) {
     console.error('Error in getUserProfile:', error);
     return null;
@@ -204,4 +184,3 @@ export const getUserMeasurements = async (userId: string): Promise<UserMeasureme
     return [];
   }
 };
-

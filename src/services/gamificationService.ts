@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -6,9 +7,20 @@ import {
   Achievement
 } from '@/types/fitness/achievements';
 import {
-  Challenge,
-  ChallengeParticipant
+  Challenge
 } from '@/types/fitness/challenges';
+
+// Local interface for challenge participants to match DB schema
+interface ChallengeParticipant {
+  id: string;
+  challenge_participants_user_id: string;
+  challenge_id: string;
+  team_id?: string;
+  joined_date: string;
+  progress: number;
+  completed: boolean;
+  completion_date?: string;
+}
 
 // Get user streak data
 export async function getUserStreak(userId: string, streakType: 'workout' | 'nutrition' | 'meditation' = 'workout') {
@@ -69,11 +81,11 @@ export async function getUserChallenges(userId: string) {
 // Join a challenge
 export async function joinChallenge(userId: string, challengeId: string, teamId?: string) {
   try {
-    const participant = {
+    const participant: Omit<ChallengeParticipant, 'id'> & { id?: string } = {
       id: uuidv4(),
-      user_id: userId,
+      challenge_participants_user_id: userId,
       challenge_id: challengeId,
-      team_id: teamId || null,
+      team_id: teamId || undefined,
       joined_date: new Date().toISOString(),
       progress: 0,
       completed: false
@@ -128,7 +140,7 @@ export async function awardAchievement(userId: string, achievementId: string) {
   try {
     const userAchievement = {
       id: uuidv4(),
-      user_id: userId,
+      user_achievements_user_id: userId,
       achievement_id: achievementId,
       date_achieved: new Date().toISOString()
     };
