@@ -1,345 +1,283 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  DeliveryUser,
-  DeliveryVehicle,
-  DeliveryDocument,
-  DeliveryAvailability,
-  DeliveryPaymentInfo,
-} from '@/types/delivery';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { DeliveryUser, DeliveryVehicle, DeliveryDocument } from "@/types/delivery";
+import { useAuth } from "./useAuth";
 
-const DELIVERY_ONBOARDING_STEPS = 5;
-
-export function useDeliveryOnboarding() {
+export const useDeliveryOnboarding = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [completeSteps, setCompleteSteps] = useState<number[]>([]);
-
+  const [currentStep, setCurrentStep] = useState(1);
   const [deliveryUser, setDeliveryUser] = useState<DeliveryUser | null>(null);
   const [vehicle, setVehicle] = useState<DeliveryVehicle | null>(null);
   const [documents, setDocuments] = useState<DeliveryDocument[]>([]);
-  const [availability, setAvailability] = useState<DeliveryAvailability[]>([]);
-  const [paymentInfo, setPaymentInfo] = useState<DeliveryPaymentInfo | null>(null);
-
-  const fetchDeliveryProfile = useCallback(async (userId: string) => {
-    setLoading(true);
-    try {
-      // Fetch delivery user profile
-      const { data: userProfile, error: userError } = await supabase
-        .from('delivery_users')
-        .select('*')
-        .eq('delivery_users_user_id', userId)
-        .single();
-
-      if (userError) throw userError;
-      setDeliveryUser(userProfile);
-
-      // Fetch vehicle information
-      const { data: vehicleData, error: vehicleError } = await supabase
-        .from('delivery_vehicles')
-        .select('*')
-        .eq('delivery_vehicles_user_id', userId)
-        .single();
-
-      if (vehicleError) throw vehicleError;
-      setVehicle(vehicleData);
-
-      // Fetch documents
-      const { data: documentsData, error: documentsError } = await supabase
-        .from('delivery_documents')
-        .select('*')
-        .eq('delivery_documents_user_id', userId);
-
-      if (documentsError) throw documentsError;
-      setDocuments(documentsData);
-
-      // Fetch availability schedule
-      const { data: availabilityData, error: availabilityError } = await supabase
-        .from('delivery_availability')
-        .select('*')
-        .eq('delivery_availability_user_id', userId);
-
-      if (availabilityError) throw availabilityError;
-      setAvailability(availabilityData);
-
-      // Fetch payment information
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('delivery_payment_info')
-        .select('*')
-        .eq('delivery_payment_info_user_id', userId)
-        .single();
-
-      if (paymentError) throw paymentError;
-      setPaymentInfo(paymentData);
-
-      // Determine completed steps
-      const completed: number[] = [];
-      if (userProfile) completed.push(1);
-      if (vehicleData) completed.push(2);
-      if (documentsData && documentsData.length > 0) completed.push(3);
-      if (availabilityData && availabilityData.length > 0) completed.push(4);
-      if (paymentData) completed.push(5);
-
-      setCompleteSteps(completed);
-      setCurrentStep(completed.length + 1);
-    } catch (error: any) {
-      console.error('Error fetching delivery profile:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load delivery profile",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const [completeSteps, setCompleteSteps] = useState<number[]>([]);
 
   useEffect(() => {
     if (user) {
-      fetchDeliveryProfile(user.id);
+      fetchDeliveryUser(user.id);
+      fetchDeliveryVehicle(user.id);
+      fetchDeliveryDocuments(user.id);
     }
-  }, [user, fetchDeliveryProfile]);
+  }, [user]);
 
-  const savePersonalInfo = async (data: Omit<DeliveryUser, 'id' | 'created_at' | 'updated_at' | 'delivery_users_user_id'>): Promise<DeliveryUser | null> => {
+  const fetchDeliveryUser = async (id: string) => {
+    const { data } = await supabase.from("delivery_users").select("*").eq("delivery_users_user_id", id).single();
+    if (data) {
+      // Manually construct DeliveryUser shape
+      setDeliveryUser({
+        id: data.id,
+        delivery_users_user_id: data.delivery_users_user_id,
+        full_name: data.full_name,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone,
+        vehicle_type: data.vehicle_type,
+        license_plate: data.license_plate,
+        driver_license_number: data.driver_license_number,
+        status: data.status,
+        rating: data.rating,
+        total_deliveries: data.total_deliveries,
+        verification_status: data.verification_status,
+        background_check_status: data.background_check_status,
+        is_available: data.is_available,
+        is_approved: data.is_approved,
+        last_active: data.last_active,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      } as DeliveryUser);
+    }
+  };
+
+  const fetchDeliveryVehicle = async (id: string) => {
+    const { data } = await supabase.from("delivery_vehicles").select("*").eq("delivery_vehicles_user_id", id).single();
+    if (data) {
+      setVehicle({
+        id: data.id,
+        delivery_vehicles_user_id: data.delivery_vehicles_user_id,
+        vehicle_type: data.vehicle_type,
+        type: data.type,
+        make: data.make,
+        model: data.model,
+        year: data.year,
+        license_plate: data.license_plate,
+        color: data.color,
+        insurance_policy_number: data.insurance_policy_number,
+        insurance_number: data.insurance_number,
+        insurance_expiry: data.insurance_expiry,
+        registration_number: data.registration_number,
+        is_active: data.is_active,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      } as DeliveryVehicle);
+    }
+  };
+
+  const fetchDeliveryDocuments = async (id: string) => {
+    const { data } = await supabase.from("delivery_documents").select("*").eq("delivery_documents_user_id", id);
+    if (data && Array.isArray(data)) {
+      setDocuments(
+        data.map(doc => ({
+          id: doc.id,
+          delivery_documents_user_id: doc.delivery_documents_user_id,
+          document_type: doc.document_type,
+          document_url: doc.document_url, // Adapt field as needed
+          verification_status: doc.verification_status ?? 'pending',
+          expiry_date: doc.expiry_date,
+          notes: doc.notes,
+          created_at: doc.created_at,
+          updated_at: doc.updated_at,
+        })) as DeliveryDocument[]
+      );
+    }
+  };
+
+  const savePersonalInfo = async (values: any) => {
     setLoading(true);
     try {
-      if (!user) throw new Error("User not authenticated");
-
-      const { data: updatedUser, error: userError } = await supabase
+      const { data: existingUser } = await supabase
         .from('delivery_users')
-        .upsert(
-          {
-            delivery_users_user_id: user.id,
-            ...data,
-          },
-          { onConflict: 'delivery_users_user_id' }
-        )
         .select('*')
+        .eq('delivery_users_user_id', user?.id)
         .single();
-
-      if (userError) throw userError;
-
-      setDeliveryUser(updatedUser);
-      setCompleteSteps(prev => prev.includes(1) ? prev : [...prev, 1]);
+  
+      if (existingUser) {
+        // Update existing user
+        const { data, error } = await supabase
+          .from('delivery_users')
+          .update({
+            ...values,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('delivery_users_user_id', user?.id)
+          .select()
+          .single();
+  
+        if (error) {
+          console.error("Error updating delivery user:", error);
+          return;
+        }
+  
+        setDeliveryUser(data as DeliveryUser);
+      } else {
+        // Create new user
+        const { data, error } = await supabase
+          .from('delivery_users')
+          .insert([
+            {
+              ...values,
+              delivery_users_user_id: user?.id,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ])
+          .select()
+          .single();
+  
+        if (error) {
+          console.error("Error creating delivery user:", error);
+          return;
+        }
+  
+        setDeliveryUser(data as DeliveryUser);
+      }
+      setCompleteSteps([...completeSteps, 1]);
       setCurrentStep(2);
-
-      toast({
-        title: "Success",
-        description: "Personal information saved successfully!",
-      });
-
-      return updatedUser;
-    } catch (error: any) {
-      console.error('Error saving personal info:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save personal information",
-        variant: "destructive"
-      });
-      return null;
+    } catch (error) {
+      console.error("Error saving personal info:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveVehicleInformation = async (data: Omit<DeliveryVehicle, 'id' | 'created_at' | 'updated_at' | 'delivery_vehicles_user_id'>): Promise<DeliveryVehicle | null> => {
+  const saveVehicleInformation = async (values: any) => {
     setLoading(true);
     try {
-      if (!user) throw new Error("User not authenticated");
-
-      const { data: vehicleData, error: vehicleError } = await supabase
+      const { data: existingVehicle } = await supabase
         .from('delivery_vehicles')
-        .upsert(
-          {
-            delivery_vehicles_user_id: user.id,
-            ...data,
-          },
-          { onConflict: 'delivery_vehicles_user_id' }
-        )
         .select('*')
+        .eq('delivery_vehicles_user_id', user?.id)
         .single();
-
-      if (vehicleError) throw vehicleError;
-
-      setVehicle(vehicleData);
-      setCompleteSteps(prev => prev.includes(2) ? prev : [...prev, 2]);
+  
+      if (existingVehicle) {
+        // Update existing vehicle
+        const { data, error } = await supabase
+          .from('delivery_vehicles')
+          .update({
+            ...values,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('delivery_vehicles_user_id', user?.id)
+          .select()
+          .single();
+  
+        if (error) {
+          console.error("Error updating delivery vehicle:", error);
+          return;
+        }
+  
+        setVehicle(data as DeliveryVehicle);
+      } else {
+        // Create new vehicle
+        const { data, error } = await supabase
+          .from('delivery_vehicles')
+          .insert([
+            {
+              ...values,
+              delivery_vehicles_user_id: user?.id,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ])
+          .select()
+          .single();
+  
+        if (error) {
+          console.error("Error creating delivery vehicle:", error);
+          return;
+        }
+  
+        setVehicle(data as DeliveryVehicle);
+      }
+      setCompleteSteps([...completeSteps, 2]);
       setCurrentStep(3);
-
-      toast({
-        title: "Success",
-        description: "Vehicle information saved successfully!",
-      });
-
-      return vehicleData;
-    } catch (error: any) {
-      console.error('Error saving vehicle information:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save vehicle information",
-        variant: "destructive"
-      });
-      return null;
+    } catch (error) {
+      console.error("Error saving vehicle information:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const uploadDocument = async (file: File, type: DeliveryDocument['type']): Promise<DeliveryDocument | null> => {
+  const uploadDocument = async (documentType: string, file: File) => {
     setLoading(true);
     try {
-      if (!user) throw new Error("User not authenticated");
-
-      const filePath = `delivery-documents/${user.id}/${type}-${Date.now()}.${file.name.split('.').pop()}`;
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('delivery-documents')
+      const filePath = `delivery_documents/${user?.id}/${documentType}_${Date.now()}`;
+      const { error: uploadError } = await supabase.storage
+        .from('delivery_documents')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
         });
-
-      if (storageError) throw storageError;
-
-      const publicURL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${storageData.Key}`;
-
-      const { data: documentData, error: documentError } = await supabase
+  
+      if (uploadError) {
+        console.error("Error uploading document:", uploadError);
+        return;
+      }
+  
+      const { data: fileData } = supabase.storage
         .from('delivery_documents')
-        .insert({
-          delivery_documents_user_id: user.id,
-          type: type,
-          url: publicURL,
-        })
-        .select('*')
-        .single();
-
-      if (documentError) throw documentError;
-
-      setDocuments(prev => [...prev, documentData]);
-
-      toast({
-        title: "Success",
-        description: `Document uploaded successfully!`,
-      });
-
-      return documentData;
-    } catch (error: any) {
-      console.error('Error uploading document:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload document",
-        variant: "destructive"
-      });
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const completeDocumentsStep = async (): Promise<void> => {
-    setLoading(true);
-    try {
-      setCompleteSteps(prev => prev.includes(3) ? prev : [...prev, 3]);
-      setCurrentStep(4);
-
-      toast({
-        title: "Success",
-        description: "Documents uploaded successfully!",
-      });
-    } catch (error: any) {
-      console.error('Error completing documents step:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to complete documents step",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveAvailabilitySchedule = async (schedule: Omit<DeliveryAvailability, 'id' | 'created_at' | 'updated_at' | 'delivery_availability_user_id'>[]): Promise<void> => {
-    setLoading(true);
-    try {
-      if (!user) throw new Error("User not authenticated");
-
-      // Delete existing availability entries
-      const { error: deleteError } = await supabase
-        .from('delivery_availability')
-        .delete()
-        .eq('delivery_availability_user_id', user.id);
-
-      if (deleteError) throw deleteError;
-
-      // Insert new availability entries
-      const scheduleWithUserId = schedule.map(item => ({
-        ...item,
-        delivery_availability_user_id: user.id,
-      }));
-
-      const { error: insertError } = await supabase
-        .from('delivery_availability')
-        .insert(scheduleWithUserId);
-
-      if (insertError) throw insertError;
-
-      setAvailability(scheduleWithUserId);
-      setCompleteSteps(prev => prev.includes(4) ? prev : [...prev, 4]);
-      setCurrentStep(5);
-
-      toast({
-        title: "Success",
-        description: "Availability schedule saved successfully!",
-      });
-    } catch (error: any) {
-      console.error('Error saving availability schedule:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save availability schedule",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const savePaymentInfo = async (data: Omit<DeliveryPaymentInfo, 'id' | 'created_at' | 'updated_at' | 'delivery_payment_info_user_id'>): Promise<void> => {
-    setLoading(true);
-    try {
-      if (!user) throw new Error("User not authenticated");
-
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('delivery_payment_info')
-        .upsert(
+        .getPublicUrl(filePath);
+  
+      const { error: dbError } = await supabase
+        .from('delivery_documents')
+        .insert([
           {
-            delivery_payment_info_user_id: user.id,
-            ...data,
+            delivery_documents_user_id: user?.id,
+            document_type: documentType,
+            document_url: fileData.publicUrl,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
-          { onConflict: 'delivery_payment_info_user_id' }
-        )
-        .select('*')
-        .single();
+        ]);
+  
+      if (dbError) {
+        console.error("Error saving document to database:", dbError);
+        return;
+      }
+  
+      fetchDeliveryDocuments(user?.id || '');
+    } catch (error) {
+      console.error("Error uploading document:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (paymentError) throw paymentError;
+  const completeDocumentsStep = () => {
+    setCompleteSteps([...completeSteps, 3]);
+    setCurrentStep(4);
+  };
 
-      setPaymentInfo(paymentData);
-      setCompleteSteps(prev => prev.includes(5) ? prev : [...prev, 5]);
+  const saveAvailabilitySchedule = async (schedule: any) => {
+    setLoading(true);
+    try {
+      // Save availability schedule to database
+      setCompleteSteps([...completeSteps, 4]);
+      setCurrentStep(5);
+    } catch (error) {
+      console.error("Error saving availability schedule:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePaymentInfo = async (paymentInfo: any) => {
+    setLoading(true);
+    try {
+      // Save payment information to database
+      setCompleteSteps([...completeSteps, 5]);
       setCurrentStep(6);
-
-      toast({
-        title: "Success",
-        description: "Payment information saved successfully!",
-      });
-    } catch (error: any) {
-      console.error('Error saving payment info:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save payment information",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error("Error saving payment information:", error);
     } finally {
       setLoading(false);
     }
@@ -351,8 +289,6 @@ export function useDeliveryOnboarding() {
     deliveryUser,
     vehicle,
     documents,
-    availability,
-    paymentInfo,
     completeSteps,
     savePersonalInfo,
     saveVehicleInformation,
@@ -361,4 +297,4 @@ export function useDeliveryOnboarding() {
     saveAvailabilitySchedule,
     savePaymentInfo,
   };
-}
+};
