@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,27 +32,22 @@ export const WorkoutGoalsManager: React.FC = () => {
     return <Badge variant="outline">Just Started</Badge>;
   };
 
-  const handleCreateGoal = async (goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const handleCreateGoal = async (
+    goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_active'>
+  ) => {
     if (!user?.id) return;
-    
-    // Create goal with authenticated user's UUID
-    const goalWithUserId = {
+    await createGoal({
       ...goalData,
-      user_id: user.id
-    };
-    
-    await createGoal(goalWithUserId);
+      // remove any user_id/is_active/status, let hook assign status: 'active' automatically
+    });
     setShowCreateForm(false);
   };
 
-  const handleEditGoal = async (goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const handleEditGoal = async (
+    goalData: Omit<WorkoutGoal, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'is_active'>
+  ) => {
     if (editingGoal && user?.id) {
-      const goalWithUserId = {
-        ...goalData,
-        user_id: user.id
-      };
-      
-      await updateGoal(editingGoal.id, goalWithUserId);
+      await updateGoal(editingGoal.id, { ...goalData });
       setEditingGoal(null);
     }
   };
