@@ -1,330 +1,197 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { PreparationStageService } from './preparationStageService';
 import { preparationNotificationService } from '@/services/notifications/preparationNotificationService';
 
-export interface StageTransitionConfig {
-  restaurantId: string;
-  enableAutoTransitions: boolean;
-  rules: Array<{
-    fromStage: string;
-    toStage: string;
-    triggerType: 'timer' | 'completion' | 'approval';
-    timerMinutes?: number;
-    requiresApproval?: boolean;
-  }>;
-}
-
-interface TimerInfo {
+interface StageTransition {
   orderId: string;
   fromStage: string;
   toStage: string;
-  startTime: number;
-  timeout: NodeJS.Timeout;
+  timestamp: Date;
+  estimatedCompletionTime?: Date;
 }
 
-export class AutomaticTransitionService {
-  private static transitionTimers = new Map<string, TimerInfo>();
+interface AutomationRule {
+  id: string;
+  restaurantId: string;
+  fromStage: string;
+  toStage: string;
+  condition: 'time_based' | 'manual_trigger' | 'external_signal';
+  parameters: any;
+  isActive: boolean;
+}
 
-  /**
-   * Setup automatic transitions for an order with enhanced logging
-   */
-  static async setupOrderTransitions(orderId: string, restaurantId: string): Promise<void> {
-    try {
-      console.log(`[AutoTransition] Setting up transitions for order ${orderId} in restaurant ${restaurantId}`);
-      
-      // Clear any existing transitions for this order first
-      this.clearOrderTransitions(orderId);
-      
-      // For now, we'll use default transitions since the custom rules table doesn't exist
-      await this.setupDefaultTransitions(orderId);
-      
-      console.log(`[AutoTransition] Successfully setup transitions for order ${orderId}`);
-    } catch (error) {
-      console.error(`[AutoTransition] Failed to setup transitions for order ${orderId}:`, {
-        error: error instanceof Error ? error.message : error,
-        orderId,
-        restaurantId,
-        timestamp: new Date().toISOString()
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Setup timer-based automatic transition with enhanced logging and error handling
-   */
-  private static async setupTimerTransition(
-    orderId: string, 
-    fromStage: string, 
-    toStage: string, 
-    timerMinutes: number
-  ): Promise<void> {
-    const timerKey = `${orderId}_${fromStage}`;
+export const getAutomationRules = async (restaurantId: string): Promise<AutomationRule[]> => {
+  try {
+    console.log('Fetching automation rules for restaurant:', restaurantId);
     
-    try {
-      console.log(`[AutoTransition] Setting up timer for order ${orderId}: ${fromStage} -> ${toStage} (${timerMinutes}min)`);
-      
-      // Clear existing timer if any
-      const existingTimer = this.transitionTimers.get(timerKey);
-      if (existingTimer) {
-        console.log(`[AutoTransition] Clearing existing timer for ${timerKey}`);
-        clearTimeout(existingTimer.timeout);
-        this.transitionTimers.delete(timerKey);
+    // Mock automation rules for now
+    return [
+      {
+        id: 'rule-1',
+        restaurantId,
+        fromStage: 'order_received',
+        toStage: 'preparation_started',
+        condition: 'time_based',
+        parameters: { delayMinutes: 2 },
+        isActive: true
       }
+    ];
+  } catch (error) {
+    console.error('Error fetching automation rules:', error);
+    return [];
+  }
+};
 
-      const startTime = Date.now();
-      
-      // Set new timer with enhanced error handling
-      const timeout = setTimeout(async () => {
-        const executionTime = Date.now();
-        console.log(`[AutoTransition] Executing timer transition for order ${orderId}: ${fromStage} -> ${toStage}`, {
-          scheduledTime: timerMinutes * 60 * 1000,
-          actualTime: executionTime - startTime,
-          orderId,
-          fromStage,
-          toStage
-        });
-        
-        try {
-          // Verify the stage is still in the correct state before transitioning
-          const stages = await PreparationStageService.getOrderPreparationStages(orderId);
-          const currentStage = stages.find(s => s.stage_name === fromStage);
-          
-          if (!currentStage) {
-            console.warn(`[AutoTransition] Stage ${fromStage} not found for order ${orderId}, skipping transition`);
-            return;
-          }
-          
-          if (currentStage.status !== 'in_progress') {
-            console.warn(`[AutoTransition] Stage ${fromStage} is not in progress (${currentStage.status}), skipping transition for order ${orderId}`);
-            return;
-          }
-          
-          const result = await PreparationStageService.advanceStage(
-            orderId,
-            fromStage,
-            `Automatic transition based on ${timerMinutes}min timer`
-          );
+export const createAutomationRule = async (rule: Omit<AutomationRule, 'id'>): Promise<AutomationRule | null> => {
+  try {
+    console.log('Creating automation rule:', rule);
+    
+    // Mock creation
+    const newRule: AutomationRule = {
+      id: `rule-${Date.now()}`,
+      ...rule
+    };
+    
+    return newRule;
+  } catch (error) {
+    console.error('Error creating automation rule:', error);
+    return null;
+  }
+};
 
-          if (result.success) {
-            console.log(`[AutoTransition] Successfully transitioned order ${orderId} from ${fromStage} to ${toStage}`);
-            
-            // Send notification about automatic transition
-            try {
-              const { data: order } = await supabase
-                .from('orders')
-                .select('customer_id')
-                .eq('id', orderId)
-                .single();
+export const executeStageTransition = async (transition: StageTransition): Promise<boolean> => {
+  try {
+    console.log('Executing stage transition:', transition);
+    
+    // Update order stage in database
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ 
+        status: transition.toStage,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', transition.orderId);
 
-              if (order?.customer_id) {
-                await preparationNotificationService.sendStageUpdateNotification({
-                  userId: order.customer_id,
-                  orderId,
-                  stageName: toStage,
-                  stageStatus: 'in_progress'
-                });
-                console.log(`[AutoTransition] Notification sent for order ${orderId} stage ${toStage}`);
-              }
-            } catch (notificationError) {
-              console.error(`[AutoTransition] Failed to send notification for order ${orderId}:`, notificationError);
-            }
-          } else {
-            console.error(`[AutoTransition] Failed to transition order ${orderId}:`, result.message);
-          }
-        } catch (transitionError) {
-          console.error(`[AutoTransition] Critical error during transition for order ${orderId}:`, {
-            error: transitionError instanceof Error ? transitionError.message : transitionError,
-            fromStage,
-            toStage,
-            orderId,
-            timestamp: new Date().toISOString()
-          });
-        } finally {
-          // Always clean up the timer reference
-          this.transitionTimers.delete(timerKey);
-          console.log(`[AutoTransition] Cleaned up timer reference for ${timerKey}`);
-        }
-      }, timerMinutes * 60 * 1000);
+    if (orderError) {
+      console.error('Error updating order stage:', orderError);
+      return false;
+    }
 
-      // Store timer info for management
-      const timerInfo: TimerInfo = {
+    // Get order details for notification
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('customer_id, restaurant_id')
+      .eq('id', transition.orderId)
+      .single();
+
+    if (fetchError || !order) {
+      console.error('Error fetching order for notification:', fetchError);
+      return true; // Stage updated but notification failed
+    }
+
+    // Send stage update notification
+    try {
+      await preparationNotificationService.sendStageUpdateNotification(
+        transition.orderId,
+        transition.toStage,
+        order.customer_id
+      );
+    } catch (notificationError) {
+      console.error('Error sending stage notification:', notificationError);
+      // Don't fail the transition if notification fails
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error executing stage transition:', error);
+    return false;
+  }
+};
+
+export const scheduleAutomaticTransition = async (
+  orderId: string, 
+  toStage: string, 
+  delayMinutes: number
+): Promise<boolean> => {
+  try {
+    console.log(`Scheduling automatic transition for order ${orderId} to ${toStage} in ${delayMinutes} minutes`);
+    
+    // In a real implementation, this would use a job queue or scheduler
+    setTimeout(async () => {
+      const transition: StageTransition = {
         orderId,
-        fromStage,
+        fromStage: 'current', // This would be fetched from the database
         toStage,
-        startTime,
-        timeout
+        timestamp: new Date()
       };
       
-      this.transitionTimers.set(timerKey, timerInfo);
-      console.log(`[AutoTransition] Timer set for ${timerKey}, will execute in ${timerMinutes} minutes`);
-      
-    } catch (error) {
-      console.error(`[AutoTransition] Failed to setup timer for ${timerKey}:`, {
-        error: error instanceof Error ? error.message : error,
+      await executeStageTransition(transition);
+    }, delayMinutes * 60 * 1000);
+    
+    return true;
+  } catch (error) {
+    console.error('Error scheduling automatic transition:', error);
+    return false;
+  }
+};
+
+export const getStageTransitionHistory = async (orderId: string): Promise<StageTransition[]> => {
+  try {
+    console.log('Fetching stage transition history for order:', orderId);
+    
+    // Mock history for now
+    return [
+      {
         orderId,
-        fromStage,
-        toStage,
-        timerMinutes
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Setup default transitions for orders without custom rules
-   */
-  private static async setupDefaultTransitions(orderId: string): Promise<void> {
-    const defaultRules = [
-      { from: 'ingredients_prep', to: 'cooking', timerMinutes: 15 },
-      { from: 'cooking', to: 'plating', timerMinutes: 25 },
-      { from: 'plating', to: 'quality_check', timerMinutes: 5 },
-      { from: 'quality_check', to: 'ready', timerMinutes: 3 }
+        fromStage: 'order_received',
+        toStage: 'preparation_started',
+        timestamp: new Date()
+      }
     ];
-
-    console.log(`[AutoTransition] Setting up default transitions for order ${orderId}`);
-
-    try {
-      // Get current stages to only setup timers for active stages
-      const stages = await PreparationStageService.getOrderPreparationStages(orderId);
-      
-      for (const rule of defaultRules) {
-        const currentStage = stages.find(s => s.stage_name === rule.from && s.status === 'in_progress');
-        
-        if (currentStage) {
-          console.log(`[AutoTransition] Setting up timer for active stage: ${rule.from} -> ${rule.to}`);
-          await this.setupTimerTransition(orderId, rule.from, rule.to, rule.timerMinutes);
-        } else {
-          console.log(`[AutoTransition] Skipping timer for inactive stage: ${rule.from}`);
-        }
-      }
-    } catch (error) {
-      console.error(`[AutoTransition] Error setting up default transitions for order ${orderId}:`, error);
-      throw error;
-    }
+  } catch (error) {
+    console.error('Error fetching stage transition history:', error);
+    return [];
   }
+};
 
-  /**
-   * Clear all transitions for an order with enhanced logging
-   */
-  static clearOrderTransitions(orderId: string): void {
-    console.log(`[AutoTransition] Clearing all transitions for order ${orderId}`);
-    const keysToRemove: string[] = [];
-    let clearedCount = 0;
-    
-    this.transitionTimers.forEach((timerInfo, key) => {
-      if (key.startsWith(orderId)) {
-        console.log(`[AutoTransition] Clearing timer: ${key} (${timerInfo.fromStage} -> ${timerInfo.toStage})`);
-        clearTimeout(timerInfo.timeout);
-        keysToRemove.push(key);
-        clearedCount++;
-      }
-    });
-
-    keysToRemove.forEach(key => this.transitionTimers.delete(key));
-    console.log(`[AutoTransition] Cleared ${clearedCount} timers for order ${orderId}`);
-  }
-
-  /**
-   * Pause transitions for an order with enhanced logging
-   */
-  static pauseOrderTransitions(orderId: string): void {
-    console.log(`[AutoTransition] Pausing transitions for order ${orderId}`);
-    const activeTimers = this.getActiveTransitions(orderId);
-    console.log(`[AutoTransition] Found ${activeTimers.length} active timers to pause`);
-    
-    // For now, we'll clear the timers - in a production system,
-    // we'd want to store the remaining time and resume later
-    this.clearOrderTransitions(orderId);
-    console.log(`[AutoTransition] Paused (cleared) transitions for order ${orderId}`);
-  }
-
-  /**
-   * Get active transition timers for an order with detailed info
-   */
-  static getActiveTransitions(orderId: string): Array<{
-    key: string;
-    fromStage: string;
-    toStage: string;
-    remainingTime: number;
-  }> {
-    const activeTransitions: Array<{
-      key: string;
-      fromStage: string;
-      toStage: string;
-      remainingTime: number;
-    }> = [];
-    
-    const currentTime = Date.now();
-    
-    this.transitionTimers.forEach((timerInfo, key) => {
-      if (key.startsWith(orderId)) {
-        const elapsedTime = currentTime - timerInfo.startTime;
-        const totalTime = 15 * 60 * 1000; // Default timer duration, should be configurable
-        const remainingTime = Math.max(0, totalTime - elapsedTime);
-        
-        activeTransitions.push({
-          key,
-          fromStage: timerInfo.fromStage,
-          toStage: timerInfo.toStage,
-          remainingTime
-        });
-      }
-    });
-
-    return activeTransitions;
-  }
-
-  /**
-   * Resume transitions for an order after pause
-   */
-  static async resumeOrderTransitions(orderId: string, restaurantId: string): Promise<void> {
-    console.log(`[AutoTransition] Resuming transitions for order ${orderId}`);
-    try {
-      await this.setupOrderTransitions(orderId, restaurantId);
-      console.log(`[AutoTransition] Successfully resumed transitions for order ${orderId}`);
-    } catch (error) {
-      console.error(`[AutoTransition] Failed to resume transitions for order ${orderId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update transition rules for a restaurant with enhanced logging
-   */
-  static async updateTransitionRules(restaurantId: string, config: StageTransitionConfig): Promise<void> {
-    console.log(`[AutoTransition] Updating transition rules for restaurant ${restaurantId}:`, {
-      enableAutoTransitions: config.enableAutoTransitions,
-      rulesCount: config.rules.length
-    });
-    
-    // This would update rules in the database when the table is created
-    console.log(`[AutoTransition] Transition rules logged for future implementation in restaurant ${restaurantId}`);
-  }
-
-  /**
-   * Get system status and statistics
-   */
-  static getSystemStatus(): {
-    activeTimers: number;
-    timersByOrder: Record<string, number>;
-    totalOrders: number;
-  } {
-    const timersByOrder: Record<string, number> = {};
-    let totalOrders = 0;
-    
-    this.transitionTimers.forEach((_, key) => {
-      const orderId = key.split('_')[0];
-      timersByOrder[orderId] = (timersByOrder[orderId] || 0) + 1;
-    });
-    
-    totalOrders = Object.keys(timersByOrder).length;
-    
-    return {
-      activeTimers: this.transitionTimers.size,
-      timersByOrder,
-      totalOrders
+export const validateStageTransition = async (
+  orderId: string, 
+  fromStage: string, 
+  toStage: string
+): Promise<{ valid: boolean; reason?: string }> => {
+  try {
+    // Basic validation logic
+    const validTransitions = {
+      'order_received': ['preparation_started', 'cancelled'],
+      'preparation_started': ['cooking', 'cancelled'],
+      'cooking': ['quality_check', 'cancelled'],
+      'quality_check': ['packaging', 'cooking'],
+      'packaging': ['ready_for_pickup'],
+      'ready_for_pickup': ['picked_up'],
+      'picked_up': ['delivered']
     };
+
+    const allowedNextStages = validTransitions[fromStage as keyof typeof validTransitions] || [];
+    
+    if (!allowedNextStages.includes(toStage)) {
+      return { 
+        valid: false, 
+        reason: `Invalid transition from ${fromStage} to ${toStage}` 
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error('Error validating stage transition:', error);
+    return { valid: false, reason: 'Validation error' };
   }
-}
+};
+
+export const automaticTransitionService = {
+  getAutomationRules,
+  createAutomationRule,
+  executeStageTransition,
+  scheduleAutomaticTransition,
+  getStageTransitionHistory,
+  validateStageTransition
+};

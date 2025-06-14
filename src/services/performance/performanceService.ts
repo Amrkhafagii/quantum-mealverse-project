@@ -29,6 +29,66 @@ export const getRestaurantPerformanceMetrics = async (restaurantId: string): Pro
   }
 };
 
+export const getTodayMetrics = async (restaurantId: string): Promise<RestaurantPerformanceMetrics | null> => {
+  try {
+    console.log('Fetching today metrics for restaurant:', restaurantId);
+    
+    // Mock data for now
+    return {
+      total_orders: 15,
+      average_rating: 4.5,
+      total_revenue: 850,
+      order_fulfillment_time: 25,
+      customer_satisfaction: 92,
+      menu_item_popularity: []
+    };
+  } catch (error) {
+    console.error('Error fetching today metrics:', error);
+    return null;
+  }
+};
+
+export const getWeeklySummary = async (restaurantId: string): Promise<RestaurantPerformanceMetrics | null> => {
+  try {
+    console.log('Fetching weekly summary for restaurant:', restaurantId);
+    
+    // Mock data for now
+    return {
+      total_orders: 95,
+      average_rating: 4.3,
+      total_revenue: 5200,
+      order_fulfillment_time: 28,
+      customer_satisfaction: 89,
+      menu_item_popularity: []
+    };
+  } catch (error) {
+    console.error('Error fetching weekly summary:', error);
+    return null;
+  }
+};
+
+export const getPeakHoursAnalysis = async (restaurantId: string): Promise<any> => {
+  try {
+    console.log('Fetching peak hours analysis for restaurant:', restaurantId);
+    
+    // Mock data for now
+    return {
+      peak_hours: [
+        { hour: 12, orders: 8 },
+        { hour: 13, orders: 12 },
+        { hour: 18, orders: 15 },
+        { hour: 19, orders: 20 },
+        { hour: 20, orders: 18 }
+      ],
+      busiest_day: 'Saturday',
+      average_orders_per_hour: 6.5
+    };
+  } catch (error) {
+    console.error('Error fetching peak hours analysis:', error);
+    return null;
+  }
+};
+
 export const updateRestaurantPerformanceMetrics = async (restaurantId: string, metrics: Partial<RestaurantPerformanceMetrics>) => {
   try {
     console.log('Updating restaurant performance metrics:', restaurantId, metrics);
@@ -60,6 +120,9 @@ export const calculateRestaurantPerformanceScore = async (restaurantId: string):
 
 export const performanceService = {
   getRestaurantPerformanceMetrics,
+  getTodayMetrics,
+  getWeeklySummary,
+  getPeakHoursAnalysis,
   updateRestaurantPerformanceMetrics,
   calculateRestaurantPerformanceScore
 };

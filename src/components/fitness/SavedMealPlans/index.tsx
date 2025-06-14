@@ -25,15 +25,8 @@ const SavedMealPlans: React.FC<SavedMealPlansProps> = ({ userId }) => {
   const loadSavedMealPlans = async () => {
     try {
       setLoading(true);
-      const { data, error } = await getUserSavedMealPlans(userId);
-      
-      if (error) throw error;
-      
-      if (data) {
-        setSavedPlans(data);
-      } else {
-        setSavedPlans([]);
-      }
+      const plans = await getUserSavedMealPlans(userId);
+      setSavedPlans(plans);
     } catch (error) {
       console.error('Error loading saved meal plans:', error);
       toast.error('Failed to load saved meal plans.');
@@ -44,9 +37,9 @@ const SavedMealPlans: React.FC<SavedMealPlansProps> = ({ userId }) => {
 
   const handleDeletePlan = async (planId: string) => {
     try {
-      const { success, error } = await deleteSavedMealPlan(planId, userId);
+      const result = await deleteSavedMealPlan(planId);
       
-      if (!success) throw error;
+      if (!result.success) throw new Error(result.error);
       
       // Remove from local state
       setSavedPlans(savedPlans.filter(plan => plan.id !== planId));

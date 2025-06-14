@@ -33,7 +33,7 @@ const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({ mealPlan, tdeeResult 
 
     try {
       const result = await saveMealPlanToDb(user.id, planName, mealPlan, tdeeResult);
-      if (result.data) {
+      if (result.success) {
         toast.success('Meal plan saved successfully!');
       } else {
         toast.error(`Failed to save meal plan: ${result.error}`);
