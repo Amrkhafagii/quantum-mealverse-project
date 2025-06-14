@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,12 +25,14 @@ interface CurrencyContextType {
 
 const defaultCurrency: Currency = { code: 'USD', symbol: '$', exchangeRate: 1 };
 
-// Fix type instantiation: don't call formatPrice in default, inline the arrow function!
-const CurrencyContext = React.createContext<CurrencyContextType>({
+// -- FIX: move the default context to a named value, not an inline arrow function, to avoid deep type instantiation --
+const defaultCurrencyContext: CurrencyContextType = {
   currentCurrency: defaultCurrency,
   formatPrice: (price: number) => `$${price.toFixed(2)}`,
   convertPrice: (price: number) => price,
-});
+};
+
+const CurrencyContext = React.createContext<CurrencyContextType>(defaultCurrencyContext);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -89,4 +90,3 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 };
 
 export const useCurrency = (): CurrencyContextType => React.useContext(CurrencyContext);
-

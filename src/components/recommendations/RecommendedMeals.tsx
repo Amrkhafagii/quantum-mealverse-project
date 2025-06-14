@@ -26,7 +26,6 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
   const getTabRecommendations = (): MealType[] => {
     switch (activeTab) {
       case 'dietary':
-        // Safely handle missing dietary_tags
         return recommendations.filter((meal: MealType) =>
           Array.isArray(meal.dietary_tags) && 
           meal.dietary_tags.some(tag =>
@@ -114,3 +113,4 @@ const RecommendedMeals: React.FC<RecommendedMealsProps> = ({
 };
 
 export default RecommendedMeals;
+
