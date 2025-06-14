@@ -60,3 +60,45 @@ export interface ExtendedUserAchievement extends UserAchievement {
 
 // Make sure UserMeasurement is properly exported
 export type { UserMeasurement } from './profile';
+
+// Additional missing types
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  members: TeamMember[];
+  created_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  user_id: string;
+  team_id: string;
+  role: 'leader' | 'member';
+  joined_at: string;
+}
+
+export interface StreakReward {
+  id: string;
+  days: number;
+  reward_type: 'points' | 'badge' | 'item';
+  reward_value: number;
+  description: string;
+}
+
+export interface StreakRewardsProps {
+  currentStreak: number;
+  rewards: StreakReward[];
+}
+
+// Updated SavedMealPlan to match database schema
+export interface SavedMealPlan {
+  id: string;
+  saved_meal_plans_user_id: string;
+  name: string;
+  meal_plan: any; // JSON data containing the meal plan
+  tdee_id: string;
+  date_created: string;
+  expires_at?: string;
+  is_active?: boolean;
+}

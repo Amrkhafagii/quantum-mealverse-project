@@ -7,10 +7,12 @@ import { toast } from 'sonner';
 interface SavedMealPlan {
   id: string;
   name: string;
-  description?: string;
-  meal_plan_data: any; // JSON data containing the meal plan
-  created_at: string;
-  updated_at: string;
+  meal_plan: any; // JSON data containing the meal plan
+  date_created: string;
+  saved_meal_plans_user_id: string;
+  tdee_id: string;
+  expires_at?: string;
+  is_active?: boolean;
 }
 
 const SavedMealPlans = () => {
@@ -30,7 +32,7 @@ const SavedMealPlans = () => {
         .from('saved_meal_plans')
         .select('*')
         .eq('saved_meal_plans_user_id', user.id) // Updated field name
-        .order('created_at', { ascending: false });
+        .order('date_created', { ascending: false });
 
       if (error) throw error;
       setSavedPlans(data || []);
@@ -117,13 +119,10 @@ const SavedMealPlans = () => {
           {savedPlans.map((plan) => (
             <div key={plan.id} className="bg-white rounded-lg shadow p-4">
               <h3 className="text-lg font-semibold mb-2">{plan.name}</h3>
-              {plan.description && (
-                <p className="text-gray-600 text-sm mb-3">{plan.description}</p>
-              )}
               
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-500">
-                  {new Date(plan.created_at).toLocaleDateString()}
+                  {new Date(plan.date_created).toLocaleDateString()}
                 </span>
                 <button
                   onClick={() => deleteMealPlan(plan.id)}

@@ -34,7 +34,7 @@ const SaveCurrentPlanButton: React.FC<SaveCurrentPlanButtonProps> = ({ userId, o
       const { data: tdeeData, error: tdeeError } = await supabase
         .from('user_tdee')
         .insert({
-          user_id: userId,
+          user_tdee_user_id: userId, // Updated field name
           date: new Date().toISOString(),
           tdee: tdeeResult.tdee,
           bmr: tdeeResult.bmr,

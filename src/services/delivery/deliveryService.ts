@@ -44,6 +44,31 @@ export const updateDeliveryUserStatus = async (
   }
 };
 
+export const updateDeliveryUserProfile = async (
+  deliveryUserId: string,
+  profileData: Partial<DeliveryUser>
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('delivery_users')
+      .update({
+        ...profileData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', deliveryUserId);
+
+    if (error) {
+      console.error('Error updating delivery user profile:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateDeliveryUserProfile:', error);
+    return false;
+  }
+};
+
 export const getVehicleByDeliveryUserId = async (deliveryUserId: string): Promise<DeliveryVehicle | null> => {
   try {
     const { data, error } = await supabase

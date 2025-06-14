@@ -84,7 +84,7 @@ const SavedMealPlans: React.FC<SavedMealPlansProps> = ({ userId }) => {
 
   const loadPlan = (plan: SavedMealPlan) => {
     try {
-      // Store the plan in session storage
+      // Store the plan in session storage - using meal_plan instead of meal_plan_data
       sessionStorage.setItem('currentMealPlan', JSON.stringify(plan.meal_plan));
       
       // Redirect to the fitness page
