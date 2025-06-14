@@ -1,14 +1,13 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bell, BellRing, Clock, CheckCircle } from 'lucide-react';
 import { useRestaurantNotifications } from '@/hooks/useRestaurantNotifications';
-import type { OrderNotification } from '@/types/notifications';
+import type { Notification } from '@/types/notifications';
 
 const NotificationItem: React.FC<{
-  notification: OrderNotification;
+  notification: Notification;
   onMarkAsRead: (id: string) => void;
 }> = ({ notification, onMarkAsRead }) => {
   const getNotificationIcon = (type: string) => {
@@ -78,7 +77,6 @@ const NotificationItem: React.FC<{
 
 export const NotificationCenter: React.FC = () => {
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useRestaurantNotifications();
-
   if (loading) {
     return (
       <Card>
@@ -93,7 +91,6 @@ export const NotificationCenter: React.FC = () => {
       </Card>
     );
   }
-
   return (
     <Card>
       <CardHeader>
