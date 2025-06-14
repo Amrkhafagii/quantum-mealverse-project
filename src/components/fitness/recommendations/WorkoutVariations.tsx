@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -17,18 +16,8 @@ interface WorkoutVariationsProps {
 const WorkoutVariations: React.FC<WorkoutVariationsProps> = ({ workoutId }) => {
   // Mock data for demo purposes
   const variations: WorkoutVariation[] = [
-    {
-      id: '1',
-      name: 'Beginner Variation',
-      description: 'Simplified version for beginners',
-      difficulty: 'Easy'
-    },
-    {
-      id: '2',
-      name: 'Advanced Variation',
-      description: 'More challenging version',
-      difficulty: 'Hard'
-    }
+    { id: '1', name: 'Beginner Variation', description: 'Simplified version for beginners', difficulty: 'Easy' },
+    { id: '2', name: 'Advanced Variation', description: 'More challenging version', difficulty: 'Hard' }
   ];
 
   return (

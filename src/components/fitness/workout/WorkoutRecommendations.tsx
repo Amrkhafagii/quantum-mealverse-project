@@ -13,7 +13,7 @@ interface WorkoutRecommendationsProps {
 
 const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApplyRecommendation }) => {
   const { user } = useAuth();
-  const [recommendations, setRecommendations] = useState<WorkoutRecommendation[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -37,19 +37,8 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
 
       if (error) throw error;
 
-      // Safely extract properties, fallback to metadata when not directly available
-      const typedRecommendations = (data || []).map(rec => ({
-        ...rec,
-        difficulty: rec.difficulty ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.difficulty : undefined),
-        duration_minutes: rec.duration_minutes ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.duration_minutes : undefined),
-        target_muscle_groups: rec.target_muscle_groups ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.target_muscle_groups : undefined),
-        recommended_frequency: rec.recommended_frequency ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.recommended_frequency : undefined),
-        type: rec.type ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.type : undefined),
-        reason: rec.reason ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.reason : undefined),
-        confidence_score: rec.confidence_score ?? (rec.metadata && typeof rec.metadata === "object" ? rec.metadata.confidence_score : undefined),
-      }));
-
-      setRecommendations(typedRecommendations);
+      // Set recommendations directly from Supabase, do not attempt to cast/merge
+      setRecommendations(data || []);
     } catch (error) {
       console.error('Error fetching workout recommendations:', error);
       toast({
@@ -62,7 +51,7 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
     }
   };
 
-  const handleApply = async (recommendation: WorkoutRecommendation) => {
+  const handleApply = async (rec: any) => {
     try {
       // Update the recommendation status
       const { error } = await supabase
@@ -71,7 +60,7 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
           applied: true,
           applied_at: new Date().toISOString()
         })
-        .eq('id', recommendation.id);
+        .eq('id', rec.id);
         
       if (error) throw error;
       
@@ -81,11 +70,11 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
       });
       
       // Update local state
-      setRecommendations(prev => prev.filter(r => r.id !== recommendation.id));
+      setRecommendations(prev => prev.filter(r => r.id !== rec.id));
       
       // Call parent callback if provided
       if (onApplyRecommendation) {
-        onApplyRecommendation(recommendation.id);
+        onApplyRecommendation(rec.id);
       }
     } catch (error) {
       console.error('Error applying recommendation:', error);
@@ -97,13 +86,13 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
     }
   };
 
-  const handleDismiss = async (recommendationId: string) => {
+  const handleDismiss = async (id: string) => {
     try {
       // Update the recommendation status
       const { error } = await supabase
         .from('workout_recommendations')
         .update({ dismissed: true })
-        .eq('id', recommendationId);
+        .eq('id', id);
         
       if (error) throw error;
       
@@ -113,7 +102,7 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
       });
       
       // Update local state
-      setRecommendations(prev => prev.filter(r => r.id !== recommendationId));
+      setRecommendations(prev => prev.filter(r => r.id !== id));
     } catch (error) {
       console.error('Error dismissing recommendation:', error);
       toast({
@@ -124,16 +113,16 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
     }
   };
 
-  // Use getMeta as in SmartRecommendations to fetch properties from both top-level or metadata
-  function getMeta<T extends object, K extends keyof any>(rec: T, key: K, fallback?: any) {
-    if (key in rec && typeof (rec as any)[key] !== "undefined") {
-      return (rec as any)[key];
+  // Helper to get property from rec or rec.metadata (for dynamic flexible fields)
+  const getMeta = (rec: any, key: string, fallback: any = undefined) => {
+    if (rec && key in rec && typeof rec[key] !== 'undefined') {
+      return rec[key];
     }
-    if ('metadata' in rec && rec.metadata && typeof rec.metadata === 'object' && !Array.isArray(rec.metadata) && key in rec.metadata) {
+    if (rec && typeof rec.metadata === 'object' && rec.metadata !== null && !Array.isArray(rec.metadata) && key in rec.metadata) {
       return rec.metadata[key];
     }
     return fallback;
-  }
+  };
 
   if (isLoading) {
     return (
@@ -143,9 +132,7 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
     );
   }
 
-  if (recommendations.length === 0) {
-    return null; // Don't show anything if no recommendations
-  }
+  if (recommendations.length === 0) return null;
 
   return (
     <div className="space-y-4">
@@ -156,28 +143,25 @@ const WorkoutRecommendations: React.FC<WorkoutRecommendationsProps> = ({ onApply
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {recommendations.map((rec) => {
-          const difficulty = getMeta(rec, "difficulty", 'beginner');
-          const duration = getMeta(rec, "duration_minutes", 0);
-          const targetMuscles = getMeta(rec, "target_muscle_groups", []);
-          const recommendedFreq = getMeta(rec, "recommended_frequency", 1);
-          const reason = getMeta(rec, "reason", "");
-          const confidenceScore = getMeta(rec, "confidence_score", 0);
-          const type = getMeta(rec, "type", "");
+          const reason = getMeta(rec, 'reason', '');
+          const confidenceScore = getMeta(rec, 'confidence_score', 0);
+          const title = rec.title || getMeta(rec, 'name', 'Recommendation');
+          const description = rec.description || '';
           return (
             <Card key={rec.id} className="bg-quantum-black/30 border-quantum-purple/30 overflow-hidden">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">{rec.title || rec.name}</CardTitle>
+                <CardTitle className="text-lg font-medium">{title}</CardTitle>
                 <CardDescription>
-                  {rec.reason && (
-                    <p className="text-gray-400 text-sm">{rec.reason}</p>
+                  {reason && (
+                    <p className="text-gray-400 text-sm">{reason}</p>
                   )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm mb-2">{rec.description}</p>
+                <p className="text-sm mb-2">{description}</p>
                 <div className="flex items-center gap-1 text-xs text-quantum-cyan">
                   <Dumbbell className="h-3 w-3" />
-                  <span>Confidence: {Math.round((rec.confidence_score || 0) * 100)}%</span>
+                  <span>Confidence: {Math.round(confidenceScore * 100)}%</span>
                 </div>
               </CardContent>
               <CardFooter className="bg-quantum-darkBlue/30 flex justify-between pt-2">

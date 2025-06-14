@@ -12,8 +12,8 @@ import { WorkoutGoalsManager } from './analytics/WorkoutGoalsManager';
 import { ProgressCharts } from './analytics/ProgressCharts';
 import { EnhancedWorkoutHistory } from './analytics/EnhancedWorkoutHistory';
 import SmartRecommendations from './recommendations/SmartRecommendations';
-import { AdaptiveDifficulty } from './recommendations/AdaptiveDifficulty';
-import { WorkoutVariations } from './recommendations/WorkoutVariations';
+import AdaptiveDifficulty from './recommendations/AdaptiveDifficulty';
+import WorkoutVariations from './recommendations/WorkoutVariations';
 import CrossPlatformTester from './CrossPlatformTester';
 
 interface FitnessOverviewProps {

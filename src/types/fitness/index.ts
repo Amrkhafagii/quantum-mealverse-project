@@ -3,27 +3,4 @@
 
 export * from './workouts';
 export * from './exercises';
-
-// Direct export of types not imported from other index.ts
-export type {
-  UserProfile,
-  UserMeasurement,
-  WorkoutPlan,
-  WorkoutDay,
-  Exercise,
-  WorkoutSet,
-  CompletedExercise,
-  WorkoutLog,
-  WorkoutHistoryItem,
-  SavedMealPlan,
-  Achievement,
-  UserAchievement,
-  DailyQuest,
-  FitnessGoal,
-  GoalStatus,
-  Team,
-  TeamMember,
-  UserWorkoutStats,
-  CalendarEvent,
-} from '../fitness.d.ts';
-
+// Explicitly avoid importing from '../fitness.d.ts' to prevent recursion. Only export from modular files.
