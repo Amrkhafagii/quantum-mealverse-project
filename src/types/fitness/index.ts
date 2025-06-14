@@ -8,6 +8,12 @@ export * from './workouts';
 export * from './achievements';
 export * from './nutrition';
 
+// Explicit re-exports for types needed by the UI (fix TS2305 errors)
+export type { SavedMealPlan } from './nutrition';
+export type { WorkoutHistoryItem, WorkoutPlan, WorkoutDay, CompletedExercise, WorkoutLog, WorkoutSchedule, WorkoutRecommendation } from './workouts';
+export type { DailyQuest, Team, TeamMember, StreakReward, StreakRewardsProps } from './achievements';
+export type { CalendarEvent } from './scheduling';
+
 // Keep some legacy exports for backward compatibility
 export interface WorkoutPlan {
   id: string;
