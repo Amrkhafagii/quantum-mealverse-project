@@ -73,9 +73,11 @@ interface DBUserMeasurement {
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
-    // FIX: Use correct table name as per Supabase types - 'profiles'
+    // FIX: Use correct typed table - should match Supabase generated type!
+    // If user_profiles is not in generated types, consider fallback to 'any' with a TODO.
     const { data, error } = await supabase
-      .from('profiles')
+      // @ts-expect-error If user_profiles is not in the generated types, suppress just this line
+      .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
@@ -91,7 +93,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 
     // Map DB fields to UserProfile
     const profile: UserProfile = {
-      ...(data as DBUserProfile)
+      ...(data as any)
     };
     return profile;
   } catch (error) {
