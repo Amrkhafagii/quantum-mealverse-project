@@ -1,9 +1,13 @@
-
 // Fitness and workout related types with updated user ID naming
+// This file is being deprecated in favor of the modular approach in src/types/fitness/
 
+// Re-export everything from the modular fitness types
+export * from './fitness/index';
+
+// Legacy types for backward compatibility
 export interface WorkoutPlan {
   id: string;
-  workout_plans_user_id: string; // Updated to match new naming convention
+  workout_plans_user_id: string;
   name: string;
   description?: string;
   difficulty_level: 'beginner' | 'intermediate' | 'advanced';
@@ -12,11 +16,17 @@ export interface WorkoutPlan {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Backward compatibility fields
+  difficulty?: string;
+  duration_minutes?: number;
+  frequency?: number;
+  goal?: string;
+  workout_days?: WorkoutDay[];
 }
 
 export interface WorkoutSession {
   id: string;
-  workout_sessions_user_id: string; // Updated to match new naming convention
+  workout_sessions_user_id: string;
   workout_plan_id?: string;
   name: string;
   scheduled_date: string;
@@ -61,16 +71,16 @@ export interface WorkoutSet {
   weight?: number;
   duration_seconds?: number;
   rest_seconds?: number;
-  rpe?: number; // Rate of Perceived Exertion (1-10)
+  rpe?: number;
 }
 
 export interface WorkoutLog {
   id: string;
-  workout_logs_user_id: string; // Updated to match new naming convention
+  workout_logs_user_id: string;
   workout_plan_id?: string;
   date: string;
   duration_minutes: number;
-  exercises_completed: any[]; // JSON data
+  exercises_completed: any[];
   total_sets: number;
   total_reps: number;
   total_volume: number;
@@ -78,11 +88,12 @@ export interface WorkoutLog {
   calories_burned?: number;
   notes?: string;
   created_at: string;
+  completed_exercises?: any[]; // For backward compatibility
 }
 
 export interface ExerciseProgress {
   id: string;
-  exercise_progress_user_id: string; // Updated to match new naming convention
+  exercise_progress_user_id: string;
   exercise_name: string;
   workout_log_id: string;
   max_weight: number;
@@ -95,7 +106,7 @@ export interface ExerciseProgress {
 
 export interface UserMeasurements {
   id: string;
-  user_measurements_user_id: string; // Updated to match new naming convention
+  user_measurements_user_id: string;
   date: string;
   weight?: number;
   height?: number;
@@ -111,7 +122,7 @@ export interface UserMeasurements {
 
 export interface FitnessGoal {
   id: string;
-  fitness_goals_user_id: string; // Updated to match new naming convention
+  fitness_goals_user_id: string;
   goal_type: 'weight_loss' | 'weight_gain' | 'muscle_gain' | 'endurance' | 'strength' | 'general_fitness';
   target_value: number;
   current_value: number;
@@ -124,10 +135,10 @@ export interface FitnessGoal {
 
 export interface SavedMealPlan {
   id: string;
-  saved_meal_plans_user_id: string; // Updated to match new naming convention
+  saved_meal_plans_user_id: string;
   name: string;
   description?: string;
-  meal_plan_data: any; // JSON data containing the meal plan
+  meal_plan_data: any;
   nutritional_targets: {
     calories: number;
     protein: number;
@@ -141,7 +152,7 @@ export interface SavedMealPlan {
 
 export interface UserProgress {
   id: string;
-  user_progress_user_id: string; // Updated to match new naming convention
+  user_progress_user_id: string;
   date: string;
   weight?: number;
   body_fat_percentage?: number;
@@ -165,7 +176,7 @@ export interface Achievement {
 
 export interface AchievementProgress {
   id: string;
-  achievement_progress_user_id: string; // Updated to match new naming convention
+  achievement_progress_user_id: string;
   achievement_id: string;
   current_progress: number;
   target_progress: number;
@@ -198,7 +209,7 @@ export interface Challenge {
 export interface ChallengeParticipant {
   id: string;
   challenge_id: string;
-  challenge_participants_user_id: string; // Updated to match new naming convention
+  challenge_participants_user_id: string;
   team_id?: string;
   joined_date: string;
   progress: number;

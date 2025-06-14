@@ -81,14 +81,26 @@ export interface TeamMember {
 export interface StreakReward {
   id: string;
   days: number;
+  days_required?: number;
+  streak_days?: number;
+  streak_length?: number;
   reward_type: 'points' | 'badge' | 'item';
-  reward_value: number;
-  description: string;
+  reward_value: number | string;
+  reward_name?: string;
+  title?: string;
+  reward_description?: string;
+  description?: string;
+  icon?: string;
+  points?: number;
+  is_claimed?: boolean;
 }
 
 export interface StreakRewardsProps {
   currentStreak: number;
   rewards: StreakReward[];
+  userId?: string;
+  longestStreak?: number;
+  onClaimReward?: (rewardId: string) => void;
 }
 
 // Updated SavedMealPlan to match database schema
