@@ -1,4 +1,6 @@
+
 import React from 'react';
+// Remove explicit type for useQuery to avoid the "excessive" error
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,8 @@ interface SubscriptionsListProps {
 
 export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) => {
   const navigate = useNavigate();
-  
+
+  // Don't use generics here, let it be 'any'
   const { data: subscriptions, isLoading, error } = useQuery({
     queryKey: ['subscriptions', userId],
     queryFn: async () => {
@@ -33,15 +36,15 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      // Make sure each subscription includes user_id, regardless of backend column name
+      // Normalize: always ensure user_id is present, possibly remapping from subscriptions_user_id
       return (data as any[] || []).map((rec) => ({
         ...rec,
         user_id: rec.user_id || rec.subscriptions_user_id,
-      }));
+      })) as Subscription[];
     },
     enabled: !!userId,
-  });
-  
+  }) as { data: Subscription[] | undefined, isLoading: boolean, error: unknown };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-500 hover:bg-green-600';
@@ -50,15 +53,15 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
       default: return 'bg-gray-500 hover:bg-gray-600';
     }
   };
-  
+
   if (isLoading) {
     return <div className="text-center py-4">Loading your subscriptions...</div>;
   }
-  
+
   if (error) {
     return <div className="text-center py-4 text-red-500">Error loading subscriptions</div>;
   }
-  
+
   if (!subscriptions || subscriptions.length === 0) {
     return (
       <div className="text-center py-8">
@@ -67,7 +70,7 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
       </div>
     );
   }
-  
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -92,9 +95,9 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
                 {format(new Date(subscription.start_date), 'MMM dd, yyyy')}
               </TableCell>
               <TableCell>
-                {subscription.is_trial && subscription.trial_ends_at 
+                {subscription.is_trial && subscription.trial_ends_at
                   ? format(new Date(subscription.trial_ends_at), 'MMM dd, yyyy') + ' (Trial End)'
-                  : subscription.end_date 
+                  : subscription.end_date
                     ? format(new Date(subscription.end_date), 'MMM dd, yyyy')
                     : 'Auto-renewal'}
               </TableCell>
@@ -105,8 +108,8 @@ export const SubscriptionsList: React.FC<SubscriptionsListProps> = ({ userId }) 
                 </Badge>
               </TableCell>
               <TableCell>
-                <CurrencyDisplay 
-                  amount={subscription.price} 
+                <CurrencyDisplay
+                  amount={subscription.price}
                   isTrial={subscription.is_trial}
                 />
               </TableCell>
