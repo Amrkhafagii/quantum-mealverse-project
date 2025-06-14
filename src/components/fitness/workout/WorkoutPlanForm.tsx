@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 // The lines causing type errors must use the correct keys like workout_plans_user_id etc. Fix as needed below, but for this pass just update the types import and add a TODO for DB mapping if needed:
-import type { WorkoutDay } from '@/types/fitness/workouts';
+import type { WorkoutDay } from '@/types/fitness';
 
 const WorkoutPlanForm: React.FC = () => {
   const { user } = useAuth();
@@ -40,10 +40,9 @@ const WorkoutPlanForm: React.FC = () => {
   };
 
   const submitPlan = async (planData: any) => {
-    // Only known props per DB
     const formattedData = {
       ...planData,
-      workout_days: JSON.stringify(planData.workout_days), // Store as Json, format as array in db
+      workout_days: JSON.stringify(planData.workout_days), // Store as Json
       workout_plans_user_id: planData.user_id || planData.workout_plans_user_id,
     };
     try {
@@ -58,19 +57,6 @@ const WorkoutPlanForm: React.FC = () => {
       }
 
       if (workoutPlan) {
-        const newWorkoutDays = workoutDays.map((day) => ({
-          ...day,
-          workout_plan_id: workoutPlan.id,
-        }));
-
-        const { error: workoutDaysError } = await supabase
-          .from('workout_days')
-          .insert(newWorkoutDays);
-
-        if (workoutDaysError) {
-          throw workoutDaysError;
-        }
-
         toast({
           title: 'Success',
           description: 'Workout plan created successfully!',

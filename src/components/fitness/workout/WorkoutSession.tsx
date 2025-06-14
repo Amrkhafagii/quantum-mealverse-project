@@ -88,21 +88,22 @@ const WorkoutSession: React.FC<WorkoutSessionProps> = ({ plan, dayIndex, onCompl
     }
     
     // Filter out sets that weren't completed
-    const filteredExercises = completedExercises.map(exercise => ({
+    const filteredExercises: CompletedExercise[] = completedExercises.map(exercise => ({
       ...exercise,
-      sets_completed: exercise.sets_completed.filter((set: any) => set.completed)
-    })).filter(exercise => exercise.sets_completed.length > 0);
+      sets_completed: (exercise.sets_completed ?? []).filter((set: any) => set.completed),
+      exercise_name: exercise.exercise_name ?? exercise.name
+    })).filter(exercise => (exercise.sets_completed?.length ?? 0) > 0);
     
-    // Create workout log
+    // Create workout log - ADD workout_logs_user_id as on the type
     const workoutLog: WorkoutLog = {
       id: crypto.randomUUID(),
       user_id: plan.user_id,
+      workout_logs_user_id: plan.user_id, // This makes it compatible with the type definition!
       workout_plan_id: plan.id,
       date: new Date().toISOString(),
       duration: Math.round(duration / 60), // Convert to minutes
       calories_burned: caloriesBurned || null,
       notes: notes || null,
-      exercises_completed: [], // Add empty array for required property
       completed_exercises: filteredExercises
     };
     

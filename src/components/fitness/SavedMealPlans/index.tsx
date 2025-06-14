@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getUserSavedMealPlans, renewMealPlan, deleteSavedMealPlan } from '@/services/mealPlan';
-import { SavedMealPlan } from '@/types/fitness'; // Corrected import
+import { SavedMealPlan } from '@/types/fitness';
 import PlanGrid from './PlanGrid';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
