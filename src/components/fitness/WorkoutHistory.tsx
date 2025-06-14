@@ -10,7 +10,7 @@ import {
   ChevronRight,
   Activity
 } from 'lucide-react';
-import { WorkoutHistoryItem, WorkoutLog } from '@/types/fitness/workouts';
+import { WorkoutHistoryItem, WorkoutLog } from '@/types/fitness';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';

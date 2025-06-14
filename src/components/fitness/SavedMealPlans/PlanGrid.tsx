@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { SavedMealPlan } from '@/types/fitness/nutrition';
+import { SavedMealPlan } from '@/types/fitness';
 import PlanCard from './PlanCard';
 
 interface PlanGridProps {
