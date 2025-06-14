@@ -73,9 +73,9 @@ interface DBUserMeasurement {
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
-    // FIX: If your table name is user_profile (singular), update here. Revert to 'user_profiles' if needed.
+    // FIX: Use correct table name as per Supabase types - 'profiles'
     const { data, error } = await supabase
-      .from('user_profile')
+      .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
