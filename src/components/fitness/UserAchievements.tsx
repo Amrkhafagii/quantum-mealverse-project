@@ -25,7 +25,6 @@ export const UserAchievements: React.FC<UserAchievementsProps> = ({
   const { toast } = useToast();
   const [awardedAchievements, setAwardedAchievements] = useState<UserAchievement[]>([]);
   const [loading, setLoading] = useState(false);
-  // Remove <UserAchievement[]> from useForm
   const form = useForm({
     defaultValues: {
       achievementId: "",
@@ -55,9 +54,9 @@ export const UserAchievements: React.FC<UserAchievementsProps> = ({
         .from('user_achievements')
         .insert([
           {
-            user_id: user.id,
+            user_achievements_user_id: user.id, // **use correct DB column**
             achievement_id: achievement.id,
-            date_earned: new Date().toISOString(),
+            date_achieved: new Date().toISOString(), // match DB schema
           },
         ])
         .select()
@@ -72,7 +71,17 @@ export const UserAchievements: React.FC<UserAchievementsProps> = ({
         return;
       }
 
-      setAwardedAchievements([...awardedAchievements, data[0]]);
+      // Cast to match UserAchievement type for state
+      setAwardedAchievements([...awardedAchievements, {
+        id: data[0].id,
+        user_achievements_user_id: data[0].user_achievements_user_id,
+        achievement_id: data[0].achievement_id,
+        unlocked_at: data[0].date_achieved || data[0].unlocked_at || new Date().toISOString(),
+        date_achieved: data[0].date_achieved,
+        progress: data[0].progress,
+        user_id: data[0].user_id, // Backward compatibility if needed
+        date_earned: data[0].date_earned, // Backward compatibility if needed
+      } as UserAchievement]);
       toast({
         title: "Achievement Awarded!",
         description: `You've earned the ${achievement.name} achievement!`,
