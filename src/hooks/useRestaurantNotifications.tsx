@@ -1,8 +1,11 @@
-
 import { useState, useEffect } from 'react';
-import { notificationService } from '@/services/notifications/notificationService';
 import type { Notification } from '@/types/notifications';
 import { useRestaurantAuth } from './useRestaurantAuth';
+import { 
+  getNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead 
+} from '@/services/notification/notificationService';
 
 // Helper: convert backend to app Notification interface
 const convertToNotification = (notification: any, restaurantId: string): Notification => ({
@@ -30,10 +33,10 @@ export const useRestaurantNotifications = () => {
 
     const loadNotifications = async () => {
       try {
-        const [notificationsData, unreadCountData] = await Promise.all([
-          notificationService.getRestaurantNotifications(restaurant.id),
-          notificationService.getUnreadCount(restaurant.id)
-        ]);
+        // Get all notifications for the restaurant user
+        const notificationsData = await getNotifications(restaurant.id);
+        // Calculate the unread count locally
+        const unreadCountData = notificationsData.filter((n: any) => !n.is_read).length;
         const convertedNotifications = notificationsData.map((n: any) =>
           convertToNotification(n, restaurant.id)
         );
@@ -48,27 +51,19 @@ export const useRestaurantNotifications = () => {
 
     loadNotifications();
 
-    const subscription = notificationService.subscribeToRestaurantNotifications(
-      restaurant.id,
-      (newNotification: any) => {
-        const convertedNotification = convertToNotification(newNotification, restaurant.id);
-        setNotifications(prev => [convertedNotification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-      }
-    );
+    // The notificationService.subscribeToRestaurantNotifications is not present in the service you have.
+    // You might need to remove or replace this part depending on your realtime setup.
+    // For now, do not subscribe.
 
-    return () => {
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
-      }
-    };
+    // Cleanup: nothing to unsubscribe from now
+    return undefined;
   }, [restaurant?.id]);
 
   const markAsRead = async (notificationId: string) => {
     if (!restaurant?.id) return;
 
     try {
-      await notificationService.markAsRead(notificationId, restaurant.id);
+      await markNotificationAsRead(notificationId);
       setNotifications(prev =>
         prev.map(notification =>
           notification.id === notificationId
@@ -86,7 +81,7 @@ export const useRestaurantNotifications = () => {
     if (!restaurant?.id) return;
 
     try {
-      await notificationService.markAllAsRead(restaurant.id);
+      await markAllNotificationsAsRead(restaurant.id);
       setNotifications(prev =>
         prev.map(notification => ({
           ...notification,
