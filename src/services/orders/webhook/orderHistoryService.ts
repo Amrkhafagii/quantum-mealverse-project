@@ -9,6 +9,31 @@ export const recordOrderHistory = async (
   orderId: string,
   status: OrderStatus,
   restaurantId?: string,
+  metadata?: Record<string, any>,
+  customTimestamp?: string
+): Promise<void> => {
+  const { error } = await supabase
+    .from('order_history')
+    .insert({
+      order_id: orderId,
+      status,
+      restaurant_id: restaurantId,
+      details: metadata || {},
+      created_at: customTimestamp || new Date().toISOString()
+    });
+
+  if (error) {
+    throw error;
+  }
+};
+
+/**
+ * Record restaurant-specific order history entry
+ */
+export const recordRestaurantOrderHistory = async (
+  orderId: string,
+  status: string,
+  restaurantId: string,
   metadata?: Record<string, any>
 ): Promise<void> => {
   const { error } = await supabase
@@ -17,7 +42,7 @@ export const recordOrderHistory = async (
       order_id: orderId,
       status,
       restaurant_id: restaurantId,
-      metadata: metadata || {},
+      details: metadata || {},
       created_at: new Date().toISOString()
     });
 

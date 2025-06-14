@@ -15,7 +15,7 @@ export enum OrderStatus {
   PENDING = 'pending',
   AWAITING_RESTAURANT = 'awaiting_restaurant',
   RESTAURANT_ASSIGNED = 'restaurant_assigned',
-  RESTAURANT_ACCEPTED = 'accepted',
+  RESTAURANT_ACCEPTED = 'restaurant_accepted',
   RESTAURANT_REJECTED = 'restaurant_rejected',
   PROCESSING = 'processing',
   PREPARING = 'preparing',

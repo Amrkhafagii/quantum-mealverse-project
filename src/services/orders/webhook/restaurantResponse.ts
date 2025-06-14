@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { RestaurantResponseRequest, WebhookResponse } from '@/types/webhook';
+import { RestaurantResponseRequest, WebhookResponse, OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from './orderHistoryService';
 
 const WEBHOOK_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://hozgutjvbrljeijybnyg.supabase.co/functions/v1';
@@ -123,16 +123,18 @@ export const sendRestaurantResponse = async (
 
     const responseData: WebhookResponse = await response.json();
     
-    // Record the restaurant response in order_history
-    const historyResult = await recordOrderHistory(
-      orderId,
-      `restaurant_${action}ed`,
-      restaurantId,
-      { assignment_id: assignmentId }
-    );
+    // Record the restaurant response in order_history using proper enum values
+    const status = action === 'accept' ? OrderStatus.RESTAURANT_ACCEPTED : OrderStatus.RESTAURANT_REJECTED;
     
-    if (!historyResult.success) {
-      console.warn(`Failed to record history but webhook succeeded: ${historyResult.message}`);
+    try {
+      await recordOrderHistory(
+        orderId,
+        status,
+        restaurantId,
+        { assignment_id: assignmentId }
+      );
+    } catch (historyError) {
+      console.warn(`Failed to record history but webhook succeeded:`, historyError);
     }
     
     // Handle direct updates for acceptance
