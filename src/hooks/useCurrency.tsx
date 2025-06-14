@@ -33,8 +33,8 @@ function passthrough(price: number) {
   return price;
 }
 
-// Explicitly initialize as undefined as any to avoid TS2589 deep type recursion.
-const CurrencyContext = createContext<CurrencyContextType>(undefined as any);
+// Explicitly initialize the context as undefined to fix type recursion
+const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
