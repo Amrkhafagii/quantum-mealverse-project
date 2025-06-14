@@ -102,7 +102,7 @@ export const getDeliveryInfo = async (userId: string): Promise<DeliveryInfo | nu
     const { data: deliveryAddress, error } = await supabase
       .from('delivery_addresses')
       .select('*')
-      .eq('user_id', userId)
+      .eq('delivery_addresses_user_id', userId)
       .eq('is_default', true)
       .single();
 

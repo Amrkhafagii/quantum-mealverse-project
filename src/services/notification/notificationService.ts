@@ -9,7 +9,7 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', userId)
+      .eq('notifications_user_id', userId)
       .order('created_at', { ascending: false });
       
     if (error) {
@@ -56,7 +56,7 @@ export const markAllNotificationsAsRead = async (userId: string): Promise<boolea
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', userId);
+      .eq('notifications_user_id', userId);
       
     if (error) {
       console.error('Error marking all notifications as read:', error);

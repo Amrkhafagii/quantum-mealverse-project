@@ -21,7 +21,7 @@ export const extendMealPlanExpiration = async (
       .from('saved_meal_plans')
       .update(updateData)
       .eq('id', planId)
-      .eq('user_id', userId)
+      .eq('saved_meal_plans_user_id', userId)
       .select()
       .single();
       

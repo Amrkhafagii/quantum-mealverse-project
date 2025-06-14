@@ -238,7 +238,7 @@ const deleteUserLocationData = async (
     const { count: countResult, error: countError } = await supabase
       .from('user_locations' as any)
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .eq('user_locations_user_id', userId);
       
     if (countError) {
       throw countError;
@@ -248,7 +248,7 @@ const deleteUserLocationData = async (
     const { error } = await supabase
       .from('user_locations' as any)
       .delete()
-      .eq('user_id', userId);
+      .eq('user_locations_user_id', userId);
       
     if (error) {
       throw error;

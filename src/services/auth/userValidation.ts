@@ -44,7 +44,7 @@ export const validateRestaurantOwnership = async (
       .from('restaurants')
       .select('id, user_id')
       .eq('id', restaurantId)
-      .eq('user_id', userId) // Now compares UUID strings
+      .eq('restaurants_user_id', userId) // Now compares UUID strings
       .single();
 
     if (error || !restaurant) {

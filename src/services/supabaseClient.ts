@@ -36,7 +36,7 @@ export const userTypeService = {
       const { data, error } = await originalSupabase
         .from('user_types')
         .select('type')
-        .eq('user_id', userId)
+        .eq('user_types_user_id', userId)
         .maybeSingle();
         
       if (error) {

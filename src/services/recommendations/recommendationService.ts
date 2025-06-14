@@ -8,7 +8,7 @@ export const fetchUserRecommendations = async (userId: string): Promise<WorkoutR
   const { data, error } = await supabase
     .from('workout_recommendations')
     .select('*')
-    .eq('user_id', userId)
+    .eq('workout_recommendations_user_id', userId)
     .eq('dismissed', false)
     .eq('applied', false)
     .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
@@ -44,7 +44,7 @@ export const applyRecommendation = async (recommendationId: string, userId: stri
       applied_at: new Date().toISOString()
     })
     .eq('id', recommendationId)
-    .eq('user_id', userId);
+    .eq('workout_recommendations_user_id', userId);
 
   if (error) throw error;
 
@@ -86,7 +86,7 @@ const applyDifficultyAdjustment = async (userId: string, metadata: any) => {
   await supabase
     .from('workout_adaptations')
     .insert({
-      user_id: userId,
+      workout_adaptations_user_id: userId,
       adaptation_type: metadata.suggestion || 'general_adjustment',
       reason: 'Applied from recommendation',
       metadata: metadata,
@@ -99,7 +99,7 @@ const createExerciseVariation = async (userId: string, metadata: any) => {
   const { data: currentPlan } = await supabase
     .from('workout_plans')
     .select('*')
-    .eq('user_id', userId)
+    .eq('workout_plans_user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -111,7 +111,7 @@ const createExerciseVariation = async (userId: string, metadata: any) => {
     await supabase
       .from('workout_plans')
       .insert({
-        user_id: userId,
+        workout_plans_user_id: userId,
         name: variation.name,
         description: `Variation focusing on ${metadata.underworked_groups?.join(', ')}`,
         workout_days: variation.workout_days,
@@ -129,7 +129,7 @@ const createWorkoutPlanFromRecommendation = async (userId: string, metadata: any
   const { data: userPreferences } = await supabase
     .from('user_workout_preferences')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_workout_preferences_user_id', userId)
     .single();
 
   const frequency = userPreferences?.preferred_workout_frequency || 3;
@@ -141,7 +141,7 @@ const createWorkoutPlanFromRecommendation = async (userId: string, metadata: any
   await supabase
     .from('workout_plans')
     .insert({
-      user_id: userId,
+      workout_plans_user_id: userId,
       name: 'Recommended Workout Plan',
       description: 'Generated from AI recommendation',
       workout_days: workoutPlan.workout_days,
@@ -157,7 +157,7 @@ const scheduleRecoveryDays = async (userId: string, metadata: any) => {
   await supabase
     .from('workout_adaptations')
     .insert({
-      user_id: userId,
+      workout_adaptations_user_id: userId,
       adaptation_type: 'add_rest',
       reason: 'Recovery recommendation applied',
       metadata: {
@@ -176,7 +176,7 @@ export const dismissRecommendation = async (recommendationId: string, userId: st
       dismissed_at: new Date().toISOString()
     })
     .eq('id', recommendationId)
-    .eq('user_id', userId);
+    .eq('workout_recommendations_user_id', userId);
 
   if (error) throw error;
 };

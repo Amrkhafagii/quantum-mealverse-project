@@ -38,7 +38,7 @@ export const getUserAdaptations = async (userId: string) => {
   const { data, error } = await supabase
     .from('workout_adaptations')
     .select('*')
-    .eq('user_id', userId) // Now expects UUID string
+    .eq('workout_adaptations_user_id', userId) // Now expects UUID string
     .order('applied_at', { ascending: false });
 
   if (error) throw error;
@@ -50,7 +50,7 @@ export const analyzePerformanceAndSuggestAdaptations = async (userId: string) =>
   const { data: progressData, error } = await supabase
     .from('exercise_progress')
     .select('*')
-    .eq('user_id', userId) // Now expects UUID string
+    .eq('exercise_progress_user_id', userId) // Now expects UUID string
     .gte('recorded_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('recorded_date', { ascending: false });
 

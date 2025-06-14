@@ -16,7 +16,7 @@ export async function getUserStreak(userId: string, streakType: 'workout' | 'nut
     const { data, error } = await supabase
       .from('user_streaks')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_streaks_user_id', userId)
       .eq('streak_type', streakType)
       .maybeSingle();
       
@@ -56,7 +56,7 @@ export async function getUserChallenges(userId: string) {
         *,
         challenge:challenge_id(*)
       `)
-      .eq('user_id', userId);
+      .eq('challenge_participants_user_id', userId);
     
     if (error) throw error;
     return { data, error: null };
@@ -113,7 +113,7 @@ export async function getUserAchievements(userId: string) {
         *,
         achievement:achievement_id(*)
       `)
-      .eq('user_id', userId)
+      .eq('user_achievements_user_id', userId)
       .order('date_achieved', { ascending: false });
       
     return { data, error };
@@ -151,7 +151,7 @@ export async function updateStreak(userId: string, streakType: string, date: str
     const { data: existingStreak } = await supabase
       .from('user_streaks')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_streaks_user_id', userId)
       .eq('streak_type', streakType)
       .maybeSingle();
       
@@ -159,7 +159,7 @@ export async function updateStreak(userId: string, streakType: string, date: str
     if (!existingStreak) {
       const newStreak: UserStreak = {
         id: uuidv4(),
-        user_id: userId,
+        user_streaks_user_id: userId,
         currentstreak: 1,
         longeststreak: 1,
         last_activity_date: date,

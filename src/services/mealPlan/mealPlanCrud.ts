@@ -14,7 +14,7 @@ export const deleteSavedMealPlan = async (planId: string, userId: string): Promi
       .from('saved_meal_plans')
       .delete()
       .eq('id', planId)
-      .eq('user_id', userId);
+      .eq('saved_meal_plans_user_id', userId);
       
     if (error) throw error;
     
@@ -41,7 +41,7 @@ export const updateSavedMealPlan = async (
       .from('saved_meal_plans')
       .update(updates)
       .eq('id', planId)
-      .eq('user_id', userId)
+      .eq('saved_meal_plans_user_id', userId)
       .select()
       .single();
       

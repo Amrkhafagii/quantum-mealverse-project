@@ -12,7 +12,7 @@ export const submitRecommendationFeedback = async (
   const { error } = await supabase
     .from('recommendation_feedback')
     .insert({
-      user_id: userId,
+      recommendation_feedback_user_id: userId,
       recommendation_id: recommendationId,
       feedback_type: feedbackType,
       rating: rating,
@@ -26,7 +26,7 @@ export const getRecommendationFeedback = async (userId: string, recommendationId
   const { data, error } = await supabase
     .from('recommendation_feedback')
     .select('*')
-    .eq('user_id', userId)
+    .eq('recommendation_feedback_user_id', userId)
     .eq('recommendation_id', recommendationId)
     .order('created_at', { ascending: false });
 

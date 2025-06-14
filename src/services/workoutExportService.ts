@@ -70,7 +70,7 @@ const fetchWorkoutPlans = async (userId: string) => {
   const { data, error } = await supabase
     .from('workout_plans')
     .select('*')
-    .eq('user_id', userId)
+    .eq('workout_plans_user_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -81,7 +81,7 @@ const fetchWorkoutLogs = async (userId: string, startDate?: string, endDate?: st
   let query = supabase
     .from('workout_logs')
     .select('*')
-    .eq('user_id', userId);
+    .eq('workout_logs_user_id', userId);
 
   if (startDate) {
     query = query.gte('date', startDate);
@@ -100,7 +100,7 @@ const fetchProgressData = async (userId: string, startDate?: string, endDate?: s
   let query = supabase
     .from('exercise_progress')
     .select('*')
-    .eq('user_id', userId);
+    .eq('exercise_progress_user_id', userId);
 
   if (startDate) {
     query = query.gte('recorded_date', startDate);
@@ -119,7 +119,7 @@ const fetchWorkoutGoals = async (userId: string) => {
   const { data, error } = await supabase
     .from('workout_goals')
     .select('*')
-    .eq('user_id', userId)
+    .eq('workout_goals_user_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -130,7 +130,7 @@ const fetchUserPreferences = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_workout_preferences')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_workout_preferences_user_id', userId)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;

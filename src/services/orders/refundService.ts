@@ -216,7 +216,7 @@ export const getRefundStatus = async (orderId: string, userId: string) => {
       .from('refund_requests')
       .select('*')
       .eq('order_id', orderId)
-      .eq('user_id', userId)
+      .eq('refund_requests_user_id', userId)
       .single();
     
     if (error) {

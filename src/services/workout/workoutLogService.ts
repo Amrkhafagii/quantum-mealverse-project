@@ -83,7 +83,7 @@ export const getWorkoutStats = async (userId: string) => {
     const { data, error } = await supabase
       .from('user_workout_stats')
       .select('*')
-      .eq('user_id', userId) // Already a UUID string from auth
+      .eq('user_workout_stats_user_id', userId) // Already a UUID string from auth
       .single();
       
     if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found

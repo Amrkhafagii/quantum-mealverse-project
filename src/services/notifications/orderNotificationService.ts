@@ -148,7 +148,7 @@ class OrderNotificationService {
     const { data, error } = await supabase
       .from('order_notifications')
       .select('*')
-      .eq('user_id', userId)
+      .eq('order_notifications_user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -204,7 +204,7 @@ class OrderNotificationService {
         is_read: true,
         read_at: new Date().toISOString()
       })
-      .eq('user_id', userId)
+      .eq('order_notifications_user_id', userId)
       .eq('is_read', false);
 
     return !error;

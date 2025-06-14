@@ -13,7 +13,7 @@ export const getUserFitnessGoals = async (userId: string): Promise<{
     const { data, error } = await supabase
       .from('fitness_goals')
       .select('*')
-      .eq('user_id', userId)
+      .eq('fitness_goals_user_id', userId)
       .order('created_at', { ascending: false });
       
     if (error) throw error;
@@ -252,7 +252,7 @@ export const updateGoalStatusBasedOnProgress = async (
       .from('fitness_goals')
       .update({ status: newStatus })
       .eq('id', goalId)
-      .eq('user_id', userId);
+      .eq('fitness_goals_user_id', userId);
       
     if (error) throw error;
     

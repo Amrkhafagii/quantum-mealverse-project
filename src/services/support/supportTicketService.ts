@@ -54,7 +54,7 @@ class SupportTicketService {
       let query = supabase
         .from('support_tickets')
         .select('*')
-        .eq('user_id', userId)
+        .eq('support_tickets_user_id', userId)
         .order('created_at', { ascending: false });
 
       if (status) {

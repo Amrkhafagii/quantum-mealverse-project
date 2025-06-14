@@ -242,7 +242,7 @@ class PrivacyDataService {
       const { data, error } = await supabase
         .from('location_anonymization_log')
         .select('*')
-        .eq('user_id', userId)
+        .eq('location_anonymization_log_user_id', userId)
         .order('processed_at', { ascending: false });
 
       if (error) {
@@ -263,7 +263,7 @@ class PrivacyDataService {
       const { data, error } = await supabase
         .from('data_export_requests')
         .select('*')
-        .eq('user_id', userId)
+        .eq('data_export_requests_user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) {

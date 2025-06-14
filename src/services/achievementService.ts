@@ -31,7 +31,7 @@ export const getUserAchievements = async (userId: string) => {
     const { data, error } = await supabase
       .from('user_achievements')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_achievements_user_id', userId);
       
     if (error) {
       throw error;
@@ -96,7 +96,7 @@ export const checkAchievementProgress = async (userId: string) => {
     const { data: stats, error: statsError } = await supabase
       .from('user_workout_stats')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_workout_stats_user_id', userId)
       .single();
       
     if (statsError && statsError.code !== 'PGRST116') {

@@ -73,7 +73,7 @@ export class IntelligentRecommendationEngine {
     const { data: workoutHistory } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', userId)
+      .eq('workout_logs_user_id', userId)
       .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('date', { ascending: false });
 
@@ -81,7 +81,7 @@ export class IntelligentRecommendationEngine {
     const { data: exerciseProgress } = await supabase
       .from('exercise_progress')
       .select('*')
-      .eq('user_id', userId)
+      .eq('exercise_progress_user_id', userId)
       .gte('recorded_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('recorded_date', { ascending: false });
 
@@ -89,21 +89,21 @@ export class IntelligentRecommendationEngine {
     const { data: userPreferences } = await supabase
       .from('user_workout_preferences')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_workout_preferences_user_id', userId)
       .single();
 
     // Get fitness goals
     const { data: fitnessGoals } = await supabase
       .from('workout_goals')
       .select('*')
-      .eq('user_id', userId)
+      .eq('workout_goals_user_id', userId)
       .eq('is_active', true);
 
     // Get current workout plan
     const { data: currentWorkoutPlan } = await supabase
       .from('workout_plans')
       .select('*')
-      .eq('user_id', userId)
+      .eq('workout_plans_user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -112,7 +112,7 @@ export class IntelligentRecommendationEngine {
     const { data: userStats } = await supabase
       .from('user_workout_stats')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_workout_stats_user_id', userId)
       .single();
 
     return {

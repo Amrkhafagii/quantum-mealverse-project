@@ -109,7 +109,7 @@ export class MealCustomizationService {
       let query = supabase
         .from('meal_plan_customizations')
         .select('*')
-        .eq('user_id', userId);
+        .eq('meal_plan_customizations_user_id', userId);
 
       if (mealPlanId) {
         query = query.eq('meal_plan_id', mealPlanId);

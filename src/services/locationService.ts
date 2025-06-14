@@ -71,7 +71,7 @@ export class LocationService {
         latitude: coordinates.latitude,
         longitude: coordinates.longitude
       })
-      .eq('user_id', userId);
+      .eq('restaurants_user_id', userId);
 
     if (error) {
       throw new Error(`Failed to update restaurant location: ${error.message}`);

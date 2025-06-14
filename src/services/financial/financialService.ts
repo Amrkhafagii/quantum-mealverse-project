@@ -17,7 +17,7 @@ export class FinancialService {
     const { data, error } = await supabase
       .from('payment_methods')
       .select('*')
-      .eq('user_id', userId)
+      .eq('payment_methods_user_id', userId)
       .eq('is_active', true)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
@@ -48,14 +48,14 @@ export class FinancialService {
     await supabase
       .from('payment_methods')
       .update({ is_default: false })
-      .eq('user_id', userId);
+      .eq('payment_methods_user_id', userId);
 
     // Then set the new default
     const { error } = await supabase
       .from('payment_methods')
       .update({ is_default: true })
       .eq('id', paymentMethodId)
-      .eq('user_id', userId);
+      .eq('payment_methods_user_id', userId);
 
     if (error) throw error;
   }

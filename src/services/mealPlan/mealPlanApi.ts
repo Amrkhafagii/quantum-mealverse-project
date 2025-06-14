@@ -15,7 +15,7 @@ export const getUserSavedMealPlans = async (userId: string): Promise<{
     const { data, error } = await supabase
       .from('saved_meal_plans')
       .select('*')
-      .eq('user_id', userId)
+      .eq('saved_meal_plans_user_id', userId)
       .order('date_created', { ascending: false });
       
     if (error) throw error;

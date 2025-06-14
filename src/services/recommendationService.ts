@@ -13,7 +13,7 @@ export const getWorkoutRecommendations = async (userId: string): Promise<{
     const { data, error } = await supabase
       .from('workout_recommendations')
       .select('*')
-      .eq('user_id', userId)
+      .eq('workout_recommendations_user_id', userId)
       .eq('dismissed', false)
       .order('suggested_at', { ascending: false });
       
@@ -79,7 +79,7 @@ export const dismissWorkoutRecommendation = async (
       .from('workout_recommendations')
       .update({ dismissed: true })
       .eq('id', recommendationId)
-      .eq('user_id', userId);
+      .eq('workout_recommendations_user_id', userId);
       
     if (error) throw error;
     
@@ -110,7 +110,7 @@ export const applyWorkoutRecommendation = async (
         applied_at: now
       })
       .eq('id', recommendationId)
-      .eq('user_id', userId);
+      .eq('workout_recommendations_user_id', userId);
       
     if (error) throw error;
     
@@ -175,7 +175,7 @@ export const getUserRecommendations = async (userId: string) => {
     const { data, error } = await supabase
       .from('workout_recommendations')
       .select('*')
-      .eq('user_id', userId)
+      .eq('workout_recommendations_user_id', userId)
       .eq('dismissed', false)
       .order('suggested_at', { ascending: false });
 

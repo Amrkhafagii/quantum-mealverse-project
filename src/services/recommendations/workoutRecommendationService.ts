@@ -13,7 +13,7 @@ export const generateWorkoutRecommendations = async (
     const { data: recentWorkouts, error: workoutError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', userId) // Use UUID string
+      .eq('workout_logs_user_id', userId) // Use UUID string
       .order('date', { ascending: false })
       .limit(10);
       
@@ -23,7 +23,7 @@ export const generateWorkoutRecommendations = async (
     const { data: preferences, error: prefError } = await supabase
       .from('user_workout_preferences')
       .select('*')
-      .eq('user_id', userId) // Use UUID string
+      .eq('user_workout_preferences_user_id', userId) // Use UUID string
       .single();
       
     if (prefError && prefError.code !== 'PGRST116') throw prefError;
@@ -32,7 +32,7 @@ export const generateWorkoutRecommendations = async (
     const { data: existingRecommendations, error: recError } = await supabase
       .from('workout_recommendations')
       .select('type, metadata')
-      .eq('user_id', userId) // Use UUID string
+      .eq('workout_recommendations_user_id', userId) // Use UUID string
       .eq('dismissed', false)
       .eq('applied', false);
       
@@ -166,7 +166,7 @@ export const applyWorkoutRecommendation = async (
         applied_at: new Date().toISOString()
       })
       .eq('id', recommendationId)
-      .eq('user_id', userId); // Use UUID string
+      .eq('workout_recommendations_user_id', userId); // Use UUID string
       
     if (error) throw error;
     
@@ -192,7 +192,7 @@ export const dismissWorkoutRecommendation = async (
         dismissed_at: new Date().toISOString()
       })
       .eq('id', recommendationId)
-      .eq('user_id', userId); // Use UUID string
+      .eq('workout_recommendations_user_id', userId); // Use UUID string
       
     if (error) throw error;
     
@@ -213,7 +213,7 @@ export const getActiveRecommendations = async (
     const { data, error } = await supabase
       .from('workout_recommendations')
       .select('*')
-      .eq('user_id', userId) // Use UUID string
+      .eq('workout_recommendations_user_id', userId) // Use UUID string
       .eq('applied', false)
       .eq('dismissed', false)
       .gt('expires_at', new Date().toISOString())

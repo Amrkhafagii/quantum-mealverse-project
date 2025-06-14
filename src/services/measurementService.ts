@@ -9,7 +9,7 @@ export const getUserMeasurements = async (userId: string): Promise<{ data: UserM
   try {
     const { data, error } = await fromTable('user_measurements')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_measurements_user_id', userId)
       .order('date', { ascending: false });
     
     if (error) throw error;
@@ -100,7 +100,7 @@ export const getLatestMeasurement = async (userId: string): Promise<{ data: User
   try {
     const { data, error } = await fromTable('user_measurements')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_measurements_user_id', userId)
       .order('date', { ascending: false })
       .limit(1)
       .single();
@@ -123,7 +123,7 @@ export const calculateProgress = async (userId: string, startDate: string, endDa
   try {
     const { data: startMeasurement, error: startError } = await fromTable('user_measurements')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_measurements_user_id', userId)
       .gte('date', startDate)
       .order('date', { ascending: true })
       .limit(1)
@@ -133,7 +133,7 @@ export const calculateProgress = async (userId: string, startDate: string, endDa
     
     const { data: endMeasurement, error: endError } = await fromTable('user_measurements')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_measurements_user_id', userId)
       .lte('date', endDate)
       .order('date', { ascending: false })
       .limit(1)

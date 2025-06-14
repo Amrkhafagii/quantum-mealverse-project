@@ -27,7 +27,7 @@ export class AdaptiveWorkoutEngine {
     const { data: progressData } = await supabase
       .from('exercise_progress')
       .select('*')
-      .eq('user_id', userId)
+      .eq('exercise_progress_user_id', userId)
       .gte('recorded_date', new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString())
       .order('recorded_date', { ascending: false });
 
@@ -37,7 +37,7 @@ export class AdaptiveWorkoutEngine {
     const { data: userPreferences } = await supabase
       .from('user_workout_preferences')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_workout_preferences_user_id', userId)
       .single();
 
     // Group by exercise
@@ -202,13 +202,13 @@ export class AdaptiveWorkoutEngine {
     const { data: userPreferences } = await supabase
       .from('user_workout_preferences')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_workout_preferences_user_id', userId)
       .single();
 
     const { data: recentProgress } = await supabase
       .from('exercise_progress')
       .select('*')
-      .eq('user_id', userId)
+      .eq('exercise_progress_user_id', userId)
       .gte('recorded_date', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
 
     if (!baseWorkoutPlan || !baseWorkoutPlan.workout_days) {

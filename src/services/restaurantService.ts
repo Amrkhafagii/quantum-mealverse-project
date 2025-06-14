@@ -65,7 +65,7 @@ export const restaurantService = {
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
-      .eq('user_id', userId)
+      .eq('restaurants_user_id', userId)
       .maybeSingle();
     
     if (error) throw error;

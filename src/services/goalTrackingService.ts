@@ -36,7 +36,7 @@ export const trackGoalProgress = async (
         updated_at: new Date().toISOString()
       })
       .eq('id', goalId)
-      .eq('user_id', userId);
+      .eq('fitness_goals_user_id', userId);
       
     if (updateError) throw updateError;
     
@@ -45,7 +45,7 @@ export const trackGoalProgress = async (
       .from('fitness_goals')
       .select('target_weight, status')
       .eq('id', goalId)
-      .eq('user_id', userId)
+      .eq('fitness_goals_user_id', userId)
       .single();
       
     if (fetchError) throw fetchError;
@@ -59,7 +59,7 @@ export const trackGoalProgress = async (
           updated_at: new Date().toISOString()
         })
         .eq('id', goalId)
-        .eq('user_id', userId);
+        .eq('fitness_goals_user_id', userId);
         
       if (statusError) throw statusError;
     }
@@ -82,7 +82,7 @@ export const getGoalProgressHistory = async (
     let query = supabase
       .from('fitness_goals')
       .select('*')
-      .eq('user_id', userId)
+      .eq('fitness_goals_user_id', userId)
       .order('updated_at', { ascending: false });
       
     if (goalId) {
@@ -123,7 +123,7 @@ export const getGoalsSummary = async (userId: string): Promise<{
     const { data: goals, error } = await supabase
       .from('fitness_goals')
       .select('status')
-      .eq('user_id', userId);
+      .eq('fitness_goals_user_id', userId);
       
     if (error) throw error;
     
@@ -163,7 +163,7 @@ export const generateProgressInsights = async (userId: string): Promise<{
     const { data: goals, error } = await supabase
       .from('fitness_goals')
       .select('*')
-      .eq('user_id', userId)
+      .eq('fitness_goals_user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(10);
 
