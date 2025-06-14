@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type {
   RestaurantEarnings,
@@ -31,23 +30,27 @@ interface DBRestaurantEarnings {
 // --- Functions using local types and explicit mapping ---
 
 async function getRestaurantEarnings(
-  restaurantId: string
+  restaurantId: string,
+  options?: { limit?: number }
 ): Promise<RestaurantEarnings[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('restaurant_earnings')
       .select('*')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false });
 
+    if (options?.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+
     if (error) {
       console.error('Error fetching restaurant earnings:', error);
       return [];
     }
-
     if (!data) return [];
 
-    // Ensure all required fields, especially commission_rate
+    // Ensure all required fields, especially commission_rate and status
     return (data as DBRestaurantEarnings[]).map(earning => ({
       ...earning,
       commission_rate: earning.commission_rate ?? 0,
@@ -85,8 +88,95 @@ async function createRestaurantEarning(
   }
 }
 
+// Dummy: Replace with real implementation!
+async function getEarningsSummary(restaurantId: string): Promise<{
+  totalEarnings: number;
+  availableEarnings: number;
+  pendingEarnings: number;
+  paidEarnings: number;
+}> {
+  // TODO: Implement logic or fetch from Supabase
+  // Returning dummy for now, so components don't break
+  return {
+    totalEarnings: 0,
+    availableEarnings: 0,
+    pendingEarnings: 0,
+    paidEarnings: 0,
+  };
+}
+
+async function getTransactions(options: { restaurantId: string, limit?: number }): Promise<FinancialTransaction[]> {
+  let query = supabase
+    .from('financial_transactions')
+    .select('*')
+    .eq('restaurant_id', options.restaurantId)
+    .order('created_at', { ascending: false });
+
+  if (options?.limit) query = query.limit(options.limit);
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching transactions:', error);
+    return [];
+  }
+  return (data ?? []) as FinancialTransaction[];
+}
+
+async function getPayouts(options: { restaurantId?: string; deliveryUserId?: string; limit?: number }): Promise<Payout[]> {
+  let query = supabase
+    .from('payouts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (options.restaurantId) query = query.eq('restaurant_id', options.restaurantId);
+  if (options.deliveryUserId) query = query.eq('delivery_user_id', options.deliveryUserId);
+  if (options.limit) query = query.limit(options.limit);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error fetching payouts:', error);
+    return [];
+  }
+  return (data ?? []) as Payout[];
+}
+
+async function getFinancialReports(restaurantId: string, limit?: number): Promise<any[]> {
+  let query = supabase
+    .from('financial_reports')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+
+  if (limit) query = query.limit(limit);
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error fetching financial reports:', error);
+    return [];
+  }
+  return data ?? [];
+}
+
+async function requestPayout(restaurantId: string): Promise<Payout | null> {
+  // This should trigger payout, but for now just return null (mock)
+  // You'll want to implement this via remote function/Supabase RPC or a proper insert!
+  console.warn('requestPayout is not implemented in backend yet! Returning null.');
+  return null;
+}
+
+async function generateFinancialReport(
+  restaurantId: string,
+  reportType: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom',
+  startDate: string,
+  endDate: string
+): Promise<any> {
+  // This should trigger a report generation, for now just mock
+  // You'd want Supabase edge function or RPC call for real
+  return {
+    reportType, startDate, endDate, generated: true
+  };
+}
+
 // For bank account management
-// BankAccountCreateInput does not exist, so we'll just take all BankAccount fields except id, created_at, updated_at
 type BankAccountCreateInput = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>;
 type SetDefaultBankAccountOptions = { isDefault?: boolean };
 
@@ -102,8 +192,6 @@ async function getBankAccounts(userId: string): Promise<BankAccount[]> {
     console.error('Error fetching bank accounts:', error);
     return [];
   }
-
-  // Sanitize return: don't spread status field, which doesn't exist, just type cast.
   return (data ?? []) as BankAccount[];
 }
 
@@ -156,23 +244,31 @@ async function setDefaultBankAccount(
   return true;
 }
 
-// Add all existing exports/functions here as methods in this object
+// Compose the service object with all needed methods
 export const financialService = {
   getRestaurantEarnings,
   createRestaurantEarning,
   getBankAccounts,
   addBankAccount,
   setDefaultBankAccount,
-  // You should add all other previously exported functions as well!
-  // e.g. getPaymentMethods, addPaymentMethod, getTransactions, getPayouts, getFinancialReports, requestPayout, generateFinancialReport, getEarningsSummary, etc.
+  getEarningsSummary,
+  getTransactions,
+  getPayouts,
+  getFinancialReports,
+  requestPayout,
+  generateFinancialReport,
 };
 
-// If you need to preserve existing named exports (for legacy code), you can also add:
 export {
   getRestaurantEarnings,
   createRestaurantEarning,
   getBankAccounts,
   addBankAccount,
   setDefaultBankAccount,
+  getEarningsSummary,
+  getTransactions,
+  getPayouts,
+  getFinancialReports,
+  requestPayout,
+  generateFinancialReport,
 };
-
