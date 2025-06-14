@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { privacyDataService } from '@/services/privacy/privacyDataService';
@@ -28,6 +27,7 @@ export function usePrivacySettings() {
 
     try {
       setLoading(true);
+      // All privacy service calls should use new id field names if applicable
       const [retention, anonymization, sharing] = await Promise.all([
         privacyDataService.getLocationRetentionPolicy(user.id),
         privacyDataService.getAnonymizationSettings(user.id),

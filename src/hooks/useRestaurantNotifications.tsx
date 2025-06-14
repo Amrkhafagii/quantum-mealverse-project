@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { notificationService, Notification } from '@/services/notifications/notificationService';
 import type { OrderNotification } from '@/types/notifications';
@@ -33,8 +32,6 @@ export const useRestaurantNotifications = () => {
           notificationService.getRestaurantNotifications(restaurant.id),
           notificationService.getUnreadCount(restaurant.id)
         ]);
-        
-        // Convert Notification[] to OrderNotification[]
         const convertedNotifications = notificationsData.map(convertToOrderNotification);
         setNotifications(convertedNotifications);
         setUnreadCount(unreadCountData);
@@ -47,7 +44,6 @@ export const useRestaurantNotifications = () => {
 
     loadNotifications();
 
-    // Subscribe to real-time notifications
     const subscription = notificationService.subscribeToRestaurantNotifications(
       restaurant.id,
       (newNotification) => {

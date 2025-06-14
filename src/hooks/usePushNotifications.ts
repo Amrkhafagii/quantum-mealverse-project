@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { pushNotificationService } from '@/services/notifications/pushNotificationService';
@@ -24,7 +23,6 @@ export function usePushNotifications() {
       setIsSubscribed(subscribed);
       return subscribed;
     }
-    
     return false;
   };
 

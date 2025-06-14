@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Review } from '@/types/review';
@@ -18,7 +17,6 @@ export const useReviewManagement = () => {
         .eq('id', reviewId);
         
       if (error) throw error;
-      
       await updateRatingCache(reviewId);
       toast.success('Review approved');
       return true;
@@ -79,7 +77,6 @@ export const useReviewManagement = () => {
         p_meal_id: review.meal_id,
         p_restaurant_id: review.restaurant_id
       });
-      
       await supabase.rpc('update_global_meal_rating_cache', {
         p_meal_id: review.meal_id
       });

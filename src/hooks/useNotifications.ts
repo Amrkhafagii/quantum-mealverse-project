@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Notification } from '@/types/notification';
@@ -29,14 +28,13 @@ export const useNotifications = () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('notifications_user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
         throw error;
       }
 
-      // Convert data and properly type the notifications
       const typedNotifications: Notification[] = (data || []).map(item => ({
         ...item,
         data: typeof item.data === 'string' 
@@ -45,11 +43,9 @@ export const useNotifications = () => {
       }));
       
       setNotifications(typedNotifications);
-      
-      // Count unread notifications
       const unread = typedNotifications.filter(n => !n.is_read).length;
       setUnreadCount(unread);
-      
+
       // Update app icon badge if on native platform
       if (Platform.isNative()) {
         nativeServices.setBadgeCount(unread);
@@ -74,22 +70,16 @@ export const useNotifications = () => {
         throw error;
       }
 
-      // Update local state
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === id ? { ...notification, is_read: true } : notification
         )
       );
-      
-      // Decrement unread count
       setUnreadCount(prev => {
         const newCount = Math.max(0, prev - 1);
-        
-        // Update app badge if on native platform
         if (Platform.isNative()) {
           nativeServices.setBadgeCount(newCount);
         }
-        
         return newCount;
       });
 
@@ -108,22 +98,15 @@ export const useNotifications = () => {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', user.id)
+        .eq('notifications_user_id', user.id)
         .eq('is_read', false);
 
       if (error) {
         throw error;
       }
 
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, is_read: true }))
-      );
-      
-      // Reset unread count and app badge
+      setNotifications(prev => prev.map(notification => ({ ...notification, is_read: true })));
       setUnreadCount(0);
-      
-      // Clear app badge if on native platform
       if (Platform.isNative()) {
         nativeServices.clearBadgeCount();
       }

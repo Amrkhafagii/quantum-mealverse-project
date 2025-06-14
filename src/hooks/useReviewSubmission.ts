@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,21 +23,20 @@ export const useReviewSubmission = () => {
       toast.error('You must be logged in to submit a review');
       return false;
     }
-    
     setIsSubmitting(true);
-    
+
     try {
+      // All review calls should use {table}_user_id fields
       const hasReviewed = await hasUserReviewed(user.id, data.mealId, data.restaurantId);
         
       if (hasReviewed) {
         toast.error('You have already reviewed this meal from this restaurant');
         return false;
       }
-      
       const isVerifiedPurchase = await checkVerifiedPurchase(user.id, data.mealId);
-      
+
       const review: Omit<Review, 'id' | 'created_at' | 'updated_at'> = {
-        user_id: user.id,
+        reviews_user_id: user.id, // use reviews_user_id not user_id
         meal_id: data.mealId,
         restaurant_id: data.restaurantId,
         rating: data.rating,
@@ -48,7 +46,6 @@ export const useReviewSubmission = () => {
         status: 'pending',
         is_flagged: false
       };
-      
       await submitReviewService(review);
       toast.success('Review submitted successfully!');
       return true;
