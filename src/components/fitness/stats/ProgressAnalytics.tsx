@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,7 +44,7 @@ const ProgressAnalytics: React.FC<ProgressAnalyticsProps> = ({ userId }) => {
       const start = startOfWeek(new Date());
       const end = endOfWeek(new Date());
       
-      // Explicit type for workouts to avoid excessive inference
+      // Explicit 'any[]' to break recursion bug in TS
       const { data: workouts, error } = await supabase
         .from('workout_logs')
         .select('calories_burned, duration')

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +34,7 @@ const CurrencyContext = createContext<CurrencyContextType>({
 
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  // EXPLICIT TYPE to prevent inference recursion
   const [currentCurrency, setCurrentCurrency] = useState<Currency>(defaultCurrency);
 
   useEffect(() => {

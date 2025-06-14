@@ -73,7 +73,7 @@ export const useRecommendations = (
     fetchUserPreferences();
   }, [user?.id]);
 
-  // Main meal recommendations query
+  // Main meal recommendations query - explicitly type the fetcher!
   const {
     data: recommendations,
     isLoading,
@@ -86,6 +86,7 @@ export const useRecommendations = (
       !!userPreferences, // avoid deep nesting in queryKey
     ],
     queryFn: async (): Promise<MealType[]> => {
+      // Use any[] to retrieve, map to MealType below
       const { data: menuItemsRaw, error } = await supabase
         .from("menu_items")
         .select("*")
@@ -94,7 +95,7 @@ export const useRecommendations = (
 
       if (error || !menuItemsRaw) return [];
 
-      const allItems: MealType[] = menuItemsRaw.map((item: any) => {
+      const allItems: MealType[] = (menuItemsRaw as any[]).map((item: any) => {
         let calories = 0, protein = 0, carbs = 0, fat = 0;
         let nutritionalInfo = item.nutritional_info;
 
@@ -209,5 +210,6 @@ export const useRecommendations = (
     error,
   };
 };
+
 // ... End of file
 
