@@ -1,8 +1,25 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { WorkoutGoal } from '@/types/fitness/analytics';
 import { supabase } from '@/integrations/supabase/client';
+
+// Local interface for mapped Supabase workout goal row
+interface WorkoutGoalDBRow {
+  created_at: string;
+  current_value: number;
+  description: string;
+  goal_type: string;
+  id: string;
+  is_active: boolean;
+  target_date: string;
+  target_value: number;
+  title: string;
+  unit: string;
+  updated_at: string;
+  workout_goals_user_id: string;
+}
 
 interface PerformanceMetrics {
   totalWorkouts: number;
@@ -36,12 +53,14 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      // Construct goals with user_id always set for compatibility with WorkoutGoal type
-      const typedGoals: WorkoutGoal[] = (data || []).map(goal => ({
+      // Cast data to the DB row interface and map to WorkoutGoal
+      const typedGoals: WorkoutGoal[] = (data as WorkoutGoalDBRow[] || []).map(goal => ({
         ...goal,
-        user_id: goal.user_id ?? goal.workout_goals_user_id ?? user.id, // ensure user_id always present
-        title: goal.title || goal.name || '', // ensure required
-        unit: goal.unit || '', // default to blank if not provided
+        user_id: goal.workout_goals_user_id ?? user.id,
+        name: goal.title, // For compatibility
+        // Avoid mapping goal.name from DB row (doesn't exist)
+        title: goal.title || '',
+        unit: goal.unit || '',
         goal_type: goal.goal_type as WorkoutGoal['goal_type']
       }));
       setGoals(typedGoals);
@@ -62,12 +81,11 @@ export function useWorkoutAnalytics() {
   ) => {
     if (!user) return;
     try {
-      // For DB insert, use workout_goals_user_id for consistency with DB
-      // Add defaults for title and unit to satisfy DB types
+      // For DB insert, supply required fields
       const insertObj = {
         ...goalData,
         workout_goals_user_id: user.id,
-        title: goalData.title || goalData.name || '',
+        title: goalData.title || '',
         unit: goalData.unit || '',
       };
       const { data, error } = await supabase
@@ -78,12 +96,13 @@ export function useWorkoutAnalytics() {
 
       if (error) throw error;
 
-      // Add missing fields locally
+      // Map result to WorkoutGoal type
       const typedGoal: WorkoutGoal = {
         ...data,
         user_id: user.id,
-        title: data.title || data.name || '',
+        title: data.title || '',
         unit: data.unit || '',
+        name: data.title || '',
         goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
       setGoals(prev => [typedGoal, ...prev]);
@@ -107,11 +126,9 @@ export function useWorkoutAnalytics() {
   ) => {
     if (!user) return;
     try {
-      // Update via workout_goals_user_id
-      // Provide fallback for title and unit
       const updateObj = {
         ...goalData,
-        title: goalData.title || goalData.name || '',
+        title: goalData.title || '',
         unit: goalData.unit || '',
       };
       const { data, error } = await supabase
@@ -127,8 +144,9 @@ export function useWorkoutAnalytics() {
       const typedGoal: WorkoutGoal = {
         ...data,
         user_id: user.id,
-        title: data.title || data.name || '',
+        title: data.title || '',
         unit: data.unit || '',
+        name: data.title || '',
         goal_type: data.goal_type as WorkoutGoal['goal_type']
       };
 
@@ -199,7 +217,7 @@ export function useWorkoutAnalytics() {
     
     // Find strongest exercise based on max weight
     const strongestExercise = exerciseProgress.reduce((strongest, current) => {
-      return (current.max_weight || 0) > (strongest.max_weight || 0) ? current : strongest;
+      return (current.max_weight || 0) > (strongest?.max_weight || 0) ? current : strongest;
     }, exerciseProgress[0] || {})?.exercise_name || 'None';
 
     return {
@@ -264,3 +282,5 @@ export function useWorkoutAnalytics() {
     refetch: fetchGoals
   };
 }
+
+// ... End of file

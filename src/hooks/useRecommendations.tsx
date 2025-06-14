@@ -9,9 +9,11 @@ import type { MealType } from "@/types/meal";
 type RecommendationType = "personalized" | "trending" | "dietary" | "fitness";
 
 // Strong guard for object shape for nutritional info
+type NutritionalInfo = { calories?: number; protein?: number; carbs?: number; fat?: number };
+
 function isNutritionalInfoObject(
   n: unknown
-): n is { calories?: any; protein?: any; carbs?: any; fat?: any } {
+): n is NutritionalInfo {
   return (
     typeof n === "object" &&
     n !== null &&
@@ -23,11 +25,17 @@ function isNutritionalInfoObject(
   );
 }
 
+interface UserPreferences {
+  fitnessProfile?: any;
+  recentOrders?: any[];
+  orderItems?: any[];
+}
+
 export const useRecommendations = (
   type: RecommendationType = "personalized"
 ) => {
   const { user } = useAuth();
-  const [userPreferences, setUserPreferences] = useState<any>(null);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
   // Fetch user preferences for meal recs
   useEffect(() => {
@@ -46,7 +54,7 @@ export const useRecommendations = (
           .eq("customer_id", user.id)
           .order("created_at", { ascending: false })
           .limit(5);
-        let orderItems = [];
+        let orderItems: any[] = [];
         if (recentOrders?.length) {
           const orderIds = recentOrders.map((order: any) => order.id);
           const { data: items } = await supabase
@@ -72,14 +80,13 @@ export const useRecommendations = (
     data: recommendations,
     isLoading,
     error,
-  } = useQuery({
+  } = useQuery<MealType[]>({
     queryKey: [
       "meal-recommendations",
       type,
       user?.id || "",
       userPreferences,
     ],
-    // Add explicit types and non-recursive return to avoid excessive depth
     queryFn: async (): Promise<MealType[]> => {
       // Get 'menu_items' sample
       const { data: menuItemsRaw, error } = await supabase
@@ -109,7 +116,6 @@ export const useRecommendations = (
           }
         }
 
-        // Only pick values if it's a plain object and not an array
         if (isNutritionalInfoObject(nutritionalInfo)) {
           calories = Number(nutritionalInfo.calories) || 0;
           protein = Number(nutritionalInfo.protein) || 0;
@@ -118,7 +124,7 @@ export const useRecommendations = (
         }
 
         // Demo dietary tags (mock logic)
-        const mockDietaryTags = [];
+        const mockDietaryTags: string[] = [];
         if (item.id && typeof item.id === "string" && item.id.length > 0) {
           if (item.id.charCodeAt(0) % 2 === 0) mockDietaryTags.push("vegetarian");
           if (
@@ -213,6 +219,4 @@ export const useRecommendations = (
     error,
   };
 };
-
 // ... End of file
-
