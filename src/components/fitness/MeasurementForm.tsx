@@ -1,11 +1,19 @@
+
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserMeasurement } from '@/types/fitness';
 import { toast } from 'sonner';
 
-const MeasurementForm = () => {
+interface MeasurementFormProps {
+  userId?: string;
+  onMeasurementAdded?: () => void;
+}
+
+const MeasurementForm: React.FC<MeasurementFormProps> = ({ userId, onMeasurementAdded }) => {
   const { user } = useAuth();
+  const activeUserId = userId || user?.id;
+  
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     weight: '',
@@ -27,11 +35,13 @@ const MeasurementForm = () => {
   };
 
   const handleSubmit = async (formData: any) => {
+    if (!activeUserId) return;
+    
     try {
       const { data, error } = await supabase
         .from('user_measurements')
         .insert({
-          user_measurements_user_id: user.id, // Updated field name
+          user_measurements_user_id: activeUserId, // Updated field name
           date: formData.date,
           weight: formData.weight,
           body_fat: formData.body_fat,
@@ -58,7 +68,8 @@ const MeasurementForm = () => {
     e.preventDefault();
     try {
       await handleSubmit(formData);
-      // Optionally reset the form after successful submission
+      
+      // Reset form after successful submission
       setFormData({
         date: new Date().toISOString().split('T')[0],
         weight: '',
@@ -70,6 +81,11 @@ const MeasurementForm = () => {
         legs: '',
         notes: '',
       });
+      
+      // Call the callback if provided
+      if (onMeasurementAdded) {
+        onMeasurementAdded();
+      }
     } catch (err) {
       // Error is already handled in handleSubmit
     }

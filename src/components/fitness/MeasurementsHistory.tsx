@@ -35,7 +35,7 @@ const MeasurementsHistory: React.FC<MeasurementsHistoryProps> = ({ userId, measu
       const { data, error } = await supabase
         .from('user_measurements')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_measurements_user_id', userId) // Updated field name
         .order('date', { ascending: false });
 
       if (error) throw error;
