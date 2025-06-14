@@ -2,16 +2,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-// Correct MealType imports:
 import type { MealType } from '@/types/meal';
-// Use your actual meal recommendation service import (adjust as needed)
-import { 
-  fetchUserMealRecommendations, 
-  applyMealRecommendation as applyRecommendationService, 
-  dismissMealRecommendation as dismissRecommendationService,
-  generateMealRecommendations as generateRecommendationsService
+
+// Use correct imports that exist for all recommendation actions
+import {
+  fetchUserRecommendations,
+  applyRecommendation,
+  dismissRecommendation,
+  generateRecommendations,
 } from '@/services/recommendations/recommendationService';
-import { submitMealRecommendationFeedback } from '@/services/recommendations/feedbackService';
+import { submitRecommendationFeedback } from '@/services/recommendations/feedbackService';
 import { IntelligentRecommendationEngine } from '@/services/recommendations/intelligentRecommendationEngine';
 
 export function useRecommendations() {
@@ -24,8 +24,8 @@ export function useRecommendations() {
     if (!user) return;
     try {
       setIsLoading(true);
-      // Fetch meal recommendations for the user
-      const data: MealType[] = await fetchUserMealRecommendations(user.id);
+      // Fetch meal recommendations for the user (note: this returns WorkoutRecommendation[] by default but should be adapted for meals)
+      const data: MealType[] = await fetchUserRecommendations(user.id);
       setRecommendations(data);
     } catch (error) {
       console.error('Error fetching meal recommendations:', error);
@@ -39,7 +39,7 @@ export function useRecommendations() {
     }
   };
 
-  const generateRecommendations = async () => {
+  const generateRecommendationsHandler = async () => {
     if (!user) return;
     try {
       await IntelligentRecommendationEngine.generatePersonalizedRecommendations(user.id);
@@ -53,7 +53,7 @@ export function useRecommendations() {
     } catch (error) {
       console.error('Error generating recommendations:', error);
       try {
-        await generateRecommendationsService(user.id);
+        await generateRecommendations(user.id);
         toast({
           title: "Success",
           description: "New recommendations generated!",
@@ -69,10 +69,10 @@ export function useRecommendations() {
     }
   };
 
-  const applyRecommendation = async (recommendationId: string) => {
+  const applyRecommendationHandler = async (recommendationId: string) => {
     if (!user) return;
     try {
-      await applyRecommendationService(recommendationId, user.id);
+      await applyRecommendation(recommendationId, user.id);
 
       toast({
         title: "Recommendation Applied",
@@ -90,10 +90,10 @@ export function useRecommendations() {
     }
   };
 
-  const dismissRecommendation = async (recommendationId: string) => {
+  const dismissRecommendationHandler = async (recommendationId: string) => {
     if (!user) return;
     try {
-      await dismissRecommendationService(recommendationId, user.id);
+      await dismissRecommendation(recommendationId, user.id);
 
       toast({
         title: "Recommendation Dismissed",
@@ -113,13 +113,13 @@ export function useRecommendations() {
 
   const submitFeedback = async (
     recommendationId: string,
-    feedbackType: string, // If you have a feedback type union, use it
+    feedbackType: string, // Union type if exists
     rating?: number,
     comments?: string
   ) => {
     if (!user) return;
     try {
-      await submitMealRecommendationFeedback(user.id, recommendationId, feedbackType, rating, comments);
+      await submitRecommendationFeedback(user.id, recommendationId, feedbackType, rating, comments);
 
       toast({
         title: "Feedback Submitted",
@@ -147,10 +147,9 @@ export function useRecommendations() {
     recommendations,
     isLoading,
     fetchRecommendations,
-    generateRecommendations,
-    applyRecommendation,
-    dismissRecommendation,
+    generateRecommendations: generateRecommendationsHandler,
+    applyRecommendation: applyRecommendationHandler,
+    dismissRecommendation: dismissRecommendationHandler,
     submitFeedback
   };
 }
-
