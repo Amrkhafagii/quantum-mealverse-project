@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, Star, Clock, Target } from 'lucide-react';
@@ -27,24 +26,41 @@ export const PerformanceDashboard: React.FC = () => {
         setTodayMetrics(today);
         setWeeklySummary(weekly);
         
-        // Handle peak hours data - convert to array format if it's an object
+        // Handle peak hours data more carefully
+        console.log('Raw peak hours data:', peaks);
+        
         if (peaks && typeof peaks === 'object') {
+          let processedPeakHours = [];
+          
           if (Array.isArray(peaks)) {
-            setPeakHours(peaks);
+            // If it's already an array, process each item
+            processedPeakHours = peaks.map(item => ({
+              hour: typeof item.hour === 'object' ? String(item.hour) : String(item.hour || 'Unknown'),
+              orders: typeof item.orders === 'object' ? Number(item.orders.count || item.orders.value || 0) : Number(item.orders || 0)
+            }));
+          } else if (peaks.peak_hours && Array.isArray(peaks.peak_hours)) {
+            // If peak_hours is nested in the response
+            processedPeakHours = peaks.peak_hours.map(item => ({
+              hour: typeof item.hour === 'object' ? String(item.hour) : String(item.hour || 'Unknown'),
+              orders: typeof item.orders === 'object' ? Number(item.orders.count || item.orders.value || 0) : Number(item.orders || 0)
+            }));
           } else {
             // Convert object to array format
-            const peakHoursArray = Object.entries(peaks).map(([hour, count]) => ({
-              hour,
-              orders: typeof count === 'object' ? count.orders || count : count
+            processedPeakHours = Object.entries(peaks).map(([hour, orderData]) => ({
+              hour: String(hour),
+              orders: typeof orderData === 'object' ? Number(orderData.orders || orderData.count || orderData) : Number(orderData || 0)
             }));
-            setPeakHours(peakHoursArray);
           }
+          
+          console.log('Processed peak hours:', processedPeakHours);
+          setPeakHours(processedPeakHours);
         } else {
+          console.log('No valid peak hours data found');
           setPeakHours([]);
         }
       } catch (error) {
         console.error('Error loading performance data:', error);
-        setPeakHours([]); // Set empty array on error
+        setPeakHours([]);
       } finally {
         setLoading(false);
       }
@@ -187,16 +203,22 @@ export const PerformanceDashboard: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {peakHours
                 .sort((a, b) => {
-                  const hourA = typeof a.hour === 'string' ? parseInt(a.hour.split(':')[0]) : 0;
-                  const hourB = typeof b.hour === 'string' ? parseInt(b.hour.split(':')[0]) : 0;
+                  const hourA = typeof a.hour === 'string' ? parseInt(a.hour.split(':')[0]) : parseInt(String(a.hour)) || 0;
+                  const hourB = typeof b.hour === 'string' ? parseInt(b.hour.split(':')[0]) : parseInt(String(b.hour)) || 0;
                   return hourA - hourB;
                 })
-                .map((item, index) => (
-                  <div key={`${item.hour}-${index}`} className="text-center p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium">{item.hour || 'N/A'}</p>
-                    <p className="text-lg font-bold text-blue-600">{item.orders || 0}</p>
-                  </div>
-                ))}
+                .map((item, index) => {
+                  // Ensure we're only rendering primitive values
+                  const hourDisplay = String(item.hour || 'N/A');
+                  const ordersDisplay = Number(item.orders || 0);
+                  
+                  return (
+                    <div key={`${hourDisplay}-${index}`} className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm font-medium">{hourDisplay}</p>
+                      <p className="text-lg font-bold text-blue-600">{ordersDisplay}</p>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </CardContent>
