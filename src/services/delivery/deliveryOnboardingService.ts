@@ -1,68 +1,117 @@
 
+// Delivery Onboarding Service - all critical schema-compliant, strictly-typed production functions
+
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryUser, DeliveryDocument, DeliveryAvailability, DeliveryPaymentDetails } from '@/types/delivery';
 
-// Create a new delivery user profile, returns DeliveryUser
-export const createDeliveryUser = async (userData: Partial<DeliveryUser>): Promise<DeliveryUser> => {
+// --- UTILITY: Only pick allowed fields for DB insert ---
+function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+  const result: any = {};
+  for (const k of keys) {
+    if (k in obj) result[k] = obj[k];
+  }
+  return result;
+}
+
+// ========== 1. Create Delivery User ==========
+export async function createDeliveryUser(user: Partial<DeliveryUser>): Promise<DeliveryUser> {
   const now = new Date().toISOString();
-  const insertData = { ...userData, created_at: now, updated_at: now };
+
+  // Map to DB schema - only insert allowed fields
+  const insertObj = {
+    delivery_users_user_id: user.delivery_users_user_id!,
+    first_name: user.first_name!,
+    last_name: user.last_name!,
+    full_name: user.full_name!,
+    phone: user.phone!,
+    vehicle_type: user.vehicle_type || "",
+    license_plate: user.license_plate || "",
+    driver_license_number: user.driver_license_number || "",
+    status: user.status || "inactive",
+    rating: user.rating ?? 0,
+    total_deliveries: user.total_deliveries ?? 0,
+    verification_status: user.verification_status || "pending",
+    background_check_status: user.background_check_status || "pending",
+    is_available: user.is_available ?? false,
+    is_approved: user.is_approved ?? false,
+    last_active: user.last_active || now,
+    created_at: now,
+    updated_at: now,
+  };
 
   const { data, error } = await supabase
     .from('delivery_users')
-    .insert(insertData)
+    .insert(insertObj)
     .select('*')
     .single();
 
   if (error || !data) throw new Error(error?.message || 'Unable to create delivery user');
-  return data as DeliveryUser;
-};
 
-/**
- * Upload a delivery document (file) and record it in the delivery_documents table.
- * @param userId
- * @param file The File object (input[type=file])
- * @param documentType See DeliveryDocument['document_type'] types
- * @param expiryDate ISO string (optional)
- * @param notes string (optional)
- */
-export const uploadDeliveryDocument = async (
+  // Map DB response to DeliveryUser
+  return {
+    id: data.id,
+    delivery_users_user_id: data.delivery_users_user_id,
+    first_name: data.first_name,
+    last_name: data.last_name,
+    full_name: data.full_name,
+    phone: data.phone,
+    vehicle_type: data.vehicle_type,
+    license_plate: data.license_plate,
+    driver_license_number: data.driver_license_number,
+    status: data.status,
+    rating: data.rating,
+    total_deliveries: data.total_deliveries,
+    verification_status: data.verification_status,
+    background_check_status: data.background_check_status,
+    is_available: data.is_available,
+    is_approved: data.is_approved,
+    last_active: data.last_active,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
+}
+
+// ========== 2. Upload Delivery Document ==========
+export async function uploadDeliveryDocument(
   userId: string,
   file: File,
   documentType: DeliveryDocument["document_type"],
   expiryDate?: string,
   notes?: string
-): Promise<DeliveryDocument> => {
-  // Storage: upload to 'delivery-documents' bucket, path format: userId/documentType_timestamp.ext
+): Promise<DeliveryDocument> {
   const ext = file.name.split('.').pop();
   const fileName = `${userId}/${documentType}_${Date.now()}.${ext}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
+  const { error: uploadError } = await supabase.storage
     .from('delivery-documents')
     .upload(fileName, file);
-
   if (uploadError) throw new Error(uploadError.message);
 
-  // Get file URL after upload
+  // URL
   const { data: urlData } = supabase.storage
     .from('delivery-documents')
     .getPublicUrl(fileName);
-  const publicUrl = urlData.publicUrl;
 
-  // Insert metadata to delivery_documents table
+  const document_url = urlData.publicUrl;
+
+  // Insert metadata row
   const { data, error } = await supabase
     .from('delivery_documents')
     .insert({
       delivery_user_id: userId,
       document_type: documentType,
       file_path: fileName,
-      document_url: publicUrl,
+      document_url,
       expiry_date: expiryDate,
       notes,
-      verified: false
+      verified: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .select('*')
     .single();
 
   if (error || !data) throw new Error(error?.message || 'Unable to save delivery document');
+
   return {
     id: String(data.id),
     delivery_documents_user_id: String(data.delivery_user_id),
@@ -74,14 +123,10 @@ export const uploadDeliveryDocument = async (
     created_at: data.created_at,
     updated_at: data.updated_at,
   };
-};
+}
 
-/**
- * Get all documents for a delivery user, ordered newest first.
- */
-export const getDocumentsByDeliveryUserId = async (
-  userId: string
-): Promise<DeliveryDocument[]> => {
+// ========== 3. Get Documents for Delivery User ==========
+export async function getDocumentsByDeliveryUserId(userId: string): Promise<DeliveryDocument[]> {
   const { data, error } = await supabase
     .from('delivery_documents')
     .select('*')
@@ -101,16 +146,13 @@ export const getDocumentsByDeliveryUserId = async (
     created_at: doc.created_at,
     updated_at: doc.updated_at,
   })) as DeliveryDocument[];
-};
+}
 
-/**
- * Save weekly delivery availability (replaces all for user).
- * Expects array of availability records (without id, user is inferred).
- */
-export const saveAvailability = async (
+// ========== 4. Save Delivery Availability ==========
+export async function saveAvailability(
   userId: string,
   availabilities: Array<Omit<DeliveryAvailability, 'id' | 'delivery_user_id' | 'created_at' | 'updated_at'>>
-): Promise<DeliveryAvailability[]> => {
+): Promise<DeliveryAvailability[]> {
   // Remove all old first
   const { error: delError } = await supabase
     .from('delivery_availability')
@@ -134,14 +176,12 @@ export const saveAvailability = async (
   if (error) throw new Error(error.message);
 
   return (data || []) as DeliveryAvailability[];
-};
+}
 
-/**
- * Get all availability schedules for a user, as array.
- */
-export const getAvailabilityByDeliveryUserId = async (
+// ========== 5. Get Availability for Delivery User ==========
+export async function getAvailabilityByDeliveryUserId(
   userId: string
-): Promise<DeliveryAvailability[]> => {
+): Promise<DeliveryAvailability[]> {
   const { data, error } = await supabase
     .from('delivery_availability')
     .select('*')
@@ -149,44 +189,70 @@ export const getAvailabilityByDeliveryUserId = async (
     .order('day_of_week', { ascending: true });
   if (error) throw new Error(error.message);
   return (data || []) as DeliveryAvailability[];
-};
+}
 
-/**
- * Save/update delivery user payment details (one row per user, upsert).
- */
-export const savePaymentDetails = async (
+// ========== 6. Save/Update Payment Details ==========
+export async function savePaymentDetails(
   userId: string,
-  paymentDetails: Omit<DeliveryPaymentDetails, 'id' | 'delivery_payment_details_user_id' | 'created_at' | 'updated_at'>
-): Promise<DeliveryPaymentDetails> => {
+  details: Omit<DeliveryPaymentDetails, 'id' | 'delivery_payment_details_user_id' | 'created_at' | 'updated_at'>
+): Promise<DeliveryPaymentDetails> {
   const now = new Date().toISOString();
-  const upsertData = {
+
+  // Upsert Key: delivery_payment_details_user_id (see DB and types)
+  const upsertObj = {
     delivery_payment_details_user_id: userId,
-    ...paymentDetails,
+    bank_name: details.bank_name,
+    account_number: details.account_number,
+    routing_number: details.routing_number,
+    account_holder_name: details.account_holder_name,
+    account_type: details.account_type,
+    is_verified: details.is_verified,
     created_at: now,
     updated_at: now,
   };
 
   const { data, error } = await supabase
     .from('delivery_payment_details')
-    .upsert(upsertData, { onConflict: 'delivery_payment_details_user_id' })
+    .upsert(upsertObj, { onConflict: 'delivery_payment_details_user_id' })
     .select('*')
     .single();
 
   if (error || !data) throw new Error(error?.message || 'Unable to save payment details');
-  return data as DeliveryPaymentDetails;
-};
+  return {
+    id: data.id,
+    delivery_payment_details_user_id: data.delivery_payment_details_user_id,
+    bank_name: data.bank_name,
+    account_number: data.account_number,
+    routing_number: data.routing_number,
+    account_holder_name: data.account_holder_name,
+    account_type: data.account_type,
+    is_verified: !!data.is_verified,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
+}
 
-/**
- * Get delivery payment details for a user.
- */
-export const getPaymentDetailsByDeliveryUserId = async (
+// ========== 7. Get Payment Details for User ==========
+export async function getPaymentDetailsByDeliveryUserId(
   userId: string
-): Promise<DeliveryPaymentDetails | null> => {
+): Promise<DeliveryPaymentDetails | null> {
   const { data, error } = await supabase
     .from('delivery_payment_details')
     .select('*')
     .eq('delivery_payment_details_user_id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data ? (data as DeliveryPaymentDetails) : null;
-};
+  if (!data) return null;
+  return {
+    id: data.id,
+    delivery_payment_details_user_id: data.delivery_payment_details_user_id,
+    bank_name: data.bank_name,
+    account_number: data.account_number,
+    routing_number: data.routing_number,
+    account_holder_name: data.account_holder_name,
+    account_type: data.account_type,
+    is_verified: !!data.is_verified,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
+}
