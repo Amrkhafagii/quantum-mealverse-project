@@ -248,6 +248,6 @@ export type CalendarEvent = {
   id: string;
   title: string;
   date: string; // ISO string
-  status: string; // completed, in_progress, etc.
+  status?: string; // completed, in_progress, etc. - made optional
   time?: string;
 };

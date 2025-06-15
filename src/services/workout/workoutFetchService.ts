@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutPlan, WorkoutSchedule, WorkoutHistoryItem } from '@/types/fitness';
 import { formatScheduleData } from './workoutUtils';
@@ -17,6 +18,7 @@ export const fetchWorkoutPlans = async (userId: string): Promise<WorkoutPlan[]> 
     // Transform workout_days from JSON string to array if needed and ensure proper typing
     return data.map(plan => ({
       ...plan,
+      user_id: plan.workout_plans_user_id, // Map database field to expected field
       difficulty: (plan.difficulty as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
       workout_days: typeof plan.workout_days === 'string' 
         ? JSON.parse(plan.workout_days) 
@@ -61,7 +63,11 @@ export const fetchWorkoutHistory = async (userId: string): Promise<WorkoutHistor
       
     if (error) throw error;
     
-    return data;
+    // Map database fields to WorkoutHistoryItem type
+    return data.map(item => ({
+      ...item,
+      user_id: item.workout_history_user_id // Map database field to expected field
+    }));
   } catch (error) {
     console.error('Error fetching workout history:', error);
     return [];

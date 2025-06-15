@@ -28,15 +28,12 @@ export const formatScheduleData = (data: any): WorkoutSchedule => {
   
   return {
     id: data.id,
-    user_id: data.user_id,
+    user_id: data.workout_schedules_user_id,
     workout_plan_id: data.workout_plan_id,
-    day_of_week: data.day_of_week,
     days_of_week: Array.isArray(data.days_of_week) ? data.days_of_week : [],
-    time: data.time,
     preferred_time: data.preferred_time,
-    reminder: data.reminder,
     start_date: data.start_date,
     end_date: data.end_date,
-    active: data.active ?? true
+    active: data.is_active ?? true
   };
 };

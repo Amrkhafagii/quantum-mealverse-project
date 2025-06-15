@@ -75,12 +75,9 @@ export const UserAchievements: React.FC<UserAchievementsProps> = ({
       // Map the database response to UserAchievement format
       const newAchievement: UserAchievement = {
         id: data[0].id,
-        user_achievements_user_id: data[0].user_achievements_user_id,
+        user_id: data[0].user_achievements_user_id,
         achievement_id: data[0].achievement_id,
-        unlocked_at: data[0].date_achieved,
-        date_achieved: data[0].date_achieved,
-        user_id: data[0].user_achievements_user_id, // Map for compatibility
-        date_earned: data[0].date_achieved, // Map for compatibility
+        date_earned: data[0].date_achieved,
       };
 
       setAwardedAchievements([...awardedAchievements, newAchievement]);
