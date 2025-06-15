@@ -98,11 +98,11 @@ export const useRestaurantAuth = () => {
           return;
         }
 
-        // Fetch actual restaurant data from database using standardized user_id
+        // Fetch actual restaurant data from database
         const { data, error } = await supabase
           .from('restaurants')
           .select('*')
-          .eq('user_id', user.id) // CHANGED FROM restaurants_user_id
+          .eq('restaurants_user_id', user.id)
           .maybeSingle();
         
         if (error) {
@@ -115,7 +115,7 @@ export const useRestaurantAuth = () => {
           // Transform database response to match Restaurant interface with proper defaults
           const restaurantData: Restaurant = {
             id: data.id,
-            user_id: data.user_id, // CHANGED from restaurants_user_id
+            user_id: data.restaurants_user_id, // fix: use the correct db field
             name: data.name,
             email: data.email,
             phone: data.phone,
