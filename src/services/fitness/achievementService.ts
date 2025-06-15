@@ -24,7 +24,7 @@ export class AchievementService {
           }
         } else {
           // Update progress for incomplete achievements
-          await this.updateAchievementProgress(userId, check.achievementId, check.currentProgress);
+          await this.updateAchievementProgress(userId, check.achievementId, check.currentProgress, check.targetProgress);
         }
       }
 
@@ -179,7 +179,7 @@ export class AchievementService {
     }
   }
 
-  private static async updateAchievementProgress(userId: string, achievementId: string, progress: number): Promise<void> {
+  private static async updateAchievementProgress(userId: string, achievementId: string, progress: number, targetProgress: number): Promise<void> {
     try {
       await supabase
         .from('achievement_progress')
@@ -187,6 +187,7 @@ export class AchievementService {
           achievement_progress_user_id: userId,
           achievement_id: achievementId,
           current_progress: progress,
+          target_progress: targetProgress,
           updated_at: new Date().toISOString()
         });
     } catch (error) {

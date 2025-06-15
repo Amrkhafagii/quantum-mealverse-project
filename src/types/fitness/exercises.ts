@@ -37,4 +37,8 @@ export interface Exercise {
   rest_seconds?: number;
   instructions?: string;
   notes?: string;
+  // Added missing properties for exercise library
+  description?: string;
+  muscle_groups?: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
 }
