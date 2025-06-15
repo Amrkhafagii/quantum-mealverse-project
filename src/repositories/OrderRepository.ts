@@ -4,7 +4,7 @@ import { Order, OrderItem } from '@/types/order';
 import { CartItem } from '@/types/cart';
 
 export interface CreateOrderData {
-  customer_id?: string | null;
+  customer_id: string; // Made required to match Supabase schema
   customer_name: string;
   customer_email: string;
   customer_phone: string;

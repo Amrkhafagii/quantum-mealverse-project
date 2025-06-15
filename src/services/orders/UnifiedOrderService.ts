@@ -62,59 +62,46 @@ export class UnifiedOrderService {
         };
       }
 
-      // Start database transaction
-      const { data, error } = await supabase.rpc('begin_transaction');
-      if (error) {
-        throw new Error(`Transaction start failed: ${error.message}`);
+      // Ensure customer_id is provided or generate a guest ID
+      const customerId = request.customerData.id || `guest_${Date.now()}`;
+
+      // Create the order
+      const order = await this.orderRepository.createOrder({
+        customer_id: customerId,
+        customer_name: request.customerData.name,
+        customer_email: request.customerData.email,
+        customer_phone: request.customerData.phone,
+        delivery_address: request.deliveryData.address,
+        city: request.deliveryData.city,
+        latitude: request.deliveryData.latitude,
+        longitude: request.deliveryData.longitude,
+        delivery_method: request.deliveryData.method,
+        payment_method: request.paymentData.method,
+        total: request.paymentData.total,
+        subtotal: request.paymentData.subtotal,
+        delivery_fee: request.paymentData.total - request.paymentData.subtotal,
+        status: 'pending',
+        notes: request.deliveryData.instructions,
+        assignment_source: 'nutrition_generation'
+      });
+
+      if (!order) {
+        throw new Error('Failed to create order');
       }
 
-      try {
-        // Create the order
-        const order = await this.orderRepository.createOrder({
-          customer_id: request.customerData.id || null,
-          customer_name: request.customerData.name,
-          customer_email: request.customerData.email,
-          customer_phone: request.customerData.phone,
-          delivery_address: request.deliveryData.address,
-          city: request.deliveryData.city,
-          latitude: request.deliveryData.latitude,
-          longitude: request.deliveryData.longitude,
-          delivery_method: request.deliveryData.method,
-          payment_method: request.paymentData.method,
-          total: request.paymentData.total,
-          subtotal: request.paymentData.subtotal,
-          delivery_fee: request.paymentData.total - request.paymentData.subtotal,
-          status: 'pending',
-          notes: request.deliveryData.instructions,
-          assignment_source: 'nutrition_generation'
-        });
-
-        if (!order) {
-          throw new Error('Failed to create order');
-        }
-
-        // Create order items
-        const orderItems = await this.orderRepository.createOrderItems(order.id!, request.items);
-        if (!orderItems) {
-          throw new Error('Failed to create order items');
-        }
-
-        // Commit transaction
-        await supabase.rpc('commit_transaction');
-
-        console.log('UnifiedOrderService: Order created successfully', order.id);
-
-        return {
-          success: true,
-          orderId: order.id,
-          order: { ...order, order_items: orderItems }
-        };
-
-      } catch (transactionError) {
-        // Rollback transaction
-        await supabase.rpc('rollback_transaction');
-        throw transactionError;
+      // Create order items
+      const orderItems = await this.orderRepository.createOrderItems(order.id!, request.items);
+      if (!orderItems) {
+        throw new Error('Failed to create order items');
       }
+
+      console.log('UnifiedOrderService: Order created successfully', order.id);
+
+      return {
+        success: true,
+        orderId: order.id,
+        order: { ...order, order_items: orderItems }
+      };
 
     } catch (error) {
       console.error('UnifiedOrderService: Order creation failed', error);
