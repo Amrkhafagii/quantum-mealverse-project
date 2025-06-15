@@ -1,17 +1,13 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
+import { useOrderStore } from '@/stores/orderStore';
 import { Order } from '@/types/order';
 
 interface UnifiedOrderContextValue {
-  // Order data
-  order: Order;
-  
-  // Restaurant assignment data
+  order: Order | null;
   restaurantId: string;
   onAssignmentUpdate?: () => void;
   isProcessing?: boolean;
-  
-  // General update handlers
   onUpdate?: () => void;
   isLoading?: boolean;
   error?: string | null;
@@ -21,15 +17,29 @@ const UnifiedOrderContext = createContext<UnifiedOrderContextValue | undefined>(
 
 interface UnifiedOrderProviderProps {
   children: ReactNode;
-  value: UnifiedOrderContextValue;
+  value: Omit<UnifiedOrderContextValue, 'order' | 'isLoading' | 'error'>;
 }
 
-export const UnifiedOrderProvider: React.FC<UnifiedOrderProviderProps> = ({ 
-  children, 
-  value 
+export const UnifiedOrderProvider: React.FC<UnifiedOrderProviderProps> = ({
+  children,
+  value,
 }) => {
+  const currentOrder = useOrderStore(state => state.currentOrder);
+  const isLoading = useOrderStore(state => state.isCreatingOrder || state.isLoadingOrders);
+  const error = useOrderStore(state => state.orderError);
+
+  const contextValue: UnifiedOrderContextValue = {
+    order: currentOrder,
+    restaurantId: value.restaurantId,
+    onAssignmentUpdate: value.onAssignmentUpdate,
+    isProcessing: value.isProcessing,
+    onUpdate: value.onUpdate,
+    isLoading,
+    error,
+  };
+
   return (
-    <UnifiedOrderContext.Provider value={value}>
+    <UnifiedOrderContext.Provider value={contextValue}>
       {children}
     </UnifiedOrderContext.Provider>
   );
@@ -51,7 +61,7 @@ export const useOrderContext = () => {
     restaurantId: context.restaurantId,
     onUpdate: context.onUpdate,
     isLoading: context.isLoading,
-    error: context.error
+    error: context.error,
   };
 };
 
@@ -60,6 +70,6 @@ export const useRestaurantAssignmentContext = () => {
   return {
     restaurantId: context.restaurantId,
     onAssignmentUpdate: context.onAssignmentUpdate,
-    isProcessing: context.isProcessing
+    isProcessing: context.isProcessing,
   };
 };
