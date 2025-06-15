@@ -40,7 +40,8 @@ export const createWorkoutPlan = async (planData: any) => {
       duration_weeks: planData.duration_weeks,
       frequency: planData.frequency,
       goal: planData.goal,
-      is_active: planData.is_active !== false
+      is_active: planData.is_active !== false,
+      workout_days: planData.workout_days || [] // Add default workout_days
     };
 
     const { data, error } = await supabase

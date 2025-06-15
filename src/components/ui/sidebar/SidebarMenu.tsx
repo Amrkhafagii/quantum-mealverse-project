@@ -21,14 +21,16 @@ SidebarMenu.displayName = "SidebarMenu";
  * Container for a single menu row. Add drag/drop props to the li if using custom DnD.
  */
 export const SidebarMenuItem = React.forwardRef<HTMLLIElement, SidebarMenuItemProps>(
-  function SidebarMenuItem({ children, className = "", style }, ref) {
-    // Remove props not defined in SidebarMenuItemProps (like draggable in prev attempts)
+  function SidebarMenuItem({ children, className = "", style, draggable, onDragStart, onDragEnter, onDragEnd }, ref) {
     return (
       <li
         ref={ref}
         className={cn("sidebar-menu-item", className)}
         style={style}
-        // Apply manual drag/drop listeners from parent, if needed.
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragEnter={onDragEnter}
+        onDragEnd={onDragEnd}
       >
         {children}
       </li>

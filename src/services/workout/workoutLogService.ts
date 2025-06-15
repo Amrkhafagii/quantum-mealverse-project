@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { WorkoutLog } from '@/types/fitness';
 
@@ -12,7 +13,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
     const { data: logData, error: logError } = await supabase
       .from('workout_logs')
       .insert([{
-        user_id: workoutLog.user_id, // Already a UUID string from auth
+        workout_logs_user_id: workoutLog.user_id, // Use correct database field name
         workout_plan_id: workoutLog.workout_plan_id,
         date: workoutLog.date || new Date().toISOString(),
         duration: workoutLog.duration,
@@ -48,7 +49,7 @@ export const logWorkout = async (workoutLog: WorkoutLog): Promise<boolean> => {
       const { error: historyError } = await supabase
         .from('workout_history')
         .insert([{
-          user_id: workoutLog.user_id, // Already a UUID string from auth
+          workout_history_user_id: workoutLog.user_id, // Use correct database field name
           workout_log_id: logData.id,
           date: workoutLog.date || new Date().toISOString(),
           workout_plan_name: planData?.name || 'Custom Workout',

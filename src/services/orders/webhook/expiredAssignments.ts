@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/webhook';
 import { recordOrderHistory } from './orderHistoryService';
@@ -50,11 +51,11 @@ export const checkExpiredAssignments = async (): Promise<void> => {
     
     for (const assignment of expiredAssignments) {
       try {
-        // Record in order history - remove the extra parameter
+        // Record in order history - fix the call to match expected parameters
         await recordOrderHistory(
           assignment.order_id,
           OrderStatus.EXPIRED_ASSIGNMENT,
-          assignment.restaurant_id,
+          assignment.restaurant_id || null,
           { assignment_id: assignment.id, expires_at: assignment.expires_at }
         );
         

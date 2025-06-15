@@ -42,6 +42,10 @@ export interface SidebarMenuItemProps {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  draggable?: boolean;
+  onDragStart?: () => void;
+  onDragEnter?: () => void;
+  onDragEnd?: () => void;
 }
 
 /**
@@ -72,4 +76,3 @@ export interface SidebarGroupContentProps {
   children: ReactNode;
   className?: string;
 }
-
