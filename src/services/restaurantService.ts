@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Restaurant } from '@/types/restaurant';
 
@@ -8,7 +7,7 @@ class RestaurantService {
       const { data, error } = await supabase
         .from('restaurants')
         .select('*')
-        .eq('restaurants_user_id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
@@ -18,8 +17,11 @@ class RestaurantService {
 
       if (!data) return null;
 
-      // Map database fields to Restaurant interface
-      return this.mapDatabaseToRestaurant(data);
+      // For migration compatibility, keep both field names until schema and types are cleaned up
+      return {
+        ...data,
+        user_id: data.user_id ?? data.restaurants_user_id,
+      };
     } catch (error) {
       console.error('Error in getRestaurant:', error);
       return null;

@@ -1,4 +1,3 @@
-
 import { supabase as originalSupabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { UserType } from '@/types/auth';
@@ -36,9 +35,9 @@ export const userTypeService = {
       const { data, error } = await originalSupabase
         .from('user_types')
         .select('type')
-        .eq('user_types_user_id', userId)
+        .eq('user_id', userId)
         .maybeSingle();
-        
+
       if (error) {
         console.error("Error getting user type:", error);
         return null;
@@ -50,16 +49,16 @@ export const userTypeService = {
       return null;
     }
   },
-  
+
   async updateUserType(userId: string, type: UserType['type']): Promise<boolean> {
     try {
       const { error } = await originalSupabase
         .from('user_types')
-        .upsert({ 
-          user_types_user_id: userId, 
-          type 
-        });
-      
+        .upsert({
+          user_id: userId,
+          type
+        }, { onConflict: 'user_id' });
+
       return !error;
     } catch (error) {
       console.error("Failed to update user type:", error);

@@ -61,7 +61,7 @@ export const useRestaurantAuth = () => {
   useEffect(() => {
     const checkRestaurantAuth = async () => {
       console.log('useRestaurantAuth - checking auth state:', { user: !!user, userType, loading });
-      
+
       if (loading) {
         return; // Still loading auth state
       }
@@ -81,12 +81,12 @@ export const useRestaurantAuth = () => {
 
       try {
         console.log('useRestaurantAuth - user type:', userType);
-        
+
         if (userType !== 'restaurant') {
           console.log('useRestaurantAuth - not a restaurant user, redirecting based on type');
           setIsRestaurantOwner(false);
           setIsLoading(false);
-          
+
           // Redirect based on actual user type
           if (userType === 'delivery') {
             navigate('/delivery/dashboard', { replace: true });
@@ -98,24 +98,24 @@ export const useRestaurantAuth = () => {
           return;
         }
 
-        // Fetch actual restaurant data from database
+        // Fetch actual restaurant data from database using user_id (not restaurants_user_id)
         const { data, error } = await supabase
           .from('restaurants')
           .select('*')
-          .eq('restaurants_user_id', user.id)
+          .eq('user_id', user.id)
           .maybeSingle();
-        
+
         if (error) {
           console.error('useRestaurantAuth - Error fetching restaurant:', error);
           throw error;
         }
-        
+
         if (data) {
           console.log('useRestaurantAuth - setting restaurant:', data);
           // Transform database response to match Restaurant interface with proper defaults
           const restaurantData: Restaurant = {
             id: data.id,
-            user_id: data.restaurants_user_id, // fix: use the correct db field
+            user_id: data.user_id, // Use new field for mapping
             name: data.name,
             email: data.email,
             phone: data.phone,
