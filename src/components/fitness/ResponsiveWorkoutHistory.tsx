@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Dumbbell, Clock, TrendingUp, ClockIcon } from 'lucide-react';
-import { format } from 'date-fns';
 import { WorkoutHistoryItem } from '@/types/fitness';
 import WorkoutLogDetails from './WorkoutLogDetails';
 import { useResponsive } from '@/contexts/ResponsiveContext';
@@ -41,6 +40,33 @@ const ResponsiveWorkoutHistory: React.FC<ResponsiveWorkoutHistoryProps> = ({
     };
     
     setSelectedLog(logWithRequiredFields);
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const formatDetailedDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   if (isLoading) {
@@ -86,7 +112,7 @@ const ResponsiveWorkoutHistory: React.FC<ResponsiveWorkoutHistoryProps> = ({
                       <div className="flex flex-col space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold text-white text-sm">
-                            {format(new Date(log.date), 'MMM dd, yyyy')}
+                            {formatDate(log.date)}
                           </h3>
                           <Badge variant="secondary" className="text-xs">
                             {log.completed_exercises?.length || log.exercises_completed} exercises
@@ -152,7 +178,7 @@ const ResponsiveWorkoutHistory: React.FC<ResponsiveWorkoutHistoryProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <h3 className="font-semibold text-white">
-                          {format(new Date(log.date), 'PPP')}
+                          {formatDetailedDate(log.date)}
                         </h3>
                         <div className="flex items-center gap-4 text-sm text-gray-400">
                           <div className="flex items-center gap-1">

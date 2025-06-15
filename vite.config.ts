@@ -19,6 +19,16 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['date-fns']
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
   }
-  // Removed external configuration to allow proper bundling for web environments
 }));
