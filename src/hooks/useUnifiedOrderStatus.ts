@@ -71,7 +71,7 @@ interface UseUnifiedOrderStatusResult {
 export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusResult {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Fetch the order data, strictly real query, never a mock/fallback.
+  // Fetch the order data
   const fetchOrderData = useCallback(async () => {
     if (!orderId) return;
     dispatch({ type: "LOADING_START", variant: "initial" });
@@ -89,14 +89,12 @@ export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusRes
     }
   }, [orderId]);
 
-  // Subscribe to updates & fetch on mount
   useEffect(() => {
     fetchOrderData();
 
-    // Real-time updates subscription
     if (!orderId) return;
 
-    // Check if method exists, otherwise skip and warn
+    // Only use the instance (unifiedOrderStatusService), not the class/type
     let unsubscribe: undefined | (() => void) = undefined;
     if (
       typeof unifiedOrderStatusService.subscribeToOrderStatus === "function"
@@ -113,7 +111,6 @@ export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusRes
         }
       );
     } else {
-      // This is a warning for the dev/user. If that method is missing, the app will still work without real-time updates.
       if (process.env.NODE_ENV !== "production") {
         console.warn(
           "[useUnifiedOrderStatus] subscribeToOrderStatus is not implemented on unifiedOrderStatusService. Real-time updates disabled."
@@ -126,7 +123,6 @@ export function useUnifiedOrderStatus(orderId: string): UseUnifiedOrderStatusRes
     };
   }, [fetchOrderData, orderId]);
 
-  // Manual refetch
   const refetch = useCallback(() => {
     fetchOrderData();
   }, [fetchOrderData]);
