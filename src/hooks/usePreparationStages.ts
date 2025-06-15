@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useReducer, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { AssignmentMonitoringService } from '@/services/monitoring/assignmentMonitoringService';
 
-interface PreparationStage {
+export interface PreparationStage {
   id: string;
   stage_name: string;
   status: string;
@@ -15,98 +16,111 @@ interface PreparationStage {
   notes?: string;
 }
 
+interface PreparationStagesState {
+  stages: PreparationStage[];
+  loading: boolean;
+  error: string | null;
+}
+
+type Action =
+  | { type: 'SET_STAGES'; stages: PreparationStage[] }
+  | { type: 'SET_LOADING'; loading: boolean }
+  | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'RESET' };
+
+const initialState: PreparationStagesState = {
+  stages: [],
+  loading: true,
+  error: null,
+};
+
+function reducer(state: PreparationStagesState, action: Action): PreparationStagesState {
+  switch (action.type) {
+    case 'SET_STAGES':
+      return { ...state, stages: action.stages, loading: false, error: null };
+    case 'SET_LOADING':
+      return { ...state, loading: action.loading };
+    case 'SET_ERROR':
+      return { ...state, error: action.error, loading: false };
+    case 'RESET':
+      return { ...initialState };
+    default:
+      return state;
+  }
+}
+
 export const usePreparationStages = (orderId: string) => {
-  const [stages, setStages] = useState<PreparationStage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [overallProgress, setOverallProgress] = useState<number>(0);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast();
 
+  // Calculate overall progress, memoized based on stages
+  const overallProgress = useMemo(() => {
+    const stageCount = state.stages.length;
+    if (!stageCount) return 0;
+    const completed = state.stages.filter(s => s.status === 'completed').length;
+    return Math.round((completed / stageCount) * 100);
+  }, [state.stages]);
+
+  // Fetch stages from DB
   const fetchStages = useCallback(async () => {
     if (!orderId) return;
-
+    dispatch({ type: 'SET_LOADING', loading: true });
+    dispatch({ type: 'SET_ERROR', error: null });
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log('PreparationStages: Fetching stages for order:', orderId);
-
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('order_preparation_stages')
         .select('*')
         .eq('order_id', orderId)
         .order('stage_order', { ascending: true });
 
-      if (fetchError) {
-        console.error('PreparationStages: Error fetching stages:', fetchError);
-        throw fetchError;
+      if (error) {
+        console.error('PreparationStages: Error fetching stages:', error);
+        throw error;
       }
+      dispatch({ type: 'SET_STAGES', stages: data ?? [] });
 
-      console.log('PreparationStages: Fetched stages:', data?.length || 0);
-
-      const stagesData = data || [];
-      setStages(stagesData);
-
-      // Calculate overall progress
-      const completedStages = stagesData.filter(s => s.status === 'completed').length;
-      const progress = stagesData.length > 0 ? Math.round((completedStages / stagesData.length) * 100) : 0;
-      setOverallProgress(progress);
-
-      // Log monitoring event
       await AssignmentMonitoringService.logMonitoringEvent(
         'preparation_stages_loaded',
-        `Loaded ${stagesData.length} stages for order`,
-        { 
-          order_id: orderId,
-          stages_count: stagesData.length,
-          progress
-        }
+        `Loaded ${data?.length || 0} stages for order`,
+        { order_id: orderId, stages_count: data?.length || 0, progress: overallProgress }
       );
-
     } catch (err) {
-      console.error('PreparationStages: Error in fetchStages:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load preparation stages';
-      setError(errorMessage);
-      
-      // Log error
-      await AssignmentMonitoringService.logMonitoringEvent(
-        'preparation_stages_error',
-        errorMessage,
-        { order_id: orderId, error: err }
-      );
+      const errMsg = err instanceof Error ? err.message : 'Failed to load preparation stages';
+      dispatch({ type: 'SET_ERROR', error: errMsg });
 
+      await AssignmentMonitoringService.logMonitoringEvent(
+        'preparation_stages_error', errMsg, { order_id: orderId, error: err }
+      );
       toast({
         title: "Error",
         description: "Failed to load preparation stages",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [orderId, toast]);
+  }, [orderId, toast, overallProgress]);
 
+  // Advance current stage, start the next
   const advanceStage = useCallback(async (stageName: string) => {
     try {
-      console.log('PreparationStages: Advancing stage:', stageName);
-
       // Complete current stage
+      const stage = state.stages.find(s => s.stage_name === stageName);
+      if (!stage) throw new Error('Stage not found');
       const { error: completeError } = await supabase
         .from('order_preparation_stages')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString()
         })
-        .eq('order_id', orderId)
-        .eq('stage_name', stageName);
+        .eq('id', stage.id);
 
       if (completeError) throw completeError;
 
-      // Get next stage
-      const currentStageOrder = stages.find(s => s.stage_name === stageName)?.stage_order || 0;
-      const nextStage = stages.find(s => s.stage_order > currentStageOrder && s.status === 'pending');
+      // Find next
+      const nextStage = state.stages
+        .filter(s => s.stage_order > stage.stage_order && s.status === 'pending')
+        .sort((a, b) => a.stage_order - b.stage_order)[0];
 
       if (nextStage) {
-        // Start next stage
         const { error: startError } = await supabase
           .from('order_preparation_stages')
           .update({
@@ -117,65 +131,60 @@ export const usePreparationStages = (orderId: string) => {
 
         if (startError) throw startError;
       } else {
-        // No more stages, mark order as ready
+        // All stages complete? Mark order as ready
         const { error: orderError } = await supabase
           .from('orders')
           .update({ status: 'ready_for_pickup' })
           .eq('id', orderId);
-
         if (orderError) throw orderError;
-
         toast({
           title: "Order Ready",
           description: "Order is now ready for pickup!",
         });
       }
 
-      // Log monitoring event
       await AssignmentMonitoringService.logMonitoringEvent(
         'stage_advanced',
         `Stage ${stageName} advanced for order`,
-        { 
+        {
           order_id: orderId,
           stage_name: stageName,
-          next_stage: nextStage?.stage_name || 'completed'
+          next_stage: nextStage?.stage_name || 'completed',
         }
       );
 
       await fetchStages();
       return true;
     } catch (error) {
-      console.error('PreparationStages: Error advancing stage:', error);
-      
+      const errorMsg = error instanceof Error ? error.message : String(error);
       await AssignmentMonitoringService.logMonitoringEvent(
         'stage_advance_error',
         `Failed to advance stage ${stageName}`,
-        { 
+        {
           order_id: orderId,
           stage_name: stageName,
           error: error
         }
       );
-
       toast({
         title: "Error",
         description: "Failed to advance preparation stage",
         variant: "destructive",
       });
+      dispatch({ type: 'SET_ERROR', error: errorMsg });
       return false;
     }
-  }, [orderId, stages, fetchStages, toast]);
+  }, [orderId, state.stages, fetchStages, toast]);
 
+  // Update stage notes
   const updateNotes = useCallback(async (stageName: string, notes: string) => {
     try {
-      const stage = stages.find(s => s.stage_name === stageName);
+      const stage = state.stages.find(s => s.stage_name === stageName);
       if (!stage) throw new Error('Stage not found');
-
       const { error } = await supabase
         .from('order_preparation_stages')
         .update({ notes })
         .eq('id', stage.id);
-
       if (error) throw error;
 
       toast({
@@ -186,50 +195,48 @@ export const usePreparationStages = (orderId: string) => {
       await fetchStages();
       return true;
     } catch (error) {
-      console.error('PreparationStages: Error updating notes:', error);
       toast({
         title: "Error",
         description: "Failed to update stage notes",
         variant: "destructive",
       });
+      dispatch({ type: 'SET_ERROR', error: error instanceof Error ? error.message : String(error) });
       return false;
     }
-  }, [stages, fetchStages, toast]);
+  }, [state.stages, fetchStages, toast]);
 
+  // Get the current stage
   const getCurrentStage = useCallback(() => {
-    return stages.find(stage => stage.status === 'in_progress') || null;
-  }, [stages]);
+    return state.stages.find(s => s.status === 'in_progress') || null;
+  }, [state.stages]);
 
+  // Memoized estimated completion
   const getEstimatedCompletionTime = useCallback(async (): Promise<Date | null> => {
-    if (!stages.length) return null;
-
-    const currentStage = getCurrentStage();
+    if (!state.stages.length) return null;
+    const currentStage = state.stages.find(s => s.status === 'in_progress');
     if (!currentStage) return null;
+    const pendingStages = state.stages.filter(s => s.status === 'pending' || s.status === 'in_progress');
+    const totalMinutes = pendingStages.reduce((acc, s) => acc + s.estimated_duration_minutes, 0);
+    return new Date(Date.now() + totalMinutes * 60 * 1000);
+  }, [state.stages]);
 
-    // Calculate remaining time based on current stage and pending stages
-    const pendingStages = stages.filter(s => s.status === 'pending' || s.status === 'in_progress');
-    const totalRemainingMinutes = pendingStages.reduce((acc, stage) => acc + stage.estimated_duration_minutes, 0);
-
-    return new Date(Date.now() + totalRemainingMinutes * 60 * 1000);
-  }, [stages, getCurrentStage]);
-
+  // Elapsed minutes for a stage
   const getElapsedMinutes = useCallback((stageName: string): number => {
-    const stage = stages.find(s => s.stage_name === stageName);
+    const stage = state.stages.find(s => s.stage_name === stageName);
     if (!stage || !stage.started_at) return 0;
+    const start = new Date(stage.started_at).getTime();
+    return Math.floor((Date.now() - start) / (1000 * 60));
+  }, [state.stages]);
 
-    const startTime = new Date(stage.started_at).getTime();
-    const currentTime = new Date().getTime();
-    return Math.floor((currentTime - startTime) / (1000 * 60));
-  }, [stages]);
-
+  // Initial fetch and real-time subscription
   useEffect(() => {
+    dispatch({ type: 'RESET' });
+    if (!orderId) return;
     fetchStages();
-  }, [fetchStages]);
+  }, [orderId, fetchStages]);
 
   useEffect(() => {
     if (!orderId) return;
-
-    // Set up real-time subscription
     const channel = supabase
       .channel(`preparation_stages_${orderId}`)
       .on(
@@ -240,8 +247,7 @@ export const usePreparationStages = (orderId: string) => {
           table: 'order_preparation_stages',
           filter: `order_id=eq.${orderId}`,
         },
-        (payload) => {
-          console.log('PreparationStages: Real-time update received:', payload);
+        () => {
           fetchStages();
         }
       )
@@ -253,9 +259,9 @@ export const usePreparationStages = (orderId: string) => {
   }, [orderId, fetchStages]);
 
   return {
-    stages,
-    loading,
-    error,
+    stages: state.stages,
+    loading: state.loading,
+    error: state.error,
     overallProgress,
     advanceStage,
     updateNotes,
@@ -263,6 +269,6 @@ export const usePreparationStages = (orderId: string) => {
     getCurrentStage,
     getEstimatedCompletionTime,
     getElapsedMinutes,
-    isLoading: loading // Add alias for consistency
+    isLoading: state.loading
   };
 };
