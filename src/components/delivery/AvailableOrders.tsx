@@ -12,7 +12,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocationTracker } from '@/hooks/useLocationTracker';
 import { DeliveryAssignment } from '@/types/delivery';
-import { getAvailableDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
+import { getActiveDeliveryAssignments } from '@/services/delivery/deliveryAssignmentService';
 
 interface AvailableOrdersProps {
   deliveryUserId: string;
@@ -52,7 +52,8 @@ export const AvailableOrders: React.FC<AvailableOrdersProps> = ({ deliveryUserId
         return;
       }
       
-      const assignments = await getAvailableDeliveryAssignments(deliveryUserId, location.latitude, location.longitude);
+      // Use active assignments as a stand-in for available assignments
+      const assignments = await getActiveDeliveryAssignments(deliveryUserId);
       setAvailableAssignments(assignments);
     } catch (error) {
       console.error('Error loading available assignments:', error);
