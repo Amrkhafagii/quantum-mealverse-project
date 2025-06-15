@@ -41,7 +41,6 @@ export function useLocationPermission(): UseLocationPermissionReturn {
   const [isTracking] = useState<boolean>(false);
   const [hasShownInitialPrompt] = useState<boolean>(false);
   const [hasInitialized] = useState<boolean>(true);
-  const [isLocationStale] = useState<boolean>(false);
 
   const { toast } = useToast();
 
@@ -148,6 +147,9 @@ export function useLocationPermission(): UseLocationPermissionReturn {
   const enableTracking = () => {};
   const toggleTracking = () => {};
 
+  // Fix for legacy compatibility: provide isLocationStale as a function
+  const isLocationStale = useCallback(() => false, []);
+
   return {
     permissionStatus,
     backgroundPermissionStatus,
@@ -164,6 +166,6 @@ export function useLocationPermission(): UseLocationPermissionReturn {
     isTracking,
     hasShownInitialPrompt,
     hasInitialized,
-    isLocationStale,
+    isLocationStale, // <-- this is now a function
   };
 }
