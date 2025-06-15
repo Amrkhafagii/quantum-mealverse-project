@@ -1,275 +1,195 @@
-import React, { useState } from 'react';
+// Add a simple TDEE calculation function at the top of the file
+function calculateTDEE(
+  weight: number,
+  height: number,
+  age: number,
+  gender: 'male' | 'female',
+  activityLevel: number
+) {
+  // Harris-Benedict Equation as a fallback
+  let bmr = gender === 'male'
+    ? 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+    : 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+
+  const tdee = bmr * activityLevel;
+  return { bmr, tdee };
+}
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/hooks/useAuth';
-import { generateMealPlan } from '@/services/mealPlan/mealGenerationService';
-import MealPlanDisplay from '@/components/fitness/MealPlanDisplay';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { CheckCheck, User2 } from 'lucide-react';
+import { TDEEResult } from '@/services/mealPlan/types';
 
 interface TDEECalculatorProps {
-  onGenerateMealPlan?: (result: any) => void;
+  onGenerateMealPlan: (result: TDEEResult) => void;
 }
 
 const TDEECalculator: React.FC<TDEECalculatorProps> = ({ onGenerateMealPlan }) => {
-  const [gender, setGender] = useState('male');
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [heightFeet, setHeightFeet] = useState('');
-  const [heightInches, setHeightInches] = useState('');
-  const [activityLevel, setActivityLevel] = useState('sedentary');
-  const [goal, setGoal] = useState('maintain');
-  const [bodyFat, setBodyFat] = useState<number | null>(null);
-  const [result, setResult] = useState<any>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
+  const [weight, setWeight] = useState<number>(70); // Weight in kg
+  const [height, setHeight] = useState<number>(175); // Height in cm
+  const [age, setAge] = useState<number>(30);
+  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [activityLevel, setActivityLevel] = useState<number>(1.55); // Moderate activity
+  const [goal, setGoal] = useState<'cut' | 'maintain' | 'bulk'>('maintain');
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [mealPlan, setMealPlan] = useState(null);
 
-  const handleCalculate = async () => {
-    setIsCalculating(true);
-    try {
-      // Validate inputs
-      if (!age || !weight || !heightFeet || !heightInches) {
-        toast({
-          title: "Error",
-          description: "Please fill in all fields.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const ageValue = parseInt(age);
-      const weightValue = parseInt(weight);
-      const heightFeetValue = parseInt(heightFeet);
-      const heightInchesValue = parseInt(heightInches);
-
-      if (ageValue <= 0 || weightValue <= 0 || heightFeetValue <= 0 || heightInchesValue < 0) {
-        toast({
-          title: "Error",
-          description: "Please enter valid positive numbers.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const heightInInches = (heightFeetValue * 12) + heightInchesValue;
-
-      // Perform calculation
-      const calculationResult = calculateTDEE({
-        gender,
-        age: ageValue,
-        weightKg: weightValue,
-        heightCm: heightInInches,
-        activityLevel,
-        goal,
-        bodyFatPercentage: bodyFat
-      });
-
-      setResult(calculationResult);
-
-      // Generate meal plan
-      try {
-        const generatedMealPlan = generateMealPlan(calculationResult);
-        setMealPlan(generatedMealPlan);
-      } catch (error: any) {
-        console.error("Meal plan generation error:", error);
-        toast({
-          title: "Error",
-          description: `Failed to generate meal plan: ${error.message}`,
-          variant: "destructive",
-        });
-      }
-
-    } catch (error) {
-      console.error("TDEE calculation error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to calculate TDEE. Please check your inputs.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCalculating(false);
-    }
+  // Activity level descriptions
+  const activityLevels = {
+    1.2: 'Sedentary (little to no exercise)',
+    1.375: 'Lightly Active (light exercise/sports 1-3 days/week)',
+    1.55: 'Moderately Active (moderate exercise/sports 3-5 days/week)',
+    1.725: 'Very Active (hard exercise/sports 6-7 days a week)',
+    1.9: 'Extremely Active (very hard exercise/sports & physical job or 2x training)'
   };
 
-  const handleGenerateMealPlan = () => {
-    // You may want to validate and generate meal plan data here
-    if (result && onGenerateMealPlan) {
-      onGenerateMealPlan(result);
+  useEffect(() => {
+    // Store default values in session storage on mount
+    sessionStorage.setItem('weight', weight.toString());
+    sessionStorage.setItem('height', height.toString());
+    sessionStorage.setItem('age', age.toString());
+    sessionStorage.setItem('gender', gender);
+    sessionStorage.setItem('activityLevel', activityLevel.toString());
+    sessionStorage.setItem('goal', goal);
+  }, []);
+
+  const handleCalculate = () => {
+    // Simple TDEE calculation (you can use a more accurate formula)
+    const { bmr, tdee } = calculateTDEE(weight, height, age, gender, activityLevel);
+
+    // Adjust calories based on goal
+    let adjustedCalories = tdee;
+    let proteinGrams = weight * 2; // 2g of protein per kg of body weight
+    let fatGrams = weight * 0.8; // 0.8g of fat per kg of body weight
+    let carbsGrams = 0;
+
+    switch (goal) {
+      case 'cut':
+        adjustedCalories = tdee * 0.85; // 15% deficit
+        carbsGrams = (adjustedCalories - (proteinGrams * 4) - (fatGrams * 9)) / 4;
+        break;
+      case 'bulk':
+        adjustedCalories = tdee * 1.10; // 10% surplus
+        carbsGrams = (adjustedCalories - (proteinGrams * 4) - (fatGrams * 9)) / 4;
+        break;
+      default:
+        adjustedCalories = tdee;
+        carbsGrams = (adjustedCalories - (proteinGrams * 4) - (fatGrams * 9)) / 4;
+        break;
     }
+
+    // Ensure carbs are not negative
+    carbsGrams = Math.max(0, carbsGrams);
+
+    const result: TDEEResult = {
+      bmr: Math.round(bmr),
+      tdee: Math.round(tdee),
+      adjustedCalories: Math.round(adjustedCalories),
+      proteinGrams: Math.round(proteinGrams),
+      carbsGrams: Math.round(carbsGrams),
+      fatsGrams: Math.round(fatGrams),
+      goal: goal
+    };
+
+    // Store calculation result in session storage
+    sessionStorage.setItem('currentTDEE', JSON.stringify(result));
+
+    // Pass the result to the parent component
+    onGenerateMealPlan(result);
+
+    toast({
+      title: "Calculation complete!",
+      description: "Your TDEE and macronutrient targets have been calculated.",
+    })
   };
 
   return (
-    <div>
-      <Card className="max-w-lg mx-auto bg-quantum-darkBlue/30 border-quantum-cyan/20">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-quantum-cyan">TDEE Calculator</CardTitle>
-          <CardDescription className="text-gray-400">
-            Calculate your Total Daily Energy Expenditure (TDEE)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="gender">Gender</Label>
-              <Select value={gender} onValueChange={setGender}>
-                <SelectTrigger className="bg-quantum-black/50 text-white">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent className="bg-quantum-black/80 text-white">
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="age">Age</Label>
-              <Input
-                type="number"
-                id="age"
-                placeholder="Enter age"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="bg-quantum-black/50 text-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="weight">Weight (kg)</Label>
-              <Input
-                type="number"
-                id="weight"
-                placeholder="Enter weight in kg"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="bg-quantum-black/50 text-white"
-              />
-            </div>
-            <div>
-              <Label>Height</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="number"
-                  placeholder="Feet"
-                  value={heightFeet}
-                  onChange={(e) => setHeightFeet(e.target.value)}
-                  className="bg-quantum-black/50 text-white"
-                />
-                <Input
-                  type="number"
-                  placeholder="Inches"
-                  value={heightInches}
-                  onChange={(e) => setHeightInches(e.target.value)}
-                  className="bg-quantum-black/50 text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="activityLevel">Activity Level</Label>
-            <Select value={activityLevel} onValueChange={setActivityLevel}>
-              <SelectTrigger className="bg-quantum-black/50 text-white">
-                <SelectValue placeholder="Select activity level" />
-              </SelectTrigger>
-              <SelectContent className="bg-quantum-black/80 text-white">
-                <SelectItem value="sedentary">Sedentary</SelectItem>
-                <SelectItem value="lightly-active">Lightly Active</SelectItem>
-                <SelectItem value="moderately-active">Moderately Active</SelectItem>
-                <SelectItem value="very-active">Very Active</SelectItem>
-                <SelectItem value="extra-active">Extra Active</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="goal">Goal</Label>
-            <Select value={goal} onValueChange={setGoal}>
-              <SelectTrigger className="bg-quantum-black/50 text-white">
-                <SelectValue placeholder="Select goal" />
-              </SelectTrigger>
-              <SelectContent className="bg-quantum-black/80 text-white">
-                <SelectItem value="lose">Lose Weight</SelectItem>
-                <SelectItem value="maintain">Maintain Weight</SelectItem>
-                <SelectItem value="gain">Gain Weight</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="bodyFat">Body Fat (%) - Optional</Label>
-            <Slider
-              defaultValue={[0]}
-              max={50}
-              step={1}
-              onValueChange={(value) => setBodyFat(value[0])}
-              className="text-quantum-cyan"
-            />
-            <p className="text-sm text-gray-400 mt-1">
-              Selected: {bodyFat !== null ? `${bodyFat}%` : 'Not specified'}
-            </p>
-          </div>
-
-          <Button
-            onClick={handleCalculate}
-            className="bg-quantum-purple hover:bg-quantum-purple/90 text-white font-bold py-2 px-4 rounded"
-            disabled={isCalculating}
-          >
-            {isCalculating ? (
-              <>
-                Calculating...
-                <Progress className="mt-2" value={50} />
-              </>
-            ) : (
-              "Calculate TDEE"
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {result && (
-        <div className="mt-6 max-w-lg mx-auto">
-          <h2 className="text-xl font-bold mb-4 text-quantum-cyan">Results</h2>
-          <Card className="bg-quantum-darkBlue/30 border-quantum-cyan/20">
-            <CardContent className="space-y-2">
-              <p className="text-gray-400">
-                Your estimated TDEE is: <span className="font-bold text-quantum-cyan">{result.tdee} kcal</span>
-              </p>
-              <p className="text-gray-400">
-                Basal Metabolic Rate (BMR): <span className="font-bold text-quantum-cyan">{result.bmr} kcal</span>
-              </p>
-              <p className="text-gray-400">
-                Adjusted Calories for your goal: <span className="font-bold text-quantum-cyan">{result.adjustedCalories} kcal</span>
-              </p>
-              <p className="text-gray-400">
-                Protein Intake: <span className="font-bold text-quantum-cyan">{result.proteinGrams} grams</span>
-              </p>
-              <p className="text-gray-400">
-                Carbs Intake: <span className="font-bold text-quantum-cyan">{result.carbsGrams} grams</span>
-              </p>
-              <p className="text-gray-400">
-                Fats Intake: <span className="font-bold text-quantum-cyan">{result.fatsGrams} grams</span>
-              </p>
-            </CardContent>
-          </Card>
+    <Card className="w-full bg-quantum-darkBlue/30 border-quantum-cyan/20">
+      <CardHeader>
+        <CardTitle className="text-quantum-cyan flex items-center gap-2">
+          <User2 className="h-5 w-5" />
+          TDEE Calculator
+        </CardTitle>
+        <CardDescription className="text-gray-400">
+          Calculate your Total Daily Energy Expenditure (TDEE) to estimate your daily calorie needs.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="weight">Weight (kg)</Label>
+          <Input
+            type="number"
+            id="weight"
+            value={weight}
+            onChange={(e) => setWeight(Number(e.target.value))}
+          />
         </div>
-      )}
-
-      <button
-        className="mt-4 px-6 py-2 rounded bg-quantum-cyan hover:bg-quantum-cyan/80 text-white text-lg font-bold transition"
-        onClick={handleGenerateMealPlan}
-        disabled={!result}
-      >
-        Generate Meal Plan
-      </button>
-    </div>
+        <div className="grid gap-2">
+          <Label htmlFor="height">Height (cm)</Label>
+          <Input
+            type="number"
+            id="height"
+            value={height}
+            onChange={(e) => setHeight(Number(e.target.value))}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="age">Age</Label>
+          <Input
+            type="number"
+            id="age"
+            value={age}
+            onChange={(e) => setAge(Number(e.target.value))}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="gender">Gender</Label>
+          <Select value={gender} onValueChange={value => setGender(value as 'male' | 'female')}>
+            <SelectTrigger id="gender">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="male">Male</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="activityLevel">Activity Level</Label>
+          <Slider
+            id="activityLevel"
+            defaultValue={[activityLevel]}
+            max={1.9}
+            min={1.2}
+            step={0.025}
+            onValueChange={(value) => setActivityLevel(value[0])}
+          />
+          <p className="text-sm text-gray-500">{activityLevels[activityLevel as keyof typeof activityLevels]}</p>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="goal">Goal</Label>
+          <Select value={goal} onValueChange={value => setGoal(value as 'cut' | 'maintain' | 'bulk')}>
+            <SelectTrigger id="goal">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cut">Cut (lose weight)</SelectItem>
+              <SelectItem value="maintain">Maintain</SelectItem>
+              <SelectItem value="bulk">Bulk (gain weight)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={handleCalculate} className="bg-quantum-purple hover:bg-quantum-purple/90">
+          Calculate & Generate Meal Plan
+          <CheckCheck className="ml-2 h-4 w-4" />
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 
