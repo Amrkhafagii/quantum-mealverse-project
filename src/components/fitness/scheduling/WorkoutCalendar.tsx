@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { CalendarEvent } from '@/types/fitness';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -55,7 +56,7 @@ export const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({
     return events.filter(event => isSameDay(new Date(event.date), date));
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'completed': return 'bg-green-500';
       case 'in_progress': return 'bg-blue-500';

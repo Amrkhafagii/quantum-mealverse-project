@@ -28,7 +28,22 @@ export const useWorkoutData = () => {
         .order('date', { ascending: false });
       
       if (error) throw error;
-      setHistory(data || []);
+      
+      // Map database fields to WorkoutHistoryItem type
+      const mappedHistory: WorkoutHistoryItem[] = (data || []).map(item => ({
+        id: item.id,
+        user_id: item.workout_history_user_id,
+        workout_log_id: item.workout_log_id,
+        date: item.date,
+        workout_plan_name: item.workout_plan_name,
+        workout_day_name: item.workout_day_name,
+        exercises_completed: item.exercises_completed,
+        total_exercises: item.total_exercises,
+        duration: item.duration,
+        calories_burned: item.calories_burned,
+      }));
+      
+      setHistory(mappedHistory);
     } catch (error) {
       console.error('Error fetching workout history:', error);
     } finally {
@@ -45,7 +60,23 @@ export const useWorkoutData = () => {
         .eq('workout_plans_user_id', userId);
       
       if (error) throw error;
-      setWorkoutPlans(data || []);
+      
+      // Map database fields to WorkoutPlan type
+      const mappedPlans: WorkoutPlan[] = (data || []).map(item => ({
+        id: item.id,
+        user_id: item.workout_plans_user_id,
+        name: item.name,
+        description: item.description,
+        goal: item.goal,
+        difficulty: item.difficulty,
+        frequency: item.frequency,
+        duration_weeks: item.duration_weeks,
+        workout_days: typeof item.workout_days === 'string' ? JSON.parse(item.workout_days) : item.workout_days,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      }));
+      
+      setWorkoutPlans(mappedPlans);
     } catch (error) {
       console.error('Error fetching workout plans:', error);
     }
@@ -60,7 +91,20 @@ export const useWorkoutData = () => {
         .eq('workout_schedules_user_id', userId);
       
       if (error) throw error;
-      setSchedules(data || []);
+      
+      // Map database fields to WorkoutSchedule type
+      const mappedSchedules: WorkoutSchedule[] = (data || []).map(item => ({
+        id: item.id,
+        user_id: item.workout_schedules_user_id,
+        workout_plan_id: item.workout_plan_id,
+        days_of_week: item.days_of_week,
+        start_date: item.start_date,
+        end_date: item.end_date,
+        preferred_time: item.preferred_time,
+        active: item.is_active,
+      }));
+      
+      setSchedules(mappedSchedules);
     } catch (error) {
       console.error('Error fetching workout schedules:', error);
     }
@@ -80,9 +124,9 @@ export const useWorkoutData = () => {
         setWorkoutStats({
           total_workouts: data.total_workouts || 0,
           streak_days: data.streak_days || 0,
-          longest_streak: data.longest_streak || 0,
-          total_calories_burned: data.total_calories_burned || 0,
-          total_duration_minutes: data.total_duration_minutes || 0,
+          longest_streak: data.streak_days || 0, // Use streak_days as fallback for longest_streak
+          total_calories_burned: data.calories_burned || 0, // Map from calories_burned
+          total_duration_minutes: data.total_time || 0, // Map from total_time
           most_active_day: data.most_active_day || 'N/A'
         });
       }

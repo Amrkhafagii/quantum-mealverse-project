@@ -125,4 +125,3 @@ const FitnessPage = () => {
 };
 
 export default FitnessPage;
-

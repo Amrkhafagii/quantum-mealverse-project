@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-// The lines causing type errors must use the correct keys like workout_plans_user_id etc. Fix as needed below, but for this pass just update the types import and add a TODO for DB mapping if needed:
 import type { WorkoutDay } from '@/types/fitness';
 
 const WorkoutPlanForm: React.FC = () => {
@@ -25,13 +25,13 @@ const WorkoutPlanForm: React.FC = () => {
   const [frequency, setFrequency] = useState(3);
   const [durationWeeks, setDurationWeeks] = useState(4);
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([
-    { day_name: 'Monday', exercises: [], id: uuidv4(), workout_plan_id: '', day_number: 1 },
+    { day_name: 'Monday', exercises: [], id: uuidv4(), day_number: 1 },
   ]);
 
   const addWorkoutDay = () => {
     setWorkoutDays([
       ...workoutDays,
-      { day_name: 'New Day', exercises: [], id: uuidv4(), workout_plan_id: '', day_number: workoutDays.length + 1 },
+      { day_name: 'New Day', exercises: [], id: uuidv4(), day_number: workoutDays.length + 1 },
     ]);
   };
 

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Team, TeamMember } from '@/types/fitness';
 
@@ -13,20 +14,26 @@ const TeamChallenges: React.FC<TeamChallengesProps> = ({ userId }) => {
       name: 'Alpha Fitness',
       description: 'Pushing limits together!',
       members: [
-        { id: '1', name: 'Alice', points: 120 },
-        { id: '2', name: 'Bob', points: 95 },
-        { id: '3', name: 'Charlie', points: 150 },
+        { id: '1', user_id: '1', team_id: '1', role: 'member', joined_at: '2024-01-01', name: 'Alice', points: 120 },
+        { id: '2', user_id: '2', team_id: '1', role: 'member', joined_at: '2024-01-01', name: 'Bob', points: 95 },
+        { id: '3', user_id: '3', team_id: '1', role: 'leader', joined_at: '2024-01-01', name: 'Charlie', points: 150 },
       ],
+      created_at: '2024-01-01',
+      member_count: 3,
+      total_points: 365,
     },
     {
       id: '2',
       name: 'Elite Warriors',
       description: 'Conquer every challenge!',
       members: [
-        { id: '4', name: 'David', points: 110 },
-        { id: '5', name: 'Eve', points: 130 },
-        { id: '6', name: 'Frank', points: 80 },
+        { id: '4', user_id: '4', team_id: '2', role: 'member', joined_at: '2024-01-01', name: 'David', points: 110 },
+        { id: '5', user_id: '5', team_id: '2', role: 'leader', joined_at: '2024-01-01', name: 'Eve', points: 130 },
+        { id: '6', user_id: '6', team_id: '2', role: 'member', joined_at: '2024-01-01', name: 'Frank', points: 80 },
       ],
+      created_at: '2024-01-01',
+      member_count: 3,
+      total_points: 320,
     },
   ];
 

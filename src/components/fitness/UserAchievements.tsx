@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,17 +72,18 @@ export const UserAchievements: React.FC<UserAchievementsProps> = ({
         return;
       }
 
-      // Use only the keys that actually exist on the returned row
-      setAwardedAchievements([
-        ...awardedAchievements,
-        {
-          id: data[0].id,
-          user_achievements_user_id: data[0].user_achievements_user_id,
-          achievement_id: data[0].achievement_id,
-          unlocked_at: data[0].date_achieved, // alias date_achieved to unlocked_at for compatibility
-          date_achieved: data[0].date_achieved,
-        } as UserAchievement,
-      ]);
+      // Map the database response to UserAchievement format
+      const newAchievement: UserAchievement = {
+        id: data[0].id,
+        user_achievements_user_id: data[0].user_achievements_user_id,
+        achievement_id: data[0].achievement_id,
+        unlocked_at: data[0].date_achieved,
+        date_achieved: data[0].date_achieved,
+        user_id: data[0].user_achievements_user_id, // Map for compatibility
+        date_earned: data[0].date_achieved, // Map for compatibility
+      };
+
+      setAwardedAchievements([...awardedAchievements, newAchievement]);
       toast({
         title: "Achievement Awarded!",
         description: `You've earned the ${achievement.name} achievement!`,

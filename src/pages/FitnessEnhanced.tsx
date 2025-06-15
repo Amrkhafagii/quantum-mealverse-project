@@ -111,4 +111,3 @@ const FitnessEnhancedPage = () => {
 };
 
 export default FitnessEnhancedPage;
-
