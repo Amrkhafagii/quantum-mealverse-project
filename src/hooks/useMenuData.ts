@@ -109,11 +109,13 @@ export const useMenuData = (restaurants: Restaurant[]) => {
     staleTime: 1000 * 10, // 10s
     retry: 2, // Try twice before error
     refetchOnWindowFocus: true,
-    onSuccess: (data) => {
-      console.log('[useMenuData] Query success. Data:', data);
-    },
-    onError: (err) => {
-      console.error('[useMenuData] Query error:', err);
+    meta: {
+      onSuccess: (data: MealType[]) => {
+        console.log('[useMenuData] Query success. Data:', data);
+      },
+      onError: (err: Error) => {
+        console.error('[useMenuData] Query error:', err);
+      }
     }
   });
 
@@ -136,4 +138,3 @@ export const useMenuData = (restaurants: Restaurant[]) => {
 
   return queryResult;
 };
-
